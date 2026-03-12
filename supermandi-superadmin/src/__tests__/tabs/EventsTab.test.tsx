@@ -145,10 +145,10 @@ describe('EventsTab', () => {
 
   it('shows groupBy label in grouped header', () => {
     const grouped = [{ key: 'g1', count: 1, lastSeen: '2026-01-01', lastEventType: 'SALE' }];
-    render(<EventsTab {...createProps({ groupBy: 'deviceId', grouped })} />);
-    // "deviceId" appears in both grouped header text and th column — check both exist
-    const deviceIdElements = screen.getAllByText('deviceId');
-    expect(deviceIdElements.length).toBeGreaterThanOrEqual(2);
+    render(<EventsTab {...createProps({ groupBy: 'transactionId', grouped })} />);
+    // "transactionId" appears in both grouped header text and th column — check both exist
+    const transactionIdElements = screen.getAllByText('transactionId');
+    expect(transactionIdElements.length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText(/Grouped by/)).toBeTruthy();
   });
 
@@ -157,13 +157,13 @@ describe('EventsTab', () => {
       { key: 'g1', count: 3, lastSeen: '2026-01-01', lastEventType: 'SALE' },
       { key: 'g2', count: 7, lastSeen: '2026-01-02', lastEventType: 'REFUND' },
     ];
-    render(<EventsTab {...createProps({ groupBy: 'storeId', grouped })} />);
+    render(<EventsTab {...createProps({ groupBy: 'billId', grouped })} />);
     expect(screen.getByText(/showing 2 groups/)).toBeTruthy();
   });
 
   it('renders grouped table column headers', () => {
     const grouped = [{ key: 'g1', count: 1, lastSeen: '2026-01-01', lastEventType: 'SALE' }];
-    render(<EventsTab {...createProps({ groupBy: 'deviceId', grouped })} />);
+    render(<EventsTab {...createProps({ groupBy: 'transactionId', grouped })} />);
     expect(screen.getByText('Count')).toBeTruthy();
     expect(screen.getByText('Last seen')).toBeTruthy();
     expect(screen.getByText('Last event')).toBeTruthy();
@@ -171,7 +171,7 @@ describe('EventsTab', () => {
 
   it('renders last event type in grouped rows', () => {
     const grouped = [{ key: 'g1', count: 10, lastSeen: '2026-03-01', lastEventType: 'PAYMENT_COMPLETED' }];
-    render(<EventsTab {...createProps({ groupBy: 'storeId', grouped })} />);
+    render(<EventsTab {...createProps({ groupBy: 'billId', grouped })} />);
     expect(screen.getByText('PAYMENT_COMPLETED')).toBeTruthy();
   });
 
@@ -187,7 +187,7 @@ describe('EventsTab', () => {
       lastSeen: '2026-01-01',
       lastEventType: 'SALE',
     }));
-    render(<EventsTab {...createProps({ groupBy: 'deviceId', grouped })} />);
+    render(<EventsTab {...createProps({ groupBy: 'transactionId', grouped })} />);
     expect(screen.getByText('Showing first 50 groups.')).toBeTruthy();
   });
 
@@ -198,7 +198,7 @@ describe('EventsTab', () => {
       lastSeen: '2026-01-01',
       lastEventType: 'SALE',
     }));
-    render(<EventsTab {...createProps({ groupBy: 'deviceId', grouped })} />);
+    render(<EventsTab {...createProps({ groupBy: 'transactionId', grouped })} />);
     expect(screen.queryByText('Showing first 50 groups.')).toBeNull();
   });
 
@@ -330,7 +330,7 @@ describe('EventsTab', () => {
       lastSeen: '2026-01-01',
       lastEventType: 'SALE',
     }));
-    render(<EventsTab {...createProps({ groupBy: 'deviceId', grouped })} />);
+    render(<EventsTab {...createProps({ groupBy: 'transactionId', grouped })} />);
     // 50 data rows in grouped table tbody
     const tbody = document.querySelector('.tableWrap tbody');
     expect(tbody).toBeTruthy();
@@ -381,10 +381,10 @@ describe('EventsTab', () => {
 
   it('renders grouped view with multiple groupBy values', () => {
     const grouped = [{ key: 's1', count: 3, lastSeen: '2026-01-01', lastEventType: 'SALE' }];
-    const { rerender } = render(<EventsTab {...createProps({ groupBy: 'storeId', grouped })} />);
+    const { rerender } = render(<EventsTab {...createProps({ groupBy: 'billId', grouped })} />);
     expect(screen.getByText('s1')).toBeTruthy();
     // Re-render with different groupBy
-    rerender(<EventsTab {...createProps({ groupBy: 'eventType', grouped: [{ key: 'REFUND', count: 7, lastSeen: '2026-02-01', lastEventType: 'REFUND' }] })} />);
+    rerender(<EventsTab {...createProps({ groupBy: 'transactionId', grouped: [{ key: 'REFUND', count: 7, lastSeen: '2026-02-01', lastEventType: 'REFUND' }] })} />);
     expect(screen.getAllByText('REFUND').length).toBeGreaterThanOrEqual(1);
   });
 });

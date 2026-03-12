@@ -3,10 +3,8 @@
  * Tests the 4 detection rules and deduplication logic.
  */
 
-import { describe, it, expect, jest, beforeEach, afterEach } from "@jest/globals";
-
 // Mock the db/client module
-const mockQuery = jest.fn<(...args: any[]) => Promise<any>>();
+const mockQuery = jest.fn();
 const mockPool = { query: mockQuery };
 
 jest.mock("../src/db/client", () => ({

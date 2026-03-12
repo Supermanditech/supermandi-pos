@@ -1,5 +1,5 @@
 // SA-001: Payments tab extracted from App.tsx
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { PosEvent } from "../api/posEvents";
 import { PayloadDetails } from "../components/PayloadDetails";
 import { formatDateTime } from "../lib/formatters";
@@ -19,10 +19,11 @@ const PAYMENTS_PAGE_SIZE = 50;
 
 export function PaymentsTab({ paymentEvents, loading, error, totalEventCount, fetchLimit }: PaymentsTabProps) {
   const [page, setPage] = useState(0);
-  // R2-FIX PAY-001: Reset page when payment events change (prevents out-of-bounds)
-  useEffect(() => { setPage(0); }, [paymentEvents.length]);
+  // R2-FIX PAY-001: Clamp page to valid range (prevents out-of-bounds when events change)
+  // ESLint: derive clamped page from state + props instead of using setState in useEffect
   const maxPage = Math.max(0, Math.ceil(paymentEvents.length / PAYMENTS_PAGE_SIZE) - 1);
-  const pageEvents = paymentEvents.slice(page * PAYMENTS_PAGE_SIZE, (page + 1) * PAYMENTS_PAGE_SIZE);
+  const clampedPage = Math.min(page, maxPage);
+  const pageEvents = paymentEvents.slice(clampedPage * PAYMENTS_PAGE_SIZE, (clampedPage + 1) * PAYMENTS_PAGE_SIZE);
 
   return (
     <section className="card">
@@ -75,9 +76,9 @@ export function PaymentsTab({ paymentEvents, loading, error, totalEventCount, fe
           </div>
           {paymentEvents.length > PAYMENTS_PAGE_SIZE && (
             <div className="sa-flex sa-gap-12 sa-text-sm sa-text-muted sa-px-12 sa-py-8">
-              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="sa-btn-xs">←</button>
-              <span>Page {page + 1} / {maxPage + 1} ({paymentEvents.length} total)</span>
-              <button onClick={() => setPage(p => Math.min(maxPage, p + 1))} disabled={page >= maxPage} className="sa-btn-xs">→</button>
+              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={clampedPage === 0} className="sa-btn-xs">←</button>
+              <span>Page {clampedPage + 1} / {maxPage + 1} ({paymentEvents.length} total)</span>
+              <button onClick={() => setPage(p => Math.min(maxPage, p + 1))} disabled={clampedPage >= maxPage} className="sa-btn-xs">→</button>
             </div>
           )}
         </>

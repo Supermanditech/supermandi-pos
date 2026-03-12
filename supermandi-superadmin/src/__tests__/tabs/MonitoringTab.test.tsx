@@ -572,7 +572,7 @@ describe('MonitoringTab', () => {
     it('handles unhealthy status', async () => {
       const unhealthyHealth: HealthResponse = {
         ...mockHealthData,
-        status: 'unhealthy',
+        status: 'degraded',
         checks: {
           database: { status: 'unhealthy', latencyMs: 5000 },
         },
@@ -580,8 +580,8 @@ describe('MonitoringTab', () => {
       mockFetchHealthStatus.mockResolvedValue(unhealthyHealth);
       render(<MonitoringTab />);
       await waitFor(() => {
-        const unhealthyTexts = screen.getAllByText('unhealthy');
-        expect(unhealthyTexts.length).toBeGreaterThanOrEqual(1);
+        const degradedTexts = screen.getAllByText('degraded');
+        expect(degradedTexts.length).toBeGreaterThanOrEqual(1);
       });
     });
   });

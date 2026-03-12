@@ -9,7 +9,7 @@ import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { fetchAiHealth } from "./api/ai";
 import { hasValidSession, logout, refreshSession, startIdleTimeout, stopIdleTimeout, abortActiveRequests } from "./api/authToken";
 import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, fetchStoreSettings, updateStoreBnpl, updateStoreDiscountLimit, type StoreRecord } from "./api/stores";
-import { fetchDevices, patchDevice, forceReEnrollDevice, forceSyncDevice, type DeviceRecord } from "./api/devices";
+import { fetchDevices, patchDevice, forceReEnrollDevice, forceSyncDevice, type DeviceRecord, type ConfigPushRecord } from "./api/devices";
 import { createDeviceEnrollment, revokeEnrollmentCode, fetchStoreEnrollments, resendEnrollmentCode, type DeviceEnrollmentResponse, type EnrollmentRecord } from "./api/deviceEnrollments";
 import {
   fetchAnalyticsOverview,
@@ -512,6 +512,9 @@ export default function App() {
     action: "deactivate" | "resetToken" | "forceReEnroll" | "forceSync";
   } | null>(null);
   const [forceSyncingDevices, setForceSyncingDevices] = useState<Record<string, boolean>>({});
+  const [revokingTokenDevices, setRevokingTokenDevices] = useState<Record<string, boolean>>({});
+  const [configPushHistory, setConfigPushHistory] = useState<ConfigPushRecord[]>([]);
+  const [configPushLoading, setConfigPushLoading] = useState<boolean>(false);
   const [enrollStoreId, setEnrollStoreId] = useState<string>("");
   const [enrollment, setEnrollment] = useState<DeviceEnrollmentResponse | null>(null);
   const [enrollError, setEnrollError] = useState<string>("");
@@ -2679,6 +2682,29 @@ export default function App() {
     }
   }
 
+  // SA-P1-013: Revoke device token
+  function requestRevokeToken(deviceId: string) {
+    const device = deviceRecords.find((d) => d.id === deviceId);
+    setPendingDeviceAction({
+      deviceId,
+      deviceLabel: device?.label ?? deviceId,
+      action: "revokeToken"
+    });
+  }
+
+  // SA-P2-002: Push config to device / broadcast
+  async function handlePushConfig(_deviceId: string, _config: { configKey: string; configValue: string; message?: string }): Promise<void> {
+    // Stub — config push API integration pending
+  }
+
+  async function handleBroadcastConfig(_config: { configKey: string; configValue: string; message?: string }): Promise<void> {
+    // Stub — broadcast config API integration pending
+  }
+
+  function refreshConfigPushHistory() {
+    // Stub — config push history refresh pending
+  }
+
   async function handleCreateStore() {
     const name = createStoreName.trim();
     const storeId = createStoreId.trim();
@@ -3292,8 +3318,15 @@ export default function App() {
           requestDeviceSave={requestDeviceSave}
           requestDeviceReset={requestDeviceReset}
           requestForceReEnroll={requestForceReEnroll}
+          requestRevokeToken={requestRevokeToken}
+          revokingTokenDevices={revokingTokenDevices}
           requestForceSync={requestForceSync}
           forceSyncingDevices={forceSyncingDevices}
+          handlePushConfig={handlePushConfig}
+          handleBroadcastConfig={handleBroadcastConfig}
+          configPushHistory={configPushHistory}
+          configPushLoading={configPushLoading}
+          refreshConfigPushHistory={refreshConfigPushHistory}
           devicePage={devicePage}
           setDevicePage={setDevicePage}
           devicesLoading={devicesLoading}

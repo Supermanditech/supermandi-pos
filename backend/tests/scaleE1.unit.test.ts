@@ -12,13 +12,11 @@
  * - Returns 404 if product id not found
  */
 
-import { describe, it, expect, jest, beforeEach } from "@jest/globals";
-
 // =============================================================================
 // Mock @supermandi/common (uploadBuffer)
 // =============================================================================
 
-const mockUploadBuffer = jest.fn<(...args: any[]) => Promise<any>>();
+const mockUploadBuffer = jest.fn();
 
 jest.mock("@supermandi/common", () => ({
   uploadBuffer: (...args: any[]) => mockUploadBuffer(...args),
@@ -34,7 +32,7 @@ jest.mock("@supermandi/common", () => ({
 // Mock DB pool
 // =============================================================================
 
-const mockQuery = jest.fn<(...args: any[]) => Promise<any>>();
+const mockQuery = jest.fn();
 const mockPool = { query: mockQuery };
 
 jest.mock("../src/db/client", () => ({

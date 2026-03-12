@@ -1,5 +1,5 @@
 // SA-001: Applications approval tab extracted from App.tsx
-import { useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import type { Application } from "../api/applications";
 import { formatDateTime } from "../lib/formatters";
 
@@ -35,7 +35,8 @@ export function ApplicationsTab({
   onLoadMore,
 }: ApplicationsTabProps) {
   // R3-APP_TAB-005: Track which action (approve/reject) is in progress per app
-  const actionTypeRef = useRef<Record<string, 'approve' | 'reject'>>({});
+  // ESLint react-hooks/rules-of-hooks: use state instead of ref to avoid reading refs during render
+  const [actionType, setActionType] = useState<Record<string, 'approve' | 'reject'>>({});
 
   // SA.016: Refresh when entity filter changes instead of using setTimeout
   // R1-FIX: Clear stale rejection reasons when filter changes to prevent cross-application leakage
@@ -156,38 +157,38 @@ export function ApplicationsTab({
                         Awaiting applicant resubmission
                       </span>
                       <button
-                        onClick={() => { actionTypeRef.current[app.id] = 'approve'; handleApproveApplication(app.id); }}
+                        onClick={() => { setActionType(prev => ({ ...prev, [app.id]: 'approve' })); handleApproveApplication(app.id); }}
                         disabled={appActionLoading[app.id]}
                         className="btnSuccess"
                         title={`Approve resubmitted ${app.entityType === 'retailer' ? 'store' : 'supplier'} application`}
                       >
-                        {appActionLoading[app.id] && actionTypeRef.current[app.id] === 'approve' ? "Approving..." : "Approve"}
+                        {appActionLoading[app.id] && actionType[app.id] === 'approve' ? "Approving..." : "Approve"}
                       </button>
                       <button
                         className="btnGhost sa-text-danger"
-                        onClick={() => { actionTypeRef.current[app.id] = 'reject'; handleRejectApplication(app.id); }}
+                        onClick={() => { setActionType(prev => ({ ...prev, [app.id]: 'reject' })); handleRejectApplication(app.id); }}
                         disabled={appActionLoading[app.id]}
                         title="Update rejection reason and send back"
                       >
-                        {appActionLoading[app.id] && actionTypeRef.current[app.id] === 'reject' ? "Updating..." : "Update Rejection"}
+                        {appActionLoading[app.id] && actionType[app.id] === 'reject' ? "Updating..." : "Update Rejection"}
                       </button>
                     </>
                   ) : (
                     <>
                       <button
-                        onClick={() => { actionTypeRef.current[app.id] = 'approve'; handleApproveApplication(app.id); }}
+                        onClick={() => { setActionType(prev => ({ ...prev, [app.id]: 'approve' })); handleApproveApplication(app.id); }}
                         disabled={appActionLoading[app.id]}
                         className="btnSuccess"
                         title={`Approve and create ${app.entityType === 'retailer' ? 'store' : 'supplier'} record`}
                       >
-                        {appActionLoading[app.id] && actionTypeRef.current[app.id] === 'approve' ? "Approving..." : `Approve ${app.entityType === 'retailer' ? 'Store' : 'Supplier'}`}
+                        {appActionLoading[app.id] && actionType[app.id] === 'approve' ? "Approving..." : `Approve ${app.entityType === 'retailer' ? 'Store' : 'Supplier'}`}
                       </button>
                       <button
                         className="btnGhost sa-text-danger"
-                        onClick={() => { actionTypeRef.current[app.id] = 'reject'; handleRejectApplication(app.id); }}
+                        onClick={() => { setActionType(prev => ({ ...prev, [app.id]: 'reject' })); handleRejectApplication(app.id); }}
                         disabled={appActionLoading[app.id]}
                       >
-                        {appActionLoading[app.id] && actionTypeRef.current[app.id] === 'reject' ? "Rejecting..." : "Reject"}
+                        {appActionLoading[app.id] && actionType[app.id] === 'reject' ? "Rejecting..." : "Reject"}
                       </button>
                     </>
                   )}

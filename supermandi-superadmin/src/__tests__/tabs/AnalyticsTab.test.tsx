@@ -353,9 +353,13 @@ describe('AnalyticsTab', () => {
 
   it('renders products tab with Group By dropdown', () => {
     const products = {
-      top_products: [{ product_id: 'p1', name: 'Tomato', barcode: '123', source: 'POS', quantity: 10, total_minor: 5000 }],
+      range: { from: '2026-01-01', to: '2026-01-31' },
+      top_products: [{ product_id: 'p1', name: 'Tomato', barcode: '123', category: null, source: 'retailer_created' as const, quantity: 10, total_minor: 5000 }],
       new_products_created_count: 1,
       new_products_created: [{ id: 'np1', name: 'Onion', barcode: '456', created_at: '2026-01-01' }],
+      sales_by_group: [],
+      group_by: 'day' as const,
+      missing_fields: [],
     };
     render(<AnalyticsTab {...createProps({ analyticsTab: 'products', analyticsProducts: products })} />);
     expect(screen.getByLabelText('Group By')).toBeTruthy();
@@ -366,7 +370,9 @@ describe('AnalyticsTab', () => {
   it('calls setProductsGroupBy on Group By change', () => {
     const setGroupBy = vi.fn();
     const products = {
+      range: { from: '2026-01-01', to: '2026-01-31' },
       top_products: [], new_products_created_count: 0, new_products_created: [],
+      sales_by_group: [], group_by: 'day' as const, missing_fields: [],
     };
     render(<AnalyticsTab {...createProps({ analyticsTab: 'products', analyticsProducts: products, setProductsGroupBy: setGroupBy })} />);
     fireEvent.change(screen.getByLabelText('Group By'), { target: { value: 'hour' } });
@@ -375,12 +381,14 @@ describe('AnalyticsTab', () => {
 
   it('renders new products created table', () => {
     const products = {
+      range: { from: '2026-01-01', to: '2026-01-31' },
       top_products: [],
       new_products_created_count: 2,
       new_products_created: [
         { id: 'np1', name: 'Onion', barcode: '456', created_at: '2026-01-01' },
         { id: 'np2', name: 'Garlic', barcode: '789', created_at: null },
       ],
+      sales_by_group: [], group_by: 'day' as const, missing_fields: [],
     };
     render(<AnalyticsTab {...createProps({ analyticsTab: 'products', analyticsProducts: products })} />);
     expect(screen.getByText('New Products (Retailer)')).toBeTruthy();
@@ -393,6 +401,7 @@ describe('AnalyticsTab', () => {
 
   it('renders purchases tab with vendor breakdown', () => {
     const purchases = {
+      range: { from: '2026-01-01', to: '2026-01-31' },
       total_minor: 20000,
       vendor_breakdown: [{ supplier: 'FarmFresh', total_minor: 15000 }],
       sku_cost_summary: [{ product_id: 'p1', sku: 'SKU-1', quantity: 5, avg_cost_minor: 200, last_cost_minor: 250 }],
@@ -407,6 +416,7 @@ describe('AnalyticsTab', () => {
 
   it('renders stock-in breakdown when data exists', () => {
     const purchases = {
+      range: { from: '2026-01-01', to: '2026-01-31' },
       total_minor: 20000,
       vendor_breakdown: [],
       sku_cost_summary: [],
@@ -414,7 +424,9 @@ describe('AnalyticsTab', () => {
         total_entries: 3,
         total_amount_minor: 10000,
         by_type: [{
-          type: 'verified',
+          type: 'verified' as const,
+          count: 2,
+          total_minor: 7000,
           suppliers: [{ name: 'Supplier A', gstin: 'GSTIN123', count: 2, total_minor: 7000 }],
         }],
       },
@@ -430,6 +442,7 @@ describe('AnalyticsTab', () => {
 
   it('renders consumer sales tab with payment split and status counts', () => {
     const consumerSales = {
+      range: { from: '2026-01-01', to: '2026-01-31' },
       total_minor: 8000,
       payment_split_minor: { cash: 3000, upi: 4000, due: 1000 },
       status_counts: [{ status: 'completed', count: 10 }, { status: 'pending', count: 2 }],
@@ -471,6 +484,7 @@ describe('AnalyticsTab', () => {
 
   it('renders dues tracking tab with aging cards', () => {
     const dues = {
+      range: { from: '2026-01-01', to: '2026-01-31' },
       outstanding_total_minor: 5000,
       aging: { d0_1: 1000, d2_7: 2000, d8_30: 1500, d30_plus: 500 },
       total: 4,
@@ -488,6 +502,7 @@ describe('AnalyticsTab', () => {
 
   it('shows empty dues message when no dues', () => {
     const dues = {
+      range: { from: '2026-01-01', to: '2026-01-31' },
       outstanding_total_minor: 0,
       aging: { d0_1: 0, d2_7: 0, d8_30: 0, d30_plus: 0 },
       total: 0,
@@ -499,6 +514,7 @@ describe('AnalyticsTab', () => {
 
   it('renders dues table headers', () => {
     const dues = {
+      range: { from: '2026-01-01', to: '2026-01-31' },
       outstanding_total_minor: 1000,
       aging: { d0_1: 1000, d2_7: 0, d8_30: 0, d30_plus: 0 },
       total: 1,

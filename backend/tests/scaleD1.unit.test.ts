@@ -12,15 +12,13 @@
  * - Barcode with special characters → key format preserved
  */
 
-import { describe, it, expect, jest, beforeEach } from "@jest/globals";
-
 // =============================================================================
 // Mock Redis module
 // =============================================================================
 
-const mockCacheGet = jest.fn<(...args: any[]) => Promise<any>>();
-const mockCacheSet = jest.fn<(...args: any[]) => Promise<any>>();
-const mockCacheDelete = jest.fn<(...args: any[]) => Promise<any>>();
+const mockCacheGet = jest.fn();
+const mockCacheSet = jest.fn();
+const mockCacheDelete = jest.fn();
 
 jest.mock("../src/db/redis", () => ({
   getRedis: jest.fn(() => null),
@@ -34,7 +32,7 @@ jest.mock("../src/db/redis", () => ({
 // Mock DB pool
 // =============================================================================
 
-const mockQuery = jest.fn<(...args: any[]) => Promise<any>>();
+const mockQuery = jest.fn();
 const mockPool = { query: mockQuery };
 
 jest.mock("../src/db/client", () => ({
