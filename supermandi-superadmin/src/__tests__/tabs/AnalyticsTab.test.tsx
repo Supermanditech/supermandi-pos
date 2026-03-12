@@ -404,7 +404,7 @@ describe('AnalyticsTab', () => {
       range: { from: '2026-01-01', to: '2026-01-31' },
       total_minor: 20000,
       vendor_breakdown: [{ supplier: 'FarmFresh', total_minor: 15000 }],
-      sku_cost_summary: [{ product_id: 'p1' as string | null, sku: 'SKU-1' as string | null, quantity: 5, avg_cost_minor: 200, last_cost_minor: 250 }],
+      sku_cost_summary: [{ product_id: 'p1' as string | null, sku: 'SKU-1' as string | null, quantity: 5, avg_cost_minor: 200, last_cost_minor: 250 as number | null }],
       stock_in_breakdown: null,
     };
     render(<AnalyticsTab {...createProps({ analyticsTab: 'purchases', analyticsPurchases: purchases })} />);
