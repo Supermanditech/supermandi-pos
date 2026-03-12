@@ -135,10 +135,10 @@ export default function ImportPage() {
         body: JSON.stringify({ csvContent, fileName: file.name }),
       });
       if (!uploadResp.ok) {
-        const data = await safeJson(uploadResp) as any;
+        const data = await safeJson(uploadResp);
         throw new Error(data?.error?.message || 'Upload failed');
       }
-      const uploadData = await safeJson(uploadResp) as any;
+      const uploadData = await safeJson(uploadResp);
       const newJobId = uploadData?.data?.jobId;
       if (!newJobId) throw new Error('Upload succeeded but no job ID returned');
       setJobId(newJobId);
@@ -150,7 +150,7 @@ export default function ImportPage() {
         { method: 'POST' }
       );
       if (!validateResp.ok) {
-        const data = await safeJson(validateResp) as any;
+        const data = await safeJson(validateResp);
         // GL-CRIT-0102: Show specific error type and row number if available
         const errorDetails = data?.error;
         if (errorDetails?.row !== undefined) {
@@ -165,7 +165,7 @@ export default function ImportPage() {
         }
         throw new Error(errorDetails?.message || 'Validation failed. Please check your file format.');
       }
-      const validateData = await safeJson(validateResp) as any;
+      const validateData = await safeJson(validateResp);
       setValidation(validateData?.data || null);
       setStep('review');
     } catch (err) {
@@ -235,7 +235,7 @@ export default function ImportPage() {
         // FIX-016: Guard after async — component may have unmounted during fetch
         if (!mountedRef.current) return;
         if (!resp.ok) return;
-        const data = await safeJson(resp) as any;
+        const data = await safeJson(resp);
         if (!mountedRef.current) return;
         if (!data?.data) return;
         const { status, progress, commitResult: result } = data.data;
@@ -287,7 +287,7 @@ export default function ImportPage() {
         );
         if (!mountedRef.current) return;
         if (!resp.ok) return;
-        const data = await safeJson(resp) as any;
+        const data = await safeJson(resp);
         if (!mountedRef.current) return;
         if (!data?.data) return;
 
@@ -343,7 +343,7 @@ export default function ImportPage() {
 
       if (queueResp.status === 202) {
         // BullMQ enqueue success — poll via BullMQ status endpoint
-        const queueData = await safeJson(queueResp) as any;
+        const queueData = await safeJson(queueResp);
         const bullJobId = queueData?.data?.bullJobId as string | undefined;
         const total = (queueData?.data?.total as number | undefined) ?? (validation?.validCount ?? 0);
         setCommitProgress({ created: 0, total });
@@ -362,7 +362,7 @@ export default function ImportPage() {
         accessToken,
         { method: 'POST' }
       );
-      const data = await safeJson(resp) as any;
+      const data = await safeJson(resp);
 
       if (resp.status === 202) {
         // Legacy async commit started — poll DB status

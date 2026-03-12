@@ -189,7 +189,7 @@ export default function SettingsPage() {
   };
 
   // Handle field changes
-  const handleChange = useCallback((field: keyof StoreSettings, value: string | number | boolean) => {
+  const handleChange = useCallback((field: keyof StoreSettings, value: string | number | boolean | null) => {
     setSettings(prev => ({ ...prev, [field]: value }));
     setSaveSuccess(false);
     setSaveError(null);
@@ -685,7 +685,7 @@ export default function SettingsPage() {
                   const val = e.target.value;
                   handleChange(
                     'dailyOrderLimitPaise',
-                    val === '' ? null as any : Math.round(parseFloat(val) * 100)
+                    val === '' ? null : Math.round(parseFloat(val) * 100)
                   );
                 }}
                 min="0"
@@ -708,7 +708,7 @@ export default function SettingsPage() {
                   const val = e.target.value;
                   handleChange(
                     'monthlyOrderLimitPaise',
-                    val === '' ? null as any : Math.round(parseFloat(val) * 100)
+                    val === '' ? null : Math.round(parseFloat(val) * 100)
                   );
                 }}
                 min="0"
@@ -763,7 +763,7 @@ export default function SettingsPage() {
                   const val = e.target.value;
                   handleChange(
                     'maxOutstandingDuesPaise',
-                    val === '' ? null as any : Math.round(parseFloat(val) * 100)
+                    val === '' ? null : Math.round(parseFloat(val) * 100)
                   );
                 }}
                 min="0"
