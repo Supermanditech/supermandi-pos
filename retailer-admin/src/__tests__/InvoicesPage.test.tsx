@@ -1015,8 +1015,8 @@ describe('InvoicesPage', () => {
   describe('PDF download', () => {
     let mockCreateObjectURL: ReturnType<typeof vi.fn>;
     let mockRevokeObjectURL: ReturnType<typeof vi.fn>;
-    let appendSpy: ReturnType<typeof vi.spyOn> | null = null;
-    let removeSpy: ReturnType<typeof vi.spyOn> | null = null;
+    let appendSpy: ReturnType<typeof vi.fn> | null = null;
+    let removeSpy: ReturnType<typeof vi.fn> | null = null;
 
     beforeEach(() => {
       mockCreateObjectURL = vi.fn().mockReturnValue('blob:test-url');
@@ -1043,8 +1043,8 @@ describe('InvoicesPage', () => {
         expect(screen.getByText('PDF')).toBeInTheDocument();
       });
 
-      appendSpy = vi.spyOn(document.body, 'appendChild');
-      removeSpy = vi.spyOn(document.body, 'removeChild');
+      appendSpy = vi.spyOn(document.body, 'appendChild') as unknown as ReturnType<typeof vi.fn>;
+      removeSpy = vi.spyOn(document.body, 'removeChild') as unknown as ReturnType<typeof vi.fn>;
 
       await act(async () => {
         fireEvent.click(screen.getByText('PDF'));
@@ -1080,8 +1080,8 @@ describe('InvoicesPage', () => {
         const anchor = node as HTMLAnchorElement;
         if (anchor.download) capturedDownload = anchor.download;
         return node;
-      });
-      removeSpy = vi.spyOn(document.body, 'removeChild').mockImplementation((node) => node);
+      }) as unknown as ReturnType<typeof vi.fn>;
+      removeSpy = vi.spyOn(document.body, 'removeChild').mockImplementation((node) => node) as unknown as ReturnType<typeof vi.fn>;
 
       await act(async () => {
         fireEvent.click(screen.getByText('PDF'));
@@ -1150,8 +1150,8 @@ describe('InvoicesPage', () => {
       });
 
       // Spy AFTER render so component can mount
-      appendSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((node) => node);
-      removeSpy = vi.spyOn(document.body, 'removeChild').mockImplementation((node) => node);
+      appendSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((node) => node) as unknown as ReturnType<typeof vi.fn>;
+      removeSpy = vi.spyOn(document.body, 'removeChild').mockImplementation((node) => node) as unknown as ReturnType<typeof vi.fn>;
 
       await act(async () => {
         fireEvent.click(screen.getByText('Download PDF'));

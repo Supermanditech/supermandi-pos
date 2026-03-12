@@ -266,10 +266,6 @@ describe('CompliancePage', () => {
       ]));
       renderPage();
       await waitFor(() => {
-        // Stat cards show counts: 2 verified, 1 pending, 1 rejected
-        const statValues = screen.getAllByClassName
-          ? [] // fallback
-          : [];
         // Check verified count = 2 in stat card
         const verifiedLabels = screen.getAllByText(/Verified/);
         expect(verifiedLabels.length).toBeGreaterThan(0);

@@ -64,13 +64,7 @@ function makeSettingsResponse(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function makeErrorResponse(status = 500) {
-  return {
-    ok: false,
-    status,
-    json: () => Promise.resolve({ error: { message: 'Server error' } }),
-  };
-}
+// makeErrorResponse removed — was declared but never used
 
 const renderPage = () =>
   render(
@@ -796,7 +790,6 @@ describe('SettingsPage', () => {
   describe('auth guard', () => {
     it('renders loading when no access token', () => {
       // Temporarily override the mock to return no token
-      const originalMock = vi.fn();
       vi.doMock('../lib/AuthContext', () => ({
         useAuth: () => ({ accessToken: null, store: null, logout: vi.fn() }),
       }));

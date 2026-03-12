@@ -22,7 +22,7 @@ vi.mock('../components/Breadcrumb', () => ({
 }));
 
 vi.mock('../components/Modal', () => ({
-  default: ({ isOpen, onClose, title, children, actions }: {
+  default: ({ isOpen, title, children, actions }: {
     isOpen: boolean; onClose: () => void; title: string;
     children: React.ReactNode; actions?: React.ReactNode;
   }) => isOpen ? (
