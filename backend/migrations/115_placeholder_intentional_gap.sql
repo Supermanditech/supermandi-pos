@@ -1,0 +1,3 @@
+-- Migration: 115_placeholder_intentional_gap
+-- INTENTIONAL GAP: This migration number was reserved but not used.
+-- Feature was not implemented. No schema changes.
