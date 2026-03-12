@@ -180,7 +180,8 @@ async function syncProductsToOffline(query?: string, sort?: "fefo" | "default"):
         const effectiveStock = pinnedStock !== null ? pinnedStock : stock;
         if (barcode) {
           // SCALE-E2: Pass image_url so offline product tiles show cached images
-          await upsertLocalProduct(barcode, product.name, "INR", null, product.productId, effectiveStock, product.storeProductId ?? null, product.image_url ?? null);
+          // AUD-003: Pass expiry_date (arg 10) so FEFO offline sort is accurate
+          await upsertLocalProduct(barcode, product.name, "INR", null, product.productId, effectiveStock, product.storeProductId ?? null, product.image_url ?? null, null, product.expiry_date ?? null);
           if (product.sellPrice !== null) {
             await setLocalPrice(barcode, product.sellPrice);
           }
@@ -241,7 +242,8 @@ async function syncProductsToOffline(query?: string, sort?: "fefo" | "default"):
           // Store in offline DB (with productId and stock)
           if (barcode) {
             // SCALE-E2: Pass image_url so offline search results show cached images
-            await upsertLocalProduct(barcode, displayName, "INR", null, match.productId, stock, match.storeProductId ?? null, match.image_url ?? null);
+            // AUD-003: Pass expiry_date (arg 10) so FEFO offline sort is accurate
+            await upsertLocalProduct(barcode, displayName, "INR", null, match.productId, stock, match.storeProductId ?? null, match.image_url ?? null, null, match.expiry_date ?? null);
             if (sellPrice !== null) {
               await setLocalPrice(barcode, sellPrice);
             }
