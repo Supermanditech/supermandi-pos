@@ -33,6 +33,14 @@ import { getRedis } from '../redis';
 
 const router: Router = Router();
 
+// SEC-001: Detect POS/mobile clients that need tokens in response body
+// Web clients use HttpOnly cookies; POS uses Authorization header from body tokens
+function isPosClient(req: Request): boolean {
+  const ua = (req.get('user-agent') || '').toLowerCase();
+  // React Native, Expo, or explicit POS client indicator
+  return ua.includes('react-native') || ua.includes('expo') || ua.includes('okhttp') || req.headers['x-device-token'] !== undefined;
+}
+
 // =============================================================================
 // SEC-006: REDIS-BACKED RATE LIMITING (with in-memory fallback)
 // =============================================================================
@@ -178,10 +186,13 @@ router.post(
     const refreshTokenExpirySeconds = config.jwt.refreshTokenExpiresInDays * 86400;
     setAuthCookies(res, tokenPair.accessToken, tokenPair.refreshToken, tokenPair.expiresIn, refreshTokenExpirySeconds);
 
-    // Build response (tokens still in body for POS app backward compatibility)
+    // SEC-001: Only include tokens in body for POS/mobile clients
+    // Web clients use HttpOnly cookies (XSS-safe)
+    const includeTokensInBody = isPosClient(req);
+
     const response: LoginResponse = {
-      accessToken: tokenPair.accessToken,
-      refreshToken: tokenPair.refreshToken,
+      accessToken: includeTokensInBody ? tokenPair.accessToken : '',
+      refreshToken: includeTokensInBody ? tokenPair.refreshToken : '',
       expiresIn: tokenPair.expiresIn,
       user: {
         id: user.id,
@@ -282,9 +293,11 @@ router.post(
     const refreshTokenExpirySeconds = config.jwt.refreshTokenExpiresInDays * 86400;
     setAuthCookies(res, accessToken, newRefreshToken, expiresIn, refreshTokenExpirySeconds);
 
+    const includeTokensInBody = isPosClient(req);
+
     const response: RefreshResponse = {
-      accessToken,
-      refreshToken: newRefreshToken,
+      accessToken: includeTokensInBody ? accessToken : '',
+      refreshToken: includeTokensInBody ? newRefreshToken : '',
       expiresIn,
     };
 
