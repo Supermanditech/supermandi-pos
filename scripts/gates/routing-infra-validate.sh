@@ -205,10 +205,10 @@ check_cr_port() {
 
 check_cr_port "api-gateway" "3000"
 check_cr_port "main-backend" "3010"
-check_cr_port "retailer-admin" "80"
+check_cr_port "retailer-admin" "8080"
 check_cr_port "supplier-portal" "3001"
-check_cr_port "superadmin" "80"
-check_cr_port "landing" "80"
+check_cr_port "superadmin" "8080"
+check_cr_port "landing" "8080"
 
 if [ "$PORT_ERRORS" -eq 0 ]; then
   gate_pass "L-029" "Cloud Run container ports match spec"
