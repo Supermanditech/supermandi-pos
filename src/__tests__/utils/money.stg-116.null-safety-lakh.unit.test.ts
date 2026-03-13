@@ -15,12 +15,12 @@ describe('STG-116: formatMoney null/undefined safety', () => {
 
   it('should format zero correctly', () => {
     const result = formatMoney(0);
-    expect(result).toMatch(/₹.*0\.00/);
+    expect(result).toMatch(/₹.*0/);
   });
 
   it('should format NaN as zero', () => {
     const result = formatMoney(NaN);
-    expect(result).toMatch(/₹.*0\.00/);
+    expect(result).toMatch(/₹.*0/);
   });
 });
 

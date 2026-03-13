@@ -52,10 +52,11 @@ export function formatMoney(minor: number | null | undefined, currency: MoneyCur
   const cappedMinor = Math.min(Math.abs(safeMinor), MAX_AMOUNT_MINOR) * (safeMinor < 0 ? -1 : 1);
   const roundedMinor = Math.round(cappedMinor);
   const major = minorToMajor(roundedMinor, fractionDigits);
+  let result: string;
   if (typeof Intl !== "undefined" && typeof Intl.NumberFormat === "function") {
     try {
       const locale = getFormattingLocale(currency);
-      return new Intl.NumberFormat(locale, {
+      result = new Intl.NumberFormat(locale, {
         style: "currency",
         currency,
         minimumFractionDigits: fractionDigits,
@@ -63,13 +64,22 @@ export function formatMoney(minor: number | null | undefined, currency: MoneyCur
       }).format(major);
     } catch {
       // Fall back to simple formatting.
+      const formatted = major.toFixed(fractionDigits);
+      result = currency === "INR"
+        ? `₹ ${formatInrGrouped(formatted)}`
+        : `${currency} ${formatGrouped(formatted)}`;
     }
+  } else {
+    const formatted = major.toFixed(fractionDigits);
+    result = currency === "INR"
+      ? `₹ ${formatInrGrouped(formatted)}`
+      : `${currency} ${formatGrouped(formatted)}`;
   }
-  const formatted = major.toFixed(fractionDigits);
-  if (currency === "INR") {
-    return `₹ ${formatInrGrouped(formatted)}`;
+  // STG-117: Smart formatting — drop .00 on round amounts for cleaner display
+  if (fractionDigits === 2 && major === Math.floor(major)) {
+    result = result.replace(/\.00\b/, '');
   }
-  return `${currency} ${formatGrouped(formatted)}`;
+  return result;
 }
 
 
