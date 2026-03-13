@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 13,
+  "version": 14,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -475,6 +475,46 @@
         "gcp_parity": "true",
         "regression_check": "true",
         "test_guard": "true"
+      }
+    },
+    {
+      "ticket": "STG-361",
+      "file": "backend/src/routes/v1/pos/voice.ts",
+      "start_line": 67,
+      "end_line": 73,
+      "checksum": "dab5baae3a819851",
+      "description": "Replace empty product search stub with initProductSearchBridge() — real catalog queries via pg_trgm similarity",
+      "test_file": "backend/tests/voice.stg-361.product-search.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T20:16:09.330Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "true",
+        "backend_api": "true",
+        "operator_approved": "true",
+        "parity_scanned": "true",
+        "parity_fixed": "true",
+        "gcp_parity": "true",
+        "regression_check": "true",
+        "test_guard": "true",
+        "db_schema": "N/A"
       }
     }
   ]

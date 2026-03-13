@@ -20,10 +20,9 @@ import { rateLimitAi } from "../../../middleware/rateLimit";
 import {
   processVoiceOrder,
   isVoiceOrderAvailable,
-  registerProductSearch,
-  type ProductCandidate,
   type VoiceOrderResult,
 } from "../../../services/ai/voiceOrderService";
+import { initProductSearchBridge } from "../../../services/ai/productSearchBridge";
 import { getHealthStatus } from "../../../services/ai/openaiProvider";
 import { log } from "../../../lib/logger";
 
@@ -65,18 +64,11 @@ const upload = multer({
 const voiceRateLimit = rateLimitAi({ windowMs: 60_000, max: 20 });
 
 // =============================================================================
-// PRODUCT SEARCH INTEGRATION
+// STG-361: PRODUCT SEARCH INTEGRATION — real catalog queries via pg_trgm
 // =============================================================================
 
-// Register a simple product search function
-// In production, this would query the actual product catalog
-// TODO: Integrate with store-products/search endpoint
-registerProductSearch(async (query: string, _storeId: string): Promise<ProductCandidate[]> => {
-  // For now, return empty array - product resolution happens client-side
-  // The voice service returns productName and the POS app resolves it
-  log.info("[Voice] Product search query:", query);
-  return [];
-});
+// Register product search bridge: queries catalog.store_products with fuzzy matching
+initProductSearchBridge();
 
 // =============================================================================
 // ROUTES
