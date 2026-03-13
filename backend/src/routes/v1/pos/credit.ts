@@ -272,6 +272,28 @@ posCreditRouter.get("/credit/offers", requireDeviceToken, async (req: Request, r
   const { storeId } = (req as unknown as PosRequest).posDevice;
 
   try {
+    // STG-457: Check consent before credit scoring (DPDP compliance)
+    const consentCheck = await pool.query(
+      `SELECT id FROM platform.consent_records
+       WHERE store_id = $1 AND consent_type = 'credit_scoring' AND revoked_at IS NULL
+       LIMIT 1`,
+      [storeId]
+    );
+
+    if (consentCheck.rows.length === 0) {
+      return res.json({
+        success: true,
+        consentRequired: true,
+        consentType: 'credit_scoring',
+        message: 'Credit scoring requires your consent to analyze business data. Please accept to view offers.',
+        offers: [],
+        creditScore: null,
+        eligibleAmount: 0,
+        scoringFactors: null,
+        activeApplication: null,
+      });
+    }
+
     // Calculate credit score
     const creditScore = await calculateCreditScore(pool, storeId);
 

@@ -79,6 +79,10 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
     kycStatus: string;
   } | null>(null);
 
+  // STG-457: Consent state for DPDP compliance
+  const [consentRequired, setConsentRequired] = useState(false);
+  const [consentLoading, setConsentLoading] = useState(false);
+
   // Apply modal state
   const [applyModal, setApplyModal] = useState<{
     visible: boolean;
@@ -117,6 +121,19 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
         creditApi.getCreditApplications(),
       ]);
 
+      // STG-457: Check if consent is required before showing credit data
+      if (offersRes.consentRequired) {
+        setConsentRequired(true);
+        setOffers([]);
+        setCreditScore(null);
+        setEligibleAmount(0);
+        setScoringFactors(null);
+        setActiveApplication(null);
+        setApplications([]);
+        return;
+      }
+
+      setConsentRequired(false);
       setOffers(offersRes.offers);
       setCreditScore(offersRes.creditScore);
       setEligibleAmount(offersRes.eligibleAmount);
