@@ -9,7 +9,7 @@
 Read these files BEFORE doing anything else — they are your machine state:
 
 1. `RELEASES/FIX_LEDGER.json` — active fix checksums (source of truth for drift detection)
-2. `scripts/fix-guard.js` — 8-gate pre-commit enforcement (do NOT modify without operator approval)
+2. `scripts/fix-guard.js` — 12-gate pre-commit enforcement (do NOT modify without operator approval)
 3. `RELEASES/CLAUDE_WORKFLOW.md` — 9-phase ticket lifecycle + git discipline + 31 failure modes
 4. `RELEASES/STAGING_TICKETS.md` — post-GCP deploy ticket registry (STG-001+). Next ticket: check `<!-- next ticket -->` comment at bottom
 5. `CLAUDE.md` — project rules, architecture, hard lessons, store isolation, test discipline
@@ -55,7 +55,7 @@ Phase 8: Next ticket pre-flight — clean tree, fix-guard check, typecheck
 
 Git discipline (per commit):
 - Linear commits on main, one ticket = one commit = one tag
-- Every commit must pass 8-gate pre-commit (`fix-guard.js`)
+- Every commit must pass 12-gate pre-commit (`fix-guard.js`)
 - Stage files by name (NEVER `git add .` or `git add -A`)
 - ALWAYS stage with source files: `FIX_LEDGER.json` + `STAGING_TICKETS.md`
 - Commit format: `fix(STG-XXX): description` with body listing files, migration, tests, fix ledger entries
