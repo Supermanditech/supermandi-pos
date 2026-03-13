@@ -44,7 +44,9 @@ const formatInrGrouped = (value: string): string => {
 // LIVE.POS.AMOUNT_PRECISION_AND_CAP.001: Max displayable amount (100 crore = 1 billion paise)
 const MAX_AMOUNT_MINOR = 1_000_000_000_00; // 100 crore INR in paise
 
-export function formatMoney(minor: number, currency: MoneyCurrency = "INR", fractionDigits = 2): string {
+export function formatMoney(minor: number | null | undefined, currency: MoneyCurrency = "INR", fractionDigits = 2): string {
+  // STG-116: null/undefined returns em dash for display safety
+  if (minor === null || minor === undefined) return "—";
   const safeMinor = Number.isFinite(Number(minor)) ? Number(minor) : 0;
   // LIVE.POS.AMOUNT_PRECISION_AND_CAP.001: Cap and round to prevent floating point display issues
   const cappedMinor = Math.min(Math.abs(safeMinor), MAX_AMOUNT_MINOR) * (safeMinor < 0 ? -1 : 1);

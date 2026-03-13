@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 25,
+  "version": 26,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -948,6 +948,43 @@
         "test_guard": "4 tests pass",
         "ux_states": "null returns dash, same behavior",
         "navigation": "no navigation change"
+      }
+    },
+    {
+      "ticket": "STG-116",
+      "file": "src/utils/money.ts",
+      "start_line": 47,
+      "end_line": 50,
+      "checksum": "1a455cdec376bc31",
+      "description": "formatMoney null/undefined safety: returns em dash for null/undefined input",
+      "test_file": "src/__tests__/utils/money.stg-116.null-safety-lakh.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": "N/A",
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T20:42:27.074Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "operator_approved": "null/undefined safety, no visual change for valid inputs",
+        "parity_scanned": "no dev URLs",
+        "parity_fixed": "no gaps",
+        "gcp_parity": "pure frontend util",
+        "regression_check": "25 fixes intact",
+        "test_guard": "8 tests pass"
       }
     }
   ]
