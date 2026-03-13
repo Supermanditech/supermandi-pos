@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 23,
+  "version": 24,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -869,6 +869,43 @@
         "gcp_parity": "pure frontend",
         "regression_check": "22 fixes intact",
         "test_guard": "3 tests pass"
+      }
+    },
+    {
+      "ticket": "STG-011",
+      "file": "src/theme/typography.ts",
+      "start_line": 1,
+      "end_line": 77,
+      "checksum": "81123b3e40e87363",
+      "description": "POS-grade readability audit: all sizes >= 14px, body >= 16px, proper line height ratios",
+      "test_file": "src/__tests__/theme/typography.stg-011.pos-readability.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": "N/A",
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T20:39:58.255Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "operator_approved": "audit only, no code changes needed",
+        "parity_scanned": "no dev URLs",
+        "parity_fixed": "no gaps",
+        "gcp_parity": "pure frontend",
+        "regression_check": "23 fixes intact",
+        "test_guard": "6 tests pass"
       }
     }
   ]
