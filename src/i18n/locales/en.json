@@ -575,5 +575,25 @@
     "title": "Something went wrong",
     "message": "The app encountered an unexpected error. Please try again.",
     "tryAgain": "Try Again"
+  },
+  "components": {
+    "sellTile": {
+      "packaged": "PACKAGED",
+      "loose": "LOOSE",
+      "perUnit": "per {{unit}}",
+      "stockWithCount": "Stock: {{count}} pcs",
+      "stockUnavailable": "Stock: —",
+      "expired": "EXPIRED",
+      "expiryWarning": "Exp: {{date}} ({{days}}d)",
+      "gst": "GST {{rate}}%"
+    },
+    "cartItem": {
+      "add": "Add",
+      "addMore": "Add More"
+    },
+    "supplierRow": {
+      "minOrder": "Min. Order: {{qty}}",
+      "moqLabel": "Min. Order"
+    }
   }
 }

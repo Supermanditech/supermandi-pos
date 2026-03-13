@@ -5,6 +5,7 @@
 
 import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import { ProductImage } from "../ProductImage";
@@ -113,6 +114,7 @@ function formatExpiryDate(expiryIso: string): string {
 // =============================================================================
 
 export function SellTile({ product, testID }: SellTileProps) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -141,7 +143,8 @@ export function SellTile({ product, testID }: SellTileProps) {
     mrp && mrp > 0 ? `MRP ${formatPrice(mrp)}` : null;
 
   // --- Pack size ---
-  const packSize = packSizeLabel(mode, net_content_value, net_content_unit, rate_unit);
+  const packSizeRaw = packSizeLabel(mode, net_content_value, net_content_unit, rate_unit);
+  const packSize = mode === "LOOSE" && rate_unit ? t("components.sellTile.perUnit", { unit: rate_unit }) : packSizeRaw;
 
   // --- Stock color ---
   const stockCount =
@@ -157,7 +160,7 @@ export function SellTile({ product, testID }: SellTileProps) {
           ? colors.warning
           : colors.success;
   const stockLabel =
-    stockCount === null ? "Stock: —" : `Stock: ${stockCount} pcs`;
+    stockCount === null ? t("components.sellTile.stockUnavailable") : t("components.sellTile.stockWithCount", { count: stockCount });
 
   // --- Expiry warning ---
   const daysLeft = daysUntilExpiry(expiry_date);
@@ -165,13 +168,13 @@ export function SellTile({ product, testID }: SellTileProps) {
   let expiryColor: string | null = null;
   if (daysLeft !== null) {
     if (daysLeft < 0) {
-      expiryText = "⚠ EXPIRED";
+      expiryText = `⚠ ${t("components.sellTile.expired")}`;
       expiryColor = colors.error;
     } else if (daysLeft <= 30) {
-      expiryText = `⚠ Exp: ${formatExpiryDate(expiry_date!)} (${daysLeft}d)`;
+      expiryText = `⚠ ${t("components.sellTile.expiryWarning", { date: formatExpiryDate(expiry_date!), days: daysLeft })}`;
       expiryColor = colors.error;
     } else if (daysLeft <= 90) {
-      expiryText = `⚠ Exp: ${formatExpiryDate(expiry_date!)} (${daysLeft}d)`;
+      expiryText = `⚠ ${t("components.sellTile.expiryWarning", { date: formatExpiryDate(expiry_date!), days: daysLeft })}`;
       expiryColor = colors.warning;
     }
     // >90d: no badge (expiryText stays null)
@@ -219,7 +222,7 @@ export function SellTile({ product, testID }: SellTileProps) {
                       : styles.modeBadgeTextLoose,
                   ]}
                 >
-                  {modeBadge}
+                  {modeBadge === "PACKAGED" ? t("components.sellTile.packaged") : t("components.sellTile.loose")}
                 </Text>
               </View>
             ) : null}
@@ -271,7 +274,7 @@ export function SellTile({ product, testID }: SellTileProps) {
         <View style={styles.bottomRight}>
           {gst_rate != null ? (
             <Text style={styles.gst} testID="sell-tile-gst">
-              GST {gst_rate}%
+              {t("components.sellTile.gst", { rate: gst_rate })}
             </Text>
           ) : null}
           {barcode ? (

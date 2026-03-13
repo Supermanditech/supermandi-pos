@@ -3,6 +3,7 @@
 
 import React, { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { theme } from "../../theme";
@@ -25,6 +26,7 @@ export interface CartItemProps {
 // =============================================================================
 
 export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
+  const { t } = useTranslation();
   const lineTotal = item.quantity * item.unitPrice;
   const isBelowMoq = item.quantity < item.moq;
 
@@ -81,7 +83,7 @@ export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
               color={theme.colors.warning}
             />
             <Text style={styles.moqWarningText}>
-              MOQ: {item.moq}
+              {t("components.supplierRow.minOrder", { qty: item.moq })}
             </Text>
           </View>
         )}

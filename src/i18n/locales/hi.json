@@ -575,5 +575,25 @@
     "title": "कुछ गलत हो गया",
     "message": "ऐप में एक अप्रत्याशित त्रुटि हुई। कृपया पुनः प्रयास करें।",
     "tryAgain": "पुनः प्रयास करें"
+  },
+  "components": {
+    "sellTile": {
+      "packaged": "पैकेज्ड",
+      "loose": "खुला",
+      "perUnit": "प्रति {{unit}}",
+      "stockWithCount": "स्टॉक: {{count}} पीस",
+      "stockUnavailable": "स्टॉक: —",
+      "expired": "समाप्त",
+      "expiryWarning": "एक्सपायरी: {{date}} ({{days}} दिन)",
+      "gst": "GST {{rate}}%"
+    },
+    "cartItem": {
+      "add": "जोड़ें",
+      "addMore": "और जोड़ें"
+    },
+    "supplierRow": {
+      "minOrder": "न्यूनतम ऑर्डर: {{qty}}",
+      "moqLabel": "न्यूनतम ऑर्डर"
+    }
   }
 }

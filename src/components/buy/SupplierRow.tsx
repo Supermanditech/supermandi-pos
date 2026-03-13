@@ -3,6 +3,7 @@
 
 import React, { useCallback, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { theme } from "../../theme";
@@ -48,6 +49,7 @@ export function SupplierRow({
   onToggleExpand,
   bnplEligible = false,
 }: SupplierRowProps) {
+  const { t } = useTranslation();
   const [quantity, setQuantity] = useState(supplier.moq);
   const stockColor = getStockStatusColor(
     supplier.stockStatus as "in_stock" | "low_stock" | "out_of_stock"
@@ -139,7 +141,7 @@ export function SupplierRow({
           {/* Meta info */}
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
-              <Text style={styles.metaLabel}>MOQ</Text>
+              <Text style={styles.metaLabel}>{t("components.supplierRow.moqLabel")}</Text>
               <Text style={styles.metaValue}>{supplier.moq}</Text>
             </View>
             {supplier.maxQty && (
@@ -199,7 +201,7 @@ export function SupplierRow({
                   color={theme.colors.textInverse}
                 />
                 <Text style={styles.addButtonText}>
-                  {cartQuantity > 0 ? "Add More" : "Add"}
+                  {cartQuantity > 0 ? t("components.cartItem.addMore") : t("components.cartItem.add")}
                 </Text>
               </Pressable>
             </View>
