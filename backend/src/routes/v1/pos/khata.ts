@@ -7,6 +7,7 @@ import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/d
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
+import { encrypt } from "../../../utils/encryption";  // STG-473: Encrypt phone in khata entries
 
 export const posKhataRouter = Router();
 
@@ -185,6 +186,23 @@ posKhataRouter.post("/khata/entries", requireDeviceToken, requireActiveStore, as
   }
   if (!amountMinor || typeof amountMinor !== "number" || amountMinor <= 0) {
     return res.status(400).json({ error: "amountMinor must be a positive number" });
+  }
+
+  // STG-473: Check consent before storing customer phone (DPDP compliance)
+  const consentCheck = await pool.query(
+    `SELECT id FROM platform.consent_records
+     WHERE store_id = $1 AND customer_phone = $2 AND consent_type = 'khata_phone' AND revoked_at IS NULL
+     LIMIT 1`,
+    [storeId, customerPhone]
+  );
+
+  if (consentCheck.rows.length === 0) {
+    return res.status(403).json({
+      success: false,
+      consentRequired: true,
+      consentType: 'khata_phone',
+      error: 'Customer consent required before recording khata entries. Please obtain consent first.',
+    });
   }
 
   const client = await pool.connect();

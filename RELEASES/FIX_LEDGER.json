@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 18,
+  "version": 19,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -676,6 +676,46 @@
         "gcp_parity": "true",
         "regression_check": "true",
         "test_guard": "true"
+      }
+    },
+    {
+      "ticket": "STG-473",
+      "file": "backend/src/routes/v1/pos/khata.ts",
+      "start_line": 191,
+      "end_line": 206,
+      "checksum": "6e92c01057ed080a",
+      "description": "Khata consent gate: check khata_phone consent before creating entry, return 403 with consentRequired",
+      "test_file": "backend/tests/khata.stg-473.consent-gate.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T20:32:03.049Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "pass",
+        "business_logic": "pass",
+        "db_schema": "pass",
+        "operator_approved": "backend-only consent gate, no UI change, source-code analysis test verified",
+        "parity_scanned": "no dev URLs, uses pool.query with parameterized SQL",
+        "parity_fixed": "no parity gaps, consent table created in migration 188",
+        "gcp_parity": "no localhost URLs, env vars used, staging-compatible",
+        "regression_check": "zero drift confirmed, 18 fixes intact",
+        "test_guard": "6 tests pass in khata.stg-473.consent-gate.unit.test.ts"
       }
     }
   ]
