@@ -157,7 +157,7 @@
     "outOfStock": "Out of stock",
     "lowStock": "Low stock",
     "newItemFound": "New item found. Enter the price to add it to cart.",
-    "digitiseMode": "Digitise mode on. Scan products to save.",
+    "digitiseMode": "Catalog mode: scan products to add them to your store inventory.",
     "digitiseSaved": "Saved. You can scan the next product.",
     "price": "Price",
     "quantity": "Qty",
@@ -393,8 +393,8 @@
     "enrollFailed": "Enrollment failed"
   },
   "status": {
-    "storeInactive": "POS is inactive. Add UPI ID in Superadmin to start billing.",
-    "deviceInactive": "This device is disabled. Contact Superadmin to enable it.",
+    "storeInactive": "POS is inactive. Add your UPI ID in settings to start billing.",
+    "deviceInactive": "This device is disabled. Contact your store admin to enable it.",
     "offline": "You're offline. Cash/Due will work. We'll sync when internet is back.",
     "syncPending": "Sync pending: {{count}} bills. Keep the app open for a minute.",
     "printerMissing": "Printer not connected. You can still bill; printing will be available once connected.",
@@ -404,7 +404,7 @@
   },
   "errors": {
     "enrollmentInvalid": "Enrollment code is invalid or expired.",
-    "deviceAlreadyEnrolled": "This label is already active. Ask Superadmin to reset the token.",
+    "deviceAlreadyEnrolled": "This label is already active. Ask your store admin to reset the token.",
     "storeNotFound": "Store not found for this enrollment code.",
     "labelRequired": "Enter a device label (e.g., Counter-1).",
     "networkError": "Network error. Please check your connection.",
@@ -417,7 +417,7 @@
     "minimumOrderValue": "Minimum order value not met.",
     "invalidQuantity": "Please enter a valid quantity.",
     "invalidPrice": "Please enter a valid price.",
-    "sessionExpired": "Session expired. Please login again.",
+    "sessionExpired": "Session expired. Please re-enter your staff PIN.",
     "permissionDenied": "Permission denied.",
     "cameraPermission": "Camera permission is required to scan barcodes.",
     "printerError": "Printer error. Please check connection.",
