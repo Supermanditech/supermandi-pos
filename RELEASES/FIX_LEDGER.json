@@ -1,0 +1,44 @@
+{
+  "$schema": "./fix-ledger-schema.json",
+  "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
+  "version": 2,
+  "fixes": [
+    {
+      "ticket": "STG-001",
+      "file": "backend/src/routes/v1/admin/suppliers.ts",
+      "start_line": 227,
+      "end_line": 301,
+      "checksum": "a6ced8442dd626e9",
+      "description": "Self-registered supplier verify: fallback to auth.applications with correct column aliases, VARCHAR(15) GSTIN, conditional table update",
+      "test_file": "backend/tests/suppliers.stg-001.verify-fallback.unit.test.ts",
+      "registered_at": "2026-03-13T08:58:45.431Z",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_evidence": {
+        "business_logic": "GSTIN truncated to VARCHAR(15), conditional update for applications vs requests table, 404 on missing supplier",
+        "backend_api": "PUT /admin/suppliers/:id/verify returns 200 with supplier_id for both application and request paths",
+        "db_schema": "Uses auth.applications and supplier.supplier_requests tables, no schema change needed",
+        "gcp_parity": "No localhost URLs, no env vars needed, query uses parameterized SQL",
+        "regression_check": "Supplier approval flow unchanged for request-path suppliers, only adds fallback for application-path",
+        "operator_approved": "operator verified supplier verify flow on superadmin portal",
+        "parity_scanned": "Parity scan clean — 4 files, 0 issues at 2026-03-13T11:20:26.575Z",
+        "parity_fixed": "No parity gaps found — nothing to fix"
+      }
+    }
+  ]
+}

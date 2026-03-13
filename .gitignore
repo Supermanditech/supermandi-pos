@@ -151,8 +151,15 @@ RELEASES/**/*.html
 
 # Local session manager state
 scripts/.session-state.json
-# Local-only operator helper
+# Local-only operator helpers
 scripts/laptop-speedup.ps1
+scripts/laptop-cleanup.ps1
+
+# Local binaries (downloaded, not committed)
+cloud-sql-proxy.exe
+
+# Screenshots / debug captures
+pos_screen.png
 
 # Firebase service account keys (NEVER commit)
 firebase-service-account*.json

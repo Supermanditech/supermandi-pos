@@ -226,11 +226,13 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
 
     // STG-038: Fall back to auth.applications for self-registered suppliers
     let request: any;
+    let isApplicationFallback = false;
     if (reqResult.rowCount === 0) {
       const appResult = await client.query(
-        `SELECT a.id, a.business_name, a.phone, a.email, a.status,
+        `SELECT a.id, a.business_name AS requested_name, a.gstin AS requested_gstin,
+                a.phone AS requested_phone, a.email AS requested_email, a.status,
                 a.entity_type, a.created_at,
-                NULL as store_id, NULL as store_name, NULL as store_status
+                NULL::uuid as store_id, NULL as store_name, NULL as store_status
          FROM auth.applications a
          WHERE a.id = $1::uuid AND a.status IN ('pending', 'KYC_SUBMITTED', 'PAYMENTS_SUBMITTED') AND a.entity_type = 'supplier'`,
         [supplierId]
@@ -240,6 +242,7 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
         return res.status(404).json({ error: "Supplier request not found or already processed" });
       }
       request = appResult.rows[0];
+      isApplicationFallback = true;
     } else {
       request = reqResult.rows[0];
     }
@@ -257,32 +260,45 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
 
     // If verifySupplier=true, create a new supplier from the request data
     if (verifySupplier && !linkedSupplierId) {
+      // GSTIN fallback: truncate to 15 chars (VARCHAR(15) constraint)
+      const gstin = request.requested_gstin || ('PND-' + supplierId.substring(0, 11));
       const supplierResult = await client.query(
-        `INSERT INTO supplier.suppliers (gstin, business_name, primary_phone, primary_email, verification_status, status)
-         VALUES ($1, $2, $3, $4, 'ACTIVE', 'active')
+        `INSERT INTO supplier.suppliers (gstin, business_name, primary_phone, primary_email, verification_status, status, application_id)
+         VALUES ($1, $2, $3, $4, 'ACTIVE', 'active', $5::uuid)
          RETURNING id`,
         [
-          request.requested_gstin || 'PENDING-' + supplierId.substring(0, 8),
+          gstin,
           request.requested_name || 'Unknown Supplier',
           request.requested_phone,
-          request.requested_email
+          request.requested_email,
+          supplierId
         ]
       );
       finalSupplierId = supplierResult.rows[0].id;
     }
 
     // GO-LIVE-130: Update the request with reviewer information
-    await client.query(
-      `UPDATE supplier.supplier_requests
-       SET status = 'approved',
-           review_notes = $2,
-           reviewed_at = NOW(),
-           reviewed_by = $3,
-           approved_supplier_id = $4,
-           updated_at = NOW()
-       WHERE id = $1::uuid`,
-      [supplierId, notes || null, adminId !== 'master-token' ? adminId : null, finalSupplierId]
-    );
+    if (isApplicationFallback) {
+      // Self-registered supplier: update auth.applications status
+      await client.query(
+        `UPDATE auth.applications
+         SET status = 'approved', updated_at = NOW()
+         WHERE id = $1::uuid`,
+        [supplierId]
+      );
+    } else {
+      await client.query(
+        `UPDATE supplier.supplier_requests
+         SET status = 'approved',
+             review_notes = $2,
+             reviewed_at = NOW(),
+             reviewed_by = $3,
+             approved_supplier_id = $4,
+             updated_at = NOW()
+         WHERE id = $1::uuid`,
+        [supplierId, notes || null, adminId !== 'master-token' ? adminId : null, finalSupplierId]
+      );
+    }
 
     // GO-LIVE-130: Log to audit table
     try {

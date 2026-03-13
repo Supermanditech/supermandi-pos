@@ -4,7 +4,7 @@
   "private": true,
   "description": "SuperMandi Backend Microservices Monorepo",
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail \"pnpm -r --parallel run dev\" \"nodemon --watch src --ext ts --exec ts-node --project tsconfig.main.json src/server.ts\"",
+    "dev": "concurrently --kill-others-on-fail \"pnpm -r --parallel run dev\" \"nodemon --watch src --ext ts --exec \\\"ts-node -r ./scripts/preload-env.js --project tsconfig.main.json src/server.ts\\\"\"",
     "build": "pnpm -r run build",
     "test": "jest",
     "test:unit": "jest --config jest.unit.config.ts",
