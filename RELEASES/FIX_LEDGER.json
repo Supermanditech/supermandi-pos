@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 16,
+  "version": 17,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -595,6 +595,46 @@
         "gcp_parity": "true",
         "regression_check": "true",
         "test_guard": "true"
+      }
+    },
+    {
+      "ticket": "STG-474",
+      "file": "backend/src/routes/v1/pos/credit.ts",
+      "start_line": 549,
+      "end_line": 560,
+      "checksum": "692a541ac76c4a4c",
+      "description": "Encrypt PAN and Aadhaar using AES-256-GCM before storing in credit_applications. Admin route decrypts for display with legacy plaintext fallback.",
+      "test_file": "backend/tests/credit.stg-474.pan-encryption.unit.test.ts",
+      "depends_on": "STG-486",
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T20:24:18.044Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "true",
+        "backend_api": "true",
+        "operator_approved": "true",
+        "parity_scanned": "true",
+        "parity_fixed": "true",
+        "gcp_parity": "true",
+        "regression_check": "true",
+        "test_guard": "true",
+        "db_schema": "N/A"
       }
     }
   ]

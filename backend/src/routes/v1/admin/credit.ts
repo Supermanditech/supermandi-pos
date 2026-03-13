@@ -7,6 +7,7 @@ import { getPool } from "../../../db/client";
 import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
+import { decrypt } from "../../../utils/encryption";  // STG-474: Decrypt PII for admin display
 
 export const adminCreditRouter = Router();
 
@@ -54,8 +55,23 @@ adminCreditRouter.get(
         [status]
       );
 
+      // STG-474: Decrypt PAN/Aadhaar for admin display
+      const rows = await Promise.all(result.rows.map(async (row: any) => {
+        try {
+          if (row.panNumber && row.panNumber.startsWith('v1:')) {
+            row.panNumber = await decrypt(row.panNumber);
+          }
+          if (row.aadhaarLast4 && row.aadhaarLast4.startsWith('v1:')) {
+            row.aadhaarLast4 = await decrypt(row.aadhaarLast4);
+          }
+        } catch {
+          // If decryption fails (old plaintext data), leave as-is
+        }
+        return row;
+      }));
+
       return res.json({
-        data: result.rows,
+        data: rows,
         total: Number(countResult.rows[0]?.total || 0),
       });
     } catch (_error: unknown) {

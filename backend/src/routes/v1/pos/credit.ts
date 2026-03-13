@@ -8,6 +8,7 @@ import { requireActiveStore } from "../../../middleware/storeStatusGate";  // SE
 import { randomUUID } from "crypto";
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
+import { encrypt } from "../../../utils/encryption";  // STG-474: Encrypt PII at rest
 
 export const posCreditRouter = Router();
 
@@ -544,12 +545,16 @@ posCreditRouter.post("/credit/:applicationId/kyc", requireDeviceToken, requireAc
 
     // CL-020: KYC passed — set status to kyc_verified (pending SuperAdmin approval)
     // Previously auto-approved with mock KYC. Now requires admin review via /admin/credit/applications
+    // STG-474: Encrypt PAN and Aadhaar before storing (DPDP compliance)
+    const encryptedPan = await encrypt(panNumber);
+    const encryptedAadhaar = await encrypt(aadhaarLast4);
+
     await client.query(`
       UPDATE payments.credit_applications
       SET kyc_status = 'verified', status = 'kyc_verified',
           pan_number = $1, aadhaar_last4 = $2
       WHERE id = $3 AND store_id = $4
-    `, [panNumber, aadhaarLast4, applicationId, storeId]);
+    `, [encryptedPan, encryptedAadhaar, applicationId, storeId]);
 
     await client.query("COMMIT");
 
