@@ -5,7 +5,7 @@
  * Commands:
  *   session-start  — full session startup check (Claude runs this FIRST)
  *   check          — verify all registered fixes are intact (handles line shifts)
- *   pre-commit     — FULL pre-commit gate: 8 gates (drift + secrets + staging + tickets + migrations + URLs + hygiene + checklist)
+ *   pre-commit     — FULL pre-commit gate: 12 gates (drift + secrets + staging + tickets + migrations + URLs + hygiene + ledger-co-commit + no-amend + msg-format + single-ticket + checklist)
  *   register       — register a new fix with checksum + auto-scoped checklist
  *   checklist      — mark checklist items complete with evidence
  *   reindex        — re-scan files and update line numbers after line shifts
@@ -665,13 +665,13 @@ if (command === 'check') {
 
 } else if (command === 'pre-commit') {
   // ===== FULL MULTI-GATE PRE-COMMIT =====
-  console.log('\n=== FIX GUARD PRE-COMMIT — 8 GATES ===\n');
+  console.log('\n=== FIX GUARD PRE-COMMIT — 12 GATES ===\n');
 
   let blocked = false;
   let warnings = 0;
 
   // Gate 1: Fix drift
-  console.log('[Gate 1/8] Fix Drift Check...');
+  console.log('[Gate 1/12] Fix Drift Check...');
   const driftResults = checkAll();
   if (!driftResults.ok) {
     console.log('  ❌ BLOCKED: Fix drift detected');
@@ -690,7 +690,7 @@ if (command === 'check') {
   }
 
   // Gate 2: Secret scanner
-  console.log('[Gate 2/8] Secret Scanner...');
+  console.log('[Gate 2/12] Secret Scanner...');
   const secretFailures = checkStagedSecrets();
   if (secretFailures.length > 0) {
     console.log('  ❌ BLOCKED: Secrets detected in staged files');
@@ -703,7 +703,7 @@ if (command === 'check') {
   }
 
   // Gate 3: Staged files validation
-  console.log('[Gate 3/8] Staged Files Validation...');
+  console.log('[Gate 3/12] Staged Files Validation...');
   const stagedFailures = checkStagedFiles();
   const stagedErrors = stagedFailures.filter(f => f.severity !== 'WARNING');
   const stagedWarnings = stagedFailures.filter(f => f.severity === 'WARNING');
@@ -722,7 +722,7 @@ if (command === 'check') {
   }
 
   // Gate 4: Ticket consistency
-  console.log('[Gate 4/8] Ticket Consistency...');
+  console.log('[Gate 4/12] Ticket Consistency...');
   const ticketFailures = checkTicketConsistency();
   const ticketErrors = ticketFailures.filter(f => f.severity !== 'WARNING');
   const ticketWarnings = ticketFailures.filter(f => f.severity === 'WARNING');
@@ -741,7 +741,7 @@ if (command === 'check') {
   }
 
   // Gate 5: Migration sequence
-  console.log('[Gate 5/8] Migration Sequence...');
+  console.log('[Gate 5/12] Migration Sequence...');
   const migFailures = checkMigrationSequence();
   if (migFailures.length > 0) {
     for (const f of migFailures) {
@@ -753,7 +753,7 @@ if (command === 'check') {
   }
 
   // Gate 6: Localhost/dev URL check
-  console.log('[Gate 6/8] Dev URL Scanner...');
+  console.log('[Gate 6/12] Dev URL Scanner...');
   const urlFailures = checkLocalhostUrls();
   if (urlFailures.length > 0) {
     for (const f of urlFailures) {
@@ -765,8 +765,9 @@ if (command === 'check') {
   }
 
   // Gate 7: Commit hygiene — check git status for signs of broad staging
-  console.log('[Gate 7/8] Commit Hygiene...');
-  const stagedCount = exec('git diff --cached --name-only').split('\n').filter(Boolean).length;
+  console.log('[Gate 7/12] Commit Hygiene...');
+  const stagedFiles7 = exec('git diff --cached --name-only').split('\n').filter(Boolean);
+  const stagedCount = stagedFiles7.length;
   if (stagedCount > 20) {
     console.log(`  ⚠️  ${stagedCount} files staged — unusually large commit. Consider splitting.`);
     warnings++;
@@ -777,8 +778,86 @@ if (command === 'check') {
     console.log(`  ✅ ${stagedCount} files staged`);
   }
 
-  // Gate 8: Completion checklist — every applicable layer must be checked off
-  console.log('[Gate 8/8] Completion Checklist...');
+  // Gate 8: Ledger co-commit — if source files staged, FIX_LEDGER.json MUST also be staged
+  console.log('[Gate 8/12] Ledger Co-Commit...');
+  const sourceFilesStaged = stagedFiles7.filter(f =>
+    !f.startsWith('RELEASES/') && !f.startsWith('.') && !f.startsWith('scripts/fix-guard') &&
+    (f.endsWith('.ts') || f.endsWith('.tsx') || f.endsWith('.js') || f.endsWith('.jsx') || f.endsWith('.sql'))
+  );
+  const ledgerStaged = stagedFiles7.includes('RELEASES/FIX_LEDGER.json');
+  const ticketsStaged = stagedFiles7.includes('RELEASES/STAGING_TICKETS.md');
+  if (sourceFilesStaged.length > 0 && !ledgerStaged) {
+    console.log('  ⚠️  Source files staged without FIX_LEDGER.json — stage it: git add RELEASES/FIX_LEDGER.json');
+    warnings++;
+  } else {
+    console.log('  ✅ Ledger co-commit OK');
+  }
+
+  // Gate 9: No amend — detect if this is an amend of a tagged commit
+  console.log('[Gate 9/12] No Amend on Tagged Commits...');
+  const isAmend = process.env.GIT_REFLOG_ACTION && process.env.GIT_REFLOG_ACTION.includes('amend');
+  // Also check if HEAD has a tag (amending a tagged commit is dangerous)
+  const headTags = exec('git tag --points-at HEAD 2>/dev/null');
+  if (headTags && headTags.length > 0) {
+    // HEAD has tags — warn that amending will orphan the tag
+    const tagList = headTags.split('\n').filter(Boolean);
+    if (tagList.some(t => t.startsWith('stg-') || t.startsWith('prestage-'))) {
+      console.log(`  ⚠️  HEAD has ticket tags: ${tagList.join(', ')} — amending will orphan them. Create a new commit instead.`);
+      warnings++;
+    } else {
+      console.log('  ✅ No amend conflict');
+    }
+  } else {
+    console.log('  ✅ No amend conflict');
+  }
+
+  // Gate 10: Commit message ticket format — extract from .git/COMMIT_EDITMSG
+  console.log('[Gate 10/12] Commit Message Format...');
+  const commitMsgPath = path.join(ROOT, '.git', 'COMMIT_EDITMSG');
+  if (fs.existsSync(commitMsgPath)) {
+    const commitMsg = fs.readFileSync(commitMsgPath, 'utf8').trim();
+    const firstLine = commitMsg.split('\n')[0];
+    // Must match: type(SCOPE): description — where type is fix|feat|chore|test|docs|refactor
+    const validFormat = /^(fix|feat|chore|test|docs|refactor|revert)\([^)]+\):\s.+/.test(firstLine);
+    if (!validFormat) {
+      console.log(`  ⚠️  Commit message doesn't match format "type(SCOPE): description" — got: "${firstLine.substring(0, 60)}"`);
+      warnings++;
+    } else {
+      console.log('  ✅ Commit message format OK');
+    }
+    // Check for Co-Authored-By
+    if (!commitMsg.includes('Co-Authored-By:')) {
+      console.log('  ⚠️  Missing Co-Authored-By line');
+      warnings++;
+    }
+  } else {
+    console.log('  ⚠️  Cannot read commit message (COMMIT_EDITMSG not found)');
+    warnings++;
+  }
+
+  // Gate 11: Single ticket per commit — commit message should reference only ONE STG-XXX
+  console.log('[Gate 11/12] Single Ticket Per Commit...');
+  if (fs.existsSync(commitMsgPath)) {
+    const commitMsg11 = fs.readFileSync(commitMsgPath, 'utf8').trim();
+    const stgMatches = commitMsg11.match(/STG-\d+/g);
+    if (stgMatches) {
+      const uniqueTickets = [...new Set(stgMatches)];
+      if (uniqueTickets.length > 1) {
+        console.log(`  ❌ BLOCKED: Multiple tickets in one commit: ${uniqueTickets.join(', ')} — one ticket = one commit`);
+        blocked = true;
+      } else {
+        console.log(`  ✅ Single ticket: ${uniqueTickets[0]}`);
+      }
+    } else {
+      // No STG- reference — might be a tooling/chore commit, that's OK
+      console.log('  ✅ Non-ticket commit (chore/infra)');
+    }
+  } else {
+    console.log('  ✅ Skipped (no commit message)');
+  }
+
+  // Gate 12: Completion checklist — every applicable layer must be checked off
+  console.log('[Gate 12/12] Completion Checklist...');
   const ledgerForChecklist = loadLedger();
   const activeFixesForChecklist = ledgerForChecklist.fixes.filter(f => f.status === 'ACTIVE' && f.checklist);
   const activeFixesNoChecklist = ledgerForChecklist.fixes.filter(f => f.status === 'ACTIVE' && !f.checklist);
@@ -821,7 +900,7 @@ if (command === 'check') {
     if (warnings > 0) {
       console.log(`\n✅ COMMIT ALLOWED — ${warnings} warning(s) (review above)`);
     } else {
-      console.log('\n✅ ALL 8 GATES PASSED — commit allowed');
+      console.log('\n✅ ALL 12 GATES PASSED — commit allowed');
     }
     process.exit(0);
   }
@@ -1456,7 +1535,7 @@ fi
   // Final verdict
   if (results.ok) {
     console.log(`\n✅ SESSION READY — ${results.intact.length} fixes intact, zero drift.`);
-    console.log(`   Pre-commit hook: 8 gates active`);
+    console.log(`   Pre-commit hook: 12 gates active`);
     console.log(`   Claude may proceed with new tickets.`);
   } else {
     console.log(`\n❌ SESSION BLOCKED — drift or missing files detected.`);
