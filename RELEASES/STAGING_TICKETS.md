@@ -250,7 +250,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-221 | SellScan — SMALL_SCREEN_WIDTH=400 threshold may not cover all budget phones | P3 | OPEN |
 | STG-222 | SellScan — product tile formatPrice shows ".00" on round amounts (₹28.00) | P2 | OPEN |
 | STG-223 | SellScan — no empty state illustration when search returns zero products | P2 | OPEN |
-| STG-224 | SellScan — category rail DEMO_CATEGORIES may show dummy data in production | P1 | OPEN |
+| STG-224 | SellScan — category rail DEMO_CATEGORIES may show dummy data in production | P1 | PARKED |
 | STG-225 | SellScan — NUM_COLUMNS=2 hardcoded, no responsive columns for tablets | P3 | OPEN |
 | STG-226 | SellTile — "—" dash for null price, should show "Price not set" | P2 | OPEN |
 | STG-227 | SellTile — expiry days calculation doesn't account for timezone (IST) | P2 | OPEN |
@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | OPEN |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | OPEN |
 
-**Total**: 492 tickets | 4 PARKED | 1 DONE | 0 IN_PROGRESS | 487 OPEN
+**Total**: 492 tickets | 5 PARKED | 1 DONE | 0 IN_PROGRESS | 486 OPEN
 
 ---
 
@@ -6989,7 +6989,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-224 — SellScan — category rail DEMO_CATEGORIES may show dummy data in production
 
-- **Status**: OPEN
+- **Status**: PARKED — tag `stg-224-2026-03-14`, test: `src/__tests__/screens/SellScanScreen.stg-224.demo-categories.unit.test.tsx`
 - **Priority**: P1
 - **Source**: Code audit — [SellScanScreen.tsx:61](src/screens/SellScanScreen.tsx#L61)
 - **Scope**: `src/screens/SellScanScreen.tsx`, `src/components/sell/CategoryRail.tsx`

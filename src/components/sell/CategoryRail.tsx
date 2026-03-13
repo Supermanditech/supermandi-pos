@@ -251,8 +251,11 @@ export function CategoryRail({
   const showExpandedLayout = expanded && !isCompact;
   const isOpen = expanded;
 
-  // CAT-004: Use API categories if provided, otherwise fallback to demo
-  const displayCategories = categories && categories.length > 0 ? categories : DEMO_CATEGORIES;
+  // STG-224: In production, show empty when API has no categories (no demo data).
+  // DEMO_CATEGORIES only used as dev fallback for testing without API.
+  const displayCategories = categories && categories.length > 0
+    ? categories
+    : __DEV__ ? DEMO_CATEGORIES : [];
 
   useEffect(() => {
     Animated.parallel([

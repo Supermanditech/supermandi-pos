@@ -2801,7 +2801,8 @@ export default function SellScanScreen({
   );
 
   const showCategoryPill = showCategoryRail && !addExpanded && !categoryRailExpanded;
-  const displayCategories = apiCategories.length > 0 ? apiCategories : DEMO_CATEGORIES;
+  // STG-224: No demo categories in production — empty array triggers "unavailable" state
+  const displayCategories = apiCategories.length > 0 ? apiCategories : (__DEV__ ? DEMO_CATEGORIES : []);
   const featuredSku =
     showCategoryPill && selectedCategory === "all" && catalogItems.length > 0
       ? catalogItems[0]

@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 6,
+  "version": 7,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -198,6 +198,47 @@
         "gcp_parity": "No env vars leak",
         "regression_check": "All tests pass",
         "test_guard": "3 tests verify guard"
+      }
+    },
+    {
+      "ticket": "STG-224",
+      "file": "src/components/sell/CategoryRail.tsx",
+      "start_line": 254,
+      "end_line": 258,
+      "checksum": "f843b98db59385f2",
+      "description": "DEMO_CATEGORIES fallback gated behind __DEV__ — production shows empty array when API has no categories",
+      "test_file": "src/__tests__/screens/SellScanScreen.stg-224.demo-categories.unit.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "business_logic": "N/A",
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T19:54:26.646Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "Demo category names never shown in production",
+        "ux_states": "N/A — empty array triggers existing empty state",
+        "wiring": "N/A — no API changes",
+        "navigation": "N/A",
+        "operator_approved": "Mode A pre-staging",
+        "parity_scanned": "Client-side only",
+        "parity_fixed": "N/A",
+        "gcp_parity": "No env vars, pure __DEV__",
+        "regression_check": "Typecheck passes, all tests pass",
+        "test_guard": "4 tests verify __DEV__ guard on both files"
       }
     }
   ]
