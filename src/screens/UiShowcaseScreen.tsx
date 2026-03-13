@@ -12,8 +12,6 @@ import {
   Alert,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Constants from "expo-constants";
-
 import { theme, useThemeColors } from "../theme";
 import { showToast } from "../utils/showToast";
 import { ProductDetailModal } from "../components/buy/ProductDetailModal";
@@ -28,9 +26,8 @@ import { asError } from "../utils/errorUtils";
 // =============================================================================
 
 export function isQaMenuEnabled(): boolean {
-  if (__DEV__) return true;
-  const extra = Constants.expoConfig?.extra ?? {};
-  return extra.EXPO_PUBLIC_ENABLE_QA_MENU === "true" || extra.EXPO_PUBLIC_ENABLE_QA_MENU === true;
+  // STG-178: QA menu ONLY in dev builds — env var cannot override in production
+  return __DEV__;
 }
 
 // =============================================================================

@@ -204,7 +204,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-175 | Menu — no Pressable ripple/feedback effect on menu items (no android_ripple) | P2 | OPEN |
 | STG-176 | Menu — header paddingVertical:8 too tight, brand pill cramped | P2 | OPEN |
 | STG-177 | Menu — status panel "Sync" label hardcoded English (not i18n) | P2 | OPEN |
-| STG-178 | Menu — Build Info visible on release with EXPO_PUBLIC_ENABLE_QA_MENU=true | P1 | OPEN |
+| STG-178 | Menu — Build Info visible on release with EXPO_PUBLIC_ENABLE_QA_MENU=true | P1 | PARKED |
 | STG-179 | Menu — release build stamp shows raw SHA and timestamp, not user-friendly version | P2 | OPEN |
 | STG-180 | Menu — Switch Staff alert uses English string literals, not i18n | P2 | OPEN |
 | STG-181 | Menu — billActions (Reprint/Download/Share) all navigate to same SalesHistory | P1 | OPEN |
@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | OPEN |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | OPEN |
 
-**Total**: 492 tickets | 2 PARKED | 1 DONE | 0 IN_PROGRESS | 489 OPEN
+**Total**: 492 tickets | 3 PARKED | 1 DONE | 0 IN_PROGRESS | 488 OPEN
 
 ---
 
@@ -6036,7 +6036,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-178 — Menu — Build Info visible on release with EXPO_PUBLIC_ENABLE_QA_MENU=true
 
-- **Status**: OPEN
+- **Status**: PARKED — commit SHA pending, tag `stg-178-2026-03-14`, fix ledger region 4, test: `src/__tests__/screens/UiShowcaseScreen.stg-178.qa-gate.unit.test.tsx`
 - **Priority**: P1
 - **Source**: Code audit — [MenuScreen.tsx:1083-1101](src/screens/MenuScreen.tsx#L1083-L1101) and [UiShowcaseScreen.tsx:30-34](src/screens/UiShowcaseScreen.tsx#L30-L34)
 - **Scope**: `src/screens/MenuScreen.tsx`, `src/screens/UiShowcaseScreen.tsx`
