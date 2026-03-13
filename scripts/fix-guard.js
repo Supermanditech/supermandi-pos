@@ -811,9 +811,10 @@ if (command === 'check') {
     console.log('  ✅ No amend conflict');
   }
 
-  // Gate 10: Commit message ticket format — extract from .git/COMMIT_EDITMSG
+  // Gate 10: Commit message ticket format
+  // In pre-commit, COMMIT_EDITMSG is stale (previous commit). Accept path via argv[3] for commit-msg hook.
   console.log('[Gate 10/12] Commit Message Format...');
-  const commitMsgPath = path.join(ROOT, '.git', 'COMMIT_EDITMSG');
+  const commitMsgPath = process.argv[3] || path.join(ROOT, '.git', 'COMMIT_EDITMSG');
   if (fs.existsSync(commitMsgPath)) {
     const commitMsg = fs.readFileSync(commitMsgPath, 'utf8').trim();
     const firstLine = commitMsg.split('\n')[0];
@@ -836,14 +837,18 @@ if (command === 'check') {
   }
 
   // Gate 11: Single ticket per commit — commit message should reference only ONE STG-XXX
+  // In pre-commit hook, COMMIT_EDITMSG is stale (previous commit). Only the first line (subject)
+  // is checked to avoid false positives from body text mentioning other tickets.
   console.log('[Gate 11/12] Single Ticket Per Commit...');
   if (fs.existsSync(commitMsgPath)) {
     const commitMsg11 = fs.readFileSync(commitMsgPath, 'utf8').trim();
-    const stgMatches = commitMsg11.match(/STG-\d+/g);
+    // Only check the subject line (first line) for ticket references
+    const subjectLine = commitMsg11.split('\n')[0];
+    const stgMatches = subjectLine.match(/STG-\d+/g);
     if (stgMatches) {
       const uniqueTickets = [...new Set(stgMatches)];
       if (uniqueTickets.length > 1) {
-        console.log(`  ❌ BLOCKED: Multiple tickets in one commit: ${uniqueTickets.join(', ')} — one ticket = one commit`);
+        console.log(`  ❌ BLOCKED: Multiple tickets in subject line: ${uniqueTickets.join(', ')} — one ticket = one commit`);
         blocked = true;
       } else {
         console.log(`  ✅ Single ticket: ${uniqueTickets[0]}`);

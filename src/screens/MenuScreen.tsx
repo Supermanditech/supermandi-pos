@@ -1063,7 +1063,7 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"help-circle-outline" as any} size={20} color={tc.primary} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Help &amp; Support</Text>
+          <Text style={styles.menuTitle}>{"Help & Support"}</Text>
           <Text style={styles.menuSubtitle}>Contact us, quick links</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />

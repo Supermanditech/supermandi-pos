@@ -215,7 +215,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-186 | Menu — trend badge at 9px font too small to read on budget Android | P2 | OPEN |
 | STG-187 | Menu — trend percentage shows "551%" with no cap or "99%+" formatting | P2 | OPEN |
 | STG-188 | Menu — Payment Modes breakdown shows "Cash: ₹..." raw label, not i18n | P2 | OPEN |
-| STG-189 | Menu — Help & Support shows "&amp;" HTML entity instead of "&" | P0 | OPEN |
+| STG-189 | Menu — Help & Support shows "&amp;" HTML entity instead of "&" | P0 | PARKED |
 | STG-190 | Menu — no skeleton/shimmer loading state for System Status and Today's Sales | P2 | OPEN |
 | STG-191 | Menu — status panel statusBadge uses transparent bg (surfaceAlt), no outline | P3 | OPEN |
 | STG-192 | Menu — menuIcon 36x36 too small for touch targets on budget Android | P2 | OPEN |
@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | OPEN |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | OPEN |
 
-**Total**: 492 tickets | 7 PARKED | 1 DONE | 0 IN_PROGRESS | 484 OPEN
+**Total**: 492 tickets | 8 PARKED | 1 DONE | 0 IN_PROGRESS | 483 OPEN
 
 ---
 
