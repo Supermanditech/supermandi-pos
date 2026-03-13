@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 10,
+  "version": 11,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -354,6 +354,46 @@
         "ux_states": "N/A — single char fix",
         "wiring": "N/A",
         "navigation": "N/A"
+      }
+    },
+    {
+      "ticket": "STG-418",
+      "file": "backend/services/reorder-service/src/index.ts",
+      "start_line": 38,
+      "end_line": 48,
+      "checksum": "9336e692408aa006",
+      "description": "Health endpoint includes stockMonitor cron status — confirms startStockMonitor() is running",
+      "test_file": "backend/tests/reorder.stg-418.stock-monitor-startup.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T20:08:27.298Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "true",
+        "backend_api": "true",
+        "operator_approved": "true",
+        "parity_scanned": "true",
+        "parity_fixed": "true",
+        "gcp_parity": "true",
+        "regression_check": "true",
+        "test_guard": "true",
+        "db_schema": "N/A"
       }
     }
   ]

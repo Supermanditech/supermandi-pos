@@ -11,7 +11,7 @@ import settingsRoutes from './routes/settings';
 import policiesRoutes from './routes/policies';
 import pendingRoutes from './routes/pending';
 import { startInventoryConsumer, stopInventoryConsumer } from './consumers/inventoryConsumer';
-import { startStockMonitor, stopStockMonitor } from './jobs/stockMonitor';
+import { startStockMonitor, stopStockMonitor, isStockMonitorRunning } from './jobs/stockMonitor';
 
 const app = express();
 
@@ -37,12 +37,14 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 app.get('/health', async (_req: Request, res: Response) => {
   const dbHealthy = await healthCheck();
+  const cronRunning = isStockMonitorRunning();
 
   res.status(dbHealthy ? 200 : 503).json({
     status: dbHealthy ? 'ok' : 'degraded',
     service: 'reorder-service',
     version: '3.0.9',
     database: dbHealthy ? 'connected' : 'disconnected',
+    stockMonitor: cronRunning ? 'running' : 'stopped',
   });
 });
 
