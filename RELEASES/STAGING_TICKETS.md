@@ -170,7 +170,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-141 | Cart — Checkout button price doesn't animate on total change | P3 | OPEN |
 | STG-142 | BUG: "[menu.viewDetails]" raw i18n key leaked in Today's Sales card | P0 | OPEN |
 | STG-143 | BUG: "[menu.printerReady]" and "[menu.testPrint]" raw i18n keys leaked | P0 | OPEN |
-| STG-144 | SECURITY: Developer/QA section + BUILD INFO visible to all users | P0 | OPEN |
+| STG-144 | SECURITY: Developer/QA section + BUILD INFO visible to all users | P0 | PARKED |
 | STG-145 | SECURITY: BUILD INFO leaks token, API URL, StoreId UUID to end users | P0 | OPEN |
 | STG-146 | Menu — Device UUID shown instead of device label ("Counter-1") | P1 | OPEN |
 | STG-147 | Menu — store name lowercase in System Status vs title case in header | P2 | OPEN |
@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | OPEN |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | OPEN |
 
-**Total**: 492 tickets | 0 PARKED | 1 DONE | 0 IN_PROGRESS | 491 OPEN
+**Total**: 492 tickets | 1 PARKED | 1 DONE | 0 IN_PROGRESS | 490 OPEN
 
 ---
 
@@ -5403,7 +5403,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-144 — SECURITY: Developer/QA section + BUILD INFO visible to all users
 
-- **Status**: OPEN
+- **Status**: PARKED — commit SHA pending, tag `stg-144-2026-03-14`, fix ledger region 2, test: `src/__tests__/screens/MenuScreen.stg-144.dev-guard.unit.test.tsx`
 - **Priority**: P0 (security — internal dev tools exposed to end users in production builds)
 - **Source**: Screenshot — "DEVELOPER / QA" section header + "UI Showcase" + "BUILD INFO (DIRTY)" visible
 - **Scope**: Menu screen — developer section visibility

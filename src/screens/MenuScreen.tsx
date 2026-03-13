@@ -1080,8 +1080,8 @@ export default function MenuScreen() {
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
 
-      {/* Developer/QA Section - Only visible in dev or with QA flag */}
-      {showQaMenu && (
+      {/* Developer/QA Section — STG-144: __DEV__ gate prevents exposure in release builds */}
+      {__DEV__ && showQaMenu && (
         <>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('menu.developerQa')}</Text>
@@ -1129,12 +1129,14 @@ export default function MenuScreen() {
         </View>
       )}
 
-      {/* LIVE.POS.BUILDSTAMP.RUNTIME_GCP_PARITY.001: Release build stamp, theme-aware */}
-      <View style={styles.releaseBuildInfo}>
-        <Text style={[styles.releaseBuildInfoText, { color: tc.textTertiary }]}>
-          Build: {buildShaLabel} · Deployed: {buildTimeLabel}
-        </Text>
-      </View>
+      {/* STG-144: Release build stamp hidden in production — no SHA/deploy info to end users */}
+      {__DEV__ && (
+        <View style={styles.releaseBuildInfo}>
+          <Text style={[styles.releaseBuildInfoText, { color: tc.textTertiary }]}>
+            Build: {buildShaLabel} · Deployed: {buildTimeLabel}
+          </Text>
+        </View>
+      )}
     </ScrollView>
   );
 }
