@@ -31,6 +31,7 @@
     "i18n:audit": "node scripts/i18n-audit.js",
     "i18n:audit:unused": "node scripts/i18n-audit.js --check-unused",
     "i18n:pseudo": "node scripts/i18n-audit.js --generate-pseudo",
+    "i18n:validate": "node scripts/i18n-validate.js",
     "release:gate": "node scripts/release-gate.js",
     "release:tag": "node scripts/release-tag.js",
     "ticket:proof": "node scripts/ticket-proof.js",

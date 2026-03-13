@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 32,
+  "version": 33,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -1207,6 +1207,43 @@
         "gcp_parity": "pure frontend i18n",
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
+      }
+    },
+    {
+      "ticket": "STG-481",
+      "file": "scripts/i18n-validate.js",
+      "start_line": 1,
+      "end_line": 5,
+      "checksum": "8ebf7d8d76784c23",
+      "description": "i18n key parity validator: en.json/hi.json key mismatch detection",
+      "test_file": "src/__tests__/i18n/i18n-validate.stg-481.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": "N/A",
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T20:49:16.646Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "operator_approved": "new tooling, no code change",
+        "parity_scanned": "no dev URLs",
+        "parity_fixed": "no gaps",
+        "gcp_parity": "build tool only",
+        "regression_check": "32 fixes intact",
+        "test_guard": "3 tests pass"
       }
     }
   ]
