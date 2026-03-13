@@ -208,7 +208,7 @@ export default function DeviceBlockedScreen() {
         <Text
           style={styles.subtitle}
           testID="device-blocked-subtitle"
-          accessibilityLabel="This device has been disabled by the administrator. Contact your SuperAdmin."
+          accessibilityLabel="This device has been disabled. Contact your store admin to enable it."
         >
           {POS_MESSAGES.deviceInactive}
         </Text>

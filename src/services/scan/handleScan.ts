@@ -739,7 +739,7 @@ async function handleScan(
         return;
       }
       if (error.message === "store_not_found" || error.message === "store not found") {
-        notify({ tone: "error", message: "Store not found. Check Superadmin setup." });
+        notify({ tone: "error", message: "Store not found. Check your account setup." });
         return;
       }
     }

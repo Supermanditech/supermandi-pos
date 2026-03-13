@@ -159,23 +159,16 @@ describe("EnrollDeviceScreen", () => {
     expect(screen.getByTestId("enroll-code-input").props.value).toBe("SM-ABC123");
   });
 
-  it("shows alert for missing code", async () => {
-    const alertSpy = jest.spyOn(Alert, "alert");
+  it("disables submit button when code is empty (STG-062)", async () => {
     render(<EnrollDeviceScreen />);
     // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
     }, { timeout: 3000 });
 
-    // Clear default label, leave code empty
-    fireEvent.changeText(screen.getByTestId("enroll-label-input"), "Counter-1");
-
-    await act(async () => {
-      fireEvent.press(screen.getByTestId("enroll-submit-button"));
-    });
-
-    expect(alertSpy).toHaveBeenCalledWith("Missing Code", expect.any(String));
-    alertSpy.mockRestore();
+    // Code input is empty — button should be disabled (STG-062)
+    const submitButton = screen.getByTestId("enroll-submit-button");
+    expect(submitButton.props.accessibilityState?.disabled).toBe(true);
   });
 
   it("shows alert for missing label (#404)", async () => {
@@ -208,7 +201,7 @@ describe("EnrollDeviceScreen", () => {
     }, { timeout: 3000 });
 
     fireEvent.changeText(screen.getByTestId("enroll-code-input"), "SM-ABC123");
-    // Label has default from device model ("TestDevice")
+    // Label has default from device model ("Test Device" with STG-064 friendly name)
 
     await act(async () => {
       fireEvent.press(screen.getByTestId("enroll-submit-button"));
@@ -302,8 +295,9 @@ describe("EnrollDeviceScreen", () => {
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
     }, { timeout: 3000 });
-    // expo-device mock has modelName: "TestDevice"
-    expect(screen.getByTestId("enroll-label-input").props.value).toBe("TestDevice");
+    // STG-064: expo-device mock has manufacturer: "Test", modelName: "TestDevice"
+    // Friendly name = "Test Device" (brand + model with brand prefix stripped)
+    expect(screen.getByTestId("enroll-label-input").props.value).toBe("Test Device");
   });
 
   // =========================================================================

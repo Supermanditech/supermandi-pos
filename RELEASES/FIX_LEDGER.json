@@ -2568,11 +2568,11 @@
     {
       "ticket": "STG-054",
       "file": "src/i18n/locales/hi.json",
-      "description": "Hindi translation completion — 100% en/hi key parity",
+      "description": "Hindi translation completion — 100% en/hi key parity (updated Layer 5: SuperAdmin→store admin)",
       "test_file": "src/__tests__/i18n/locale-completion.stg-054.unit.test.ts",
       "start_line": 1,
       "end_line": 1319,
-      "checksum": "5e14973af8d524fd",
+      "checksum": "8910cff56502e578",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": "N/A",
@@ -2602,11 +2602,11 @@
     {
       "ticket": "STG-055",
       "file": "src/screens/EnrollDeviceScreen.tsx",
-      "description": "App version display on enrollment screen",
+      "description": "App version display on enrollment screen (updated Layer 5: UX redesign + text fixes)",
       "test_file": "src/__tests__/i18n/locale-completion.stg-054.unit.test.ts",
       "start_line": 1,
-      "end_line": 943,
-      "checksum": "8813cd47e46830b3",
+      "end_line": 1103,
+      "checksum": "3673e9b01d07d61f",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,

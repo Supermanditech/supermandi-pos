@@ -3,7 +3,7 @@
  *
  * Flow:
  * 1. Retailer registers on retailer web
- * 2. SuperAdmin activates the retailer account
+ * 2. Admin activates the retailer account
  * 3. POS enters activation code and enrolls device
  *
  * Post-activation: routes to PaymentSetup if no UPI VPA set, else SellScan.
@@ -82,7 +82,7 @@ const ENROLL_ERROR_MESSAGES: Record<string, { message: string; hint?: string }> 
   },
   STORE_INACTIVE: {
     message: "This store is not active yet.",
-    hint: "Your registration may still be pending approval. Contact hello@supermandi.tech for help."
+    hint: "Your registration may still be pending approval. Tap 'WhatsApp us' below for help."
   },
   DATABASE_UNAVAILABLE: {
     message: "Server temporarily unavailable.",
@@ -182,9 +182,17 @@ export default function EnrollDeviceScreen() {
   // ENROLL-SESSION-CHECK-RACE-CONDITION: hide form until session check completes
   const [checkingSession, setCheckingSession] = useState(true);
 
-  // #404: Device label (required by backend for device identification)
-  // Default to device model name for convenience
-  const defaultLabel = Device.modelName || Device.deviceName || "";
+  // #404 + STG-064: Device label with friendly default name
+  const defaultLabel = useMemo(() => {
+    const model = Device.modelName || Device.deviceName || "";
+    // Make model names more friendly (e.g. "SM-A325F" → "Samsung A325F")
+    if (model && Device.manufacturer) {
+      const brand = Device.manufacturer.charAt(0).toUpperCase() + Device.manufacturer.slice(1).toLowerCase();
+      const shortModel = model.replace(new RegExp(`^${Device.manufacturer}\\s*`, "i"), "");
+      return `${brand} ${shortModel}`.trim();
+    }
+    return model;
+  }, []);
   const [labelInput, setLabelInput] = useState(defaultLabel);
 
   const deviceMeta = useMemo(() => ({
@@ -216,6 +224,24 @@ export default function EnrollDeviceScreen() {
     })();
     return () => { cancelled = true; };
   }, [navigation]);
+
+  // STG-062: Activate button enabled only when code has valid format (at least 4 chars)
+  const isCodeValid = useMemo(() => {
+    const parsed = parseActivationCode(codeInput);
+    return parsed !== null && parsed.length >= 4;
+  }, [codeInput]);
+
+  // STG-041: Inline validation states
+  const codeValidationState = useMemo(() => {
+    if (!codeInput.trim()) return "empty";
+    const parsed = parseActivationCode(codeInput);
+    if (!parsed || parsed.length < 4) return "invalid";
+    return "valid";
+  }, [codeInput]);
+  const labelValidationState = useMemo(() => {
+    if (!labelInput.trim()) return "empty";
+    return "valid";
+  }, [labelInput]);
 
   // Deep link support
   // DEEP-LINK-RE-ENROLLMENT-NO-CONFIRM: check if already enrolled before pre-filling code
@@ -253,7 +279,7 @@ export default function EnrollDeviceScreen() {
       setEnrollError("Enter the activation code shared after retailer registration.");
       Alert.alert(
         "Missing Code",
-        "Enter the activation code shared after retailer registration and superadmin account activation."
+        "Enter the activation code shared after retailer registration."
       );
       return;
     }
@@ -455,6 +481,10 @@ export default function EnrollDeviceScreen() {
     >
       {/* Header */}
       <View style={styles.headerSection}>
+        {/* STG-063: Welcome illustration */}
+        <View style={styles.welcomeIllustration} testID="enroll-welcome-illustration">
+          <MaterialCommunityIcons name="store-check" size={48} color={tc.primary} />
+        </View>
         <View style={styles.brandLockup}>
           <BrandShortmark
             size={36}
@@ -465,20 +495,58 @@ export default function EnrollDeviceScreen() {
           />
           <Text style={styles.brandPillText}>SuperMandi</Text>
         </View>
+        {/* STG-065: Step indicator */}
+        <Text style={styles.stepIndicator} testID="enroll-step-indicator">
+          Step 1 of 2
+        </Text>
         <Text style={styles.title} testID="enroll-title" accessibilityRole="header">
           Activate Your POS
         </Text>
         <Text style={styles.subtitle} testID="enroll-subtitle">
-          Use your activation code after retailer registration on web and superadmin account activation.
+          Enter your activation code to connect this device to your store.
         </Text>
+        {/* STG-004: Trust signal */}
+        <View style={styles.trustRow} testID="enroll-trust-signal">
+          <MaterialCommunityIcons name="shield-check" size={14} color={tc.success} />
+          <Text style={styles.trustText}>Secure activation · Data encrypted</Text>
+        </View>
+      </View>
+
+      {/* STG-058: Visual 3-step flow */}
+      <View style={styles.stepsContainer}>
+        <View style={styles.stepRow}>
+          <View style={[styles.stepCircle, { backgroundColor: tc.success }]}>
+            <Text style={styles.stepCircleText}>1</Text>
+          </View>
+          <Text style={styles.stepText}>Register on supermandi.tech</Text>
+        </View>
+        <View style={styles.stepConnector} />
+        <View style={styles.stepRow}>
+          <View style={[styles.stepCircle, { backgroundColor: tc.success }]}>
+            <Text style={styles.stepCircleText}>2</Text>
+          </View>
+          <Text style={styles.stepText}>Wait for account activation</Text>
+        </View>
+        <View style={styles.stepConnector} />
+        <View style={styles.stepRow}>
+          <View style={[styles.stepCircle, { backgroundColor: tc.primary }]}>
+            <Text style={styles.stepCircleText}>3</Text>
+          </View>
+          <Text style={[styles.stepText, { fontWeight: "700", color: tc.textPrimary }]}>Enter activation code below</Text>
+        </View>
       </View>
 
       {/* Manual Code Input */}
       <View style={styles.inputSection}>
         <Text style={styles.label}>Activation Code</Text>
         <TextInput
-          style={styles.codeInput}
+          style={[
+            styles.codeInput,
+            codeValidationState === "valid" && { borderColor: tc.success },
+            codeValidationState === "invalid" && { borderColor: tc.error },
+          ]}
           placeholder="SM-XXXXXX"
+          placeholderTextColor={tc.textTertiary}
           autoCapitalize="characters"
           value={codeInput}
           onChangeText={(v) => { setCodeInput(v); setEnrollError(null); }}
@@ -489,6 +557,10 @@ export default function EnrollDeviceScreen() {
           autoFocus
           editable={!loading}
         />
+        {/* STG-324: Help text below activation code */}
+        <Text style={styles.codeHint}>
+          Find this code in your registration confirmation SMS or WhatsApp message
+        </Text>
       </View>
 
       {/* #404: Device Label (required) */}
@@ -497,7 +569,10 @@ export default function EnrollDeviceScreen() {
           Device Name <Text style={styles.requiredMark}>*</Text>
         </Text>
         <TextInput
-          style={styles.labelInput}
+          style={[
+            styles.labelInput,
+            labelValidationState === "valid" && { borderColor: tc.success },
+          ]}
           placeholder="e.g., Counter-1, Billing-Main"
           placeholderTextColor={tc.textTertiary}
           value={labelInput}
@@ -515,13 +590,13 @@ export default function EnrollDeviceScreen() {
         </Text>
 
         <Pressable
-          style={[styles.activateButton, loading && styles.activateButtonDisabled]}
+          style={[styles.activateButton, (loading || !isCodeValid) && styles.activateButtonDisabled]}
           onPress={handleActivate}
-          disabled={loading}
+          disabled={loading || !isCodeValid}
           testID="enroll-submit-button"
-          accessibilityLabel={loading ? "Activating device" : "Activate device"}
+          accessibilityLabel={loading ? "Activating device" : "Activate POS"}
           accessibilityRole="button"
-          accessibilityState={{ disabled: loading }}
+          accessibilityState={{ disabled: loading || !isCodeValid }}
         >
           {loading ? (
             <View style={styles.activatingRow}>
@@ -559,19 +634,24 @@ export default function EnrollDeviceScreen() {
 
       {/* Help Text */}
       <View style={styles.helpSection}>
-        <Text style={styles.helpText}>
-          Register your retailer account at{" "}
-          <Text style={styles.helpLink} onPress={() => Linking.openURL("https://supermandi.tech/retailer/register")}>
-            supermandi.tech/retailer/register
-          </Text>
-        </Text>
+        {/* STG-060: Tappable "Register Here" button instead of raw URL */}
+        <Pressable
+          style={styles.registerButton}
+          onPress={() => Linking.openURL("https://supermandi.tech/retailer/register")}
+          testID="enroll-register-button"
+          accessibilityLabel="Register your store on SuperMandi website"
+          accessibilityRole="link"
+        >
+          <MaterialCommunityIcons name="store-plus" size={16} color={tc.primary} />
+          <Text style={styles.registerButtonText}>Register Your Store</Text>
+        </Pressable>
         <Text style={styles.helpTextSmall}>
-          After registration, wait for superadmin account activation. Then enter your activation code here.
+          After registration, your account will be activated within 24 hours. Then enter your activation code here.
         </Text>
         <Text style={styles.helpTextSmall}>
           Need help?{" "}
-          <Text style={styles.helpLink} onPress={() => Linking.openURL("mailto:hello@supermandi.tech")}>
-            hello@supermandi.tech
+          <Text style={styles.helpLink} onPress={() => Linking.openURL("https://wa.me/918600001234?text=Hi%20SuperMandi%2C%20I%20need%20help%20with%20POS%20activation")}>
+            WhatsApp us
           </Text>
         </Text>
       </View>
@@ -685,6 +765,87 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     color: colors.textSecondary,
     lineHeight: 20,
   },
+  stepIndicator: {
+    ...typography.caption,
+    fontWeight: "700",
+    color: colors.primary,
+    marginBottom: spacing.xs,
+    letterSpacing: 0.5,
+  },
+  welcomeIllustration: {
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  stepsContainer: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  stepCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepCircleText: {
+    color: colors.textInverse,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  stepText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  stepConnector: {
+    width: 2,
+    height: 12,
+    backgroundColor: colors.border,
+    marginLeft: 11,
+    marginVertical: 2,
+  },
+  codeHint: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    lineHeight: 14,
+  },
+  registerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: colors.primary + "10",
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.primary + "30",
+    alignSelf: "flex-start",
+  },
+  registerButtonText: {
+    ...typography.caption,
+    fontWeight: "600",
+    color: colors.primary,
+  },
+  trustRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  trustText: {
+    fontSize: 11,
+    color: colors.success,
+    fontWeight: "500",
+  },
   inputSection: {
     gap: spacing.sm,
     marginBottom: spacing.xl,
@@ -761,8 +922,8 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     paddingVertical: spacing.md,
     backgroundColor: colors.surfaceAlt,
     color: colors.textPrimary,
-    textAlign: "center",
-    letterSpacing: 3,
+    textAlign: "left",
+    letterSpacing: 2,
   },
   labelInput: {
     ...typography.body,

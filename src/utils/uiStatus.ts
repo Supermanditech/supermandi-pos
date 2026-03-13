@@ -16,8 +16,8 @@ export type UiStatus = {
 export type StatusTone = "success" | "warning" | "error" | "neutral";
 
 export const POS_MESSAGES = {
-  storeInactive: "POS is inactive. Add UPI ID in Superadmin to start billing.",
-  deviceInactive: "This device is disabled. Contact Superadmin to enable it.",
+  storeInactive: "POS is inactive. Add your UPI ID in settings to start billing.",
+  deviceInactive: "This device is disabled. Contact your store admin to enable it.",
   offline: "You're offline. Cash/Due will work. We'll sync when internet is back.",
   syncPending: (count: number) => `Sync pending: ${count} bills. Keep the app open for a minute.`,
   printerMissing: "Printer not connected. You can still bill; printing will be available once connected.",

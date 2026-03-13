@@ -138,7 +138,7 @@ export function GRNItemRow({
             color={theme.colors.warning}
           />
           <Text style={styles.excessWarningText}>
-            Exceeds order by {excessAmount} — will alert SuperAdmin
+            Exceeds order by {excessAmount} — will alert store admin
           </Text>
         </View>
       )}

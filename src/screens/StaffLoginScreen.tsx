@@ -41,6 +41,8 @@ export default function StaffLoginScreen({ storeName, onSwitchStore }: Props) {
 
   // ISSUE-081: Client-side rate limiting
   const [cooldown, setCooldown] = useState(false);
+  // STG-327: Countdown seconds for button text
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const failCountRef = useRef(0);
   // ISSUE-127: Ref-based guard to prevent double submission via keyboard onSubmitEditing
   const loginInFlightRef = useRef(false);
@@ -116,10 +118,23 @@ export default function StaffLoginScreen({ storeName, onSwitchStore }: Props) {
       });
     } catch (err: any) {
       // ISSUE-081: Increase cooldown on repeated failures
+      // STG-327: Show countdown seconds on button
       failCountRef.current += 1;
       const cooldownMs = Math.min(failCountRef.current * 3000, 15000);
+      const totalSeconds = Math.ceil(cooldownMs / 1000);
       setCooldown(true);
-      setTimeout(() => setCooldown(false), cooldownMs);
+      setCooldownSeconds(totalSeconds);
+      let remaining = totalSeconds;
+      const interval = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          clearInterval(interval);
+          setCooldown(false);
+          setCooldownSeconds(0);
+        } else {
+          setCooldownSeconds(remaining);
+        }
+      }, 1000);
 
       const code = err?.body?.error?.code || err?.message;
       if (code === "STAFF_INVALID_CREDENTIALS") {
@@ -334,6 +349,8 @@ export default function StaffLoginScreen({ storeName, onSwitchStore }: Props) {
         >
           {loading ? (
             <ActivityIndicator color={colors.textInverse} size="small" />
+          ) : cooldown ? (
+            <Text style={styles.loginButtonText}>Wait {cooldownSeconds}s</Text>
           ) : (
             <Text style={styles.loginButtonText}>Login</Text>
           )}

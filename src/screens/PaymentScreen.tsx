@@ -497,7 +497,7 @@ const PaymentScreen = () => {
         }
         if (error.message === "store not found") {
           setSaleError("Store not found");
-          Alert.alert("Store Missing", "Store not found. Check Superadmin setup.");
+          Alert.alert("Store Missing", "Store not found. Check your account setup.");
           return;
         }
       }

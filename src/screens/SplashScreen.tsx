@@ -229,10 +229,10 @@ export default function SplashScreen() {
             onPress={() => navigation.replace("EnrollDevice")}
             style={styles.skipButton}
             testID="splash-skip-button"
-            accessibilityLabel="Continue to enrollment"
+            accessibilityLabel="Continue offline"
             accessibilityRole="button"
           >
-            <Text style={dynamicStyles.skipText}>Continue without session</Text>
+            <Text style={dynamicStyles.skipText}>Continue Offline</Text>
           </Pressable>
         </View>
       </View>
