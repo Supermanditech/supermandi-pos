@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 21,
+  "version": 22,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -791,6 +791,47 @@
         "gcp_parity": "pure frontend theme",
         "regression_check": "zero drift, 20 fixes intact",
         "test_guard": "4 tests pass"
+      }
+    },
+    {
+      "ticket": "STG-003",
+      "file": "src/components/sell/SellTile.tsx",
+      "start_line": 330,
+      "end_line": 334,
+      "checksum": "facded4573d29495",
+      "description": "Remove ?? hex fallbacks from theme token usage in SellTile",
+      "test_file": "src/__tests__/theme/colors.stg-003.no-hex-fallbacks.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "business_logic": "N/A",
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T20:37:33.584Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "removed 6 hex fallbacks across SellTile and PaymentScreen",
+        "operator_approved": "cosmetic cleanup, no visual change",
+        "parity_scanned": "no dev URLs",
+        "parity_fixed": "no gaps",
+        "gcp_parity": "pure frontend",
+        "regression_check": "zero drift, 21 fixes",
+        "test_guard": "3 tests pass",
+        "ux_states": "no UX states affected, cosmetic only",
+        "wiring": "no wiring change",
+        "navigation": "no navigation change"
       }
     }
   ]

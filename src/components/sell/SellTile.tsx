@@ -328,10 +328,10 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       paddingVertical: 1,
     },
     modeBadgePackaged: {
-      backgroundColor: colors.primarySoft ?? "#EFF6FF",
+      backgroundColor: colors.primarySoft,
     },
     modeBadgeLoose: {
-      backgroundColor: colors.accentLight ?? "#F0FDFA",
+      backgroundColor: colors.accentLight,
     },
     modeBadgeText: {
       fontSize: 10,

@@ -1316,14 +1316,14 @@ const PaymentScreen = () => {
 
       {/* ISSUE-076: Sale creation error with retry */}
       {saleError && !loadingSale && (
-        <View style={{ backgroundColor: colors.errorSoft ?? "#FEE2E2", paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "center" }}>
-          <MaterialCommunityIcons name="alert-circle-outline" size={18} color={colors.error ?? "#DC2626"} />
-          <Text style={{ color: colors.error ?? "#DC2626", fontSize: 13, marginLeft: 8, flex: 1 }}>
+        <View style={{ backgroundColor: colors.errorSoft, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "center" }}>
+          <MaterialCommunityIcons name="alert-circle-outline" size={18} color={colors.error} />
+          <Text style={{ color: colors.error, fontSize: 13, marginLeft: 8, flex: 1 }}>
             {saleError}
           </Text>
           <TouchableOpacity
             onPress={() => setSaleError(null)}
-            style={{ backgroundColor: colors.error ?? "#DC2626", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6, marginLeft: 8 }}
+            style={{ backgroundColor: colors.error, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6, marginLeft: 8 }}
           >
             <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>Retry</Text>
           </TouchableOpacity>
