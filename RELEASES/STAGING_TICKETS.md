@@ -168,7 +168,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-139 | Cart — no return/exchange line item for customer returns | P2 | OPEN |
 | STG-140 | Cart — Discount section always visible, should collapse when unused | P3 | OPEN |
 | STG-141 | Cart — Checkout button price doesn't animate on total change | P3 | OPEN |
-| STG-142 | BUG: "[menu.viewDetails]" raw i18n key leaked in Today's Sales card | P0 | OPEN |
+| STG-142 | BUG: "[menu.viewDetails]" raw i18n key leaked in Today's Sales card | P0 | PARKED |
 | STG-143 | BUG: "[menu.printerReady]" and "[menu.testPrint]" raw i18n keys leaked | P0 | OPEN |
 | STG-144 | SECURITY: Developer/QA section + BUILD INFO visible to all users | P0 | PARKED |
 | STG-145 | SECURITY: BUILD INFO leaks token, API URL, StoreId UUID to end users | P0 | PARKED |
@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | OPEN |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | OPEN |
 
-**Total**: 492 tickets | 5 PARKED | 1 DONE | 0 IN_PROGRESS | 486 OPEN
+**Total**: 492 tickets | 6 PARKED | 1 DONE | 0 IN_PROGRESS | 485 OPEN
 
 ---
 

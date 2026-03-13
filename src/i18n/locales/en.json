@@ -87,7 +87,21 @@
     "productCatalog": "Product Catalog",
     "productCatalogSubtitle": "Browse and search store products",
     "bnplDues": "BNPL Dues",
-    "bnplDuesSubtitle": "View and pay pending BNPL dues"
+    "bnplDuesSubtitle": "View and pay pending BNPL dues",
+    "viewDetails": "View Details",
+    "printerReady": "Printer Ready",
+    "printerUnavailable": "Printer Unavailable",
+    "testPrint": "Test",
+    "printerOk": "Printer OK",
+    "testPrintSuccess": "Test page sent successfully.",
+    "printerError": "Printer Error",
+    "testPrintFailed": "Could not print test page.",
+    "syncComplete": "Sync Complete",
+    "allDataSynced": "All data has been synced.",
+    "syncFailed": "Sync Failed",
+    "syncing": "Syncing...",
+    "syncNow": "Sync Now",
+    "offline": "Offline"
   },
   "tabs": {
     "menu": "MENU",

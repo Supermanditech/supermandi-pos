@@ -87,7 +87,21 @@
     "productCatalog": "उत्पाद कैटलॉग",
     "productCatalogSubtitle": "स्टोर उत्पाद ब्राउज़ और खोजें",
     "bnplDues": "BNPL बकाया",
-    "bnplDuesSubtitle": "लंबित BNPL बकाया देखें और भुगतान करें"
+    "bnplDuesSubtitle": "लंबित BNPL बकाया देखें और भुगतान करें",
+    "viewDetails": "विवरण देखें",
+    "printerReady": "प्रिंटर तैयार",
+    "printerUnavailable": "प्रिंटर उपलब्ध नहीं",
+    "testPrint": "टेस्ट",
+    "printerOk": "प्रिंटर ठीक",
+    "testPrintSuccess": "टेस्ट पेज भेजा गया।",
+    "printerError": "प्रिंटर त्रुटि",
+    "testPrintFailed": "टेस्ट पेज प्रिंट नहीं हो सका।",
+    "syncComplete": "सिंक पूर्ण",
+    "allDataSynced": "सारा डेटा सिंक हो गया।",
+    "syncFailed": "सिंक विफल",
+    "syncing": "सिंक हो रहा है...",
+    "syncNow": "अभी सिंक करें",
+    "offline": "ऑफलाइन"
   },
   "tabs": {
     "menu": "मेनू",
