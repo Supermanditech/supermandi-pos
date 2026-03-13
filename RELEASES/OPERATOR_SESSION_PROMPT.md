@@ -6,7 +6,7 @@
 
 ---
 
-Read these files BEFORE doing anything else — they are your machine state:
+these are files Read these files BEFORE doing anything else — they are your machine state:
 
 1. `RELEASES/FIX_LEDGER.json` — active fix checksums (source of truth for drift detection)
 2. `scripts/fix-guard.js` — 12-gate pre-commit enforcement (do NOT modify without operator approval)
@@ -34,50 +34,66 @@ Source of truth:
 - GCP staging baseline: SHA `81c3a2a4` (deployed 2026-03-13)
 
 Implementation plan:
-- 18 layers (L0–L18), dependency-ordered, complete each layer before next
-- 29 loophole guards (LH-001–029) — mandatory, no skipping
-- 12 GUARD prereq tickets (STG-481–492) — must complete before dependent tickets
+- 18 layers (L0-L18), dependency-ordered, complete each layer before next
+- 29 loophole guards (LH-001-029) — MANDATORY, no skipping
+- 12 GUARD prereq tickets (STG-481-492) — MUST complete before dependent tickets
 - Layer 0 first: Security, DPDP, P0 bugs (17 tickets)
 - One ticket = one commit = one tag, linear on main
 
-Per-ticket completion protocol (ALL 9 phases mandatory, no skipping):
+Per-ticket completion protocol (ALL 9 phases MANDATORY — Claude MUST NOT skip any phase):
 ```
-Phase 0: Read ticket from STAGING_TICKETS.md
-Phase 1: Pre-flight — fix-guard check, git status clean, read FIX_LEDGER, typecheck baseline
-Phase 2: Scope analysis — announce files, registered fixes, migration needs, test plan to operator
-Phase 3: Implement — DB layer → backend → frontend → cross-layer wiring
-Phase 4: Test — typecheck + unit + integration + UI + business logic + edge cases (ALL applicable)
-Phase 5: Register — fix-guard register every modified region, verify zero drift
-Phase 6: Regression gate — FULL test suite (not just new tests), production build, GCP parity
-Phase 7: Git commit — stage by name, one commit per ticket, tag, verify clean state, update ticket status
-Phase 8: Next ticket pre-flight — clean tree, fix-guard check, typecheck
+Phase 0: Read ticket from STAGING_TICKETS.md — understand problem, fix, test plan
+Phase 1: Pre-flight — fix-guard check (MUST exit 0), git status (MUST be clean), read FIX_LEDGER, pnpm -r typecheck (MUST pass)
+Phase 2: Scope analysis — announce to operator: files in scope, registered fixes to preserve, migration needs, test plan. WAIT for operator review.
+Phase 3: Implement — DB layer → backend → frontend → cross-layer wiring. Check FIX_LEDGER BEFORE modifying any file.
+Phase 4: Test — typecheck + unit + integration + UI + business logic + edge cases. ALL applicable types. Zero test.skip(). Zero test.todo().
+Phase 5: Register — fix-guard register every modified region with test_file. Run fix-guard check — MUST show zero drift.
+Phase 6: Regression gate — run FULL test suite (not just new tests). Production build MUST succeed. GCP parity check.
+Phase 7: Git commit — stage files by name, commit with fix(STG-XXX): format, tag stg-XXX-YYYY-MM-DD, verify clean state, update ticket to PARKED.
+Phase 8: Next ticket pre-flight — git status clean, fix-guard check zero drift, pnpm -r typecheck passes.
 ```
 
-Git discipline (per commit):
+12-gate pre-commit enforcement (machine-enforced by `fix-guard.js` — Claude CANNOT bypass):
+```
+Gate  1: Fix drift check         — BLOCKS if any registered fix checksum drifted
+Gate  2: Secret scanner          — BLOCKS if .env, credentials, API keys in staged files
+Gate  3: Staged files validation  — BLOCKS if forbidden files staged
+Gate  4: Ticket consistency       — BLOCKS if ticket references are invalid
+Gate  5: Migration sequence       — BLOCKS if migration numbers have gaps or collisions
+Gate  6: Dev URL scanner          — BLOCKS if localhost/127.0.0.1 in staged source files
+Gate  7: Commit hygiene           — WARNS if >20 files staged, BLOCKS if 0 files staged
+Gate  8: Ledger co-commit         — WARNS if source files staged without FIX_LEDGER.json
+Gate  9: No amend on tagged       — WARNS if HEAD has stg-/prestage- tags (amend would orphan rollback anchor)
+Gate 10: Commit message format    — WARNS if not type(SCOPE): description format
+Gate 11: Single ticket per commit — BLOCKS if multiple STG-XXX tickets referenced in commit message
+Gate 12: Completion checklist     — BLOCKS if any active fix has incomplete checklist (missing test guard, etc.)
+```
+
+Git discipline (per commit — ALL MANDATORY, not advisory):
 - Linear commits on main, one ticket = one commit = one tag
-- Every commit must pass 12-gate pre-commit (`fix-guard.js`)
-- Stage files by name (NEVER `git add .` or `git add -A`)
-- ALWAYS stage with source files: `FIX_LEDGER.json` + `STAGING_TICKETS.md`
-- Commit format: `fix(STG-XXX): description` with body listing files, migration, tests, fix ledger entries
-- Tag AFTER commit: `git tag stg-XXX-YYYY-MM-DD` (tag is rollback anchor)
+- Every commit MUST pass 12-gate pre-commit (`fix-guard.js`) — no `--no-verify`
+- Stage files by name (NEVER `git add .` or `git add -A`) — Gate 7 catches broad staging
+- ALWAYS co-stage: `FIX_LEDGER.json` + `STAGING_TICKETS.md` with source files — Gate 8 enforces
+- Commit format: `fix(STG-XXX): description` — Gate 10 enforces format, Gate 11 enforces single ticket
+- Tag AFTER commit: `git tag stg-XXX-YYYY-MM-DD` — Gate 9 prevents amending tagged commits
 - Verify after commit: `git status` clean + `git log --oneline -1` correct + `fix-guard check` zero drift
-- Never amend, never force push, never skip hooks, never `--no-verify`
+- NEVER amend, NEVER force push, NEVER skip hooks — Gates 9/10/11 catch violations
 - Update ticket status to PARKED in STAGING_TICKETS.md with commit SHA + tag
 
-Git anti-patterns (FORBIDDEN):
-- `git add .` or `git add -A` (catches .env, temp files)
-- Two tickets in one commit (can't revert independently)
-- Commit without fix-guard passing (drift enters history)
-- Amending a previous ticket's commit (rewrites history, breaks tags)
-- `test.skip()` or `test.todo()` (hides broken tests)
-- Touching files outside ticket scope (create new ticket instead)
-- Committing STAGING_TICKETS.md without FIX_LEDGER.json
-- "Will add tests later" (tests are part of the fix, not a follow-up)
+Git anti-patterns (FORBIDDEN — Gate enforcement noted):
+- `git add .` or `git add -A` → Gate 7 warns on >20 files, Gate 2 blocks secrets
+- Two tickets in one commit → Gate 11 BLOCKS
+- Commit without fix-guard → pre-commit hook prevents
+- Amending tagged commit → Gate 9 warns
+- `test.skip()` or `test.todo()` → Gate 12 blocks (checklist requires test_guard=true)
+- Touching files outside ticket scope → create new ticket instead
+- Source files without FIX_LEDGER.json → Gate 8 warns
+- "Will add tests later" → Gate 12 BLOCKS (no test = no commit)
 
 Ticket status lifecycle:
 ```
 OPEN → IN_PROGRESS → PARKED (committed + tagged on main)
 ```
-PARKED entry must include: commit SHA, tag name, fix ledger region count, test file, migration number (if any)
+PARKED entry MUST include: commit SHA, tag name, fix ledger region count, test file, migration number (if any)
 
 Current operator context: [YOUR NOTES — e.g. "today we're working on Layer 0 GUARD tickets" or "staging deploy is frozen" or "focus on STG-492 PENDING_UPI_KEY fix" or "skip DPDP tickets, focus on P0 bugs only"]
