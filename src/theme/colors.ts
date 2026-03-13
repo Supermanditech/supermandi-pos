@@ -44,6 +44,11 @@ export const lightColors = {
   warningBorder: "#FDE68A",
   successBorder: "#BBF7D0",
 
+  // Disabled states — STG-232: semantic tokens for disabled UI elements
+  disabled: "#94A3B8",
+  disabledText: "#94A3B8",
+  disabledBg: "#F1F5F9",
+
   // Brand colors — third-party services (STG-233)
   whatsapp: "#25D366",
 
@@ -106,6 +111,11 @@ export const darkColors: Record<keyof typeof lightColors, string> = {
   errorBorder: "#7F1D1D",
   warningBorder: "#78350F",
   successBorder: "#14532D",
+
+  // Disabled states — STG-232: semantic tokens for disabled UI elements (dark mode)
+  disabled: "#475569",
+  disabledText: "#64748B",
+  disabledBg: "#1E293B",
 
   // Brand colors — slightly brightened for dark bg
   whatsapp: "#34E875",

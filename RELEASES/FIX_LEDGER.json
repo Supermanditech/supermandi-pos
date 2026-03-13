@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 19,
+  "version": 20,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -716,6 +716,43 @@
         "gcp_parity": "no localhost URLs, env vars used, staging-compatible",
         "regression_check": "zero drift confirmed, 18 fixes intact",
         "test_guard": "6 tests pass in khata.stg-473.consent-gate.unit.test.ts"
+      }
+    },
+    {
+      "ticket": "STG-232",
+      "file": "src/theme/colors.ts",
+      "start_line": 47,
+      "end_line": 51,
+      "checksum": "4d390bcfb5645f85",
+      "description": "Add disabled, disabledText, disabledBg tokens to light and dark palettes",
+      "test_file": "src/__tests__/theme/colors.stg-232.disabled-tokens.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": "N/A",
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T20:34:35.067Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "operator_approved": "theme-only change, no UI rendering change",
+        "parity_scanned": "no dev URLs",
+        "parity_fixed": "no gaps",
+        "gcp_parity": "pure frontend theme tokens",
+        "regression_check": "zero drift, 19 fixes intact",
+        "test_guard": "4 tests pass"
       }
     }
   ]
