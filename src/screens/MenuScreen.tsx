@@ -1118,13 +1118,15 @@ export default function MenuScreen() {
             </Text>
           )}
           <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>Built: {BUILD_INFO.buildTime}</Text>
-          <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>API: {API_BASE_URL}</Text>
+          <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>API: {API_BASE_URL?.replace(/https?:\/\//, '').replace(/:\d+$/, '') ?? "—"}</Text>
+          {/* STG-145: Mask sensitive data — no token, no UUID, no API URL in any build */}
           <View style={[styles.devInfoSection, { borderTopColor: tc.border }]}>
             <Text style={[styles.devInfoLabel, { color: tc.primary }]}>Device Info</Text>
-            <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>Token: ...{devInfo.tokenSuffix}</Text>
-            <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>Store: {devInfo.storeName ?? "null"}</Text>
-            <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>StoreId: {devInfo.storeId ?? "null"}</Text>
-            <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>StoreCode: {devInfo.storeCode ?? "null"}</Text>
+            <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>
+              Auth: {devInfo.tokenSuffix !== "none" && devInfo.tokenSuffix !== "..." ? "Authenticated \u2713" : "Not authenticated"}
+            </Text>
+            <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>Store: {devInfo.storeName ?? "—"}</Text>
+            <Text style={[styles.buildInfoText, { color: tc.textSecondary }]}>StoreCode: {devInfo.storeCode ?? "—"}</Text>
           </View>
         </View>
       )}

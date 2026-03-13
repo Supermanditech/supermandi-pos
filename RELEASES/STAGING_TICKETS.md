@@ -171,7 +171,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-142 | BUG: "[menu.viewDetails]" raw i18n key leaked in Today's Sales card | P0 | OPEN |
 | STG-143 | BUG: "[menu.printerReady]" and "[menu.testPrint]" raw i18n keys leaked | P0 | OPEN |
 | STG-144 | SECURITY: Developer/QA section + BUILD INFO visible to all users | P0 | PARKED |
-| STG-145 | SECURITY: BUILD INFO leaks token, API URL, StoreId UUID to end users | P0 | OPEN |
+| STG-145 | SECURITY: BUILD INFO leaks token, API URL, StoreId UUID to end users | P0 | PARKED |
 | STG-146 | Menu — Device UUID shown instead of device label ("Counter-1") | P1 | OPEN |
 | STG-147 | Menu — store name lowercase in System Status vs title case in header | P2 | OPEN |
 | STG-148 | Menu — System Status card should be collapsible, rarely needed | P2 | OPEN |
@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | OPEN |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | OPEN |
 
-**Total**: 492 tickets | 1 PARKED | 1 DONE | 0 IN_PROGRESS | 490 OPEN
+**Total**: 492 tickets | 2 PARKED | 1 DONE | 0 IN_PROGRESS | 489 OPEN
 
 ---
 
@@ -5428,7 +5428,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-145 — SECURITY: BUILD INFO leaks token, API URL, StoreId UUID to end users
 
-- **Status**: OPEN
+- **Status**: PARKED — commit SHA pending, tag `stg-145-2026-03-14`, fix ledger region 3, test: `src/__tests__/screens/MenuScreen.stg-145.data-leak.unit.test.tsx`
 - **Priority**: P0 (security — credentials and internal URLs visible to any user)
 - **Source**: Screenshot — BUILD INFO shows token hash, API: http://localhost:3000, StoreId UUID
 - **Scope**: Menu screen — BUILD INFO section data
