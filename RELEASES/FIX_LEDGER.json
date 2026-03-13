@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 40,
+  "version": 41,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -1503,6 +1503,47 @@
         "gcp_parity": "frontend i18n",
         "regression_check": "39 fixes intact",
         "test_guard": "11 tests pass"
+      }
+    },
+    {
+      "ticket": "STG-279",
+      "file": "src/components/ErrorBoundary.tsx",
+      "start_line": 41,
+      "end_line": 47,
+      "checksum": "411913ef34a0b2eb",
+      "description": "ErrorBoundary i18n: all user-facing strings use i18n.t()",
+      "test_file": "src/__tests__/components/ErrorBoundary.stg-279.i18n.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "business_logic": "N/A",
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T20:56:19.344Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "3 strings i18n-ized",
+        "wiring": "i18n.t() calls added",
+        "operator_approved": "i18n only",
+        "parity_scanned": "no dev URLs",
+        "parity_fixed": "no gaps",
+        "gcp_parity": "frontend i18n",
+        "regression_check": "40 fixes intact",
+        "test_guard": "5 tests pass",
+        "ux_states": "error state i18n-ized",
+        "navigation": "no change"
       }
     }
   ]

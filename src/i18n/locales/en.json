@@ -570,5 +570,10 @@
     "reopenUpi": "Re-open UPI App",
     "paymentRecorded": "Payment Recorded",
     "upiConfirmed": "Your UPI payment has been recorded."
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "The app encountered an unexpected error. Please try again.",
+    "tryAgain": "Try Again"
   }
 }

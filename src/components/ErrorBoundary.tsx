@@ -4,6 +4,7 @@
 import React, { Component, ErrorInfo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { colors, typography, spacing } from "../theme";
+import i18n from "../i18n"; // STG-279: i18n for error boundary
 
 interface Props {
   children: React.ReactNode;
@@ -37,12 +38,12 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <View style={styles.container}>
           <Text style={styles.icon}>⚠️</Text>
-          <Text style={styles.title}>Something went wrong</Text>
+          <Text style={styles.title}>{i18n.t("errorBoundary.title")}</Text>
           <Text style={styles.message}>
-            The app encountered an unexpected error. Please try again.
+            {i18n.t("errorBoundary.message")}
           </Text>
           <Pressable style={styles.button} onPress={this.handleReset}>
-            <Text style={styles.buttonText}>Try Again</Text>
+            <Text style={styles.buttonText}>{i18n.t("errorBoundary.tryAgain")}</Text>
           </Pressable>
         </View>
       );
