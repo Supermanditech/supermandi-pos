@@ -341,7 +341,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       color: colors.primary,
     },
     modeBadgeTextLoose: {
-      color: colors.accent ?? colors.secondary,
+      color: colors.accent,
     },
     packSize: {
       fontSize: 11,

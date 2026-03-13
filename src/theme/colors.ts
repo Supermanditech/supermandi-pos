@@ -7,9 +7,10 @@ export const lightColors = {
   accent: "#14B8A6",
   accentDark: "#0D9488",
   accentLight: "#F0FDFA",
-  secondary: "#14B8A6",
-  secondaryDark: "#0D9488",
-  secondaryLight: "#F0FDFA",
+  // STG-231: secondary aliases accent — use `accent` in new code
+  secondary: "#14B8A6",       // @deprecated — alias of accent
+  secondaryDark: "#0D9488",   // @deprecated — alias of accentDark
+  secondaryLight: "#F0FDFA",  // @deprecated — alias of accentLight
 
   // Surfaces — T-076: aligned to DESIGN_TOKENS.md
   bg: "#F7F9FC",
@@ -75,9 +76,10 @@ export const darkColors: Record<keyof typeof lightColors, string> = {
   accent: "#2DD4BF",
   accentDark: "#14B8A6",
   accentLight: "#134E4A",
-  secondary: "#2DD4BF",
-  secondaryDark: "#14B8A6",
-  secondaryLight: "#134E4A",
+  // STG-231: secondary aliases accent — use `accent` in new code
+  secondary: "#2DD4BF",       // @deprecated — alias of accent
+  secondaryDark: "#14B8A6",   // @deprecated — alias of accentDark
+  secondaryLight: "#134E4A",  // @deprecated — alias of accentLight
 
   // Surfaces — Slate dark scale (matches web portal dark mode)
   bg: "#0F172A",
