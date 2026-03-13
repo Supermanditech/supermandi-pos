@@ -12,6 +12,9 @@ Before writing ANY code, Claude MUST read and internalize:
 1. **`RELEASES/CLAUDE_PRODUCTION_RULES.md`** — How Claude writes code (16 parts: safety rules, test policy, evidence requirements, debugging stages, git discipline, anti-patterns, incident workflow, priority order, go-live safeguards, completeness protocol)
 2. **`RELEASES/MASTER_PLAN.md`** — What to do (batches, tickets, gates, current status, change class matrix)
 3. **`RELEASES/ZERO_REGRESSION_RULES.md`** — How deploys work (immutability, rollback, CI gates, forbidden actions)
+4. **`RELEASES/FIX_LEDGER.json`** — Machine state: every active fix with file:line checksums (SEE: Zero-Drift Protocol below)
+5. **`RELEASES/CLAUDE_WORKFLOW.md`** — End-to-end 8-phase workflow for every ticket (MANDATORY process)
+6. **`RELEASES/STAGING_TICKETS.md`** — Active ticket registry (operator inputs + Claude outputs)
 
 ## Secondary References (Read When Relevant)
 
@@ -164,10 +167,12 @@ These files are from the pre-Cloud Run VM era. They remain in the repo for histo
 ## Session Mode
 
 ### Mode A: Pre-Staging (CURRENT)
+- **Session start**: Claude MUST run `node scripts/fix-guard.js session-start` FIRST
 - Claude starts independently — no operator paste required
-- Claude can work on SA-GOLIVE tickets directly
+- Claude can work on staging tickets directly
 - No deploy risk — but branches + PRs still required (Claude self-merges)
 - One ticket = one branch = one PR = one tag (no direct pushes to main)
+- Follow `RELEASES/CLAUDE_WORKFLOW.md` for every ticket (8 phases, no skipping)
 - Run `git log --oneline -5` and `git status` at session start
 
 ### Mode B: Staging/Production (activate after GCP + SA-GOLIVE done)
@@ -238,7 +243,16 @@ TICKET-ID DONE:
 
 ## GCP Status
 
-**Operator resolving immediately.** GCP infrastructure setup in progress — see Operator Action Tracker in MASTER_PLAN.md (Part 4).
+**DEPLOYED.** All 6 Cloud Run services live on staging.supermandi.tech (SHA `81c3a2a4`, deployed 2026-03-13). 187/187 migrations applied. CD pipeline #970 — 7/7 jobs GREEN.
+
+## Current Phase: Staging Ticket Implementation (STG-001 → STG-492)
+
+- **492 tickets** organized in **18 layers** with **29 loophole guards** and **12 GUARD prereq tickets**
+- **Implementation order**: Layer 0 (Security/P0) → Layer 18 (E2E tests)
+- **Active ticket registry**: `RELEASES/STAGING_TICKETS.md`
+- **Next ticket number**: STG-493 (check `<!-- next ticket -->` comment at bottom)
+- **Git model**: Linear commits on main, one ticket = one commit = one tag
+- **Current focus**: Layer 0 — Security, DPDP compliance, P0 critical bugs
 
 ### First Deploy Protocol (Mega-Batch)
 When GCP is ready AND SA-GOLIVE is complete:
@@ -257,3 +271,61 @@ When GCP is ready AND SA-GOLIVE is complete:
 - `migrate-prod.js dry-run` to preview pending migrations
 - Manual migration execution (not auto on container start)
 - See MASTER_PLAN.md BATCH-010 for full protocol
+
+---
+
+## Zero-Drift Protocol (ZDP)
+
+> **Purpose**: Prevent Claude from regressing previous fixes. Every fix is registered with a file-region checksum. Before modifying any file, Claude checks if it contains registered fixes. After every fix, Claude registers it.
+
+### The Fix Ledger (`RELEASES/FIX_LEDGER.json`)
+Machine-readable state file tracking every active fix:
+```json
+{
+  "ticket": "STG-001",
+  "file": "backend/src/routes/v1/admin/suppliers.ts",
+  "start_line": 227,
+  "end_line": 301,
+  "checksum": "a1b2c3d4e5f6g7h8",
+  "description": "Self-registered supplier verify fallback from auth.applications",
+  "test_file": "backend/src/__tests__/admin/suppliers.verify.test.ts",
+  "status": "ACTIVE"
+}
+```
+
+### Claude MUST follow this protocol for EVERY code change:
+
+#### BEFORE modifying any file:
+1. Run `node scripts/fix-guard.js check` — if drift detected, STOP and investigate
+2. Read `RELEASES/FIX_LEDGER.json` — identify any ACTIVE fixes in the file you're about to modify
+3. If the file has registered fixes:
+   - Read the fixed regions (start_line to end_line)
+   - Understand WHY that code exists (read the description)
+   - Plan your change to PRESERVE those regions, or explicitly mark the old fix as SUPERSEDED with a reason
+
+#### AFTER every fix:
+1. Register the fix: `node scripts/fix-guard.js register '<json>'`
+2. Run `node scripts/fix-guard.js check` — confirm zero drift
+3. Run the test file associated with the fix
+4. Run ALL test files associated with other fixes in the same file
+
+#### BEFORE every commit:
+1. `node scripts/fix-guard.js pre-commit` — MUST exit 0
+2. If exit non-zero, Claude MUST fix the drift before committing
+
+### Rules:
+- **NEVER modify a registered fix region without reading the ledger first**
+- **NEVER delete a fix entry** — mark as SUPERSEDED with reason
+- **Every fix MUST have a test_file** — no test = no registration = no commit
+- **Checksum = truth** — if the checksum doesn't match, the fix has drifted
+- **Claude reads the ledger at session start** — this is mandatory, not optional
+- **The ledger is committed to git** — it travels with the code
+
+### Guard Script Commands:
+```bash
+node scripts/fix-guard.js check          # Verify all fixes intact
+node scripts/fix-guard.js report         # Print fix ledger summary
+node scripts/fix-guard.js register '{}'  # Register a new fix
+node scripts/fix-guard.js snapshot <file> <start> <end>  # Get checksum for a region
+node scripts/fix-guard.js pre-commit     # Pre-commit validation (exit 0/1)
+```

@@ -1,1274 +1,11569 @@
-# Staging Tickets — SuperMandi POS
+# Staging Tickets — Post-GCP Deploy (13-03-2026)
 
-> **Phase 1**: T-001 to T-053 — UI/UX staging fixes from operator browser testing (ALL DONE)
-> **Phase 2**: T-054 to T-073 — E2E production-grade implementation tickets (ALL DONE)
-> **Phase 3**: T-074 to T-111 — UI/UX Professional Polish (ALL DONE)
-> **Phase 4**: T-112 to T-127 — Wiring & Navigation (ALL DONE)
-> **Phase 5**: T-128 to T-199 — Production Audit: POS + Cross-Platform Gaps (ALL DONE)
-> **Phase 6**: T-200 to T-235 — 360° CTO Audit (ALL DONE)
-> **Phase 7**: T-236 to T-252 — B2B Reorder System (ALL DONE)
-> **Phase 8**: T-219, T-223, T-231, T-232, T-235 — FCM Push + Deferred (ALL DONE)
-> **Phase 9**: T-253 to T-316 — Payments + B2B Finance + WhatsApp + AI Automation (DONE — 45/64, 19 awaiting external APIs)
-> **Phase 10**: TEST-001 to TEST-052 — Production Testing: 3 Rounds (ALL DONE — 3,416 tests, 248 suites)
-> **Phase 11**: FIX-001 to FIX-067 — Production Hardening (QUEUED — 67 tickets from 5-platform audit)
-> **Launch Geography**: India — INR (₹), +91, IST, DD/MM/YYYY
-> **Zero Regression Rule**: Every ticket must leave the system in a deployable state. Fix micro issues inline.
+> **Baseline SHA**: `81c3a2a4` — deployed to GCP staging on 13-03-2026
+> **Staging URL**: staging.supermandi.tech
+> **Services**: api-gateway, main-backend, retailer-admin, supplier-portal, superadmin, landing
+> **Migrations**: 187/187 applied (zero pending)
+> **Previous tickets**: See `STAGING_TICKETS_V1.md` (440 tickets, Phases 1-11, archived)
+> **Ticket format**: STG-001, STG-002, ... (sequential, never reused)
+> **Zero Regression Rule**: Every ticket must leave the system in a deployable state
 
 ---
 
-## PHASE 1: STAGING UI/UX FIXES (T-001 → T-053) — ALL DONE
-
-> 53 tickets implemented across 10 commits (08568af → 8ab4f4c).
-> Categories: Blocking Bugs (3), Functional Bugs (7), Design System (5), Pre-Auth Retailer (5), Pre-Auth Supplier (5), Post-Auth Retailer (10), Post-Auth Supplier (7), SuperAdmin (11).
-
-| Range | Category | Count | Status |
-|-------|----------|-------|--------|
-| T-001, T-012, T-014 | A: Blocking Bugs (P0) | 3 | DONE |
-| T-002 to T-005, T-008, T-009, T-011 | B: Functional Bugs (P1) | 7 | DONE |
-| T-016 to T-020 | C: Cross-Portal Design System (P1) | 5 | DONE |
-| T-021 to T-025 | D: Pre-Auth Retailer (P2) | 5 | DONE |
-| T-026 to T-030 | E: Pre-Auth Supplier (P2) | 5 | DONE |
-| T-031 to T-040 | F: Post-Auth Retailer (P2) | 10 | DONE |
-| T-041 to T-047 | G: Post-Auth Supplier (P2) | 7 | DONE |
-| T-006, T-007, T-010, T-013, T-015, T-048 to T-053 | H: SuperAdmin (P1-P2) | 11 | DONE |
-
----
-
-## PHASE 2: E2E PRODUCTION-GRADE IMPLEMENTATION (T-054 → T-073)
-
-> 20 tickets. Full implementation — not verification stubs.
-> Execution order: schema/migration first → backend API → frontend UI → POS app → cross-service E2E.
-> During execution: if any micro issue found, fix inline and move on. Zero regression.
-
----
-
-### CATEGORY I: RETAILER PRODUCT → POS SYNC (P0)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-054 | Retailer web inline product upload → POS sync | Backend + Retailer + POS | **Implement**: Full E2E chain — retailer creates product via web form (PACKAGED or LOOSE_BULK) → product saved to `catalog.store_products` → POS `/api/v1/pos/products/lookup` and `/api/v1/pos/products/list` return the product with correct barcode, name, price, stock, unit, category. Fix any gap in: form validation, barcode generation (LOOSE_BULK `2{prefix}{ts}{rand}`), stock initialization (`inventory.stock_balances` + `inventory.inventory_ledger` opening_stock entry), POS query returning new product. Verify PACKAGED mode (manufacturer barcode) and LOOSE_BULK mode (system barcode) both sync. |
-| T-055 | Retailer CSV upload → POS sync | Backend + Retailer + POS | **Implement**: Full E2E chain — retailer uploads CSV file → async validation (5-step: template → upload → validate → commit → status) → products created in `catalog.store_products` → stock initialized in `inventory.stock_balances` + `inventory.inventory_ledger` → POS lookup/list/search returns all imported products. Fix any gap in: CSV parsing, duplicate barcode handling, chunked commit (100/batch), error categorization, stock ledger creation for imported rows with stock > 0. |
-
----
-
-### CATEGORY J: LOOSE PRODUCT RETAIL VARIANTS (P0 — NEW FEATURE)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-056 | Loose product retail variant schema + migration | Backend DB | **Implement**: New migration creating `catalog.product_retail_variants` table. Schema: `id` (uuid PK), `store_product_id` (FK → store_products), `variant_label` (e.g., "1 kg", "500 gm", "5 kg"), `variant_qty` (numeric — quantity in base unit, e.g., 1.0, 0.5, 5.0), `base_unit` (enum: KG, GM, LTR, ML, COUNT), `sell_price_minor` (int — retail price in paise for this variant), `barcode` (unique, system-generated), `is_active` (boolean default true), `created_at`, `updated_at`. Add index on `(store_product_id, is_active)`. Add constraint: only LOOSE_BULK products can have variants. Add enum type if `base_unit` doesn't exist. |
-| T-057 | Loose product retail variant backend API | Backend API | **Implement**: CRUD endpoints under `/api/v1/retailer-admin/products/:productId/variants`. POST — create variant (validate product is LOOSE_BULK, generate barcode `3{storePrefix}{ts}{rand}`, validate sell_price > 0, validate variant_qty > 0). GET — list variants for product. PUT `/:variantId` — update variant (price, label, active status). DELETE `/:variantId` — soft delete (set is_active=false). All endpoints store-scoped via JWT. Auto-generate default variants on LOOSE_BULK product creation based on base_unit: KG → [1kg, 5kg, 500gm, 250gm], LTR → [1L, 500ml, 200ml], COUNT → [1, 5, 10, 25]. |
-| T-058 | Retailer admin UI — variant management for loose products | Retailer Admin | **Implement**: In product detail/edit page, when product mode is LOOSE_BULK, show "Retail Variants" section below main form. Table listing all variants with columns: Label, Quantity, Unit, Sell Price, Barcode, Active, Actions (edit/delete). "Add Variant" button opens inline form (label, qty, unit, price). Auto-suggest variants based on base unit. Show calculated cost-per-unit (purchase_price / variant_qty) next to sell_price for margin visibility. Print barcode labels for variants (extend existing SKU label PDF to include variant barcodes). |
-| T-059 | POS app — variant picker for loose product sale | POS App | **Implement**: When scanning or selecting a LOOSE_BULK product in POS sale screen, if product has retail variants, show variant picker modal instead of adding directly to cart. Modal shows: product name, base purchase info (e.g., "Purchased: 1000 kg @ Rs 2/kg"), variant cards (e.g., "1 kg — Rs 25", "5 kg — Rs 120", "500 gm — Rs 15"). Tapping variant adds to cart with variant barcode, variant price, variant quantity. If product has no variants, fall back to current weight/count entry. POS product lookup API must return variants array with each LOOSE_BULK product. |
-| T-060 | Inventory deduction for variant-based loose product sales | Backend + POS | **Implement**: When POS completes sale with variant items, deduct stock in BASE UNIT from `inventory.stock_balances`. Example: selling "2x 1kg flour variant" deducts 2.0 KG from parent product's stock. Selling "3x 500gm flour variant" deducts 1.5 KG. Ledger entry in `inventory.inventory_ledger`: transaction_type='sale', product_id=parent_product_id, delta_qty=-variant_qty*cart_qty, reference includes variant_id. Update `stock_balances.quantity` atomically. Handle insufficient stock (reject if stock < required, no negative stock). |
-| T-061 | CSV upload support for loose product retail variants | Backend + Retailer | **Implement**: Extend retailer CSV import to support variant rows. New CSV columns: `variant_label`, `variant_qty`, `variant_unit`, `variant_sell_price`. If a CSV row has variant columns filled, create variant under the parent product (matched by barcode or product name). If parent doesn't exist yet in same CSV, create parent first then variants. Template download includes variant columns with example rows. Validation: variant_qty > 0, variant_sell_price > 0, parent must be LOOSE_BULK. |
-
----
-
-### CATEGORY K: SUPPLY CHAIN E2E & SCALABILITY (P0-P1)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-062 | Stock/purchase/sell ledger E2E across retail web + POS | Backend + Retailer + POS | **Implement**: Full ledger E2E chain. (1) Retailer web: add product with opening stock → verify `inventory.inventory_ledger` has opening_stock row + `stock_balances` has correct qty. (2) POS sale: sell N units → verify ledger has 'sale' row with delta_qty=-N + stock_balances reduced. (3) POS sale return: return M units → verify ledger has 'sale_return' row with delta_qty=+M + stock_balances increased. (4) Stock adjustment via retailer web → verify ledger has 'adjustment' row. (5) Purchase received (GRN) → verify ledger has 'purchase_received' row + stock_balances increased + avg_unit_cost_minor recalculated. Fix any broken link in the chain. Ensure `stock_balances.quantity` ALWAYS equals SUM of all `inventory_ledger.delta_qty` for that product+store. |
-| T-063 | Supplier CSV upload → SuperAdmin approval → POS catalog E2E | Backend + Supplier + SuperAdmin + POS | **Implement**: Full chain. (1) Supplier uploads CSV via supplier portal → products created in `catalog.supplier_products` with `approval_status='pending'`. (2) Products appear in SuperAdmin "Pending Products" panel → admin can edit name/category, set margin (lumpsum + %), approve or reject. (3) On approval: product added to `catalog.products` (master catalog) if not exists, `catalog.supplier_product_map` created linking supplier product to master. (4) POS catalog API `/api/v1/pos/catalog/stores/:storeId/catalog` returns the approved product with supplier info, margin-adjusted price, buyability. Fix any gap in: CSV validation, SuperAdmin approval endpoint, master catalog upsert, POS catalog query visibility rules. |
-| T-064 | Supplier web inline upload → SuperAdmin approval → POS catalog E2E | Backend + Supplier + SuperAdmin + POS | **Implement**: Same chain as T-063 but via supplier web form instead of CSV. (1) Supplier creates product via web form (name, category, barcode, SKU, purchase_price, MRP, MOQ, unit, description) → saved to `catalog.supplier_products` with `approval_status='pending'`. (2) Appears in SuperAdmin pending queue. (3) SuperAdmin approves with margin → master catalog + supplier_product_map. (4) POS catalog shows product. Verify the web form captures all required fields, validation matches CSV validation, and the downstream chain is identical to CSV path. |
-| T-065 | POS supplier catalog scalability — 10K suppliers x 1M SKUs | Backend + POS | **Implement**: Optimize POS catalog for scale. (1) Backend: paginated catalog API with cursor-based pagination (not offset), category index, supplier index, full-text search index on product name/SKU. (2) Add `catalog.catalog_categories` cache table (category → product count) refreshed on approval. (3) POS app: infinite scroll with 50-item pages, category sidebar filter, supplier filter dropdown, search-as-you-type with 300ms debounce, result count display. (4) Backend query plan: ensure JOINs across supplier_products + products + supplier_product_map + suppliers use indexed columns. (5) Add DB indexes: `idx_supplier_products_approval_status`, `idx_supplier_product_map_product_id`, `idx_products_category`. Target: <500ms p95 for first page load with 1M products. |
-| T-066 | Supplier → SuperAdmin auto-approval queue | Backend + SuperAdmin | **Implement**: When supplier creates/uploads product, it automatically enters SuperAdmin approval queue. (1) Backend: ensure all product creation paths (web form + CSV) set `approval_status='pending'` and `created_at` timestamp. (2) SuperAdmin: "Pending Products" panel sorted by created_at ASC (oldest first), with supplier name, product count per supplier, batch approve/reject capability. (3) Real-time notification: when new products are pending, SuperAdmin dashboard shows badge count. (4) Approval queue filters: by supplier, by category, by date range. (5) Batch operations: select multiple products → approve all / reject all with single reason. |
-| T-067 | SuperAdmin margin application — lumpsum + % per SKU/unit | Backend + SuperAdmin | **Implement**: Full margin system. (1) Schema: `catalog.supplier_products` already has `supermandi_margin_minor` (paise) and `margin_percent` (%). Verify both fields are used in price calculation. (2) Price calculation formula: `retailer_price = supplier_price + supermandi_margin_minor + (supplier_price * margin_percent / 100)`. (3) SuperAdmin UI: in product approval modal, margin fields with live preview — show supplier price, margin amount, final retailer price. (4) Bulk margin: apply same margin to all products from a supplier or all products in a category. (5) Margin validation: final price must be > 0 and ≤ MRP. (6) POS catalog API must return `retailer_price` (with margin applied), not raw `supplier_price`. |
-| T-068 | SuperAdmin publish (approve) → POS purchase tab visibility | Backend + SuperAdmin + POS | **Implement**: End-to-end publish flow. (1) SuperAdmin clicks "Approve" on pending product → `approval_status='approved'`, `approved_at=now()`, `approved_by=admin_id`. (2) If master catalog entry doesn't exist, create in `catalog.products`. (3) Create `catalog.supplier_product_map` entry (supplier_product_id → product_id) with status='active'. (4) POS catalog query visibility rules: `sp.approval_status='approved'` AND `s.verification_status='verified'` AND `ssl.status='active'` AND `spm.status='active'`. (5) Verify: newly approved product appears in POS BuyScreen within 1 API refresh. (6) Verify: rejected product does NOT appear. (7) Verify: if supplier is unverified, approved product still doesn't appear (supplier gate). |
-
----
-
-### CATEGORY L: INVOICING SYSTEM (P0 — NEW FEATURE)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-069 | Invoice system schema — tables + sequences | Backend DB | **Implement**: New migration creating invoice tables. (1) `orders.invoices`: id (uuid PK), invoice_number (varchar UNIQUE, auto-generated INV-YYYYMM-NNNNN), invoice_type (enum: 'buy_resell', 'platform_fee'), purchase_order_id (FK), supplier_id (FK), retailer_store_id (FK), invoice_date (timestamptz), due_date (timestamptz), subtotal_minor (int), cgst_minor (int), sgst_minor (int), igst_minor (int), total_tax_minor (int), total_minor (int), platform_fee_minor (int — only for platform_fee type), platform_fee_percent (numeric), status (enum: 'draft', 'issued', 'paid', 'cancelled'), from_gstin (varchar), to_gstin (varchar), from_state (varchar), to_state (varchar), from_entity_name (varchar), to_entity_name (varchar), notes (text), created_at, updated_at. (2) `orders.invoice_items`: id (uuid PK), invoice_id (FK), product_name (varchar), hsn_code (varchar), quantity (numeric), unit (varchar), unit_price_minor (int), discount_minor (int default 0), taxable_value_minor (int), cgst_rate (numeric), cgst_minor (int), sgst_rate (numeric), sgst_minor (int), igst_rate (numeric default 0), igst_minor (int default 0), total_minor (int). (3) Sequence: `orders.invoice_number_seq` for auto-incrementing invoice numbers. (4) Indexes on invoice_number, purchase_order_id, supplier_id, retailer_store_id, status. |
-| T-070 | Invoice mode per product — schema + SuperAdmin UI | Backend + SuperAdmin | **Implement**: (1) Add `invoice_mode` column to `catalog.supplier_products` — enum: 'buy_resell', 'platform_fee', default null. (2) SuperAdmin product approval modal: add "Invoice Model" dropdown with two options: "Buy-Resell (SuperMandi as intermediary)" and "Platform Fee (Direct supplier → retailer)". (3) When admin selects buy_resell: show margin fields (lumpsum + %). When admin selects platform_fee: show platform fee fields (lumpsum fee + % fee). (4) Invoice mode is set at product publish time and stored per-product. (5) POS catalog API includes `invoice_mode` in product response so purchase flow knows which invoice to generate. (6) Validation: invoice_mode must be set before product can be approved/published. |
-| T-071 | Invoice Model 1 — Buy-Resell (Supplier → SuperMandi → Retailer) | Backend + POS | **Implement**: When retailer purchases a buy_resell product via POS purchase tab: (1) TWO invoices generated: Invoice A (Supplier → SuperMandi Tech Pvt Ltd) at supplier_price, Invoice B (SuperMandi Tech Pvt Ltd → Retailer) at supplier_price + margin. (2) Tax calculation: determine if same-state (CGST 9% + SGST 9%) or inter-state (IGST 18%) based on supplier_state vs SuperMandi_state vs retailer_state. (3) SuperMandi entity details: hardcode company GSTIN, address, state in env vars (SUPERMANDI_GSTIN, SUPERMANDI_STATE, SUPERMANDI_ADDRESS, SUPERMANDI_ENTITY_NAME). (4) Invoice A: from=Supplier, to=SuperMandi, amount=supplier_price + tax. Invoice B: from=SuperMandi, to=Retailer, amount=retailer_price + tax. (5) Both invoices linked to same purchase_order_id. (6) Invoices created atomically when GRN is completed (goods received). |
-| T-072 | Invoice Model 2 — Platform Fee (Supplier → Retailer + Fee) | Backend + POS | **Implement**: When retailer purchases a platform_fee product via POS purchase tab: (1) ONE invoice generated: Invoice (Supplier → Retailer) at supplier_price + tax. (2) PLUS a platform fee debit note: SuperMandi charges supplier a fee (lumpsum_fee_minor + fee_percent * invoice_total). (3) Fee debit note schema: `orders.platform_fee_notes` — id, invoice_id (FK), supplier_id, fee_amount_minor, fee_percent, fee_base_minor (what % is applied to), cgst_minor, sgst_minor, igst_minor, total_minor, status. (4) Tax on platform fee: SuperMandi charges GST on the fee itself (service tax). (5) Supplier earnings page: show gross earnings minus platform fees = net earnings. (6) SuperAdmin: platform fee report — total fees collected per supplier, per month. |
-| T-073 | Invoice PDF generation + download | Backend + All Portals | **Implement**: (1) PDF generation service using `pdfkit` or `@react-pdf/renderer` (server-side). (2) Invoice PDF layout: company header (logo placeholder, name, GSTIN, address), invoice number, date, due date, from/to party details with GSTIN, itemized table (product, HSN, qty, unit price, taxable value, CGST, SGST, IGST, total), subtotal, tax summary, grand total in words, bank details for payment, terms & conditions, digital signature placeholder. (3) API endpoint: GET `/api/v1/invoices/:invoiceId/pdf` — generates and streams PDF. (4) Retailer admin: "Invoices" section showing purchase invoices with download button. (5) Supplier portal: "Invoices" section showing sales invoices + platform fee notes with download. (6) SuperAdmin: invoice search/filter/download across all invoices. (7) Store invoice PDFs in GCS bucket for archival. |
-
----
-
-## SUMMARY
-
-| Category | Range | Count | Priority | Status |
-|----------|-------|-------|----------|--------|
-| A-H: Staging UI/UX Fixes | T-001 → T-053 | 53 | P0-P2 | **DONE** |
-| I: Retailer Product → POS Sync | T-054 → T-055 | 2 | P0 | **DONE** |
-| J: Loose Product Retail Variants | T-056 → T-061 | 6 | P0 | **DONE** |
-| K: Supply Chain E2E & Scalability | T-062 → T-068 | 7 | P0-P1 | **DONE** |
-| L: Invoicing System | T-069 → T-073 | 5 | P0 | **DONE** |
-| M: Brand Foundation | T-074 → T-080 | 7 | P0 | **DONE** |
-| N: Navigation & Layout | T-081 → T-088 | 8 | P0 | **DONE** |
-| O: Component Consistency | T-089 → T-098 | 10 | P1 | **DONE** |
-| P: Loading States & Feedback | T-099 → T-103 | 5 | P1 | **DONE** |
-| Q: Landing Page Brand | T-104 → T-106 | 3 | P1 | **DONE** |
-| R: POS App Polish | T-107 → T-109 | 3 | P1 | **DONE** |
-| S: Verification (Phase 3) | T-110 → T-111 | 2 | P2 | **DONE** |
-| T: Breadcrumbs | T-112 → T-114 | 3 | P1 | **DONE** |
-| U: 404 & Error Pages | T-115 → T-117 | 3 | P1 | **DONE** |
-| V: Deep Linking & State | T-118 → T-121 | 4 | P1 | **DONE** |
-| W: POS Navigation Polish | T-122 → T-127 | 6 | P1 | **DONE** |
-| **Phase 1-4 Total** | **T-001 → T-127** | **127** | | **ALL DONE** |
-| | | | | |
-| **PHASE 5: Production Audit** | T-128 → T-199 | 72 | P0-P2 | **DONE** |
-| **PHASE 6: 360° CTO Audit** | T-200 → T-235 | 36 | P0-P2 | **DONE** |
-| **PHASE 7: B2B Reorder** | T-236 → T-252 | 17 | P0-P1 | **DONE** |
-| **PHASE 8: FCM Push + Deferred** | T-219,T-223,T-231,T-232,T-235 | 5 | P1 | **DONE** |
-| **PHASE 9: Payments+Finance+WhatsApp+AI** | T-253 → T-316 | 64 | P0-P2 | **DONE (45/64, 19 ext.)** |
-| **PHASE 10: Production Testing** | TEST-001 → TEST-052 | 52 | — | **DONE (3,416 tests)** |
-| **PHASE 11: Production Hardening** | FIX-001 → FIX-067 | 67 | P0-P2 | **QUEUED** |
-| | | | | |
-| **GRAND TOTAL** | **T-001 → FIX-067** | **440** | | **373 DONE / 67 QUEUED** |
-
----
-
-## EXECUTION ORDER (T-054 → T-073)
-
-> Dependencies flow downward. Each ticket leaves system deployable.
+## Ticket Lifecycle
 
 ```
-Phase 1: Retailer → POS Sync (verify + fix existing chain)
-  T-054  Retailer web product upload → POS sync
-  T-055  Retailer CSV upload → POS sync
-
-Phase 2: Loose Product Retail Variants (NEW feature, bottom-up)
-  T-056  Schema + migration (catalog.product_retail_variants)
-  T-057  Backend CRUD API (/products/:id/variants)
-  T-058  Retailer admin UI (variant management)
-  T-059  POS app (variant picker for sale)
-  T-060  Inventory deduction (variant → base unit stock)
-  T-061  CSV upload variant support
-
-Phase 3: Supply Chain E2E (verify + fix + scale)
-  T-062  Stock/purchase/sell ledger E2E
-  T-063  Supplier CSV → SuperAdmin → POS catalog
-  T-064  Supplier web → SuperAdmin → POS catalog
-  T-065  POS catalog scalability (10K suppliers × 1M SKUs)
-  T-066  Supplier → SuperAdmin auto-approval queue
-  T-067  SuperAdmin margin (lumpsum + %)
-  T-068  SuperAdmin publish → POS visibility
-
-Phase 4: Invoicing System (NEW feature, bottom-up)
-  T-069  Invoice schema + tables
-  T-070  Invoice mode per product (SuperAdmin UI)
-  T-071  Invoice Model 1: Buy-Resell
-  T-072  Invoice Model 2: Platform Fee
-  T-073  Invoice PDF generation + download
+OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 ```
 
----
-
-## ZERO REGRESSION RULES FOR PHASE 2
-
-1. **Every ticket is E2E**: schema → API → UI → POS. No partial implementations.
-2. **Fix inline**: If executing T-058 reveals a bug in T-054's work, fix it in the same commit.
-3. **Stock integrity invariant**: `stock_balances.quantity = SUM(inventory_ledger.delta_qty)` — ALWAYS.
-4. **Price integrity invariant**: All prices in minor units (paise). No floating point math on money.
-5. **Store isolation invariant**: `store_id` from JWT only. Never trust client-sent store_id.
-6. **Supplier gate invariant**: POS catalog only shows products where supplier is verified + product is approved + store link is active + mapping exists.
-7. **Invoice integrity invariant**: Invoice totals must equal SUM(line items). Tax must match CGST+SGST or IGST (never both).
-8. **No orphan data**: Every variant must have a parent product. Every invoice must have a purchase order. Every ledger entry must have a reference.
+- **OPEN**: Ticket created from operator input, not yet started
+- **IN_PROGRESS**: Claude is actively working on it
+- **DONE**: Code complete, tests pass, registered in FIX_LEDGER
+- **PARKED**: Committed to main with prestage tag, ready for mega-batch deploy
 
 ---
 
-## REFERENCE: Portal Pages
+## Summary
 
-### Retailer Portal
-| Route | Component | Description |
-|-------|-----------|-------------|
-| `/retailer/login` | LoginPage | Phone OTP + password login |
-| `/retailer/register` | RegisterPage | 5-step registration |
-| `/retailer/forgot-password` | ForgotPasswordPage | OTP-based password reset |
-| `/s/:storeCode` | DashboardPage | Main dashboard |
-| `/s/:storeCode/products` | ProductsPage | Product catalog + variant management |
-| `/s/:storeCode/import` | ImportPage | Bulk CSV import (4-step) |
-| `/s/:storeCode/inventory` | InventoryPage | Inventory ledger |
-| `/s/:storeCode/suppliers` | SuppliersPage | Supplier management |
-| `/s/:storeCode/supplier-catalog` | SupplierCatalogPage | Browse supplier products |
-| `/s/:storeCode/compliance` | CompliancePage | Compliance documents |
-| `/s/:storeCode/settings` | SettingsPage | Store configuration |
-| `/s/:storeCode/settings/payments` | PaymentsPage | Payment setup |
-| `/s/:storeCode/devices` | DeviceActivationPage | POS device activation |
-| `/s/:storeCode/invoices` | InvoicesPage | Purchase invoices (NEW — T-073) |
+| # | Title | Priority | Status |
+|---|-------|----------|--------|
+| STG-001 | Supplier self-registration verify fallback | P1 | DONE (uncommitted) |
+| STG-002 | Release APK cold start blank screen before splash | P2 | OPEN |
+| STG-003 | Brand design tokens — unified color palette and spacing | P1 | OPEN |
+| STG-004 | Activation screen — branded redesign with trust signals | P1 | OPEN |
+| STG-005 | Home top bar — declutter status icons and scanner warning | P1 | OPEN |
+| STG-006 | Sync status panel — collapse when healthy, reduce footprint | P2 | OPEN |
+| STG-007 | Tab navigation — full labels, consistent colors, active states | P1 | OPEN |
+| STG-008 | Search/scan area — unified input with clear visual hierarchy | P2 | OPEN |
+| STG-009 | Product cards — full names, stock badges, better thumbnails | P1 | OPEN |
+| STG-010 | Sync Status modal — brand illustrations, plain-language tabs | P3 | OPEN |
+| STG-011 | Typography and spacing system — POS-grade readability | P2 | OPEN |
+| STG-012 | Voice FAB — brand-colored, contextual label on first use | P3 | OPEN |
+| STG-013 | FEFO badge — explain or hide jargon for kirana users | P3 | OPEN |
+| STG-014 | DEV MODE banner — hide in production builds | P2 | OPEN |
+| STG-015 | Inconsistent product card layouts — unify list vs thumbnail styles | P1 | OPEN |
+| STG-016 | Cart/checkout indicator — floating total bar when items added | P1 | OPEN |
+| STG-017 | Staff login indicator — show who is logged in on home screen | P2 | OPEN |
+| STG-018 | Product cards — add unit/weight context to prices | P2 | OPEN |
+| STG-019 | Activation screen keyboard and navigation UX fixes | P2 | OPEN |
+| STG-020 | Product card whitespace — remove excess empty area in small cards | P2 | OPEN |
+| STG-021 | Sync modal — add tab count badges and last-sync timestamp | P3 | OPEN |
+| STG-022 | Logo pill badge — enlarge and make recognizable as brand mark | P2 | OPEN |
+| STG-023 | Activation subtitle — simplify two-concept info text | P2 | OPEN |
+| STG-024 | Enrollment QR scan — button exists but needs camera integration and UX polish | P2 | OPEN |
+| STG-025 | Add support phone number on activation and error screens | P2 | OPEN |
+| STG-026 | Add terms/privacy policy link — Play Store compliance | P1 | OPEN |
+| STG-027 | Green grid icon on product card — explain or remove | P3 | OPEN |
+| STG-028 | Product list section headers — group by category or recent | P2 | OPEN |
+| STG-029 | SELL tab — add manual "Add Product" button for unlisted items | P2 | OPEN |
+| STG-030 | CREDIT tab — explain greyed-out state or enable with guidance | P2 | OPEN |
+| STG-031 | Quantity selector — quick +/- buttons for bulk product adds | P1 | OPEN |
+| STG-032 | Discount/MRP indicator on product cards | P2 | OPEN |
+| STG-033 | Favorites/frequently sold section on SELL tab | P2 | OPEN |
+| STG-034 | Recent bills shortcut — quick access to last 5 transactions | P2 | OPEN |
+| STG-035 | Empty state design for zero-product store | P2 | OPEN |
+| STG-036 | Date/time display in app header | P3 | OPEN |
+| STG-037 | Customer name/phone entry before billing for credit sales | P1 | OPEN |
+| STG-038 | Enrollment — Device Type chips unexplained jargon | P2 | OPEN |
+| STG-039 | Enrollment — Printing Mode "Direct ESC/POS" jargon, needs plain language | P2 | OPEN |
+| STG-040 | Enrollment — chip layout breaks on small screens (Retailer Phone wraps) | P2 | OPEN |
+| STG-041 | Enrollment — no inline form validation feedback on code input | P2 | OPEN |
+| STG-042 | Enrollment — "Counter-1" default label causes duplicates on multi-device | P3 | OPEN |
+| STG-043 | Enrollment — floating labels for input fields (placeholder disappears on focus) | P2 | OPEN |
+| STG-044 | Enrollment — button hierarchy: "Scan QR" vs "Enroll Device" visual weight | P3 | OPEN |
+| STG-045 | Home — "Ready for billing" status text too small for key operational state | P2 | OPEN |
+| STG-046 | Product card expand chevron (↓) — no hint of what it expands to | P3 | OPEN |
+| STG-047 | Horizontal product row misleading — empty space implies missing products | P2 | OPEN |
+| STG-048 | Voice FAB position — overlaps product cards on longer lists | P2 | OPEN |
+| STG-049 | Top-right camera icon unlabeled — unknown function to users | P2 | OPEN |
+| STG-050 | No pull-to-refresh indicator on product list | P3 | OPEN |
+| STG-051 | Daily session counter — show "Bills today" and "Sales total" on home | P2 | OPEN |
+| STG-052 | Store name truncation on narrow screens | P3 | OPEN |
+| STG-053 | Accessibility — WCAG AA contrast audit across all buttons and text | P1 | OPEN |
+| STG-054 | Hindi/regional language selector — i18n for kirana retailers | P2 | OPEN |
+| STG-055 | App version display on enrollment and settings screens | P3 | OPEN |
+| STG-056 | Product card tap feedback — haptic vibration and ripple effect | P3 | OPEN |
+| STG-057 | Activation text rewrite — remove "superadmin", simplify to 3-step flow | P1 | OPEN |
+| STG-058 | Activation info box — replace wall-of-text with collapsible visual steps | P1 | OPEN |
+| STG-059 | Support contact — replace email with phone/WhatsApp for kirana users | P1 | OPEN |
+| STG-060 | Activation — replace raw URL with tappable "Register Here" button | P2 | OPEN |
+| STG-061 | Activation code input — fix center-aligned placeholder, must be left-aligned | P2 | OPEN |
+| STG-062 | Activation — "Activate POS" button disabled state until valid code format | P2 | OPEN |
+| STG-063 | Activation — add welcome illustration/visual for brand warmth | P2 | OPEN |
+| STG-064 | Activation — "23106RN0DA" device name should show friendly model name | P2 | OPEN |
+| STG-065 | Activation — add step indicator "Step 1 of 2" for onboarding progress | P2 | OPEN |
+| STG-066 | Enrollment vs Activation — unify two different onboarding screens into one | P1 | OPEN |
+| STG-067 | Home header icons — add labels or tooltips to Wi-Fi/printer/scanner/camera | P2 | OPEN |
+| STG-068 | Product cards — add "+" tap affordance button for adding to bill | P1 | OPEN |
+| STG-069 | Tab bar — unify 5 different visual treatments into one consistent style | P1 | OPEN |
+| STG-070 | Home — dark header band harsh cut to white body, add smooth transition | P3 | OPEN |
+| STG-071 | Sync row — connect checkmark (left) with "15s ago" (right) visually | P3 | OPEN |
+| STG-072 | Activation — remove hamburger menu pre-activation (no navigation needed) | P2 | OPEN |
+| STG-073 | Activation helper text — "store dashboard" is jargon, simplify | P3 | OPEN |
+| STG-074 | Search + barcode inputs — unify border/container styles into one section | P2 | OPEN |
+| STG-075 | Product cards — add loading skeleton placeholder during fetch | P2 | OPEN |
+| STG-076 | Activation — "on web" rewrite to specific URL or "online" | P2 | OPEN |
+| STG-077 | Payment — error message vague, no specific failure reason | P1 | OPEN |
+| STG-078 | Payment — "Complete Payment" greyed out with no explanation why | P1 | OPEN |
+| STG-079 | Payment — two competing retry mechanisms (error Retry + disabled CTA) | P1 | OPEN |
+| STG-080 | Payment — no cash amount received input or change calculation | P1 | OPEN |
+| STG-081 | Payment — no cart/order summary visible on payment screen | P1 | OPEN |
+| STG-082 | Payment — "Due" method has no customer selection for credit sale | P1 | OPEN |
+| STG-083 | Payment — no back button to return to cart | P1 | OPEN |
+| STG-084 | Payment — UPI flow incomplete, no QR/app selector after selecting UPI | P1 | OPEN |
+| STG-085 | Payment — no split payment support (cash + UPI) | P2 | OPEN |
+| STG-086 | Payment — "Cart locked" badge unexplained, no unlock path | P2 | OPEN |
+| STG-087 | Payment — ~40% empty space between tabs and amount | P2 | OPEN |
+| STG-088 | Payment — no GST/tax breakup on payment screen | P2 | OPEN |
+| STG-089 | Payment — "Complete Payment" grey-on-grey text fails WCAG contrast | P2 | OPEN |
+| STG-090 | Payment — no loading/processing state during payment attempt | P2 | OPEN |
+| STG-091 | Payment — instruction text "Collect cash" doesn't change per payment method | P2 | OPEN |
+| STG-092 | Payment — no receipt preview before completing payment | P3 | OPEN |
+| STG-093 | Payment — Cash icon unclear, doesn't read as "cash" or "banknote" | P3 | OPEN |
+| STG-094 | Cart — "Clear" button has no confirmation dialog, deletes all items instantly | P1 | OPEN |
+| STG-095 | Cart — delete item (🗑️) has no confirmation or undo | P1 | OPEN |
+| STG-096 | Cart — quantity [-][+] buttons too small, need larger tap targets | P1 | OPEN |
+| STG-097 | Cart — quantity number not tappable for direct input (type "10" vs tap + 9x) | P1 | OPEN |
+| STG-098 | Cart — no "Add more items" / "Continue Shopping" link in cart | P2 | OPEN |
+| STG-099 | Cart — edit icon (✏️) purpose unclear, no tooltip or label | P2 | OPEN |
+| STG-100 | Cart — unit price vs line total not labeled (ambiguous with qty > 1) | P2 | OPEN |
+| STG-101 | Cart — no GST/tax line between Subtotal and Total | P2 | OPEN |
+| STG-102 | Cart — discount has no max limit / manager approval for large discounts | P1 | OPEN |
+| STG-103 | Cart — no customer name/phone field for credit/due sales | P2 | OPEN |
+| STG-104 | Cart — no "Hold/Park Bill" feature for interrupted transactions | P2 | OPEN |
+| STG-105 | Cart — no item count header ("1 item in cart") | P3 | OPEN |
+| STG-106 | Cart — Discount %/Flat toggle styling inconsistent | P3 | OPEN |
+| STG-107 | Cart — no product thumbnail/image in cart items | P3 | OPEN |
+| STG-108 | Cart — ~50% empty space with few items, no guidance to add more | P3 | OPEN |
+| STG-109 | Cart — Checkout button should show item count "Checkout (1 item) ₹145" | P3 | OPEN |
+| STG-110 | Cart — no per-item discount, only cart-level | P3 | OPEN |
+| STG-111 | Cart — no "You save ₹X" line when discount applied | P3 | OPEN |
+| STG-112 | Cart — no notes/memo field for special instructions | P3 | OPEN |
+| STG-113 | Payment — no bill/invoice number visible for tracking and disputes | P1 | OPEN |
+| STG-114 | Payment — no cancel/void transaction button | P1 | OPEN |
+| STG-115 | Payment — missing payment methods: Card, Wallet (Paytm/GPay balance) | P2 | OPEN |
+| STG-116 | Payment — Indian lakh number formatting (₹1,45,000 not ₹145,000) | P2 | OPEN |
+| STG-117 | Payment — ".00" always shown on round amounts, add smart formatting | P3 | OPEN |
+| STG-118 | Payment — "Retry" button is red (destructive color) for a positive action | P2 | OPEN |
+| STG-119 | Payment — error banner has no dismiss X, persists indefinitely | P2 | OPEN |
+| STG-120 | Payment — no staff name/ID for shift reconciliation and audit | P2 | OPEN |
+| STG-121 | Payment — "Due" icon is calendar, should represent credit/udhar | P3 | OPEN |
+| STG-122 | Payment — no confirmation dialog for large amounts (₹5,000+) | P1 | OPEN |
+| STG-123 | Payment — amount positioned in dead center of empty space, move to top | P2 | OPEN |
+| STG-124 | Payment — no sound/vibration feedback on payment success or failure | P2 | OPEN |
+| STG-125 | Payment — no partial payment tracking (₹100 now + ₹45 due later) | P2 | OPEN |
+| STG-126 | Cart — [-] at qty=1 behavior undefined: remove item? block? go to 0? | P1 | OPEN |
+| STG-127 | Cart — no stock validation when qty exceeds available stock | P1 | OPEN |
+| STG-128 | Cart — no batch/expiry info for perishable items in cart | P2 | OPEN |
+| STG-129 | Cart — long product name truncation/overflow not handled | P2 | OPEN |
+| STG-130 | Cart — discount input has no live preview ("10% = ₹14.50 off") | P2 | OPEN |
+| STG-131 | Cart — empty space should show "frequently bought together" suggestions | P2 | OPEN |
+| STG-132 | Cart — Subtotal = Total is redundant, show Subtotal only when different | P3 | OPEN |
+| STG-133 | Cart — bottom sheet height fixed at ~90%, should be dynamic to content | P3 | OPEN |
+| STG-134 | Cart — no swipe-to-delete gesture on cart items | P3 | OPEN |
+| STG-135 | Cart — keyboard may cover Checkout button when discount input focused | P2 | OPEN |
+| STG-136 | Cart — no "Share cart via WhatsApp" for phone order confirmation | P3 | OPEN |
+| STG-137 | Cart — "In stock" has no low-stock warning styling (amber/red for <5 units) | P2 | OPEN |
+| STG-138 | Cart — no weight/unit display separate from product name | P2 | OPEN |
+| STG-139 | Cart — no return/exchange line item for customer returns | P2 | OPEN |
+| STG-140 | Cart — Discount section always visible, should collapse when unused | P3 | OPEN |
+| STG-141 | Cart — Checkout button price doesn't animate on total change | P3 | OPEN |
+| STG-142 | BUG: "[menu.viewDetails]" raw i18n key leaked in Today's Sales card | P0 | OPEN |
+| STG-143 | BUG: "[menu.printerReady]" and "[menu.testPrint]" raw i18n keys leaked | P0 | OPEN |
+| STG-144 | SECURITY: Developer/QA section + BUILD INFO visible to all users | P0 | OPEN |
+| STG-145 | SECURITY: BUILD INFO leaks token, API URL, StoreId UUID to end users | P0 | OPEN |
+| STG-146 | Menu — Device UUID shown instead of device label ("Counter-1") | P1 | OPEN |
+| STG-147 | Menu — store name lowercase in System Status vs title case in header | P2 | OPEN |
+| STG-148 | Menu — System Status card should be collapsible, rarely needed | P2 | OPEN |
+| STG-149 | Menu — Today's Sales percentages (551%) have no baseline context | P2 | OPEN |
+| STG-150 | Menu — "Payment Modes" section incomplete, label with no data | P2 | OPEN |
+| STG-151 | Menu — metric labels below numbers, should be above (read order) | P2 | OPEN |
+| STG-152 | Menu — Today's Sales should be on HOME screen, not buried in Menu | P1 | OPEN |
+| STG-153 | Menu — Reprint/Download/Share buttons have no context (what?) | P2 | OPEN |
+| STG-154 | Menu — "BNPL Dues" jargon, kirana retailer won't understand BNPL | P2 | OPEN |
+| STG-155 | Menu — "Stock Inward" warehouse jargon, rename to "Add New Stock" | P2 | OPEN |
+| STG-156 | Menu — Opening Stock "?" icon should be inventory icon | P2 | OPEN |
+| STG-157 | Menu — "Customers" and "Customer Management" are duplicate entries | P1 | OPEN |
+| STG-158 | Menu — "Overdue Dues" redundant wording, use "Overdue Payments" | P3 | OPEN |
+| STG-159 | Menu — 20+ items need 8 screens of scrolling, needs restructure | P1 | OPEN |
+| STG-160 | Menu — icon colors inconsistent (blue, teal, green, red, grey, orange) | P2 | OPEN |
+| STG-161 | Menu — no notification badges on items (overdue count, pending) | P2 | OPEN |
+| STG-162 | Menu — logo + pill + "Menu" title redundant heading, wastes 60px | P3 | OPEN |
+| STG-163 | Menu — card spacing too large (~96px each), needs tighter layout | P3 | OPEN |
+| STG-164 | Settings — "kbcretailer (MANAGER)" shows username not display name | P1 | OPEN |
+| STG-165 | Settings — Hindi toggle "हि" non-standard abbreviation | P2 | OPEN |
+| STG-166 | Settings — "Re-enroll to a different store" enrollment jargon | P3 | OPEN |
+| STG-167 | Settings — no About section with app version + terms + privacy links | P2 | OPEN |
+| STG-168 | Settings — no logout/sign-out option visible for staff | P1 | OPEN |
+| STG-169 | Menu — no search/filter across 20+ menu items | P2 | OPEN |
+| STG-170 | Menu — "Barcode Sheets" subtitle "tiered" jargon | P3 | OPEN |
+| STG-171 | Menu — Today's Sales metrics all same size, no visual hierarchy | P2 | OPEN |
+| STG-172 | Menu — hardcoded English strings not using i18n (Return/Refund, Opening Stock, etc.) | P1 | OPEN |
+| STG-173 | Menu — "View Details" uses t() defaultValue fallback, raw key leaks if i18n fails | P1 | OPEN |
+| STG-174 | Menu — "Printer Ready"/"Test" use t() second-arg fallback, not standard defaultValue | P1 | OPEN |
+| STG-175 | Menu — no Pressable ripple/feedback effect on menu items (no android_ripple) | P2 | OPEN |
+| STG-176 | Menu — header paddingVertical:8 too tight, brand pill cramped | P2 | OPEN |
+| STG-177 | Menu — status panel "Sync" label hardcoded English (not i18n) | P2 | OPEN |
+| STG-178 | Menu — Build Info visible on release with EXPO_PUBLIC_ENABLE_QA_MENU=true | P1 | OPEN |
+| STG-179 | Menu — release build stamp shows raw SHA and timestamp, not user-friendly version | P2 | OPEN |
+| STG-180 | Menu — Switch Staff alert uses English string literals, not i18n | P2 | OPEN |
+| STG-181 | Menu — billActions (Reprint/Download/Share) all navigate to same SalesHistory | P1 | OPEN |
+| STG-182 | Menu — no haptic feedback on menu item press | P3 | OPEN |
+| STG-183 | Menu — section header margin 24px top but 4px bottom, visually unbalanced | P3 | OPEN |
+| STG-184 | Menu — WhatsApp Support fallback uses "Support Unavailable" English literal | P2 | OPEN |
+| STG-185 | Menu — WhatsApp pre-filled message in English only, no i18n | P2 | OPEN |
+| STG-186 | Menu — trend badge at 9px font too small to read on budget Android | P2 | OPEN |
+| STG-187 | Menu — trend percentage shows "551%" with no cap or "99%+" formatting | P2 | OPEN |
+| STG-188 | Menu — Payment Modes breakdown shows "Cash: ₹..." raw label, not i18n | P2 | OPEN |
+| STG-189 | Menu — Help & Support shows "&amp;" HTML entity instead of "&" | P0 | OPEN |
+| STG-190 | Menu — no skeleton/shimmer loading state for System Status and Today's Sales | P2 | OPEN |
+| STG-191 | Menu — status panel statusBadge uses transparent bg (surfaceAlt), no outline | P3 | OPEN |
+| STG-192 | Menu — menuIcon 36x36 too small for touch targets on budget Android | P2 | OPEN |
+| STG-193 | Menu — "Z-Report and cash reconciliation" subtitle jargon for kirana users | P2 | OPEN |
+| STG-194 | Menu — "Start, end, and view shift history" assumes shift concept familiarity | P3 | OPEN |
+| STG-195 | Menu — "AI & Intelligence" section title too technical, rename to "Smart Insights" | P2 | OPEN |
+| STG-196 | Menu — "Alerts, forecasts, slow movers, expiry tracking" subtitle info-dense | P3 | OPEN |
+| STG-197 | Menu — "Browse and apply for credit offers" subtitle implies retailer is borrowing | P3 | OPEN |
+| STG-198 | Menu — content padding 16px identical to item padding, creates visual merge | P3 | OPEN |
+| STG-199 | Menu — ScrollView has no scrollbar indicator styling | P3 | OPEN |
+| STG-200 | Enroll — "hello@supermandi.tech" email in error hints, kirana users won't email | P1 | OPEN |
+| STG-201 | Enroll — "Superadmin" used in error messages (deviceInactive, storeInactive) | P1 | OPEN |
+| STG-202 | Enroll — STORE_INACTIVE hint says "Contact hello@supermandi.tech for help" | P1 | OPEN |
+| STG-203 | Enroll — "RETAILER_PHONE" hardcoded as deviceType, OEM_HANDHELD never sent | P2 | OPEN |
+| STG-204 | Enroll — defaultLabel uses Device.modelName raw (e.g. "23106RN0DA") | P2 | OPEN |
+| STG-205 | Enroll — deep link re-enrollment alert uses English literals, no i18n | P2 | OPEN |
+| STG-206 | Enroll — missing code alert says "superadmin account activation" | P1 | OPEN |
+| STG-207 | Enroll — error codes DEVICE_FINGERPRINT_INVALID says "Reinstall the app" | P2 | OPEN |
+| STG-208 | Enroll — ENROLLMENT_RATE_LIMITED says "wait 15 minutes" but no countdown | P3 | OPEN |
+| STG-209 | Payment — uses TouchableOpacity instead of Pressable (inconsistent with rest) | P3 | OPEN |
+| STG-210 | Payment — "Low Stock Warning" and "Partial Sale" alerts in English, no i18n | P2 | OPEN |
+| STG-211 | Payment — "UPI Error: UPI ID not configured or QR failed" too vague | P2 | OPEN |
+| STG-212 | Payment — "POS Inactive" and "Store Missing" alerts reference "Superadmin" | P1 | OPEN |
+| STG-213 | Payment — "Payment in Progress" back-block alert is bare, no spinner | P2 | OPEN |
+| STG-214 | Payment — QR expiry countdown exists but no visual regenerate button | P2 | OPEN |
+| STG-215 | Payment — stale price warning threshold 4 hours is hardcoded, not configurable | P3 | OPEN |
+| STG-216 | Payment — "Price Freshness Warning" title confusing for kirana user | P2 | OPEN |
+| STG-217 | Payment — sale creation error shows generic "Unable to start payment" | P2 | OPEN |
+| STG-218 | Payment — "Previous UPI Payment Pending" alert shows raw paymentId hash | P2 | OPEN |
+| STG-219 | Payment — "UPI Offline" / "UPI Missing" / "UPI Timeout" all different alert styles | P3 | OPEN |
+| STG-220 | SellScan — CART_SHEET_COLLAPSED_RATIO 0.55 covers 55% screen, too much | P2 | OPEN |
+| STG-221 | SellScan — SMALL_SCREEN_WIDTH=400 threshold may not cover all budget phones | P3 | OPEN |
+| STG-222 | SellScan — product tile formatPrice shows ".00" on round amounts (₹28.00) | P2 | OPEN |
+| STG-223 | SellScan — no empty state illustration when search returns zero products | P2 | OPEN |
+| STG-224 | SellScan — category rail DEMO_CATEGORIES may show dummy data in production | P1 | OPEN |
+| STG-225 | SellScan — NUM_COLUMNS=2 hardcoded, no responsive columns for tablets | P3 | OPEN |
+| STG-226 | SellTile — "—" dash for null price, should show "Price not set" | P2 | OPEN |
+| STG-227 | SellTile — expiry days calculation doesn't account for timezone (IST) | P2 | OPEN |
+| STG-228 | SellTile — no MRP strikethrough visual when sell price < MRP | P2 | OPEN |
+| STG-229 | SellTile — LOOSE mode "per KG" label not translated | P2 | OPEN |
+| STG-230 | SellTile — brand name not displayed if available | P3 | OPEN |
+| STG-231 | Colors — "accent" and "secondary" are identical (#14B8A6), redundant token | P2 | OPEN |
+| STG-232 | Colors — no dedicated "disabled" color token for greyed-out buttons | P2 | OPEN |
+| STG-233 | Colors — dark mode "ink" is #F8FAFC but light mode "ink" is #0B1220, never used | P3 | OPEN |
+| STG-234 | i18n — status.storeInactive says "Add UPI ID in Superadmin to start billing" | P1 | OPEN |
+| STG-235 | i18n — status.deviceInactive says "Contact Superadmin to enable it" | P1 | OPEN |
+| STG-236 | i18n — errors.deviceAlreadyEnrolled says "Ask Superadmin to reset the token" | P1 | OPEN |
+| STG-237 | i18n — errors.sessionExpired says "Please login again" but POS has no login | P2 | OPEN |
+| STG-238 | i18n — sell.digitiseMode says "Digitise mode on" — jargon for kirana user | P2 | OPEN |
+| STG-239 | i18n — purchase.moq "MOQ" acronym not spelled out for kirana users | P2 | OPEN |
+| STG-240 | i18n — tabs use ALL CAPS ("SELL", "PURCHASE", "REORDER") — shouty | P2 | OPEN |
+| STG-241 | i18n — reorder.dismissSuggestedFrom template too complex for Hindi translation | P3 | OPEN |
+| STG-242 | i18n — credit section uses financial jargon (EMI, KYC, PAN, Aadhaar) without explanation | P2 | OPEN |
+| STG-243 | i18n — bnpl.upiInstructions sentence too long (2 clauses + technical term UTR) | P2 | OPEN |
+| STG-244 | i18n — grn.title "Goods Receipt Note" — warehouse jargon | P2 | OPEN |
+| STG-245 | Tab nav — "REORDER • ON" / "REORDER • OFF" unusual tab label convention | P2 | OPEN |
+| STG-246 | Tab nav — 5 tabs but CREDIT tab is greyed/disabled, confusing affordance | P2 | OPEN |
+| STG-247 | Menu — "Customers & Credit" section has 4 items (Khata, Customers, Customer Management, Overdue) — 3 overlap | P1 | OPEN |
+| STG-248 | Menu — menuItem marginTop:16 creates 16px gap, but first item after sectionHeader has 16+4=20px gap inconsistency | P3 | OPEN |
+| STG-249 | Menu — printerStatusRow sits between Bills and Barcode with no card container | P2 | OPEN |
+| STG-250 | Menu — "Switch Store" in Settings section but it's a destructive action, needs separation | P2 | OPEN |
+| STG-251 | Menu — no confirmation count on "Daily Closing" (e.g., "2 shifts open") | P2 | OPEN |
+| STG-252 | Menu — "Chat" subtitle says "Message suppliers and support" but no unread count | P2 | OPEN |
+| STG-253 | Enroll — TEST_STORE_CONFIG imported but may auto-fill in production builds | P1 | OPEN |
+| STG-254 | Payment — formatMoney not using Indian lakh system (1,45,000 vs 145,000) | P2 | OPEN |
+| STG-255 | Menu — summaryCard and statusPanel have same border/radius but different marginTop | P3 | OPEN |
+| STG-256 | Menu — no swipe gesture to dismiss/collapse System Status panel | P3 | OPEN |
+| STG-257 | PaymentSetupScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-258 | SalesHistoryScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-259 | BillDetailScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-260 | SalesStatementScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-261 | DailyReportScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-262 | DailyClosingScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-263 | InwardScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-264 | GRNScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-265 | OpeningStockScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-266 | PurchaseScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-267 | BarcodeSheetScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-268 | BnplDuesScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-269 | KhataScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-270 | CustomerListScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-271 | OverdueDuesScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-272 | ShiftScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-273 | OrderDetailScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-274 | ReturnScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-275 | BuyScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-276 | CreditScreen — hardcoded English strings not using i18n | P1 | OPEN |
+| STG-277 | ReorderScreen + ReorderPoliciesScreen — hardcoded English not using i18n | P2 | OPEN |
+| STG-278 | BulkPurchaseCreditScreen — no i18n setup, all strings hardcoded | P1 | OPEN |
+| STG-279 | ErrorBoundary — hardcoded English error text | P1 | OPEN |
+| STG-280 | PaymentSetup — "UPI ID (VPA)" jargon, simplify for kirana users | P2 | OPEN |
+| STG-281 | DailyClosing — "Variance" accounting jargon confusing for retailers | P2 | OPEN |
+| STG-282 | SalesStatement — "Inventory Cost Statement" title misleading | P2 | OPEN |
+| STG-283 | BnplDues — BNPL/UTR/UPI jargon unexplained | P1 | OPEN |
+| STG-284 | Credit — PAN/Aadhaar/KYC jargon needs help text | P2 | OPEN |
+| STG-285 | GRN — "GRN" jargon, needs subtitle explaining purpose | P2 | OPEN |
+| STG-286 | OpeningStock — "Opening Stock" needs contextual explanation | P2 | OPEN |
+| STG-287 | Buy — "BNPL" badge jargon unexplained | P2 | OPEN |
+| STG-288 | Shift — "Variance" terminology same as DailyClosing | P2 | OPEN |
+| STG-289 | Return — "Khata Credit" and "UPI (Manual)" need clarification | P2 | OPEN |
+| STG-290 | AIInsights — "Slow", "Forecast", "Expiry" tab labels unclear | P2 | OPEN |
+| STG-291 | Components — hardcoded English in SellTile, CartItem, SupplierRow | P1 | OPEN |
+| STG-292 | LimitedModeBanner — "Place Orders (BUY)" jargon | P2 | OPEN |
+| STG-293 | Font sizes below 12px across Purchase/Stock screens | P2 | OPEN |
+| STG-294 | Font sizes below 12px across Sales/Closing screens | P2 | OPEN |
+| STG-295 | Font sizes below 12px across Credit/Customer/Orders screens | P2 | OPEN |
+| STG-296 | Font sizes below 12px in Chat/ForceUpdate/TabBadge | P2 | OPEN |
+| STG-297 | SplitPaymentModal — font 10px + missing accessibility labels | P2 | OPEN |
+| STG-298 | Missing accessibility labels on icon-only buttons across screens | P1 | OPEN |
+| STG-299 | Missing accessibility labels on form inputs across screens | P2 | OPEN |
+| STG-300 | GRN — checkboxes missing accessibilityState | P2 | OPEN |
+| STG-301 | OrderDetail — status badge relies only on color (colorblind) | P1 | OPEN |
+| STG-302 | Help — email-first contact, should be WhatsApp-first | P1 | OPEN |
+| STG-303 | BnplDues — "contacted via email" should include WhatsApp | P2 | OPEN |
+| STG-304 | CustomerList + CustomerMgmt — email field inappropriate for kirana | P2 | OPEN |
+| STG-305 | DeviceBlocked — "SuperAdmin"/"administrator" jargon | P1 | OPEN |
+| STG-306 | DailyReport — vague empty state messaging | P2 | OPEN |
+| STG-307 | BillDetail — print/share buttons show "..." instead of spinner | P2 | OPEN |
+| STG-308 | Inward — raw product ID shown when barcode is null | P2 | OPEN |
+| STG-309 | Return — raw refundId displayed to users | P2 | OPEN |
+| STG-310 | Splash — "Continue without session" jargon | P2 | OPEN |
+| STG-311 | AIInsights — "not yet available" error too vague | P2 | OPEN |
+| STG-312 | DailyReport + DailyClosing — missing offline/sync indication | P2 | OPEN |
+| STG-313 | Network error messages across screens — no recovery guidance | P2 | OPEN |
+| STG-314 | PaymentSetup — no success confirmation after saving | P2 | OPEN |
+| STG-315 | Reorder — missing confirmation before dismissing suggestion | P1 | OPEN |
+| STG-316 | SplitPaymentModal — TouchableOpacity should be Pressable | P3 | OPEN |
+| STG-317 | Inconsistent disabled button opacity across all screens | P2 | OPEN |
+| STG-318 | Khata — Add Credit red color semantics wrong | P2 | OPEN |
+| STG-319 | Inconsistent modal button styling across components | P3 | OPEN |
+| STG-320 | OverdueDues — "Due Soon" uses info color instead of warning | P2 | OPEN |
+| STG-321 | Chat — "No messages yet. Say hello!" vague empty state | P2 | OPEN |
+| STG-322 | Chat — 24-hour time format without AM/PM | P2 | OPEN |
+| STG-323 | ForceUpdate — "iOS update coming soon" vague | P2 | OPEN |
+| STG-324 | Enroll — activation code placeholder lacks help text | P1 | OPEN |
+| STG-325 | Enroll — "Activate POS" vs "Activate Your POS" inconsistency | P3 | OPEN |
+| STG-326 | Enroll — required field indicators inconsistent | P2 | OPEN |
+| STG-327 | StaffLogin — button doesn't change text during cooldown | P2 | OPEN |
+| STG-328 | ForceUpdate — "unknown" version display lacks explanation | P2 | OPEN |
+| STG-329 | ProductDetailModal — "No suppliers available" lacks guidance | P1 | OPEN |
+| STG-330 | DismissReasonModal — predefined reasons store English to backend | P2 | OPEN |
+| STG-331 | SELL — Remove separate manual barcode field, unify into main search bar | P1 | OPEN |
+| STG-332 | SELL — Search bar placeholder doesn't indicate barcode input support | P2 | OPEN |
+| STG-333 | SELL — 300ms debounce delays barcode resolution unnecessarily | P2 | OPEN |
+| STG-334 | SELL — Barcode heuristic too broad, matches phone numbers | P1 | OPEN |
+| STG-335 | SELL — Duplicate scan 2000ms window too strict for same-item multiples | P2 | OPEN |
+| STG-336 | SELL — Scan storm detection with no user feedback | P2 | OPEN |
+| STG-337 | SELL — Intermediate barcode prefixes trigger search results flicker | P2 | OPEN |
+| STG-338 | SELL — Unknown barcode modal lacks clear field guidance | P2 | OPEN |
+| STG-339 | SELL — LOOSE_BULK variant picker gated, may never trigger | P2 | OPEN |
+| STG-340 | SELL — Price error silently blocks checkout with no feedback | P1 | OPEN |
+| STG-341 | SELL — DEMO_CATEGORIES hardcoded, no dynamic loading | P2 | OPEN |
+| STG-342 | SELL — Category selection does NOT filter displayed products | P1 | OPEN |
+| STG-343 | PURCHASE — BuyScreen search bar missing barcode lookup | P1 | OPEN |
+| STG-344 | PURCHASE — Search debounce 400ms creates perceived slowness | P2 | OPEN |
+| STG-345 | PURCHASE — No search autocomplete/suggestions before results | P3 | OPEN |
+| STG-346 | PURCHASE — Stock filter applied client-side, pagination issues | P2 | OPEN |
+| STG-347 | PURCHASE — Quick purchase mode adds items with empty metadata | P1 | OPEN |
+| STG-348 | PURCHASE — No barcode lookup loading state | P2 | OPEN |
+| STG-349 | SELL — Search results missing brand, image, pack size | P2 | OPEN |
+| STG-350 | SELL — Autocomplete dropdown shows only name+barcode | P2 | OPEN |
+| STG-351 | PURCHASE — Supplier name not visible in grid card | P2 | OPEN |
+| STG-352 | PURCHASE — MOV not shown anywhere before checkout | P1 | OPEN |
+| STG-353 | PURCHASE — MOQ shown only when >1 in small 11px font | P2 | OPEN |
+| STG-354 | PURCHASE — "Cost" price label ambiguous | P2 | OPEN |
+| STG-355 | PURCHASE — No variant/pack size when metadata missing | P2 | OPEN |
+| STG-356 | SELL — SellTile brand truncates on narrow screens | P2 | OPEN |
+| STG-357 | SELL — Expiry badge overlaps stock on small screens | P2 | OPEN |
+| STG-358 | PURCHASE — No supplier comparison table in ProductDetailModal | P2 | OPEN |
+| STG-359 | PURCHASE — No expiry date/batch info for incoming products | P2 | OPEN |
+| STG-360 | VOICE — No confirmation before auto-executing voice commands | P1 | OPEN |
+| STG-361 | VOICE — Product search stub not implemented, lookups fail | P0 | OPEN |
+| STG-362 | VOICE — Locale toggle not wired to backend STT | P1 | OPEN |
+| STG-363 | VOICE — NEEDS_CLARIFICATION flag never shown as picker | P2 | OPEN |
+| STG-364 | VOICE — No visual confidence score or match feedback | P2 | OPEN |
+| STG-365 | VOICE — No mic permission guidance when denied | P2 | OPEN |
+| STG-366 | VOICE — No timeout on slow API, app hangs indefinitely | P1 | OPEN |
+| STG-367 | VOICE — Prompt injection vulnerability (regex-only mitigation) | P0 | OPEN |
+| STG-368 | SELL — No immediate visual feedback on product tile tap | P2 | OPEN |
+| STG-369 | SELL — VariantPickerModal lacks images, stock, price context | P2 | OPEN |
+| STG-370 | SELL — Cart add persistence not awaited, silent data loss | P1 | OPEN |
+| STG-371 | HID — Scanner timing parameters hardcoded | P2 | OPEN |
+| STG-372 | HID — Buffer not reset on SellScanScreen mount/unmount | P1 | OPEN |
+| STG-373 | SELL — Cart sheet covers 55-75% of screen on small devices | P2 | OPEN |
+| STG-374 | SELL — No cart item limit, performance degrades at 100+ items | P2 | OPEN |
+| STG-375 | SELL — Cart item removal undo has no countdown indicator | P3 | OPEN |
+| STG-376 | SELL — No cart hold/park feature for multi-customer scenarios | P3 | OPEN |
+| STG-377 | PAYMENT — Payment method tabs not locked during transaction | P1 | OPEN |
+| STG-378 | PAYMENT — UPI QR expiry countdown reaches 0:00 but QR stays | P2 | OPEN |
+| STG-379 | PAYMENT — No offline payment fallback messaging | P1 | OPEN |
+| STG-380 | PAYMENT — Cart lock on failure doesn't explain timeout | P2 | OPEN |
+| STG-381 | PAYMENT — PENDING_UPI_KEY defined but unused for crash recovery | P1 | OPEN |
+| STG-382 | PAYMENT — Split payment manual UTR shown too late | P2 | OPEN |
+| STG-383 | PAYMENT — No refund/void mechanism post-payment from POS | P1 | OPEN |
+| STG-384 | PAYMENT — Item vs cart discount not distinguished on receipt | P2 | OPEN |
+| STG-385 | STOCK — No standalone stock adjustment modal from SELL screen | P2 | OPEN |
+| STG-386 | STOCK — Stock limit notification doesn't explain cap reason | P2 | OPEN |
+| STG-387 | SYNC — No push-based stock sync, only 5-minute polling | P2 | OPEN |
+| STG-388 | SYNC — Stock sync conflicts silently resolved as server wins | P2 | OPEN |
+| STG-389 | OFFLINE — 24h queue expiry with no warning before loss | P1 | OPEN |
+| STG-390 | OFFLINE — Price cache not refreshed from portal on reconnect | P2 | OPEN |
+| STG-391 | OFFLINE — No post-checkout sync confirmation | P2 | OPEN |
+| STG-392 | OFFLINE — No recovery when offline SQLite database corrupted | P1 | OPEN |
+| STG-393 | DEVICE — No device type detection (POS vs phone vs tablet) | P2 | OPEN |
+| STG-394 | DEVICE — Touch targets too small on compact small phones | P2 | OPEN |
+| STG-395 | LAYOUT — NUM_COLUMNS=2 hardcoded, no responsive columns | P2 | OPEN |
+| STG-396 | LAYOUT — Cart sheet snap points not optimized for tablets | P2 | OPEN |
+| STG-397 | LAYOUT — No safe area handling for notched phones | P2 | OPEN |
+| STG-398 | LAYOUT — Modal dialogs stretch full-width on tablets | P2 | OPEN |
+| STG-399 | SELL — Price edit in cart not persisted separately | P2 | OPEN |
+| STG-400 | SELL — No quantity input validation for large numbers | P2 | OPEN |
+| STG-401 | PAYMENT — Cart-to-payment data consistency not validated | P1 | OPEN |
+| STG-402 | SELL — Search history unbounded, no expiration | P3 | OPEN |
+| STG-403 | SELL — Cart bar flash animation invisible on slow devices | P3 | OPEN |
+| STG-404 | PAYMENT — No UPI polling status visible during QR wait | P2 | OPEN |
+| STG-405 | PAYMENT — Discount application has no undo | P2 | OPEN |
+| STG-406 | PAYMENT — Offline receipts may not get OFF- prefix consistently | P2 | OPEN |
+| STG-407 | PURCHASE — BNPL badge shown without terms explanation | P2 | OPEN |
+| STG-408 | PURCHASE — Cart badge confusing with multi-supplier items | P2 | OPEN |
+| STG-409 | VOICE — No recording duration countdown visible | P2 | OPEN |
+| STG-410 | VOICE — Rate limit 429 errors show no retry-after guidance | P2 | OPEN |
+| STG-411 | VOICE — Zero E2E test coverage for voice flow | P1 | OPEN |
+| STG-412 | REORDER — No manual quick-reorder from purchase history | P1 | OPEN |
+| STG-413 | REORDER — Quantity edits in EditReorderModal not persisted to DB | P1 | OPEN |
+| STG-414 | REORDER — No reorder history/audit trail visible on POS | P2 | OPEN |
+| STG-415 | REORDER — Pending reorders are snapshots, no staleness detection | P2 | OPEN |
+| STG-416 | REORDER — Expired reorders silently disappear, no re-trigger | P2 | OPEN |
+| STG-417 | REORDER — No expiry cleanup job marks pending reorders as expired | P1 | OPEN |
+| STG-418 | REORDER — No scheduler generates reorder suggestions (CRITICAL) | P0 | OPEN |
+| STG-419 | REORDER — Auto-approve threshold setting has no effect | P2 | OPEN |
+| STG-420 | REORDER — No quantity optimization algorithm (EOQ/MOQ) | P2 | OPEN |
+| STG-421 | REORDER — Approved reorders create draft POs but no submission | P1 | OPEN |
+| STG-422 | REORDER — GRN auto-close doesn't mark reorders as fulfilled | P2 | OPEN |
+| STG-423 | REORDER — No dynamic supplier mapping algorithm | P0 | OPEN |
+| STG-424 | REORDER — Supplier picker doesn't show pack variants | P2 | OPEN |
+| STG-425 | REORDER — Supplier picker loses original supplier if not in catalog | P2 | OPEN |
+| STG-426 | REORDER — Payment terms not returned by backend, dead code | P1 | OPEN |
+| STG-427 | REORDER — Approval response missing supplier names | P2 | OPEN |
+| STG-428 | REORDER — Partial approval failure is silent (transaction rollback) | P1 | OPEN |
+| STG-429 | REORDER — Empty state misleading when auto-reorder is off | P2 | OPEN |
+| STG-430 | REORDER — Selection bar disappears causing layout shift | P3 | OPEN |
+| STG-431 | REORDER — EditReorderModal original quantity reference too subtle | P3 | OPEN |
+| STG-432 | REORDER — Supplier load error hidden until save attempt | P2 | OPEN |
+| STG-433 | REORDER — maxReorderQty not visible in policy list | P3 | OPEN |
+| STG-434 | REORDER — Threshold visual guide proportions misleading | P3 | OPEN |
+| STG-435 | REORDER — Catalog supplier data not cached, re-fetched on modal open | P3 | OPEN |
+| STG-436 | REORDER — minStock/minThreshold naming inconsistency | P2 | OPEN |
+| STG-437 | REORDER — Stock status threshold mismatch frontend vs backend | P2 | OPEN |
+| STG-438 | REORDER — Policy validation frontend-only, no server-side bounds | P2 | OPEN |
+| STG-439 | REORDER — No auto-reorder cron visibility or manual trigger on POS | P2 | OPEN |
+| STG-440 | REORDER — No bulk policy management | P2 | OPEN |
+| STG-441 | REORDER — Filter labels in ReorderPoliciesScreen hardcoded English | P2 | OPEN |
+| STG-442 | REORDER — Dismiss reason codes sent as translated strings to backend | P2 | OPEN |
+| STG-443 | REORDER — Dismissal reason max length not validated on backend | P3 | OPEN |
+| STG-444 | REORDER — Missing accessibility labels on interactive elements | P2 | OPEN |
+| STG-445 | REORDER — formatMoney null safety risk on price display | P2 | OPEN |
+| STG-446 | REORDER — No unit tests for reorder helper functions | P2 | OPEN |
+| STG-447 | REORDER — Idempotency framework created but unused | P3 | OPEN |
+| STG-448 | CREDIT — Feature gate hardcoded false in PaymentOptionsSheet | P0 | OPEN |
+| STG-449 | CREDIT — Credit scoring algorithm simplified mock, not production | P1 | OPEN |
+| STG-450 | CREDIT — Credit score tiers hardcoded in source code | P2 | OPEN |
+| STG-451 | CREDIT — No credit disbursement endpoint after admin approval | P0 | OPEN |
+| STG-452 | CREDIT — KYC validation is format-only, no real verification | P1 | OPEN |
+| STG-453 | CREDIT — No KYC document upload endpoint | P2 | OPEN |
+| STG-454 | CREDIT — Credit offers have no expiry cleanup job | P2 | OPEN |
+| STG-455 | CREDIT — No external credit providers integrated | P1 | OPEN |
+| STG-456 | CREDIT — Provider failure silently hides offers | P2 | OPEN |
+| STG-457 | CREDIT — No consent management before credit scoring (DPDP) | P0 | OPEN |
+| STG-458 | CREDIT — No re-eligibility check at application time | P2 | OPEN |
+| STG-459 | CREDIT — No application status timeline or tracking UI | P2 | OPEN |
+| STG-460 | CREDIT — PaymentOptionsSheet credit option shows no cost details | P2 | OPEN |
+| STG-461 | CREDIT — CreditScreen 55KB needs component extraction | P2 | OPEN |
+| STG-462 | BNPL — Interest calculation doesn't prorate by tenure days | P1 | OPEN |
+| STG-463 | BNPL — No overdue visual hierarchy in BnplDuesScreen | P2 | OPEN |
+| STG-464 | BNPL — Dispute has no audit trail or status history | P2 | OPEN |
+| STG-465 | BNPL — No drawdown limit per supplier | P2 | OPEN |
+| STG-466 | BNPL — Payment status polling race condition | P2 | OPEN |
+| STG-467 | BNPL — Overdue maturation job functions exist but no scheduler | P1 | OPEN |
+| STG-468 | BNPL — Max days hardcoded to 7, not configurable per store type | P2 | OPEN |
+| STG-469 | KHATA — Phone number validation too weak | P2 | OPEN |
+| STG-470 | KHATA — Transaction type semantics unclear (DEBIT vs PAYMENT) | P2 | OPEN |
+| STG-471 | KHATA — No entry correction or void mechanism | P2 | OPEN |
+| STG-472 | KHATA — No bulk actions (settle, export, multi-payment) | P2 | OPEN |
+| STG-473 | KHATA — Customer phone numbers stored without consent (DPDP) | P1 | OPEN |
+| STG-474 | CREDIT — PAN number stored in plaintext (DPDP violation) | P0 | OPEN |
+| STG-475 | CREDIT — No rate limiting on credit offer generation | P2 | OPEN |
+| STG-476 | CREDIT — Missing composite index on bnpl_drawdowns | P2 | OPEN |
+| STG-477 | CREDIT — Hardcoded ₹ currency symbol in multiple screens | P3 | OPEN |
+| STG-478 | CREDIT — BnplDuesScreen 55KB needs component extraction | P3 | OPEN |
+| STG-479 | REORDER/CREDIT — No E2E test for full lifecycle | P1 | OPEN |
+| STG-480 | BNPL — No early repayment incentive or standing instructions | P3 | OPEN |
+| STG-481 | GUARD: i18n validation script — en/hi key parity check | P0 | OPEN |
+| STG-482 | GUARD: i18n key naming convention document | P0 | OPEN |
+| STG-483 | GUARD: Refactor SellTile.formatPrice() → use formatMoney() | P0 | OPEN |
+| STG-484 | GUARD: Refactor CartItem + SupplierRow → useThemeColors() hook | P1 | OPEN |
+| STG-485 | GUARD: consent_records table + consent API (DPDP) | P0 | OPEN |
+| STG-486 | GUARD: Encryption key management infra (GCP Secret Manager) | P0 | OPEN |
+| STG-487 | GUARD: Backend staff role + max discount API | P0 | OPEN |
+| STG-488 | GUARD: Backend manager PIN verification endpoint | P0 | OPEN |
+| STG-489 | GUARD: Backend void/refund sale endpoint | P0 | OPEN |
+| STG-490 | GUARD: Backend credit disbursement endpoint | P0 | OPEN |
+| STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | OPEN |
+| STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | OPEN |
 
-### Supplier Portal
-| Route | Component | Description |
-|-------|-----------|-------------|
-| `/login` | LoginPage | Phone OTP + password login |
-| `/register` | RegisterPage | 3-step registration |
-| `/pending-approval` | PendingApprovalPage | Awaiting admin approval |
-| `/forgot-password` | ForgotPasswordPage | Password reset |
-| `/dashboard` | DashboardPage | Main dashboard |
-| `/products` | ProductsPage | Product catalog |
-| `/orders` | OrdersPage | Order management (SSE real-time) |
-| `/upload` | UploadPage | CSV bulk import |
-| `/kyc` | KYCPage | Document management + bank verification |
-| `/earnings` | EarningsPage | Payout history + platform fee deductions |
-| `/profile` | ProfilePage | Profile + password change |
-| `/invoices` | InvoicesPage | Sales invoices + fee notes (NEW — T-073) |
-
-### SuperAdmin Tabs
-Events, Devices, Stores, Suppliers, Applications, Analytics (8 sub-tabs), Payments, Users, Settings, Documents, Audit Logs, Registrations, Staff, GRN Alerts, Invoices (NEW — T-073)
+**Total**: 492 tickets | 0 PARKED | 1 DONE | 0 IN_PROGRESS | 491 OPEN
 
 ---
 
-## PHASE 5: PRODUCTION AUDIT (T-128 → T-199) — ALL DONE
+## Implementation Layers — File-Type Grouped, Dependency-Ordered
 
-> 72 tickets across 8 sub-phases (5A→5I). Schema migrations, P0 APIs (stock locking, token blacklist, SSE sync, QR expiry, refunds), POS features (search, images, voice, haptics, offline, barcode), web portal features.
-
----
-
-## PHASE 6: 360° CTO AUDIT (T-200 → T-235) — ALL DONE
-
-> 36 tickets (4 P0, 11 P1, 21 P2). 9 false positives dropped. Audit method: 5 parallel deep-audit agents + 1 reconciliation.
-
----
-
-## PHASE 7: B2B REORDER SYSTEM (T-236 → T-252) — ALL DONE
-
-> 17 tickets across 6 waves. Full reorder system: schema, suggestion engine, POS enhancements, portal build-out, GRN unification.
-
----
-
-## PHASE 8: FCM PUSH + DEFERRED (T-219, T-223, T-231, T-232, T-235) — ALL DONE
-
-> 5 deferred tickets from Phase 6 implemented. Commit: ecbaf3b.
-
----
-
-## PHASE 9: PAYMENTS + B2B FINANCE + WHATSAPP + AI (T-253 → T-316) — DONE (45/64)
-
-> 64 tickets across 8 sub-phases (9A→9H). 45 codeable tickets complete. 19 awaiting external API onboarding dependencies:
-> - 2 awaiting RazorpayX credentials/webhook secrets (T-256, T-257)
-> - 14 partnerships complete; awaiting provider sandbox/API credentials (T-264→T-273, T-283→T-286)
-> - 3 awaiting Meta WABA verification + template approval + production access (T-296→T-298)
-
----
-
-## PHASE 10: PRODUCTION TESTING (TEST-001 → TEST-052) — ALL DONE
-
-> 52 tickets across 4 sub-phases. 3 rounds: Discovery → Regression → Stress + GO/NO-GO.
+> **Purpose**: Tickets grouped by edit file type and ordered in layers so each layer can be completed end-to-end without regressing previous layers. Within each layer, tickets are grouped by primary file to minimize merge conflicts.
 >
-> **Results:**
-> - 3,416 tests passing across 248 suites
-> - 16 stress test files
-> - 7 regression fixes in Round 2
-> - GO/NO-GO: 22/48 auto-PASS, 26 MANUAL (require staging)
-
-| Sub-Phase | Range | Count | Status |
-|-----------|-------|-------|--------|
-| 10A: Test Infrastructure | TEST-001 → TEST-010 | 10 | **DONE** |
-| 10B: Round 1 — Discovery | TEST-011 → TEST-028 | 18 | **DONE** |
-| 10C: Round 2 — Regression | TEST-029 → TEST-037 | 9 | **DONE** |
-| 10D: Round 3 — Stress + GO/NO-GO | TEST-038 → TEST-052 | 15 | **DONE** |
-
----
-
-## PHASE 11: PRODUCTION HARDENING (FIX-001 → FIX-067) — QUEUED
-
-> 67 tickets from 5-platform deep-scan audit + GCP MCP parity check.
-> **Audit date:** 2026-02-16
-> **Breakdown:** 16 P0, 26 P1, 25 P2
-> **Full ticket details:** See `AUDIT_BACKLOG.md`
-> **Execution model:** One ticket = one branch = one PR = one tag (git discipline ON)
-
-| Sub-Phase | Range | Count | Priority | Status |
-|-----------|-------|-------|----------|--------|
-| 11A: Infrastructure & Deploy Blockers | FIX-001 → FIX-004 | 4 | P0-P1 | QUEUED |
-| 11B: Backend P0 — Store Isolation | FIX-005 → FIX-008 | 4 | P0 | QUEUED |
-| 11C: Backend P1 — Error Handling | FIX-009 → FIX-014 | 6 | P1 | QUEUED |
-| 11D: Retailer Admin P1 — UX | FIX-015 → FIX-021 | 7 | P1-P2 | QUEUED |
-| 11E: Supplier Portal P0-P1 | FIX-022 → FIX-030 | 9 | P0-P1 | QUEUED |
-| 11F: POS App P0-P1 | FIX-031 → FIX-042 | 12 | P0-P1 | QUEUED |
-| 11G: SuperAdmin P0-P1 | FIX-043 → FIX-050 | 8 | P0-P1 | QUEUED |
-| 11H: P2 Polish (Cross-Platform) | FIX-051 → FIX-067 | 17 | P2 | QUEUED |
-
-### GCP Parity Findings (as of 2026-02-16)
-- Staging SHA: `f61a3b2` — **37 commits behind** main HEAD `e52adf7`
-- Missing GCP secrets: RAZORPAY_*, OPENAI_API_KEY, PAYOUT_PROCESS_API_KEY, GCS_IMAGES_BUCKET, GCS_CHAT_BUCKET
-- 20 Dependabot vulnerability alerts (nodemailer, multer, axios, undici, tar, esbuild)
-
----
-
-## PHASE 3: UI/UX PROFESSIONAL POLISH (T-074 → T-111)
-
-> 38 tickets. Brand consistency + professional appearance across all platforms.
-> Launch geography: India. All locale defaults: INR (₹), +91, IST, DD/MM/YYYY.
-> Brand spec: Primary `#2563EB` (blue), Accent `#14B8A6` (teal), Background `#F7F9FC`, Font Inter, Sidebar 256px dark gradient.
-> Execution order: brand foundation → navigation/layout → components → page polish → states/feedback → landing.
-> During execution: if any micro issue found, fix inline and move on. Zero regression.
-
----
-
-### CATEGORY M: BRAND FOUNDATION (P0 — Do First)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-074 | Unified brand design tokens specification | All Platforms | **Implement**: Create `RELEASES/DESIGN_TOKENS.md` — single source-of-truth for all UI tokens. Primary: `#2563EB` (blue-600), PrimaryDark: `#1D4ED8`, PrimaryLight: `#EFF6FF`. Accent: `#14B8A6`, AccentDark: `#0D9488`, AccentLight: `#F0FDFA`. Success: `#22C55E`, Warning: `#F59E0B`, Error: `#EF4444`, Info: `#0EA5E9`. Background: `#F7F9FC`, Surface: `#FFFFFF`, Border: `#E2E8F0`. Text: `#0F172A` primary, `#64748B` secondary. Sidebar: 256px, gradient `#0F172A→#1E293B`. Card radius: 8px, Button height: 46px, Input height: 42px, Button/Input radius: 6px, Modal radius: 12px. Font: `Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`. All platforms reference this spec. |
-| T-075 | SVG brand logo + shortmark icon | Shared Assets | **Implement**: Create `shared/brand/` directory with: (1) `logo-full.svg` — "SuperMandi" text in Inter Bold 700 with geometric shortmark icon (abstract "SM" monogram, hexagonal/tech shape, `#2563EB` blue). (2) `logo-shortmark.svg` — Just the icon, scalable 16×16 to 64×64, blue on transparent. (3) `favicon.svg` — 32×32 shortmark on `#2563EB` blue background with white icon, rounded corners. (4) `logo-white.svg` — White version for dark backgrounds (sidebars). Design: clean geometric, tech-forward, derived from "S" + "M" letterforms. No gradients — flat blue + white only. |
-| T-076 | Align POS mobile color tokens to brand standard | POS App | **Implement**: Update `src/theme/colors.ts`: Change `primary` from `"#1D4ED8"` to `"#2563EB"`, `primaryDark` from `"#1E3A8A"` to `"#1D4ED8"`, `primaryLight` from `"#3B82F6"` to `"#EFF6FF"`, `success` from `"#16A34A"` to `"#22C55E"`, `background` from `"#F4F6FB"` to `"#F7F9FC"`, `backgroundSecondary` from `"#EEF2F6"` to `"#F1F5F9"`. Keep accent `#14B8A6` (already matches). All screens using `theme.colors.primary` auto-update. Run typecheck after. |
-| T-077 | Align SuperAdmin font stack + heading sizes | SuperAdmin | **Implement**: (1) Update `supermandi-superadmin/src/index.css` `:root` font-family to `Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif` (add Inter first, matching retailer/supplier). (2) Update `supermandi-superadmin/src/App.css` `.title` from `font-size: 26px; font-weight: 800` to `font-size: 24px; font-weight: 700`. (3) Update SuperAdmin button `border-radius: 10px` to `6px`, input `border-radius: 12px` to `6px` in `index.css`. |
-| T-078 | Replace all favicons with brand shortmark | Retailer + SuperAdmin + Landing | **Implement**: (1) Copy `shared/brand/favicon.svg` to `retailer-admin/public/favicon.svg` — replaces green "S" on green background. (2) Copy to `supermandi-superadmin/public/favicon.svg` — replaces Vite logo. Update `supermandi-superadmin/index.html` favicon href from `/admin/vite.svg` to `/admin/favicon.svg`. Update `supermandi-superadmin/public/manifest.json` `theme_color` from `"#1976d2"` to `"#2563EB"`. (3) Replace landing page inline data URI favicon with `<link rel="icon" href="/favicon.svg">`, copy favicon to `supermandi-landing/favicon.svg`. |
-| T-079 | Standardize sidebar width to 256px across all portals | Retailer + SuperAdmin | **Implement**: (1) Retailer Admin: Update `retailer-admin/src/index.css` `--sidebar-width` from `240px` to `256px`. Update `retailer-admin/src/components/ProtectedLayout.tsx` inline `width: '240px'` to `'256px'` and `marginLeft: '240px'` to `'256px'`. (2) SuperAdmin: Update `supermandi-superadmin/src/App.css` `.sidebar { width: 220px }` to `256px`. Update `.mainContent` padding-left if hardcoded. Supplier Portal already at `w-64` (256px) — no change needed. |
-| T-080 | Standardize card/modal border radius across SuperAdmin | SuperAdmin | **Implement**: Update `supermandi-superadmin/src/App.css`: `.card { border-radius: 18px }` → `8px`. `.sidebar { border-radius: 16px }` → `0` (sidebars no radius). `.loginCard { border-radius: 18px }` → `8px`. `.modal { border-radius: 20px }` → `12px`. `.banner { border-radius: 16px }` → `8px`. `.loginField input { border-radius: 12px }` → `6px`. Per DESIGN_TOKENS.md spec: cards 8px, inputs/buttons 6px, modals 12px. |
-
----
-
-### CATEGORY N: NAVIGATION & LAYOUT (P0)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-081 | Replace retailer admin emoji nav icons with Lucide SVG icons | Retailer Admin | **Implement**: (1) Install `lucide-react` as dependency. (2) Update `retailer-admin/src/components/ProtectedLayout.tsx` `navItems` array: replace `icon` emoji strings with Lucide components — `📊`→LayoutDashboard, `📦`→Package, `📋`→ClipboardList, `🏪`→Store, `🛒`→ShoppingCart, `📄`→FileText, `📑`→FileSpreadsheet, `⚙️`→Settings, `💳`→CreditCard, `📱`→Smartphone, `🧾`→Receipt, `✅`→CheckCircle, `📝`→PenSquare. (3) Render icons at 20×20 with `opacity: 0.7` inactive, `1.0` active. (4) Update admin section icons similarly. |
-| T-082 | Replace supplier portal emoji nav icons with Lucide SVG icons | Supplier Portal | **Implement**: (1) Install `lucide-react` as dependency. (2) Update `supplier-portal/src/app/(dashboard)/layout.tsx` `navItems`: `📊`→LayoutDashboard, `📦`→Package, `📄`→FileSpreadsheet, `🛒`→ShoppingCart, `📋`→ClipboardList, `💰`→DollarSign, `🧾`→Receipt, `👤`→User. (3) Render icons with `className="w-5 h-5"`. Match active/inactive opacity to retailer admin. |
-| T-083 | Add Lucide SVG icons to SuperAdmin sidebar | SuperAdmin | **Implement**: (1) Install `lucide-react` as dependency. (2) Update `supermandi-superadmin/src/App.tsx` sidebar items: Add icon before each text label — Events→Activity, Stores→Store, Devices→Smartphone, Staff→Users, GRN Alerts→AlertTriangle, Invoices→Receipt, Applications→FileCheck, Registrations→UserPlus, Documents→FileText, Suppliers→Truck, Payments→CreditCard, Analytics→BarChart3, Audit→Shield, Users→UserCog, Settings→Settings. (3) Style: 18×18 icon, `opacity: 0.6` inactive, `1.0` active, `marginRight: 10px`. |
-| T-084 | Update retailer admin sidebar brand logo | Retailer Admin | **Implement**: Update `retailer-admin/src/components/ProtectedLayout.tsx` sidebar header: Replace gradient text "SuperMandi" with `<img>` referencing white shortmark SVG from `shared/brand/logo-white.svg` (24×24) + "SuperMandi" text in white (`#FFFFFF`, Inter 600, 1.25rem). Keep store name + green status dot below. |
-| T-085 | Update supplier portal sidebar brand logo | Supplier Portal | **Implement**: Update `supplier-portal/src/app/(dashboard)/layout.tsx` sidebar header: Replace `bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent` text with white shortmark SVG (24×24) + "SuperMandi" text in `text-white font-semibold text-xl`. Keep "Supplier Portal" subtitle in `text-slate-400 text-xs`. |
-| T-086 | Add brand header to SuperAdmin sidebar | SuperAdmin | **Implement**: Add brand section at top of `.sidebar` in `supermandi-superadmin/src/App.tsx`: White shortmark SVG (24×24) + "SuperMandi" text in white (`#FFFFFF`, Inter 600, 18px) + "SuperAdmin" subtitle in `#94A3B8` (12px). Keep health status indicator. Replace `.brandPill` usage with proper header. |
-| T-087 | Add mobile hamburger menu to supplier portal | Supplier Portal | **Implement**: Update `supplier-portal/src/app/(dashboard)/layout.tsx`: (1) Add `useState` for `sidebarOpen`. (2) Sidebar: `className="hidden md:flex ..."` by default. When open on mobile: `fixed inset-y-0 left-0 z-50 flex w-64 ...`. (3) Add hamburger button: `md:hidden fixed top-4 left-4 z-40` with Menu icon (Lucide). (4) Add backdrop: `fixed inset-0 bg-black/50 z-40` when open. (5) Close on nav link click, close on backdrop click. (6) Add X close button inside mobile sidebar. |
-| T-088 | Add mobile hamburger menu to retailer admin | Retailer Admin | **Implement**: Update `retailer-admin/src/components/ProtectedLayout.tsx`: (1) Add `sidebarOpen` state. (2) Add hamburger button (Menu icon from Lucide) visible only below 768px: `display: none` desktop, `display: flex` mobile. (3) Sidebar: add `transform: translateX(0)` when open, keep `translateX(-100%)` when closed on mobile. (4) Add overlay backdrop div. (5) Close on nav click, close on backdrop click. (6) Update `index.css` `@media (max-width: 768px)` for sidebar open state class. |
-
----
-
-### CATEGORY O: COMPONENT CONSISTENCY (P1)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-089 | Refactor retailer admin sidebar from inline styles to CSS classes | Retailer Admin | **Implement**: Refactor `retailer-admin/src/components/ProtectedLayout.tsx`: Remove ALL inline `style={}` objects for sidebar, nav items, footer, brand section. Use existing CSS classes from `index.css` (`.sidebar`, `.nav-link`, `.nav-link.active`). Add missing classes to `index.css` for dark sidebar gradient, white text, hover states. Remove all `onMouseOver`/`onMouseOut` handlers — use CSS `:hover` instead. Zero visual change for end users. |
-| T-090 | Refactor retailer admin login page from inline styles to CSS | Retailer Admin | **Implement**: Refactor `retailer-admin/src/pages/LoginPage.tsx`: Remove the massive `styles` const object. Use existing CSS classes: `.login-page`, `.login-card`, `.login-title`, `.form-group`, `.form-label`, `.form-input`, `.btn`, `.btn-primary`. Add any missing auth-specific classes to `index.css`. Clean JSX. |
-| T-091 | Create shared modal component for retailer admin | Retailer Admin | **Implement**: Extract `retailer-admin/src/components/Modal.tsx` from inline modals in ProtectedLayout (session warning, logout confirm). Props: `isOpen: boolean`, `onClose: () => void`, `title: string`, `children: ReactNode`, `actions?: ReactNode`. Styles: overlay `position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50`, card `background: white; border-radius: 12px; padding: 24px; max-width: 400px; width: 90%`. Replace both inline modals. |
-| T-092 | Create shared modal component for supplier portal | Supplier Portal | **Implement**: Create `supplier-portal/src/components/Modal.tsx` matching UX of retailer admin modal (T-091). Props: `isOpen`, `onClose`, `title`, `children`, `footer`. Tailwind: overlay `fixed inset-0 bg-black/50 flex items-center justify-center z-50`, card `bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4`. Replace logout modal and email verification modal in layout. |
-| T-093 | Standardize status badge design across all portals | All Web Portals | **Implement**: Unify badge/pill design: (1) Retailer `index.css`: `.badge-success` = `background: #DCFCE7; border: 1px solid #86EFAC; color: #166534`, `.badge-warning` = `background: #FEF3C7; border: 1px solid #FCD34D; color: #92400E`, `.badge-danger` = `background: #FEE2E2; border: 1px solid #FCA5A5; color: #991B1B`. Add `.badge-info` = `background: #DBEAFE; border: 1px solid #93C5FD; color: #1E40AF`. (2) Supplier: Tailwind badge classes. (3) SuperAdmin: align `.badgeOk/.badgeWarn/.badgeError` to same colors. |
-| T-094 | Standardize toast notification system across portals | Retailer + SuperAdmin | **Implement**: (1) Add `react-hot-toast` to Retailer Admin and SuperAdmin `package.json`. (2) Retailer: add `<Toaster>` in App.tsx — position: `top-center`, duration: 4000 (success) / 6000 (error), style: `background: '#0F172A', color: '#FFFFFF', borderRadius: '8px'`. (3) SuperAdmin: same config. Supplier already uses react-hot-toast — update config to match. |
-| T-095 | Unify login page header across all portals | All Web Portals | **Implement**: All three login pages: 64px header bar, white background, `border-bottom: 1px solid #E2E8F0`. Left: shortmark SVG (20×20) + "SuperMandi" text (`#2563EB`, Inter 600, 18px) + "|" separator + portal name (`#64748B`, 16px). Update: Retailer `LoginPage.tsx`, Supplier `(auth)/layout.tsx`, SuperAdmin `LoginGate.tsx`. |
-| T-096 | Unify login card design across all portals | All Web Portals | **Implement**: All login cards: max-width 448px, white, border `1px solid #E2E8F0`, border-radius 8px, shadow, padding 32px. India locale: phone placeholder `+91 98765 43210`, PIN placeholder `Enter 6-digit PIN`, currency `₹`, date `DD/MM/YYYY`. (1) SuperAdmin: `.loginCard` radius 18px→8px, `.loginField input` 12px→6px, `.loginButton`→6px. (2) Retailer: match spec + India placeholders. (3) Supplier: match spec + India placeholders. |
-| T-097 | Unify footer design across all web portals | All Web Portals | **Implement**: Standard footer: `background: #F8FAFC`, `border-top: 1px solid #E2E8F0`, `padding: 12px 24px`, `font-size: 12px`, `color: #94A3B8`. Left: `© 2026 SuperMandi Tech Pvt Ltd · Made in India`, Right: `<BuildStamp />`. Update all 3 portals. |
-| T-098 | Standardize error/warning/success banner design | All Web Portals | **Implement**: Unified alert banner: border-radius 8px, padding 12px 16px. Error: `bg: #FEF2F2; border: #FCA5A5; color: #991B1B`. Warning: `bg: #FFFBEB; border: #FCD34D; color: #92400E`. Success: `bg: #F0FDF4; border: #86EFAC; color: #166534`. Update retailer `index.css`, SuperAdmin `App.css`, supplier Tailwind classes. |
-
----
-
-### CATEGORY P: LOADING STATES & FEEDBACK (P1)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-099 | Add skeleton loading components to retailer admin | Retailer Admin | **Implement**: (1) Create `retailer-admin/src/components/Skeleton.tsx`: animated shimmer div with `@keyframes shimmer`. (2) Create `retailer-admin/src/components/TableSkeleton.tsx`: N skeleton rows matching table layout. (3) Apply to: DashboardPage (stat cards), ProductsPage (table), InventoryPage (ledger). Replace blank-space-during-load with shimmer. |
-| T-100 | Add skeleton loading to supplier portal pages | Supplier Portal | **Implement**: (1) Create `supplier-portal/src/components/Skeleton.tsx` using Tailwind `animate-pulse`. (2) Update `(dashboard)/loading.tsx` from spinner to skeleton layout. (3) Skeleton variants for dashboard (stat cards + table), products (rows), orders (list items). |
-| T-101 | Create branded empty state component for retailer admin | Retailer Admin | **Implement**: Create `retailer-admin/src/components/EmptyState.tsx`. Props: `icon`, `title`, `description`, `action?`. Design: centered, icon in 48px `#EFF6FF` circle with `#2563EB` icon, title 18px/600, description 14px `#64748B`. Apply to: Products, Inventory, Suppliers, Orders empty states. |
-| T-102 | Create branded empty state component for supplier portal | Supplier Portal | **Implement**: Create `supplier-portal/src/components/EmptyState.tsx` Tailwind version. Apply to: Products, Orders, Earnings, Invoices empty states. |
-| T-103 | Add subtle page entrance animations to web portals | Retailer + SuperAdmin | **Implement**: (1) Retailer: `@keyframes fadeIn { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }`. (2) SuperAdmin: verify `fadeUp`. (3) All: honor `prefers-reduced-motion: reduce`. |
-
----
-
-### CATEGORY Q: LANDING PAGE BRAND ALIGNMENT (P1)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-104 | Update landing page primary buttons to brand blue | Landing Page | **Implement**: Update `supermandi-landing/index.html` CSS: `.nav-btn-primary` background from `var(--foreground)` (black) to `#2563EB`, hover to `#1D4ED8`. Update `::selection` and `.portal-card:hover` accent to `#2563EB`. |
-| T-105 | Replace landing page triangle logo with brand shortmark | Landing Page | **Implement**: Replace `.logo-mark` inline triangle SVG with shortmark from `shared/brand/logo-shortmark.svg`. Update `.logo-text` "supermandi" → "SuperMandi" (PascalCase). |
-| T-106 | Add portal entry section to landing page | Landing Page | **Implement**: 3 portal cards below hero: "Retailer Portal" → `/retailer/login`, "Supplier Portal" → `/supplier/login`, "SuperAdmin" → `/admin/`. White cards, `border: 1px solid #E2E8F0`, `border-radius: 8px`. Responsive: 3-col desktop, stacked mobile. |
-
----
-
-### CATEGORY R: POS APP BRAND POLISH (P1)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-107 | Update POS splash screen with brand shortmark | POS App | **Implement**: Replace text-only "Welcome To SuperMandi" with shortmark icon (64×64 white on `#2563EB`) + "SuperMandi" text (Inter Bold 28px white) + "POS" subtitle. Background: solid `#2563EB`. |
-| T-108 | Update POS menu screen header with brand identity | POS App | **Implement**: Add shortmark icon (24×24) next to "SuperMandi POS" title. Ensure header uses `theme.colors.primary` (`#2563EB` after T-076). |
-| T-109 | Add branded empty states to POS screens | POS App | **Implement**: Branded empty states for: SalesHistoryScreen ("No sales yet"), OrderHistoryScreen ("No orders yet"), StockStatementScreen ("No stock data"), BnplDuesScreen ("No outstanding dues"). Use `theme.colors.primarySoft` background circle + `theme.colors.primary` icon. |
-
----
-
-### CATEGORY S: CROSS-PLATFORM CONSISTENCY VERIFICATION (P2)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-110 | Cross-portal visual consistency audit | All Platforms | **Implement**: Verify all prior UX tickets achieved consistency: sidebar 256px, Lucide icons, login headers, favicons, badge colors, card radius 8px, button/input radius 6px, toast style, footer, empty states. Document remaining gaps as micro-fixes. Run `pnpm -r typecheck`. |
-| T-111 | Full production build verification for all portals | All Platforms | **Implement**: Run full production builds: `retailer-admin pnpm build`, `supplier-portal pnpm build`, `supermandi-superadmin pnpm build`, POS `pnpm -r typecheck`. Fix any build errors. |
-
----
-
-## EXECUTION ORDER (T-074 → T-111)
-
-```
-Phase 3A: Brand Foundation (MUST do first)
-  T-074  Design tokens specification
-  T-075  SVG brand logo + shortmark
-  T-076  POS mobile color alignment
-  T-077  SuperAdmin font + heading + radius alignment
-  T-078  Replace all favicons
-  T-079  Standardize sidebar width 256px
-  T-080  Standardize SuperAdmin border radii
-
-Phase 3B: Navigation & Layout (depends on T-075)
-  T-081  Retailer admin: emoji → Lucide SVG icons
-  T-082  Supplier portal: emoji → Lucide SVG icons
-  T-083  SuperAdmin: add Lucide SVG icons
-  T-084  Retailer admin: sidebar brand logo
-  T-085  Supplier portal: sidebar brand logo
-  T-086  SuperAdmin: sidebar brand header
-  T-087  Supplier portal: mobile hamburger
-  T-088  Retailer admin: mobile hamburger
-
-Phase 3C: Component Consistency (after Phase 3A)
-  T-089  Retailer: refactor sidebar inline styles → CSS
-  T-090  Retailer: refactor login inline styles → CSS
-  T-091  Retailer: shared Modal component
-  T-092  Supplier: shared Modal component
-  T-093  Standardize badges across portals
-  T-094  Standardize toast notifications
-  T-095  Unify login page header
-  T-096  Unify login card design
-  T-097  Unify footer design
-  T-098  Standardize alert banners
-
-Phase 3D: Loading States (after Phase 3A)
-  T-099  Retailer: skeleton loading
-  T-100  Supplier: skeleton loading
-  T-101  Retailer: branded empty states
-  T-102  Supplier: branded empty states
-  T-103  Page entrance animations
-
-Phase 3E: Landing Page (depends on T-075)
-  T-104  Landing page: brand blue buttons
-  T-105  Landing page: brand shortmark logo
-  T-106  Landing page: portal entry cards
-
-Phase 3F: POS App (depends on T-075 + T-076)
-  T-107  POS splash screen brand polish
-  T-108  POS menu screen brand header
-  T-109  POS branded empty states
-
-Phase 3G: Verification (MUST be last)
-  T-110  Cross-portal visual consistency audit
-  T-111  Full production build verification
-```
-
----
-
-## ZERO REGRESSION RULES FOR PHASE 3
-
-1. **Every ticket passes typecheck**: `pnpm -r typecheck` must be clean after every commit.
-2. **No functionality changes**: UX tickets change appearance only — zero behavior/API/DB changes.
-3. **Fix inline**: If T-081 reveals a missing CSS class, add it in same commit.
-4. **Store isolation unchanged**: No route or middleware changes in UX tickets.
-5. **Build verification**: T-111 ensures all portals build successfully.
-6. **Responsive safety**: Mobile changes (T-087, T-088) must not break desktop layout.
-7. **Accessibility preserved**: `prefers-reduced-motion` still honored after T-103 animations.
-
----
-
-## PHASE 4: WIRING & NAVIGATION (T-112 → T-127)
-
-> 16 tickets. Navigation guards, breadcrumbs, deep linking, 404 pages, modal persistence, error boundaries.
-> All platforms share common patterns. Execution: breadcrumbs/404 → deep linking → state persistence → POS nav.
-> Zero regression: wiring tickets add UI chrome, never change business logic or API behavior.
-
----
-
-### CATEGORY T: BREADCRUMBS & PATH INDICATORS (P1)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-112 | Add breadcrumb component + apply to retailer admin pages | Retailer Admin | **Implement**: (1) Create `retailer-admin/src/components/Breadcrumb.tsx`. Props: `items: Array<{label, path?}>`. Design: `›` separator, 13px `#64748B`, last item `#0F172A` bold. (2) Wire: Dashboard→"Home", Products→"Home › Products", Inventory→"Home › Inventory", Settings→"Home › Settings", etc. Use `useLocation()`. |
-| T-113 | Add breadcrumb component + apply to supplier portal pages | Supplier Portal | **Implement**: (1) Create `supplier-portal/src/components/Breadcrumb.tsx` Tailwind. `flex items-center gap-2 text-sm text-slate-500`. (2) Wire: Dashboard→"Home", Products→"Home › Products", Orders→"Home › Orders", etc. Use `usePathname()`. |
-| T-114 | Add tab path indicator + browser history to SuperAdmin | SuperAdmin | **Implement**: (1) Store active tab in URL hash: `#events`, `#stores`, etc. Read on mount, push on switch. (2) Breadcrumb: "SuperAdmin › [Tab Name]". (3) Browser back navigates previous tab. |
-
----
-
-### CATEGORY U: 404 & ERROR PAGES (P1)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-115 | Create branded 404 page for retailer admin | Retailer Admin | **Implement**: `retailer-admin/src/pages/NotFoundPage.tsx`. "404" large text, title, description, "Back to Dashboard" button. Update catch-all route. |
-| T-116 | Create branded 404 page for supplier portal | Supplier Portal | **Implement**: `supplier-portal/src/app/not-found.tsx` (Next.js convention). Same design as T-115. |
-| T-117 | Add per-screen error boundaries to POS app | POS App | **Implement**: `src/components/ui/ScreenErrorBoundary.tsx` — wrap each major screen. Error icon, "Something went wrong", "Try Again" button. One screen crash doesn't take down the app. |
-
----
-
-### CATEGORY V: DEEP LINKING & STATE PERSISTENCE (P1)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-118 | Add deep linking support to SuperAdmin tabs | SuperAdmin | **Implement**: External links like `/admin/#suppliers` open directly. Query params for filters: `#suppliers?status=pending`. Share button copies deep link. |
-| T-119 | Persist modal state across navigation in SuperAdmin | SuperAdmin | **Implement**: Store open modal in `sessionStorage`. Re-open on tab restore. "Unsaved changes?" warning on dirty form + tab switch. Clean up on modal close. |
-| T-120 | Add navigation state to retailer admin store context | Retailer Admin | **Implement**: Use `useSearchParams()` to persist filter/sort in URL. Products: `?search=flour&page=2`. Inventory: `?product=xyz`. Browser back restores filters. |
-| T-121 | Add navigation state to supplier portal pages | Supplier Portal | **Implement**: Next.js `useSearchParams()` for filters. Products: `?status=approved&page=2`. Orders: `?status=confirmed`. Browser back restores. |
-
----
-
-### CATEGORY W: POS APP NAVIGATION POLISH (P1)
-
-| # | Title | Scope | Implementation |
-|---|-------|-------|----------------|
-| T-122 | Add screen-level back navigation to POS detail screens | POS App | **Implement**: Back arrow (ChevronLeft) on all detail screens. 40×40 touch target. Handle Android `BackHandler`. |
-| T-123 | Add session timeout to POS app | POS App | **Implement**: Track last interaction. 30 min idle → warning. 35 min idle → auto-logout. Hook: `src/hooks/useSessionTimeout.ts`. Reset on touch/scan. |
-| T-124 | Add tab switch confirmation when cart has items in POS | POS App | **Implement**: Cart non-empty + tab switch → "You have N items. Switching clears cart. Continue?" Stay/Switch buttons. |
-| T-125 | Add pull-to-refresh on POS list screens | POS App | **Implement**: `RefreshControl` on SalesHistory, OrderHistory, PurchaseHistory, StockStatement, BnplDues. Color: `theme.colors.primary`. |
-| T-126 | Add offline indicator banner to POS app | POS App | **Implement**: `src/components/ui/OfflineBanner.tsx`. Warning yellow banner "No internet connection — working offline". Uses `NetInfo`. Animated slide-down. |
-| T-127 | Ensure all POS modals close on hardware back button | POS App | **Implement**: Shared hook `src/hooks/useModalBackHandler.ts`. All modals: hardware back closes modal (not navigate away). No modal open → default behavior. |
-
----
-
-## EXECUTION ORDER (T-112 → T-127)
-
-```
-Phase 4A: Breadcrumbs (independent of each other)
-  T-112  Retailer admin breadcrumbs
-  T-113  Supplier portal breadcrumbs
-  T-114  SuperAdmin tab path indicator
-
-Phase 4B: 404 & Error Pages
-  T-115  Retailer admin 404 page
-  T-116  Supplier portal 404 page
-  T-117  POS per-screen error boundaries
-
-Phase 4C: Deep Linking & State
-  T-118  SuperAdmin deep linking
-  T-119  SuperAdmin modal persistence
-  T-120  Retailer admin URL state
-  T-121  Supplier portal URL state
-
-Phase 4D: POS Navigation Polish
-  T-122  POS back navigation
-  T-123  POS session timeout
-  T-124  POS cart switch confirmation
-  T-125  POS pull-to-refresh
-  T-126  POS offline banner
-  T-127  POS modal back handler
-```
-
----
-
-## ZERO REGRESSION RULES FOR PHASE 4
-
-1. **Navigation changes never break auth**: Route guards remain intact.
-2. **URL state is additive**: Pages work without query params (graceful fallback).
-3. **Back button never bypasses auth**: Browser/hardware back from login does NOT enter dashboard.
-4. **Modal state is defensive**: Stale sessionStorage → silently discard.
-5. **POS stability**: Error boundaries per-screen — one crash never takes down the app.
-6. **Typecheck clean**: `pnpm -r typecheck` after every ticket.
-
----
-
-## PHASE 5: PRODUCTION AUDIT — POS + CROSS-PLATFORM GAPS (T-128 → T-199)
-
-> 72 tickets across 8 categories (X→AE). Comprehensive audit of POS sell/buy flows, payments, product images, barcode labels, data sync, cross-platform integration, and business logic.
-> P0 Go-Live Blockers: T-147 (price continuity), T-149 (QR expiry), T-150 (refund flow), T-173 (real-time sync), T-177 (stock locking), T-184 (token revocation), T-188 (batch approval)
-
-| Category | Range | Count | Priority | Description |
-|----------|-------|-------|----------|-------------|
-| X: POS Sell Flow & Scan | T-128 → T-138 | 11 | P0-P2 | Manual barcode, search debounce, fuzzy search, product images, voice Hindi |
-| Y: POS Purchase Tab (B2B) | T-139 → T-148 | 10 | P0-P2 | Purchase images, MOQ, batch/lot, price continuity, unified flows |
-| Z: Payment & UPI | T-149 → T-158 | 10 | P0-P2 | QR expiry, refund flow, Khata, customer profiles, BNPL partial |
-| AA: Product Images | T-159 → T-165 | 7 | P1-P2 | Image schema, GCS upload, supplier UI, placeholders, optimization |
-| AB: Barcode Sheets | T-166 → T-172 | 7 | P2 | Category filter, custom selection, preview, label enrichment |
-| AC: Data Sync & Offline | T-173 → T-179 | 7 | P0-P1 | Real-time SSE, stock locking, deadletter, auto-sync |
-| AD: Cross-Platform | T-180 → T-190 | 11 | P0-P2 | PO visibility, batch approval, token revocation, max devices |
-| AE: Business Logic | T-191 → T-199 | 9 | P1-P2 | Z-report, shift management, returns, customer management |
-
-### CATEGORY X: POS SELL FLOW & SCAN (T-128 → T-138)
-
-| # | Title | Priority |
-|---|-------|----------|
-| T-128 | Manual barcode entry fallback to POS sell screen | P0 |
-| T-129 | 300ms search debounce to POS sell screen | P1 |
-| T-130 | Recent search history to POS sell screen | P2 |
-| T-131 | Frequently sold products when search empty | P2 |
-| T-132 | Fuzzy/typo-tolerant search via pg_trgm | P1 |
-| T-133 | Bulk quantity selector on product cards | P2 |
-| T-134 | Product images on POS sell screen cards | P1 |
-| T-135 | Voice command Hindi language indicator | P2 |
-| T-136 | Product substitution suggestions (out of stock) | P2 |
-| T-137 | Search autocomplete/suggestions | P2 |
-| T-138 | Audio/haptic feedback on scan add | P2 |
-
-### CATEGORY Y: POS PURCHASE TAB B2B (T-139 → T-148)
-
-| # | Title | Priority |
-|---|-------|----------|
-| T-139 | Product images on purchase catalog cards | P1 |
-| T-140 | Delivery date picker in purchase flow | P1 |
-| T-141 | Always show MOQ on purchase cards | P1 |
-| T-142 | Show actual available quantity from supplier | P1 |
-| T-143 | Recently purchased quick-reorder section | P2 |
-| T-144 | Batch/lot number + expiry date in GRN | P1 |
-| T-145 | Backend cart backup for purchase cart | P1 |
-| T-146 | Offline catalog browsing for purchase tab | P1 |
-| T-147 | Prevent product disappearance during supplier price edit | P0 |
-| T-148 | Unify Quick Purchase and Live Supplier flows | P2 |
-
-### CATEGORY Z: PAYMENT & UPI (T-149 → T-158)
-
-| # | Title | Priority |
-|---|-------|----------|
-| T-149 | UPI QR expiry 5 minutes + countdown timer | P0 |
-| T-150 | Payment refund flow (refunds table + API + POS UI) | P0 |
-| T-151 | Payment reconciliation dashboard (Retailer Admin) | P1 |
-| T-152 | Three-way split payment support | P2 |
-| T-153 | BNPL partial payment option | P1 |
-| T-154 | Khata (credit book) UI to POS | P1 |
-| T-155 | Customer profiles for regular buyers | P1 |
-| T-156 | Payment receipt customization | P2 |
-| T-157 | Bank transfer option for supplier purchases | P2 |
-| T-158 | Configurable BNPL interest rates per supplier | P2 |
-
-### CATEGORY AA: PRODUCT IMAGES (T-159 → T-165)
-
-| # | Title | Priority |
-|---|-------|----------|
-| T-159 | image_url column to supplier/store/products tables | P1 |
-| T-160 | Image upload endpoint with GCS storage | P1 |
-| T-161 | Image upload UI in supplier portal product creation | P1 |
-| T-162 | Image preview in SuperAdmin product approval | P1 |
-| T-163 | Placeholder image component for products without photos | P1 |
-| T-164 | Image optimization/resizing pipeline (sharp) | P2 |
-| T-165 | Image column in CSV import for supplier products | P2 |
-
-### CATEGORY AB: BARCODE SHEETS (T-166 → T-172)
-
-| # | Title | Priority |
-|---|-------|----------|
-| T-166 | Category-wise filtering for barcode sheet | P2 |
-| T-167 | Custom product selection for barcode sheet | P2 |
-| T-168 | Barcode sheet preview before download | P2 |
-| T-169 | Print settings for barcode labels | P2 |
-| T-170 | Batch printing (N copies of same barcode) | P2 |
-| T-171 | Enrich labels with price, unit, category | P2 |
-| T-172 | Auto-generate labels after GRN | P2 |
-
-### CATEGORY AC: DATA SYNC & OFFLINE (T-173 → T-179)
-
-| # | Title | Priority |
-|---|-------|----------|
-| T-173 | Real-time product sync via SSE | P0 |
-| T-174 | Real-time settings sync from web to POS | P0 |
-| T-175 | Sync progress indicator + queue depth | P1 |
-| T-176 | Deadletter recovery for failed sync events | P1 |
-| T-177 | Stock locking (optimistic concurrency) | P0 |
-| T-178 | Periodic stock reconciliation POS↔server | P1 |
-| T-179 | Background auto-sync configurable interval | P1 |
-
-### CATEGORY AD: CROSS-PLATFORM (T-180 → T-190)
-
-| # | Title | Priority |
-|---|-------|----------|
-| T-180 | POS purchase order visibility in Retailer Admin | P1 |
-| T-181 | PO-to-invoice linkage for reconciliation | P1 |
-| T-182 | Supplier catalog browsing from POS | P1 |
-| T-183 | Auto-refresh on Retailer Admin inventory page | P1 |
-| T-184 | Immediate token revocation via Redis blacklist | P0 |
-| T-185 | Max devices per store enforcement | P1 |
-| T-186 | Align CSV import validation with product form | P1 |
-| T-187 | Populate categoryId in product creation flow | P1 |
-| T-188 | Batch approval/rejection in SuperAdmin | P0 |
-| T-189 | Margin analysis report (SuperAdmin analytics) | P2 |
-| T-190 | Compliance/KYC doc upload from POS app | P2 |
-
-### CATEGORY AE: POS MENU & BUSINESS LOGIC (T-191 → T-199)
-
-| # | Title | Priority |
-|---|-------|----------|
-| T-191 | Daily cash closing / Z-report | P1 |
-| T-192 | Shift management with cash count | P1 |
-| T-193 | Collection/dunning for overdue DUE payments | P1 |
-| T-194 | Return/refund processing screen | P1 |
-| T-195 | Thermal printer configuration screen | P2 |
-| T-196 | Customer management screen | P1 |
-| T-197 | Auto-categorization of products by name | P2 |
-| T-198 | Opening stock ledger creation from POS | P1 |
-| T-199 | Daily closing printable report | P2 |
-
-### EXECUTION ORDER
-
-```
-Phase 5A: Schema Foundation (DB migrations)
-  T-159, T-154, T-155, T-144, T-145, T-150, T-177, T-191, T-192
-
-Phase 5B: Backend Core APIs
-  T-147 (P0), T-184 (P0), T-149 (P0), T-173 (P0), T-132, T-160, T-131, T-143, T-186, T-185, T-188 (P0)
-
-Phase 5C: POS App Features
-  T-128 (P0), T-129, T-134, T-139-T-142, T-146, T-153, T-174-T-179
-
-Phase 5D: POS New Screens
-  T-154, T-155, T-191, T-192, T-194, T-196, T-198
-
-Phase 5E: Web Portal Features
-  T-161-T-163, T-151, T-180-T-181, T-183, T-187, T-188
-
-Phase 5F-5I: UX + Advanced + Barcode
-  T-130, T-133, T-135-T-138, T-148, T-152, T-156-T-158, T-164-T-172, T-189-T-190, T-193, T-195, T-197, T-199
-```
-
-### ZERO REGRESSION RULES FOR PHASE 5
-
-1. **Schema migrations are additive only** — new columns with DEFAULT null, new tables. Never alter existing columns.
-2. **Stock integrity**: `stock_balances.quantity = SUM(inventory_ledger.delta_qty)` must hold.
-3. **Store isolation**: All new endpoints derive `store_id` from JWT only.
-4. **Price integrity**: All money in minor units (paise). No floating point. Integer arithmetic only.
-5. **Supplier gate**: T-147 does NOT bypass approval — old price stays visible while change is pending.
-6. **Offline safety**: Cache is read-only fallback. Mutations always through server when online.
-7. **India market**: DD/MM/YYYY, INR (₹), +91 on all new screens.
-8. **Typecheck clean**: `pnpm -r typecheck` after every batch.
-
----
-
-## PHASE 6: 360° CTO PRODUCTION READINESS AUDIT (T-200 → T-235)
-
-> 36 tickets from comprehensive CTO-level audit across ALL platforms.
-> Audit method: 5 parallel deep-dive agents + 1 reconciliation agent. ~150+ raw findings → 9 false positives dropped → 36 final tickets.
-> Priority: 4 P0 blockers, 11 P1 high, 21 P2 medium.
-> Estimated effort: ~490 hours (7 S, 15 M, 10 L, 2 XL).
-
-### FALSE POSITIVES DROPPED (9 items that ALREADY WORK)
-
-1. `POST /api/v1/orders/create` "missing" → Backend has `/api/v1/pos/purchases` (correct route name)
-2. Webhooks/payments "missing" → Exists as `/razorpay/payments`
-3. Supplier CSV upload "missing" → Exists at `upload/page.tsx` with `uploadProductsCsv`
-4. Split payment "not implemented" → Fully implemented (`payments.ts` lines 361-606)
-5. BNPL dispute false success → Already fixed (catch block shows "Failed")
-6. Stock cap silent → Toast IS shown (`SellScanScreen.tsx:1856-1873`)
-7. Hindi voice NLU missing → Defaults to Hindi (`voiceOrderService.ts:386`)
-8. Store isolation "not enforced" → Middleware + query-level isolation comprehensive (reframed as P2 RLS)
-9. CSP/Helmet missing → WORKING (api-gateway has Helmet with HSTS, X-Frame-Options)
-
----
-
-### P0 GO-LIVE BLOCKERS (4 tickets — platform BREAKS without these)
-
-| # | Title | Platform | What's Wrong | Impact | Fix | Effort |
-|---|-------|----------|-------------|--------|-----|--------|
-| T-200 | POS B2B order placement stubbed to "Coming Soon" | POS | `PurchaseScreen.tsx:929-931` — "Place Order" shows `Alert.alert("Coming Soon")` instead of calling `POST /api/v1/pos/purchases`. Backend fully implemented. | Retailers CANNOT place purchase orders from POS. B2B flow dead. | Wire button to purchases API, navigate to confirmation screen | M |
-| T-201 | Purchase history shows hardcoded Rs.0 for all orders | POS | `PurchaseHistoryScreen.tsx:47-54` — `totalValue: 0` hardcoded because ledger API doesn't return `unitCost`. | Financial tracking useless. Every purchase displays Rs.0. | Include `unit_cost` in ledger API response, update grouping logic | M |
-| T-202 | Retailer bank account fields not persisted | Retailer Web | `PaymentsPage.tsx:49-50` — bank/IFSC fields load empty with "Not stored in backend yet" comments. | Retailers can't configure bank details for payouts. | Add `bank_account_number` + `ifsc_code` to `platform.stores`, update settings API | M |
-| T-204 | UPI QR code has no visual expiry countdown | POS | Backend returns `expiresAt` (5-min expiry) but POS shows no countdown. QR expires silently. | Cashiers/customers wait forever. UPI (India's #1 payment) broken UX. | Add countdown timer, auto-refresh on expiry, "Tap to regenerate" | M |
-
----
-
-### P1 HIGH PRIORITY (11 tickets — platform works but has serious gaps)
-
-| # | Title | Platform | Category | Fix | Effort |
-|---|-------|----------|----------|-----|--------|
-| T-205 | Supplier commission/fee transparency missing | Supplier Web | Business Logic | Add commission rate, gross, platform fee, net payout columns to earnings | M |
-| T-206 | Product images not displayed in product cards | Cross-Platform | UI-UX | Wire image display into POS/web cards. Backend upload works, DB stores URLs, but cards show placeholders | L |
-| T-207 | Stock-in PO validation missing | Backend | Data Integrity | Add PO existence validation before GRN creation in `stockIn.ts` | S |
-| T-208 | OTP verification rate limiting needs hardening | Backend | Security | 5 attempts per phone per 15 min on verification + exponential backoff + lockout | S |
-| T-209 | npm audit — 25 high-severity vulnerabilities | Backend | Security | `npm audit fix` + manual upgrades for breaking changes | M |
-| T-210 | Replace console.log with structured logging | Backend | Infrastructure | Introduce pino/winston, JSON output, correlation IDs. Replace 68+ console.* calls | L |
-| T-211 | Webhook idempotency uses in-memory Map | Backend | Infrastructure | Move `webhooks.ts:22-23` Map to Redis-based idempotency with TTL for multi-instance safety | M |
-| T-212 | Sales analytics dashboard missing on Retailer Admin | Retailer Web | UI-UX | Create AnalyticsPage with date range, charts, top products, payment breakdown | L |
-| T-213 | Offline sync conflict UI missing on POS | POS | UI-UX | Add SyncConflictScreen with pending/failed items and resolution options | M |
-| T-214 | Password strength validation missing | Backend | Security | Enforce min 8 chars, 1 number + 1 letter, common password blocklist | S |
-
----
-
-### P2 MEDIUM PRIORITY (21 tickets — fix post-launch or in parallel)
-
-| # | Title | Platform | Category | Fix | Effort |
-|---|-------|----------|----------|-----|--------|
-| T-215 | UPI VPA regex inconsistency between POS and web | Cross-Platform | Data Integrity | Centralize VPA regex: `^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$` | S |
-| T-216 | Database RLS not enabled (defense-in-depth) | Backend | Security | Add PostgreSQL RLS policies on critical tables keyed on store_id | L |
-| T-217 | Hindi/regional language missing on web portals | Cross-Platform | UI-UX | Integrate react-i18next/next-intl, start with Hindi for nav/buttons/labels | XL |
-| T-218 | Customer CRM not exposed in Retailer Admin | Retailer Web | Business Logic | Create CustomersPage with list, search, due balances, purchase history | L |
-| T-219 | UPI refunds stay "pending" forever | Cross-Platform | Business Logic | Integrate Razorpay refund API for UPI, add admin UI for pending refunds | L |
-| T-220 | Error retry buttons missing on POS | POS | UI-UX | Add shared ErrorState component with retry callback across all screens | M |
-| T-221 | Mobile responsive untested on web portals | Cross-Platform | UI-UX | Audit for 360-414px viewports, add media queries | L |
-| T-222 | WCAG accessibility gaps | Cross-Platform | UI-UX | ARIA labels, keyboard nav, contrast check, skip-nav links | XL |
-| T-223 | Cloud Monitoring alerts not configured | Backend | Infrastructure | Alert policies for 5xx rate, p95 latency, memory, payment failures | M |
-| T-224 | Staff tracking on sales missing | POS | Business Logic | Add staff_id to sales, populate from POS staff context, show in receipts | M |
-| T-225 | Daily closing report not fully wired on POS | POS | UI-UX | Wire DailyClosingScreen to backend API, show cash/UPI breakdown | M |
-| T-226 | Supplier order acceptance flow incomplete | Supplier Web | Business Logic | Complete accept/reject/ship workflow, propagate status to retailer+POS | L |
-| T-227 | Khata integration needs verification | POS | Business Logic | Verify khata screen wired to backend, integrates with DUE payment checkout | M |
-| T-228 | Invoice PDF service has uncommitted changes | Backend | Infrastructure | Review, test, commit `invoicePdfService.ts` + `invoices.ts` changes | S |
-| T-229 | Voice product search returns empty | POS | Business Logic | Implement product search callback in voice.ts to query store_products by name | M |
-| T-230 | Auto-reorder suggestions not wired E2E | Cross-Platform | Business Logic | Verify reorder algorithm, wire retailer-admin page to create POs from suggestions | L |
-| T-231 | No overdue payment reminders | Backend | Business Logic | Cloud Scheduler job to check overdue + send SMS/push notifications | L |
-| T-232 | GRN alerts have no delivery mechanism | Backend | Business Logic | Wire to FCM push or in-app notification center | M |
-| T-233 | Barcode sheet printing UX unverified | SuperAdmin | UI-UX | Verify API returns printable PDF, ensure retailer-admin has download UI | S |
-| T-234 | Feature flag admin UI missing | SuperAdmin | Infrastructure | Add FeatureFlagsPage to superadmin with toggle controls per store | M |
-| T-235 | GST compliance document flow incomplete | Cross-Platform | Business Logic | Verify GST summary report, GSTR-1 export, document storage working E2E | M |
-
----
-
-### EXECUTION ORDER (Phase 6)
-
-```
-Wave 1 — P0 Blockers (before ANY deployment):
-  T-200 → T-201 → T-202 → T-204
-
-Wave 2 — P1 Security (before production exposure):
-  T-208 → T-214 → T-209 → T-211
-
-Wave 3 — P1 Infrastructure:
-  T-210 → T-207
-
-Wave 4 — P1 Features:
-  T-205 → T-206 → T-212 → T-213
-
-Wave 5 — P2 Quick Wins (S effort):
-  T-215 → T-228 → T-233
-
-Wave 6 — P2 Medium (parallel work):
-  T-218, T-219, T-220, T-223, T-224, T-225, T-226, T-227, T-229, T-230, T-231, T-232, T-234, T-235
-
-Wave 7 — P2 Large (post-launch):
-  T-216, T-217, T-221, T-222
-```
-
-### ZERO REGRESSION RULES FOR PHASE 6
-
-1. **P0 blockers first**: No deployment until T-200, T-201, T-202, T-204 are all resolved.
-2. **Security before exposure**: OTP hardening (T-208) and password strength (T-214) before any public access.
-3. **Schema additive only**: New columns with DEFAULT null/new tables. Never alter existing column types.
-4. **Store isolation**: All new endpoints derive `store_id` from JWT only.
-5. **Price integrity**: All money in minor units (paise). Integer arithmetic only.
-6. **India market**: DD/MM/YYYY, INR, +91 on all new screens.
-7. **Typecheck clean**: `pnpm -r typecheck` after every batch.
-8. **Multi-instance safety**: T-211 webhook fix must work across Cloud Run instances.
-
----
-
-## GRAND TOTAL SUMMARY
-
-| Phase | Range | Count | Status |
-|-------|-------|-------|--------|
-| Phase 1: Staging UI/UX Fixes | T-001 → T-053 | 53 | ALL DONE |
-| Phase 2: E2E Production Implementation | T-054 → T-073 | 20 | ALL DONE |
-| Phase 3: UI/UX Professional Polish | T-074 → T-111 | 38 | ALL DONE |
-| Phase 4: Wiring & Navigation | T-112 → T-127 | 16 | ALL DONE |
-| Phase 5: Production Audit (POS+Cross) | T-128 → T-199 | 72 | ALL DONE |
-| Phase 6: 360° CTO Audit | T-200 → T-235 | 36 | ALL DONE |
-| Phase 7: B2B Reorder System | T-236 → T-252 | 17 | ALL DONE |
-| Phase 8: FCM Push + Deferred | T-219, T-223, T-231, T-232, T-235 | 5 | ALL DONE |
-| **Phase 9: Payments + Finance + WhatsApp + AI** | **T-253 → T-316** | **64** | **QUEUED** |
-| **GRAND TOTAL** | **T-001 → T-316** | **316** | **252 DONE / 64 QUEUED** |
-
----
-
-## PHASE 7: B2B REORDER SYSTEM — Production-Grade (T-236 → T-252)
-
-> 17 tickets from deep reorder system audit. Complete B2B reorder loop: auto-detect low stock → suggest reorder → retailer approves → PO to supplier with payment terms → supplier confirms delivery → scan at counter enters purchase ledger.
-> Audit finding: stock monitor EXISTS but queries wrong tables. POS screens ~80% done. Retailer Admin = zero UI. Supplier Portal = zero reorder awareness.
-> Priority: 10 P0 must-have, 5 P1 important, 2 P2 post-launch. Estimated effort: ~180 hours.
-
-### CATEGORY A: SCHEMA & DATA FOUNDATION
-
-| # | Title | Priority | Platform | Effort | Dependencies |
-|---|-------|----------|----------|--------|-------------|
-| T-236 | Reconcile reorder schema — unify dual table sets (007 vs 044) | P0 | Backend Schema | M | None |
-| T-237 | Add payment terms snapshot to purchase orders | P0 | Backend Schema | S | T-236 |
-
-### CATEGORY B: SUGGESTION ENGINE
-
-| # | Title | Priority | Platform | Effort | Dependencies |
-|---|-------|----------|----------|--------|-------------|
-| T-238 | Wire reorder-service stock monitor to correct schema + startup | P0 | Backend | M | T-236 |
-| T-239 | Add max_reorder_qty enforcement to suggestion engine | P1 | Backend | S | T-236, T-238 |
-
-### CATEGORY C: POS APP ENHANCEMENTS
-
-| # | Title | Priority | Platform | Effort | Dependencies |
-|---|-------|----------|----------|--------|-------------|
-| T-240 | Display payment terms on POS reorder screens | P0 | POS App | M | T-237 |
-| T-241 | One-tap reorder enablement from purchase history | P1 | POS + Backend | L | T-236 |
-| T-242 | POS reorder policy edit — add max qty field | P1 | POS App | S | T-239 |
-
-### CATEGORY D: RETAILER ADMIN PORTAL
-
-| # | Title | Priority | Platform | Effort | Dependencies |
-|---|-------|----------|----------|--------|-------------|
-| T-243 | Fix retailer admin reorder backend routes (column mismatches) | P0 | Backend | S | T-236 |
-| T-244 | Build Retailer Admin reorder dashboard page (Settings + Policies + Pending) | P0 | Retailer Web | L | T-243 |
-
-### CATEGORY E: SUPPLIER PORTAL INTEGRATION
-
-| # | Title | Priority | Platform | Effort | Dependencies |
-|---|-------|----------|----------|--------|-------------|
-| T-245 | Backend — add reorder context + delivery confirmation to supplier order endpoints | P0 | Backend | M | T-237 |
-| T-246 | Supplier Portal — reorder badge, delivery confirmation UI, payment terms | P0 | Supplier Web | L | T-245 |
-| T-247 | Supplier notification for new reorder POs (SSE + badge) | P1 | Backend + Supplier Web | M | T-245 |
-
-### CATEGORY F: PAYMENT TERMS
-
-| # | Title | Priority | Platform | Effort | Dependencies |
-|---|-------|----------|----------|--------|-------------|
-| T-248 | Cross-platform payment terms verification (POS + Retailer + Supplier) | P1 | Cross-Platform | M | T-240, T-244, T-246 |
-
-### CATEGORY G: GRN UNIFICATION
-
-| # | Title | Priority | Platform | Effort | Dependencies |
-|---|-------|----------|----------|--------|-------------|
-| T-249 | Unify POS stock-in with formal PO GRN for reorder deliveries | P0 | Backend + POS | XL | T-236, T-245 |
-| T-250 | Retailer admin PO tracking with receive history | P1 | Retailer Web | M | T-249 |
-
-### CATEGORY H: CLEANUP & TESTING
-
-| # | Title | Priority | Platform | Effort | Dependencies |
-|---|-------|----------|----------|--------|-------------|
-| T-251 | Clean up legacy reorder tables (007) | P2 | Backend Schema | S | T-236, T-238 |
-| T-252 | End-to-end reorder integration tests | P0 | E2E | L | T-238, T-243, T-245, T-249 |
-
-### EXECUTION ORDER (Phase 7)
-
-```
-Wave 1 — Schema Foundation:
-  T-236 (unify dual tables) → T-237 (payment terms columns)
-
-Wave 2 — Engine + Backend Fixes (parallel):
-  T-238 (fix stock monitor) | T-243 (fix retailer admin routes) | T-239 (max qty)
-
-Wave 3 — POS Enhancements (parallel):
-  T-240 (payment terms display) | T-241 (one-tap reorder) | T-242 (max qty UI)
-
-Wave 4 — Portal Build-Out:
-  T-244 (retailer admin page, needs T-243)
-  T-245 (supplier backend) → T-246 (supplier UI) → T-247 (notifications)
-
-Wave 5 — GRN Unification:
-  T-249 (unified receive flow) → T-250 (retailer PO tracking)
-
-Wave 6 — Integration & Cleanup:
-  T-248 (payment terms verify) → T-252 (E2E tests) → T-251 (legacy cleanup)
-```
-
-### ZERO REGRESSION RULES FOR PHASE 7
-
-1. **Schema additive only**: New columns with DEFAULT null, new tables. Never alter existing column types.
-2. **Stock integrity**: `stock_balances.quantity = SUM(inventory_ledger.delta_qty)` must hold after GRN.
-3. **Store isolation**: All new endpoints derive `store_id` from JWT only.
-4. **Price integrity**: All money in minor units (paise). Integer arithmetic only.
-5. **Idempotency**: GRN receive must be idempotent (use idempotency keys per PO+receive batch).
-6. **No double-counting**: Unified GRN path must be the ONLY stock-in for PO-linked deliveries.
-7. **Payment terms immutable on PO**: Snapshot at creation time, never recalculated.
-8. **India market**: DD/MM/YYYY, INR (₹), +91, Hindi-ready labels on all new screens.
-
----
-
-## PHASE 9: PAYMENTS + B2B FINANCE + WHATSAPP + AI AUTOMATION (T-253 → T-316)
-
-> 64 tickets across 4 major areas. ~1100 hours estimated effort.
-> **Area 1**: UPI Payment Gateway — Razorpay (10 tickets, P0 launch blocker)
-> **Area 2**: B2B Finance — 14 direct financers across 5 tiers + platform UI (28 tickets, P1)
-> **Area 3**: WhatsApp + In-App Chat — Hybrid model (12 tickets, P1)
-> **Area 4**: AI Automation — Full suite with expo-speech TTS (14 tickets, P1-P2)
-> **External deps**: Razorpay account, Meta WhatsApp Business verification, BNPL provider partnerships
+> **Rule**: Complete a layer fully before starting the next. Within a layer, file-groups are independent and can be parallelized.
 >
-> **📋 R&D Reference**: See **`RELEASES/PHASE9_INTEGRATION_GUIDE.md`** for per-ticket implementation details including:
-> SDK docs, API endpoints, sandbox URLs, npm packages, environment variables, known bugs, code patterns.
-> **Integration Readiness**: 41 tickets (64%) can start immediately with NO external dependencies.
-> 6 tickets need API keys only. 13 tickets need partnership agreements. 4 tickets fix existing code.
+> **Regression guard**: Each layer ends with a gate — typecheck + tests + build must pass before advancing.
 
 ---
 
-### AREA 1: UPI PAYMENT GATEWAY — Razorpay (T-253 → T-262)
+### Loophole Guard Protocol (LGP)
 
-> Razorpay SDK is integrated but NOT go-live ready. No API keys, UPI uses plain intent strings, payouts disabled, refund API missing.
+> **Added 2026-03-14** after code-level audit of all 480 tickets. Each loophole identified below is a MANDATORY guard — Claude MUST NOT skip these during implementation. Loopholes are numbered LH-001+ and referenced in their respective layers.
 
-| # | Title | Priority | Platform | Effort | What |
-|---|-------|----------|----------|--------|------|
-| T-253 | Wire Razorpay SELL webhook handler | P0 | Backend | M | Handle `payment.captured`/`payment.failed` events → update `sell_payments` status |
-| T-254 | Real UPI order tracking via Razorpay Orders API | P0 | Backend + POS | M | Create Razorpay order → link to sell_payment → poll/webhook for confirmation |
-| T-255 | UTR verification via Razorpay gateway API | P1 | Backend | S | Query Razorpay API to verify UTR against real payment (not just format check) |
-| T-256 | Enable supplier payouts via RazorpayX | P0 | Backend | L | Contact creation → fund account → payout execution → webhook tracking |
-| T-257 | Supplier bank/UPI KYC collection UI | P1 | Supplier Portal + POS | M | UI to enter bank details, POS to enter supplier UPI VPA |
-| T-258 | Payout retry and failure handling | P1 | Backend | M | Retry failed payouts with exponential backoff, alert on 3x failure |
-| T-259 | Refund flow via Razorpay Refund API | P0 | Backend + POS | M | Initiate refund via Razorpay API → track status → update sell_payments |
-| T-260 | Payment reconciliation dashboard | P1 | Retailer Admin | L | Daily settlement, pending, failed payments. Export CSV. INR format |
-| T-261 | Dynamic QR expiry countdown + auto-refresh UI | P0 | POS App | S | Countdown timer on POS, auto-refresh QR after 5-min expiry |
-| T-262 | Payment event outbox processor | P1 | Backend | M | Worker to publish payment events from outbox table to BullMQ consumers |
+#### LGP Rules:
+1. **GUARD tickets (STG-481–492) are P0 prerequisites** — they MUST be completed before the layer that depends on them
+2. **Merge order constraints** are MANDATORY — tickets marked "AFTER X" cannot start until X is PARKED
+3. **Cross-file audit requirements** mean Claude must search beyond the declared scope to verify no other files have the same vulnerability
+4. **Missing backend infrastructure** means a frontend ticket is BLOCKED until the backend ticket is done — no dead-code buttons
 
----
+#### Loophole Registry:
 
-### AREA 2: B2B FINANCE — 14 Direct Financers + Platform (T-263 → T-290)
-
-> **Tier 1 (Trade Credit)**: Rupifi, KredX, Mintifi, Trevex — Pay supplier at PO checkout
-> **Tier 2 (Credit Lines)**: Lendingkart, FlexiLoans, Progcap, NeoGrowth — Working capital
-> **Tier 3 (Rajasthan NBFC)**: Finova Capital (HQ Jaipur, 180 branches)
-> **Tier 4 (LaaS)**: Cashfree Embedded Lending — Single API → multiple NBFCs
-> **Tier 5 (Supplier Invoice Discounting)**: KredX, M1xchange, Vayana, Credlix
-> ALL under SuperMandi umbrella. SuperAdmin monitors ALL applications across ALL providers.
-
-| # | Title | Priority | Platform | Effort | What |
-|---|-------|----------|----------|--------|------|
-| T-263 | Credit provider abstraction layer | P0 | Backend | L | `CreditProvider` interface: TradeCredit + CreditLine modes. `checkEligibility()`, `createDrawdown()`, `getRepaymentSchedule()`, `processRepayment()`, `getBalance()`, `getOffers()` |
-| T-264 | Rupifi integration (Trade Credit, Tier 1) | P1 | Backend | L | OAuth + onboarding + credit check + drawdown + repayment |
-| T-265 | KredX integration (Trade Credit, Tier 1) | P1 | Backend | L | Channel finance — reverse factoring, credit line, drawdown |
-| T-266 | Mintifi integration (Trade Credit, Tier 1) | P1 | Backend | L | Supply chain finance — brand-anchored, invoice financing |
-| T-267 | Trevex integration (Trade Credit, Tier 1) | P1 | Backend | L | White-label BNPL — instant supplier payout |
-| T-268 | Lendingkart integration (Credit Line, Tier 2) | P1 | Backend | L | 2gthr API — working capital credit line, EMI |
-| T-269 | FlexiLoans integration (Credit Line, Tier 2) | P1 | Backend | L | REST API — business loan, disbursement to bank |
-| T-270 | Progcap integration (Credit Line, Tier 2) | P1 | Backend | L | FRCL — fast rotation credit for stock |
-| T-271 | NeoGrowth integration (Credit Line, Tier 2) | P1 | Backend | L | POS-based lending, deduction-based repay |
-| T-272 | Finova Capital integration (Rajasthan NBFC, Tier 3) | P1 | Backend | L | Jaipur HQ, kirana-focused, 30K+ customers |
-| T-273 | Cashfree Embedded Lending (LaaS, Tier 4) | P1 | Backend | L | Single API → multiple additional NBFCs, escrow + disbursement + reconciliation |
-| T-274 | Provider selection UI (POS + Retailer Web) | P1 | POS + Retailer | L | At PO checkout: trade credit offers. On dashboard: credit line offers. Sort by best terms |
-| T-275 | Multi-provider repayment tracking | P1 | Backend | M | Track across all providers, auto paid/overdue, partial payments, EMI schedules |
-| T-276 | KYC routing (provider-specific) | P1 | Backend | L | Route PAN + Aadhaar + GSTIN through each provider's KYC API. Shared where possible |
-| T-277 | Credit dashboard (Retailer Admin) | P1 | Retailer Admin | L | Aggregated: total credit across ALL providers, per-provider breakdown, drawdowns, repayment calendar, credit score |
-| T-278 | Settlement reconciliation (multi-provider) | P1 | Backend + Retailer | L | Match disbursements from each provider to POs/withdrawals, multi-provider reconciliation report |
-| T-279 | Auto-overdue maturation job | P1 | Backend | S | Cron: check all providers' drawdowns/EMIs, mark overdue, push + WhatsApp alerts |
-| T-280 | Supplier-side BNPL visibility | P1 | Supplier Portal | M | Which POs are BNPL-backed, payment guaranteed, which provider, expected payout date |
-| T-281 | Provider health monitoring | P2 | SuperAdmin | M | API health, response times, approval rates, volumes per provider |
-| T-282 | Provider comparison engine | P2 | Backend + POS | M | Side-by-side offers: sort by total cost, show APR, credit limit, tenure |
-| T-283 | KredX invoice discounting (Supplier, Tier 5) | P1 | Backend + Supplier | L | Supplier uploads invoice → KredX API → 80-90% in 24-72h |
-| T-284 | M1xchange TReDS integration (Supplier, Tier 5) | P1 | Backend + Supplier | L | RBI-licensed TReDS — banks bid on invoices → lowest rate → instant funding |
-| T-285 | Vayana trade credit (Supplier, Tier 5) | P1 | Backend + Supplier | L | Supply chain finance API — payables/receivables financing |
-| T-286 | Credlix invoice factoring (Supplier, Tier 5) | P1 | Backend + Supplier | L | 90% of invoice in 24h, PO financing up to 40Cr |
-| T-287 | Supplier financing UI (Supplier Portal) | P1 | Supplier Portal | L | "Get Paid Now" button on invoices, application flow, status tracking, repayment schedule |
-| T-288 | Retailer bulk purchase credit UI (POS + Web) | P1 | POS + Retailer | L | "Finance this purchase" at checkout for large POs. Show available credit offers |
-| T-289 | SuperAdmin finance monitoring dashboard | P1 | SuperAdmin | XL | Real-time: all applications, approvals, disbursements, repayments, provider health across ALL providers (retailer + supplier) |
-| T-290 | SuperAdmin provider management | P2 | SuperAdmin | M | Enable/disable providers per store, set commission rates, configure credit limits |
+| LH# | Layer | Risk | Guard Ticket | Description |
+|-----|-------|------|-------------|-------------|
+| LH-001 | L0 | CRITICAL | — | `showQaMenu` NOT bounded by `__DEV__` — if `EXPO_PUBLIC_ENABLE_QA_MENU=true` leaks to prod, QA menu shows |
+| LH-002 | L0 | HIGH | STG-486 | PAN encryption needs key management infra BEFORE STG-474 can encrypt |
+| LH-003 | L0 | HIGH | STG-485 | No `consent_records` table — STG-457 and STG-473 both need it FIRST |
+| LH-004 | L0 | HIGH | — | Voice `startStockMonitor()` may not be called from service entrypoint — verify in STG-418 |
+| LH-005 | L0 | MEDIUM | — | STG-224: `DEMO_CATEGORIES` is intentional fallback — guard must add "Categories unavailable" UX, not just `__DEV__` |
+| LH-006 | L0 | MEDIUM | — | No release build verification test — `__DEV__` strip not verified in CI |
+| LH-007 | L1 | CRITICAL | — | STG-232 (disabled tokens) MUST precede STG-003 (palette audit) — or combine |
+| LH-008 | L1 | HIGH | STG-483 | SellTile.formatPrice() duplicates formatMoney() — STG-116 won't affect SellTile |
+| LH-009 | L1 | HIGH | — | 50 files call formatMoney() — 4 have null-unsafe calls — audit BEFORE STG-116 |
+| LH-010 | L2 | HIGH | STG-481 | No i18n validation script — no build-time en/hi key parity check |
+| LH-011 | L2 | MEDIUM | STG-482 | i18n key naming convention undefined — component keys need namespace rules |
+| LH-012 | L2 | MEDIUM | — | STG-292 only covers 2 of 7 hardcoded strings in LimitedModeBanner |
+| LH-013 | L4 | HIGH | STG-484 | CartItem + SupplierRow use static `theme` (not `useThemeColors()`) — dark mode broken |
+| LH-014 | L4 | MEDIUM | — | SupplierRow:120 `stockColor + "20"` opacity hack breaks if color format changes |
+| LH-015 | L7 | CRITICAL | STG-487 + STG-488 | STG-102 (discount limits) has NO backend: no staff role API, no max discount setting, no manager PIN endpoint |
+| LH-016 | L7 | CRITICAL | — | STG-094/095/126 (three removal paths) must be implemented in sequence: STG-094 → STG-126 → STG-095 |
+| LH-017 | L8 | CRITICAL | STG-492 | PENDING_UPI_KEY defined but NEVER written before checkout — double-charge risk on crash |
+| LH-018 | L8 | CRITICAL | STG-489 | STG-383 (refund/void) has NO backend endpoint — button would be dead code |
+| LH-019 | L8 | HIGH | — | STG-377: `renderModeTab` callers NEVER pass `disabled` during `submitting` state |
+| LH-020 | L8 | HIGH | — | STG-080/087/123 mutually dependent — merge order: STG-087 → STG-080 → STG-123 |
+| LH-021 | L8 | MEDIUM | — | STG-085 (split) vs STG-125 (partial) are different features — clarify DUE overlap |
+| LH-022 | L14 | CRITICAL | STG-491 | STG-421: Draft POs created but NO submission endpoint — POs never reach suppliers |
+| LH-023 | L14 | CRITICAL | — | STG-413: EditReorderModal calls non-existent PATCH API — edits silently lost |
+| LH-024 | L14 | HIGH | — | STG-423: Supplier mapping ignores MOQ, only sorts by price |
+| LH-025 | L15 | CRITICAL | STG-490 | STG-451: No credit disbursement endpoint — approved applications stuck forever |
+| LH-026 | L15 | CRITICAL | — | STG-462: Interest formula is flat (`principal * rate / 100`), not prorated by tenure |
+| LH-027 | L15 | CRITICAL | — | STG-448: Feature gate hardcoded `false` in BOTH frontend AND backend — no single source |
+| LH-028 | L15 | HIGH | — | STG-467: Overdue maturation functions exist but no scheduler calls them |
+| LH-029 | L15 | HIGH | — | Missing tables: `credit_disbursements`, `kyc_document_storage`, `overdue_notifications`, `consent_records` |
 
 ---
 
-### AREA 3: WHATSAPP + IN-APP CHAT — Hybrid (T-291 → T-302)
+### LAYER 0 — Security & P0 Critical Bugs (17 tickets)
+> **Why first**: These are data leaks, security violations, and broken core features. Ship-blocking regardless of UI polish.
+> **Gate**: `pnpm -r typecheck` + `pnpm test` + zero security violations
+> **Loophole guards**: LH-001 through LH-006
 
-> **Option C: Hybrid** — In-app chat (retailer↔supplier via Socket.io) + Meta WhatsApp Cloud API direct (retailer→consumer, BSP fallback if Meta approval difficult)
+#### 0A: GUARD Prerequisites (do FIRST within L0)
+| # | File(s) | What | Guards |
+|---|---------|------|--------|
+| STG-486 | `backend/src/utils/encryption.ts` (NEW) + GCP Secret Manager | Create encryption key management utility: `encrypt(plaintext)`, `decrypt(ciphertext)`, key rotation support. Use `@google-cloud/secret-manager` for key storage. | LH-002 — blocks STG-474 |
+| STG-485 | Migration + `backend/src/routes/v1/consent.ts` (NEW) | Create `platform.consent_records` table: `(id, store_id, customer_phone, consent_type, given_at, revoked_at)`. Create `POST /api/v1/consent/record` + `GET /api/v1/consent/check` endpoints. | LH-003 — blocks STG-457, STG-473 |
 
-| # | Title | Priority | Platform | Effort | What |
-|---|-------|----------|----------|--------|------|
-| T-291 | Chat database schema | P0 | Backend | M | `messages`, `conversations`, `conversation_participants` tables with store isolation |
-| T-292 | Chat backend API | P0 | Backend | L | CRUD endpoints: create conversation, send message, list messages, mark read |
-| T-293 | Real-time chat via Socket.io | P0 | Backend | L | WebSocket server alongside Express, auth via JWT, room per conversation |
-| T-294 | POS chat screen (in-app) | P1 | POS App | L | Chat list + conversation view + send messages to suppliers/SuperMandi team |
-| T-295 | Supplier portal chat UI | P1 | Supplier Portal | L | Supplier sees retailer messages, can reply, delivery confirmations |
-| T-296 | WhatsApp Cloud API integration (Meta direct) | P1 | Backend | L | Meta WhatsApp Cloud API directly (no BSP). Setup: Meta Business verification + developer app + webhook |
-| T-297 | WhatsApp order receipt to consumer | P2 | Backend + POS | M | After sale, send receipt via WhatsApp to consumer phone (if provided) |
-| T-298 | WhatsApp reorder alert to supplier | P2 | Backend | M | When reorder PO created, send WhatsApp notification to supplier |
-| T-299 | Push notifications (FCM + Expo) | P1 | Backend + POS | L | Wire firebase-admin for push, expo-notifications for POS app. Extend existing FCM infra |
-| T-300 | SuperMandi support chat channel | P1 | Backend + POS | M | Dedicated channel for retailer↔SuperMandi team communication |
-| T-301 | Chat attachment support (image/PDF) | P2 | Backend + POS | M | Image/PDF upload in chat messages (GCS storage) |
-| T-302 | WhatsApp message template management | P2 | SuperAdmin | M | SuperAdmin portal to create/edit WhatsApp template messages for approval |
+#### 0B: Security — Data Exposure & Auth (POS app)
+| # | File(s) | What | Guards |
+|---|---------|------|--------|
+| STG-144 | `MenuScreen.tsx:1083-1130` | Wrap BOTH `showQaMenu` section AND BUILD INFO in `if (__DEV__)`. **LH-001**: Must guard `showQaMenu` condition itself, not just BUILD_INFO. Fix: `{__DEV__ && showQaMenu && (...)}` | LH-001 |
+| STG-145 | `MenuScreen.tsx:1103-1130` | Remove token, API URL, StoreId UUID from visible UI. **ALSO**: grep for `API_BASE_URL` in error messages, crash reports, analytics across ALL files | LH-006 |
+| STG-178 | `MenuScreen.tsx:1083-1101` + `UiShowcaseScreen.tsx:30-34` | Double-gate: `__DEV__ && showQaMenu`. Remove `EXPO_PUBLIC_ENABLE_QA_MENU` from production capability — `isQaMenuEnabled()` must return `false` unless `__DEV__` | LH-001 |
+| STG-253 | `EnrollDeviceScreen.tsx:40` | Already guarded ✓. Verify: `EXPO_PUBLIC_TEST_PHONE` not set in `app.json` production profile | — |
+| STG-224 | `SellScanScreen.tsx:61` + `CategoryRail.tsx:67,255` | **LH-005**: Don't just `__DEV__`-guard. Change fallback to `"Categories unavailable"` empty state in production. `DEMO_CATEGORIES` stays for dev only | LH-005 |
 
----
+#### 0C: Security — Backend & Compliance (DPDP)
+| # | File(s) | What | Depends On |
+|---|---------|------|-----------|
+| STG-474 | `backend/src/routes/v1/pos/credit.ts:550` + migration | Encrypt PAN using `encrypt()` from STG-486. Add migration to encrypt existing plaintext PANs. **ALSO**: encrypt `aadhaar_last4`. Add PAN hash column for search. | **STG-486** |
+| STG-457 | `CreditScreen.tsx` + `backend/src/routes/v1/pos/credit.ts` | Add consent checkbox UI before credit scoring. Call `POST /consent/record` from STG-485. Block scoring if no consent. Store `consent_id` on credit application. | **STG-485** |
+| STG-473 | `KhataScreen.tsx:778-787` + backend | Add consent checkbox before phone collection. Call `POST /consent/record`. Encrypt phone in `khata_entries` using STG-486. | **STG-485, STG-486** |
+| STG-367 | `backend/services/voice-service/src/services/intentParser.ts` + `routes/voice.ts` | Fix prompt injection: (1) sanitize `productName` — strip SQL keywords, (2) add rate limiter to `/interpret`, (3) redact PII from transcript stored in memory, (4) add input length limit | — |
 
-### AREA 4: AI AUTOMATION — Full Suite (T-303 → T-316)
+#### 0D: P0 Bugs — Broken Features
+| # | File(s) | What |
+|---|---------|------|
+| STG-142 | `MenuScreen.tsx:605` + `en.json` + `hi.json` | Fix leaked i18n key. **ALSO**: verify all `t('menu.*')` calls have matching keys in BOTH en.json and hi.json |
+| STG-143 | `MenuScreen.tsx:656-658` + `en.json` + `hi.json` | Fix leaked i18n keys. Change from positional fallback to `defaultValue` format |
+| STG-189 | `MenuScreen.tsx:1066` | Fix `&amp;` → `&`. **ALSO**: grep ALL .tsx files for `&amp;`, `&lt;`, `&gt;`, `&quot;` HTML entities in React Native Text |
+| STG-361 | `backend/services/voice-service/` | Implement real product search: query `catalog.store_products` by name/barcode, scope to `store_id` from JWT, return top 10, fuzzy match |
+| STG-418 | `backend/services/reorder-service/` | **LH-004**: Verify `startStockMonitor()` is called in service entrypoint (`index.ts`). If not, add call. Add startup log. Add health check endpoint to confirm cron is running |
+| STG-492 | `src/screens/PaymentScreen.tsx:826` | **LH-017**: Write `PENDING_UPI_KEY` to AsyncStorage BEFORE calling `completeCheckout()`. On mount, check for stale pending — recover or warn. Prevents double-charge on crash. |
 
-> expo-speech for TTS (free, built-in, Hindi, offline). NOT ElevenLabs.
-> Voice STT already works (Claude/Anthropic API). Intent parsing already works (GPT-4o-mini).
-> Goal: Make AI feel like a virtual store manager.
-
-| # | Title | Priority | Platform | Effort | What |
-|---|-------|----------|----------|--------|------|
-| T-303 | AI onboarding assistant | P2 | POS App | L | First-time setup: AI walks retailer through store setup, first product add, first sale |
-| T-304 | Hindi NLU expansion (Marathi, Gujarati, Tamil) | P2 | Backend | M | Add support for regional number words and product aliases |
-| T-305 | Voice TTS response (AI speaks back) | P1 | POS App | L | After voice command, AI responds with spoken Hindi/English using expo-speech (free, built-in, offline) |
-| T-306 | Multi-turn voice conversation | P1 | POS App | L | Context-aware: "Add rice" → "Which rice? Basmati or Sona Masoori?" → "Basmati" → done |
-| T-307 | Proactive AI alerts (push) | P1 | POS + Backend | L | Daily alerts: low stock, expiring items, overdue payments, unusual patterns |
-| T-308 | Demand forecasting engine | P2 | Backend | XL | 4-week rolling sales data to predict daily demand per SKU |
-| T-309 | Smart reorder suggestions (forecast-driven) | P1 | Backend | L | Enhance stock monitor: demand forecast + supplier lead time + buffer days |
-| T-310 | Auto daily closing summary | P1 | POS + Backend | M | AI generates end-of-day report: total sales, cash count, UPI collected, dues created |
-| T-311 | Supplier price comparison | P1 | POS + Backend | M | "Supplier B is X cheaper for same SKU" when adding item to PO |
-| T-312 | Customer purchase insights | P2 | POS + Backend | M | "Top 10 customers by value", "Customers who haven't visited in 7 days" |
-| T-313 | Slow mover detection | P2 | Backend | M | Flag items with <2 sales in 30 days, suggest discount or discontinue |
-| T-314 | Expiry tracking alerts | P1 | POS + Backend | L | Scan expiry dates → alert 30/15/7 days before → suggest markdown |
-| T-315 | Voice-driven full workflow | P1 | POS App | L | "Place reorder for all low stock items" → AI shows list → retailer approves → POs created |
-| T-316 | Anomaly detection | P2 | Backend | M | Flag: "Sales dropped 40% vs last Tuesday" or "Unusual 50-item return" |
-
-> **AI Ticket Dependencies:**
-> - T-305 (TTS) → PREREQUISITE for T-303 (onboarding), T-306 (multi-turn), T-315 (workflows)
-> - Product search (`voice.ts:72`) → Must wire to `storeProducts.ts` search before T-306/T-315 work server-side
-> - T-308 (forecasting) → PREREQUISITE for T-309 (smart reorder)
-> - T-305 + T-306 → PREREQUISITE for T-315 (voice workflows)
->
-> **ALREADY EXISTS — Phase 9 voice tickets are ADDITIVE, not replacing:**
-> - Audio recording (`expo-av`) ✅, `VoiceButton.tsx` ✅, `VoiceSheet.tsx` ✅, voice routes ✅
-> - STT (OpenAI Whisper via `openaiProvider.ts`) ✅, Intent parsing (GPT-4o-mini) ✅
-> - `SellScanScreen.tsx` voice integration ✅, `voiceEnabled` feature flag ✅
-> - Voice service microservice (port 3009, Anthropic Claude STT) ✅
-> - Phase 9 ADDS: TTS output (`expo-speech`), multi-turn context, alerts, forecasting, anomalies
+**Layer 0 total**: 17 tickets (14 original + 3 GUARD)
 
 ---
 
-### EXECUTION WAVES (Phase 9)
+### LAYER 1 — Foundation: Theme, Utilities, i18n Keys (14 tickets)
+> **Why second**: Every UI ticket depends on design tokens, money formatting, and i18n keys being correct. Fix the foundation before touching screens.
+> **Gate**: `pnpm -r typecheck` + theme tokens importable + `formatMoney()` passes unit tests
+> **Loophole guards**: LH-007 through LH-009
 
-```
-Wave A — UPI Core (P0 Launch Critical):
-  T-253 (Razorpay SELL webhook) → T-254 (real UPI tracking) → T-255 (UTR verify)
-  T-262 (payment outbox) → T-259 (refund flow) → T-261 (QR expiry UI)
-  → Result: SELL payments fully confirmed via Razorpay gateway
+#### 1A: Design Tokens (`src/theme/`) — STRICT ORDER
+| # | File(s) | What | Guards |
+|---|---------|------|--------|
+| STG-232 | `colors.ts` | **DO FIRST** — Add `disabled`, `disabledText`, `disabledBg` tokens to BOTH light AND dark palettes | LH-007 |
+| STG-231 | `colors.ts:7-12` | **AFTER STG-232** — Deduplicate accent/secondary. Pick ONE name, alias the other, deprecate | LH-007 |
+| STG-003 | `colors.ts` + `spacing.ts` + `typography.ts` + `index.ts` | **AFTER STG-232+231** — Unified palette. **RULE**: No null-coalescing fallback hex colors (`?? "#EFF6FF"`) — use explicit secondary token. Remove all `?? "#hex"` patterns in theme consumers | LH-007 |
+| STG-233 | `colors.ts:61,124` | Remove/assign purpose to unused `ink` token | — |
+| STG-011 | `typography.ts:1-77` | Audit font sizes for POS-grade readability | — |
 
-Wave B — BNPL Foundation + First 2 Providers:
-  T-263 (abstraction layer) → T-264 (Rupifi) → T-270 (Progcap)
-  T-274 (provider selection UI) → T-275 (repayment tracking) → T-279 (overdue job)
-  → Result: Retailers can get BNPL + working capital from 2 providers
+#### 1B: Utility Functions (`src/utils/`) — AUDIT FIRST
+| # | File(s) | What | Guards |
+|---|---------|------|--------|
+| STG-483 | `SellTile.tsx:55-59` + `money.ts` | **DO FIRST** — Refactor `SellTile.formatPrice()` to call `formatMoney()`. Delete duplicate local formatter. Ensure `/rateUnit` suffix still works via wrapper. | LH-008 |
+| STG-116 | `money.ts:31-71` | **AFTER STG-483** — Implement Indian lakh formatting. **LH-009**: Before modifying, grep all 50 callers for null-unsafe usage. Add `formatMoney(null) → "—"` test. Add `formatMoney(undefined) → "—"` test. | LH-009 |
+| STG-117 | `money.ts` | **AFTER STG-116** — Smart formatting: drop `.00` on round amounts | — |
 
-Wave C — Supplier Payouts + Trade Credit Providers:
-  T-256 (RazorpayX payouts) → T-257 (supplier KYC) → T-258 (retry)
-  T-265 (KredX) → T-266 (Mintifi) → T-267 (Trevex)
-  → Result: Retailer→supplier payouts live + 4 trade credit providers
+#### 1C: i18n Locale Keys — Existing Key Fixes (`src/i18n/locales/`)
+| # | File(s) | What |
+|---|---------|------|
+| STG-234 | `en.json:382` + `hi.json` | Rewrite `status.storeInactive` (remove "Superadmin") |
+| STG-235 | `en.json:383` + `hi.json` | Rewrite `status.deviceInactive` (remove "Superadmin") |
+| STG-236 | `en.json:393` + `hi.json` | Rewrite `errors.deviceAlreadyEnrolled` (remove "Superadmin") |
+| STG-237 | `en.json:406` | Change "Please login again" → "re-enter staff PIN" |
+| STG-238 | `en.json:146` + `hi.json` | Rewrite "Digitise mode on" to plain language |
 
-Wave C2 — Credit Lines + LaaS:
-  T-268 (Lendingkart) → T-269 (FlexiLoans) → T-271 (NeoGrowth)
-  T-272 (Finova Capital) → T-273 (Cashfree Embedded Lending)
-  → Result: ALL 10 direct financers + LaaS pipe active
-
-Wave D — In-App Chat + Push Notifications:
-  T-291 (chat schema) → T-292 (chat API) → T-293 (Socket.io)
-  T-294 (POS chat) → T-295 (supplier chat) → T-299 (push)
-  → Result: Retailer↔Supplier real-time chat working
-
-Wave E — AI Core (Voice + Automation):
-  T-305 (TTS expo-speech) → T-306 (multi-turn voice)
-  T-307 (proactive alerts) → T-310 (auto daily closing)
-  → Result: AI speaks Hindi/English, proactive alerts
-
-Wave F — WhatsApp + Supplier Finance:
-  T-296 (WhatsApp Cloud API) → T-297 (receipts) → T-298 (reorder alerts)
-  T-300 (support channel) → T-301 (attachments) → T-302 (templates)
-  T-283 (KredX invoice) → T-284 (M1xchange) → T-285 (Vayana) → T-286 (Credlix) → T-287 (supplier UI)
-  → Result: Full WhatsApp + supplier invoice discounting
-
-Wave G — Finance Dashboards + Reconciliation:
-  T-276 (KYC routing) → T-277 (credit dashboard) → T-278 (reconciliation)
-  T-280 (supplier BNPL visibility) → T-281 (provider health) → T-282 (comparison engine)
-  T-288 (bulk purchase credit) → T-289 (SuperAdmin monitoring) → T-290 (provider mgmt)
-  T-260 (payment reconciliation)
-  → Result: Full financial visibility across all providers
-
-Wave H — AI Intelligence (Forecasting + Insights):
-  T-308 (demand forecasting) → T-309 (smart reorder)
-  T-311 (supplier price comparison) → T-312 (customer insights) → T-315 (voice workflows)
-  → Result: AI predicts demand, compares suppliers, knows customers
-
-Wave I — AI Polish + Scale:
-  T-313 (slow mover) → T-314 (expiry tracking)
-  T-303 (AI onboarding) → T-316 (anomaly detection) → T-304 (Hindi NLU expansion)
-  → Result: Complete AI retail assistant
-```
-
-### EXTERNAL DEPENDENCIES (Operator Action Required)
-
-| Dependency | For | Action |
-|------------|-----|--------|
-| Razorpay Standard account | UPI SELL | Sign up at razorpay.com, get API keys |
-| RazorpayX account | Supplier payouts | Contact Razorpay sales for business account |
-| Meta Business verification | WhatsApp API | Verify business at business.facebook.com |
-| Rupifi partnership | Trade Credit | Apply at rupifi.com/partners |
-| KredX partnership | Trade Credit + Invoice Discounting | Apply at kredx.com/channel-finance |
-| Mintifi partnership | Trade Credit | Contact mintifi.com |
-| Trevex partnership | Trade Credit | Contact trevex.io |
-| Lendingkart partnership | Credit Line | Contact lendingkart.com (sandbox at gateway-qa.lendingkart.io) |
-| FlexiLoans partnership | Credit Line | Apply at flexiloans.com/partners |
-| Progcap partnership | Credit Line | Contact progcap.com |
-| NeoGrowth partnership | Credit Line | Contact neogrowth.in |
-| Finova Capital partnership | Rajasthan NBFC | Contact Jaipur HQ |
-| Cashfree Embedded Lending | LaaS | Sign up at cashfree.com/embedded-lending |
-| M1xchange partnership | TReDS | Contact M1xchange for API access |
-| Vayana Network partnership | Trade finance | Contact vayana.com |
-| Credlix partnership | Invoice factoring | Contact credlix.com |
-
-### KEY TECHNICAL NOTES
-
-- **TTS**: Using `expo-speech` (React Native built-in, FREE, offline, Hindi supported). NOT ElevenLabs.
-- **WhatsApp**: Meta Cloud API directly (no BSP). BSP (Interakt/AiSensy/Gupshup) as fallback if Meta approval difficult.
-- **Razorpay**: SDK integrated but NOT go-live ready. No API keys configured. UPI uses plain `upi://pay?` intent strings. All payout features behind disabled flags.
-- **BNPL Sandboxes**: Lendingkart confirmed (gateway-qa.lendingkart.io). Cashfree likely. All others require partnership agreements.
-- **All finance under SuperMandi umbrella**: Retailers/suppliers never leave the platform. SuperAdmin monitors ALL providers.
-
-### ZERO REGRESSION RULES FOR PHASE 9
-
-1. **Payment integrity**: All money in minor units (paise). Integer arithmetic only. Never floating point.
-2. **Idempotency**: All payment webhooks (Razorpay + BNPL providers) must be idempotent via Redis/DB dedup.
-3. **Store isolation**: All new endpoints derive store_id from JWT only. Chat/finance/payment all store-scoped.
-4. **Provider abstraction**: Adding a new BNPL provider MUST NOT require changes to POS/web UI code. Only backend adapter.
-5. **Graceful degradation**: If a BNPL provider API is down, other providers still work. No cascade failure.
-6. **Chat security**: Messages only visible to conversation participants. No cross-store leakage.
-7. **WhatsApp rate limits**: Respect Meta rate limits. Queue messages via BullMQ, not direct API calls.
-8. **AI safety**: Voice commands that involve money (reorder, payment) ALWAYS require explicit confirmation.
-9. **India market**: DD/MM/YYYY, INR, +91, Hindi-ready on all new screens.
+**Layer 1 total**: 14 tickets (12 original + STG-483 from GUARD + STG-232 reordered)
 
 ---
 
-## PHASE 10: PRODUCTION GO-LIVE TESTING (TEST-001 → TEST-052)
+### LAYER 2 — i18n Hardcoded String Replacement (30 tickets)
+> **Why here**: i18n is a mechanical, low-risk change per screen. Doing all i18n before UI redesign avoids merge conflicts — redesign tickets would otherwise invalidate i18n line numbers.
+> **Gate**: `pnpm -r typecheck` + all screens render without leaked `[keys]` + Hindi toggle works + `npm run i18n:validate` passes
+> **Loophole guards**: LH-010, LH-011, LH-012
 
-> **52 tickets. 1,135 files × 10 test types × 3 rounds = 34,050 test executions.**
-> Testing happens AFTER all 109 pending development tickets (Phases 6+7+9) are completed.
-> This is the final gate before GCP staging deploy and India market go-live.
+#### 2-PREREQ: GUARD Prerequisites (do FIRST within L2)
+| # | File(s) | What | Guards |
+|---|---------|------|--------|
+| STG-481 | `scripts/i18n-validate.js` (NEW) + `package.json` | Create i18n key parity validator: reads en.json + hi.json, reports keys missing in either file. Add `"i18n:validate": "node scripts/i18n-validate.js"` to package.json. Exit 1 if mismatch. Run in pre-commit hook. | LH-010 |
+| STG-482 | `src/i18n/NAMING.md` (NEW) | Define i18n key naming convention: `common.*` = truly generic ("Loading", "Error", "Retry"), `{screen}.*` = screen-specific ("dailyReport.title"), `components.*` = shared component strings. **RULE**: Every STG-257–279 ticket MUST follow this convention. | LH-011 |
 
-> **Detailed R&D reference**: See plan file for full test type details, per-project coverage requirements, CI pipeline architecture, and 48 GO/NO-GO checks.
+#### 2A: Screens with zero t() — Full i18n setup needed
+| # | Primary File | Strings |
+|---|-------------|---------|
+| STG-257 | `PaymentSetupScreen.tsx` (395 lines) | ~18 strings |
+| STG-259 | `BillDetailScreen.tsx` (432 lines) | ~15 strings |
+| STG-260 | `SalesStatementScreen.tsx` (423 lines) | ~12 strings |
+| STG-261 | `DailyReportScreen.tsx` (809 lines) | ~25 strings |
+| STG-264 | `GRNScreen.tsx` (1000 lines) | ~18 strings |
+| STG-265 | `OpeningStockScreen.tsx` (738 lines) | ~16 strings |
+| STG-269 | `KhataScreen.tsx` (941 lines) | ~22 strings |
+| STG-271 | `OverdueDuesScreen.tsx` (573 lines) | ~18 strings |
+| STG-272 | `ShiftScreen.tsx` (903 lines) | ~40 strings |
+| STG-274 | `ReturnScreen.tsx` (914 lines) | ~32 strings |
+| STG-278 | `BulkPurchaseCreditScreen.tsx` (231 lines) | ~15 strings |
+| STG-279 | `ErrorBoundary.tsx` (74 lines) | ~4 strings |
 
-### Phase A: Test Infrastructure Setup (TEST-001 → TEST-010)
+#### 2B: Screens with partial t() — Extend coverage
+| # | Primary File | Strings |
+|---|-------------|---------|
+| STG-258 | `SalesHistoryScreen.tsx` (310 lines) | ~5 remaining |
+| STG-262 | `DailyClosingScreen.tsx` (750 lines) | ~12 remaining |
+| STG-263 | `InwardScreen.tsx` (1146 lines) | ~20 remaining |
+| STG-266 | `PurchaseScreen.tsx` (1700+ lines) | ~40 remaining |
+| STG-267 | `BarcodeSheetScreen.tsx` (1500+ lines) | ~35 remaining |
+| STG-268 | `BnplDuesScreen.tsx` (1439 lines) | ~25 remaining |
+| STG-270 | `CustomerListScreen.tsx` (904 lines) | ~35 remaining |
+| STG-273 | `OrderDetailScreen.tsx` (952 lines) | ~22 remaining |
+| STG-277 | `ReorderScreen.tsx` + `ReorderPoliciesScreen.tsx` | ~20 combined |
 
-| # | Title | What | Effort |
-|---|-------|------|--------|
-| TEST-001 | Install testcontainers + PostgreSQL/Redis containers | Backend integration test infrastructure | M |
-| TEST-002 | Install Snyk + Semgrep + gitleaks + wire to CI | Security scanning tools in CI pipeline | M |
-| TEST-003 | Install @axe-core/playwright | Accessibility testing for web portals | S |
-| TEST-004 | Create 100K SKU seed script (Indian FMCG data) | @faker-js/faker + realistic product data | L |
-| TEST-005 | Create k6 load test scenarios (scan, search, checkout, payment, 10K VU) | 15 load test scripts | L |
-| TEST-006 | Configure Maestro CLI for POS mobile E2E | Mobile test runner setup | M |
-| TEST-007 | Add coverage thresholds to all Jest/Vitest configs (80%/70%) | Coverage enforcement | S |
-| TEST-008 | Enhance CI pipeline from 5 → 13 jobs (4 tiers) | ci-gates.yml restructure | M |
-| TEST-009 | Create Zod contract schemas for all 102 API endpoints | API shape validation | L |
-| TEST-010 | Capture visual regression baseline screenshots for all portal pages | Playwright snapshots | M |
+#### 2C: Screens with heavy t() — Close gaps
+| # | Primary File | Strings |
+|---|-------------|---------|
+| STG-275 | `BuyScreen.tsx` (996 lines) | ~12 remaining |
+| STG-276 | `CreditScreen.tsx` (1498 lines) | ~15 remaining |
 
-### Phase B: Round 1 — Discovery (TEST-011 → TEST-028)
+#### 2D: i18n for shared locale keys
+| # | File(s) | What |
+|---|---------|------|
+| STG-239 | `en.json` + `hi.json` | Replace "MOQ" with "Min. Order" |
+| STG-240 | `en.json:93-100` + `hi.json` | Tab labels: ALL CAPS → title case |
+| STG-241 | `en.json:251` + `hi.json` | Simplify `dismissSuggestedFrom` template for Hindi |
+| STG-242 | `en.json:484-536` | Add explanations for KYC, UTR, EMI jargon |
+| STG-243 | `en.json:461` + `hi.json` | Break UPI instructions into steps |
+| STG-244 | `en.json:292` + `hi.json` | "Goods Receipt Note" → "Stock Received" |
 
-| # | Title | Scope | What |
-|---|-------|-------|------|
-| TEST-011 | Backend unit tests — all 306 files (80% coverage) | Backend | Unit tests for every service, route, middleware, utility |
-| TEST-012 | POS app unit tests — all 267 files (80% coverage) | POS | Unit tests for every screen, store, service, component |
-| TEST-013 | Retailer Admin unit tests — all 98 files (75% coverage) | Retailer | Unit tests for every page, component, API call |
-| TEST-014 | SuperAdmin unit tests — all 114 files (75% coverage) | SuperAdmin | Unit tests for every tab, component, API call |
-| TEST-015 | Supplier Portal unit tests — all 73 files (75% coverage) | Supplier | Unit tests for every page, component, API call |
-| TEST-016 | Backend integration tests — 102 routes + 158 migrations | Backend | testcontainers, real DB, migration from zero |
-| TEST-017 | Backend contract tests — all 102 API endpoints | Backend | Zod schema validation on request/response |
-| TEST-018 | Portal contract tests — all frontend API calls | Cross-platform | Every fetch/axios call matches backend schema |
-| TEST-019 | Retailer Admin E2E — all 15+ pages × desktop + mobile | Retailer | Playwright, all CRUD flows, auth, navigation |
-| TEST-020 | Supplier Portal E2E — all 10+ pages × desktop + mobile | Supplier | Playwright, products, orders, earnings, KYC |
-| TEST-021 | SuperAdmin E2E — all 18+ tabs × desktop + mobile | SuperAdmin | Playwright, approvals, analytics, settings |
-| TEST-022 | POS mobile E2E — all 39 screens, core flows | POS | Maestro, scan→cart→pay→bill, offline |
-| TEST-023 | Cross-portal E2E — product/order/payment lifecycle | All | Supplier→Admin→Retailer→POS end-to-end |
-| TEST-024 | Security scan — ALL 1,135 files | All | Snyk + Semgrep + gitleaks + npm audit |
-| TEST-025 | Visual regression — all portal pages × 2 viewports | Web | Playwright screenshot comparison |
-| TEST-026 | Accessibility — all portal pages (WCAG 2.1 AA) | Web | axe-core scan |
-| TEST-027 | Data integrity — 6 domain invariants | Backend | Stock, ledger, isolation, idempotency, price, payment |
-| TEST-028 | Load test baseline — all hot paths at 100 VU | Backend | k6 baseline performance |
+#### 2E: Component-level i18n
+| # | File(s) | What |
+|---|---------|------|
+| STG-291 | `SellTile.tsx` + `CartItem.tsx` + `SupplierRow.tsx` | i18n "PACKAGED", "MOQ:", "Add"/"Add More" |
 
-### Phase C: Round 2 — Regression (TEST-029 → TEST-037)
+**Layer 2 total**: 28 tickets
 
-| # | Title | What |
-|---|-------|------|
-| TEST-029 | Re-run ALL unit tests across all 5 projects | Zero failures |
-| TEST-030 | Re-run ALL integration tests | Zero failures |
-| TEST-031 | Re-run ALL contract tests | Zero failures |
-| TEST-032 | Re-run ALL E2E tests (web + mobile) | Zero failures |
-| TEST-033 | Re-run ALL security scans | Zero high-severity findings |
-| TEST-034 | Re-run visual regression (compare to Round 1 baselines) | Zero unexpected diffs |
-| TEST-035 | Re-run accessibility scans | Zero violations |
-| TEST-036 | Re-run data integrity checks | Zero invariant violations |
-| TEST-037 | Regression fix sweep | Fix ANY new failures found in Round 2 |
+---
 
-### Phase D: Round 3 — Stress + GO/NO-GO (TEST-038 → TEST-052)
+### LAYER 3 — i18n for MenuScreen + Locale Completion (19 tickets)
+> **Why separate**: MenuScreen has 54 tickets total. Doing its i18n first (before layout restructure) avoids conflict. Also complete Hindi translations.
+> **Gate**: MenuScreen renders cleanly in both EN and HI + no leaked keys
 
-| # | Title | What |
-|---|-------|------|
-| TEST-038 | Seed 100K SKUs + 1M ledger + 50K sales + 10K customers | Production-scale test data |
-| TEST-039 | Run ALL tests against 100K SKU database | Must pass at scale |
-| TEST-040 | Scan stress: 35 scans/min × 30 min (p95 < 200ms) | Sustained scanner load |
-| TEST-041 | Search stress: 100K product search (p95 < 200ms) | Big data query speed |
-| TEST-042 | Checkout stress: 500/min (p95 < 3s) | Transaction throughput |
-| TEST-043 | 10K concurrent users: all endpoints (< 10% errors) | Extreme user load |
-| TEST-044 | Multi-device stock race: 10 devices, same store | Zero oversell |
-| TEST-045 | DB failure mid-test: graceful degradation | PostgreSQL kill test |
-| TEST-046 | Redis failure mid-test: app continues | Redis kill test |
-| TEST-047 | POS offline stress: 50 items offline → sync | Offline reliability |
-| TEST-048 | Payment stress: 100 UPI QR/min | Payment throughput |
-| TEST-049 | Full E2E under background load | Playwright + k6 simultaneous |
-| TEST-050 | Final security sweep | All security tools |
-| TEST-051 | Final data integrity on production-scale DB | All 6 invariants |
-| TEST-052 | GO/NO-GO report: 48-check pass/fail summary | Final gate |
+#### 3A: MenuScreen i18n strings
+| # | File(s) | What |
+|---|---------|------|
+| STG-172 | `MenuScreen.tsx` + `en.json` + `hi.json` | Replace 36 hardcoded English strings with t() |
+| STG-173 | `MenuScreen.tsx:605` + `en.json` | Fix defaultValue fallback for viewDetails |
+| STG-174 | `MenuScreen.tsx:243,656-658` + `en.json` | Fix positional fallback for printer keys |
+| STG-177 | `MenuScreen.tsx:479` + `en.json` + `hi.json` | i18n "Sync" label |
+| STG-180 | `MenuScreen.tsx:282-293` + `en.json` + `hi.json` | i18n Switch Staff alert |
+| STG-184 | `MenuScreen.tsx:877,888` + `en.json` + `hi.json` | i18n WhatsApp support alerts |
+| STG-185 | `MenuScreen.tsx:882-884` + `en.json` + `hi.json` | i18n WhatsApp pre-filled message |
+| STG-188 | `MenuScreen.tsx:593-601` + `en.json` + `hi.json` | i18n Payment Modes labels |
 
-### TESTING SUMMARY
+#### 3B: MenuScreen jargon renames (i18n keys + screen labels)
+| # | File(s) | What |
+|---|---------|------|
+| STG-154 | `MenuScreen.tsx:848-849` + `en.json` + `hi.json` | "BNPL Dues" → "Credit Purchases" |
+| STG-155 | `MenuScreen.tsx:769-770` + `en.json` + `hi.json` | "Stock Inward" → "Add New Stock" |
+| STG-158 | `MenuScreen.tsx:820-821` + `en.json` + `hi.json` | "Overdue Dues" → "Overdue Payments" |
+| STG-193 | `MenuScreen.tsx:962` + `en.json` + `hi.json` | Replace "Z-Report" jargon |
+| STG-194 | `MenuScreen.tsx:972` + `en.json` + `hi.json` | Simplify shift subtitle |
+| STG-195 | `MenuScreen.tsx:828` + `en.json` + `hi.json` | "AI & Intelligence" → "Smart Insights" |
+| STG-196 | `MenuScreen.tsx:837` | Simplify AI Insights subtitle |
+| STG-197 | `MenuScreen.tsx:849` | Reword credit offers subtitle |
 
-| Phase | Tickets | Purpose | Effort |
-|-------|---------|---------|--------|
-| A: Infrastructure | TEST-001→010 | Setup tools + frameworks | ~30h |
-| B: Round 1 Discovery | TEST-011→028 | Find ALL bugs | ~50h |
-| C: Round 2 Regression | TEST-029→037 | Verify fixes | ~25h |
-| D: Round 3 Stress | TEST-038→052 | Production simulation | ~20h |
-| Bug fixing | N/A | From Round 1+2 | ~40-60h |
-| **TOTAL** | **52 tickets** | | **~165-185h** |
+#### 3C: Hindi locale completion
+| # | File(s) | What |
+|---|---------|------|
+| STG-054 | `hi.json` (full file) | Complete Hindi translations for all screens |
+| STG-055 | `en.json` + `hi.json` | Add app version display string |
+| STG-026 | `en.json` + `hi.json` | Add terms/privacy policy link strings |
+
+**Layer 3 total**: 19 tickets
+
+---
+
+### LAYER 4 — Shared Components (19 tickets)
+> **Why here**: SellTile, VoiceButton, SyncStatusWidget etc. are used by multiple screens. Fix them before redesigning screens that embed them.
+> **Gate**: `pnpm -r typecheck` + component render tests pass
+> **Loophole guards**: LH-013, LH-014
+
+#### 4-PREREQ: GUARD Prerequisites (do FIRST within L4)
+| # | File(s) | What | Guards |
+|---|---------|------|--------|
+| STG-484 | `CartItem.tsx` + `SupplierRow.tsx` | Refactor both components from static `import { theme }` to `useThemeColors()` hook. Also fix SupplierRow:120 `stockColor + "20"` opacity hack → use proper `{ backgroundColor: stockColor, opacity: 0.12 }`. | LH-013, LH-014 |
+
+#### 4A: SellTile.tsx — Product Card Component (14 tickets)
+> **Note**: STG-483 (formatPrice refactor) was done in Layer 1. SellTile now uses `formatMoney()`.
+> **Merge order**: STG-009 (redesign) FIRST → then STG-068 (add "+" button) → then all others (independent)
+
+| # | What | Order |
+|---|------|-------|
+| STG-009 | Redesign: full names, stock badges, thumbnails. **Verify**: SellTileProduct props include `brand` and `mrp` from API. If optional, handle gracefully. | **1st** |
+| STG-228 | Add MRP strikethrough (`textDecorationLine: "line-through"`) when sell price < MRP | AFTER STG-009 |
+| STG-032 | Add discount/MRP indicator. Show: ~~₹160~~ ₹145 | AFTER STG-228 |
+| STG-068 | Add "+" tap affordance button for adding to bill | AFTER STG-009 |
+| STG-013 | FEFO → "Expiring Soon" | independent |
+| STG-018 | Add unit/weight context to prices | independent |
+| STG-020 | Remove excess whitespace | independent |
+| STG-027 | Explain or remove green grid icon | independent |
+| STG-046 | Add expand chevron hint text | independent |
+| STG-056 | Add haptic vibration + ripple on tap | independent |
+| STG-222 | Smart formatting: drop ".00" (uses STG-117 from L1) | independent |
+| STG-226 | "—" for null price → "Price not set" | independent |
+| STG-227 | Fix IST timezone in expiry calculation | independent |
+| STG-230 | Display brand name if available | AFTER STG-009 |
+
+#### 4B: Other Shared Components
+| # | File(s) | What | Guards |
+|---|---------|------|--------|
+| STG-012 | `VoiceButton.tsx` | Brand-color FAB, contextual label | — |
+| STG-048 | `VoiceButton.tsx` | Fix FAB overlap with product cards | — |
+| STG-292 | `LimitedModeBanner.tsx` | **LH-012**: Cover ALL 7 strings (BLOCKED_ACTIONS + ALLOWED_ACTIONS), not just 2. Move all to i18n. | LH-012 |
+| STG-279 | `ErrorBoundary.tsx` | i18n error text (also in Layer 2 — do here if not done) | — |
+
+**Layer 4 total**: 19 tickets (18 original + STG-484 GUARD)
+
+---
+
+### LAYER 5 — Screen Redesigns: Enrollment & Onboarding (22 tickets)
+> **Why now**: EnrollDeviceScreen is the first screen users see. Fix it completely before moving to home/sell screens.
+> **Gate**: Enrollment flow works end-to-end on device + no "Superadmin" text visible
+
+#### 5A: EnrollDeviceScreen.tsx — Critical text fixes
+| # | What |
+|---|------|
+| STG-057 | Rewrite all "superadmin" text to plain language |
+| STG-200 | Replace email with WhatsApp link |
+| STG-201 | Replace "Superadmin" in i18n status messages |
+| STG-202 | Add tappable WhatsApp button in STORE_INACTIVE |
+| STG-206 | Remove "superadmin account activation" text |
+| STG-059 | Replace email with phone/WhatsApp for kirana |
+
+#### 5B: EnrollDeviceScreen.tsx — UX improvements
+| # | What |
+|---|------|
+| STG-004 | Branded redesign with trust signals |
+| STG-019 | Keyboard UX: left-align, auto-focus |
+| STG-023 | Simplify subtitle info text |
+| STG-041 | Inline form validation |
+| STG-042 | Fix "Counter-1" default label |
+| STG-043 | Floating labels for input fields |
+| STG-058 | Collapsible visual 3-step flow |
+| STG-060 | Raw URL → tappable "Register Here" button |
+| STG-061 | Fix center-aligned placeholder |
+| STG-062 | Disabled state until valid code format |
+| STG-063 | Welcome illustration |
+| STG-064 | Friendly device model names |
+| STG-065 | Step indicator "Step 1 of 2" |
+| STG-072 | Remove hamburger menu pre-activation |
+| STG-324 | Help text below activation code |
+| STG-325 | Standardize to "Activate POS" |
+
+#### 5C: Other Onboarding Screens
+| # | File(s) | What |
+|---|---------|------|
+| STG-002 | `SplashScreen.tsx` + `app.json` + `styles.xml` | Fix cold-start blank screen |
+| STG-310 | `SplashScreen.tsx` | "Continue without session" → "Continue Offline" |
+| STG-305 | `DeviceBlockedScreen.tsx` | Replace "SuperAdmin"/"administrator" |
+| STG-327 | `StaffLoginScreen.tsx` | Button countdown text |
+
+**Layer 5 total**: 26 tickets (expanded from 22 with 5C)
+
+---
+
+### LAYER 6 — Screen Redesigns: Home, Header, Tabs (19 tickets)
+> **Why now**: The home screen frame (header + tabs + sync) sets the visual language for all inner screens.
+> **Gate**: Home screen renders cleanly, all tabs navigate, sync states correct
+
+#### 6A: PosStatusBar.tsx — Header Icons
+| # | What |
+|---|------|
+| STG-005 | Declutter status icons, reduce count |
+| STG-017 | Add staff name/role display |
+| STG-022 | Enlarge logo pill badge |
+| STG-036 | Add date/time display |
+| STG-045 | Increase "Ready for billing" text size |
+| STG-049 | Add label/tooltip to camera icon |
+| STG-052 | Handle store name truncation |
+| STG-067 | Add labels to Wi-Fi/printer/scanner/camera |
+
+#### 6B: PosRootLayout.tsx — Tab Bar
+| # | What |
+|---|------|
+| STG-007 | Full labels, consistent colors, active states |
+| STG-014 | Hide DEV MODE banner in production |
+| STG-069 | Unify 5 tab visual treatments |
+| STG-070 | Smooth gradient header-to-body transition |
+| STG-245 | "REORDER • ON/OFF" → stable label + badge |
+| STG-246 | Hide disabled CREDIT tab or "Coming Soon" |
+
+#### 6C: SyncStatusWidget.tsx
+| # | What |
+|---|------|
+| STG-006 | Collapse when healthy, reduce footprint |
+| STG-010 | Brand illustrations, plain-language tabs |
+| STG-021 | Tab count badges, last-sync timestamp |
+| STG-071 | Connect checkmark with "15s ago" visually |
+
+#### 6D: Home Dashboard
+| # | What |
+|---|------|
+| STG-051 | Add "Bills today" + "Sales total" on home |
+| STG-152 | Move Today's Sales summary to home screen |
+
+**Layer 6 total**: 19 tickets (with 6D)
+
+---
+
+### LAYER 7 — Screen Redesigns: SELL Flow (59 tickets)
+> **Why now**: The SELL tab is the primary revenue flow. Depends on SellTile (Layer 4) and theme (Layer 1).
+> **Gate**: Full sell flow works: search → add to cart → discount → checkout
+> **Loophole guards**: LH-015, LH-016
+
+#### 7-PREREQ: Mandatory Prerequisites
+| # | What | Guards |
+|---|------|--------|
+| STG-487 | GUARD: Backend staff role + max discount API | LH-015 |
+| STG-488 | GUARD: Backend manager PIN verification endpoint | LH-015 |
+
+> **RULE**: STG-487 + STG-488 MUST be merged BEFORE STG-102 (7D). Without these endpoints, the discount limit feature is dead code.
+
+#### 7A: SellScanScreen — Search & Product Grid
+| # | What |
+|---|------|
+| STG-008 | Unify search input with visual hierarchy |
+| STG-015 | Unify list vs thumbnail card layouts |
+| STG-028 | Add section headers for product grouping |
+| STG-029 | Add manual "Add Product" button |
+| STG-033 | Favorites/frequently sold section |
+| STG-035 | Empty state for zero-product store |
+| STG-047 | Fix empty space in horizontal row |
+| STG-050 | Pull-to-refresh indicator |
+| STG-074 | Unify search + barcode input styles |
+| STG-075 | Loading skeleton placeholder |
+| STG-220 | Reduce CART_SHEET_COLLAPSED_RATIO |
+| STG-223 | Empty state for zero search results |
+| STG-225 | Dynamic NUM_COLUMNS from screen width |
+
+#### 7B: SellScanScreen — Scan & Barcode Logic (STRICT ORDER)
+> **Merge order** (LH-016 related): STG-331 → STG-332 → STG-333..342 (331 removes the barcode field, 332 updates placeholder, rest build on unified input)
+
+| # | What | Merge Order |
+|---|------|-------------|
+| STG-331 | Remove separate barcode field, unify into search | 1st |
+| STG-332 | Search placeholder indicates barcode support | 2nd |
+| STG-333 | 300ms debounce too slow for barcode | 3+ |
+| STG-334 | Barcode heuristic too broad (matches phones) | 3+ |
+| STG-335 | Duplicate scan 2000ms window too strict | 3+ |
+| STG-336 | Scan storm detection — add user feedback | 3+ |
+| STG-337 | Intermediate prefixes cause search flicker | 3+ |
+| STG-338 | Unknown barcode modal lacks guidance | 3+ |
+| STG-339 | LOOSE_BULK variant picker gated | 3+ |
+| STG-340 | Price error silently blocks checkout | 3+ |
+| STG-341 | DEMO_CATEGORIES — no dynamic loading | 3+ |
+| STG-342 | Category selection doesn't filter products | 3+ |
+
+#### 7C: SellScanScreen — Cart Bottom Sheet (UX) (STRICT ORDER)
+> **Merge order** (LH-016): STG-094 → STG-126 → STG-095 (clear button first, then define [-] at qty=1, then trash icon — three removal paths must not conflict)
+
+| # | What | Merge Order |
+|---|------|-------------|
+| STG-094 | Clear button confirmation dialog | 1st |
+| STG-126 | Define [-] at qty=1 behavior | 2nd |
+| STG-095 | Trash icon confirmation/undo | 3rd |
+| STG-096 | Stepper button tap targets → 48px | any |
+| STG-097 | Tappable quantity for direct input | any |
+| STG-099 | Clarify edit icon purpose | any |
+| STG-100 | Label unit price vs line total | any |
+| STG-105 | Item count header | any |
+| STG-106 | Discount %/Flat toggle styling | any |
+| STG-109 | Item count on Checkout button | any |
+| STG-129 | Long product name truncation | any |
+| STG-132 | Hide Subtotal when equals Total | any |
+| STG-133 | Dynamic sheet height | any |
+| STG-135 | KeyboardAvoidingView for discount | any |
+| STG-137 | Stock level styling (green/amber/red) | any |
+| STG-140 | Collapse discount section by default | any |
+
+#### 7D: SellScanScreen — Cart Business Logic (PREREQUISITES REQUIRED)
+> **LH-015**: STG-102 REQUIRES STG-487 (staff role API) + STG-488 (manager PIN endpoint) from 7-PREREQ
+
+| # | What | Depends-On |
+|---|------|------------|
+| STG-102 | Max discount limit + manager approval | STG-487, STG-488 |
+| STG-127 | Stock validation cap on qty | — |
+| STG-130 | Live discount preview | STG-102 |
+| STG-370 | Cart add persistence not awaited | — |
+| STG-399 | Price edit in cart not persisted separately | — |
+| STG-400 | Quantity input validation for large numbers | — |
+
+#### 7E: SellScanScreen — Cart Enhancements (Lower Priority)
+| # | What |
+|---|------|
+| STG-098 | "Add more items" link |
+| STG-101 | GST/tax line |
+| STG-103 | Customer name/phone field |
+| STG-107 | Product thumbnail in cart items |
+| STG-108 | Fill empty space with guidance |
+| STG-110 | Per-item discount |
+| STG-111 | "You save ₹X" line |
+| STG-112 | Notes/memo field |
+| STG-128 | Batch/expiry info in cart |
+| STG-131 | "Frequently bought together" suggestions |
+| STG-134 | Swipe-to-delete gesture |
+| STG-138 | Separate unit/weight from name |
+| STG-141 | Price animation on Checkout |
+
+#### 7F: Sell — Search Results & Tiles
+| # | What |
+|---|------|
+| STG-349 | Search results: use SellTile (brand, image, pack) |
+| STG-350 | Autocomplete: add price + stock to suggestions |
+| STG-356 | SellTile brand truncation fix |
+| STG-357 | Expiry badge overlap on small screens |
+| STG-368 | Product tile tap feedback |
+| STG-369 | VariantPickerModal: add images, stock, price |
+
+#### 7G: Sell — HID Scanner
+| # | What |
+|---|------|
+| STG-371 | Scanner timing parameters hardcoded |
+| STG-372 | Buffer not reset on mount/unmount |
+
+**Layer 7 total**: 59 tickets + 2 GUARD prereqs (STG-487, STG-488)
+
+---
+
+### LAYER 8 — Screen Redesigns: Payment Flow (45 tickets)
+> **Why after SELL**: Payment screen receives cart data from SELL flow. Test end-to-end.
+> **Gate**: Cash payment works, UPI QR works, receipt generated, all amounts in lakh format
+> **Loophole guards**: LH-017, LH-018, LH-019, LH-020, LH-021
+
+#### 8-PREREQ: Mandatory Prerequisites
+| # | What | Guards |
+|---|------|--------|
+| STG-489 | GUARD: Backend void/refund sale endpoint | LH-018 |
+
+> **RULE**: STG-489 MUST be merged BEFORE STG-383 (8D). STG-492 (PENDING_UPI_KEY write-before-checkout) is in Layer 0 — must already be done before Layer 8 starts.
+
+#### 8A: PaymentScreen — Critical Fixes (STRICT ORDER)
+> **Merge order** (LH-020): STG-087 → STG-080 → STG-123 (layout restructure first, then cash input in new layout, then move amount — mutually dependent on screen positioning)
+> **LH-019**: STG-377 must also patch `renderModeTab` callers to pass `disabled={submitting}` — the prop exists but is never passed during `submitting` state
+
+| # | What | Merge Order | Guards |
+|---|------|-------------|--------|
+| STG-087 | Fill empty space with order summary | 1st | LH-020 |
+| STG-080 | Cash amount input + change calculation | 2nd | LH-020 |
+| STG-123 | Move amount to top | 3rd | LH-020 |
+| STG-077 | Show specific failure reason | any | — |
+| STG-078 | Explain greyed-out "Complete Payment" | any | — |
+| STG-079 | Resolve competing retry mechanisms | any | — |
+| STG-083 | Back button to return to cart | any | — |
+| STG-090 | Spinner + processing state + double-tap prevention | any | — |
+| STG-113 | Show bill/invoice number | any | — |
+| STG-212 | Replace "Superadmin" references | any | — |
+| STG-377 | Lock payment method tabs during transaction | any | LH-019 |
+| STG-379 | Offline payment fallback messaging | any | — |
+| STG-381 | PENDING_UPI_KEY for crash recovery | any | Depends: STG-492 (L0) |
+| STG-401 | Cart-to-payment data consistency validation | any | — |
+
+#### 8B: PaymentScreen — UPI & QR (STRICT ORDER)
+> **Merge order**: STG-084 → STG-214 → STG-378 (complete UPI flow first, then regenerate QR, then fix expiry countdown — each builds on the previous)
+
+| # | What | Merge Order |
+|---|------|-------------|
+| STG-084 | Complete UPI flow: QR, verification, polling | 1st |
+| STG-214 | "Regenerate QR" button on expiry | 2nd |
+| STG-378 | QR expiry countdown reaches 0:00 but stays | 3rd |
+| STG-211 | Separate UPI ID vs QR errors | any |
+| STG-218 | Remove raw paymentId hash | any |
+| STG-219 | Standardize UPI alert styles | any |
+| STG-404 | UPI polling status visible during wait | any |
+
+#### 8C: PaymentScreen — UI Polish
+| # | What |
+|---|------|
+| STG-081 | Cart/order summary visible |
+| STG-082 | Customer selection for credit/due |
+| STG-086 | Remove/redesign "Cart locked" badge |
+| STG-088 | GST/tax breakup display |
+| STG-089 | Fix disabled button WCAG contrast |
+| STG-091 | Dynamic instruction text per method |
+| STG-093 | Replace cash icon with banknote/₹ |
+| STG-118 | Retry button red → blue |
+| STG-119 | Error dismiss X + auto-dismiss |
+| STG-120 | Staff name/ID for audit |
+| STG-121 | "Due" icon: calendar → credit |
+| STG-209 | TouchableOpacity → Pressable |
+| STG-210 | i18n all alert strings |
+| STG-213 | Spinner overlay for "Payment in Progress" |
+| STG-216 | Rewrite "Price Freshness Warning" |
+| STG-217 | Show specific error type |
+| STG-380 | Cart lock timeout explanation |
+
+#### 8D: PaymentScreen — Feature Additions (PREREQUISITES REQUIRED)
+> **LH-018**: STG-383 REQUIRES STG-489 (backend void/refund endpoint) from 8-PREREQ
+> **LH-021**: STG-085 (split payment) and STG-125 (partial payment) are DIFFERENT features — STG-085 = one bill paid by two methods simultaneously, STG-125 = customer pays part now and rest is DUE. Clarify DUE overlap with credit system (Layer 15).
+
+| # | What | Depends-On |
+|---|------|------------|
+| STG-085 | Split payment support (cash + UPI) | — |
+| STG-092 | Receipt preview before completing | — |
+| STG-114 | Cancel/Void transaction button | — |
+| STG-115 | Card, Wallet payment method tabs | — |
+| STG-122 | Confirmation dialog for ₹5,000+ | — |
+| STG-124 | Sound/vibration feedback | — |
+| STG-125 | Partial payment tracking | — (NOTE: LH-021 — distinct from STG-085) |
+| STG-382 | Split payment UTR shown too late | STG-085 |
+| STG-383 | Post-payment refund/void mechanism | STG-489 (LH-018) |
+| STG-384 | Item vs cart discount on receipt | — |
+| STG-405 | Discount undo | — |
+| STG-406 | Offline receipt OFF- prefix consistency | — |
+
+#### 8E: PaymentSetupScreen
+| # | What |
+|---|------|
+| STG-280 | "UPI ID (VPA)" → plain language |
+| STG-314 | Success toast after save |
+| STG-254 | Indian lakh formatting everywhere |
+
+**Layer 8 total**: 45 tickets + 1 GUARD prereq (STG-489)
+
+---
+
+### LAYER 9 — Screen Redesigns: MenuScreen (38 tickets)
+> **Why here**: MenuScreen is navigation hub. i18n done in Layer 3. Now do layout, UX, features.
+> **Gate**: All menu items navigate correctly, system status collapsible, no jargon visible
+
+#### 9A: MenuScreen — Layout & Structure
+| # | What |
+|---|------|
+| STG-159 | Restructure: collapsible sections, search, usage ordering |
+| STG-148 | Make System Status collapsible |
+| STG-157 | Merge "Customers" + "Customer Management" |
+| STG-247 | Consolidate customer section to 2 items max |
+| STG-162 | Remove redundant logo pill + "Menu" title |
+| STG-169 | Add search bar at top |
+| STG-256 | Swipe/tap to collapse System Status |
+| STG-250 | Move Switch Store to "Danger Zone" |
+
+#### 9B: MenuScreen — Data Display
+| # | What |
+|---|------|
+| STG-146 | Device label instead of UUID |
+| STG-147 | toTitleCase() store name |
+| STG-149 | Comparison period label, hide % at 0 base |
+| STG-150 | Fix empty Payment Modes section |
+| STG-151 | Labels above metric values |
+| STG-164 | display_name instead of username |
+| STG-171 | Visual hierarchy: hero metric bigger |
+| STG-179 | App version instead of raw SHA |
+| STG-181 | Pass action param to SalesHistory navigation |
+| STG-187 | Cap trend at 999%+ |
+
+#### 9C: MenuScreen — Styling & UX
+| # | What |
+|---|------|
+| STG-160 | Standardize icon colors |
+| STG-163 | Reduce card spacing |
+| STG-175 | Add android_ripple to Pressables |
+| STG-176 | Increase header paddingVertical |
+| STG-182 | Haptic feedback on press |
+| STG-183 | Fix sectionHeader margin asymmetry |
+| STG-186 | trendText fontSize 9 → 11+ |
+| STG-190 | Skeleton/shimmer loading state |
+| STG-191 | Border on statusBadge |
+| STG-192 | menuIcon 36 → 40px |
+| STG-198 | Content padding for visual distinction |
+| STG-199 | Scroll indicator |
+| STG-248 | Fix marginTop inconsistency |
+| STG-249 | Wrap printerStatusRow in card |
+| STG-255 | Differentiate summaryCard vs statusPanel |
+
+#### 9D: MenuScreen — Feature Additions
+| # | What |
+|---|------|
+| STG-153 | Subtitles for Reprint/Download/Share |
+| STG-156 | Replace "?" icon with inventory icon |
+| STG-161 | Notification count badges |
+| STG-165 | Hindi toggle "हि" → "हिंदी" |
+| STG-166 | Replace "Re-enroll" jargon |
+| STG-167 | About section: version + terms + privacy |
+| STG-168 | Logout/End Session option |
+| STG-170 | Replace "tiered" jargon |
+| STG-251 | Pending badge on Daily Closing |
+| STG-252 | Unread count badge on Chat |
+
+**Layer 9 total**: 38 tickets
+
+---
+
+### LAYER 10 — Screen Redesigns: Secondary Screens (32 tickets)
+> **Why now**: These screens are accessed from Menu. Depends on theme (L1), i18n (L2), menu navigation (L9).
+> **Gate**: Each screen renders correctly in both EN/HI, no jargon, all actions work
+
+#### 10A: Sales & Reporting Screens
+| # | File(s) | What |
+|---|---------|------|
+| STG-282 | `SalesStatementScreen.tsx` | "Inventory Cost Statement" → "Stock Value Report" |
+| STG-306 | `DailyReportScreen.tsx` | Actionable empty state |
+| STG-307 | `BillDetailScreen.tsx` | Spinner on print/share buttons |
+| STG-312 | `DailyReportScreen.tsx` + `DailyClosingScreen.tsx` | Offline/sync banner |
+| STG-281 | `DailyClosingScreen.tsx` | "Variance" → "Difference" |
+
+#### 10B: Stock & Inventory Screens
+| # | File(s) | What |
+|---|---------|------|
+| STG-285 | `GRNScreen.tsx` | Subtitle below "Receive Goods" |
+| STG-286 | `OpeningStockScreen.tsx` | Subtitle below "Opening Stock" |
+| STG-308 | `InwardScreen.tsx` | Raw product ID → product name |
+| STG-385 | `SellScanScreen.tsx` | Standalone stock adjustment modal |
+| STG-386 | `SellScanScreen.tsx` | Stock limit notification explanation |
+
+#### 10C: Customer & Khata Screens
+| # | File(s) | What |
+|---|---------|------|
+| STG-304 | `CustomerListScreen.tsx` + `CustomerManagementScreen.tsx` | Email → WhatsApp primary |
+| STG-318 | `KhataScreen.tsx` | "Add Credit" red → blue |
+| STG-320 | `OverdueDuesScreen.tsx` | "Due Soon" info → warning color |
+| STG-469 | `KhataScreen.tsx` + backend | Phone number validation |
+| STG-470 | `KhataScreen.tsx` + backend | Clarify DEBIT vs PAYMENT |
+| STG-471 | `KhataScreen.tsx` + backend | Entry correction/void mechanism |
+
+#### 10D: Order & Return Screens
+| # | File(s) | What |
+|---|---------|------|
+| STG-289 | `ReturnScreen.tsx` | "UPI (Manual)" → "UPI Transfer" |
+| STG-301 | `OrderDetailScreen.tsx` | Color+text for status (colorblind) |
+| STG-309 | `ReturnScreen.tsx` | Raw refundId → "Return #[ref]" |
+
+#### 10E: Shift & Daily Closing
+| # | File(s) | What |
+|---|---------|------|
+| STG-288 | `ShiftScreen.tsx` | "Variance" → "Cash Difference" |
+
+#### 10F: Chat, Help, Misc Screens
+| # | File(s) | What |
+|---|---------|------|
+| STG-290 | `AIInsightsScreen.tsx` | Tab labels: Slow → Slow Moving, etc. |
+| STG-302 | `HelpScreen.tsx` | Email-first → WhatsApp-first |
+| STG-303 | `BnplDuesScreen.tsx` | Add WhatsApp to "contacted via email" |
+| STG-311 | `AIInsightsScreen.tsx` | "Not yet available" → actionable text |
+| STG-321 | `ChatListScreen.tsx` | "No messages yet" → actionable empty |
+| STG-322 | `ChatListScreen.tsx` | 24h → AM/PM time format |
+| STG-323 | `ForceUpdateScreen.tsx` | "iOS update coming soon" fix |
+| STG-328 | `ForceUpdateScreen.tsx` | "unknown" version → "check failed" |
+| STG-329 | `ProductDetailModal.tsx` | "No suppliers" → actionable guidance |
+
+#### 10G: Jargon & Help Text
+| # | File(s) | What |
+|---|---------|------|
+| STG-283 | `BnplDuesScreen.tsx` | Inline help for BNPL/UTR/UPI |
+| STG-284 | `CreditScreen.tsx` | Help text for PAN/KYC/Aadhaar/EMI |
+| STG-287 | `BuyScreen.tsx` | "BNPL" badge → "Pay Later" + tooltip |
+
+**Layer 10 total**: 32 tickets
+
+---
+
+### LAYER 11 — Cross-Cutting Audits: Font Size, Accessibility, Consistency (19 tickets)
+> **Why last for UI**: These sweep across ALL screens. Must run after screen redesigns to avoid double-work.
+> **Gate**: No fontSize < 12px body text + all interactive elements have accessibilityLabel + WCAG AA contrast
+
+#### 11A: Font Size Audit (minimum 12px body text)
+| # | Screens Affected |
+|---|-----------------|
+| STG-293 | PurchaseScreen, InwardScreen, OpeningStockScreen, GRNScreen, StockStatementScreen |
+| STG-294 | SalesHistoryScreen, DailyClosingScreen, DailyReportScreen, BillDetailScreen, SalesStatementScreen |
+| STG-295 | CreditScreen, CustomerListScreen, CustomerManagementScreen, OrderDetailScreen, BnplDuesScreen, OverdueDuesScreen, KhataScreen |
+| STG-296 | ChatListScreen, ForceUpdateScreen, TabBadge.tsx |
+| STG-297 | SplitPaymentModal: fontSize 10→12 + accessibilityLabel |
+
+#### 11B: Accessibility Labels
+| # | Scope |
+|---|-------|
+| STG-053 | WCAG AA contrast audit across all buttons and text |
+| STG-298 | Icon-only buttons: PaymentScreen, MenuScreen, SellScanScreen, BuyScreen |
+| STG-299 | TextInput labels: PaymentSetupScreen, KhataScreen, ShiftScreen, CustomerListScreen, OpeningStockScreen |
+| STG-300 | GRN checkboxes: add accessibilityState + accessibilityRole |
+
+#### 11C: Consistency Fixes
+| # | Scope |
+|---|-------|
+| STG-209 | PaymentScreen: TouchableOpacity → Pressable |
+| STG-316 | SplitPaymentModal: TouchableOpacity → Pressable |
+| STG-317 | Standardize disabled button opacity across app |
+| STG-319 | Modal button styling: EditReorderModal, EditPolicyModal, DismissReasonModal |
+| STG-313 | Network error messages + recovery guidance across screens |
+
+#### 11D: Remaining UX Micro-Fixes
+| # | What |
+|---|------|
+| STG-215 | PaymentScreen: configurable PRICE_FRESHNESS_THRESHOLD_MS |
+| STG-221 | SellScanScreen: validate SMALL_SCREEN_WIDTH=400 |
+| STG-229 | SellTile: i18n "per KG" label |
+| STG-330 | DismissReasonModal: English display → i18n codes |
+
+**Layer 11 total**: 19 tickets
+
+---
+
+### LAYER 12 — PURCHASE Flow (17 tickets)
+> **Why here**: PURCHASE (BUY) flow is the second revenue stream. Depends on theme, shared components.
+> **Gate**: Full buy flow: search → select supplier → add to cart → checkout
+
+| # | File(s) | What |
+|---|---------|------|
+| STG-343 | `BuyScreen.tsx` | Search bar: add barcode lookup |
+| STG-344 | `BuyScreen.tsx` | Debounce 400ms → 200ms |
+| STG-345 | `BuyScreen.tsx` | Search autocomplete/suggestions |
+| STG-346 | `BuyScreen.tsx` | Stock filter pagination fix |
+| STG-347 | `PurchaseScreen.tsx` | Quick purchase: empty metadata fix |
+| STG-348 | `BuyScreen.tsx` | Barcode lookup loading state |
+| STG-351 | `BuyScreen.tsx` | Supplier name visible in grid card |
+| STG-352 | `PurchaseScreen.tsx` | MOV shown before checkout |
+| STG-353 | `PurchaseScreen.tsx` | MOQ font 11px → 12px+ |
+| STG-354 | `PurchaseScreen.tsx` | "Cost" label → "Purchase Price" |
+| STG-355 | `PurchaseScreen.tsx` | Variant/pack size fallback |
+| STG-358 | `ProductDetailModal.tsx` | Supplier comparison table |
+| STG-359 | `PurchaseScreen.tsx` | Expiry/batch info for incoming |
+| STG-407 | `PurchaseScreen.tsx` | BNPL badge with terms |
+| STG-408 | `PurchaseScreen.tsx` | Cart badge multi-supplier clarification |
+| STG-315 | `ReorderScreen.tsx` | Confirmation before dismissing suggestion |
+| STG-442 | `DismissReasonModal.tsx` | Reason codes as i18n not translated strings |
+
+**Layer 12 total**: 17 tickets
+
+---
+
+### LAYER 13 — VOICE Flow (10 tickets)
+> **Why here**: Voice is an overlay on SELL. Needs SELL flow working first.
+> **Gate**: Voice command → product found → added to cart
+
+| # | File(s) | What |
+|---|---------|------|
+| STG-360 | `VoiceScreen/` | Confirmation before auto-executing commands |
+| STG-362 | `VoiceScreen/` | Locale toggle wired to backend STT |
+| STG-363 | `VoiceScreen/` | NEEDS_CLARIFICATION → picker UI |
+| STG-364 | `VoiceScreen/` | Visual confidence score / match feedback |
+| STG-365 | `VoiceScreen/` | Mic permission guidance when denied |
+| STG-366 | `VoiceScreen/` | API timeout handling |
+| STG-409 | `VoiceScreen/` | Recording duration countdown |
+| STG-410 | `VoiceScreen/` | Rate limit 429 → retry-after guidance |
+| STG-411 | E2E tests | Voice flow E2E test coverage |
+| STG-374 | `SellScanScreen.tsx` | Cart item limit for performance |
+
+**Layer 13 total**: 10 tickets
+
+---
+
+### LAYER 14 — REORDER System (28 tickets)
+> **Why here**: Backend-heavy. Depends on PURCHASE flow (Layer 12) for PO submission.
+> **Gate**: Reorder suggestion generated → approved → PO created → GRN received → reorder fulfilled
+> **Loophole guards**: LH-022, LH-023, LH-024
+
+#### 14-PREREQ: Mandatory Prerequisites
+| # | What | Guards |
+|---|------|--------|
+| STG-491 | GUARD: Backend reorder PO submission endpoint | LH-022 |
+
+> **RULE**: STG-491 MUST be merged BEFORE STG-421 (14A). Without the PO submission endpoint, approved reorders create draft POs that never reach suppliers — silent data loss.
+
+#### 14A: Backend — Core Reorder Pipeline (STRICT ORDER)
+> **LH-022**: STG-421 REQUIRES STG-491 — the PO submission endpoint must exist before the approved→PO flow is wired
+> **LH-023**: STG-413 (EditReorderModal qty edits) calls a non-existent PATCH API — implement the backend PATCH endpoint WITHIN STG-413 or as a sub-task, or edits are silently lost
+> **LH-024**: STG-423 (supplier mapping) currently ignores MOQ — only sorts by price. Implementation MUST include MOQ filtering before price sort, or suppliers with unmet MOQ will receive impossible orders
+
+| # | What | Depends-On | Guards |
+|---|------|------------|--------|
+| STG-491 | GUARD: Backend reorder PO submission endpoint | — | LH-022 |
+| STG-423 | Dynamic supplier mapping algorithm | — | LH-024 (must include MOQ) |
+| STG-420 | Quantity optimization (EOQ/MOQ) | — | — |
+| STG-421 | Approved reorders → PO submission | STG-491 | LH-022 |
+| STG-417 | Expiry cleanup job for pending reorders | — | — |
+| STG-419 | Auto-approve threshold logic | — | — |
+| STG-422 | GRN auto-close marks reorders fulfilled | STG-421 | — |
+| STG-426 | Payment terms from backend (remove dead code) | — | — |
+| STG-428 | Partial approval failure feedback | — | — |
+| STG-438 | Policy validation server-side | — | — |
+| STG-443 | Dismissal reason max length validation | — | — |
+
+#### 14B: Frontend — Reorder UX
+> **LH-023**: STG-413 MUST implement or depend on a backend PATCH endpoint for quantity edits — without it, `EditReorderModal` saves locally but edits are silently lost on refresh
+
+| # | What | Depends-On | Guards |
+|---|------|------------|--------|
+| STG-413 | Quantity edits persisted to DB | — | LH-023 (needs PATCH API) |
+| STG-412 | Manual quick-reorder from history | — | — |
+| STG-414 | Reorder history/audit trail on POS | — | — |
+| STG-415 | Staleness detection for pending reorders | — | — |
+| STG-416 | Expired reorder re-trigger option | — | — |
+| STG-424 | Supplier picker pack variants | — | — |
+| STG-425 | Supplier picker original supplier fallback | — | — |
+| STG-427 | Approval response includes supplier names | — | — |
+| STG-429 | Empty state when auto-reorder off | — | — |
+| STG-430 | Selection bar layout shift fix | — | — |
+| STG-431 | EditReorderModal original qty reference | STG-413 | — |
+| STG-432 | Supplier load error shown early | — | — |
+| STG-433 | maxReorderQty in policy list | — | — |
+| STG-434 | Threshold visual guide fix | — | — |
+| STG-436 | minStock/minThreshold naming fix | — | — |
+| STG-437 | Stock threshold frontend/backend alignment | — | — |
+| STG-439 | Cron visibility / manual trigger | — | — |
+| STG-440 | Bulk policy management | — | — |
+
+#### 14C: Reorder — Polish
+| # | What |
+|---|------|
+| STG-435 | Cache catalog supplier data |
+| STG-441 | Filter labels in ReorderPoliciesScreen i18n |
+| STG-444 | Accessibility labels on reorder elements |
+| STG-445 | formatMoney null safety |
+| STG-446 | Unit tests for reorder helpers |
+| STG-447 | Enable idempotency framework |
+
+**Layer 14 total**: 28 tickets + 1 GUARD prereq (STG-491)
+
+---
+
+### LAYER 15 — CREDIT & BNPL System (24 tickets)
+> **Why last feature layer**: Credit is gated (`false`). Heavy backend + compliance. Can be deferred post-go-live.
+> **Gate**: Credit gate → `true`, scoring → offer → KYC → approval → disbursement → repayment
+> **Loophole guards**: LH-025, LH-026, LH-027, LH-028, LH-029
+
+#### 15-PREREQ: Mandatory Prerequisites
+| # | What | Guards |
+|---|------|--------|
+| STG-490 | GUARD: Backend credit disbursement endpoint | LH-025 |
+
+> **RULE**: STG-490 MUST be merged BEFORE STG-451 (15A). Without the disbursement endpoint, approved credit applications are stuck forever — no funds reach the retailer.
+> **LH-029**: Missing tables `credit_disbursements`, `kyc_document_storage`, `overdue_notifications`, `consent_records`. These MUST be created as migrations BEFORE any 15A ticket that writes to them. STG-485 (consent_records, Layer 0) handles one; the rest need migrations within this layer.
+
+#### 15A: Backend — Credit Infrastructure (STRICT ORDER)
+> **LH-027**: STG-448 — feature gate is hardcoded `false` in BOTH frontend (`CreditScreen.tsx`) AND backend (`credit.routes.ts`). Implementation MUST use a SINGLE source of truth: backend config endpoint that frontend reads. Do NOT just flip both to `true`.
+> **LH-025**: STG-451 REQUIRES STG-490 — the disbursement endpoint skeleton must exist before wiring the approval→disbursement flow
+> **LH-029**: Create migrations for `credit_disbursements`, `kyc_document_storage`, `overdue_notifications` BEFORE tickets that reference them
+
+| # | What | Depends-On | Guards |
+|---|------|------------|--------|
+| STG-490 | GUARD: Backend credit disbursement endpoint | — | LH-025 |
+| STG-448 | Remove feature gate hardcoded `false` | — | LH-027 (single source!) |
+| STG-449 | Production-grade credit scoring algorithm | STG-448 | — |
+| STG-450 | Credit score tiers → config/DB | STG-449 | — |
+| STG-451 | Credit disbursement endpoint | STG-490 | LH-025 |
+| STG-452 | Real KYC verification (not format-only) | — | LH-029 (needs kyc_document_storage table) |
+| STG-453 | KYC document upload endpoint | STG-452 | LH-029 |
+| STG-454 | Credit offer expiry cleanup job | STG-448 | — |
+| STG-455 | External credit provider integration | STG-451 | — |
+| STG-456 | Provider failure → surface error, not hide | STG-455 | — |
+| STG-458 | Re-eligibility check at application time | STG-449 | — |
+| STG-475 | Rate limiting on credit offer generation | STG-448 | — |
+| STG-476 | Composite index on bnpl_drawdowns | — | — |
+
+#### 15B: Backend — BNPL (CRITICAL GUARDS)
+> **LH-026**: STG-462 — interest formula is flat (`principal * rate / 100`), NOT prorated by tenure days. Implementation MUST use `principal * rate / 100 * (days / 365)` or equivalent daily proration. The current flat formula overcharges short tenures and undercharges long ones.
+> **LH-028**: STG-467 — overdue maturation functions exist in code but NO scheduler calls them. Implementation MUST wire the maturation check to a cron job or Cloud Scheduler, not just define the function.
+
+| # | What | Depends-On | Guards |
+|---|------|------------|--------|
+| STG-462 | Interest proration by tenure days | — | LH-026 (MUST be daily proration!) |
+| STG-465 | Per-supplier drawdown limit | — | — |
+| STG-466 | Payment status polling race condition | — | — |
+| STG-467 | Overdue maturation scheduler | — | LH-028 (must wire to cron!) |
+| STG-468 | Max days configurable per store type | — | — |
+
+#### 15C: Frontend — Credit & BNPL UX
+| # | What |
+|---|------|
+| STG-459 | Application status timeline UI |
+| STG-460 | PaymentOptionsSheet cost details |
+| STG-461 | CreditScreen component extraction |
+| STG-463 | Overdue visual hierarchy in BnplDuesScreen |
+| STG-464 | Dispute audit trail / status history |
+| STG-472 | Khata bulk actions |
+| STG-478 | BnplDuesScreen component extraction |
+
+#### 15D: Credit — Low Priority
+| # | What |
+|---|------|
+| STG-477 | Hardcoded ₹ → locale-aware currency |
+| STG-480 | Early repayment incentive / standing instructions |
+
+**Layer 15 total**: 24 tickets + 1 GUARD prereq (STG-490)
+
+---
+
+### LAYER 16 — Sync, Offline, Device & Layout (17 tickets)
+> **Why here**: Infrastructure-level improvements. Test after all features stable.
+> **Gate**: Offline checkout → queue → sync on reconnect → no data loss
+
+| # | Category | What |
+|---|----------|------|
+| STG-387 | SYNC | Push-based stock sync (replace 5min polling) |
+| STG-388 | SYNC | Stock sync conflict → user choice (not silent server-wins) |
+| STG-389 | OFFLINE | 24h queue expiry warning before loss |
+| STG-390 | OFFLINE | Price cache refresh on reconnect |
+| STG-391 | OFFLINE | Post-checkout sync confirmation |
+| STG-392 | OFFLINE | SQLite corruption recovery |
+| STG-393 | DEVICE | Device type detection (POS/phone/tablet) |
+| STG-394 | DEVICE | Touch target min size on small phones |
+| STG-395 | LAYOUT | Responsive NUM_COLUMNS for tablets |
+| STG-396 | LAYOUT | Cart sheet snap points for tablets |
+| STG-397 | LAYOUT | Safe area handling for notched phones |
+| STG-398 | LAYOUT | Modal max-width on tablets |
+| STG-373 | SELL | Cart sheet covers 55-75% on small devices |
+| STG-375 | SELL | Cart item removal undo countdown |
+| STG-376 | SELL | Cart hold/park for multi-customer |
+| STG-402 | SELL | Search history expiration |
+| STG-403 | SELL | Cart bar animation on slow devices |
+
+**Layer 16 total**: 17 tickets
+
+---
+
+### LAYER 17 — Nice-to-Have & P3 Polish (14 tickets)
+> **Do last**: These are delightful but non-blocking.
+
+| # | What |
+|---|------|
+| STG-034 | Recent bills shortcut (last 5) |
+| STG-037 | Customer name/phone before billing |
+| STG-030 | CREDIT tab: explain greyed-out state |
+| STG-104 | Hold/Park Bill feature |
+| STG-136 | Share cart via WhatsApp |
+| STG-139 | Return/exchange negative line items |
+| STG-016 | Floating total bar when items added |
+| STG-031 | Quick +/- buttons for bulk adds |
+| STG-024 | QR scan button camera integration |
+| STG-025 | Support phone on activation + error |
+| STG-039 | Printing mode: removed — ticket invalid |
+| STG-040 | Chip layout: removed — ticket invalid |
+| STG-038 | Device type: covered by STG-203 |
+| STG-066 | Unify enrollment: single screen (already is) |
+
+**Layer 17 total**: 14 tickets
+
+---
+
+### LAYER 18 — E2E Tests & Regression Guards (3 tickets)
+> **Final layer**: Write tests that validate the full system after all features.
+
+| # | What |
+|---|------|
+| STG-411 | Voice flow E2E tests |
+| STG-479 | Reorder + Credit full lifecycle E2E |
+| STG-446 | Unit tests for reorder helper functions |
+
+**Layer 18 total**: 3 tickets
+
+---
+
+### Layer Summary
+
+| Layer | Theme | Tickets | GUARD Prereqs | Cumulative |
+|-------|-------|---------|---------------|------------|
+| L0 | Security & P0 bugs | 17 | 3 (STG-485, 486, 492) | 17 |
+| L1 | Foundation: theme, utils, i18n keys | 14 | 1 (STG-483) | 31 |
+| L2 | i18n: hardcoded string replacement | 30 | 2 (STG-481, 482) | 61 |
+| L3 | i18n: MenuScreen + Hindi completion | 19 | — | 80 |
+| L4 | Shared components (SellTile, etc.) | 19 | 1 (STG-484) | 99 |
+| L5 | Enrollment & onboarding screens | 26 | — | 125 |
+| L6 | Home, header, tabs | 19 | — | 144 |
+| L7 | SELL flow (search, cart, scan) | 61 | 2 (STG-487, 488) | 205 |
+| L8 | Payment flow | 46 | 1 (STG-489) | 251 |
+| L9 | MenuScreen redesign | 38 | — | 289 |
+| L10 | Secondary screens | 32 | — | 321 |
+| L11 | Cross-cutting audits | 19 | — | 340 |
+| L12 | PURCHASE flow | 17 | — | 357 |
+| L13 | VOICE flow | 10 | — | 367 |
+| L14 | REORDER system | 29 | 1 (STG-491) | 396 |
+| L15 | CREDIT & BNPL system | 25 | 1 (STG-490) | 421 |
+| L16 | Sync, offline, device, layout | 17 | — | 438 |
+| L17 | Nice-to-have & P3 polish | 14 | — | 452 |
+| L18 | E2E tests & guards | 3 | — | 455 |
+
+> **Note**: 492 total tickets. 455 unique layer assignments. Difference: 37 tickets appear in multiple layers (implement once, skip in later layer). STG-001 (DONE) excluded from counts. STG-038/039/040/066 marked as invalid/covered in L17. 12 GUARD tickets (STG-481–492) are counted in their respective layer prereq sections.
+
+---
+
+## Execution Scope Index
+
+> **Purpose**: Maps every ticket to exact source files, line numbers, and actions so Claude can execute any ticket without ambiguity.
+> **Legend**: `→` = primary file to modify | `+` = secondary/supporting file | `?` = investigate first | `NEW` = create new file/component
+> **Line numbers**: Based on SHA `81c3a2a4` — verify before editing as lines may shift after earlier tickets.
+
+### Screen: EnrollDeviceScreen (`src/screens/EnrollDeviceScreen.tsx`)
+
+| Ticket | Lines | Action |
+|--------|-------|--------|
+| STG-002 | → `src/screens/SplashScreen.tsx:31,249-276` | Fix cold-start blank screen; ensure SplashScreen shows brand mark immediately; tune SPLASH_DURATION_MS |
+| | + `app.json:17,25-28` | Verify splash icon/bg config |
+| | + `android/app/src/main/res/values/styles.xml:14-16` | Verify Theme.App.SplashScreen drawable |
+| STG-004 | → `EnrollDeviceScreen.tsx:441-617` | Redesign activation screen: add trust signals, brand illustration, step indicator |
+| STG-019 | → `EnrollDeviceScreen.tsx:479-515` | Fix keyboard UX: left-align placeholder, auto-focus, keyboard dismiss on submit |
+| STG-023 | → `EnrollDeviceScreen.tsx:441-460` | Simplify subtitle info text above activation code input |
+| STG-024 | → `EnrollDeviceScreen.tsx:517-549` | Polish QR scan button + camera integration UX |
+| STG-025 | → `EnrollDeviceScreen.tsx:554-558` | Add support phone/WhatsApp on error screens |
+| | + `src/i18n/locales/en.json`, `hi.json` | Add support contact i18n keys |
+| STG-038 | → `EnrollDeviceScreen.tsx:196` | Replace hardcoded "RETAILER_PHONE" with auto-detect or selector |
+| STG-039 | → `EnrollDeviceScreen.tsx` | Find printing mode selector, replace "Direct ESC/POS" with plain language |
+| STG-040 | → `EnrollDeviceScreen.tsx` | Fix chip layout wrapping on small screens (<360dp) |
+| STG-041 | → `EnrollDeviceScreen.tsx:479-491` | Add inline validation (format check, error styling on invalid input) |
+| STG-042 | → `EnrollDeviceScreen.tsx:187,496-515` | Fix "Counter-1" default label — use auto-incrementing "Counter-N" or friendly model name |
+| STG-043 | → `EnrollDeviceScreen.tsx:479-515` | Convert placeholder to floating label that persists on focus |
+| STG-044 | → `EnrollDeviceScreen.tsx:517-549` | Adjust visual weight: "Scan QR" secondary, "Activate POS" primary |
+| STG-057 | → `EnrollDeviceScreen.tsx:85,97,112-118,256` | Rewrite all "superadmin" text to plain language |
+| | + `src/i18n/locales/en.json:382-383,393,406` | Update status.storeInactive, deviceInactive, errors.* keys |
+| STG-058 | → `EnrollDeviceScreen.tsx:441-460` | Replace wall-of-text with collapsible visual 3-step flow |
+| STG-059 | → `EnrollDeviceScreen.tsx:85` | Replace "hello@supermandi.tech" with WhatsApp/phone |
+| STG-060 | → `EnrollDeviceScreen.tsx` | Replace raw URL text with tappable "Register Here" button |
+| STG-061 | → `EnrollDeviceScreen.tsx:479-491` | Fix center-aligned placeholder to left-aligned |
+| STG-062 | → `EnrollDeviceScreen.tsx:517-549` | Add disabled state to Activate button until code format valid (SM-XXXXXX) |
+| STG-063 | → `EnrollDeviceScreen.tsx:441-460` | Add welcome illustration above activation input |
+| STG-064 | → `EnrollDeviceScreen.tsx:187` | Map Device.modelName internal codes to friendly names (e.g., "23106RN0DA" → "Redmi Note 13 Pro") |
+| STG-065 | → `EnrollDeviceScreen.tsx:441-460` | Add step indicator "Step 1 of 2" |
+| STG-066 | → `EnrollDeviceScreen.tsx` + `ActivationScreen.tsx` (?) | Unify enrollment and activation into single onboarding flow |
+| STG-072 | → `EnrollDeviceScreen.tsx` | Remove hamburger menu when not yet activated (no navigation needed) |
+| STG-073 | → `EnrollDeviceScreen.tsx:256` | Replace "store dashboard" jargon with plain language |
+| STG-076 | → `EnrollDeviceScreen.tsx` | Replace "on web" with specific URL or "online" |
+| STG-200 | → `EnrollDeviceScreen.tsx:85` | Replace email with WhatsApp link |
+| STG-201 | → `src/i18n/locales/en.json:382-383` + `hi.json` | Replace "Superadmin" in status messages |
+| STG-202 | → `EnrollDeviceScreen.tsx:85` | Add tappable WhatsApp button in STORE_INACTIVE error |
+| STG-203 | → `EnrollDeviceScreen.tsx:196` | Auto-detect device type or add selector |
+| STG-204 | → `EnrollDeviceScreen.tsx:187` | Map raw model codes to friendly names |
+| STG-205 | → `EnrollDeviceScreen.tsx:229-235` | i18n for re-enrollment alert |
+| STG-206 | → `EnrollDeviceScreen.tsx:256` | Remove "superadmin account activation" text |
+| STG-207 | → `EnrollDeviceScreen.tsx:112-118` | Replace "Reinstall the app" with support contact path |
+| STG-208 | → `EnrollDeviceScreen.tsx:97` | Add countdown timer for rate limit cooldown |
+| STG-253 | → `EnrollDeviceScreen.tsx:40` | Verify TEST_STORE_CONFIG only behind `__DEV__` |
+
+### Screen: PosRootLayout — Header & Tabs (`src/screens/PosRootLayout.tsx`)
+
+| Ticket | Lines | Action |
+|--------|-------|--------|
+| STG-005 | → `src/components/PosStatusBar.tsx:137-151,208-246` | Declutter status icons, reduce icon count, add labels |
+| | + `PosRootLayout.tsx:1200-1214` | Adjust header area layout |
+| STG-007 | → `PosRootLayout.tsx:1230-1376` | Unify tab bar: add full labels, consistent colors, active states |
+| | + `src/i18n/locales/en.json:93-100` | Tab label text (currently ALL CAPS) |
+| STG-014 | → `PosRootLayout.tsx` | Hide DEV MODE banner in production (`__DEV__` guard) |
+| STG-017 | → `src/components/PosStatusBar.tsx:127-129` | Add staff name/role display in header |
+| STG-022 | → `src/components/PosStatusBar.tsx` | Enlarge logo pill badge |
+| STG-036 | → `src/components/PosStatusBar.tsx` | Add date/time display |
+| STG-045 | → `src/components/PosStatusBar.tsx:380` | Increase "Ready for billing" text size |
+| STG-049 | → `src/components/PosStatusBar.tsx:137-151` | Add label/tooltip to camera icon |
+| STG-052 | → `src/components/PosStatusBar.tsx:127-129` | Handle store name truncation on narrow screens |
+| STG-067 | → `src/components/PosStatusBar.tsx:137-151` | Add labels/tooltips to Wi-Fi/printer/scanner/camera icons |
+| STG-069 | → `PosRootLayout.tsx:1230-1376` | Unify 5 tab visual treatments into one consistent style |
+| STG-070 | → `PosRootLayout.tsx:1200-1230` | Smooth gradient transition from dark header to white body |
+| STG-071 | → `src/components/ui/SyncStatusWidget.tsx:328-359` | Connect checkmark with "15s ago" visually |
+| STG-240 | → `src/i18n/locales/en.json:93-100` + `hi.json` | Change tab labels from ALL CAPS to title case |
+| STG-245 | → `src/i18n/locales/en.json:98-99` + `PosRootLayout.tsx:1322-1349` | Replace "REORDER • ON/OFF" with stable label + state badge |
+| STG-246 | → `PosRootLayout.tsx:1351-1372` + `src/screens/CreditScreen.tsx` | Hide disabled CREDIT tab or show "Coming Soon" |
+
+### Screen: SyncStatus (`src/components/ui/SyncStatusWidget.tsx`)
+
+| Ticket | Lines | Action |
+|--------|-------|--------|
+| STG-006 | → `SyncStatusWidget.tsx:328-359` | Collapse when healthy; reduce footprint |
+| STG-010 | → `SyncStatusWidget.tsx` + `src/components/ui/SyncConflictPanel.tsx` | Add brand illustrations, plain-language tabs |
+| STG-021 | → `SyncStatusWidget.tsx:172-175,195` | Add tab count badges and last-sync timestamp |
+
+### Screen: SellScanScreen — Search, Products, Cart (`src/screens/SellScanScreen.tsx`)
+
+| Ticket | Lines | Action |
+|--------|-------|--------|
+| STG-008 | → `SellScanScreen.tsx:2724-2763` | Unify search input with clear visual hierarchy |
+| STG-009 | → `src/components/sell/SellTile.tsx` (full file) | Redesign product cards: full names, stock badges, thumbnails |
+| STG-015 | → `SellTile.tsx` + `SellScanScreen.tsx:3303-3340` | Unify list vs thumbnail card layouts |
+| STG-016 | → `SellScanScreen.tsx:3344-3389` | Add floating total bar when cart has items |
+| STG-018 | → `SellTile.tsx:73` | Add unit/weight context to prices (i18n "per" prefix) |
+| STG-020 | → `SellTile.tsx` styles | Remove excess whitespace in small product cards |
+| STG-027 | → `SellTile.tsx` | Explain or remove green grid icon |
+| STG-028 | → `SellScanScreen.tsx:3265-3302` | Add section headers for product grouping |
+| STG-029 | → `SellScanScreen.tsx` | Add manual "Add Product" button for unlisted items |
+| STG-031 | → `SellScanScreen.tsx:696-718` | Add quick +/- buttons for bulk product adds |
+| STG-033 | → `SellScanScreen.tsx:3303-3340` | Add favorites/frequently sold section |
+| STG-035 | → `SellScanScreen.tsx` | Add empty state illustration when zero products |
+| STG-046 | → `SellTile.tsx` | Add expand chevron hint text |
+| STG-047 | → `SellScanScreen.tsx:3303-3340` | Fix empty space in horizontal product row |
+| STG-050 | → `SellScanScreen.tsx:3303-3340` | Add pull-to-refresh indicator on product FlatList |
+| STG-056 | → `SellTile.tsx` | Add haptic vibration and ripple on tap |
+| STG-068 | → `SellTile.tsx` | Add "+" tap affordance button for adding to bill |
+| STG-074 | → `SellScanScreen.tsx:2724-2841` | Unify search + barcode input border/container styles |
+| STG-075 | → `SellScanScreen.tsx:3303-3340` | Add loading skeleton placeholder during product fetch |
+| STG-220 | → `SellScanScreen.tsx:291` | Reduce CART_SHEET_COLLAPSED_RATIO from 0.55 to 0.40-0.45 |
+| STG-221 | → `SellScanScreen.tsx:296` | Validate SMALL_SCREEN_WIDTH=400 threshold on target devices |
+| STG-222 | → `SellTile.tsx:55-59` | Smart formatting: drop ".00" on round amounts |
+| STG-223 | → `SellScanScreen.tsx` | Add empty state illustration for zero search results |
+| STG-224 | → `SellScanScreen.tsx:61` + `src/components/sell/CategoryRail.tsx` | Guard DEMO_CATEGORIES behind `__DEV__` |
+| STG-225 | → `SellScanScreen.tsx:283` | Calculate NUM_COLUMNS dynamically from screen width |
+| STG-226 | → `SellTile.tsx:56` | Replace "—" dash for null price with "Price not set" label |
+| STG-227 | → `SellTile.tsx:86-95` | Fix IST timezone in expiry calculation |
+| STG-228 | → `SellTile.tsx` | Add MRP strikethrough when sell price < MRP |
+| STG-229 | → `SellTile.tsx:73` + `en.json` + `hi.json` | i18n for "per KG" label |
+| STG-230 | → `SellTile.tsx:33` | Display brand name if available |
+
+### Screen: SellScanScreen — Cart Bottom Sheet (`src/screens/SellScanScreen.tsx`)
+
+| Ticket | Lines | Action |
+|--------|-------|--------|
+| STG-094 | → `SellScanScreen.tsx:3435-3468` | Add confirmation dialog to Clear button |
+| | + `src/stores/cartStore.ts:617-640` | clearCart function |
+| STG-095 | → `SellScanScreen.tsx:660` | Add confirmation/undo to trash icon delete |
+| | + `cartStore.ts:391-426` | removeItem function |
+| STG-096 | → `SellScanScreen.tsx:690-718` | Increase stepper button tap targets to 48px min |
+| STG-097 | → `SellScanScreen.tsx:706` | Make quantity number tappable for direct input |
+| STG-098 | → `SellScanScreen.tsx:3473-3494` | Add "Add more items" link below cart items |
+| STG-099 | → `SellScanScreen.tsx:630-632` | Clarify edit icon (✏️) purpose with label |
+| STG-100 | → `SellScanScreen.tsx:668-728` | Label unit price vs line total clearly |
+| STG-101 | → `SellScanScreen.tsx:3563-3577` | Add GST/tax line between Subtotal and Total |
+| STG-102 | → `SellScanScreen.tsx:3497-3560` + `cartStore.ts:677-689` | Add max discount limit + manager approval |
+| STG-103 | → `SellScanScreen.tsx:3413-3470` | Add optional customer name/phone field at top of cart |
+| STG-104 | → `SellScanScreen.tsx:3413-3590` | Add Hold/Park Bill feature |
+| | + `cartStore.ts` | Add held bills storage |
+| STG-105 | → `SellScanScreen.tsx:3413-3435` | Add item count to "Sell Cart" header |
+| STG-106 | → `SellScanScreen.tsx:3505-3548` | Fix discount %/Flat toggle styling (segmented control) |
+| STG-107 | → `SellScanScreen.tsx:630-660` | Add product thumbnail to cart items |
+| STG-108 | → `SellScanScreen.tsx:3473-3497` | Fill empty space with guidance or suggestions |
+| STG-109 | → `SellScanScreen.tsx:3580-3590` | Add item count to Checkout button text |
+| STG-110 | → `SellScanScreen.tsx:630-660` + `cartStore.ts` | Add per-item discount via edit icon |
+| STG-111 | → `SellScanScreen.tsx:3563-3577` | Add "You save ₹X" line when discount applied |
+| STG-112 | → `SellScanScreen.tsx:3560-3563` | Add notes/memo field (collapsible) |
+| STG-126 | → `SellScanScreen.tsx:696-705` | Define [-] at qty=1 behavior (disable or remove with confirm) |
+| | + `cartStore.ts:428-488` | updateQuantity min-qty logic |
+| STG-127 | → `SellScanScreen.tsx:709-718` + `cartStore.ts:428-488` | Add stock validation cap on qty |
+| STG-128 | → `SellScanScreen.tsx:630-632` | Add batch/expiry info below product name |
+| STG-129 | → `SellScanScreen.tsx:630` | Handle long product name with numberOfLines={2} + ellipsis |
+| STG-130 | → `SellScanScreen.tsx:3549-3560` | Add live discount preview below input |
+| STG-131 | → `SellScanScreen.tsx:3473-3497` | Add "frequently bought together" suggestions |
+| STG-132 | → `SellScanScreen.tsx:3563-3577` | Hide Subtotal when equals Total |
+| STG-133 | → `SellScanScreen.tsx:3413` (BottomSheet snap points) | Dynamic sheet height based on content |
+| STG-134 | → `SellScanScreen.tsx:630-660` | Add swipe-to-delete on cart items |
+| STG-135 | → `SellScanScreen.tsx:3497-3590` | Add KeyboardAvoidingView for discount input |
+| STG-136 | → `SellScanScreen.tsx:3413-3435` | Add "Share cart via WhatsApp" button in header |
+| STG-137 | → `SellScanScreen.tsx:630-660` | Conditional stock styling (green/amber/red by level) |
+| STG-138 | → `SellScanScreen.tsx:630-632` | Separate unit/weight display from product name |
+| STG-139 | → `SellScanScreen.tsx:3413-3590` | Add return/exchange negative line items |
+| STG-140 | → `SellScanScreen.tsx:3497-3503` | Collapse discount section by default |
+| STG-141 | → `SellScanScreen.tsx:3580-3590` | Add price animation on Checkout button total change |
+
+### Screen: PaymentScreen (`src/screens/PaymentScreen.tsx`)
+
+| Ticket | Lines | Action |
+|--------|-------|--------|
+| STG-077 | → `PaymentScreen.tsx:505` | Show specific failure reason instead of generic error |
+| STG-078 | → `PaymentScreen.tsx` (CTA button) | Explain why "Complete Payment" is greyed out |
+| STG-079 | → `PaymentScreen.tsx` (error + CTA) | Resolve competing retry mechanisms |
+| STG-080 | → `PaymentScreen.tsx` (cash tab) | Add cash amount input + change calculation |
+| STG-081 | → `PaymentScreen.tsx` (layout) | Add cart/order summary visible on payment screen |
+| STG-082 | → `PaymentScreen.tsx` (due tab) | Add customer selection for credit/due sales |
+| STG-083 | → `PaymentScreen.tsx` (header) | Add back button to return to cart |
+| STG-084 | → `PaymentScreen.tsx:618,650-671` | Complete UPI flow: QR display, verification, polling |
+| STG-085 | → `PaymentScreen.tsx` | Add multi-tender/split payment support |
+| STG-086 | → `PaymentScreen.tsx` (header) | Remove/redesign "Cart locked" badge |
+| STG-087 | → `PaymentScreen.tsx` (layout) | Fill empty space with order summary + cash input |
+| STG-088 | → `PaymentScreen.tsx` | Add GST/tax breakup display |
+| STG-089 | → `PaymentScreen.tsx` (CTA styles) | Fix disabled button WCAG contrast |
+| | + `src/theme/colors.ts` | Add `disabled`, `disabledText` tokens (STG-232) |
+| STG-090 | → `PaymentScreen.tsx` (submit handler) | Add spinner + processing state + double-tap prevention |
+| STG-091 | → `PaymentScreen.tsx` | Dynamic instruction text per payment method |
+| STG-092 | → `PaymentScreen.tsx` | Add receipt preview before completing payment |
+| STG-093 | → `PaymentScreen.tsx` (tab icons) | Replace cash icon with recognizable banknote/₹ icon |
+| STG-113 | → `PaymentScreen.tsx` (header) | Show bill/invoice number |
+| STG-114 | → `PaymentScreen.tsx` | Add Cancel/Void transaction button + confirmation |
+| STG-115 | → `PaymentScreen.tsx` (tabs) | Add Card, Wallet payment method tabs |
+| STG-116 | → `src/utils/money.ts:31-71` | Implement Indian lakh formatting in formatMoney() |
+| STG-117 | → `SellTile.tsx:55-59` + `src/utils/money.ts` | Smart formatting: drop ".00" on round amounts |
+| STG-118 | → `PaymentScreen.tsx` (error banner) | Change Retry button from red to blue |
+| STG-119 | → `PaymentScreen.tsx` (error banner) | Add dismiss X + auto-dismiss timer |
+| STG-120 | → `PaymentScreen.tsx` (header) | Show staff name/ID for audit |
+| STG-121 | → `PaymentScreen.tsx` (tab icons) | Replace calendar icon for "Due" with credit/udhar icon |
+| STG-122 | → `PaymentScreen.tsx` (submit handler) | Add confirmation dialog for amounts > ₹5,000 |
+| STG-123 | → `PaymentScreen.tsx` (layout) | Move amount to top, not dead center |
+| STG-124 | → `PaymentScreen.tsx` (success/failure) | Add sound + haptic feedback |
+| STG-125 | → `PaymentScreen.tsx` | Add partial payment tracking (cash + due remainder) |
+| STG-209 | → `PaymentScreen.tsx:14` | Replace TouchableOpacity with Pressable |
+| STG-210 | → `PaymentScreen.tsx:404-424,758-779` + `en.json` + `hi.json` | i18n all alert strings |
+| STG-211 | → `PaymentScreen.tsx:618` | Separate "UPI ID not configured" vs "QR failed" errors |
+| STG-212 | → `PaymentScreen.tsx:493,500` | Replace "Superadmin" references in error alerts |
+| STG-213 | → `PaymentScreen.tsx:706` | Replace bare Alert with spinner overlay for "Payment in Progress" |
+| STG-214 | → `PaymentScreen.tsx:650-671` | Add "Regenerate QR" button when QR expires |
+| STG-215 | → `PaymentScreen.tsx:6` | Make PRICE_FRESHNESS_THRESHOLD_MS configurable |
+| STG-216 | → `PaymentScreen.tsx:789` | Rewrite "Price Freshness Warning" to plain language |
+| STG-217 | → `PaymentScreen.tsx:505` | Show specific error type instead of generic message |
+| STG-218 | → `PaymentScreen.tsx:257` | Remove raw paymentId hash from user-facing alert |
+| STG-219 | → `PaymentScreen.tsx` | Standardize all UPI alert styles |
+| STG-254 | → `src/utils/money.ts:31-71` | Ensure Indian lakh formatting in all formatMoney calls |
+
+### Screen: MenuScreen (`src/screens/MenuScreen.tsx`)
+
+| Ticket | Lines | Action |
+|--------|-------|--------|
+| STG-142 | → `MenuScreen.tsx:605` + `en.json` (add `menu.viewDetails`) + `hi.json` | Fix leaked i18n key |
+| STG-143 | → `MenuScreen.tsx:656-658` + `en.json` (add `menu.printerReady`, `menu.testPrint`) + `hi.json` | Fix leaked i18n keys |
+| STG-144 | → `MenuScreen.tsx:1083-1130` | Wrap Developer/QA + BUILD INFO in `if (__DEV__)` |
+| STG-145 | → `MenuScreen.tsx:1103-1130` | Remove token, API URL, StoreId UUID from visible UI |
+| STG-146 | → `MenuScreen.tsx:63-129` (opStatus) | Show device label instead of UUID |
+| STG-147 | → `MenuScreen.tsx:63-129` | Apply toTitleCase() to store name in System Status |
+| STG-148 | → `MenuScreen.tsx:426-518` | Make System Status collapsible; auto-expand on issues |
+| STG-149 | → `MenuScreen.tsx:250-272` | Add comparison period label; hide % when base is 0 |
+| STG-150 | → `MenuScreen.tsx:593-601` | Fix empty Payment Modes section; hide if no data |
+| STG-151 | → `MenuScreen.tsx:542-600` | Move labels above metric values (label-first pattern) |
+| STG-152 | → `PosRootLayout.tsx:1200-1214` | Move Today's Sales summary to home screen |
+| | + `MenuScreen.tsx:542-600` | Keep detailed version in Menu |
+| STG-153 | → `MenuScreen.tsx:621-634` | Add subtitles/context to Reprint/Download/Share buttons |
+| STG-154 | → `MenuScreen.tsx:848-849` + `en.json` + `hi.json` | Rename "BNPL Dues" to "Credit Purchases" |
+| STG-155 | → `MenuScreen.tsx:769-770` + `en.json` + `hi.json` | Rename "Stock Inward" to "Add New Stock" |
+| STG-156 | → `MenuScreen.tsx` (Opening Stock icon) | Replace "?" icon with inventory icon |
+| STG-157 | → `MenuScreen.tsx:785-821` | Merge "Customers" + "Customer Management" into one card |
+| STG-158 | → `MenuScreen.tsx:820-821` + `en.json` + `hi.json` | Rename "Overdue Dues" to "Overdue Payments" |
+| STG-159 | → `MenuScreen.tsx:390-1138` | Restructure: collapsible sections, search, usage ordering |
+| STG-160 | → `MenuScreen.tsx` (all menuIcon colors) | Standardize to 2-3 color palette |
+| STG-161 | → `MenuScreen.tsx` (badge rendering) | Add notification count badges to menu items |
+| STG-162 | → `MenuScreen.tsx:1153` (header) | Remove redundant logo pill + "Menu" title |
+| STG-163 | → `MenuScreen.tsx:1294-1302` (styles) | Reduce card spacing: 12px padding, 8px gap |
+| STG-164 | → `MenuScreen.tsx:282-293` (Switch Staff) | Show display_name instead of username |
+| STG-165 | → `MenuScreen.tsx` (language toggle) + `en.json` | Fix Hindi toggle "हि" → "हिंदी" |
+| STG-166 | → `MenuScreen.tsx:1072-1081` | Replace "Re-enroll" jargon in subtitle |
+| STG-167 | → `MenuScreen.tsx:1133-1137` | Add About section: version + terms + privacy links |
+| STG-168 | → `MenuScreen.tsx` (Settings section) | Add Logout/End Session option |
+| STG-169 | → `MenuScreen.tsx:391` | Add search bar at top of menu |
+| STG-170 | → `MenuScreen.tsx` (Barcode Sheets subtitle) | Replace "tiered" with plain language |
+| STG-171 | → `MenuScreen.tsx:542-600` (styles) | Add visual hierarchy: hero metric bigger |
+| STG-172 | → `MenuScreen.tsx:642-1067` + `en.json` + `hi.json` | Replace 36 hardcoded English strings with t() calls |
+| STG-173 | → `MenuScreen.tsx:605` + `en.json` (add key) | Fix defaultValue fallback for viewDetails |
+| STG-174 | → `MenuScreen.tsx:243,656-658` + `en.json` | Fix positional fallback for printer keys |
+| STG-175 | → `MenuScreen.tsx:610+` (all Pressable) | Add `android_ripple` prop to all menu Pressables |
+| STG-176 | → `MenuScreen.tsx:1153` | Increase paddingVertical from 8 to 16 |
+| STG-177 | → `MenuScreen.tsx:479` + `en.json` + `hi.json` | i18n "Sync" label + syncComplete/syncFailed keys |
+| STG-178 | → `MenuScreen.tsx:1083-1101` + `UiShowcaseScreen.tsx:30-34` | Double-gate QA menu: `showQaMenu && (__DEV__ \|\| isStaging)` |
+| STG-179 | → `MenuScreen.tsx:1133-1137` | Show app version instead of raw SHA |
+| STG-180 | → `MenuScreen.tsx:282-293` + `en.json` + `hi.json` | i18n Switch Staff alert |
+| STG-181 | → `MenuScreen.tsx:621-634` | Pass action param to SalesHistory navigation |
+| STG-182 | → `MenuScreen.tsx` (menu item press handlers) | Add haptic feedback on menu item press |
+| STG-183 | → `MenuScreen.tsx:1354-1358` | Fix sectionHeader margin asymmetry (24/4 → 28/8) |
+| STG-184 | → `MenuScreen.tsx:877,888` + `en.json` + `hi.json` | i18n WhatsApp support alerts |
+| STG-185 | → `MenuScreen.tsx:882-884` + `en.json` + `hi.json` | i18n WhatsApp pre-filled message |
+| STG-186 | → `MenuScreen.tsx:1588` | Increase trendText fontSize from 9 to 11+ |
+| STG-187 | → `MenuScreen.tsx:251-268` | Cap trend percentage at 999%+ or show absolute |
+| STG-188 | → `MenuScreen.tsx:593-601` + `en.json` + `hi.json` | i18n Payment Modes labels |
+| STG-189 | → `MenuScreen.tsx:1066` | Fix `&amp;` → `&` in "Help & Support" |
+| STG-190 | → `MenuScreen.tsx:542-543` | Add skeleton/shimmer loading state |
+| STG-191 | → `MenuScreen.tsx:1253-1258` | Add border to default statusBadge |
+| STG-192 | → `MenuScreen.tsx:1294-1302` | Increase menuIcon from 36×36 to 40×40 |
+| STG-193 | → `MenuScreen.tsx:962` + `en.json` + `hi.json` | Replace "Z-Report" jargon in subtitle |
+| STG-194 | → `MenuScreen.tsx:972` + `en.json` + `hi.json` | Simplify shift management subtitle |
+| STG-195 | → `MenuScreen.tsx:828` + `en.json` + `hi.json` | Rename "AI & Intelligence" to "Smart Insights" |
+| STG-196 | → `MenuScreen.tsx:837` | Simplify AI Insights subtitle |
+| STG-197 | → `MenuScreen.tsx:849` | Reword "Browse and apply for credit offers" |
+| STG-198 | → `MenuScreen.tsx:1149` | Adjust content padding for visual distinction |
+| STG-199 | → `MenuScreen.tsx:391` | Enable scroll indicator on ScrollView |
+| STG-247 | → `MenuScreen.tsx:775-824` | Consolidate customer section to 2 items max |
+| STG-248 | → `MenuScreen.tsx` styles | Fix marginTop inconsistency after sectionHeader |
+| STG-249 | → `MenuScreen.tsx:648-659` | Wrap printerStatusRow in card container |
+| STG-250 | → `MenuScreen.tsx:1072-1081` | Move Switch Store to "Danger Zone" section |
+| STG-251 | → `MenuScreen.tsx:956-965` | Add pending badge to Daily Closing |
+| STG-252 | → `MenuScreen.tsx:859-868` | Add unread count badge to Chat |
+| STG-255 | → `MenuScreen.tsx:1221-1228,1471-1478` | Differentiate summaryCard vs statusPanel visually |
+| STG-256 | → `MenuScreen.tsx:426-518` | Add swipe/tap to collapse System Status |
+
+### Theme & Design System (`src/theme/`)
+
+| Ticket | Lines | Action |
+|--------|-------|--------|
+| STG-003 | → `src/theme/colors.ts` (full file) | Audit & unify brand palette, add missing tokens |
+| | + `src/theme/spacing.ts` (1-9) | Verify/extend spacing scale |
+| | + `src/theme/typography.ts` (1-77) | Verify/extend type scale for POS readability |
+| | + `src/theme/index.ts` | Ensure all tokens exported |
+| STG-011 | → `src/theme/typography.ts:1-77` | Audit font sizes for POS-grade readability |
+| STG-053 | → `src/theme/colors.ts` + all screens | WCAG AA contrast audit across buttons and text |
+| STG-231 | → `src/theme/colors.ts:7-12` | Deduplicate accent/secondary (identical #14B8A6) |
+| STG-232 | → `src/theme/colors.ts` | Add `disabled`, `disabledText`, `disabledBg` tokens |
+| STG-233 | → `src/theme/colors.ts:61,124` | Remove or assign purpose to unused `ink` token |
+
+### i18n Locale Files (`src/i18n/locales/`)
+
+| Ticket | Lines | Action |
+|--------|-------|--------|
+| STG-026 | → NEW file or `en.json`/`hi.json` | Add terms/privacy policy link strings |
+| STG-054 | → `src/i18n/locales/hi.json` (full file) | Complete Hindi translations for all screens |
+| STG-055 | → `en.json` + `hi.json` | Add app version display string |
+| STG-234 | → `en.json:382` + `hi.json` | Rewrite status.storeInactive (remove "Superadmin") |
+| STG-235 | → `en.json:383` + `hi.json` | Rewrite status.deviceInactive (remove "Superadmin") |
+| STG-236 | → `en.json:393` + `hi.json` | Rewrite errors.deviceAlreadyEnrolled (remove "Superadmin", "token") |
+| STG-237 | → `en.json:406` | Change "Please login again" to "re-enter staff PIN" |
+| STG-238 | → `en.json:146` + `hi.json` | Rewrite "Digitise mode on" to plain language |
+| STG-239 | → `en.json:116` + `hi.json` | Replace "MOQ" with "Min. Order" |
+| STG-241 | → `en.json:251` + `hi.json` | Simplify dismissSuggestedFrom template for Hindi |
+| STG-242 | → `en.json:484-536` | Add explanations for KYC, UTR, EMI jargon |
+| STG-243 | → `en.json:461` + `hi.json` | Break UPI instructions into numbered steps |
+| STG-244 | → `en.json:292` + `hi.json` | Change "Goods Receipt Note" to "Stock Received" |
+
+### Voice & Misc Components
+
+| Ticket | Lines | Action |
+|--------|-------|--------|
+| STG-012 | → `src/components/voice/VoiceButton.tsx:53-54,127-179` | Brand-color FAB, contextual label on first use |
+| STG-013 | → `SellTile.tsx` (FEFO badge) | Explain FEFO or rename to "Expiring Soon" |
+| STG-030 | → `src/screens/CreditScreen.tsx` | Explain greyed-out state or enable with guidance |
+| STG-034 | → `MenuScreen.tsx` or `PosRootLayout.tsx` | Add recent bills shortcut (quick access last 5) |
+| STG-037 | → `SellScanScreen.tsx` or `PaymentScreen.tsx` | Add customer name/phone entry for credit sales |
+| STG-048 | → `src/components/voice/VoiceButton.tsx:204-215` | Fix FAB position overlap with product cards |
+| STG-051 | → `PosRootLayout.tsx` or `PosStatusBar.tsx` | Add "Bills today" and "Sales total" on home |
+
+### Utility & Cross-Cutting
+
+| Ticket | Lines | Action |
+|--------|-------|--------|
+| STG-116 | → `src/utils/money.ts:31-71` | Implement Indian lakh formatting |
+| STG-117 | → `src/utils/money.ts` + `SellTile.tsx:55-59` | Smart .00 formatting |
+| STG-032 | → `SellTile.tsx` | Add discount/MRP indicator on product cards |
+
+### Screen i18n — Hardcoded English Replacement (STG-257–STG-279)
+
+| Ticket | Lines | Action |
+|--------|-------|--------|
+| STG-257 | → `src/screens/PaymentSetupScreen.tsx` (395 lines, ~18 strings, zero t()) | Replace all hardcoded English: L73,75,80,86 (validation), L105,128 (alerts), L265-267 (title/subtitle), L285-334 (form labels), L371,384,388 (buttons). Add `useTranslation()`, create `en.json` keys under `paymentSetup.*`, add Hindi translations |
+| STG-258 | → `src/screens/SalesHistoryScreen.tsx` (310 lines, ~5 strings, partial t()) | Replace remaining hardcoded: L245 ("OFFLINE" badge), L260 ("Bills" header). Verify t() fallbacks are proper `defaultValue` format |
+| STG-259 | → `src/screens/BillDetailScreen.tsx` (432 lines, ~15 strings, zero t()) | Replace all hardcoded English: L49,57 (error messages), L78-80,91-92,101 (alert texts), L106-110 (printer errors), L130-132 (WhatsApp errors), L319-328 (summary labels), L368-383 (totals labels), L397,412,420 (status text). Add `useTranslation()`, create `billDetail.*` i18n keys |
+| STG-260 | → `src/screens/SalesStatementScreen.tsx` (423 lines, ~12 strings, zero t()) | Replace all hardcoded: L45,48 ("Today"/"Yesterday"), L282-290 (stat labels), L355 ("Inventory Cost Statement" title), L365-375 (summary labels), L389 ("Retry"), L395-402 (empty state). Add `useTranslation()`, create `salesStatement.*` keys |
+| STG-261 | → `src/screens/DailyReportScreen.tsx` (809 lines, ~25 strings, zero t()) | Replace all hardcoded: L82-114 (print template), L164-203 (HTML report), L301-330 (print/share errors), L549-728 (all UI labels). Add `useTranslation()`, create `dailyReport.*` keys |
+| STG-262 | → `src/screens/DailyClosingScreen.tsx` (750 lines, ~12 strings, partial t()) | Replace remaining hardcoded: L138,144 (validation alerts), L184-185 ("MATCH"/"MISMATCH"), L229-238 ("Summary"/"History" tabs). Verify existing t() calls use `defaultValue` |
+| STG-263 | → `src/screens/InwardScreen.tsx` (1146 lines, ~20 strings, partial t()) | Replace hardcoded: L64,74,83,86 (supplier labels), L177,187,228,238,250 (error messages), L481-482 (stock check alert), L561-701 (screen labels/buttons). Extend existing t() coverage |
+| STG-264 | → `src/screens/GRNScreen.tsx` (1000 lines, ~18 strings, zero t()) | Replace all hardcoded: L106,177 (error messages), L315-377 (alert messages), L457-514 (screen titles/labels), L539-659 (UI text). Add `useTranslation()`, create `grn.*` keys |
+| STG-265 | → `src/screens/OpeningStockScreen.tsx` (738 lines, ~16 strings, zero t()) | Replace all hardcoded: L136,179-180,187-188 (errors), L245-256 (confirmation alerts), L551-553 (success), L576-728 (labels). Add `useTranslation()`, create `openingStock.*` keys |
+| STG-266 | → `src/screens/PurchaseScreen.tsx` (1700+ lines, ~40 strings, partial t()) | Replace hardcoded: L29-38 (ROTATING_HINTS array), remaining alert messages, button labels. Extend existing t() coverage to all user-facing strings |
+| STG-267 | → `src/screens/BarcodeSheetScreen.tsx` (1500+ lines, ~35 strings, partial t()) | Replace all hardcoded English labels, alerts, and button text. Extend existing partial t() coverage to full file |
+| STG-268 | → `src/screens/BnplDuesScreen.tsx` (1439 lines, ~25 strings, partial t()) | Replace remaining hardcoded English: alert messages, modal labels, payment status text. Extend existing partial t() coverage |
+| STG-269 | → `src/screens/KhataScreen.tsx` (941 lines, ~22 strings, zero t()) | Replace all hardcoded: L112 ("Error"), L138-217 (alert messages), L551-752 (all screen labels including "Khata (Credit Book)", "Add Credit", "Record Payment", form labels). Add `useTranslation()`, create `khata.*` keys |
+| STG-270 | → `src/screens/CustomerListScreen.tsx` (904 lines, ~35 strings, partial t()) | Replace hardcoded: L154,158 ("Required"), L171,175 ("Success"/"Error"), L209,229,232,236,250,253 (stat labels), L638-639 (empty state), L707 (WhatsApp), L730-747 (detail labels), L768-895 (form labels/buttons). Extend partial t() to full coverage |
+| STG-271 | → `src/screens/OverdueDuesScreen.tsx` (573 lines, ~18 strings, zero t()) | Replace all hardcoded: L65-67 ("Critical"/"Overdue"/"Due Soon"), L104,154,158 (alerts), L321-324 (WhatsApp message), L360,373 (modal titles), L499-552 (screen title, loading, empty states). Add `useTranslation()`, create `overdueDues.*` keys |
+| STG-272 | → `src/screens/ShiftScreen.tsx` (903 lines, ~40 strings, zero t()) | Replace all hardcoded: L44 (AM/PM), L145-197 (validation/confirmation alerts), L557 (status labels), L612-862 (entire UI: tab labels, shift details, form fields, buttons). Add `useTranslation()`, create `shift.*` keys |
+| STG-273 | → `src/screens/OrderDetailScreen.tsx` (952 lines, ~22 strings, partial t()) | Replace hardcoded: L96 (error), L147-165 (cancel alerts), L228 (WhatsApp), L249-281 (titles/loading), L357-517 (labels, info rows, buttons). Extend partial t() to full coverage |
+| STG-274 | → `src/screens/ReturnScreen.tsx` (914 lines, ~32 strings, zero t()) | Replace all hardcoded: L153-158 (lookup errors), L619-905 (entire UI: titles, form labels, placeholders, section headers, buttons, success messages). Add `useTranslation()`, create `return.*` keys |
+| STG-275 | → `src/screens/BuyScreen.tsx` (996 lines, ~12 strings, heavy t()) | Replace remaining hardcoded: L415 ("No more products"), L622-623 (offline messages), L631 ("Refresh"), L675 ("Loading catalog..."). Already uses t() extensively — close the gaps |
+| STG-276 | → `src/screens/CreditScreen.tsx` (1498 lines, ~15 strings, extensive t()) | Replace remaining hardcoded strings in modal UIs and error handlers. Already uses t() extensively — audit and close remaining gaps |
+| STG-277 | → `src/screens/ReorderScreen.tsx` (563 lines, ~12 strings, partial t()) + `src/screens/ReorderPoliciesScreen.tsx` (592 lines, ~8 strings, zero t()) | ReorderScreen: L441-443 (empty state), L455,476,482,492,537 (labels). ReorderPoliciesScreen: L343-360 (empty states), L380-397 (headers, search). Add t() to both |
+| STG-278 | → `src/screens/BulkPurchaseCreditScreen.tsx` (231 lines, ~15 strings, zero t()) | Replace all hardcoded: L106 ("Apply for Credit"), L115-118 (success/error alerts), L142-177 (offer details: amount, rate, tenure, EMI labels), L182,193,200-223 (title, info banner, empty state). Add `useTranslation()`, create `bulkCredit.*` keys |
+| STG-279 | → `src/components/ErrorBoundary.tsx` (74 lines, ~4 strings, zero t()) | Replace L40 ("Something went wrong"), L42 (description), L45 ("Try Again"). Add i18n import, create `error.boundary.*` keys |
+
+### Screen-Level Jargon & UX Fixes (STG-280–STG-330)
+
+| Ticket | Lines | Action |
+|--------|-------|--------|
+| STG-280 | → `src/screens/PaymentSetupScreen.tsx:285` | Replace "UPI ID (VPA) *" label with "UPI ID *" + help text below: "Your Virtual Payment Address (e.g., shop@upi)" |
+| STG-281 | → `src/screens/DailyClosingScreen.tsx:414` | Replace "Variance:" with "Difference:" or "Cash Difference:" — plain language for kirana users |
+| STG-282 | → `src/screens/SalesStatementScreen.tsx:355` | Replace "Inventory Cost Statement" title with "Stock Value Report" or "Daily Stock & Sales" |
+| STG-283 | → `src/screens/BnplDuesScreen.tsx` (1439 lines) | Add inline help tooltips for: "BNPL" → "Buy Now Pay Later", "UTR" → "Transaction Reference Number", "UPI" → "Unified Payment Interface". Key locations: payment modal, dispute modal, dues list |
+| STG-284 | → `src/screens/CreditScreen.tsx` (1498 lines) | Add help text below PAN input: "Permanent Account Number (tax ID)". Below KYC section: "Know Your Customer — identity verification". Add tooltips for Aadhaar, EMI acronyms |
+| STG-285 | → `src/screens/GRNScreen.tsx:457` | Add subtitle below "Receive Goods" header: "Check and confirm items received from supplier" |
+| STG-286 | → `src/screens/OpeningStockScreen.tsx:541` | Add subtitle below "Opening Stock" header: "Enter starting quantities for your shop inventory" |
+| STG-287 | → `src/screens/BuyScreen.tsx:525` | Replace bare "BNPL" badge with "Pay Later" badge + tooltip: "Buy Now Pay Later — pay supplier after delivery" |
+| STG-288 | → `src/screens/ShiftScreen.tsx:794` | Replace "Variance:" with "Cash Difference:" (same as STG-281 for consistency) |
+| STG-289 | → `src/screens/ReturnScreen.tsx:66-67` | Replace "UPI (Manual)" with "UPI Transfer" and "Khata Credit" with "Store Credit (Khata)" |
+| STG-290 | → `src/screens/AIInsightsScreen.tsx:101-105` | Replace tab labels: "Slow" → "Slow Moving", "Forecast" → "Sales Forecast", "Expiry" → "Expiring Soon", "Prices" → "Price Changes" |
+| STG-291 | → `src/components/sell/SellTile.tsx:220` + `src/components/buy/CartItem.tsx:84` + `src/components/buy/SupplierRow.tsx:202` | SellTile: i18n "PACKAGED" badge. CartItem: i18n "MOQ:" label. SupplierRow: i18n "Add"/"Add More" buttons |
+| STG-292 | → `src/components/LimitedModeBanner.tsx:115` | Replace "Place Orders (BUY)" with plain language: "Order stock from suppliers" |
+| STG-293 | → `src/screens/PurchaseScreen.tsx` + `InwardScreen.tsx` + `OpeningStockScreen.tsx` + `GRNScreen.tsx` + `StockStatementScreen.tsx` | Audit all `fontSize` < 12. Set minimum 12px for body text, 11px only for secondary captions. Fix per-file |
+| STG-294 | → `src/screens/SalesHistoryScreen.tsx` + `DailyClosingScreen.tsx` + `DailyReportScreen.tsx` + `BillDetailScreen.tsx` + `SalesStatementScreen.tsx` | Same audit: all `fontSize` < 12 → minimum 12px body, 11px caption only |
+| STG-295 | → `src/screens/CreditScreen.tsx` + `CustomerListScreen.tsx` + `CustomerManagementScreen.tsx` + `OrderDetailScreen.tsx` + `BnplDuesScreen.tsx` + `OverdueDuesScreen.tsx` + `KhataScreen.tsx` | Same audit: all `fontSize` < 12 → minimum 12px |
+| STG-296 | → `src/screens/ChatListScreen.tsx` + `src/screens/ForceUpdateScreen.tsx` + `src/components/TabBadge.tsx` | Same audit: all `fontSize` < 12 → minimum 12px (TabBadge may keep 10px for badge count) |
+| STG-297 | → `src/components/sell/SplitPaymentModal.tsx:908` | Increase fontSize from 10 to 12. Add `accessibilityLabel` to all interactive elements in the modal |
+| STG-298 | → `src/screens/PaymentScreen.tsx` + `MenuScreen.tsx` + `SellScanScreen.tsx` + `BuyScreen.tsx` | Find all `<Pressable>` or `<TouchableOpacity>` with icon-only children (no text, no accessibilityLabel). Add `accessibilityLabel` describing the action |
+| STG-299 | → All screens with `<TextInput>` | Find all `<TextInput>` without `accessibilityLabel`. Add labels describing the field purpose. Priority files: PaymentSetupScreen, KhataScreen, ShiftScreen, CustomerListScreen, OpeningStockScreen |
+| STG-300 | → `src/screens/GRNScreen.tsx` | Find checkbox/toggle elements, add `accessibilityState={{ checked: value }}` and `accessibilityRole="checkbox"` |
+| STG-301 | → `src/screens/OrderDetailScreen.tsx:357` | Add text label or icon alongside color for status badge (e.g., "Delivered ✓" not just green dot). Ensures colorblind accessibility |
+| STG-302 | → `src/screens/HelpScreen.tsx` | Replace email-first contact with WhatsApp button as primary CTA. Keep email as secondary "or email us" link |
+| STG-303 | → `src/screens/BnplDuesScreen.tsx` | Find "contacted via email" text, add "or WhatsApp" option alongside. Add tappable WhatsApp link |
+| STG-304 | → `src/screens/CustomerListScreen.tsx:793` + `src/screens/CustomerManagementScreen.tsx` | Change "Email (Optional)" field to "WhatsApp Number (Optional)" or make email truly secondary with WhatsApp as primary |
+| STG-305 | → `src/screens/DeviceBlockedScreen.tsx` | Replace "SuperAdmin"/"administrator" with "your store manager" or "SuperMandi support". Add WhatsApp support link |
+| STG-306 | → `src/screens/DailyReportScreen.tsx:613-615` | Replace "No report data for this date" + "Try selecting a date..." with actionable: "No sales recorded on [date]. Reports appear after your first sale." |
+| STG-307 | → `src/screens/BillDetailScreen.tsx:91-110` | Replace "..." loading indicator on print/share buttons with ActivityIndicator spinner + disabled state during operation |
+| STG-308 | → `src/screens/InwardScreen.tsx` | Find where raw product ID (UUID) is displayed when barcode is null. Replace with product name or "No barcode" label |
+| STG-309 | → `src/screens/ReturnScreen.tsx` | Find where raw refundId is displayed to user. Replace with "Return #[short-ref]" format or hide the ID entirely |
+| STG-310 | → `src/screens/SplashScreen.tsx` | Find "Continue without session" text. Replace with "Continue Offline" or "Skip for now" |
+| STG-311 | → `src/screens/AIInsightsScreen.tsx` | Find "not yet available" error text. Replace with "Smart Insights are being set up for your store. Check back after a few days of sales." |
+| STG-312 | → `src/screens/DailyReportScreen.tsx` + `src/screens/DailyClosingScreen.tsx` | Add offline/sync banner at top of both screens when device is offline. Use existing OfflineBanner component or SyncStatusWidget |
+| STG-313 | → All screens with API error handling | Standardize network error messages to include recovery guidance: "No internet connection. Check your Wi-Fi and try again." with Retry button. Priority: PaymentScreen, BuyScreen, CreditScreen, ReorderScreen |
+| STG-314 | → `src/screens/PaymentSetupScreen.tsx:371` | After successful save, show success toast/banner: "Payment settings saved!" before navigating away. Currently navigates silently |
+| STG-315 | → `src/screens/ReorderScreen.tsx` | Find dismiss handler for reorder suggestions. Add confirmation Alert before dismissing: "Dismiss this reorder suggestion? You can add a reason." |
+| STG-316 | → `src/components/sell/SplitPaymentModal.tsx` | Replace all `TouchableOpacity` with `Pressable` for consistency with rest of app |
+| STG-317 | → All screens | Audit disabled button `opacity` values. Standardize to `opacity: 0.5` across app. Create `styles.buttonDisabled` in theme. Files with inconsistent values: PaymentScreen, SellScanScreen, BuyScreen, ShiftScreen |
+| STG-318 | → `src/screens/KhataScreen.tsx` | Find "Add Credit" button — red color is destructive semantic (implies danger). Change to blue/primary (credit = giving, not destructive) |
+| STG-319 | → `src/components/reorder/EditReorderModal.tsx` + `EditPolicyModal.tsx` + `DismissReasonModal.tsx` | Standardize modal buttons: primary action = filled blue, secondary = outlined grey, destructive = red outline. Audit all three modals for consistency |
+| STG-320 | → `src/screens/OverdueDuesScreen.tsx:67` | Change "Due Soon" badge from info color (blue) to warning color (amber/orange) — imminent payment is a warning, not info |
+| STG-321 | → `src/screens/ChatListScreen.tsx` | Find "No messages yet. Say hello!" empty state. Replace with: "No conversations yet. Start a chat with your supplier to discuss orders." |
+| STG-322 | → `src/screens/ChatListScreen.tsx` | Find time formatting code. Add AM/PM to timestamps (use `format(date, 'h:mm a')` instead of 24h format) |
+| STG-323 | → `src/screens/ForceUpdateScreen.tsx` | Find "iOS update coming soon" text. Replace with "iPhone version coming soon" or hide iOS section entirely on Android |
+| STG-324 | → `src/screens/EnrollDeviceScreen.tsx:479-491` | Add help text below activation code input: "Enter the 6-digit code from your SuperMandi dashboard" |
+| STG-325 | → `src/screens/EnrollDeviceScreen.tsx` | Standardize to "Activate POS" everywhere (not "Activate Your POS") |
+| STG-326 | → `src/screens/EnrollDeviceScreen.tsx` | Add red asterisk (*) to all required fields consistently. Currently some fields have it, others don't |
+| STG-327 | → `src/screens/StaffLoginScreen.tsx` | Find login button cooldown logic. Change button text during cooldown from static "Login" to "Wait (Xs)" with countdown |
+| STG-328 | → `src/screens/ForceUpdateScreen.tsx` | Find "unknown" version display. Replace with "Version check failed" + retry option, or hide version when unavailable |
+| STG-329 | → `src/components/buy/ProductDetailModal.tsx` | Find "No suppliers available" text. Replace with: "No suppliers carry this product yet. Contact SuperMandi support to add suppliers." + WhatsApp link |
+| STG-330 | → `src/components/reorder/DismissReasonModal.tsx:39-46` | Change predefined reasons from English display strings to i18n codes. Backend should receive codes (e.g., "OVERSTOCKED", "SEASONAL", "WRONG_ITEM") not translated text. Create enum mapping |
+
+---
+
+## Tickets
+
+### STG-001 — Supplier self-registration verify fallback
+
+- **Status**: DONE (uncommitted)
+- **Priority**: P1
+- **Source**: Operator testing — supplier KYC submit returns 404 for self-registered suppliers
+- **Scope**: `backend/src/routes/v1/admin/suppliers.ts` (L227-301)
+- **Fix**: Fallback to `auth.applications` table when `supplier.supplier_requests` has no row. Correct column aliases, VARCHAR(15) GSTIN truncation, conditional table update (applications vs requests).
+- **Migration**: None
+- **Test**: TODO — `backend/src/__tests__/admin/suppliers.verify.test.ts`
+- **FIX_LEDGER**: Registered, checksum `a6ced8442dd626e9`
+- **Tag**: Pending commit
+- **Note**: Originally tracked as STG-038 in pre-deploy era, renumbered to STG-001 for post-deploy sequence
+
+---
+
+### STG-002 — Release APK cold start blank screen before splash
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator observation — release APK shows 2-5 second blank/default image screen before splash screen appears on cold start
+- **Scope**: Android native splash config (`android/`, `app.json` splash settings, `expo-splash-screen`)
+- **Problem**: On cold start, there is a 2-5 second gap showing a blank/default Android screen before the configured splash screen renders. This creates a jarring UX — users see an empty white/default screen before the branded splash.
+- **Expected**: Splash screen should appear immediately on app launch with zero blank gap.
+- **Fix approach**: Configure Android `windowBackground` theme to match splash, or use `expo-splash-screen` `preventAutoHideAsync` with a matching native splash drawable so the native activity window shows the branded splash instantly.
+- **Migration**: None
+- **Test**: Visual verification on release APK cold start
+- **FIX_LEDGER**: Pending implementation
+- **Tag**: Pending
+
+---
+
+### STG-003 — Brand design tokens — unified color palette and spacing
+
+- **Status**: OPEN
+- **Priority**: P1 (foundation — all other UI tickets depend on this)
+- **Source**: Operator review — colors are inconsistent across app (blue SELL, green REORDER, teal mic, grey tabs, orange DEV banner)
+- **Scope**: New `src/theme/` or `src/constants/theme.ts` — design tokens consumed by all screens
+- **Problem**: No centralized color/spacing system. Each screen picks its own shades of blue, green, grey. The result feels like 5 different apps stitched together. No POS-grade visual identity.
+- **Expected**:
+  - Primary: SuperMandi blue (`#2563EB` from adaptive-icon) — CTAs, active tabs, headers
+  - Secondary: A complementary accent for success states (green) and alerts (amber/red)
+  - Neutral scale: background, card, border, text (4-5 shades)
+  - Spacing scale: 4px base unit (4, 8, 12, 16, 24, 32, 48)
+  - Border radius: consistent (8px cards, 12px buttons, 24px pills)
+  - Shadow: one elevation level for cards, one for modals
+  - Typography: 3 weights max (regular, semibold, bold), 5 sizes (caption, body, subtitle, title, header)
+- **Fix approach**: Create `theme.ts` with named tokens. Refactor existing hardcoded colors/sizes to use tokens. This is the first ticket to implement — all STG-004 through STG-014 consume it.
+- **Migration**: None
+- **Test**: Visual diff — before/after screenshots on Redmi
+- **FIX_LEDGER**: Pending implementation
+- **Tag**: Pending
+
+---
+
+### STG-004 — Activation screen — branded redesign with trust signals
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Operator review — activation screen is plain white, no brand feel, raw device model name
+- **Scope**: `app/screens/ActivateScreen.tsx` (or equivalent activation component)
+- **Problem**:
+  1. Plain white background — no brand presence beyond tiny logo pill
+  2. "Activate Your POS" heading is generic — no warmth for a first-time kirana retailer
+  3. Device Name shows raw model `23106RN0DA` — meaningless, intimidating
+  4. Info box at bottom is wordy — retailer won't read it
+  5. No progress indicator — retailer doesn't know what happens after activation
+- **Expected**:
+  1. Branded background — subtle gradient or pattern using primary blue
+  2. Welcome heading: "Welcome to SuperMandi" or "Set up your POS" — warm, Hindi-English friendly
+  3. Auto-populate device name with friendly label (e.g., "Redmi Note 12") not model number
+  4. Condensed info section — one-liner with link, not a paragraph
+  5. Step indicator (Step 1 of 2) to show progress
+  6. SuperMandi logo prominent at top (not just a pill badge)
+- **Migration**: None
+- **Test**: Visual verification on Redmi, Expo Go
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-005 — Home top bar — declutter status icons and scanner warning
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Operator review — top bar has 4 status icons all crossed out, "Scanner not ready" in red is alarming
+- **Scope**: Home screen top status bar component
+- **Problem**:
+  1. Four icons (Wi-Fi, 2x printer, scanner) are all shown even when not applicable — crossed-out icons look like errors
+  2. "Scanner not ready" in red next to store ID — feels like something is broken when it's just "no hardware scanner paired"
+  3. Store ID `SU260308-001` takes prominent space — retailers don't use this daily
+  4. Overall impression: "everything is broken" when actually the POS is working fine
+- **Expected**:
+  1. Show only relevant status icons — hide printer icons if no printer configured
+  2. Scanner status: show neutral "Tap to pair scanner" instead of red "Scanner not ready"
+  3. Move store ID into a settings/info screen — don't show on main screen (or show smaller, below store name)
+  4. When all is good, top bar should feel calm — green dot or nothing, not 4 grey X icons
+  5. Connection status: single dot indicator (green = online, amber = syncing, red = offline)
+- **Migration**: None
+- **Test**: Visual verification, check all states (online, offline, scanner paired, no scanner)
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-006 — Sync status panel — collapse when healthy, reduce footprint
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — sync panel takes ~25% of screen when status is "connected, all synced"
+- **Scope**: Home screen sync status section
+- **Problem**:
+  1. When everything is fine (connected, empty outbox, synced), the panel still shows 5 lines of info + 2 buttons
+  2. This pushes product cards below the fold — the actual selling area is squeezed
+  3. "Sync Now" button shown when outbox is empty — no action needed, button is misleading
+  4. "View Details" opens a modal that says "All synced!" — unnecessary step
+- **Expected**:
+  1. **Healthy state (collapsed)**: Single line — green dot + "Connected" + "15s ago" — tappable to expand
+  2. **Problem state (expanded)**: Show full panel only when there are pending items, failed syncs, or drift
+  3. "Sync Now" only appears when there are pending items
+  4. Save ~100px of vertical space in the happy path so products are more visible
+- **Migration**: None
+- **Test**: Verify collapsed/expanded states, offline behavior
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-007 — Tab navigation — full labels, consistent colors, active states
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Operator review — tab labels truncated ("PURCH...", "REORDE..."), color inconsistency
+- **Scope**: Home screen tab bar (MENU, SELL, PURCHASE, REORDER, CREDIT)
+- **Problem**:
+  1. Labels truncated on small screens — "PURCH..." and "REORDE..." lose meaning
+  2. Color inconsistency — SELL is blue, REORDER is green with a dot, others are grey
+  3. All caps makes labels harder to scan at a glance
+  4. No icons — text-only tabs are harder to distinguish quickly
+  5. "MENU" as a tab is confusing — it's a hamburger concept but styled as a tab
+- **Expected**:
+  1. Full labels visible — use shorter names if needed: "Sell", "Buy", "Reorder", "Credit"
+  2. Consistent active/inactive colors — active tab uses primary blue, inactive is neutral grey
+  3. Title case (not ALL CAPS) for readability
+  4. Add small icons above or beside labels (cart for Sell, box for Buy, refresh for Reorder, rupee for Credit)
+  5. "MENU" → hamburger icon or move to header, not in the tab bar
+  6. Notification dot on Reorder should use accent color, not a separate green
+- **Migration**: None
+- **Test**: Visual on Redmi, verify all tabs navigate correctly, check 5-inch and 6-inch screens
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-008 — Search/scan area — unified input with clear visual hierarchy
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — three competing input areas (search bar, scan button, barcode field)
+- **Scope**: Home screen SELL tab search/scan section
+- **Problem**:
+  1. Three input areas stacked: "Search product" + "Scan product here" button + "Enter barcode manually"
+  2. Retailer doesn't know which to use first — cognitive overload
+  3. "Scan product here" is a button next to search — confusing whether it's a search action or separate flow
+  4. "Enter barcode manually" duplicates what typing in search could do
+- **Expected**:
+  1. **Single unified search bar**: "Search or scan barcode" — handles text search AND barcode input
+  2. Camera/scan icon integrated INTO the search bar (right side) — tap to open scanner
+  3. Remove separate "Enter barcode manually" field — the search bar accepts barcodes
+  4. Search bar should be the most prominent element on the SELL tab — it's the #1 action
+  5. Auto-detect if input is a barcode (all digits, 8-13 chars) vs product name search
+- **Migration**: None
+- **Test**: Search by name, search by barcode, scan via camera — all from one input
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-009 — Product cards — full names, stock badges, better thumbnails
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Operator review — product names truncated, placeholder icons, no stock info visible
+- **Scope**: Product card component used in SELL tab product listing
+- **Problem**:
+  1. Product names truncated to "To or...", "Ta ta..." — useless for identifying products
+  2. Thumbnail is a generic box/package icon — no visual distinction between products
+  3. Price shown but no stock quantity — retailer can't see if they have 2 or 200 units
+  4. Barcode number shown (8901725183745) — not useful for visual scanning
+  5. Cards are small and cramped — hard to tap accurately on a busy counter
+- **Expected**:
+  1. Full product name (2 lines max, then ellipsis) — "Toor Dal 1kg" not "To or..."
+  2. Product category color-coded left border or chip (Grocery, Dairy, etc.)
+  3. Stock count badge — "12 in stock" or "Low: 3" with amber warning
+  4. Price prominent, barcode hidden (show on tap/expand)
+  5. Larger tap target — min 56px height per Material guidelines
+  6. If product image exists (from catalog), show it; else show category-specific placeholder (not generic box)
+- **Migration**: None
+- **Test**: Verify with long product names, zero stock, low stock, with/without images
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-010 — Sync Status modal — brand illustrations, plain-language tabs
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Operator review — "Drifts" tab is technical jargon, empty state could be more branded
+- **Scope**: Sync Status modal/sheet component
+- **Problem**:
+  1. "Drifts" tab label — kirana retailer won't understand what a "drift" is
+  2. Empty state is functional but plain — just text and a checkmark
+  3. "Sync All" button shown even when nothing to sync
+- **Expected**:
+  1. Rename tabs: "Pending" → "Queued", "Failed" → "Failed", "Drifts" → "Mismatches" or "Issues"
+  2. Branded empty state — SuperMandi illustration or icon with "You're all caught up!"
+  3. Hide "Sync All" button when nothing to sync — or grey it out with "Nothing to sync"
+- **Migration**: None
+- **Test**: Visual verification with 0, 1, many pending items
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-011 — Typography and spacing system — POS-grade readability
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — inconsistent font sizes, tight spacing, hard to read at arm's length on counter
+- **Scope**: Global typography styles across all POS screens
+- **Problem**:
+  1. POS app is used at arm's length on a counter — text needs to be larger than a chat app
+  2. Prices, quantities, and product names should be scannable in 1 second
+  3. Currently: small text, tight line heights, inconsistent sizes across screens
+  4. No visual hierarchy — headings and body text are similar weight
+- **Expected**:
+  1. Base font size: 16px (body), not 14px — POS counter readability
+  2. Prices: 20-24px bold — the most important number on every card
+  3. Product names: 16px semibold — clearly readable
+  4. Secondary info (barcode, timestamps): 12px light grey — de-emphasized
+  5. Consistent line-height: 1.4x for body, 1.2x for headings
+  6. Minimum touch target: 48px (Android Material guideline)
+  7. Card padding: 16px internal, 8px gap between cards
+- **Migration**: None
+- **Test**: Readability test — can you read product name and price from 60cm away?
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-012 — Voice FAB — brand-colored, contextual label on first use
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Operator review — teal mic button doesn't match brand, no onboarding hint
+- **Scope**: Floating Action Button (voice input) on SELL tab
+- **Problem**:
+  1. Teal color doesn't match the blue brand palette — looks like it belongs to a different app
+  2. First-time users won't know what the mic button does
+  3. No tooltip or label — just an icon
+- **Expected**:
+  1. Use primary blue (or a designated accent from STG-003 tokens)
+  2. First-use: show extended FAB with label "Voice Search" that collapses to icon after 3 uses
+  3. Subtle pulse animation on first visit to draw attention
+  4. Consistent shadow/elevation with other card elements
+- **Migration**: None
+- **Test**: First launch — label visible. After 3 uses — icon only. Color matches brand.
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-013 — FEFO badge — explain or hide jargon for kirana users
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Operator review — "FEFO" badge on SELL tab is warehouse jargon
+- **Scope**: FEFO indicator on product listing
+- **Problem**:
+  1. "FEFO" (First Expired, First Out) is supply chain jargon — kirana retailers won't know what it means
+  2. Badge appears without context or explanation
+  3. If it's informational, it should explain itself; if it's a toggle, it should look like one
+- **Expected**:
+  1. Option A: Rename to "Expiry First" or "Sell oldest first" — plain Hindi-English
+  2. Option B: Show as a toggle with tooltip — "Products sorted by expiry date (oldest first)"
+  3. Option C: Move to settings if it's a global preference, not a per-session toggle
+  4. If shown, use a neutral info chip style (not a standalone badge)
+- **Migration**: None
+- **Test**: Verify label is understandable to non-technical user
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-014 — DEV MODE banner — hide in production builds
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — orange dashed "DEV MODE" banner visible at bottom of activation screen
+- **Scope**: DEV MODE indicator component (likely in root layout or activation screen)
+- **Problem**:
+  1. DEV MODE banner visible on screen — should only appear in `__DEV__` or development builds
+  2. Orange dashed border style is visually jarring
+  3. On release APK / production, this must be completely hidden
+- **Expected**:
+  1. Wrap DEV MODE banner in `if (__DEV__)` check — hidden in release builds
+  2. In dev builds, make it less intrusive — small pill at top-right, not a full-width banner
+  3. Verify it's gone in release APK
+- **Migration**: None
+- **Test**: Build release APK → verify no DEV MODE banner. Run in Expo Go → verify banner shows (dev only).
+- **Depends on**: None (independent fix)
+
+---
+
+### STG-015 — Inconsistent product card layouts — unify list vs thumbnail styles
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Operator review — two completely different product card designs on the same screen
+- **Scope**: SELL tab product listing components
+- **Problem**:
+  1. "Toor Dal (Arhar) 1kg" uses a wide list-style card with green grid icon, full name, and expandable chevron (↓)
+  2. "Vim..." and "Tata..." use small square thumbnail cards in a horizontal scroll row with box icons
+  3. These are both products in the same store but look like they belong to different apps
+  4. The list-style card is more informative (full name, price visible) but takes more space
+  5. The thumbnail cards show truncated names and barcodes — less useful
+- **Expected**:
+  1. **One unified card design** for all products — either list-style or grid, not both
+  2. Recommended: compact list cards (product name + price + stock badge) for SELL tab — easier to scan and tap
+  3. Grid/thumbnail layout only for category browsing or catalog view (separate screen)
+  4. Consistent icon/thumbnail treatment across all cards
+  5. The "expand chevron" on the first card — if it expands to show variants/batches, make that pattern consistent
+- **Migration**: None
+- **Test**: Verify all products render in same card style, check with 1, 5, 20+ products
+- **Depends on**: STG-003 (theme tokens), STG-009 (product card redesign)
+
+---
+
+### STG-016 — Cart/checkout indicator — floating total bar when items added
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Operator review — no visible cart total, item count, or checkout CTA on SELL screen
+- **Scope**: SELL tab — new floating cart bar component
+- **Problem**:
+  1. When a retailer taps a product to add it to the bill, there is no visible indicator of what's been added
+  2. No item count badge, no running total, no "Proceed to checkout" button
+  3. Retailer has no idea how much the current bill is without navigating away
+  4. This is the #1 POS action — every kirana billing app (Khatabook, Vyapar, MyStore) shows a floating cart bar
+- **Expected**:
+  1. **Floating bottom bar** appears when cart has 1+ items: "[3 items] ₹435.00 → View Cart"
+  2. Slides up with animation when first item added, persists until checkout or cart cleared
+  3. Shows: item count, total amount, "View Cart" or "Checkout" CTA
+  4. Tapping it opens the cart/checkout screen
+  5. Positioned above the Android nav bar, below the product list
+  6. Uses primary blue background with white text for high visibility
+- **Migration**: None
+- **Test**: Add 1 item → bar appears. Add more → count/total updates. Clear cart → bar disappears.
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-017 — Staff login indicator — show who is logged in on home screen
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — no indication of which staff member is using the POS
+- **Scope**: Home screen header area
+- **Problem**:
+  1. Multi-staff stores have managers and cashiers — need to know who made each sale
+  2. Currently no staff name or avatar visible on the home screen
+  3. If a staff member forgets to switch accounts, sales get attributed to the wrong person
+  4. Shift accountability requires visible identity
+- **Expected**:
+  1. Show staff name/role in the header area: "Raju (Manager)" — small, unobtrusive
+  2. Tappable to switch staff or log out
+  3. Use first-letter avatar circle if no photo (e.g., "R" for Raju)
+  4. Position: top-right corner or below store name
+- **Migration**: None
+- **Test**: Verify staff name shows after login, updates on staff switch
+- **Depends on**: STG-005 (top bar redesign)
+
+---
+
+### STG-018 — Product cards — add unit/weight context to prices
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — prices shown without quantity/unit context
+- **Scope**: Product card component
+- **Problem**:
+  1. "₹30.00" for Vim — is that per piece? Per bar? Per box of 10?
+  2. "₹145.00" for Toor Dal — per kg? Per 500g? Per packet?
+  3. Kirana retailers deal in mixed units (pieces, kg, liters, packets) — price without unit is ambiguous
+  4. During fast billing, ambiguity leads to wrong pricing
+- **Expected**:
+  1. Show unit after price: "₹145.00/kg" or "₹30.00/pc"
+  2. Pull unit from product variant data (already in DB — `unit_type` field)
+  3. If no unit set, show just the price (don't break existing behavior)
+  4. For multi-pack products, show per-unit and per-pack: "₹30.00/pc (Box of 10: ₹280)"
+- **Migration**: None
+- **Test**: Products with kg, pc, ltr, pack units — verify correct display
+- **Depends on**: STG-009 (product card redesign)
+
+---
+
+### STG-019 — Activation screen keyboard and navigation UX fixes
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — hamburger menu on activation screen, no keyboard optimization
+- **Scope**: Activation screen component
+- **Problem**:
+  1. Hamburger menu (≡) shown on activation screen — nothing to navigate to before enrollment, confuses first-time users
+  2. No back button — user can't escape the screen
+  3. Activation code input should trigger uppercase alphanumeric keyboard (SM-XXXXXX format)
+  4. No auto-formatting of code — user has to type "SM-" prefix manually
+  5. "Activate POS" button has no visible loading/spinner state during API call
+- **Expected**:
+  1. Remove hamburger menu from activation screen — no sidebar needed here
+  2. Auto-prefix "SM-" in the input — user only types 6 characters
+  3. Set `autoCapitalize="characters"` and `keyboardType` to limit input
+  4. Show spinner on button during enrollment API call
+  5. If there's a "Scan QR" option, show it as an alternative to manual entry
+- **Migration**: None
+- **Test**: Type code → verify uppercase, auto-prefix, loading state, error state
+- **Depends on**: STG-004 (activation redesign)
+
+---
+
+### STG-020 — Product card whitespace — remove excess empty area in small cards
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — small product thumbnail cards have massive empty space below content
+- **Scope**: Small product card/grid component in SELL tab
+- **Problem**:
+  1. The square thumbnail cards ("Vim...", "Tata...") have ~60% empty whitespace below the barcode number
+  2. Card height appears fixed regardless of content — wasting vertical screen real estate
+  3. On a 6-inch screen this means only 2 products visible at a time
+- **Expected**:
+  1. Card height should auto-size to content (or use a compact fixed height)
+  2. Remove or hide barcode from card face — show on tap/expand instead
+  3. Reclaimed space = more products visible without scrolling
+  4. If cards are in horizontal scroll, consider 2-row grid instead for more visibility
+- **Migration**: None
+- **Test**: Verify cards are compact, check with varying product name lengths
+- **Depends on**: STG-015 (unified card layout)
+
+---
+
+### STG-021 — Sync modal — add tab count badges and last-sync timestamp
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Operator review — sync modal tabs don't show item counts, no timestamp
+- **Scope**: Sync Status modal component
+- **Problem**:
+  1. "Failed" and "Drifts" tabs show no count — user must tap each tab to check
+  2. No last-sync timestamp visible in the modal (only on home screen)
+  3. Full-screen modal feels heavy for a status check — could be a bottom sheet
+- **Expected**:
+  1. Tab labels with counts: "Pending (0)", "Failed (2)", "Issues (0)"
+  2. Show last successful sync timestamp at top of modal: "Last synced: 15s ago"
+  3. Consider converting to bottom sheet (50-70% height) instead of full-screen modal
+  4. Red badge on "Failed" tab if count > 0 to draw attention
+- **Migration**: None
+- **Test**: Verify counts update in real-time, check with 0 and 5+ items in each tab
+- **Depends on**: STG-010 (sync modal redesign)
+
+---
+
+### STG-022 — Logo pill badge — enlarge and make recognizable as brand mark
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — SuperMandi logo pill badge on activation screen is too small to identify as a brand logo
+- **Scope**: Activation screen header, shared logo component
+- **Problem**:
+  1. The green pill badge with "SuperMandi" is tiny (~24px tall) — looks like a chip, not a logo
+  2. The icon inside is unrecognizable at that size — could be anything
+  3. First impression for a new retailer: no brand presence, no trust signal
+  4. Logo should be the hero element on the activation screen
+- **Expected**:
+  1. Logo: 64-80px height on activation, 32-40px on home header — instantly recognizable
+  2. Use the full SuperMandi wordmark (text + icon) on activation, icon-only on home
+  3. Consistent logo usage across all screens — same asset, same sizing rules
+  4. Logo should be SVG or high-res PNG to avoid blur on high-DPI screens
+- **Migration**: None
+- **Test**: Visual verification — logo identifiable at arm's length on Redmi
+- **Depends on**: STG-003 (theme tokens), STG-004 (activation redesign)
+
+---
+
+### STG-023 — Activation subtitle — simplify two-concept info text
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — activation screen subtitle mixes device enrollment and store linking concepts
+- **Scope**: Activation screen text/copy
+- **Problem**:
+  1. The subtitle text tries to explain both "what an activation code is" and "how to get one" in one paragraph
+  2. Kirana retailers scanning a code don't need a textbook — they need action steps
+  3. The info box at the bottom repeats similar information in different words
+- **Expected**:
+  1. Single clear instruction: "Enter the activation code from your SuperMandi welcome kit"
+  2. Below input: small link "Don't have a code? Call support" (links to STG-025)
+  3. Remove the info box paragraph — replace with 2-3 bullet icons if needed (step 1: enter code, step 2: start billing)
+  4. Use simple Hindi-English friendly language
+- **Migration**: None
+- **Test**: Show screen to a non-technical person — can they understand what to do in 3 seconds?
+- **Depends on**: STG-004 (activation redesign)
+
+---
+
+### STG-024 — Enrollment QR scan — button exists but needs camera integration and UX polish
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — "Scan QR" button exists on enrollment screen but needs camera integration verification and UX polish
+- **Scope**: Enrollment screen — QR scan button and camera flow
+- **Problem**:
+  1. "Scan QR" outlined button exists but unclear if camera integration actually works
+  2. Button style is outlined (secondary) but should arguably be more prominent — QR scan is faster than manual entry
+  3. No visual indicator of what the QR code looks like — field staff need to know what to scan
+  4. Camera permission flow — no graceful error if camera denied
+  5. After successful scan, does it auto-fill the Enrollment Code field and auto-submit?
+- **Expected**:
+  1. Verify camera opens on "Scan QR" tap — if broken, implement camera integration
+  2. On successful scan: auto-fill enrollment code + flash green confirmation + auto-submit
+  3. Camera permission prompt: explain clearly ("Allow camera to scan your activation QR code")
+  4. If camera denied: show toast "Camera needed to scan QR — enter code manually" and highlight the text field
+  5. QR generation in superadmin: backend enrollment response should include QR data for printing
+  6. Consider swapping button hierarchy: "Scan QR" as primary (filled), "Enter Manually" as secondary
+- **Migration**: None
+- **Test**: Tap Scan QR → camera opens → scan code → auto-fills → submits. Camera denied → graceful fallback.
+- **Depends on**: STG-004 (activation redesign)
+
+---
+
+### STG-025 — Add support phone number on activation and error screens
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — kirana retailers prefer calling over reading help text
+- **Scope**: Activation screen, error screens, settings
+- **Problem**:
+  1. No phone number or WhatsApp link visible anywhere in the app
+  2. Kirana owners are non-digital-native — when stuck, they want to call someone
+  3. Activation is the highest-friction screen — most likely place to need help
+  4. Error screens ("Network error", "Invalid code") have no escape hatch
+- **Expected**:
+  1. Activation screen: "Need help? Call 1800-XXX-XXXX" or WhatsApp link below the input
+  2. Error screens: include support contact alongside retry button
+  3. Settings/About: full support contact section
+  4. Use `Linking.openURL('tel:...')` or `Linking.openURL('https://wa.me/...')` for tap-to-call/chat
+  5. Support number should be configurable via backend config (not hardcoded)
+- **Migration**: None (support number is config, not schema)
+- **Test**: Tap phone number → dialer opens. Tap WhatsApp → chat opens.
+- **Depends on**: None (can implement independently)
+
+---
+
+### STG-026 — Add terms/privacy policy link — Play Store compliance
+
+- **Status**: OPEN
+- **Priority**: P1 (Play Store requirement)
+- **Source**: Operator review — no terms of service or privacy policy link visible in app
+- **Scope**: Activation screen footer, settings/about screen
+- **Problem**:
+  1. Google Play Store requires apps to link to a privacy policy
+  2. No terms/privacy link on activation screen, settings, or anywhere in the app
+  3. This is a hard blocker for Play Store publishing
+  4. Indian data protection regulations (DPDPA 2023) require explicit consent for data collection
+- **Expected**:
+  1. Activation screen footer: "By activating, you agree to our [Terms] and [Privacy Policy]"
+  2. Links open in-app browser (WebView) or external browser
+  3. Settings → About: full links to Terms, Privacy Policy, and Contact
+  4. URLs should be configurable via app config (point to supermandi.tech/privacy, supermandi.tech/terms)
+  5. Privacy policy page needs to exist on the landing site (separate ticket if needed)
+- **Migration**: None
+- **Test**: Tap Terms → page opens. Tap Privacy → page opens. Links work offline (cached or graceful error).
+- **Depends on**: None (independent, high priority)
+
+---
+
+### STG-027 — Green grid icon on product card — explain or remove
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Operator review — green grid/4-square icon on the Toor Dal product card has no tooltip or explanation
+- **Scope**: Product card component — icon rendering
+- **Problem**:
+  1. Green 4-square grid icon appears on the left side of the Toor Dal card
+  2. No label, tooltip, or context — user doesn't know what it means
+  3. Could mean: category, variant, multi-pack, or nothing — unclear
+  4. Inconsistent — not all product cards show this icon
+- **Expected**:
+  1. If it indicates category: use a category-specific icon (leaf for grocery, bottle for drinks) with label
+  2. If it indicates variants: show "3 variants" text chip instead of cryptic icon
+  3. If it's a placeholder: replace with product image or category-colored left border
+  4. Whatever it means, it must be self-explanatory or removed
+- **Migration**: None
+- **Test**: Verify meaning of icon in code, replace with clear alternative
+- **Depends on**: STG-009 (product card redesign)
+
+---
+
+### STG-028 — Product list section headers — group by category or recent
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — products displayed as a flat unsorted list with no grouping
+- **Scope**: SELL tab product listing
+- **Problem**:
+  1. All products appear in a flat list — no visual separation between categories
+  2. A kirana store might have 500+ products — flat list is unnavigable
+  3. No "Recently sold" or "Popular" section to surface frequently billed items
+  4. Retailers waste time scrolling to find products they sell every day
+- **Expected**:
+  1. Section headers grouping products: "Grocery", "Cleaning", "Dairy", etc.
+  2. Top section: "Frequently Sold" — last 10 products billed (auto-populated from sales data)
+  3. Sticky section headers during scroll (SectionList in React Native)
+  4. Collapse/expand sections to reduce scroll length
+  5. Category filter chips at the top for quick jump: [All] [Grocery] [Dairy] [Cleaning]
+- **Migration**: None
+- **Test**: Verify sections render, sticky headers work, filter chips filter correctly
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-029 — SELL tab — add manual "Add Product" button for unlisted items
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — no way to add a product that isn't in the catalog
+- **Scope**: SELL tab — add CTA for quick product creation
+- **Problem**:
+  1. If a product isn't in the catalog, the retailer has no way to bill it from the SELL tab
+  2. Kirana stores frequently get new products from suppliers — not all are pre-cataloged
+  3. Retailer either has to skip the product (revenue loss) or go to a completely different flow to add it
+  4. Competitor apps (Vyapar, Khatabook) allow "Add custom item" during billing
+- **Expected**:
+  1. "Add Product" button at the bottom of the product list or as a FAB alongside voice button
+  2. Opens a quick-add modal: Product name, price, quantity, unit — minimal fields
+  3. Creates a local product entry (syncs to catalog later)
+  4. Added product immediately appears in the current bill
+  5. Mark quick-added products for catalog review later (admin portal)
+- **Migration**: None (uses existing product creation API)
+- **Test**: Add custom product → appears in bill → syncs after billing complete
+- **Depends on**: None (independent feature)
+
+---
+
+### STG-030 — CREDIT tab — explain greyed-out state or enable with guidance
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — CREDIT tab appears greyed/inactive with no explanation
+- **Scope**: CREDIT tab component, tab navigation
+- **Problem**:
+  1. CREDIT tab in the tab bar appears greyed out or inactive — no visual explanation why
+  2. User taps it and either nothing happens or gets an empty screen
+  3. No tooltip, banner, or setup guidance — feels like a bug, not a feature gate
+  4. Credit/udhar is essential for kirana stores — this tab will be used daily once enabled
+- **Expected**:
+  1. If disabled: show a clear "Coming soon" or "Set up credit" screen inside the tab
+  2. Include a brief explanation: "Track customer credit (udhar) — coming soon" or "Enable in Settings"
+  3. If feature-flagged: show setup steps (e.g., "Add customers first to start tracking credit")
+  4. Tab icon should not look disabled if tappable — use neutral state, not greyed-out
+  5. If enabled but empty: show empty state with illustration + "No credit accounts yet"
+- **Migration**: None
+- **Test**: Tap CREDIT tab → see informative screen, not blank. Check feature-flag on/off states.
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-031 — Quantity selector — quick +/- buttons for bulk product adds
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Operator review — no visible quantity selector when adding products to bill
+- **Scope**: Product card interaction, cart add flow
+- **Problem**:
+  1. Tapping a product presumably adds 1 unit — but there's no visible quantity selector
+  2. Kirana billing often involves bulk: "5 packets of salt", "2kg toor dal"
+  3. No +/- buttons, no quantity input field, no stepper control
+  4. Retailer would have to tap the same product 5 times for 5 units — slow and error-prone
+- **Expected**:
+  1. On first tap: add 1 unit and show quantity stepper overlay on the card (+/- buttons)
+  2. Stepper: [-] [qty] [+] — tap + to increment, - to decrement, long-press for fast repeat
+  3. Direct quantity input: tap the number to type exact quantity (e.g., "10")
+  4. For weighted items (kg, ltr): show decimal input (e.g., "2.5 kg")
+  5. Stepper should remain visible on the card as long as qty > 0
+  6. Swipe left to remove or set to 0
+- **Migration**: None
+- **Test**: Add 1 unit → stepper shows. Tap + 4 times → qty = 5. Tap number → type 10 → qty = 10.
+- **Depends on**: STG-009 (product card redesign)
+
+---
+
+### STG-032 — Discount/MRP indicator on product cards
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — no MRP/selling price differentiation visible on product cards
+- **Scope**: Product card component — pricing display
+- **Problem**:
+  1. Only one price shown per product — unclear if it's MRP, selling price, or wholesale
+  2. Indian retail requires MRP to be printed/displayed — it's a legal requirement
+  3. If selling below MRP (discount), no strikethrough or savings indicator
+  4. Retailers need to see their margin at a glance
+- **Expected**:
+  1. Show MRP (strikethrough) + selling price when different: "~~₹160~~ ₹145"
+  2. If same (no discount): show just the price without strikethrough
+  3. Optional: show savings percentage or rupee discount as a green chip "Save ₹15"
+  4. Pull MRP from product data (already in DB — `mrp` field)
+  5. Margin indicator for owner/manager role: small "Margin: ₹20" text (hidden for cashiers)
+- **Migration**: None
+- **Test**: Products with MRP ≠ selling price show strikethrough. Same price = no strikethrough.
+- **Depends on**: STG-009 (product card redesign)
+
+---
+
+### STG-033 — Favorites/frequently sold section on SELL tab
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — no quick-access section for frequently sold items
+- **Scope**: SELL tab — new section above product list
+- **Problem**:
+  1. A typical kirana store sells the same 20-30 products every day — milk, bread, dal, soap
+  2. Currently these are buried in the full product list — retailer has to search/scroll every time
+  3. No "pin to top" or "favorites" feature to speed up repeat billing
+  4. This is the #1 efficiency feature for POS apps — speeds up checkout significantly
+- **Expected**:
+  1. "Quick Add" or "Frequently Sold" horizontal strip at top of SELL tab
+  2. Auto-populated from last 7 days of sales data (top 10-15 products by frequency)
+  3. Compact circular or pill cards: product name + tap to add
+  4. Manual pin: long-press any product → "Add to Quick Sell" option
+  5. Editable: settings to manage pinned/quick-sell products
+  6. First visit (no sales data): show store's full catalog in category order instead
+- **Migration**: None (reads from existing sales data)
+- **Test**: Sell 5 products → next session shows them in "Frequently Sold". Pin a product → appears in strip.
+- **Depends on**: STG-003 (theme tokens), STG-028 (section headers)
+
+---
+
+### STG-034 — Recent bills shortcut — quick access to last 5 transactions
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — no way to quickly view recent bills from the SELL screen
+- **Scope**: Home screen — recent bills widget or shortcut
+- **Problem**:
+  1. A kirana retailer needs to reprint, void, or review the last bill frequently
+  2. "Customer just left and came back — what was the total?" — common scenario
+  3. No recent transactions visible on the home screen — must navigate to a separate history screen
+  4. Speed matters during billing — every extra tap costs time during rush hours
+- **Expected**:
+  1. Recent bills strip or icon on SELL tab: last 3-5 bills as compact cards
+  2. Show: bill number, time, total amount, items count
+  3. Tap to expand: full bill details with reprint option
+  4. Or: floating "Last Bill: ₹435 (3 items) — 2 min ago" pill above the cart bar
+  5. Long-press: quick actions (reprint, void, add item to current bill)
+- **Migration**: None (reads from existing order data)
+- **Test**: Complete a bill → recent bill shows on SELL tab. Tap → see details.
+- **Depends on**: None (independent feature)
+
+---
+
+### STG-035 — Empty state design for zero-product store
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator review — no designed empty state when store has zero products
+- **Scope**: SELL tab, product listing empty state
+- **Problem**:
+  1. A freshly activated store has zero products — what does the SELL tab show?
+  2. Likely: blank white screen or "No products found" text — feels broken
+  3. Retailer doesn't know what to do next — add products? Wait for sync? Call support?
+  4. Empty states are a critical onboarding moment — must guide the user to the next action
+- **Expected**:
+  1. Branded illustration: cart/store shelves with "Let's stock your store!" message
+  2. Clear CTA: "Add your first product" button → opens product creation flow
+  3. Secondary: "Import from catalog" if store catalog sync is available
+  4. Tertiary: "Products syncing..." with progress bar if sync is in progress
+  5. Support link: "Need help? Call support" (connects to STG-025)
+  6. Never show a completely blank screen — always show guidance
+- **Migration**: None
+- **Test**: New store with 0 products → see empty state. Add 1 product → empty state disappears.
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-036 — Date/time display in app header
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Operator review — no date or time visible in the POS app header
+- **Scope**: Home screen header area
+- **Problem**:
+  1. POS apps typically show current date/time — helps with shift tracking and receipt context
+  2. Kirana retailers use the POS as their primary work screen — no clock visible means checking phone
+  3. Date context: "Is today's stock updated?" — date visibility helps
+  4. Receipts generated from POS should match visible date/time
+- **Expected**:
+  1. Show current date + time in header: "13 Mar 2026 • 2:45 PM"
+  2. Small text, right-aligned in header area — unobtrusive
+  3. Live clock (updates every minute, not every second — battery efficient)
+  4. Format: Indian date format (DD MMM YYYY), 12-hour time with AM/PM
+  5. Position: below store name or alongside status icons
+- **Migration**: None
+- **Test**: Verify clock updates, correct IST timezone, no battery drain from frequent re-renders
+- **Depends on**: STG-005 (header redesign)
+
+---
+
+### STG-037 — Customer name/phone entry before billing for credit sales
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Operator review — no customer identification step before starting a credit (udhar) bill
+- **Scope**: Billing/checkout flow, customer selection component
+- **Problem**:
+  1. Credit sales (udhar) are the backbone of kirana commerce — most regular customers buy on credit
+  2. Currently no way to attach a customer to a bill before checkout
+  3. Without customer identity, credit tracking is impossible — who owes what?
+  4. Retailers track udhar in physical notebooks — SuperMandi should replace this workflow
+  5. Even cash sales benefit from customer linking (loyalty, purchase history)
+- **Expected**:
+  1. Optional "Select Customer" input at top of cart/checkout — search by name or phone
+  2. Quick-add: if customer not found, "Add new customer" with name + phone (minimal fields)
+  3. For credit sale: customer selection becomes mandatory (can't create udhar without identity)
+  4. Recent customers list: last 5-10 customers for quick selection
+  5. Customer phone → auto-lookup → show name, outstanding balance, last purchase
+  6. After linking: bill shows "Customer: Raju (₹450 due)" as header
+- **Migration**: May need `customers` table if not existing (check schema first)
+- **Test**: Select customer → bill linked. Credit sale without customer → blocked with message.
+- **Depends on**: STG-030 (CREDIT tab), STG-016 (cart/checkout)
+
+---
+
+### STG-038 — Enrollment — Device type hardcoded as "RETAILER_PHONE", no auto-detection
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — `EnrollDeviceScreen.tsx:196` hardcodes `deviceType: "RETAILER_PHONE"`
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx:196`
+- **Problem**:
+  1. Line 196 sends `deviceType: "RETAILER_PHONE"` for ALL enrollments — no UI selector exists (original ticket assumed chip buttons existed; they don't)
+  2. Backend supports 3 types: RETAILER_PHONE, OEM_HANDHELD, SUPERMANDI_PHONE — but only RETAILER_PHONE is ever sent
+  3. OEM handheld devices (e.g., Sunmi, PAX) have different hardware capabilities (built-in scanner, thermal printer) that backend uses for feature gating
+  4. No auto-detection logic to identify device type from hardware signatures
+- **Expected**:
+  1. Add auto-detection: check `Device.brand` / `Device.modelName` against known OEM POS brands (Sunmi, PAX, Elo, Newland) → set OEM_HANDHELD
+  2. Fallback to RETAILER_PHONE for unrecognized devices
+  3. No user-facing selector needed — auto-detect is sufficient for MVP
+  4. Log detected device type to enrollment metadata for support debugging
+- **Migration**: None
+- **Test**: Enroll on Redmi → sends RETAILER_PHONE. Mock Device.brand="Sunmi" → sends OEM_HANDHELD.
+- **Depends on**: None
+
+---
+
+### STG-039 — Enrollment — Move printer setup to post-activation settings (not enrollment)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — `EnrollDeviceScreen.tsx` has NO printing mode selector UI; printer config only in `PrinterSettingsScreen.tsx`
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx`, `src/screens/PrinterSettingsScreen.tsx`
+- **Problem**:
+  1. Original ticket assumed a printing mode selector exists on enrollment screen — it does NOT
+  2. Printing mode is configured ONLY in PrinterSettingsScreen (post-enrollment)
+  3. However, EnrollDeviceScreen error message at line 123 references `PRINTING_MODE_INVALID` — backend validates a field the frontend never sends
+  4. New users have no guidance about printer setup during or after enrollment
+- **Expected**:
+  1. After successful enrollment, show a "Set up your printer?" prompt with "Set Up Now" (→ PrinterSettingsScreen) and "Skip" options
+  2. Remove `PRINTING_MODE_INVALID` error handling from EnrollDeviceScreen (dead code — backend never receives this field from POS)
+  3. Add "Printer not set up" nudge on MenuScreen if no printer configured after first 3 bills
+- **Migration**: None
+- **Test**: Enroll device → "Set up printer?" prompt appears. Skip → lands on home. "Set Up Now" → opens PrinterSettingsScreen.
+- **Depends on**: STG-004 (enrollment redesign)
+
+---
+
+### STG-040 — Enrollment — Header layout uses flexDirection:"row" with no small-screen breakpoint
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — `EnrollDeviceScreen.tsx` header layouts at lines 636, 712, 783, 793, 847 use `flexDirection:"row"` with no responsive breakpoint
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx:636,712,783,793,847`
+- **Problem**:
+  1. Original ticket assumed device type chip selectors exist — they don't (see STG-038)
+  2. However, the enrollment screen DOES have multiple `flexDirection:"row"` header layouts that can break on screens < 360dp
+  3. The activation code input + button row (lines 479-549) may overlap on narrow screens
+  4. Device label input + model name display may truncate on small screens
+- **Expected**:
+  1. Add `flexWrap: 'wrap'` to row layouts at lines 636, 712, 783, 793, 847
+  2. Test activation code input area on 320dp width — ensure input field and button don't overlap
+  3. Use `useWindowDimensions()` to detect narrow screens and switch to stacked (column) layout if width < 360
+- **Migration**: None
+- **Test**: Test on 320dp, 360dp, and 400dp widths — all form elements visible and usable.
+- **Depends on**: STG-004 (enrollment redesign)
+
+---
+
+### STG-041 — Enrollment — no inline form validation feedback on code input
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot review — enrollment code field shows "SM-XXXXXX" placeholder but no validation feedback
+- **Scope**: Enrollment screen — Enrollment Code input field
+- **Problem**:
+  1. No real-time validation as user types — no green checkmark for valid format, no red border for invalid
+  2. User types "SM-7V7CM9" — no indication if the format is correct before pressing "Enroll Device"
+  3. Invalid code errors only appear after submit — wasted round trip
+  4. No character count indicator — user doesn't know when they've typed enough
+  5. "SM-" prefix not auto-filled — user may type "7V7CM9" without prefix and get an error
+- **Expected**:
+  1. Auto-fill "SM-" prefix — input starts with "SM-" and cursor positioned after it (non-editable prefix)
+  2. Real-time format validation: green border when 6 alphanumeric chars after "SM-", red if wrong format
+  3. Character count: show "6/6" or progress dots under the field
+  4. On valid format: green checkmark icon inside the input field (right side)
+  5. On invalid submit: inline error message below field "Code not found — check your activation kit"
+  6. Auto-uppercase input (activation codes are uppercase)
+- **Migration**: None
+- **Test**: Type valid code → green border + checkmark. Type 3 chars → no validation yet. Type invalid → red border on submit.
+- **Depends on**: STG-019 (keyboard fixes), STG-004 (enrollment redesign)
+
+---
+
+### STG-042 — Enrollment — Default label uses raw Device.modelName (e.g., "23106RN0DA")
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — `EnrollDeviceScreen.tsx:187` sets `defaultLabel` from `Device.modelName || Device.deviceName || ""`
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx:187,499-512`
+- **Problem**:
+  1. Line 187: `defaultLabel` set from `Device.modelName` which returns raw hardware codes like "23106RN0DA" (Redmi Note 13 Pro)
+  2. User CAN edit in TextInput (lines 499-512) with placeholder "e.g., Counter-1, Billing-Main" but most won't
+  3. No auto-increment logic — all devices from same model get same default label
+  4. Original ticket assumed "Counter-1" was hardcoded — it's actually the raw model code, which is worse
+- **Expected**:
+  1. Map common `Device.modelName` codes to friendly names (e.g., "23106RN0DA" → "Redmi Note 13 Pro") using a lookup table of top 20 Indian market devices
+  2. If model unrecognized, fall back to `Device.deviceName` or "My POS"
+  3. For multi-device stores: append auto-increment suffix "My POS 1", "My POS 2" based on enrolled device count (requires API call to check existing devices)
+  4. Show hint: "Name this device (e.g., Front Counter, Warehouse)"
+- **Migration**: None
+- **Test**: Enroll on Redmi → default label shows "Redmi Note 13 Pro" not "23106RN0DA". Unknown device → shows "My POS".
+- **Depends on**: None (independent)
+
+---
+
+### STG-043 — Enrollment — floating labels for input fields (placeholder disappears on focus)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot review — input fields use placeholder text only, which disappears when field is focused
+- **Scope**: Enrollment screen — all input fields
+- **Problem**:
+  1. "SM-XXXXXX" placeholder disappears when user taps into the Enrollment Code field
+  2. User forgets what the field is for — no persistent label visible during typing
+  3. "Counter-1" in Device Label is both a default value and implied placeholder — confusing dual role
+  4. After typing, user can't verify which field is which without clearing and re-reading placeholder
+  5. Material Design and Apple HIG both recommend persistent floating labels for form fields
+- **Expected**:
+  1. Implement floating label pattern: label starts as placeholder, animates above the field on focus
+  2. "Enrollment Code" floats above when user starts typing "SM-7V7CM9" — both label and input visible
+  3. "Device Label" floats above when user edits — they can see both "Device Label" and their typed value
+  4. Use React Native Paper `TextInput` or custom animated floating label component
+  5. Label color: neutral grey when unfocused, primary blue when focused
+- **Migration**: None
+- **Test**: Tap field → label animates up. Type text → label stays visible. Blur → label stays up if field has value.
+- **Depends on**: STG-003 (theme tokens), STG-004 (enrollment redesign)
+
+---
+
+### STG-044 — Enrollment — button hierarchy: "Scan QR" vs "Enroll Device" visual weight
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot review — "Scan QR" (outlined) and "Enroll Device" (filled blue) are same width, competing visually
+- **Scope**: Enrollment screen — CTA button pair
+- **Problem**:
+  1. Both buttons are full-width — equal visual weight despite different importance levels
+  2. "Enroll Device" is the primary CTA (filled blue, correct) but "Scan QR" (outlined) is equally prominent due to same size
+  3. User must decide between two full-width actions — cognitive overhead
+  4. For field-deployed QR enrollment, "Scan QR" should arguably be the primary action (faster flow)
+  5. Stacked full-width buttons: 2 buttons × ~56px = 112px of vertical space for CTAs alone
+- **Expected**:
+  1. Option A: "Scan QR" as inline link/text button above the "Enroll Device" CTA — not a full-width button
+  2. Option B: Side-by-side buttons — "Scan QR" (50% width, outlined) + "Enroll Device" (50%, filled)
+  3. Option C: Make "Scan QR" the primary (filled) and "Enter code manually" the secondary — if QR is the expected flow
+  4. Add "OR" divider between the two options to clarify they're alternatives
+  5. Consider: most kirana activations are field-deployed (staff present) → QR is primary; self-install → manual is primary
+- **Migration**: None
+- **Test**: Verify primary CTA is visually dominant, secondary is clearly alternative
+- **Depends on**: STG-024 (QR scan polish), STG-004 (enrollment redesign)
+
+---
+
+### STG-045 — Home — "Ready for billing" status text too small for key operational state
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot review — "Ready for billing" in green text is tiny (~12px) next to the store ID
+- **Scope**: Home screen — store info line below store name
+- **Problem**:
+  1. "Ready for billing" is THE most important operational state — tells retailer the system is good to go
+  2. Currently rendered in small green text (~12px) next to "ID SU260308-001" — easy to miss
+  3. When NOT ready (e.g., "Syncing...", "Offline"), this status becomes critical — must be immediately visible
+  4. Competes visually with the store ID which is equally small and equally prominent
+  5. A kirana retailer glancing at the screen during a rush should see "READY" in 0.5 seconds
+- **Expected**:
+  1. "Ready for billing" as a prominent status chip: green background, white text, 14-16px bold
+  2. Negative states more prominent: "Offline" = red chip, "Syncing" = amber chip with spinner
+  3. Move store ID to settings/info screen — it's reference info, not operational
+  4. Position status chip directly below store name or in the header alongside sync indicator
+  5. Consider: large status dot (green/amber/red) + text as the primary header element
+- **Migration**: None
+- **Test**: Verify "Ready for billing" is readable at arm's length. Switch to offline → verify red state is prominent.
+- **Depends on**: STG-005 (header redesign), STG-003 (theme tokens)
+
+---
+
+### STG-046 — Product card expand chevron (↓) — no hint of what it expands to
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot review — Toor Dal card has a down-arrow (↓) chevron below the green grid icon
+- **Scope**: Product card component — expand/collapse affordance
+- **Problem**:
+  1. Down chevron (↓) below the green grid icon on the Toor Dal card — unclear what it does
+  2. Does it expand to show: variants? Batch details? Stock info? Description? Expiry dates?
+  3. No label, tooltip, or visual hint — user must tap to discover (low discoverability)
+  4. The chevron is positioned below the icon, not aligned with the card content — feels disconnected
+  5. Small cards (Vim, Tata) don't have this chevron — inconsistent across card types
+- **Expected**:
+  1. Add micro-label: "Details ↓" or "3 batches ↓" to explain what expands
+  2. Or: show key expanded info directly (stock count, expiry) without needing expand — reduce clicks
+  3. If expanding shows variants: show variant count on the card "3 variants" → tap to see them
+  4. Consistent behavior: ALL product cards should have expand or NONE should — not just some
+  5. Expanded state: use smooth animation, show a card with variant rows inside
+- **Migration**: None
+- **Test**: Tap chevron → verify what expands. Verify all cards have consistent expand behavior.
+- **Depends on**: STG-009 (product card redesign), STG-015 (unified card layout)
+
+---
+
+### STG-047 — Horizontal product row misleading — empty space implies missing products
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot review — two small product cards (Vim, Tata) in a horizontal scroll row with empty space to the right
+- **Scope**: SELL tab — product listing layout
+- **Problem**:
+  1. Two small cards sit in what appears to be a horizontal scroll container
+  2. Empty space to the right of the second card implies there are more products off-screen
+  3. User swipes right expecting more products — finds nothing
+  4. This horizontal row occupies ~40% of the visible screen but shows only 2 items
+  5. The list card (Toor Dal) above and thumbnail cards below use completely different layouts — disorienting
+- **Expected**:
+  1. If only 2-3 products: use a full-width vertical list, not a horizontal scroll
+  2. Horizontal scroll only makes sense with 5+ items where you need to save vertical space
+  3. Fill empty space: if using horizontal scroll, show "Add product +" as the last card placeholder
+  4. Or: switch to a 2-column grid for all products — more consistent, shows more items
+  5. Show total product count: "3 products" header above the list to set expectations
+- **Migration**: None
+- **Test**: 2 products → vertical list, no empty scroll space. 10 products → horizontal scroll with scroll indicator.
+- **Depends on**: STG-015 (unified card layout)
+
+---
+
+### STG-048 — Voice FAB position — overlaps product cards on longer lists
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot review — teal mic FAB in bottom-right positioned where product cards would be on longer lists
+- **Scope**: SELL tab — Voice FAB positioning
+- **Problem**:
+  1. Mic FAB sits at bottom-right over the product area
+  2. With 2 products it's fine — but with 10+ products, the FAB will cover the last product card
+  3. User can't tap the product underneath the FAB — must scroll past it
+  4. FAB has no "dodge" behavior — product list doesn't add bottom padding to account for FAB height
+  5. On smaller screens the FAB takes proportionally more space
+- **Expected**:
+  1. Add `paddingBottom: 80` to the product list FlatList to prevent FAB overlap
+  2. Or: position FAB above the cart bar (STG-016) — both float but don't overlap content
+  3. FAB should "hide" or shrink when user is actively scrolling the product list (scroll-aware FAB)
+  4. On long-press: FAB becomes draggable so user can reposition it
+  5. Keep FAB above Android nav bar — currently looks properly positioned
+- **Migration**: None
+- **Test**: Add 20 products → verify last product is tappable, not hidden by FAB. Scroll → verify FAB behavior.
+- **Depends on**: STG-012 (FAB redesign), STG-016 (cart bar)
+
+---
+
+### STG-049 — Top-right camera icon is a hardware status indicator, not a button — confusing affordance
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — `PosStatusBar.tsx:150-151` renders camera icon as status indicator (available/unavailable), not an action button
+- **Scope**: `src/components/PosStatusBar.tsx:150-151,343-362`
+- **Problem**:
+  1. Line 150: shows "camera" or "camera-off" MaterialCommunityIcon as a **status indicator** (not a button)
+  2. Line 151: label is "Camera available" / "Camera not available" — shown in a popover on tap (lines 343-362)
+  3. Users see a camera icon and expect tapping it opens a camera/scanner — but it only shows status text
+  4. The icon looks like a button (same size/style as other header icons) creating a false affordance
+  5. Camera availability status is not useful to end users — it's a developer diagnostic
+- **Expected**:
+  1. **Option A**: Make it functional — tapping camera icon opens barcode scanner (replaces the camera status indicator with an action)
+  2. **Option B**: Remove from header entirely — camera status is not user-relevant (move to Settings > Device Info)
+  3. **Option C**: If keeping as status, reduce icon size and grey it out so it doesn't look interactive
+  4. Decide: is camera icon needed for barcode scanning shortcut (useful) or just diagnostics (remove)?
+- **Migration**: None
+- **Test**: Chosen option renders correctly. If Option A: tap → opens camera. If B: icon removed. If C: icon is clearly non-interactive.
+- **Depends on**: STG-005 (header redesign)
+
+---
+
+### STG-050 — No pull-to-refresh indicator on product list
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot review — no visual indicator that pulling down refreshes the product list
+- **Scope**: SELL tab — product list scroll behavior
+- **Problem**:
+  1. Standard mobile UX: pull down to refresh a list. Users expect this everywhere.
+  2. If new products were added via catalog sync, user needs to refresh to see them
+  3. No visual indicator (spinner, arrow) that pull-to-refresh is available or active
+  4. If pull-to-refresh IS implemented, no branded loading indicator (just default spinner)
+  5. Without this, only way to refresh is: leave tab and come back, or restart app
+- **Expected**:
+  1. Implement `RefreshControl` on the product FlatList/SectionList
+  2. Branded pull indicator: SuperMandi logo animation or branded spinner
+  3. On refresh: re-fetch products from local DB + trigger background sync if online
+  4. Show last-refresh timestamp: "Products updated 30s ago" at the top of the list
+  5. If already synced (no changes), show brief toast "Already up to date"
+- **Migration**: None
+- **Test**: Pull down → spinner appears → products refresh. Already up to date → shows toast.
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-051 — Daily session counter — show "Bills today" and "Sales total" on home
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot review — no daily business metrics visible on the home screen
+- **Scope**: Home screen — new daily summary widget
+- **Problem**:
+  1. A POS home screen should immediately tell the retailer: "How's business today?"
+  2. No visible: bills count, total sales amount, items sold, or last bill time
+  3. Retailer has to navigate to a separate reports screen to see basic daily metrics
+  4. During busy hours, quick metrics help staff track performance without leaving the SELL screen
+  5. Every competitor POS app (Vyapar, Khatabook, PetPooja) shows daily totals on the home screen
+- **Expected**:
+  1. Compact daily summary bar below the header (or inside the collapsed sync panel area):
+     - "Today: 12 bills | ₹4,520 | Last: 3m ago"
+  2. Tappable: opens daily report details
+  3. Updates in real-time as bills are created
+  4. Reset at midnight (or store opening time if configured)
+  5. Manager view: show comparison "Yesterday: 15 bills | ₹5,200" (subtle, below today's count)
+  6. Zero state: "No bills yet today — let's start selling!"
+- **Migration**: None (reads from existing order data)
+- **Test**: Create 3 bills → counter shows 3, total correct. Next day → resets to 0.
+- **Depends on**: STG-006 (sync panel collapse — reclaim space for this widget)
+
+---
+
+### STG-052 — Store name truncation uses clip mode, no long-press to see full name
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — `PosStatusBar.tsx:444-448` uses `numberOfLines={2}` + `ellipsizeMode="clip"`
+- **Scope**: `src/components/PosStatusBar.tsx:444-448`
+- **Problem**:
+  1. Line 444-448: Store name uses `formatStoreName(storeName)` with `numberOfLines={2}` and `ellipsizeMode="clip"`
+  2. `clip` abruptly cuts text mid-character — should use `tail` for clean "..." truncation
+  3. Store ID label (line 129) shows either storeCode (human-readable) or last 8 chars of UUID — inconsistent
+  4. No way for user to see full store name if truncated
+  5. Real store names like "Ramesh Kumar General Store & Provisioning" (42 chars) will definitely clip on 5-inch screens
+- **Expected**:
+  1. Change `ellipsizeMode="clip"` to `ellipsizeMode="tail"` at line 448
+  2. Add long-press handler on store name → shows full name in a tooltip or bottom sheet
+  3. Store ID: always show storeCode (human-readable "SU260305-003" format), never raw UUID
+  4. Consider auto-scaling font size for long names: 16px default, 14px if >30 chars, 12px min
+- **Migration**: None
+- **Test**: Set 50-char store name → clean "..." truncation, not abrupt clip. Long-press → full name shown.
+- **Depends on**: STG-005 (header redesign)
+
+---
+
+### STG-053 — Accessibility — WCAG AA contrast audit across all buttons and text
+
+- **Status**: OPEN
+- **Priority**: P1 (legal/compliance — accessibility guidelines)
+- **Source**: Screenshot review — "Scan product here" white-on-green button may fail WCAG AA 4.5:1 contrast
+- **Scope**: All screens — color contrast audit
+- **Problem**:
+  1. Green "Scan product here" button (#22C55E or similar) with white text — contrast ratio likely ~3:1 (fails AA minimum 4.5:1)
+  2. Light grey placeholder text in input fields — may fail AA for large text (3:1 minimum)
+  3. "CREDIT" tab in grey on white — may be below readable contrast for inactive state
+  4. Blue-on-white tab labels — check all active/inactive states
+  5. Android accessibility scanner would flag these issues — potential Play Store review concern
+  6. Indian government accessibility guidelines (GIGW) recommend WCAG 2.0 AA compliance
+- **Expected**:
+  1. Audit all text/background color pairs across all screens using a contrast checker
+  2. All body text: minimum 4.5:1 contrast ratio (WCAG AA)
+  3. All large text (18px+): minimum 3:1 contrast ratio
+  4. All interactive elements (buttons, links): minimum 4.5:1
+  5. Fix the green "Scan" button: darken to #16A34A or use dark text on light green background
+  6. Fix inactive tab text: ensure grey is dark enough (min #6B7280 on white)
+  7. Test with Android Accessibility Scanner and TalkBack screen reader
+- **Migration**: None
+- **Test**: Run accessibility scanner on every screen. All contrast ratios pass WCAG AA.
+- **Depends on**: STG-003 (theme tokens — define accessible color palette)
+
+---
+
+### STG-054 — Hindi translation completion — i18n infrastructure exists but coverage is partial
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — i18n setup at `src/i18n/index.ts:18` supports `['en', 'hi']`. Language toggle on `MenuScreen.tsx:983-1004` as "EN" | "हि" chips. But many screens have zero t() usage.
+- **Scope**: `src/i18n/locales/hi.json` (primary), all screens listed in STG-257–STG-279
+- **Problem**:
+  1. i18n infrastructure (i18next + react-i18next) is ALREADY set up — `src/i18n/index.ts` configures en/hi
+  2. Language toggle EXISTS on MenuScreen (lines 983-1004) — "EN" | "हि" chip pair
+  3. `en.json` and `hi.json` locale files exist but coverage is partial
+  4. 13 screens have ZERO t() usage (see STG-257-279 audit): PaymentSetup, BillDetail, SalesStatement, DailyReport, GRN, OpeningStock, KhataScreen, OverdueDues, ShiftScreen, ReturnScreen, BulkPurchaseCredit, ErrorBoundary, and partial gaps in 10+ other screens
+  5. Hindi translations in `hi.json` are incomplete — many keys only have English fallbacks
+  6. Toggle label "हि" is non-standard abbreviation — should be "हिंदी"
+- **Expected**:
+  1. **Phase 1** (this ticket): Complete `hi.json` translations for all EXISTING i18n keys. Fix toggle label to "हिंदी"
+  2. **Phase 2** (STG-257–STG-279): Extract hardcoded English strings to t() calls in each screen (separate tickets per screen)
+  3. Persist language choice in AsyncStorage (verify this already works via i18next-async-storage-backend)
+  4. Ensure language selector visible on EnrollDeviceScreen for first-time users (currently only in MenuScreen)
+- **Migration**: None (frontend-only)
+- **Test**: Switch to Hindi → all existing t() keys render in Devanagari. Toggle shows "हिंदी". Switch back → English. Language persists across app restart.
+- **Depends on**: None (infrastructure already exists)
+
+---
+
+### STG-055 — App version display on enrollment and settings screens
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot review — no app version number visible anywhere in the app
+- **Scope**: Enrollment screen footer, Settings/About screen
+- **Problem**:
+  1. When a retailer calls support: "What version are you on?" — they can't answer
+  2. No version number on enrollment screen — critical for debugging first-time issues
+  3. No Settings/About screen with version, build number, or device info
+  4. Support staff can't triage issues without knowing the app version
+  5. Version mismatch between installed and required (minAppVersion) — no easy way to compare
+- **Expected**:
+  1. Enrollment screen: small "v1.0.1" at bottom-center of screen (above Android nav)
+  2. Settings/About: full version info — App Version, Build Number, Device Model, OS Version, Store ID
+  3. Tappable version → copy to clipboard (support can ask user to paste it)
+  4. Format: "SuperMandi POS v1.0.1 (build 42)" — human-readable
+  5. Pull version from `app.json` or `expo-constants` (already available in Expo)
+- **Migration**: None
+- **Test**: Verify version matches `app.json`. Tap → copies to clipboard. Build number increments on new build.
+- **Depends on**: None (independent)
+
+---
+
+### STG-056 — Product card tap feedback — haptic vibration and ripple effect
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot review — product cards have no visible tap feedback (no ripple, no scale, no haptic)
+- **Scope**: All tappable product cards on SELL tab
+- **Problem**:
+  1. Android Material Design requires touch ripple feedback on all interactive surfaces
+  2. Product cards are the primary billing interaction — user taps 50-200 times per session
+  3. Without feedback: user doesn't know if tap registered → taps again → double-adds products
+  4. No haptic vibration on add-to-cart — missed micro-interaction that confirms the action
+  5. POS hardware (OEM handhelds) often has poor touch sensitivity — feedback is critical
+- **Expected**:
+  1. Android ripple effect on all product cards using `TouchableNativeFeedback` or `Pressable` with `android_ripple`
+  2. Light haptic vibration (10ms) on product add — `Haptics.impactAsync(ImpactFeedbackStyle.Light)`
+  3. Subtle scale animation on press: `transform: [{ scale: 0.97 }]` — visual confirmation
+  4. Card background briefly highlights on add (flash green or primary color for 200ms)
+  5. Audio click optional — some POS apps use a subtle "beep" on scan/add
+  6. For quantity changes (+/-), lighter haptic than initial add
+- **Migration**: None
+- **Test**: Tap product → see ripple + feel haptic + card flashes. Rapid taps → each one registered with feedback.
+- **Depends on**: STG-009 (product card redesign)
+
+---
+
+### STG-057 — Activation text rewrite — remove "superadmin", simplify to 3-step flow
+
+- **Status**: OPEN
+- **Priority**: P1 (user-facing copy is the first impression for every new retailer)
+- **Source**: Operator flagged — subtitle "Use your activation code after retailer registration on web and superadmin account activation" is vague, uses internal jargon
+- **Scope**: Activation screen — subtitle text + info box text
+- **Problem**:
+  1. **"superadmin" appears TWICE** — in subtitle ("superadmin account activation") and info box ("wait for superadmin account activation"). This is internal company terminology. A kirana retailer opening the app for the first time has ZERO context for what a "superadmin" is.
+  2. **Subtitle is a backwards run-on sentence** — crams 3 concepts into 1 line: (a) use activation code, (b) after registering on web, (c) after superadmin activates. Order is confusing.
+  3. **"account activation" is circular** — using the word "activation" to explain how to get an "activation code" creates a loop.
+  4. **Tone is corporate/technical** — should be warm, welcoming, Hindi-English friendly for a first-time kirana store setup.
+  5. **No user action is clear** — subtitle describes prerequisites, not what to DO right now.
+- **Expected**:
+  1. **Replace subtitle** with action-first copy:
+     - "Enter the activation code from your welcome kit" (simple, direct)
+     - OR "Enter the code you received after registration" (if no physical kit)
+  2. **Remove ALL instances of "superadmin"** — replace with:
+     - "After registration, your account will be reviewed and approved (usually within 24 hours)"
+     - OR "After registration, you'll receive an activation code via SMS"
+  3. **Remove "on web"** — replace with specific: "at supermandi.tech" or just "online"
+  4. **Break into numbered steps** (in info box, not subtitle):
+     - Step 1: Register at supermandi.tech
+     - Step 2: Your account gets verified
+     - Step 3: Enter code here
+  5. **Tone**: Warm, first-person: "Welcome! Let's set up your POS."
+- **Migration**: None
+- **Test**: Show the screen to a non-technical person. Can they understand what to do in 3 seconds?
+- **Depends on**: STG-004 (activation redesign)
+
+---
+
+### STG-058 — Activation info box — replace wall-of-text with collapsible visual steps
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Operator review — info box at bottom of activation screen is a paragraph of text that won't be read
+- **Scope**: Activation screen — info/help section at bottom
+- **Problem**:
+  1. Info box contains 4 lines of text in a bordered container — too much to read during setup
+  2. Content overlaps with the subtitle — both explain the same registration flow
+  3. "Register your retailer account at supermandi.tech/retailer/register" — raw URL, not tappable as a button
+  4. "After registration, wait for superadmin account activation. Then enter your activation code here." — repeats subtitle
+  5. "Need help? hello@supermandi.tech" — email for kirana retailers who don't use email
+  6. The box visually competes with the form above — two equally prominent sections fight for attention
+- **Expected**:
+  1. **Replace with collapsible section**: "Don't have a code? ▼" — tap to expand
+  2. **Expanded content as visual steps** (not prose):
+     - 📝 Step 1: Register online → [Register] button
+     - ✅ Step 2: Account verified (1-2 days)
+     - 📱 Step 3: Enter code here
+  3. **Collapsed by default** — retailers WITH codes shouldn't see registration instructions
+  4. **"Need help?" section**: Phone icon + number + WhatsApp icon + link (not email)
+  5. **Position**: Below the "Activate POS" button, visually subordinate to the main form
+- **Migration**: None
+- **Test**: Verify collapsed by default. Expand → see steps. Tap Register → opens browser. Tap phone → opens dialer.
+- **Depends on**: STG-057 (text rewrite), STG-059 (support contact)
+
+---
+
+### STG-059 — Support contact — replace email with phone/WhatsApp for kirana users
+
+- **Status**: OPEN
+- **Priority**: P1 (kirana retailers need to call when stuck — email is useless)
+- **Source**: Operator review — "Need help? hello@supermandi.tech" uses email, kirana retailers don't email
+- **Scope**: Activation screen, error screens, settings — support contact everywhere
+- **Problem**:
+  1. "hello@supermandi.tech" is the ONLY support contact visible in the app
+  2. Kirana store owners/staff are overwhelmingly non-email users — they call or WhatsApp
+  3. When stuck on activation (the highest-friction screen), the user needs immediate voice help
+  4. Email response time is hours/days — a retailer at the counter can't wait
+  5. Even tech-savvy retailers prefer WhatsApp over email for quick support
+- **Expected**:
+  1. **Replace email with phone**: "Need help? Call 1800-XXX-XXXX" (toll-free for trust)
+  2. **Add WhatsApp**: "💬 WhatsApp us" → opens `https://wa.me/91XXXXXXXXXX`
+  3. **Tap-to-action**: Phone number opens dialer (`Linking.openURL('tel:+91...')`), WhatsApp link opens WhatsApp
+  4. **Keep email as tertiary**: Small "or email hello@supermandi.tech" below phone/WhatsApp
+  5. **Support hours**: "Available Mon-Sat, 9 AM - 7 PM" — set expectations
+  6. **Configurable via backend**: Support number/WhatsApp stored in platform config, not hardcoded
+  7. **Show on ALL error screens** too — not just activation
+- **Migration**: May need `platform.config` entry for support contacts
+- **Test**: Tap phone → dialer opens. Tap WhatsApp → chat opens. Number renders correctly.
+- **Depends on**: STG-025 (support phone on error screens)
+
+---
+
+### STG-060 — Activation — replace raw URL with tappable "Register Here" button
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot review — raw URL "supermandi.tech/retailer/register" displayed as text
+- **Scope**: Activation screen — registration link
+- **Problem**:
+  1. "supermandi.tech/retailer/register" displayed as blue text link — looks like a URL to type, not a button
+  2. Kirana retailers don't type URLs into browsers — they tap buttons
+  3. The URL is long and wraps mid-line — ugly and hard to read
+  4. Even if it IS tappable (as a link), it doesn't look like a tap target
+  5. Mixed with surrounding prose text — easy to miss
+- **Expected**:
+  1. Replace with a clear button: [📝 Register Your Store] — opens in-app browser or external browser
+  2. Button style: outlined or secondary, clearly tappable (min 48px height)
+  3. URL hidden behind the button — user doesn't need to see "supermandi.tech/retailer/register"
+  4. Position: inside the help section (STG-058) as part of Step 1
+  5. After opening: deep-link back to the app after registration completes (if possible)
+- **Migration**: None
+- **Test**: Tap button → browser opens registration page. Button visually identifiable as tappable.
+- **Depends on**: STG-058 (info box redesign)
+
+---
+
+### STG-061 — Activation code input — fix center-aligned placeholder, must be left-aligned
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot review — "SM-XXXXXX" placeholder text is center-aligned inside the input field
+- **Scope**: Activation screen — Activation Code input field
+- **Problem**:
+  1. Placeholder "SM-XXXXXX" is CENTER-ALIGNED — violates every text input UX guideline (Material, Apple HIG)
+  2. When user starts typing, text is left-aligned — visual jump from center to left
+  3. Centered placeholder looks like a title or heading, not an input hint
+  4. Inconsistent with "Device Name" field below which uses left-aligned text
+  5. On focus, the cursor appears at the right edge (visible in screenshot) — confusing
+- **Expected**:
+  1. Left-align the placeholder: `textAlign: 'left'` in styles
+  2. Consistent with all other input fields in the app
+  3. Placeholder text: "SM-XXXXXX" left-aligned with appropriate left padding
+  4. Consider: persistent "SM-" prefix (non-editable) + 6-char input area
+  5. Match style exactly with Device Name field below
+- **Migration**: None
+- **Test**: Open activation screen → placeholder is left-aligned. Tap → cursor starts at left after "SM-" prefix.
+- **Depends on**: STG-041 (inline validation), STG-043 (floating labels)
+
+---
+
+### STG-062 — Activation — "Activate POS" button disabled state until valid code format
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot review — "Activate POS" button appears always active regardless of input state
+- **Scope**: Activation screen — CTA button state management
+- **Problem**:
+  1. "Activate POS" button is full blue (active) even when Activation Code field is empty
+  2. User can tap submit with empty code → gets an error after a round-trip → wasted time
+  3. No visual signal that the code needs to be filled in before submitting
+  4. On slow network, submitting an empty/invalid code wastes 3-5 seconds before error
+  5. Button should guide the user: "fill the field first, then I become active"
+- **Expected**:
+  1. **Disabled state**: Button grey/light blue when code is empty or format invalid
+  2. **Active state**: Button turns primary blue when code matches SM-XXXXXX format (2 letters + dash + 6 alphanumeric)
+  3. **Loading state**: On tap → button shows spinner + "Activating..." text, becomes non-tappable
+  4. **Error state**: On failure → button returns to active, error message appears below code field
+  5. **Success state**: Button shows checkmark + "Activated!" for 1 second before navigating to home
+  6. Device Name field validation: also required (asterisk shown) — disable button if empty
+- **Migration**: None
+- **Test**: Empty form → button disabled. Enter valid code → button activates. Tap → loading. Invalid → error below field.
+- **Depends on**: STG-041 (inline validation)
+
+---
+
+### STG-063 — Activation — add welcome illustration/visual for brand warmth
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot review — activation screen is just text + inputs on grey-white, no visual warmth
+- **Scope**: Activation screen — hero section above form
+- **Problem**:
+  1. A kirana retailer opens the app for the FIRST time — their first impression is a grey form
+  2. No illustration, no imagery, no visual warmth — looks like a government portal, not a modern POS
+  3. The "SuperMandi" green pill is tiny and doesn't establish brand presence
+  4. Competitor apps (Khatabook, Vyapar, PetPooja) have colorful onboarding with illustrations
+  5. First impressions determine if the retailer trusts the app enough to enter their activation code
+- **Expected**:
+  1. **Hero illustration** above the title: stylized kirana store shelf, POS counter, or shopping bag — branded in SuperMandi blue/green
+  2. Size: ~120-150px tall, centered, doesn't push form below the fold
+  3. Style: flat illustration or Lottie animation (not a photo — keeps APK small)
+  4. **SuperMandi logo** prominent: 48px height, above or beside the title
+  5. **Subtle background**: light blue gradient or pattern behind the hero area, transitioning to white form area
+  6. Alternative: use the existing splash screen brand assets to maintain consistency
+  7. The illustration should communicate "welcome to your digital store" in one glance
+- **Migration**: None (need designer assets or use free illustration library like unDraw)
+- **Test**: Visual verification — screen feels warm and branded. Illustration loads instantly (no flicker).
+- **Depends on**: STG-003 (theme tokens), STG-022 (logo redesign)
+
+---
+
+### STG-064 — Activation — "23106RN0DA" device name should show friendly model name
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot review — Device Name auto-fills with raw model string "23106RN0DA" which looks like an error code
+- **Scope**: Activation screen — Device Name auto-population logic
+- **Problem**:
+  1. "23106RN0DA" is the raw `Build.MODEL` or internal device codename — meaningless to a user
+  2. To a kirana retailer, this looks like an error code or something broken — intimidating
+  3. The field is editable but retailers typically leave defaults unchanged
+  4. Helper text says "A name to identify this device in your store dashboard" — doesn't help because the auto-filled value is nonsensical
+  5. This is the Redmi Note 12 Pro — "Redmi Note 12 Pro" would be much more friendly
+- **Expected**:
+  1. Use `DeviceInfo.getDeviceName()` or `Device.modelName` from `expo-device` — returns "Redmi Note 12 Pro" not "23106RN0DA"
+  2. Fallback chain: friendly model name → brand + model → raw codename (last resort)
+  3. Prepend store context: "Front Counter" or "Counter-1" as default, with device model in parentheses
+  4. Example: "Counter-1 (Redmi Note 12 Pro)" — friendly + identifiable
+  5. Helper text: "Give this device a name (e.g., Front Counter)" — actionable, not descriptive
+- **Migration**: None
+- **Test**: Redmi Note 12 → shows "Redmi Note 12 Pro" not "23106RN0DA". Unknown device → shows brand at minimum.
+- **Depends on**: STG-042 (label auto-increment)
+
+---
+
+### STG-065 — Activation — add step indicator "Step 1 of 2" for onboarding progress
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot review — no progress indicator on activation, user doesn't know what comes next
+- **Scope**: Activation screen — progress/step indicator
+- **Problem**:
+  1. Retailer enters code and taps "Activate POS" — then what? Login? Billing? Tutorial?
+  2. No visual indicator of how many steps are in the onboarding process
+  3. Uncertainty increases cognitive load — "how long is this going to take?"
+  4. No mental model of the journey: activation → staff login → start billing
+  5. Without progress indication, users are more likely to abandon setup
+- **Expected**:
+  1. **Step indicator at top**: "Step 1 of 2" or progress dots (● ○) below the header
+  2. Step 1: Enter activation code → Step 2: Staff login → Done: Start billing
+  3. Visual: progress bar (filled 50%) or numbered circles (1 filled, 2 empty)
+  4. Position: below the "Activate Your POS" title, above the form
+  5. After activation success: animate to "Step 2 of 2" → show staff login screen
+  6. Keep it simple: 2-3 steps max, not 5+ wizard steps
+- **Migration**: None
+- **Test**: Activation screen → shows Step 1. After activation → shows Step 2. After login → indicator disappears.
+- **Depends on**: STG-004 (activation redesign)
+
+---
+
+### STG-066 — Enrollment — Standardize terminology ("Enroll" vs "Activate" used interchangeably)
+
+- **Status**: OPEN
+- **Priority**: P1 (terminology confusion — same screen uses both "enroll" and "activate")
+- **Source**: Code audit — `EnrollDeviceScreen.tsx` is the ONLY onboarding screen (no separate ActivationScreen exists). File header (lines 1-9) says "POS Activation Screen". But code uses both "Enroll" and "Activate" inconsistently.
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx` (single file, 850+ lines)
+- **Problem**:
+  1. Original ticket assumed TWO separate screens exist — they DO NOT. There is ONE file: `EnrollDeviceScreen.tsx`
+  2. File is named "Enroll" but header comment says "Activation Screen"
+  3. CTA button says "Activate POS" but route name is "EnrollDevice"
+  4. Error messages mix: "enrollment code" vs "activation code" — `ENROLL_ERROR_MESSAGES` at lines 85-118
+  5. Navigation routes (lines 50-54) route to `PaymentSetup` or `SellScan` post-enrollment
+  6. This inconsistency confuses support staff and documentation
+- **Expected**:
+  1. Pick ONE term: **"Activate"** (warmer, user-friendly) — not "Enroll" (technical)
+  2. Rename file: `EnrollDeviceScreen.tsx` → `ActivateDeviceScreen.tsx`
+  3. Update all references: route name, error messages, i18n keys, navigation params
+  4. Update `ENROLL_ERROR_MESSAGES` constant name → `ACTIVATION_ERROR_MESSAGES`
+  5. CTA remains "Activate POS" (already correct)
+  6. Update i18n keys: `enroll.*` → `activate.*` in en.json and hi.json
+- **Migration**: None (code rename only, no backend changes)
+- **Test**: All user-facing text says "Activate" not "Enroll". Route still works. No broken navigation.
+- **Depends on**: STG-004 (activation redesign)
+
+---
+
+### STG-067 — Home header icons — add labels or tooltips to Wi-Fi/printer/scanner/camera
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot deep review — 4 icons in header bar (Wi-Fi, printer, scanner, camera) have zero labels
+- **Scope**: Home screen — top icon bar
+- **Problem**:
+  1. Four icons in a row: Wi-Fi waves, printer with X, barcode with X, viewfinder/camera
+  2. ZERO labels — user must guess what each icon means
+  3. Two icons have "X" overlay (printer, scanner) — are they errors? Disconnected? Not configured?
+  4. Wi-Fi icon is standard but the others are ambiguous — is the right icon a camera or a QR scanner?
+  5. A kirana retailer who doesn't use tech daily won't recognize a barcode scanner icon
+  6. Different from STG-005 which covers decluttering — this is about LABELING what remains
+- **Expected**:
+  1. **Long-press tooltip** on each icon: "Wi-Fi: Connected", "Printer: Not connected", "Scanner: Not paired", "Camera: Barcode scan"
+  2. **First-use overlay**: on first app launch, brief labels appear below each icon for 3 seconds
+  3. **Status text under icon bar**: single line "Wi-Fi ✓ | Printer ✗ | Scanner ✗" — more readable than icons alone
+  4. **Tap action**: tap any icon → opens relevant settings (Wi-Fi settings, printer pairing, scanner pairing)
+  5. **Color coding**: green icon = connected, grey = not configured, red = error/disconnected
+  6. Alternative: show only connected peripherals as green icons, hide unconfigured ones (per STG-005)
+- **Migration**: None
+- **Test**: Long-press each icon → tooltip appears. Tap printer icon → opens printer settings.
+- **Depends on**: STG-005 (header declutter)
+
+---
+
+### STG-068 — Product cards — add "+" tap affordance button for adding to bill
+
+- **Status**: OPEN
+- **Priority**: P1 (without visible "add" button, billing workflow is undiscoverable)
+- **Source**: Screenshot deep review — product cards have NO visible add/plus button
+- **Scope**: All product card variants (list card + thumbnail card) on SELL tab
+- **Problem**:
+  1. Product cards show name + price but NO "Add" or "+" button
+  2. User must discover by tapping the entire card that it adds to bill — zero discoverability
+  3. First-time user stares at products and doesn't know the next action
+  4. Even experienced POS users expect a "+" button — it's universal across retail POS UIs
+  5. Without visible affordance, the #1 workflow (search → add to bill) is broken on first use
+  6. The Toor Dal card has an expand chevron (↓) — is THAT the add button? Confusing.
+- **Expected**:
+  1. **"+" button** on every product card — right side, circular, primary blue, always visible
+  2. On tap: adds 1 unit to cart + brief haptic + card flashes confirmation
+  3. After first add: "+" becomes a quantity stepper [- 1 +] (ties into STG-031)
+  4. Button size: 40-48px diameter — easy to tap on a busy counter
+  5. Position: right edge of list card, bottom-right of thumbnail card
+  6. Icon: "+" icon with no label needed — universally understood
+  7. For the Toor Dal list card: "+" on the right, expand (↓) stays on left — separate actions
+- **Migration**: None
+- **Test**: See "+" on every card. Tap → item added, cart count updates. Tap again → quantity stepper shows.
+- **Depends on**: STG-009 (card redesign), STG-031 (quantity selector), STG-016 (cart bar)
+
+---
+
+### STG-069 — Tab bar — unify 5 different visual treatments into one consistent style
+
+- **Status**: OPEN
+- **Priority**: P1 (tab bar is the primary navigation — visual chaos hurts usability)
+- **Source**: Screenshot deep review — each of the 5 tabs has a completely different visual treatment
+- **Scope**: Home screen tab bar (MENU, SELL, PURCHASE, REORDER, CREDIT)
+- **Problem**:
+  1. **MENU**: rounded pill with hamburger icon (≡) + text, grey background
+  2. **SELL**: rounded pill, filled BLUE background, white text (active)
+  3. **PURCH...**: rounded pill, OUTLINED (no fill), dark text, truncated
+  4. **REORDE...**: rounded pill, filled GREEN background, white text + blue notification dot
+  5. **CREDIT**: rounded pill, flat GREY text, no background, lightest treatment
+  6. FIVE different visual treatments for 5 tabs in the same bar — looks like 5 different apps
+  7. Colors: blue (SELL), green (REORDER), grey (MENU, CREDIT) — no unified palette
+  8. The active tab (SELL) is blue but REORDER is always green — is REORDER also active? Confusing.
+  9. Different from STG-007 which covers labels/truncation — this covers VISUAL CONSISTENCY
+- **Expected**:
+  1. **One treatment for active**: filled pill in primary blue, white text
+  2. **One treatment for inactive**: no fill, grey text, same pill shape
+  3. **Remove green from REORDER**: use blue when active, grey when inactive — same as all tabs
+  4. **Notification dot**: consistent accent color (red or brand secondary) on any tab with alerts
+  5. **MENU**: either make it look like other tabs (no special icon treatment) or move to header as hamburger
+  6. **All pills same size**: equal width or auto-size but same padding/radius
+  7. Reference: Material Design tab bar guidelines — consistent treatment, only color/fill distinguishes active
+- **Migration**: None
+- **Test**: All tabs look consistent. Active = blue fill. Inactive = grey. Switch tabs → style updates correctly.
+- **Depends on**: STG-003 (theme tokens), STG-007 (tab labels)
+
+---
+
+### STG-070 — Home — dark header band harsh cut to white body, add smooth transition
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot deep review — abrupt visual break between grey header area and white content body
+- **Scope**: Home screen — header-to-body transition
+- **Problem**:
+  1. Header area (icons + store name + sync row) has a slightly grey/tinted background
+  2. Below the tab bar, content area is pure white — abrupt 1px line transition
+  3. No gradient, no shadow, no visual softening between the two zones
+  4. Creates a feeling of two separate screens stacked on top of each other
+  5. Professional POS apps use subtle shadows or gradients to create depth
+- **Expected**:
+  1. Add subtle shadow below the tab bar — `elevation: 2` or `shadowOffset: { height: 2 }` with low opacity
+  2. Or: very subtle gradient from light grey (#F8F9FA) to white over 8px
+  3. Keep it minimal — this is a polish item, not a redesign
+  4. Consistent across all tabs (SELL, PURCHASE, REORDER, CREDIT)
+- **Migration**: None
+- **Test**: Visual verification — smooth transition from header to content. No harsh line visible.
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-071 — Sync row — connect checkmark (left) with "15s ago" (right) visually
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot deep review — green checkmark is far-left, "15s ago ▼" is far-right, full screen width apart
+- **Scope**: Home screen — sync status row between store name and tabs
+- **Problem**:
+  1. Green checkmark (✓) at far-left and "15s ago ▼" at far-right — they're semantically related but visually disconnected
+  2. User doesn't connect "the green check means synced 15 seconds ago"
+  3. The space between them (~280px on a 360dp screen) is empty — wasted and creates disconnect
+  4. The chevron (▼) next to "15s ago" suggests a dropdown — but what does expanding show?
+  5. The entire row is a narrow 24px band — too small for its importance
+- **Expected**:
+  1. **Group together**: "✓ Connected • 15s ago" as a single left-aligned chip or row element
+  2. Or: "✓ Synced 15s ago" as one tappable pill — opens sync details
+  3. Remove redundant chevron if the sync panel (STG-006) handles the expanded view
+  4. Position: left-aligned below store name, compact single element
+  5. States: "✓ Connected • 15s ago" (green), "⟳ Syncing..." (amber), "✗ Offline" (red)
+- **Migration**: None
+- **Test**: Verify grouped display, all 3 states render correctly, tap opens sync details
+- **Depends on**: STG-006 (sync panel)
+
+---
+
+### STG-072 — Activation — remove hamburger menu pre-activation (no navigation needed)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot review — hamburger menu (≡) visible on activation screen where no navigation exists
+- **Scope**: Activation screen — navigation header
+- **Problem**:
+  1. Blue rounded hamburger icon (≡) at top-left of activation screen
+  2. Before device is activated, there is NOTHING to navigate to — no settings, no history, no profile
+  3. Tapping it either: opens an empty drawer, or shows irrelevant options
+  4. First-time user might tap it thinking it's part of the activation flow — gets confused
+  5. Creates false expectation that there's a menu/navigation available
+- **Expected**:
+  1. **Remove hamburger menu from pre-activation screens** entirely
+  2. If a back button is needed: show ← back arrow (not hamburger) to return to... nothing? (app should close)
+  3. Post-activation: hamburger menu is appropriate (settings, about, logout, switch staff)
+  4. Pre-activation: the ONLY interactive elements should be: code input, device name, Activate button, help section
+  5. Cleaner screen = less confusion = faster activation
+- **Migration**: None
+- **Test**: Activation screen → no hamburger menu. After activation → hamburger appears on home screen.
+- **Depends on**: STG-004 (activation redesign)
+
+---
+
+### STG-073 — Activation helper text — "store dashboard" is jargon, simplify
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot review — helper text "A name to identify this device in your store dashboard" uses "dashboard" jargon
+- **Scope**: Activation screen — Device Name field helper text
+- **Problem**:
+  1. "store dashboard" — a kirana retailer doesn't know what a dashboard is
+  2. The helper text explains WHY the field exists but not WHAT to enter
+  3. Should guide the user with an example, not explain the backend purpose
+  4. "A name to identify this device" — identify to whom? For what purpose?
+- **Expected**:
+  1. Replace with: "Give this device a name (e.g., Front Counter, My Phone)"
+  2. Or simply: "e.g., Front Counter, Billing Phone"
+  3. Action-oriented, example-driven — not explanation-driven
+  4. Remove reference to "dashboard" — the user doesn't need to know about backend systems
+- **Migration**: None
+- **Test**: Helper text is understandable to a non-technical user. Contains practical examples.
+- **Depends on**: STG-064 (device name auto-populate)
+
+---
+
+### STG-074 — Search + barcode inputs — unify border/container styles into one section
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot deep review — search field and barcode field have different container styles
+- **Scope**: SELL tab — search area styling
+- **Problem**:
+  1. "Search product" + "Scan product here" are in a rounded container with thin grey border
+  2. "Enter barcode manually" is in a SEPARATE container below with different border radius and padding
+  3. They serve the same purpose (find a product) but look like separate sections
+  4. The visual separation suggests they're unrelated — user doesn't connect them
+  5. Two containers = two tap decisions = cognitive overhead during fast billing
+- **Expected**:
+  1. **Single container** wrapping all search/scan inputs — one border, one shadow
+  2. Or per STG-008: merge into one input that handles text search + barcode + scan
+  3. If keeping separate: same border style, radius, and padding — visually grouped
+  4. Add visual connector: shared background, no gap, or a subtle divider line
+  5. The container should feel like ONE tool: "This is where I find products"
+- **Migration**: None
+- **Test**: Search area looks like one unified section, not two disconnected boxes
+- **Depends on**: STG-008 (unified search input)
+
+---
+
+### STG-075 — Product cards — add loading skeleton placeholder during fetch
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot deep review — no loading state visible for product list
+- **Scope**: SELL tab — product listing loading state
+- **Problem**:
+  1. When products are loading from local DB or syncing, what does the screen show?
+  2. Likely: blank white space or a generic spinner — feels broken during first load
+  3. Skeleton screens (shimmer placeholders) are industry standard for list loading
+  4. First app launch: products sync for the first time — could take 5-30 seconds
+  5. Without skeletons, user thinks the app is empty/broken during initial sync
+- **Expected**:
+  1. **Skeleton cards** matching the product card layout — grey shimmer rectangles for name, price, image
+  2. Show 3-5 skeleton cards while loading — indicates "content is coming"
+  3. Animate: shimmer left-to-right gradient effect (react-native-skeleton-placeholder)
+  4. Transition: skeleton → real cards with subtle fade-in
+  5. For initial sync: show skeleton + "Loading your products..." text + progress indicator
+  6. Offline with cached data: show cached products immediately, no skeleton
+- **Migration**: None
+- **Test**: Clear local DB → open SELL tab → see skeleton cards. Products load → skeletons replaced smoothly.
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-076 — Activation — "on web" rewrite to specific URL or "online"
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Operator flagged — "on web" in activation subtitle is vague
+- **Scope**: Activation screen — subtitle text
+- **Problem**:
+  1. "retailer registration on web" — "on web" means nothing specific
+  2. Which web? Browser? Laptop? Mobile browser? The supermandi website?
+  3. Kirana retailers may not distinguish between "web" and "app" — both are on their phone
+  4. The info box DOES mention "supermandi.tech/retailer/register" but the subtitle says "on web"
+  5. Inconsistent: subtitle says "web", info box says the actual URL
+- **Expected**:
+  1. Replace "on web" with either:
+     - "at supermandi.tech" (specific)
+     - "online" (simple, understood by everyone)
+     - Remove entirely: "Use your activation code after registration" (shorter, clearer)
+  2. Or restructure entirely per STG-057: "Enter the code you received after registration"
+  3. The URL should appear ONCE in the help section, not referenced vaguely in the subtitle
+- **Migration**: None
+- **Test**: No occurrence of "on web" remains. Subtitle mentions specific URL or omits it.
+- **Depends on**: STG-057 (text rewrite — this ticket may be absorbed into STG-057)
+
+---
+
+### STG-077 — Payment — error message vague, no specific failure reason
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Screenshot — "Unable to start payment. Please try again." gives no reason
+- **Scope**: Payment screen — error handling
+- **Problem**:
+  1. "Unable to start payment. Please try again." — WHY did it fail?
+  2. Was it: network timeout? Server 500? Invalid cart? Inventory changed? Stock depleted?
+  3. Generic error messages cause confusion — retailer doesn't know if they should retry or fix something
+  4. No error code for support calls — "it says unable to start payment" is useless for debugging
+  5. The error persists on screen even as other UI elements remain interactive — is the error stale?
+- **Expected**:
+  1. **Specific error messages**: "No internet connection — check Wi-Fi" / "Server is busy — try in 30s" / "Item out of stock — return to cart"
+  2. **Error code**: "Error P-001" — support can look up the specific failure
+  3. **Actionable guidance**: "Check your internet connection and tap Retry" not just "try again"
+  4. **Auto-clear**: Error banner disappears after successful retry, not stuck permanently
+  5. **Offline handling**: If offline, show "You're offline. Payment will complete when connected" (for cash sales, complete offline)
+  6. **Toast vs persistent banner**: Transient errors = toast (auto-dismiss). Blocking errors = persistent banner with Retry.
+- **Migration**: None
+- **Test**: Disconnect network → attempt payment → specific offline error. Reconnect → retry → success → error clears.
+- **Depends on**: None
+
+---
+
+### STG-078 — Payment — "Complete Payment" greyed out with no explanation why
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Screenshot — "Complete Payment" button is dark grey (disabled) with no visible reason
+- **Scope**: Payment screen — CTA button states
+- **Problem**:
+  1. "Complete Payment" button is greyed out — user can see it but can't tap it
+  2. NO explanation of WHY it's disabled — is it because of the error? Loading? Missing info?
+  3. Grey text on slightly lighter grey background — almost unreadable (WCAG failure)
+  4. The error banner above has its own "Retry" button — so TWO actions compete but one is disabled
+  5. User doesn't know: "Do I tap Retry or wait for Complete Payment to become active?"
+- **Expected**:
+  1. **Disabled reason**: Small text below button "Fix the error above to continue" or "Retrying..."
+  2. **Visual hierarchy**: When disabled, show clear disabled style (light grey bg, 50% opacity text)
+  3. **When active**: Bright blue (matching Checkout button from cart), white text, full opacity
+  4. **Loading state**: If payment is processing, show spinner + "Processing..." text in the button
+  5. **After error**: Button should either (a) become the retry action, or (b) stay disabled with clear reason
+  6. **Remove ambiguity**: ONE clear action path — either Retry in error banner OR the main CTA, not both
+- **Migration**: None
+- **Test**: Error state → button shows "Fix error to continue". No error → button is bright blue + active.
+- **Depends on**: STG-077 (error handling), STG-079 (retry consolidation)
+
+---
+
+### STG-079 — Payment — two competing retry mechanisms (error Retry + disabled CTA)
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Screenshot — "Retry" red button in error banner AND "Complete Payment" (greyed) both visible
+- **Scope**: Payment screen — action consolidation
+- **Problem**:
+  1. Error banner has a red "Retry" button — tapping it presumably retries the payment
+  2. "Complete Payment" main CTA is greyed out — but if it became active again, it does the same thing
+  3. Two buttons for the same action = confused user, especially during a rush at the counter
+  4. "Retry" is red (danger color) but it's a positive action (try again) — color mismatch
+  5. The main CTA should be THE action — the error banner should inform, not add another button
+- **Expected**:
+  1. **ONE action path**: Error banner shows the message only (no Retry button)
+  2. **Main CTA handles retry**: "Complete Payment" stays active (blue) even after error — tapping it retries
+  3. **Or**: Error banner has "Retry" which IS the main CTA repositioned — not a second button
+  4. **Button text changes**: After error → "Retry Payment ₹145.00" (clear, actionable, shows amount)
+  5. **Error banner**: Informational only — red/amber background, icon, message text, dismiss X
+  6. **Success flow**: On success → button shows "✓ Paid!" for 1 second → navigates to receipt
+- **Migration**: None
+- **Test**: Error → one clear retry action. No duplicate buttons. Success → navigates cleanly.
+- **Depends on**: STG-077 (error messages)
+
+---
+
+### STG-080 — Payment — no cash amount received input or change calculation
+
+- **Status**: OPEN
+- **Priority**: P1 (cash is the #1 payment method in kirana stores — this is a core POS function)
+- **Source**: Screenshot — Cash selected, ₹145.00 due, but no way to enter amount received or calculate change
+- **Scope**: Payment screen — Cash payment flow
+- **Problem**:
+  1. Customer hands over ₹200 — cashier has NO field to enter "200"
+  2. Without "Amount Received" input, there's NO way to calculate change
+  3. Every kirana POS app (Vyapar, PetPooja, POSist) has: Amount Due → Amount Received → Change
+  4. Mental math is error-prone during rush hours — cashier gives wrong change
+  5. No denomination breakdown — ₹500 note for ₹145 bill is common
+  6. "Collect cash from customer" is the instruction but the WORKFLOW stops there — no next step
+- **Expected**:
+  1. **Amount Received input**: Large numeric keypad input below the amount: "Amount Received: ₹___"
+  2. **Auto-calculate change**: "Change: ₹55.00" appears instantly as amount is entered
+  3. **Quick denomination buttons**: [₹100] [₹200] [₹500] [₹2000] — one-tap entry for common notes
+  4. **Exact amount button**: "Exact ₹145.00" shortcut — no change needed
+  5. **Change display**: Large, prominent "Change: ₹55.00" — cashier can read at a glance
+  6. **"Complete Payment" activates** only after amount received ≥ amount due
+  7. **Insufficient amount warning**: "₹100 received — ₹45.00 still due" in amber
+  8. Fill the empty 40% of screen (STG-087) with this keypad + change display
+- **Migration**: None
+- **Test**: Enter ₹200 → "Change: ₹55.00". Enter ₹100 → "₹45 still due". Exact amount → "No change needed".
+- **Depends on**: STG-087 (empty space utilization)
+
+---
+
+### STG-081 — Payment — no cart/order summary visible on payment screen
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Screenshot — payment screen shows ₹145.00 total but ZERO product details
+- **Scope**: Payment screen — order summary section
+- **Problem**:
+  1. User sees "₹145.00" but cannot verify WHAT they're paying for
+  2. No product names, no quantities, no item count visible
+  3. If cashier accidentally added wrong product or wrong quantity, they can't catch it here
+  4. "Cart locked" implies they can't go back — so this is their last chance to verify
+  5. Customer asks "What's on my bill?" — cashier can't answer from this screen
+  6. Receipts can't be previewed — errors only caught after payment is done
+- **Expected**:
+  1. **Collapsible order summary** at the top of payment screen (below payment tabs):
+     - "1 item • Toor Dal (Arhar) 1kg × 1 = ₹145.00"
+     - Collapsed: shows item count + total. Expanded: full item list.
+  2. **Item list**: Product name, qty, unit price, line total — compact format
+  3. **Subtotal → Tax → Discount → Total** breakdown below item list
+  4. Fills the empty space between payment tabs and the amount
+  5. **"Edit Cart" link**: If user spots an error, quick link to return to cart (related to STG-083)
+- **Migration**: None
+- **Test**: Payment screen shows item details. 5 items → collapsible list. Tap expand → see all items.
+- **Depends on**: STG-083 (back to cart)
+
+---
+
+### STG-082 — Payment — "Due" method has no customer selection for credit sale
+
+- **Status**: OPEN
+- **Priority**: P1 (credit/udhar is THE core kirana workflow — can't record credit without knowing WHO)
+- **Source**: Screenshot — "Due" tab has calendar icon, but no customer selection when credit sale chosen
+- **Scope**: Payment screen — Due/credit payment flow
+- **Problem**:
+  1. "Due" payment = credit sale (udhar) — customer takes goods, pays later
+  2. But there is NO customer selection on the payment screen — credit to WHO?
+  3. Without customer linkage, the credit is untrackable — defeats the entire purpose
+  4. Kirana stores lose money to untracked udhar — this is a critical business function
+  5. After selecting "Due", the screen still shows "Collect cash from customer" (wrong instruction)
+  6. No outstanding balance display — "This customer already owes ₹1,200"
+- **Expected**:
+  1. **When "Due" selected**: Show customer search/select input immediately
+  2. **Customer search**: By name or phone — recent customers listed for quick pick
+  3. **Outstanding balance**: After selecting customer, show "Current due: ₹1,200 + This bill: ₹145 = New total: ₹1,345"
+  4. **Due date** (optional): "Pay by" date picker or "7 days" / "15 days" / "30 days" quick picks
+  5. **Instruction text changes**: "Record as due for [Customer Name]" instead of "Collect cash"
+  6. **Mandatory customer for Due**: Cannot complete a Due payment without selecting a customer
+  7. **Partial payment**: "₹100 cash now + ₹45 due" — split between cash and credit
+- **Migration**: May need customer table relation (check STG-037)
+- **Test**: Select Due → customer search appears. No customer → cannot complete. Select customer → shows balance.
+- **Depends on**: STG-037 (customer entry), STG-030 (CREDIT tab)
+
+---
+
+### STG-083 — Payment — no back button to return to cart
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Screenshot — payment screen has no ← back arrow or close button
+- **Scope**: Payment screen — navigation
+- **Problem**:
+  1. User is on payment screen but realizes they need to add/remove an item
+  2. NO back button, NO close/X, NO swipe-to-dismiss visible
+  3. "Cart locked" badge suggests the cart is frozen — but what if the cashier needs to modify?
+  4. Only escape: Android back button (hardware/gesture) — not discoverable
+  5. Getting stuck on the payment screen is a blocking UX failure during live billing
+- **Expected**:
+  1. **← back arrow** at top-left (matching Sell Cart screen which has one)
+  2. On tap: "Return to cart? Payment will be cancelled." confirmation
+  3. **"Cart locked" → explain**: "Cart is locked during payment. Tap ← to return to cart and make changes."
+  4. **Swipe down** (if it's a bottom sheet like the cart): dismiss to return to cart
+  5. Android back button should work + be confirmed: "Cancel payment?" dialog
+- **Migration**: None
+- **Test**: Tap ← → confirmation → returns to cart with items intact. Android back → same flow.
+- **Depends on**: None
+
+---
+
+### STG-084 — Payment — UPI flow incomplete, no QR/app selector after selecting UPI
+
+- **Status**: OPEN
+- **Priority**: P1 (UPI is India's #1 digital payment — incomplete flow blocks digital payments)
+- **Source**: Screenshot — UPI tab visible but flow after selection is unclear
+- **Scope**: Payment screen — UPI payment flow
+- **Problem**:
+  1. UPI tab shows a QR icon — but when selected, what happens?
+  2. No QR code generation visible for customer to scan
+  3. No UPI ID input field ("yourname@upi")
+  4. No app selector (GPay, PhonePe, Paytm) — deep link to payment app
+  5. No UPI payment verification — how does the POS know the customer paid?
+  6. India has 10B+ monthly UPI transactions — this MUST work for a POS app
+- **Expected**:
+  1. **UPI selected → two options**:
+     - "Show QR" — generates UPI QR code for customer to scan (using store's VPA)
+     - "Enter UPI ID" — input for customer's UPI ID to request payment
+  2. **QR code display**: Large QR + "₹145.00" + "Scan to pay" — customer scans with their app
+  3. **Verification**: Auto-verify via UPI callback/webhook, or manual "Payment Received" confirmation button
+  4. **Polling**: Show "Waiting for payment..." with countdown timer while listening for payment confirmation
+  5. **Fallback**: "Payment not received? Ask customer to show payment screenshot" → manual confirm
+  6. **Store VPA setup**: First time UPI → guide to set up store UPI VPA in settings
+- **Migration**: Backend UPI integration (Razorpay/Cashfree/direct UPI) — significant
+- **Test**: Select UPI → QR displays → customer scans → payment verified → receipt generated.
+- **Depends on**: Backend payment gateway integration
+
+---
+
+### STG-085 — Payment — no split payment support (cash + UPI)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — only one payment method can be selected at a time (tabs are exclusive)
+- **Scope**: Payment screen — split/multi-tender payment
+- **Problem**:
+  1. Tabs (UPI / Cash / Due) are mutually exclusive — only one can be active
+  2. Common scenario: customer pays ₹100 cash + ₹45 UPI = ₹145 total
+  3. Also common: ₹100 cash + ₹45 due (partial credit)
+  4. Without split payment, cashier must choose one method — loses flexibility
+  5. This is a standard POS feature — every restaurant/retail POS supports it
+- **Expected**:
+  1. **Multi-tender mode**: "Add payment" button to add second payment method
+  2. **Flow**: Cash ₹100 → "₹45 remaining" → Add UPI ₹45 → "₹0 remaining" → Complete
+  3. **Visual**: Show each tender as a row: "Cash: ₹100 ✓ | UPI: ₹45 pending"
+  4. **Balance tracking**: "Remaining: ₹45.00" updates as tenders are added
+  5. **Receipt**: Shows all tenders — "Cash: ₹100, UPI: ₹45"
+- **Migration**: Backend order model may need multi-tender support
+- **Test**: Add ₹100 cash → shows ₹45 remaining → add UPI ₹45 → complete. Receipt shows both.
+- **Depends on**: STG-080 (cash amount input), STG-084 (UPI flow)
+
+---
+
+### STG-086 — Payment — "Cart locked" badge unexplained, no unlock path
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — orange "Cart locked" pill badge at top-right of payment screen
+- **Scope**: Payment screen — cart lock indicator
+- **Problem**:
+  1. "Cart locked" in orange — alarming color, no explanation
+  2. Does "locked" mean: can't modify? Payment in progress? Stock reserved?
+  3. No way to "unlock" — no tap action, no tooltip
+  4. If user needs to modify the cart, "locked" feels like they're stuck
+  5. Orange color implies warning — is something wrong? Or is this expected?
+- **Expected**:
+  1. **Don't show "Cart locked"** — it's unnecessary UX noise for the user
+  2. Instead: the back button (STG-083) handles the "I need to modify" flow
+  3. If must show: use neutral color (grey) and add tooltip: "Cart is saved while you complete payment"
+  4. Or: show "1 item" badge instead of "Cart locked" — informational, not alarming
+  5. Lock/unlock should be invisible to the user — it's an internal state
+- **Migration**: None
+- **Test**: Payment screen → no alarming "locked" badge. Back button returns to editable cart.
+- **Depends on**: STG-083 (back button)
+
+---
+
+### STG-087 — Payment — ~40% empty space caused by centered flex layout with no content fill
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — `PaymentScreen.tsx:1108-1113` uses `cashStage` style with `flex:1, alignItems:"center", justifyContent:"center"` causing amount to float in center of empty space
+- **Scope**: `src/screens/PaymentScreen.tsx:1108-1113,1223-1230`
+- **Problem**:
+  1. Lines 1108-1113: `cashStage` style uses `flex:1` + center alignment — amount floats in vertical center
+  2. Lines 1223-1230: Amount display (label + formatted value) is the ONLY content in this flex area
+  3. Between payment method tabs (top) and CTA button (bottom), ~40% is empty white space
+  4. This space should contain order summary (STG-081) and cash input (STG-080)
+- **Expected**:
+  1. Change `justifyContent:"center"` to `justifyContent:"flex-start"` — move amount to top
+  2. Below amount: add order summary (item list, subtotal, discount, tax, total) — see STG-081
+  3. Below summary: add cash input with change calculation — see STG-080
+  4. Layout order: Tabs → Amount → Summary → Cash Input → CTA — no empty space
+  5. Add `paddingTop: 16` to separate from tabs
+- **Migration**: None
+- **Test**: Payment screen has no large empty spaces. Amount at top, summary below, CTA at bottom.
+- **Depends on**: STG-080 (cash input), STG-081 (order summary)
+
+---
+
+### STG-088 — Payment — no GST/tax breakup on payment screen
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — payment screen shows flat ₹145.00, no tax/GST breakdown
+- **Scope**: Payment screen — tax display
+- **Problem**:
+  1. Indian GST law requires tax amount to be shown on invoices/receipts
+  2. Payment screen shows total only — no "Subtotal: ₹123 + GST 18%: ₹22 = ₹145"
+  3. Customer may ask "What's the GST?" — cashier can't answer
+  4. For B2B sales, GST breakup is mandatory on invoices
+  5. Different products have different GST rates (5%, 12%, 18%, 28%) — should show per-rate breakup
+- **Expected**:
+  1. Below amount display: "Includes GST: ₹22.17 (CGST ₹11.09 + SGST ₹11.09)"
+  2. Or: separate lines in summary: "Subtotal: ₹122.83 | GST 18%: ₹22.17 | Total: ₹145.00"
+  3. For mixed-rate carts: group by GST rate (5% items, 18% items)
+  4. GSTIN display if store is registered
+  5. This info should also appear on the printed/digital receipt
+- **Migration**: Backend may need GST calculation if not already present
+- **Test**: Add GST item → see tax breakup. Add mixed-rate items → see per-rate breakdown.
+- **Depends on**: STG-081 (order summary)
+
+---
+
+### STG-089 — Payment — "Complete Payment" grey-on-grey text fails WCAG contrast
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — "Complete Payment" text is dark grey on a grey button — barely readable
+- **Scope**: Payment screen — CTA button disabled style
+- **Problem**:
+  1. Disabled button: dark grey (#6B7280) text on grey (#9CA3AF) background
+  2. Contrast ratio approximately 2:1 — fails WCAG AA minimum of 4.5:1
+  3. Under bright shop lighting, this becomes essentially invisible
+  4. User might not even notice the button exists when disabled
+  5. Even disabled buttons should be readable — the user needs to know the action exists
+- **Expected**:
+  1. Disabled style: light grey background (#E5E7EB) + medium grey text (#9CA3AF) — meets 3:1 for large text
+  2. Active style: primary blue (#2563EB) background + white text — high contrast
+  3. The transition from disabled → active should be noticeable (color change + optional subtle animation)
+  4. All button states audited for WCAG AA compliance (ties to STG-053)
+- **Migration**: None
+- **Test**: Disabled button text is readable in direct sunlight. Active button passes WCAG 4.5:1.
+- **Depends on**: STG-053 (WCAG audit), STG-003 (theme tokens)
+
+---
+
+### STG-090 — Payment — no loading/processing state during payment attempt
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — error state visible but no prior loading/processing state evident
+- **Scope**: Payment screen — payment processing UX
+- **Problem**:
+  1. User taps "Complete Payment" → presumably it tries to process → shows error
+  2. But there's no indication of PROCESSING state between tap and error
+  3. Was there a spinner? A progress bar? "Processing..." text? Nothing visible
+  4. Without processing indication, user doesn't know if the tap registered
+  5. User might tap multiple times → multiple payment attempts → potential double-charge
+- **Expected**:
+  1. **On tap**: Button shows spinner + "Processing payment..." — becomes non-tappable
+  2. **3-second timeout**: "Still processing..." message if it takes longer
+  3. **10-second timeout**: "Taking longer than usual..." with cancel option
+  4. **Prevent double-tap**: Button disabled immediately on first tap, re-enabled only after result
+  5. **Success**: Spinner → checkmark animation → "Payment complete!" → navigate to receipt
+  6. **Failure**: Spinner → error animation → error message with Retry
+- **Migration**: None
+- **Test**: Tap → see spinner. Slow network → see "Still processing". Double-tap → second tap ignored.
+- **Depends on**: STG-078 (button states)
+
+---
+
+### STG-091 — Payment — instruction text "Collect cash" doesn't change per payment method
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — "Collect cash from customer" shows even though payment method could be UPI or Due
+- **Scope**: Payment screen — dynamic instruction text
+- **Problem**:
+  1. "Collect cash from customer" is static text — doesn't change when UPI or Due is selected
+  2. For UPI: should say "Ask customer to scan QR" or "Send payment request"
+  3. For Due: should say "Record as credit for [customer]"
+  4. Wrong instruction for wrong payment method creates confusion
+- **Expected**:
+  1. **Cash**: "Collect ₹145.00 cash from customer"
+  2. **UPI**: "Ask customer to scan QR code or enter UPI ID"
+  3. **Due**: "This amount will be added to customer's credit"
+  4. Dynamic instruction updates immediately on tab switch
+  5. Use the payment method name in the instruction for clarity
+- **Migration**: None
+- **Test**: Switch Cash → UPI → Due → verify instruction text changes each time.
+- **Depends on**: None
+
+---
+
+### STG-092 — Payment — no receipt preview before completing payment
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot review — no way to preview receipt before completing payment
+- **Scope**: Payment screen — receipt preview
+- **Problem**:
+  1. After tapping "Complete Payment", receipt is generated — but user can't preview it beforehand
+  2. If there's an error in product name, price, or quantity, it's on the receipt already
+  3. No way to verify: store name, GSTIN, payment method, total — all receipt elements
+  4. Reprinting/voiding a receipt is more work than previewing before payment
+- **Expected**:
+  1. **"Preview Receipt"** link/button on payment screen — opens formatted receipt view
+  2. Or: the order summary (STG-081) IS the receipt preview — shows exactly what the receipt will contain
+  3. Shows: store header, items, taxes, total, payment method, date/time, receipt number
+  4. "Print receipt after payment" toggle — some customers don't need receipts
+- **Migration**: None
+- **Test**: Tap preview → see formatted receipt. Content matches final printed receipt.
+- **Depends on**: STG-081 (order summary)
+
+---
+
+### STG-093 — Payment — Cash tab uses MaterialCommunityIcons "cash" icon which renders as generic bills
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — `PaymentScreen.tsx:1199` uses `renderModeTab("CASH", "Cash", "cash")` with MaterialCommunityIcons name="cash" at size 20
+- **Scope**: `src/screens/PaymentScreen.tsx:1199,957`
+- **Problem**:
+  1. Line 1199: Cash tab renders `MaterialCommunityIcons name="cash"` — which is a small bills/banknote icon
+  2. At size 20 (line 957), the icon is small and its shape is hard to distinguish from other icons
+  3. Icon color toggles between `colors.textInverse` (selected) and `colors.textSecondary` (unselected)
+  4. On budget Android screens, the "cash" icon at 20px looks like a generic rectangle
+- **Expected**:
+  1. Replace "cash" with "cash-multiple" (stacked bills — more recognizable) or "currency-inr" (₹ symbol — culturally specific)
+  2. Increase icon size from 20 to 24 for better legibility on small screens
+  3. Ensure all 3 tab icons (Cash, UPI, Due) have same visual weight at new size
+  4. Add text label below icon: "Cash", "UPI", "Due" (redundant but helpful for first-time users)
+- **Migration**: None
+- **Test**: All 3 payment tab icons instantly recognizable at 5-inch screen size. Icon size consistent.
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-094 — Cart — "Clear" button has no confirmation dialog, deletes all items instantly
+
+- **Status**: OPEN
+- **Priority**: P1 (accidental clear during rush billing = lost work + angry customer)
+- **Source**: Screenshot — red "Clear" text at top-right, one tap presumably empties entire cart
+- **Scope**: Sell Cart screen — Clear action
+- **Problem**:
+  1. "Clear" at top-right in red text — tapping it presumably deletes ALL cart items
+  2. NO confirmation dialog — one accidental tap destroys the bill the cashier was building
+  3. During rush hours, thumbs slip — accidental taps on "Clear" are inevitable
+  4. "Clear" text is positioned where a common "Done" or "Close" button would be — high mis-tap risk
+  5. No undo mechanism — once cleared, items are gone
+  6. If cart has 10 items entered manually, clearing them means re-entering all 10
+- **Expected**:
+  1. **Confirmation dialog**: "Clear cart? This will remove all 3 items." → [Cancel] [Clear]
+  2. **Or**: Swipe-to-clear gesture with undo toast: "Cart cleared. [Undo - 5s]"
+  3. **Move "Clear" away from tap-hazard position**: smaller, or behind a ⋮ menu, or long-press only
+  4. **Red color is correct** for destructive action — but add confirmation
+  5. **Undo buffer**: Keep cleared items in memory for 10 seconds — "Undo" toast restores them
+- **Migration**: None
+- **Test**: Tap Clear → dialog asks confirmation. Cancel → cart unchanged. Confirm → items removed + undo toast.
+- **Depends on**: None
+
+---
+
+### STG-095 — Cart — delete item (🗑️) has no confirmation or undo
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Screenshot — red trash icon on cart item, one tap presumably removes the item
+- **Scope**: Sell Cart — item delete action
+- **Problem**:
+  1. Red outlined trash icon (🗑️) at top-right of product card — one tap removes the item
+  2. No confirmation dialog — "Are you sure you want to remove Toor Dal?"
+  3. No undo mechanism — item is gone after one tap
+  4. During fast billing, cashier's thumb might hit 🗑️ instead of [+] — mis-tap removes the item
+  5. 🗑️ and [+] are on the same card, ~100px apart — too close for error-free rapid tapping
+- **Expected**:
+  1. **Swipe-to-delete** instead of tap: swipe left reveals red delete area — intentional action
+  2. **Or**: Tap 🗑️ → item shows "Removed" overlay + "Undo" button (5 second timeout) → then removes
+  3. **Or**: Move delete behind a ⋮ menu per item — requires 2 taps (intentional)
+  4. **Minimum**: Tap → confirmation "Remove Toor Dal from cart?" → [Cancel] [Remove]
+  5. **Reduce [-] to 0** = implicit remove: tapping [-] when qty=1 could remove with undo
+- **Migration**: None
+- **Test**: Tap delete → confirmation dialog. Swipe left → delete revealed. Undo → item restored.
+- **Depends on**: None
+
+---
+
+### STG-096 — Cart — quantity [-][+] buttons too small, need larger tap targets
+
+- **Status**: OPEN
+- **Priority**: P1 (quantity changes are the #1 cart interaction — must be fast and accurate)
+- **Source**: Screenshot — [-] and [+] are small outlined blue squares, hard to tap rapidly
+- **Scope**: Sell Cart — quantity stepper buttons
+- **Problem**:
+  1. [-] and [+] buttons appear to be ~36px outlined blue squares — below Android's 48px minimum
+  2. Outlined (not filled) — low visual weight, hard to see in bright shop lighting
+  3. The quantity "1" between them is also small and not clearly tappable
+  4. During fast billing: "5 packets of salt" requires 4 rapid taps on [+] — small targets = errors
+  5. [-] is dangerously close to [+] — tapping [-] when meaning [+] changes the quantity wrong way
+- **Expected**:
+  1. **Minimum 48px × 48px** tap targets (Android Material guideline)
+  2. **Filled buttons**: [-] grey/neutral, [+] primary blue — clearly tappable
+  3. **Larger text**: quantity number in 20px+ bold between the buttons
+  4. **Long-press**: hold [+] for rapid increment (auto-repeat every 200ms)
+  5. **Spacing**: minimum 16px gap between [-] and [+] to prevent mis-taps
+  6. **Ripple feedback**: on each tap, confirm the action registered
+  7. **Alternative**: stepper with wider touch zones: [− ₹145 × 1 +] as a single row
+- **Migration**: None
+- **Test**: Tap [+] 10 times rapidly → qty reaches 11, no mis-taps. Long-press [+] → continuous increment.
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-097 — Cart — quantity number not tappable for direct input (type "10" vs tap + 9x)
+
+- **Status**: OPEN
+- **Priority**: P1 (kirana retailers buy in bulk — tapping + 49 times for qty 50 is unusable)
+- **Source**: Screenshot — "1" between [-][+] appears static, not tappable as an input
+- **Scope**: Sell Cart — quantity direct input
+- **Problem**:
+  1. To set quantity to 50, user must tap [+] 49 times — unacceptable
+  2. The "1" between [-][+] should be tappable → opens numeric keyboard → type "50" → done
+  3. Kirana wholesale: "2 crates of 48 bottles" = qty 96 — impossible with stepper alone
+  4. Even qty 5-10 is tedious with single [+] taps during rush hours
+  5. No alternative input: no "Set quantity" option, no keyboard shortcut
+- **Expected**:
+  1. **Tap on quantity number** → inline edit mode → numeric keyboard appears → type exact qty
+  2. **Or**: Tap on qty → bottom sheet with large numpad: [1-9, 0, ., ←, Done]
+  3. **Validation**: Max quantity = available stock (show "Only 39 in stock" if user enters 50)
+  4. **Decimal support**: for weighted items: "2.5 kg" — decimal numpad
+  5. **Quick picks**: for common quantities: [1] [2] [5] [10] [25] below the stepper
+  6. **After entry**: quantity updates, line total recalculates, stepper reflects new number
+- **Migration**: None
+- **Test**: Tap "1" → keyboard opens → type "25" → qty changes to 25 → line total = ₹3,625.
+- **Depends on**: STG-096 (stepper redesign)
+
+---
+
+### STG-098 — Cart — no "Add more items" / "Continue Shopping" link
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — cart has no way to add more items without dismissing the cart
+- **Scope**: Sell Cart — navigation back to product list
+- **Problem**:
+  1. Cart is a bottom sheet — to add more items, user must swipe it down/dismiss it
+  2. No explicit "Add more items" or "Continue Shopping" link inside the cart
+  3. After adding one item, user might think they need to checkout before adding more
+  4. The "← Sell Cart" back button might mean "go back" (close cart) but user isn't sure
+  5. Common POS flow: scan-scan-scan-checkout — cart should support continuous adding
+- **Expected**:
+  1. **"+ Add more items"** link at the bottom of the item list (above Discount section)
+  2. Tap → dismisses cart sheet → returns to SELL tab product list with cart badge showing count
+  3. Or: "Continue Scanning" button — keeps cart open as a mini bar while returning to products
+  4. Cart badge on SELL tab: floating "1 item ₹145" pill (ties to STG-016)
+  5. The flow should feel continuous: add → add → add → checkout when ready
+- **Migration**: None
+- **Test**: Tap "Add more items" → returns to product list → cart count badge visible → reopen cart → items preserved.
+- **Depends on**: STG-016 (floating cart bar)
+
+---
+
+### STG-099 — Cart — edit icon (✏️) purpose unclear, no tooltip or label
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — pencil edit icon next to "Toor Dal (Arhar) 1kg" — function unknown
+- **Scope**: Sell Cart — item edit action
+- **Problem**:
+  1. Small pencil (✏️) icon next to the product name — what does it edit?
+  2. Possible meanings: edit product name? Edit price? Edit quantity? Edit unit? Open product details?
+  3. No tooltip, no label, no hint — user must tap to discover
+  4. If it opens a price override: dangerous — cashier could change price without manager approval
+  5. If it opens product details: useful but should use a different icon (ℹ️ not ✏️)
+- **Expected**:
+  1. **Clarify purpose**: If it edits price → label "Edit price" and add manager approval for changes > 10%
+  2. **If it opens product details**: Change icon to ℹ️ or add label "Details"
+  3. **Remove if redundant**: If quantity and delete handle all cart actions, the edit icon may be unnecessary clutter
+  4. **If price override**: Show both original and overridden price with strikethrough
+  5. **Tooltip on first use**: "Tap to edit price or quantity" — disappears after first interaction
+- **Migration**: None
+- **Test**: Tap edit → verify function. Label matches actual behavior. Price override requires approval.
+- **Depends on**: None
+
+---
+
+### STG-100 — Cart — unit price vs line total not labeled (ambiguous with qty > 1)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — ₹145.00 on left and ₹145.00 on right with qty=1, not labeled
+- **Scope**: Sell Cart — item pricing display
+- **Problem**:
+  1. With qty=1: left price "₹145.00" and right price "₹145.00" are identical — which is which?
+  2. With qty=3: left would be "₹145.00" (unit) and right would be "₹435.00" (line total) — but still unlabeled
+  3. Cashier can't distinguish "per unit" from "total" at a glance
+  4. Price disputes: customer says "I thought ₹145 was the total for 3" — ambiguity causes arguments
+  5. No "×" symbol: showing "₹145.00 × 3 = ₹435.00" would be immediately clear
+- **Expected**:
+  1. **Left**: "₹145.00/unit" (small text, or "₹145 ea.")
+  2. **Right**: "₹435.00" (bold, larger — this is the line total)
+  3. **Or**: Single line format: "₹145.00 × 3 = ₹435.00" — calculation is explicit
+  4. **With qty=1**: Show just "₹145.00" (skip the "×1" — it's obvious)
+  5. **Label positions consistently**: unit price always left, line total always right, always labeled
+- **Migration**: None
+- **Test**: qty=1 → shows one price. qty=3 → shows "₹145/unit × 3 = ₹435". Visually unambiguous.
+- **Depends on**: STG-009 (product card redesign)
+
+---
+
+### STG-101 — Cart — no GST/tax line between Subtotal and Total
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — "Subtotal ₹145.00" then "Total ₹145.00" — no tax line
+- **Scope**: Sell Cart — price breakdown
+- **Problem**:
+  1. Subtotal and Total are the same amount — no tax, discount, or fee lines between them
+  2. If GST is included in the price, it should still be shown: "Incl. GST: ₹22.17"
+  3. If discount is applied (using the Discount section), where does the discount line appear?
+  4. Expected breakdown: Subtotal → Discount → Tax/GST → Total
+  5. Indian GST compliance requires tax display on commercial transactions
+- **Expected**:
+  1. **Standard breakdown**:
+     - Subtotal: ₹145.00
+     - Discount: -₹0.00 (or hidden if zero)
+     - GST (18%): ₹22.17 (or "Incl." if tax-inclusive pricing)
+     - **Total: ₹145.00**
+  2. For zero discount: hide the discount line (only show when > 0)
+  3. For mixed GST rates: show per-rate lines (5%: ₹X, 18%: ₹Y)
+  4. Show savings if discount applied: "You save ₹15.00"
+- **Migration**: None (display-only, GST calc may already exist in backend)
+- **Test**: Add discounted item → see discount line. GST-applicable → see tax line. Zero discount → line hidden.
+- **Depends on**: STG-088 (payment GST display)
+
+---
+
+### STG-102 — Cart — discount has no max limit / manager approval for large discounts
+
+- **Status**: OPEN
+- **Priority**: P1 (security: cashier could give 100% discount = theft)
+- **Source**: Code audit — `SellScanScreen.tsx:3505-3561` discount UI + `cartStore.ts:111-129` `calculateDiscountAmount()` + `cartStore.ts:677-689` discount application
+- **Scope**: `src/screens/SellScanScreen.tsx:3505-3561`, `src/stores/cartStore.ts:111-129,677-689`
+- **Problem**:
+  1. Lines 3505-3547: Two chips (%, Flat) toggle discount type. TextInput accepts ANY numeric value.
+  2. `cartStore.ts:111-129`: `calculateDiscountAmount()` caps percentage at 100% and fixed at INT32_MAX (2147483647) — effectively NO real limit
+  3. NO role-based check — `disabled={!canEditCart}` at line 3516 only checks cart editability, not staff role
+  4. NO audit trail — discount amount stored in cart state but not logged with who/when/why
+  5. NO manager approval workflow — any staff member can apply any discount
+  6. NO preset discount reasons (damaged, loyalty, clearance) — just a raw number input
+- **Expected**:
+  1. Add `maxDiscountPercent` config per store role: CASHIER=10%, MANAGER=25%, OWNER=100% — fetch from store settings API or `platform_settings` table
+  2. If discount > role limit: show "Manager Approval Required" modal → manager enters PIN → unlock higher limit
+  3. Add discount reason selector: "Damaged", "Customer Loyalty", "Clearance", "Price Match", "Other" — required for discounts > 5%
+  4. Log discount in sale metadata: `{ staffId, discountAmount, discountType, reason, approvedBy, timestamp }`
+  5. Visual warning at >20%: amber banner "High discount — ₹X off"
+  6. Backend: add `max_discount_percent` column to `store_staff` or `platform_settings` table
+- **Migration**: New migration adding `max_discount_percent` to store settings + `discount_audit` fields to sales table
+- **Test**: Cashier enters 50% → "Manager approval required" modal. Manager PIN → discount applied + audit logged. Cashier enters 8% → no approval needed.
+- **Depends on**: STG-017 (staff role display)
+
+---
+
+### STG-103 — Cart — no customer name/phone field for credit/due sales
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — cart has no customer identification field
+- **Scope**: Sell Cart — customer selection
+- **Problem**:
+  1. Cart shows items + discount + total but no customer field
+  2. For cash sales, customer ID is optional but useful (loyalty, history)
+  3. For credit/due sales, customer ID is MANDATORY (who owes the money?)
+  4. The customer should be linked BEFORE payment — not on the payment screen after "Due" is selected
+  5. Linking customer in cart enables: outstanding balance display, loyalty points, purchase history
+- **Expected**:
+  1. **Optional customer field at top of cart**: "Customer (optional)" → search by name/phone
+  2. For credit sales: field becomes REQUIRED — "Select customer for credit sale"
+  3. Show customer info: name, phone, outstanding balance
+  4. Quick-add: "New customer" → name + phone (2 fields)
+  5. Recent customers: last 5 for quick selection
+  6. Position: above the first item in the cart
+- **Migration**: None (ties to STG-037 customer model)
+- **Test**: Select customer → name shows in cart. Proceed to Due payment → customer pre-selected.
+- **Depends on**: STG-037 (customer entry), STG-082 (Due payment customer)
+
+---
+
+### STG-104 — Cart — no "Hold/Park Bill" feature for interrupted transactions
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot review — no way to save current bill and start a new one
+- **Scope**: Sell Cart — bill hold/park functionality
+- **Problem**:
+  1. Customer says "I forgot my wallet, I'll be right back" — cart has 5 items, cashier can't wait
+  2. Next customer is waiting — cashier needs to start a new bill immediately
+  3. No "Hold Bill" or "Park" button — cashier must either complete or clear the current bill
+  4. Clearing loses all entered items — customer comes back, cashier re-enters 5 items
+  5. This is a standard POS feature — restaurant POS calls it "Hold Table", retail calls it "Park Bill"
+- **Expected**:
+  1. **"Hold" button** in cart header (alongside "Clear"): saves current bill with timestamp
+  2. **Held bills list**: accessible from SELL tab — "2 held bills" badge
+  3. Tap held bill → restore to active cart → continue billing
+  4. **Auto-expire**: Held bills expire after 2 hours (configurable)
+  5. **Max held bills**: 5 concurrent — prevents forgotten held bills accumulating
+  6. **Show held bill info**: Customer name (if linked), item count, total, time held
+- **Migration**: May need local storage for held bills
+- **Test**: Hold bill → start new bill → go to held bills → restore first bill → complete checkout.
+- **Depends on**: None
+
+---
+
+### STG-105 — Cart — no item count header ("1 item in cart")
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — "Sell Cart" title but no item count
+- **Scope**: Sell Cart — header info
+- **Problem**:
+  1. "Sell Cart" title doesn't show how many items are in the cart
+  2. With 10 items that require scrolling, user doesn't know total count without counting
+  3. Quick verification: "I scanned 5 items" — glance at header → "5 items" → confirmed
+- **Expected**:
+  1. Header: "Sell Cart (1 item)" or "Sell Cart • 1 item"
+  2. Updates dynamically: "Sell Cart (3 items)" when items added
+  3. Or: separate subtitle below "Sell Cart": "1 item • ₹145.00"
+- **Migration**: None
+- **Test**: Add 3 items → header shows "3 items". Remove 1 → shows "2 items".
+- **Depends on**: None
+
+---
+
+### STG-106 — Cart — Discount %/Flat toggle styling inconsistent
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — "%" has blue circle indicator, "Flat" has no indicator
+- **Scope**: Sell Cart — discount toggle component
+- **Problem**:
+  1. "%" option has a blue filled circle to its left — appears selected
+  2. "Flat" option has NO blue circle — appears unselected
+  3. But the visual treatment is unclear: is "%" a radio button? A toggle? A chip?
+  4. The input field next to it shows "%" as placeholder — doesn't change to "₹" when "Flat" selected
+  5. Custom toggle doesn't follow Material Design or any recognizable pattern
+- **Expected**:
+  1. Use standard segmented control / toggle: [%] [₹ Flat] — selected one has blue fill, other is outlined
+  2. Input placeholder changes: "%" when percent selected, "₹" when flat selected
+  3. Input label: "Discount (%)" or "Discount (₹)" — dynamic based on toggle
+  4. Standard Material segmented button for consistency
+- **Migration**: None
+- **Test**: Toggle % ↔ Flat → visual state changes clearly. Input placeholder updates. Both modes calculate correctly.
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-107 — Cart — no product thumbnail/image in cart items
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — cart item shows only text, no product image/thumbnail
+- **Scope**: Sell Cart — item card visual
+- **Problem**:
+  1. Cart shows "Toor Dal (Arhar) 1kg" in text only — no product image
+  2. Visual identification is faster than reading text — images help verify correct product
+  3. With 10 items, text-only list is harder to scan than image + text
+  4. Product images may already exist in catalog — just not displayed in cart
+- **Expected**:
+  1. Small thumbnail (40×40px) at left of each cart item: product image or category icon
+  2. If no image exists: category-specific placeholder (leaf for grocery, bottle for dairy)
+  3. Matches the product card design from SELL tab for consistency
+- **Migration**: None
+- **Test**: Product with image → shows thumbnail. No image → category placeholder. Cart still loads fast.
+- **Depends on**: STG-009 (product card images)
+
+---
+
+### STG-108 — Cart — ~50% empty space with few items, no guidance to add more
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — cart with 1 item has massive empty white space
+- **Scope**: Sell Cart — empty area utilization
+- **Problem**:
+  1. With 1 item, ~50% of the cart screen between the product card and Discount section is empty white
+  2. No illustration, no guidance, no suggestion — just void
+  3. Feels incomplete — "is this all?" rather than "ready to checkout!"
+- **Expected**:
+  1. **Light illustration or text in empty area**: "Scan or search to add more items" with a subtle icon
+  2. **Suggested products**: "Frequently bought together" — 2-3 product suggestions
+  3. **Or**: Auto-collapse empty space — Discount section moves up closer to the item list
+  4. With 5+ items: empty space fills naturally — skeleton is fine
+- **Migration**: None
+- **Test**: 1 item → guidance visible. 5 items → space fills naturally. Guidance disappears.
+- **Depends on**: STG-098 (add more items link)
+
+---
+
+### STG-109 — Cart — Checkout button should show item count "Checkout (1 item) ₹145"
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — "Checkout ₹145.00" button shows total but not item count
+- **Scope**: Sell Cart — checkout CTA
+- **Problem**:
+  1. "Checkout ₹145.00" — good that it shows total, but no item count
+  2. Quick verification before checkout: "Checkout (3 items) ₹435.00" confirms both count and total
+  3. Prevents accidental checkout with wrong number of items
+- **Expected**:
+  1. Button text: "Checkout (1 item) ₹145.00" or "Checkout • 1 item • ₹145.00"
+  2. For multiple: "Checkout (3 items) ₹435.00"
+  3. Dynamic update as items are added/removed
+- **Migration**: None
+- **Test**: 1 item → "Checkout (1 item) ₹145". Add 2 more → "Checkout (3 items) ₹435".
+- **Depends on**: None
+
+---
+
+### STG-110 — Cart — no per-item discount, only cart-level
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — Discount section applies to entire cart, no per-item discount option
+- **Scope**: Sell Cart — discount granularity
+- **Problem**:
+  1. Discount section at bottom applies to the whole cart subtotal
+  2. No way to discount just ONE item (e.g., damaged packaging on one product)
+  3. Per-item discounts are common: "This dal bag is torn, give ₹10 off just this item"
+  4. Cart-level discount distributes unevenly across items — wrong GST allocation
+- **Expected**:
+  1. Per-item discount: tap edit (✏️) on an item → "Discount" option → %/Flat per item
+  2. Cart-level discount ALSO available — both co-exist
+  3. Display: item shows original price strikethrough + discounted price
+  4. Tax calculation: per-item discounts before GST, cart discount after subtotal
+- **Migration**: None
+- **Test**: Discount one item ₹10 → that item shows ₹135, others unchanged. Cart discount stacks on top.
+- **Depends on**: STG-099 (edit icon purpose), STG-102 (discount controls)
+
+---
+
+### STG-111 — Cart — no "You save ₹X" line when discount applied
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — discount section exists but no savings display when discount applied
+- **Scope**: Sell Cart — savings display
+- **Problem**:
+  1. When a discount is applied, there's no "You save ₹X" or "Discount: -₹X" line
+  2. Customer likes to see savings — builds loyalty
+  3. Cashier can't verify the discount amount without mental calculation
+- **Expected**:
+  1. After discount: show "Discount: -₹15.00" line between Subtotal and Total
+  2. Green "You save ₹15.00" message — positive reinforcement for customer
+  3. On receipt: also print "You saved ₹15.00 today!"
+- **Migration**: None
+- **Test**: Apply 10% discount → "Discount: -₹14.50" appears. "You save ₹14.50" in green.
+- **Depends on**: STG-101 (cart price breakdown)
+
+---
+
+### STG-112 — Cart — no notes/memo field for special instructions
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot review — no way to add notes to a bill
+- **Scope**: Sell Cart — notes/memo section
+- **Problem**:
+  1. No notes field for: "Deliver to Raju's shop", "Customer will pick up at 5 PM", "Return packaging"
+  2. Kirana stores frequently take phone orders for delivery — notes capture the context
+  3. Without notes, cashier relies on memory — errors during busy periods
+- **Expected**:
+  1. "Add Note" expandable field at bottom of cart (below Discount, above Subtotal)
+  2. Optional — collapsed by default: "📝 Add note" link
+  3. Expanded: text input, 2 lines, 140 chars max
+  4. Note appears on receipt and in order history
+  5. Suggestions: "Delivery", "Hold for pickup", "Customer return"
+- **Migration**: May need `notes` field in order model
+- **Test**: Add note → appears on receipt. No note → field stays collapsed.
+- **Depends on**: None
+
+---
+
+### STG-113 — Payment — no bill/invoice number visible for tracking and disputes
+
+- **Status**: OPEN
+- **Priority**: P1 (every commercial transaction needs a unique ID — legal + operational requirement)
+- **Source**: Screenshot deep review — payment screen shows amount but no transaction/bill identifier
+- **Scope**: Payment screen — transaction metadata display
+- **Problem**:
+  1. ₹145.00 is displayed but NO bill number, invoice ID, or transaction reference
+  2. After payment: customer asks "What's my bill number?" — cashier can't answer
+  3. For returns: "I bought this yesterday" — which transaction? No ID to look up
+  4. For disputes: "You charged me twice" — without bill numbers, impossible to investigate
+  5. Audit/reconciliation: end-of-day settlement needs bill numbers to match payments
+  6. Indian GST requires invoice numbers on tax invoices
+- **Expected**:
+  1. Show bill number at the top: "Bill #SM-20260313-0042" (store prefix + date + sequence)
+  2. Auto-generated before payment starts (not after) — so the number is visible throughout
+  3. Sequential, unique per store per day — easy to reference verbally
+  4. Show on: payment screen, receipt, order history
+  5. Format: configurable but default "SM-YYYYMMDD-NNNN"
+- **Migration**: May need bill_number sequence in orders table
+- **Test**: Start checkout → bill number visible. Complete → same number on receipt. Next bill → number increments.
+- **Depends on**: None
+
+---
+
+### STG-114 — Payment — no cancel/void transaction button
+
+- **Status**: OPEN
+- **Priority**: P1 (cashier can get trapped on payment screen with no escape except back button)
+- **Source**: Screenshot — only "Complete Payment" (disabled) and "Retry" visible. No cancel option.
+- **Scope**: Payment screen — cancel/void workflow
+- **Problem**:
+  1. Cashier is on payment screen but customer says "Never mind, I don't want it"
+  2. NO "Cancel" button, no "Void", no "Back to Cart" (STG-083 covers back, this is VOID)
+  3. What if the cashier accidentally tapped Checkout? They're stuck on payment with no escape
+  4. Error state: payment failed, but cashier doesn't want to retry — wants to cancel entirely
+  5. "Cart locked" badge implies irreversibility — intensifies the feeling of being stuck
+  6. Going back to cart (STG-083) preserves the cart. But sometimes the whole SALE needs to be cancelled.
+- **Expected**:
+  1. **"Cancel Sale"** text button or ⋮ menu option on payment screen
+  2. Confirmation: "Cancel this sale? Items will be returned to inventory." → [Keep] [Cancel Sale]
+  3. After cancellation: return to SELL tab with empty cart, stock restored
+  4. **Void after payment**: If payment already completed, "Void" option available for 15 minutes
+  5. Void requires manager PIN for amounts > ₹500 (prevent cashier abuse)
+  6. Audit log: record all cancellations and voids with staff ID, reason, timestamp
+- **Migration**: May need void/cancellation status in orders model
+- **Test**: Cancel before payment → cart cleared, returned to SELL. Void after payment → stock restored, audit logged.
+- **Depends on**: STG-083 (back button)
+
+---
+
+### STG-115 — Payment — missing payment methods: Card, Wallet (Paytm/GPay balance)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — only UPI, Cash, Due available. No card or wallet payment.
+- **Scope**: Payment screen — additional payment methods
+- **Problem**:
+  1. Only 3 methods: UPI, Cash, Due — missing common Indian payment methods
+  2. **Card/Debit**: Many kirana stores have card swipe machines (Mswipe, Pine Labs) — growing fast
+  3. **Wallet**: Paytm wallet, Amazon Pay balance — customers use these daily
+  4. **Bank Transfer/NEFT**: For large B2B wholesale orders
+  5. **Cheque**: Rare but used for large supplier payments in kirana
+  6. As digital payments grow, 3 methods will become insufficient
+- **Expected**:
+  1. Add "Card" tab with card icon — records card payment (amount only, no card processing in POS)
+  2. Add "Wallet" tab or merge with UPI into "Digital" category
+  3. Make payment methods configurable per store — hide unused methods in settings
+  4. "More" overflow if >4 methods — or scrollable tabs
+  5. Tab layout should handle 4-5 methods without breaking (flexible width or scroll)
+  6. Each method: distinct icon, clear label, method-specific flow
+- **Migration**: Backend payment_method enum may need new values
+- **Test**: Enable Card in settings → Card tab appears. Disable → hidden. Payment recorded with correct method.
+- **Depends on**: None
+
+---
+
+### STG-116 — Payment — Indian lakh number formatting (₹1,45,000 not ₹145,000)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot analysis — ₹145.00 is small but large amounts would need Indian formatting
+- **Scope**: All screens — number formatting across the app
+- **Problem**:
+  1. India uses lakh/crore system: ₹1,45,000 (one lakh forty-five thousand)
+  2. International format: ₹145,000 — Indians misread this as "fourteen thousand five hundred"
+  3. For wholesale kirana bills (₹50,000+), wrong formatting causes confusion
+  4. The ₹145.00 on screen is fine, but ₹1,45,000.00 must be formatted correctly
+  5. This applies to: payment amount, cart total, product prices, reports, receipts
+- **Expected**:
+  1. Use Indian number formatting: `Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' })`
+  2. Examples: ₹1,45,000 | ₹10,00,000 | ₹99,999 | ₹1,000
+  3. Apply to: payment screen, cart total, product prices, order history, reports
+  4. Receipts: same formatting for printed/digital receipts
+  5. Create a shared `formatCurrency()` utility used everywhere
+- **Migration**: None (display formatting only)
+- **Test**: Cart total ₹1,45,250 → displays with lakh comma. Receipt matches. All screens consistent.
+- **Depends on**: STG-003 (theme/design system)
+
+---
+
+### STG-117 — Payment — ".00" always shown on round amounts, add smart formatting
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — "₹145.00" when "₹145" is cleaner for round amounts
+- **Scope**: All screens — price display formatting
+- **Problem**:
+  1. ₹145.00 — the ".00" is visual noise. 95%+ of kirana prices are round numbers.
+  2. ₹30.00, ₹260.00, ₹145.00 — the ".00" adds no information and takes space
+  3. On small product cards (where space is precious), ".00" wastes 3 characters
+  4. International convention: ₹145 for round, ₹145.50 for fractional
+- **Expected**:
+  1. Smart formatting: ₹145 (round) vs ₹145.50 (fractional)
+  2. Show decimals only when the amount has a fractional part
+  3. On payment screen (large display): always show .00 for formal/receipt-like appearance
+  4. On product cards (small display): drop .00 for compactness
+  5. Configurable per context: card = compact, receipt = full
+- **Migration**: None
+- **Test**: Product ₹145 → shows "₹145". Product ₹145.50 → shows "₹145.50". Payment screen → always "₹145.00".
+- **Depends on**: STG-116 (Indian formatting utility)
+
+---
+
+### STG-118 — Payment — "Retry" button is red (destructive color) for a positive action
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — red "Retry" pill button in error banner
+- **Scope**: Payment screen — error banner retry button
+- **Problem**:
+  1. "Retry" button uses red color — red universally means destructive (delete, cancel, danger)
+  2. But Retry is a POSITIVE action — "try again to complete the payment"
+  3. User hesitates: "Will tapping this red button cancel my payment?"
+  4. The red Retry + grey Complete Payment create a confusing color hierarchy
+  5. Red should be reserved for: Clear, Delete, Void, Cancel
+- **Expected**:
+  1. Retry button: blue (primary action) or amber (warning-action) — NOT red
+  2. Match the primary blue of the Checkout button for consistency
+  3. Style: "Retry" as outlined blue pill or filled blue pill
+  4. Red reserved for destructive actions ONLY across the entire app
+  5. Error banner: keep the red/pink background for the banner itself (warning zone), but button inside should be blue
+- **Migration**: None
+- **Test**: Error banner → Retry button is blue. Visual distinction: banner = warning, button = action.
+- **Depends on**: STG-003 (theme tokens — color semantic rules)
+
+---
+
+### STG-119 — Payment — error banner has no dismiss X, persists indefinitely
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — error banner stays on screen with no way to dismiss
+- **Scope**: Payment screen — error banner lifecycle
+- **Problem**:
+  1. "Unable to start payment" banner has no close/X button — sticks on screen forever
+  2. If the network issue resolved itself, the error still shows — stale information
+  3. User can't dismiss it to try fresh — the old error occupies space and attention
+  4. Banner position (above CTA) partially obscures the payment flow
+  5. No auto-dismiss timer — even temporary errors persist
+- **Expected**:
+  1. **Dismiss X**: Small X button at right of error banner — tap to dismiss
+  2. **Auto-dismiss**: After 10 seconds, fade out with "Tap to retry" toast
+  3. **Auto-clear on action**: If user switches payment method or taps Retry, old error clears
+  4. **Fresh attempt**: After dismiss, "Complete Payment" button should be active (blue) for a fresh try
+  5. **Stacking**: If multiple errors occur, show only the latest (not stack all errors)
+- **Migration**: None
+- **Test**: Error appears → wait 10s → fades. Tap X → dismissed. Switch tab → error clears.
+- **Depends on**: STG-077 (error messaging)
+
+---
+
+### STG-120 — Payment — no staff name/ID for shift reconciliation and audit
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — payment screen has no indication of which staff member is processing
+- **Scope**: Payment screen — staff identification
+- **Problem**:
+  1. Multi-staff stores: who is accepting this ₹145 cash payment? No name visible.
+  2. End-of-shift: "Raju's register should have ₹12,450" — but if payments aren't tagged to staff, can't reconcile
+  3. Manager reviews: "Who gave 30% discount on bill #42?" — no staff trail
+  4. Fraud prevention: every payment must be attributable to a specific staff member
+  5. The home screen may show staff (STG-017) but payment screen doesn't carry it through
+- **Expected**:
+  1. Small text at top of payment screen: "Cashier: Raju (Manager)" — inherited from login session
+  2. Every completed payment records staff_id in the order/payment record
+  3. Receipts: "Served by: Raju" printed at the bottom
+  4. Shift report: grouped by staff — "Raju: 15 bills, ₹4,520 cash, ₹1,200 UPI"
+  5. If staff switches mid-transaction, update attribution
+- **Migration**: staff_id column in orders/payments if not already present
+- **Test**: Login as Raju → payment screen shows "Cashier: Raju". Payment record has staff_id.
+- **Depends on**: STG-017 (staff indicator on home)
+
+---
+
+### STG-121 — Payment — "Due" icon is calendar, should represent credit/udhar
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — Due tab has calendar+clock icon but "Due" means credit/udhar
+- **Scope**: Payment screen — Due payment tab icon
+- **Problem**:
+  1. Calendar+clock icon implies "schedule" or "deadline" — not "credit" or "owe money"
+  2. "Due" in kirana context = udhar = customer takes goods and pays later
+  3. A calendar suggests time-based scheduling, not a debt/credit concept
+  4. Kirana retailers understand "udhar" via: notebook, rupee with arrow, handshake
+- **Expected**:
+  1. Icon options: ₹ with forward arrow (money owed), notebook/ledger icon, or handshake icon
+  2. Or: ₹ inside a clock (money that will come later) — combines both concepts
+  3. Label: consider "Credit" or "Udhar" instead of "Due" for Hindi-belt users
+  4. Consistent with the CREDIT tab on the home screen
+- **Migration**: None
+- **Test**: Due tab icon is immediately recognizable as "credit sale" to a kirana retailer.
+- **Depends on**: STG-003 (theme tokens — icon set)
+
+---
+
+### STG-122 — Payment — no confirmation dialog for large amounts (₹5,000+)
+
+- **Status**: OPEN
+- **Priority**: P1 (accidental ₹50,000 payment can't be easily reversed)
+- **Source**: Payment screen analysis — Complete Payment has no confirmation step regardless of amount
+- **Scope**: Payment screen — high-value confirmation
+- **Problem**:
+  1. ₹145 → tap Complete Payment → done. Fine for small amounts.
+  2. ₹50,000 → tap Complete Payment → done. NO confirmation for a large amount — dangerous.
+  3. Fat-finger error: cashier enters wrong quantity, total becomes ₹14,500 instead of ₹145. One tap completes it.
+  4. Stock deduction is immediate — reversing requires void/return workflow.
+  5. Cash handling: giving wrong change on a large bill (no change calculator per STG-080) compounds the risk.
+- **Expected**:
+  1. **Threshold-based confirmation**: Amount > ₹5,000 → "Confirm: Complete payment of ₹14,500?" → [Cancel] [Confirm]
+  2. Threshold configurable per store in settings (default ₹5,000)
+  3. Confirmation shows: item count, total, payment method — final verification
+  4. For amounts > ₹10,000: require manager PIN (prevent large unauthorized sales)
+  5. Below threshold: single tap completes (no friction for daily small sales)
+- **Migration**: Store settings for confirmation threshold
+- **Test**: ₹145 → no confirmation. ₹6,000 → confirmation dialog. ₹15,000 → manager PIN required.
+- **Depends on**: STG-102 (manager approval pattern)
+
+---
+
+### STG-123 — Payment — amount positioned in dead center of empty space, move to top
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — ₹145.00 is vertically centered on the screen in a sea of whitespace
+- **Scope**: Payment screen — layout restructure
+- **Problem**:
+  1. "Amount ₹145.00" is dead center of the screen — ~200px of whitespace above and below it
+  2. This positioning suggests the amount is the ONLY content — but a payment screen should have more
+  3. Amount should be at the top (first thing cashier sees) with functional content below
+  4. Centering implies "this is a display screen" not "this is an action screen" — wrong mental model
+  5. When cart summary (STG-081) and cash input (STG-080) are added, the layout must restructure anyway
+- **Expected**:
+  1. Amount at top: immediately below payment tabs, large and prominent
+  2. Below amount: order summary (collapsible)
+  3. Below summary: payment-method-specific content (cash keypad, UPI QR, customer selector for Due)
+  4. Bottom: CTA button (fixed at bottom, always visible)
+  5. Top-to-bottom flow: see what → verify items → enter payment details → complete
+- **Migration**: None
+- **Test**: Amount at top, no dead whitespace. All functional areas have content.
+- **Depends on**: STG-080 (cash input), STG-081 (order summary), STG-087 (space utilization)
+
+---
+
+### STG-124 — Payment — no sound/vibration feedback on payment success or failure
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot analysis — no audio/haptic cues for payment outcomes
+- **Scope**: Payment screen — audio and haptic feedback
+- **Problem**:
+  1. Kirana counter is NOISY — customers talking, traffic outside, other devices beeping
+  2. Visual-only feedback (color change, text) is easily missed in this environment
+  3. Payment success: cashier needs to hear it worked without staring at the screen
+  4. Payment failure: needs an alert that cuts through ambient noise
+  5. Other POS systems: cash register "cha-ching" sound is iconic for a reason
+- **Expected**:
+  1. **Success**: Short pleasant chime (200ms) + medium haptic vibration
+  2. **Failure**: Short error buzz (200ms) + strong haptic vibration
+  3. **Processing**: Subtle tick every 2 seconds while waiting
+  4. **Configurable**: Settings → Sound on/off, Vibration on/off (some stores prefer silent)
+  5. **Volume**: Uses notification channel, not media — respects silent/vibrate mode
+  6. Use `expo-haptics` for vibration, `expo-av` for sound
+- **Migration**: None
+- **Test**: Complete payment → hear chime + feel vibration. Fail → hear buzz. Silent mode → vibration only.
+- **Depends on**: None
+
+---
+
+### STG-125 — Payment — no partial payment tracking (₹100 now + ₹45 due later)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Payment screen analysis — payment is all-or-nothing, no partial payment support
+- **Scope**: Payment screen — partial payment with remaining as due
+- **Problem**:
+  1. Bill is ₹145. Customer says "I only have ₹100, I'll pay ₹45 tomorrow."
+  2. Cashier must choose: Cash (full ₹145 — lies about receiving full amount) or Due (full ₹145 on credit — doesn't record the ₹100 received)
+  3. Neither option is correct — the REAL transaction is: ₹100 cash + ₹45 due
+  4. This is EXTREMELY common in kirana stores — partial payment with remaining as udhar
+  5. Different from split payment (STG-085) which is same-time multi-method. This is partial payment NOW + rest LATER.
+- **Expected**:
+  1. **"Partial Payment" option**: After entering cash amount ₹100, show "₹45 remaining → Record as due?"
+  2. **Flow**: Cash ₹100 → "₹45 remaining" → Select customer → "Record ₹45 due for Raju" → Complete
+  3. **Receipt shows**: "Paid: ₹100 (Cash) | Due: ₹45 | Total: ₹145"
+  4. **Customer ledger**: ₹45 added to Raju's outstanding balance
+  5. **Mandatory customer for partial-due**: Can't record "due" without customer identity
+- **Migration**: Order model needs partial_paid + due_amount fields
+- **Test**: Enter ₹100 on ₹145 bill → "₹45 remaining" → select customer → complete. Customer balance +₹45.
+- **Depends on**: STG-080 (cash amount input), STG-082 (customer for due), STG-037 (customer model)
+
+---
+
+### STG-126 — Cart — [-] at qty=1 behavior undefined: remove item? block? go to 0?
+
+- **Status**: OPEN
+- **Priority**: P1 (undefined behavior at a critical interaction point causes confusion)
+- **Source**: Screenshot — [-] button shown when qty=1, behavior on tap is undefined/unknown
+- **Scope**: Sell Cart — quantity stepper edge case
+- **Problem**:
+  1. Item qty is 1. User taps [-]. Three possible behaviors, all problematic:
+     - **Remove item**: Dangerous — accidental tap removes product from bill. No undo. (Same as STG-095 but via [-])
+     - **Go to 0**: Meaningless — qty 0 is same as not in cart. Confusing state.
+     - **Do nothing**: Frustrating — button is tappable but has no effect. No feedback.
+  2. Whatever the behavior, it's not communicated visually
+  3. The [-] button looks identical at qty=1 and qty=5 — no disabled/warning state
+  4. With STG-095 (delete button), there are now TWO ways to remove an item (🗑️ and [-]) — conflicting
+- **Expected**:
+  1. **At qty=1**: [-] button shows dimmed/disabled state — can't go below 1
+  2. **To remove**: User must use 🗑️ delete button (with confirmation per STG-095)
+  3. **Or**: [-] at qty=1 → shows confirmation: "Remove from cart?" → [Cancel] [Remove]
+  4. **Visual**: [-] button at qty=1 has reduced opacity (30%) and different border color (grey not blue)
+  5. **Haptic**: At qty=1, tapping [-] gives a "blocked" haptic (short double-buzz) signaling "can't go lower"
+  6. **Never allow qty=0**: qty minimum is 1. Removal is a separate explicit action.
+- **Migration**: None
+- **Test**: qty=1 → tap [-] → nothing happens, button appears disabled. qty=2 → tap [-] → qty=1.
+- **Depends on**: STG-096 (stepper redesign), STG-095 (delete confirmation)
+
+---
+
+### STG-127 — Cart — no stock validation when qty exceeds available stock
+
+- **Status**: OPEN
+- **Priority**: P1 (overselling = stock discrepancy = inventory chaos)
+- **Source**: Screenshot — "In stock: 39" shown but no validation preventing qty=50
+- **Scope**: Sell Cart — quantity vs stock validation
+- **Problem**:
+  1. Product shows "In stock: 39" but the [+] button has no visible upper limit
+  2. Can user set qty=50 when only 39 available? What happens?
+  3. Overselling → stock goes negative → inventory reports are wrong → reorder calculations break
+  4. Multi-device stores: Device A and Device B both have "In stock: 39" — both sell 30 → total 60 sold from 39 stock
+  5. No real-time stock lock — race condition between devices
+- **Expected**:
+  1. **Hard cap**: [+] disabled when qty = available stock. Button dims, tooltip "Max stock: 39"
+  2. **Warning**: At qty = stock - 5 → amber warning "Only 5 left!"
+  3. **At max**: qty=39, [+] greyed out, "No more in stock" message
+  4. **Direct input** (STG-097): Typing 50 → "Only 39 available" error, caps at 39
+  5. **Multi-device**: Ideally sync stock before checkout — "Stock changed: 32 remaining" notification
+  6. **Override for manager**: Manager PIN to allow overselling (for pre-orders or known incoming stock)
+  7. **Show remaining**: "In stock: 39" → as qty increases → "Remaining after sale: 9"
+- **Migration**: None (validation logic only)
+- **Test**: Set qty=39 → [+] disabled. Type 50 → capped at 39. qty=35 → "Remaining: 4" in amber.
+- **Depends on**: STG-097 (direct qty input)
+
+---
+
+### STG-128 — Cart — no batch/expiry info for perishable items in cart
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — "Toor Dal (Arhar) 1kg" in cart with no expiry or batch info
+- **Scope**: Sell Cart — item batch/expiry display
+- **Problem**:
+  1. FMCG products have expiry dates — Toor Dal could expire in 2 months or 2 days
+  2. FEFO (First Expired, First Out) badge on SELL tab implies expiry-aware selling — but cart doesn't show which batch
+  3. If multiple batches exist (batch A: exp Mar 2026, batch B: exp Dec 2026), which one is being sold?
+  4. Customer complaints: "This dal expired last week" — no proof of which batch was sold
+  5. Regulatory: FSSAI requires expiry awareness in food retail
+- **Expected**:
+  1. Below product name in cart: "Batch: B-2026-03 | Exp: Dec 2026" — small grey text
+  2. Auto-select FEFO batch (earliest expiry) — highlight if expiring within 30 days (amber)
+  3. If expired batch exists: RED warning "⚠️ This batch expired on 10-Mar-2026"
+  4. Batch selection: if multiple batches, tap to choose which batch to sell
+  5. Show batch info on receipt for traceability
+- **Migration**: None (batch data should exist in inventory)
+- **Test**: Product with 2 batches → FEFO batch auto-selected → expiry shown. Expired batch → red warning.
+- **Depends on**: STG-013 (FEFO badge explanation)
+
+---
+
+### STG-129 — Cart — long product name truncation/overflow not handled
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot analysis — "Toor Dal (Arhar) 1kg" fits but longer names will overflow
+- **Scope**: Sell Cart — product name text handling
+- **Problem**:
+  1. "Toor Dal (Arhar) 1kg" is 21 chars — fits in one line on screen width
+  2. "Tata Sampann Organic Premium Toor Dal Arhar Extra Clean 1kg" is 59 chars — will it wrap? Truncate? Overflow?
+  3. With edit icon (✏️) and delete icon (🗑️) on the same row, space for text is limited
+  4. Truncated names are problematic — customer can't verify "Tata Samp..." is the right product
+  5. Different font sizes on different devices may cause earlier truncation
+- **Expected**:
+  1. Product name: max 2 lines with ellipsis (`numberOfLines={2}`)
+  2. Full name on tap/long-press: tooltip or bottom sheet with complete product details
+  3. Icons (✏️ 🗑️) positioned at fixed right edge — name text area is the flexible element
+  4. Font size: min 14px for readability, even on 2nd line
+  5. Test with longest real product name in the catalog
+- **Migration**: None
+- **Test**: 60-char product name → wraps to 2 lines → ellipsis if still too long. Icons don't overlap.
+- **Depends on**: None
+
+---
+
+### STG-130 — Cart — discount input has no live preview ("10% = ₹14.50 off")
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — discount % input field with no preview of what the discount amount would be
+- **Scope**: Sell Cart — discount UX
+- **Problem**:
+  1. Cashier types "10" in the % field — but doesn't see "₹14.50 off" until checking the Total
+  2. No live preview: "10% on ₹145.00 = ₹14.50 off → New total: ₹130.50"
+  3. Cashier must mentally calculate: "10% of 145 is... 14.50" — error-prone during rush
+  4. For Flat discount: typing "20" → is that ₹20 off? Shows nowhere until Total updates
+  5. Without preview, cashier may enter wrong discount and not notice until receipt
+- **Expected**:
+  1. **Live preview below input**: As user types "10" → show "- ₹14.50 (10%)" in real-time
+  2. **Total preview**: "New total: ₹130.50" updates as discount changes
+  3. **For %**: "10% = ₹14.50 off"
+  4. **For Flat**: "₹20.00 off (13.8%)" — shows both absolute and percentage
+  5. **Validation**: >100% → "Discount can't exceed item total". Negative → blocked.
+  6. **Apply explicitly**: Show preview → tap "Apply" → Total updates. Not auto-apply on each keystroke.
+- **Migration**: None
+- **Test**: Type 10 → see "₹14.50 off" preview. Change to 20 → preview updates. Apply → Total changes.
+- **Depends on**: STG-106 (toggle styling), STG-102 (discount limits)
+
+---
+
+### STG-131 — Cart — empty space should show "frequently bought together" suggestions
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — ~50% of cart is empty white space that could drive upsell
+- **Scope**: Sell Cart — product suggestions in empty area
+- **Problem**:
+  1. Cart with 1 item has massive empty space between the item and Discount section
+  2. This prime real estate could suggest complementary products — increasing basket size
+  3. "Bought Toor Dal? Customers also buy: Oil ₹180, Salt ₹20, Jeera ₹45"
+  4. Kirana retailers want higher average bill value — suggestions help
+  5. Empty space feels incomplete and unprofessional
+- **Expected**:
+  1. **"Also add" section**: 3-5 product chips based on purchase patterns
+  2. **Data source**: order history — "products frequently bought with Toor Dal"
+  3. **Chip format**: "Oil ₹180 [+]" — name, price, quick-add button
+  4. **Position**: below last cart item, above Discount section
+  5. **Disappears**: when cart has 3+ items or user dismisses the section
+  6. **Fallback**: if no data, show "Popular items" from store's top sellers
+  7. **One-tap add**: tapping [+] adds to cart immediately
+- **Migration**: None (reads from existing order/sales data)
+- **Test**: Add Toor Dal → see suggestions for Oil, Salt. Tap [+] on Oil → added to cart. Cart has 5+ items → suggestions hidden.
+- **Depends on**: STG-033 (frequently sold), STG-108 (empty space)
+
+---
+
+### STG-132 — Cart — Subtotal = Total is redundant, show Subtotal only when different
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — "Subtotal ₹145.00" and "Total ₹145.00" are identical, taking two lines
+- **Scope**: Sell Cart — price summary display logic
+- **Problem**:
+  1. Subtotal: ₹145.00 and Total: ₹145.00 — showing both when they're identical is redundant
+  2. Takes 2 lines of space for 1 piece of information
+  3. Feels like the app is "trying too hard" to look like a receipt when there's nothing to break down
+  4. Adds visual noise — user scans both and realizes they're the same
+- **Expected**:
+  1. **No discount/tax applied**: Show only "Total: ₹145.00" (bold)
+  2. **Discount applied**: Show "Subtotal: ₹145.00 → Discount: -₹14.50 → Total: ₹130.50"
+  3. **Tax applicable**: Show "Subtotal → Tax → Total"
+  4. Lines appear ONLY when they add information (discount > 0, tax > 0)
+  5. Keeps the summary clean and purposeful
+- **Migration**: None
+- **Test**: No discount → only "Total" shown. Apply 10% → Subtotal + Discount + Total all appear.
+- **Depends on**: STG-101 (tax line), STG-111 (savings display)
+
+---
+
+### STG-133 — Cart — bottom sheet height fixed at ~90%, should be dynamic to content
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — cart bottom sheet is ~90% height for just 1 item
+- **Scope**: Sell Cart — bottom sheet sizing
+- **Problem**:
+  1. Bottom sheet opens at ~90% screen height regardless of content
+  2. With 1 item: ~50% of the sheet is empty whitespace
+  3. With 10 items: 90% might be appropriate
+  4. Fixed height feels wrong — like opening a giant drawer for a single pencil
+  5. Dynamic sheet height is standard mobile UX (Google Maps, Apple Maps, etc.)
+- **Expected**:
+  1. **Dynamic height based on content**:
+     - 1-2 items: 50% height (peek mode)
+     - 3-5 items: 70% height
+     - 6+ items: 90% height (full mode)
+  2. **Drag to resize**: User can drag the handle to expand/collapse
+  3. **Snap points**: 50%, 75%, 90% — sheet snaps to nearest point on release
+  4. Always show Checkout button at bottom (fixed, visible at any sheet height)
+  5. Use `@gorhom/bottom-sheet` library with dynamic snap points
+- **Migration**: None
+- **Test**: 1 item → sheet at 50%. Add items → sheet grows. Drag handle → snaps to points.
+- **Depends on**: None
+
+---
+
+### STG-134 — Cart — no swipe-to-delete gesture on cart items
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot review — only explicit 🗑️ button for item removal, no swipe gesture
+- **Scope**: Sell Cart — item removal gesture
+- **Problem**:
+  1. Standard mobile pattern: swipe left on a list item → reveals delete action
+  2. Cart only has explicit 🗑️ button — no gesture alternative
+  3. Power users (fast cashiers) prefer swipe gestures — fewer precise tap targets needed
+  4. Swipe-to-delete is more intentional than tapping a small icon — fewer accidental deletions
+  5. Combined with undo (STG-095), swipe provides the safest removal UX
+- **Expected**:
+  1. Swipe left on cart item → reveals red "Delete" panel (partial swipe)
+  2. Full swipe left → deletes item with undo toast (5 seconds)
+  3. Swipe right → could reveal "Edit" panel (price override)
+  4. Use `react-native-gesture-handler` Swipeable component
+  5. Keep 🗑️ button as alternative for users who don't know swipe gestures
+- **Migration**: None
+- **Test**: Swipe left → red delete area. Full swipe → removed + undo. Swipe right → edit panel.
+- **Depends on**: STG-095 (delete confirmation/undo)
+
+---
+
+### STG-135 — Cart — keyboard may cover Checkout button when discount input focused
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot analysis — discount input near bottom, keyboard would overlap Checkout area
+- **Scope**: Sell Cart — keyboard interaction
+- **Problem**:
+  1. Discount input is near the bottom of the sheet, just above Subtotal/Total/Checkout
+  2. When tapped, soft keyboard appears (~40% of screen height)
+  3. Keyboard likely covers: Subtotal, Total, AND Checkout button
+  4. User can't see the total while typing discount — can't verify the calculation
+  5. Can't tap Checkout until keyboard is dismissed — extra step
+- **Expected**:
+  1. **KeyboardAvoidingView**: Scroll the sheet content up so discount input + total + Checkout remain visible above keyboard
+  2. **Or**: Pin Checkout button above keyboard (like chat input UX)
+  3. **Total visible**: Even with keyboard open, the Total should be visible for live preview
+  4. **"Done" button** on keyboard toolbar: dismisses keyboard and shows full cart
+  5. **Auto-dismiss**: Keyboard dismisses when user taps outside the input or on Checkout
+  6. Test on small screens (5-inch) where keyboard takes more proportional space
+- **Migration**: None
+- **Test**: Tap discount input → keyboard opens → Checkout button still visible → type 10 → see total update.
+- **Depends on**: STG-130 (live preview)
+
+---
+
+### STG-136 — Cart — no "Share cart via WhatsApp" for phone order confirmation
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Cart analysis — no way to share cart contents externally
+- **Scope**: Sell Cart — share/export feature
+- **Problem**:
+  1. Common kirana flow: customer calls/WhatsApps order → cashier builds cart → needs to confirm with customer
+  2. No way to share cart contents: "Toor Dal 1kg ₹145, Vim ₹30, Total: ₹175"
+  3. Cashier reads items back verbally — slow, error-prone
+  4. WhatsApp share would let customer visually confirm the order
+  5. Also useful for: delivery orders, B2B quotes, hold bills shared with manager
+- **Expected**:
+  1. **Share button** (📤) in cart header (alongside Clear)
+  2. Tap → generates formatted text: "SuperMandi - Order Summary\n1. Toor Dal 1kg × 1 = ₹145\nTotal: ₹145"
+  3. Opens native share sheet → WhatsApp, SMS, copy to clipboard
+  4. Include store name, date, item list, total
+  5. Optional: include store phone number for callbacks
+- **Migration**: None
+- **Test**: Build cart → tap Share → WhatsApp opens with formatted order text. All items and total correct.
+- **Depends on**: None
+
+---
+
+### STG-137 — Cart — "In stock" has no low-stock warning styling (amber/red for <5 units)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — "In stock: 39" in neutral grey, same styling regardless of stock level
+- **Scope**: Sell Cart — conditional stock display
+- **Problem**:
+  1. "In stock: 39" is grey text — same color whether stock is 39 or 2
+  2. Low stock (2 units) should visually alert the cashier — "sell carefully, almost out"
+  3. Zero stock should be red with blocking — "Can't sell, out of stock"
+  4. No urgency communication — cashier doesn't know to suggest alternatives
+  5. Stock could change between adding to cart and checkout (multi-device) — no staleness indicator
+- **Expected**:
+  1. **>10 units**: Green or neutral grey "In stock: 39" ✓
+  2. **≤10 units**: Amber "Low stock: 5" ⚠️
+  3. **≤2 units**: Red "Last 2!" or "Almost out" 🔴
+  4. **0 units**: Red "Out of stock" — block addition or show warning
+  5. **After adding qty**: Show "Remaining after sale: 34" — dynamic update
+  6. Thresholds configurable per store in settings
+- **Migration**: None
+- **Test**: Stock=39 → green. Stock=5 → amber "Low stock". Stock=1 → red "Last one!". Stock=0 → blocked.
+- **Depends on**: STG-127 (stock validation)
+
+---
+
+### STG-138 — Cart — no weight/unit display separate from product name
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — "Toor Dal (Arhar) 1kg" — weight is embedded in the product name, not structured
+- **Scope**: Sell Cart — unit/weight display
+- **Problem**:
+  1. "1kg" is part of the product NAME string, not a separate structured field
+  2. "× 1" means 1 unit (packet) — but the product is also 1kg per unit
+  3. Confusing: is the customer buying "1 × 1kg" or "1kg" (by weight)?
+  4. For loose items sold by weight: "Rice 2.5kg" — the qty stepper [- 1 +] doesn't work for decimals
+  5. Unit type (kg, pc, ltr, box, dozen) should be a separate display element
+- **Expected**:
+  1. Structured display: "Toor Dal (Arhar)" on line 1, "1kg per pack | ₹145/kg" on line 2
+  2. For piece items: "Vim Dishbar" + "Per piece | ₹30"
+  3. For weight items: qty stepper becomes weight input: "_ kg" with decimal keyboard
+  4. Unit badge: small chip showing "kg" / "pc" / "ltr" next to quantity
+  5. Cart shows: product name | unit/weight | qty × unit price = line total
+- **Migration**: None (unit data exists in product model)
+- **Test**: kg item → shows weight input. pc item → shows stepper. ltr item → shows volume input.
+- **Depends on**: STG-018 (unit context on product cards)
+
+---
+
+### STG-139 — Cart — no return/exchange line item for customer returns
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Cart analysis — no way to process returns/exchanges in the billing flow
+- **Scope**: Sell Cart — returns and exchanges
+- **Problem**:
+  1. Customer brings back Vim bought yesterday: "This was expired, I want a refund"
+  2. No way to add a "return" or "negative" line item in the cart
+  3. Cashier must: void the old bill (if possible) or manually adjust, or ignore it
+  4. Exchanges: "Swap this 500g dal for 1kg" — no exchange workflow
+  5. Returns without a system: money leaks, stock doesn't get restored, no audit trail
+  6. This is different from voiding (STG-114) — returns are for PREVIOUS transactions
+- **Expected**:
+  1. **"Add Return" button** in cart (or ⋮ menu): opens return item selector
+  2. **Return flow**: scan/search the returned product → enter qty → negative line item appears
+  3. **Cart shows**: "Toor Dal 1kg × 1 = ₹145" and "Vim 1pc × -1 = -₹30" → "Net total: ₹115"
+  4. **Refund method**: cash back, store credit, or adjust against new purchase
+  5. **Original bill reference**: link return to original bill number (STG-113)
+  6. **Stock restoration**: returned item qty added back to inventory
+  7. **Manager approval**: returns > ₹500 require manager PIN
+- **Migration**: Cart model needs negative qty/amount support + return_reference
+- **Test**: Add return item → negative amount shows → net total calculated. Stock restored. Audit logged.
+- **Depends on**: STG-113 (bill numbers), STG-114 (void), STG-102 (manager approval)
+
+---
+
+### STG-140 — Cart — Discount section always visible, should collapse when unused
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — Discount section takes ~80px of space even when no discount is being applied
+- **Scope**: Sell Cart — discount section visibility
+- **Problem**:
+  1. "Discount" section with %/Flat toggle + input is always visible
+  2. Most kirana transactions (80%+) have NO discount — section is wasted space
+  3. ~80px used for a feature used 20% of the time
+  4. Pushes Subtotal/Total/Checkout lower — less visible on smaller screens
+  5. With few items, the visible discount section adds to the "empty" feel
+- **Expected**:
+  1. **Collapsed by default**: Show "Add Discount" text link instead of the full section
+  2. Tap "Add Discount" → section expands with %/Flat toggle + input
+  3. **When discount applied**: Section stays expanded, shows the applied discount
+  4. **Collapse again**: Tap "Remove Discount" or clear the input → collapses
+  5. Saves ~60px of vertical space in the common (no-discount) case
+- **Migration**: None
+- **Test**: Cart opens → discount collapsed. Tap "Add Discount" → expands. Apply → stays. Clear → collapses.
+- **Depends on**: STG-106 (discount toggle), STG-130 (discount preview)
+
+---
+
+### STG-141 — Cart — Checkout button price doesn't animate on total change
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Cart analysis — "Checkout ₹145.00" button total is static, doesn't animate on change
+- **Scope**: Sell Cart — checkout button micro-interaction
+- **Problem**:
+  1. When quantity changes (1 → 3), the price in the Checkout button updates: ₹145 → ₹435
+  2. But the update is instant (no animation) — easy to miss, especially during fast billing
+  3. When discount is applied, total changes — again no animation
+  4. User might not notice the total changed — especially if they're looking at the product area
+  5. Animation draws attention to the most important number (the total they'll pay)
+- **Expected**:
+  1. **On total change**: Brief green flash/highlight on the price text (200ms)
+  2. **Count-up animation**: ₹145 → ₹435 with rapid counting animation (300ms)
+  3. **Or**: Price text briefly enlarges (scale 1.1) then returns to normal (bounce effect)
+  4. **On discount**: Price decreases with green "saved" color flash
+  5. **Subtle**: Don't overdo — a brief attention-draw, not a full animation show
+- **Migration**: None
+- **Test**: Change qty → see price animate. Apply discount → see price decrease with flash. Rapid changes → smooth.
+- **Depends on**: STG-003 (theme tokens — animation timing)
+
+---
+
+### STG-142 — BUG: "[menu.viewDetails]" raw i18n key leaked in Today's Sales card
+
+- **Status**: OPEN
+- **Priority**: P0 (visible bug — raw code key shown to end users)
+- **Source**: Screenshot — Menu → Today's Sales card shows "[menu.viewDetails] >" instead of translated text
+- **Scope**: Menu screen — i18n translation missing
+- **Problem**:
+  1. "[menu.viewDetails]" is a raw i18n translation key — NOT the translated string
+  2. Visible to ALL users at the bottom of the Today's Sales card
+  3. Looks like a broken app — "[menu.viewDetails]" means nothing to a kirana retailer
+  4. Translation key not found in the active locale file (en.json or hi.json)
+  5. This is a regression or missing translation — should show "View Details" or "विवरण देखें"
+- **Expected**:
+  1. Fix: add "menu.viewDetails" key to all locale files: EN="View Details", HI="विवरण देखें"
+  2. Add i18n lint rule: fail build if any translation key is missing from any locale
+  3. Audit ALL screens for other leaked i18n keys (see STG-143)
+- **Migration**: None
+- **Test**: Menu → Today's Sales → bottom link shows "View Details" not "[menu.viewDetails]". Check Hindi too.
+- **Depends on**: None (immediate fix)
+
+---
+
+### STG-143 — BUG: "[menu.printerReady]" and "[menu.testPrint]" raw i18n keys leaked
+
+- **Status**: OPEN
+- **Priority**: P0 (visible bug — TWO more raw keys shown to users)
+- **Source**: Screenshot — Menu below Return/Refund shows "[menu.printerReady]" and "[menu.testPrint]"
+- **Scope**: Menu screen — printer status section i18n
+- **Problem**:
+  1. "[menu.printerReady]" — should show "Printer: Ready" or "Printer: Not connected"
+  2. "[menu.testPrint]" — should show "Test Print" button
+  3. Both are inline text below the Return/Refund card — weird positioning
+  4. Combined with STG-142: at least 3 raw i18n keys are leaked on the Menu screen alone
+  5. Suggests the i18n system has missing keys or broken fallback
+- **Expected**:
+  1. Fix: add both keys to locale files
+  2. "menu.printerReady" → "Printer: Ready ✓" / "Printer: Not connected ✗" (dynamic)
+  3. "menu.testPrint" → "Test Print" (tappable button)
+  4. Move printer status into a proper "Printer" card, not orphaned text
+  5. Run full i18n audit: `grep -r 'menu\.' | grep -v '.json'` to find all translation keys → verify all exist in locale files
+- **Migration**: None
+- **Test**: Menu → printer area shows translated text. No square brackets visible anywhere.
+- **Depends on**: STG-142 (same root cause)
+
+---
+
+### STG-144 — SECURITY: Developer/QA section + BUILD INFO visible to all users
+
+- **Status**: OPEN
+- **Priority**: P0 (security — internal dev tools exposed to end users in production builds)
+- **Source**: Screenshot — "DEVELOPER / QA" section header + "UI Showcase" + "BUILD INFO (DIRTY)" visible
+- **Scope**: Menu screen — developer section visibility
+- **Problem**:
+  1. "DEVELOPER / QA" section header is visible to ALL users — not behind __DEV__ check
+  2. "UI Showcase" — "View all screens and modals for QA" — internal testing tool exposed
+  3. "BUILD INFO (DIRTY)" — orange dashed box showing SHA, branch, modified/untracked file counts
+  4. This is developer debugging info — has NO place in a production or release build
+  5. Combined with STG-145: token and API URL also leaked in this section
+  6. Related to STG-014 (DEV MODE banner) — same pattern, different location
+- **Expected**:
+  1. **Wrap entire "DEVELOPER / QA" section in `if (__DEV__)` check** — completely hidden in release builds
+  2. **Also hide BUILD INFO box** in `if (__DEV__)`
+  3. **Also hide footer** "Build: d4aa8d03 · Deployed: ..." in `if (__DEV__)`
+  4. Keep in dev builds for debugging — but NEVER in release APK
+  5. Add CI gate: build-time check that DEVELOPER/QA section is not rendered when `__DEV__ === false`
+- **Migration**: None
+- **Test**: Build release APK → no "DEVELOPER / QA" section. Run in Expo Go → section visible for dev.
+- **Depends on**: STG-014 (DEV MODE banner — same pattern)
+
+---
+
+### STG-145 — SECURITY: BUILD INFO leaks token, API URL, StoreId UUID to end users
+
+- **Status**: OPEN
+- **Priority**: P0 (security — credentials and internal URLs visible to any user)
+- **Source**: Screenshot — BUILD INFO shows token hash, API: http://localhost:3000, StoreId UUID
+- **Scope**: Menu screen — BUILD INFO section data
+- **Problem**:
+  1. "Token: ...65c737" — partial auth token visible. Even partial tokens aid attacks.
+  2. "API: http://localhost:3000" — internal API URL. In staging/prod: reveals the backend URL.
+  3. "StoreId: aedbd94c-1d60-4290-bfbd-6ad099439d91" — internal UUID. Enables targeted API attacks.
+  4. "5 modified, 8 untracked" — reveals the build was from a dirty git state
+  5. "Branch: main | SHA: d4aa8d03" — reveals exact code version for vulnerability targeting
+  6. Even if section is hidden (STG-144), the DATA itself shouldn't be stored in a visible UI component
+- **Expected**:
+  1. **Remove ALL sensitive data from any user-visible component** — even dev builds should mask tokens
+  2. Token: never show, even partially. Show "Authenticated ✓" instead.
+  3. API URL: show only in dev. In production, hide entirely.
+  4. StoreId: show only the human-readable StoreCode (SU260308-001), not the UUID
+  5. Build info (SHA, branch): dev-only, behind __DEV__
+  6. **Review all components for data leakage**: grep for `token`, `storeId`, `apiUrl` in render methods
+- **Migration**: None
+- **Test**: Release APK → no token, no API URL, no UUID visible anywhere. Dev → masked token.
+- **Depends on**: STG-144 (hide dev section)
+
+---
+
+### STG-146 — Menu — Device UUID shown instead of device label
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Screenshot — "Device: 5c62f50a-06d7-46db-969c-392f2aa8c51f" in System Status
+- **Scope**: Menu → System Status → Device row
+- **Problem**:
+  1. Full UUID "5c62f50a-06d7-46db-969c-392f2aa8c51f" displayed — meaningless to retailer
+  2. Takes 2 lines due to length — wastes space
+  3. Looks like an error or debug code — intimidating to non-technical users
+  4. The device has a LABEL ("Counter-1" from enrollment) — that should be shown instead
+- **Expected**:
+  1. Show device label: "Device: Counter-1" (from enrollment)
+  2. Or: "Device: Redmi Note 12 Pro" (friendly model name per STG-064)
+  3. UUID available only on tap/expand for support calls
+  4. Single line, not wrapping
+- **Migration**: None
+- **Test**: System Status → "Device: Counter-1 (Active)" on one line. Tap → shows UUID for support.
+- **Depends on**: STG-064 (friendly device name)
+
+---
+
+### STG-147 — Menu — store name lowercase in System Status vs title case in header
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — "supermandi retailer test store" (lowercase) vs "SuperMandi Retailer Test Store" (header)
+- **Scope**: Menu → System Status → store name display
+- **Problem**: Inconsistent casing — header shows title case, System Status shows raw DB value (lowercase).
+- **Expected**: Display store name consistently in title case everywhere. Apply `toTitleCase()` or store the name properly in DB.
+- **Migration**: None
+- **Test**: System Status store name matches header exactly.
+- **Depends on**: None
+
+---
+
+### STG-148 — Menu — System Status card should be collapsible, rarely needed
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — System Status card takes ~200px for 3 "Active/Synced" statuses
+- **Scope**: Menu → System Status card
+- **Problem**: When everything is "Active/Synced" (99% of the time), this card is noise. It occupies prime space that could show actionable content.
+- **Expected**: Collapsed by default: show single line "System: All OK ✓" green chip. Expand on tap to see device details. Show expanded automatically when something is NOT active/synced.
+- **Migration**: None
+- **Test**: All active → collapsed. One item not active → auto-expanded with warning.
+- **Depends on**: STG-003 (theme)
+
+---
+
+### STG-149 — Menu — Today's Sales percentages (551%) have no baseline context
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — "551%" green arrow next to ₹11,170.50 with no explanation
+- **Scope**: Menu → Today's Sales card
+- **Problem**: "551% up" compared to WHAT? Yesterday? Last week? Same day last month? No label.
+- **Expected**: Show comparison period: "vs yesterday" or "vs last 7-day avg". Show absolute comparison: "Yesterday: ₹1,720". Hide percentage if comparison base is 0 or 1 sale (551% from 1 sale is misleading).
+- **Migration**: None
+- **Test**: Shows "vs yesterday" label. Base of 0 → hides percentage. Normal comparison → shows realistic %.
+- **Depends on**: None
+
+---
+
+### STG-150 — Menu — "Payment Modes" section renders empty when dailySummary has no payment breakdown
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — `MenuScreen.tsx:588-602` renders "Payment Modes" header conditionally, but the breakdown rows (Cash/UPI/Card totals) only render when `dailySummary` has payment data
+- **Scope**: `src/screens/MenuScreen.tsx:588-602`
+- **Problem**:
+  1. Lines 588-602: "Payment Modes" title renders as section header
+  2. Breakdown rows (Cash: ₹X, UPI: ₹Y, Card: ₹Z) only render if dailySummary contains payment_mode data
+  3. When no sales exist or API returns no breakdown, the "Payment Modes" header shows with nothing below it — empty section
+  4. This is NOT a settings page — it's a Today's Sales summary display
+- **Expected**:
+  1. **Chosen approach**: Hide "Payment Modes" header entirely when no breakdown data exists
+  2. Wrap lines 588-602 in: `{dailySummary?.paymentBreakdown && dailySummary.paymentBreakdown.length > 0 && ( ... )}`
+  3. When data exists: show "Cash: ₹8,000 | UPI: ₹3,170 | Card: ₹0" (show all modes, zero included)
+  4. Also hide "Card" row if store has never accepted card payments (optional declutter)
+- **Migration**: None
+- **Test**: No sales today → "Payment Modes" section hidden. Sales exist → shows breakdown. New day with no sales → hidden again.
+- **Depends on**: None
+
+---
+
+### STG-151 — Menu — metric labels below numbers, should be above
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — "₹11,170.50" then "Total Sales" below. Users read top-to-bottom.
+- **Scope**: Menu → Today's Sales metrics layout
+- **Problem**: Labels ("Total Sales", "Bills", "Avg Bill", "Items Sold") appear BELOW their values. Users read top-to-bottom, so they see "₹11,170.50" before knowing what it represents.
+- **Expected**: Label above, value below: "Total Sales" → "₹11,170.50". Or: inline "Total Sales: ₹11,170.50". Standard dashboard pattern is label-first.
+- **Migration**: None
+- **Test**: Labels above values. User can identify each metric without reading the number first.
+- **Depends on**: None
+
+---
+
+### STG-152 — Menu — Today's Sales should be on HOME screen, not buried in Menu
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Screenshot — Today's Sales card is in the Menu tab, not visible from the SELL screen
+- **Scope**: Home screen — add daily sales widget
+- **Problem**: Today's Sales (₹11,170.50, 2 bills, 5 items sold) is the MOST actionable data for a retailer — but it's hidden in the Menu tab requiring a tab switch + scroll. Every competitor POS shows daily totals on the home/main screen. Ties to STG-051 (daily counter) but this is about moving the existing card.
+- **Expected**: Move (or duplicate) Today's Sales summary to the home screen — compact bar or collapsible card above or below the sync panel. Keep detailed version in Menu for drill-down.
+- **Migration**: None
+- **Test**: Home screen shows "Today: ₹11,170 | 2 bills" without navigating to Menu.
+- **Depends on**: STG-051 (daily session counter), STG-006 (sync panel collapse to make room)
+
+---
+
+### STG-153 — Menu — Reprint/Download/Share buttons all call identical `goToBills()` with no context
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — `MenuScreen.tsx:621-634` — all three buttons (Reprint printer icon, Download download icon, Share share-variant icon) call the same `goToBills()` function. `goToBills` defined at line 365: `navigation.navigate("SalesHistory")` with NO params.
+- **Scope**: `src/screens/MenuScreen.tsx:621-634,365`
+- **Problem**:
+  1. Three distinct actions (Reprint, Download, Share) all navigate to SalesHistory identically — no way to know user intent
+  2. No subtitles explain what each button does — "Reprint what? Download what? Share what?"
+  3. Buttons orphaned between Bills History card and Return/Refund — no section header
+  4. Related to STG-181 which covers the same navigation issue from a different angle
+- **Expected**:
+  1. **Chosen approach**: Remove standalone buttons. Move actions to per-bill context in SalesHistory/BillDetail.
+  2. In `BillDetailScreen.tsx`: add "Reprint", "Download PDF", "Share via WhatsApp" as action buttons on individual bill detail
+  3. Remove lines 621-634 from MenuScreen (the 3 orphaned buttons)
+  4. The "Bills History" menu card already navigates to SalesHistory — these buttons are redundant
+  5. If keeping buttons: add subtitles — "Reprint: Last bill", "Download: Sales report", "Share: Daily summary" — and pass distinct navigation params
+- **Migration**: None
+- **Test**: Bill detail has Reprint/Download/Share actions. Menu no longer shows orphaned buttons (or buttons have clear subtitles).
+- **Depends on**: STG-181 (navigation params for bill actions)
+
+---
+
+### STG-154 — Menu — "BNPL Dues" jargon, kirana retailer won't understand
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — "BNPL Dues" card with subtitle "View and pay pending BNPL dues"
+- **Scope**: Menu → BNPL Dues card
+- **Problem**: "BNPL" = Buy Now Pay Later — fintech jargon. A kirana store owner knows this as "udhar" or "credit purchase". Using BNPL alienates the target user.
+- **Expected**: Rename to "Credit Purchases" or "Pending Supplier Payments" or "Buy Now Pay Later (BNPL)" with the Hindi equivalent. Subtitle: "View pending payments for stock bought on credit."
+- **Migration**: None
+- **Test**: Label is understandable to a non-fintech user. Hindi mode shows appropriate translation.
+- **Depends on**: STG-003 (theme)
+
+---
+
+### STG-155 — Menu — "Stock Inward" warehouse jargon, rename
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — "Stock Inward" card with subtitle "Record incoming stock purchases"
+- **Scope**: Menu → Stock Management → Stock Inward
+- **Problem**: "Stock Inward" is warehouse/ERP terminology. Kirana retailers say "maal aaya" (goods arrived) or "add stock". "Inward" is not everyday language.
+- **Expected**: Rename to "Add New Stock" or "Record Stock Received" or "Stock In". Subtitle: "Record goods received from suppliers." Keep "Stock Inward" as internal API/code term only.
+- **Migration**: None
+- **Test**: Menu shows "Add New Stock" or equivalent plain language. Functionality unchanged.
+- **Depends on**: None
+
+---
+
+### STG-156 — Menu — Opening Stock "?" icon should be inventory icon
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — Opening Stock card has "?" question mark icon in a teal circle
+- **Scope**: Menu → Stock Management → Opening Stock icon
+- **Problem**: "?" icon implies help/FAQ/unknown — NOT stock initialization. Every other menu item has a relevant icon (box for stock, chart for reports, gear for settings). "?" is the wrong icon.
+- **Expected**: Use box/inventory icon (📦), or stack/shelf icon, or clipboard icon. Match the icon style of other Stock Management items (Stock Inward uses a box with arrow).
+- **Migration**: None
+- **Test**: Opening Stock icon is recognizable as inventory-related, not a question mark.
+- **Depends on**: STG-160 (icon consistency)
+
+---
+
+### STG-157 — Menu — "Customers" and "Customer Management" are duplicate entries
+
+- **Status**: OPEN
+- **Priority**: P1 (duplicate navigation = confused users)
+- **Source**: Screenshot — two separate cards in CUSTOMERS & CREDIT section
+- **Scope**: Menu → Customers & Credit section
+- **Problem**:
+  1. "Customers" — "Customer profiles and purchase history"
+  2. "Customer Management" — "Add, edit, and manage customer profiles"
+  3. These are the SAME feature split into two cards — viewing vs managing
+  4. User doesn't know which to tap: "I want to add a customer — is that Customers or Customer Management?"
+  5. Every other app has ONE "Customers" section that handles both viewing and managing
+- **Expected**: Merge into single "Customers" card — "View, add, and manage customer profiles." Inside the Customers screen: tabs or sections for list view, add new, edit, purchase history. Remove "Customer Management" card entirely.
+- **Migration**: None (UI restructure only)
+- **Test**: One "Customers" card in menu. Tap → screen with all customer functions.
+- **Depends on**: None
+
+---
+
+### STG-158 — Menu — "Overdue Dues" redundant wording
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — "Overdue Dues" card title
+- **Scope**: Menu → Customers & Credit
+- **Problem**: "Overdue Dues" — "overdue" and "dues" are near-synonyms. Like saying "late lates." Should be "Overdue Payments" or "Pending Collections" or "Late Payments."
+- **Expected**: Rename to "Overdue Payments" — "Collect overdue payments and send reminders." Clear, non-redundant.
+- **Migration**: None
+- **Test**: Card shows "Overdue Payments" not "Overdue Dues".
+- **Depends on**: None
+
+---
+
+### STG-159 — Menu — 20+ items need 8 screens of scrolling, needs restructure
+
+- **Status**: OPEN
+- **Priority**: P1 (menu is the primary navigation — can't require 8 screens of scrolling)
+- **Source**: 8 screenshots needed to capture entire menu
+- **Scope**: Menu tab — overall structure
+- **Problem**:
+  1. Menu has 20+ items across 8 sections — requires extensive scrolling
+  2. "Daily Closing" (critical daily action) is 6 screens down — cashier scrolls past 15 items to reach it
+  3. No collapsible sections — everything is always expanded
+  4. No search — can't jump to "Printer Settings" without scrolling
+  5. No usage-based ordering — rarely-used items get same prominence as daily-use items
+  6. For a POS app used at a busy counter, this much scrolling is unacceptable
+- **Expected**:
+  1. **Collapsible sections**: Section headers (PURCHASING, STOCK MANAGEMENT, etc.) tap to collapse/expand
+  2. **Default collapsed**: Only show most-used items expanded. Less-used sections collapsed.
+  3. **Search bar at top**: Type "printer" → filters to Printer Settings
+  4. **Usage-based ordering**: Track which menu items are tapped most → auto-sort
+  5. **Quick actions at top**: Daily Closing, Shift Management, Reprint — most used daily actions
+  6. **Reduce item count**: Merge duplicates (STG-157), nest related items (Reorder Settings + Policies)
+  7. Target: max 2 screens of scrolling to see everything, 0 scrolling for top 5 actions
+- **Migration**: None
+- **Test**: Menu → 2 screens max. Search works. Sections collapse. Daily Closing visible without scrolling.
+- **Depends on**: STG-157 (merge duplicates)
+
+---
+
+### STG-160 — Menu — icon colors inconsistent across items
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: 8 screenshots — icons use blue, teal, green, red, grey, orange with no system
+- **Scope**: Menu — all card icons
+- **Problem**: Icon circles have 6+ different colors: blue (Bills, Purchase), teal (BNPL, Opening Stock), green (WhatsApp), red (Return, Overdue, Switch Store), grey (Reorder Settings), orange (UI Showcase). No color system — feels random.
+- **Expected**: Use 2-3 colors max per the brand design system (STG-003): primary blue for main features, neutral grey for settings, red only for destructive/warning. Or: all icons same neutral color, differentiated by icon shape only.
+- **Migration**: None
+- **Test**: All menu icons follow a consistent 2-3 color palette. Brand-aligned.
+- **Depends on**: STG-003 (theme tokens)
+
+---
+
+### STG-161 — Menu — no notification badges on menu items
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshots — Overdue Dues, BNPL Dues show no count badges
+- **Scope**: Menu — item-level notification badges
+- **Problem**: "Overdue Dues" could have 5 overdue customers, "BNPL Dues" could have 3 pending — but no badge or count indicates this. User must tap into each to discover if action is needed. No urgency signal.
+- **Expected**: Red badge with count: "Overdue Dues (3)" or red dot. Amber badge for pending: "BNPL Dues (2)". Green badge for completed/clear items. Update in real-time from local data.
+- **Migration**: None
+- **Test**: 3 overdue → red badge "3" on Overdue Dues card. 0 overdue → no badge.
+- **Depends on**: None
+
+---
+
+### STG-162 — Menu — logo + pill + "Menu" title redundant heading
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — SuperMandi icon + green pill badge + "Menu" text at top of Menu tab
+- **Scope**: Menu → header area
+- **Problem**: "SuperMandi" pill + "Menu" text + hamburger icon = 3 elements saying "you're on the Menu." The tab bar already shows "MENU" is active. This header wastes ~60px of prime space.
+- **Expected**: Remove redundant header — the active MENU tab already indicates location. Use the space for Today's Sales (STG-152) or quick actions. If a header must exist: single line "Menu" text, no logo pill.
+- **Migration**: None
+- **Test**: Menu opens → no redundant heading. Space used for content.
+- **Depends on**: STG-152 (move sales to home)
+
+---
+
+### STG-163 — Menu — card spacing too large, needs tighter layout
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: 8 screenshots — each card is ~80px + 16px gap = ~96px per item
+- **Scope**: Menu — card list spacing
+- **Problem**: 20+ items × 96px = ~1920px = 3.5+ screen heights. Card padding and gap between cards is generous (16px each side + 16px gap). Reducing to 12px padding + 8px gap would save ~30% height.
+- **Expected**: Tighter spacing: 12px card padding, 8px gap between cards. Or: list items instead of cards for simple navigation items (title + subtitle + >, no card border). Save card styling for data-rich items (Today's Sales, System Status).
+- **Migration**: None
+- **Test**: Menu scrollable in 2-3 screens instead of 8. Content still readable.
+- **Depends on**: STG-159 (menu restructure)
+
+---
+
+### STG-164 — Settings — "kbcretailer (MANAGER)" shows username not display name
+
+- **Status**: OPEN
+- **Priority**: P1 (staff identity is displayed wrong — affects daily operations)
+- **Source**: Screenshot — Switch Staff shows "kbcretailer (MANAGER)"
+- **Scope**: Settings → Switch Staff display
+- **Problem**: "kbcretailer" is an internal username/login ID — NOT the staff member's real name. Should show "Raju Manager" or whatever display_name is in the staff record. Showing a username looks broken and is confusing for non-technical users.
+- **Expected**: Show display name + role: "Raju (Manager)" or "Raju Kumar — Manager". Username only as a fallback if display_name is null. Fix applies everywhere staff name is shown: menu, receipts, audit logs, payment screen (STG-120).
+- **Migration**: May need to populate display_name in staff records
+- **Test**: Switch Staff shows real name "Raju (Manager)" not "kbcretailer (MANAGER)".
+- **Depends on**: STG-017 (staff indicator on home), STG-120 (staff on payment)
+
+---
+
+### STG-165 — Settings — Hindi toggle "हि" non-standard abbreviation
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — Language toggle shows "EN | हि"
+- **Scope**: Settings → Language card
+- **Problem**: "हि" is not a standard Hindi abbreviation. Standard is "हिं" (for हिंदी). Or use full word "Hindi" in Latin script. The current abbreviation may confuse Hindi-literate users who don't recognize "हि" as their language.
+- **Expected**: Use "EN | हिंदी" (full word) or "EN | HI" (ISO code). If space constrained: "EN | हिं".
+- **Migration**: None
+- **Test**: Toggle shows recognizable Hindi label. Hindi-literate user identifies it instantly.
+- **Depends on**: STG-054 (Hindi i18n)
+
+---
+
+### STG-166 — Settings — "Re-enroll to a different store" enrollment jargon
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — Switch Store subtitle "Re-enroll to a different store"
+- **Scope**: Settings → Switch Store subtitle
+- **Problem**: "Re-enroll" is internal jargon from the enrollment/activation flow. Users think "switch" not "re-enroll." Should use plain language.
+- **Expected**: "Switch to a different store" or "Connect to another store." Drop "re-enroll."
+- **Migration**: None
+- **Test**: Subtitle uses plain language. No mention of "enroll."
+- **Depends on**: None
+
+---
+
+### STG-167 — Settings — no About section with app version + terms + privacy links
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — Settings has no About/Legal section
+- **Scope**: Settings area — new About card
+- **Problem**: No app version visible in Settings (ties to STG-055). No Terms of Service link (ties to STG-026). No Privacy Policy link (Play Store requirement). No "About SuperMandi" card. Standard apps have About section in Settings.
+- **Expected**: Add "About" card at bottom of Settings: App version, Terms link, Privacy Policy link, Licenses, Contact support. Satisfies Play Store requirements (STG-026) and support needs (STG-055).
+- **Migration**: None
+- **Test**: Settings → About card shows version + terms link + privacy link. All links open correctly.
+- **Depends on**: STG-026 (terms/privacy), STG-055 (version display)
+
+---
+
+### STG-168 — Settings — no logout/sign-out option visible for staff
+
+- **Status**: OPEN
+- **Priority**: P1 (security — staff can't fully log out of the POS)
+- **Source**: Screenshot — Settings shows Switch Staff and Switch Store, but no Logout
+- **Scope**: Settings → logout functionality
+- **Problem**:
+  1. "Switch Staff" switches to another staff member but doesn't fully log out
+  2. "Switch Store" re-enrolls to a different store — not a logout
+  3. No "Logout" or "Sign Out" option — staff can't end their session securely
+  4. End of shift: outgoing staff should log out so unauthorized people can't make sales
+  5. Security: lost/stolen device — no way to remotely or locally log out
+  6. Shared devices: without logout, the next person inherits the previous session
+- **Expected**: Add "Logout" or "End Session" option in Settings — below Switch Staff. Confirmation: "Log out? You'll need to re-enter staff PIN to continue." After logout: shows staff login/PIN screen. All pending data synced before logout.
+- **Migration**: None
+- **Test**: Tap Logout → confirmation → returned to staff login screen. No active session.
+- **Depends on**: STG-017 (staff indicator)
+
+---
+
+### STG-169 — Menu — no search/filter across 20+ menu items
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: 8 screenshots of menu — no way to search
+- **Scope**: Menu tab — search functionality
+- **Problem**: 20+ menu items, 8 sections. To find "Printer Settings": scroll through 6 screens. No search, no filter, no jump-to-section. During busy periods, this wastes time.
+- **Expected**: Search bar at top of menu: type "print" → shows "Printer Settings" immediately. Or: alphabetical index sidebar (like phone contacts). Or: section jump chips at top: [Sales] [Stock] [Settings] → scrolls to section.
+- **Migration**: None
+- **Test**: Type "daily" → filters to "Daily Closing" + "Daily Report". Clear → shows all items.
+- **Depends on**: STG-159 (menu restructure)
+
+---
+
+### STG-170 — Menu — "Barcode Sheets" subtitle "tiered" jargon
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Screenshot — "Generate tiered barcode PDFs"
+- **Scope**: Menu → Barcode Sheets subtitle
+- **Problem**: "tiered" is a pricing/technical term. Kirana retailer doesn't know what "tiered barcodes" means. Subtitle should explain the action in plain language.
+- **Expected**: "Print barcode labels for your products" or "Generate barcode stickers." Drop "tiered."
+- **Migration**: None
+- **Test**: Subtitle is understandable to non-technical user.
+- **Depends on**: None
+
+---
+
+### STG-171 — Menu — Today's Sales metrics all same size, no visual hierarchy
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Screenshot — ₹11,170.50, 2 bills, ₹5,585.25, 5 items — all roughly same font weight/size
+- **Scope**: Menu → Today's Sales card layout
+- **Problem**: Total Sales (₹11,170.50) should be the HERO metric — bigger, bolder, first thing the eye hits. But it's the same size as Avg Bill and Items Sold. All 4 metrics compete equally for attention.
+- **Expected**: Hero metric: Total Sales ₹11,170.50 — 28px bold, primary color. Secondary: Bills (2), Avg Bill — 18px, grey. Tertiary: Items Sold — 14px. Percentage arrows can be smaller. The card should read: "You made ₹11,170 today from 2 bills" in visual hierarchy.
+- **Migration**: None
+- **Test**: Total Sales is visually dominant. Secondary metrics are clearly subordinate.
+- **Depends on**: STG-003 (theme tokens — typography scale)
+
+---
+
+### STG-172 — Menu — hardcoded English strings not using i18n (Return/Refund, Opening Stock, etc.)
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [MenuScreen.tsx](src/screens/MenuScreen.tsx)
+- **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**:
+  1. Line 642: `"Return / Refund"` hardcoded
+  2. Line 643: `"Process returns and issue refunds"` hardcoded
+  3. Line 769: `"Opening Stock"` hardcoded
+  4. Line 770: `"Initialize stock for new products"` hardcoded
+  5. Line 777: `"Customers & Credit"` section title hardcoded
+  6. Line 785: `"Khata (Credit Book)"` hardcoded
+  7. Line 786: `"Track credit and payments"` hardcoded
+  8. Line 796: `"Customers"` hardcoded
+  9. Line 797: `"Customer profiles and purchase history"` hardcoded
+  10. Line 808: `"Customer Management"` hardcoded
+  11. Line 809: `"Add, edit, and manage customer profiles"` hardcoded
+  12. Line 820: `"Overdue Dues"` hardcoded
+  13. Line 821: `"Collect overdue DUE payments and send reminders"` hardcoded
+  14. Line 828: `"AI & Intelligence"` section title hardcoded
+  15. Line 836: `"AI Insights"` hardcoded
+  16. Line 837: `"Alerts, forecasts, slow movers, expiry tracking"` hardcoded
+  17. Line 848: `"Bulk Purchase Credit"` hardcoded
+  18. Line 849: `"Browse and apply for credit offers"` hardcoded
+  19. Line 856: `"Messages"` section title hardcoded
+  20. Line 864: `"Chat"` hardcoded
+  21. Line 865: `"Message suppliers and support"` hardcoded
+  22. Line 895: `"WhatsApp Support"` hardcoded
+  23. Line 896: `"Chat with SuperMandi support team"` hardcoded
+  24. Line 945: `"Daily Report"` hardcoded
+  25. Line 946: `"View, print, and share daily sales report"` hardcoded
+  26. Line 953: `"Operations"` section title hardcoded
+  27. Line 961: `"Daily Closing"` hardcoded
+  28. Line 962: `"Z-Report and cash reconciliation"` hardcoded
+  29. Line 971: `"Shift Management"` hardcoded
+  30. Line 972: `"Start, end, and view shift history"` hardcoded
+  31. Line 1016: `"Theme"` hardcoded
+  32. Line 1040: `"Switch Staff"` hardcoded
+  33. Line 1054: `"Printer Settings"` hardcoded
+  34. Line 1055: `"Paper width, auto-print, copies"` hardcoded
+  35. Line 1066: `"Help & Support"` with `&amp;` entity
+  36. Line 1067: `"Contact us, quick links"` hardcoded
+- **Expected**: All strings go through `t()` with keys in both `en.json` and `hi.json`. Hindi-speaking kirana retailers should see the entire Menu in Hindi when language is toggled.
+- **Migration**: None
+- **Test**: Toggle language to Hindi, verify all menu items display in Hindi with no English fallbacks
+- **Depends on**: STG-054 (Hindi translations)
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. In `en.json`, add under `"menu"` section: `"returnRefund"`, `"returnRefundSubtitle"`, `"openingStock"`, `"openingStockSubtitle"`, `"customersCredit"`, `"khataCredit"`, `"khataCreditSubtitle"`, `"customers"`, `"customersSubtitle"`, `"customerManagement"`, `"customerManagementSubtitle"`, `"overdueDues"`, `"overdueDuesSubtitle"`, `"aiIntelligence"`, `"aiInsights"`, `"aiInsightsSubtitle"`, `"bulkPurchaseCredit"`, `"bulkPurchaseCreditSubtitle"`, `"messages"`, `"chat"`, `"chatSubtitle"`, `"whatsappSupport"`, `"whatsappSupportSubtitle"`, `"dailyReport"`, `"dailyReportSubtitle"`, `"operations"`, `"dailyClosing"`, `"dailyClosingSubtitle"`, `"shiftManagement"`, `"shiftManagementSubtitle"`, `"theme"`, `"switchStaff"`, `"printerSettings"`, `"printerSettingsSubtitle"`, `"helpSupport"`, `"helpSupportSubtitle"`
+  2. In `hi.json`, add Hindi translations for all above keys
+  3. In `MenuScreen.tsx`, replace every hardcoded string literal (lines 642-1067) with `t('menu.<key>')` calls
+- **Guard**: Do NOT change any navigation logic, only text rendering. Do NOT modify lines inside `if (__DEV__)` blocks.
+- **DoD**: ☐ Zero hardcoded English in MenuScreen render ☐ `en.json` has all keys ☐ `hi.json` has all keys ☐ Hindi toggle shows full Hindi menu ☐ Typecheck passes
+
+---
+
+### STG-173 — Menu — "View Details" uses t() defaultValue fallback, raw key leaks if i18n fails
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [MenuScreen.tsx:605](src/screens/MenuScreen.tsx#L605)
+- **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`
+- **Problem**: Line 605 uses `t('menu.viewDetails', { defaultValue: 'View Details' })`. The key `menu.viewDetails` does NOT exist in `en.json`. If the defaultValue mechanism fails or is overridden by a translation management system, the raw key `[menu.viewDetails]` leaks to the UI (confirmed in screenshot from previous session).
+- **Expected**: Add `"viewDetails": "View Details"` to `en.json` under `menu` section. Remove the `defaultValue` fallback since the key will now exist.
+- **Migration**: None
+- **Test**: Verify the string renders as "View Details" (not `[menu.viewDetails]`) in both English and Hindi
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. Add `"viewDetails": "View Details"` to `en.json` → `menu` section
+  2. Add `"viewDetails": "विवरण देखें"` to `hi.json` → `menu` section
+  3. In `MenuScreen.tsx` line ~605, remove `{ defaultValue: 'View Details' }` — key now exists
+- **Guard**: Do NOT change line numbering or surrounding logic.
+- **DoD**: ☐ Key exists in both locale files ☐ No `defaultValue` fallback ☐ UI shows "View Details" in EN, Hindi in HI
+
+---
+
+### STG-174 — Menu — "Printer Ready"/"Test" use t() second-arg fallback, not standard defaultValue
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [MenuScreen.tsx:656-658](src/screens/MenuScreen.tsx#L656-L658)
+- **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`
+- **Problem**:
+  1. Line 656: `t('menu.printerReady', 'Printer Ready')` — uses positional string fallback (non-standard i18next API). Key `menu.printerReady` NOT in `en.json`.
+  2. Line 658: `t('menu.testPrint', 'Test')` — same issue. Key `menu.testPrint` NOT in `en.json`.
+  3. Line 243: `t('menu.printerOk', 'Printer OK')`, `t('menu.testPrintSuccess', 'Test page sent successfully.')` — same pattern.
+  4. These keys were confirmed leaking as `[menu.printerReady]` and `[menu.testPrint]` in the screenshot.
+- **Expected**: Add all missing keys to `en.json` and `hi.json`. Use standard `t('menu.printerReady')` without fallback.
+- **Migration**: None
+- **Test**: Verify printer status row shows localized text, no raw keys
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. Add to `en.json` → `menu`: `"printerReady": "Printer Ready"`, `"testPrint": "Test"`, `"printerOk": "Printer OK"`, `"testPrintSuccess": "Test page sent successfully."`, `"testPrintFailed": "Could not print test page."`
+  2. Add Hindi translations to `hi.json`
+  3. In `MenuScreen.tsx`, remove all positional string fallbacks (e.g., `t('menu.printerReady', 'Printer Ready')` → `t('menu.printerReady')`)
+- **Guard**: Do NOT change printer detection or test print logic.
+- **DoD**: ☐ All printer i18n keys in both locale files ☐ No positional fallbacks ☐ Hindi printer strings display correctly
+
+---
+
+### STG-175 — Menu — no Pressable ripple/feedback effect on menu items (no android_ripple)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:610+](src/screens/MenuScreen.tsx#L610)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: All `<Pressable>` menu items lack `android_ripple={{ color: colors.primary + '20' }}` or any press feedback. On Android, tapping a menu item gives zero visual response. User can't tell if their tap registered.
+- **Expected**: Add `android_ripple={{ color: colors.primary + '20', borderless: false }}` to every `<Pressable style={styles.menuItem}>`. Also add pressed state via `style={({ pressed }) => [..., pressed && { opacity: 0.7 }]}`.
+- **Migration**: None
+- **Test**: Tap any menu item, verify ripple appears on Android. On iOS, verify opacity change.
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**:
+  1. Add `android_ripple={{ color: colors.primary + '20', borderless: false }}` to every `<Pressable style={styles.menuItem}>` (approx 20 instances, lines ~610-1080)
+  2. Change `style={styles.menuItem}` to `style={({ pressed }) => [styles.menuItem, pressed && { opacity: 0.85 }]}` for iOS feedback
+- **Guard**: Do NOT add to `<Pressable>` inside modal/alert contexts. Only menu item Pressables.
+- **DoD**: ☐ All menu Pressables have `android_ripple` ☐ Pressed opacity on iOS ☐ Visual test on Android device
+
+---
+
+### STG-176 — Menu — header paddingVertical:8 too tight, brand pill cramped
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:1153](src/screens/MenuScreen.tsx#L1153)
+- **Scope**: `src/screens/MenuScreen.tsx` styles
+- **Problem**: Header has `paddingVertical: 8` — only 8px above/below the brand pill + "Menu" label. Combined with the content padding of 16px, the header sits too close to the status bar and feels cramped. Compare to professional apps that give headers 16-24px vertical padding.
+- **Expected**: Increase `paddingVertical` to 16px. Add `marginBottom: 4` to create breathing room before System Status panel.
+- **Migration**: None
+- **Test**: Visual check — header feels spacious, not cramped
+- **Depends on**: STG-003 (spacing tokens)
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**: In `styles` object (~line 1153), change `header: { paddingVertical: 8 }` → `paddingVertical: 16`. Add `marginBottom: 4` to header style.
+- **Guard**: Do NOT change header's horizontal padding or other header children.
+- **DoD**: ☐ Header has 16px vertical padding ☐ Visual breathing room above brand pill
+
+---
+
+### STG-177 — Menu — status panel "Sync" label hardcoded English (not i18n)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:479](src/screens/MenuScreen.tsx#L479)
+- **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: Line 479: `<Text style={styles.statusLabel}>Sync</Text>` — hardcoded English. Also lines 221, 226: `t('menu.syncComplete')`, `t('menu.syncFailed')` use defaultValue but keys NOT in `en.json`.
+- **Expected**: Add `menu.sync`, `menu.syncComplete`, `menu.syncFailed`, `menu.syncing`, `menu.syncNow`, `menu.allDataSynced` to both locale files. Replace hardcoded "Sync" with `t('menu.sync')`.
+- **Migration**: None
+- **Test**: Toggle Hindi, verify Sync label and alerts show in Hindi
+- **Depends on**: STG-054
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. Add to `en.json` → `menu`: `"sync": "Sync"`, `"syncComplete": "Sync Complete"`, `"syncFailed": "Sync Failed"`, `"syncing": "Syncing..."`, `"syncNow": "Sync Now"`, `"allDataSynced": "All data has been synced."`
+  2. Add Hindi translations to `hi.json`
+  3. Line ~479: Replace `<Text>Sync</Text>` with `<Text>{t('menu.sync')}</Text>`
+  4. Lines ~221, ~226: Remove `defaultValue` params from existing `t()` calls
+- **Guard**: Do NOT modify sync logic in `handleSyncNow()` or `syncStore` calls.
+- **DoD**: ☐ All sync i18n keys in both locales ☐ No hardcoded "Sync" text ☐ Hindi sync labels render
+
+---
+
+### STG-178 — Menu — Build Info visible on release with EXPO_PUBLIC_ENABLE_QA_MENU=true
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [MenuScreen.tsx:1083-1101](src/screens/MenuScreen.tsx#L1083-L1101) and [UiShowcaseScreen.tsx:30-34](src/screens/UiShowcaseScreen.tsx#L30-L34)
+- **Scope**: `src/screens/MenuScreen.tsx`, `src/screens/UiShowcaseScreen.tsx`
+- **Problem**: The QA menu gate `isQaMenuEnabled()` returns `true` when `__DEV__` OR `EXPO_PUBLIC_ENABLE_QA_MENU=true`. However, the BUILD_INFO section (lines 1103-1130) is guarded by `__DEV__` only. If someone sets `EXPO_PUBLIC_ENABLE_QA_MENU=true` in a release build (for QA testing), they see the Developer/QA section with UI Showcase but NOT the Build Info. This is inconsistent. More critically, if `EXPO_PUBLIC_ENABLE_QA_MENU` accidentally ships as `true`, end users see "Developer / QA" and "UI Showcase" in their menu.
+- **Expected**:
+  1. **Chosen approach**: Gate with `__DEV__` — simplest and most reliable. Change MenuScreen line ~1083 from `{showQaMenu && (...)}` to `{__DEV__ && showQaMenu && (...)}`
+  2. This ensures QA menu NEVER appears in any release build (staging or production) regardless of env vars
+  3. QA testing on staging should use debug builds, not release builds with env flags
+- **Migration**: None
+- **Test**: Production release build with `EXPO_PUBLIC_ENABLE_QA_MENU=true` must NOT show Developer/QA section
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/screens/UiShowcaseScreen.tsx`
+- **Changes**:
+  1. In `UiShowcaseScreen.tsx` line ~30-34: Change `isQaMenuEnabled()` to require `__DEV__` always: `return __DEV__ && (process.env.EXPO_PUBLIC_ENABLE_QA_MENU === 'true' || true)` — or simpler: gate the Developer/QA section in MenuScreen with `{__DEV__ && showQaMenu && (...)}`
+  2. In `MenuScreen.tsx` line ~1083: Change condition from `{showQaMenu && (...)}` to `{__DEV__ && showQaMenu && (...)}`
+  3. Alternatively, add an `isStaging` check from config that is `false` in production
+- **Guard**: Do NOT remove the QA menu entirely — it's useful in dev. Only prevent it from appearing in production.
+- **DoD**: ☐ `isQaMenuEnabled()` returns `false` in production regardless of env vars ☐ Dev mode still shows QA menu ☐ Release APK build has no "Developer / QA" section
+
+---
+
+### STG-179 — Menu — release build stamp shows raw SHA and timestamp, not user-friendly version
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:1133-1137](src/screens/MenuScreen.tsx#L1133-L1137)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: Line 1135: `Build: {buildShaLabel} · Deployed: {buildTimeLabel}` — shows raw git SHA (e.g., "81c3a2a4") and raw timestamp to all users. Kirana retailers don't understand git SHAs. This is developer info leaking to end users.
+- **Expected**: Show human-readable version like "Version 3.2.0" from `app.json`. Move SHA/timestamp to a long-press or "About" section. The footer should say "SuperMandi POS v3.2.0" not "Build: 81c3a2a4 · Deployed: 2026-03-13T..."
+- **Migration**: None
+- **Test**: Release build footer shows app version, not SHA
+- **Depends on**: STG-167 (About section)
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `app.json`
+- **Changes**:
+  1. Import app version from `app.json` or `expo-constants` (`Constants.expoConfig.version`)
+  2. Lines ~1133-1137: Change `Build: {buildShaLabel} · Deployed: {buildTimeLabel}` to `SuperMandi POS v{appVersion}` for release builds
+  3. Keep SHA/timestamp in dev builds or behind a long-press handler
+- **Guard**: Do NOT remove SHA tracking from code — just hide from non-dev UI.
+- **DoD**: ☐ Release footer shows "SuperMandi POS v3.x.x" ☐ Dev footer still shows SHA ☐ Version reads from app.json
+
+---
+
+### STG-180 — Menu — Switch Staff alert uses English string literals, not i18n
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:282-293](src/screens/MenuScreen.tsx#L282-L293)
+- **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/*.json`
+- **Problem**: Lines 282-293: `Alert.alert("Switch Staff", ...)` — title and body are hardcoded English. The `Switch` and `Cancel` button labels are also English. When a Hindi-speaking staff member tries to switch, they see English alerts.
+- **Expected**: Use `t('menu.switchStaffTitle')`, `t('menu.switchStaffMessage', { name, role })`, etc.
+- **Migration**: None
+- **Test**: Toggle Hindi, tap Switch Staff, verify alert is in Hindi
+- **Depends on**: STG-054
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. Add to `en.json` → `menu`: `"switchStaffTitle": "Switch Staff"`, `"switchStaffMessage": "Switch to {{name}} ({{role}})?"`, `"switchButton": "Switch"`, `"cancelButton": "Cancel"`
+  2. Add Hindi translations to `hi.json`
+  3. Lines ~282-293: Replace `Alert.alert("Switch Staff", ...)` with `Alert.alert(t('menu.switchStaffTitle'), t('menu.switchStaffMessage', { name, role }), [{ text: t('menu.cancelButton') }, { text: t('menu.switchButton'), ... }])`
+- **Guard**: Do NOT change the staff switching logic itself. Only text.
+- **DoD**: ☐ Switch Staff alert fully localized ☐ Hindi alert renders correctly
+
+---
+
+### STG-181 — Menu — billActions (Reprint/Download/Share) all navigate to same SalesHistory
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [MenuScreen.tsx:621-634](src/screens/MenuScreen.tsx#L621-L634)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: All three bill action buttons (Reprint, Download, Share) call `goToBills` which navigates to `SalesHistory`. The user expects:
+  1. **Reprint** → open bill select → reprint specific bill
+  2. **Download** → download bill as PDF
+  3. **Share** → share bill via WhatsApp/other
+  But all three just open the same Bills History page with no indication of which action to perform.
+- **Expected**: Either: (a) pass navigation params `{ action: 'reprint' | 'download' | 'share' }` so SalesHistory knows the intent, or (b) show a "Select a bill to [reprint/download/share]" instruction, or (c) hide these buttons and add reprint/download/share actions on individual bill detail pages.
+- **Migration**: None
+- **Test**: Tap Reprint, verify it opens bill selection with reprint mode. Same for Download and Share.
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/screens/SalesHistoryScreen.tsx`
+- **Changes**:
+  1. In `MenuScreen.tsx` lines ~621-634: Change `goToBills` calls to pass action param: `navigation.navigate('SalesHistory', { action: 'reprint' })`, `{ action: 'download' }`, `{ action: 'share' }`
+  2. In `SalesHistoryScreen.tsx`: Read route params, show instruction banner: "Select a bill to reprint/download/share" based on action param
+  3. Add `action` to the SalesHistory route params type definition
+- **Guard**: Default SalesHistory behavior (no action param) must remain unchanged.
+- **DoD**: ☐ Each button navigates with distinct action ☐ SalesHistory shows context banner ☐ Default (from Bills History card) still works normally
+
+---
+
+### STG-182 — Menu — no haptic feedback on menu item press
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — MenuScreen.tsx
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: No haptic feedback (vibration) on any menu item tap. Professional POS apps use light haptics to confirm interaction.
+- **Expected**: Add `Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)` on menu item press. Use `expo-haptics`.
+- **Migration**: None
+- **Test**: Tap menu item, feel subtle vibration on Android device
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**:
+  1. Import `{ lightHaptic }` from `../utils/haptics`
+  2. In each menu item `onPress` handler, add `lightHaptic()` call before navigation
+  3. If `lightHaptic` doesn't exist, use `import * as Haptics from 'expo-haptics'` → `Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)`
+- **Guard**: Do NOT add haptics to scroll events or non-interactive elements.
+- **DoD**: ☐ All menu taps trigger light haptic ☐ No haptic on scroll ☐ Works on physical Android device
+
+---
+
+### STG-183 — Menu — section header margin 24px top but 4px bottom, visually unbalanced
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [MenuScreen.tsx:1354-1358](src/screens/MenuScreen.tsx#L1354-L1358)
+- **Scope**: `src/screens/MenuScreen.tsx` styles
+- **Problem**: `sectionHeader: { marginTop: 24, marginBottom: 4 }` — 24px gap above but only 4px below the section title. The first menu item after the header has its own `marginTop: 16` creating a 4+16=20px gap below header. Above the header is 24px. This asymmetry makes sections feel top-heavy.
+- **Expected**: Use `marginTop: 28, marginBottom: 8` for better visual balance, or reduce menuItem marginTop for first-after-header items.
+- **Migration**: None
+- **Test**: Visual check — section headers feel centered between groups
+- **Depends on**: STG-003 (spacing tokens)
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**: In styles (~line 1354-1358), change `sectionHeader: { marginTop: 24, marginBottom: 4 }` → `marginTop: 28, marginBottom: 8`
+- **Guard**: Do NOT change `sectionHeaderText` font size or color.
+- **DoD**: ☐ Section headers visually centered between card groups ☐ No overlapping or cramping
+
+---
+
+### STG-184 — Menu — WhatsApp Support fallback uses "Support Unavailable" English literal
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:877](src/screens/MenuScreen.tsx#L877)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: Line 877: `Alert.alert("Support Unavailable", "Support phone not configured...")` — hardcoded English. Line 888: `Alert.alert("WhatsApp Not Found", "Please install WhatsApp...")` — also hardcoded.
+- **Expected**: Use i18n keys for both alerts.
+- **Migration**: None
+- **Test**: Hindi mode, trigger both alerts, verify Hindi text
+- **Depends on**: STG-054
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. Add to `en.json` → `menu`: `"supportUnavailable": "Support Unavailable"`, `"supportPhoneNotConfigured": "Support phone not configured. Please try again later."`, `"whatsappNotFound": "WhatsApp Not Found"`, `"installWhatsapp": "Please install WhatsApp to contact support."`
+  2. Add Hindi translations to `hi.json`
+  3. Line ~877: Replace `Alert.alert("Support Unavailable", ...)` with `Alert.alert(t('menu.supportUnavailable'), t('menu.supportPhoneNotConfigured'))`
+  4. Line ~888: Replace `Alert.alert("WhatsApp Not Found", ...)` with i18n calls
+- **Guard**: Do NOT change WhatsApp URL/phone logic.
+- **DoD**: ☐ Both alerts localized ☐ Hindi renders correctly
+
+---
+
+### STG-185 — Menu — WhatsApp pre-filled message in English only, no i18n
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:882-884](src/screens/MenuScreen.tsx#L882-L884)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: WhatsApp support message `"Hi SuperMandi Support,\n\nStore: ${storeName}\nDevice: ${deviceLabel}\n\nI need help with: "` is hardcoded English. Hindi-speaking retailers would expect to see this in Hindi.
+- **Expected**: Use `t('menu.whatsappSupportMessage', { storeName, deviceLabel })` with Hindi translation.
+- **Migration**: None
+- **Test**: Hindi mode, tap WhatsApp Support, verify pre-filled message is in Hindi
+- **Depends on**: STG-054
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. Add to `en.json` → `menu`: `"whatsappSupportMessage": "Hi SuperMandi Support,\n\nStore: {{storeName}}\nDevice: {{deviceLabel}}\n\nI need help with: "`
+  2. Add Hindi translation to `hi.json`
+  3. Lines ~882-884: Replace hardcoded template string with `t('menu.whatsappSupportMessage', { storeName, deviceLabel })`
+- **Guard**: Do NOT change the WhatsApp URL encoding logic.
+- **DoD**: ☐ WhatsApp message localized ☐ Hindi pre-fill reads naturally
+
+---
+
+### STG-186 — Menu — trend badge at 9px font too small to read on budget Android
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:1588](src/screens/MenuScreen.tsx#L1588)
+- **Scope**: `src/screens/MenuScreen.tsx` styles
+- **Problem**: `trendText: { fontSize: 9 }` — 9px font is below WCAG minimum of 12px for mobile. On budget Android phones (720p, 5" screen), 9px text is literally illegible. The trend arrow icon is only 10px.
+- **Expected**: Increase trendText to 11px minimum. Increase trend arrow to 12px. Ensure badge has enough padding to be tappable (44px minimum).
+- **Migration**: None
+- **Test**: Trend percentages readable on Redmi device at arm's length
+- **Depends on**: STG-053 (WCAG audit)
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**: In styles (~line 1588), change `trendText: { fontSize: 9 }` → `fontSize: 11`. Change trend arrow icon size from 10 → 12. Ensure badge padding provides minimum 44px touch target height.
+- **Guard**: Do NOT change trend calculation logic or color scheme.
+- **DoD**: ☐ `fontSize: 11` minimum ☐ Arrow icon ≥12px ☐ Readable on 720p 5" screen
+
+---
+
+### STG-187 — Menu — trend percentage shows "551%" with no cap or "99%+" formatting
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:251-268](src/screens/MenuScreen.tsx#L251-L268)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: `getTrend()` computes `((today - yesterday) / yesterday) * 100` with no cap. If yesterday had ₹200 sales and today has ₹1,300, it shows "551%". Extreme percentages like 2000% or 10000% are meaningless to users and break the layout (text overflow in trend badge).
+- **Expected**: Cap at 999% and show "999%+". Or for very high/low changes, show absolute difference "↑ ₹1,100" instead of percentage.
+- **Migration**: None
+- **Test**: Simulate 100x daily change, verify display caps at "999%+" or shows absolute
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**: In `getTrend()` function (~lines 251-268), add cap logic: `if (Math.abs(pct) > 999) return { label: '999%+', ... }`. Also handle `yesterday === 0` case: show "New" badge instead of infinity%.
+- **Guard**: Do NOT change the trend data source or API call.
+- **DoD**: ☐ Percentage capped at 999%+ ☐ Yesterday=0 shows "New" not Infinity% ☐ Unit test for edge cases
+
+---
+
+### STG-188 — Menu — Payment Modes breakdown shows "Cash: ₹..." raw label, not i18n
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:593-601](src/screens/MenuScreen.tsx#L593-L601)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: Lines 593-601: `Cash: {formatMoney(...)}`, `UPI: {formatMoney(...)}`, `Card: {formatMoney(...)}` — hardcoded English labels. Also, "Card" is shown but kirana stores rarely accept cards.
+- **Expected**: Use `t('payment.cash')`, `t('payment.upi')`, etc. Consider hiding "Card" if the store doesn't accept cards.
+- **Migration**: None
+- **Test**: Hindi mode, verify Payment Modes labels are in Hindi
+- **Depends on**: STG-054
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. Add to `en.json` → `payment`: `"cash": "Cash"`, `"upi": "UPI"`, `"card": "Card"` (or under `menu`)
+  2. Add Hindi: `"cash": "नकद"`, `"upi": "UPI"`, `"card": "कार्ड"`
+  3. Lines ~593-601: Replace `Cash:`, `UPI:`, `Card:` literals with `t('payment.cash')`, etc.
+- **Guard**: Do NOT change payment amount calculations.
+- **DoD**: ☐ Payment mode labels localized ☐ Hindi labels render
+
+---
+
+### STG-189 — Menu — Help & Support shows "&amp;" HTML entity instead of "&"
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: Code audit — [MenuScreen.tsx:1066](src/screens/MenuScreen.tsx#L1066)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: Line 1066: `<Text style={styles.menuTitle}>Help &amp; Support</Text>`. React Native's `<Text>` renders `&amp;` as the literal text "Help &amp; Support" on screen, not "Help & Support". This is because JSX/React Native `<Text>` does NOT decode HTML entities like a browser `<p>` tag does.
+- **Expected**: Change to `Help & Support` (literal ampersand) or `{"Help & Support"}`. The `&amp;` syntax is only needed in HTML, not JSX.
+- **Migration**: None
+- **Test**: Menu shows "Help & Support" not "Help &amp; Support"
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**: Line ~1066: Change `Help &amp; Support` → `{"Help & Support"}` (JSX expression with literal ampersand). If this is already through i18n (STG-172), the fix is in the locale file string instead.
+- **Guard**: Single character change. Do NOT change surrounding JSX structure.
+- **DoD**: ☐ Screen shows "Help & Support" with actual ampersand ☐ No HTML entities visible
+
+---
+
+### STG-190 — Menu — no skeleton/shimmer loading state for System Status and Today's Sales
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:542-543](src/screens/MenuScreen.tsx#L542-L543)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: While loading, System Status shows "Loading..." text and Today's Sales shows a static "Loading..." text. No skeleton/shimmer effect. The loading state looks broken rather than intentional. Professional apps show animated skeleton placeholders during data fetch.
+- **Expected**: Show shimmer/skeleton placeholders matching the final layout shape. Use `react-native-skeleton-placeholder` or animated gradient views.
+- **Migration**: None
+- **Test**: Kill API, load Menu, verify skeleton shimmer shows instead of "Loading..."
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, possibly new `src/components/ui/SkeletonLoader.tsx`
+- **Changes**:
+  1. Create a simple `SkeletonLoader` component using `Animated.View` with opacity pulse animation (no new deps needed)
+  2. Lines ~542-543: Replace `"Loading..."` text with `<SkeletonLoader>` matching the shape of System Status and Today's Sales cards
+  3. Use `Animated.loop(Animated.sequence([fadeIn, fadeOut]))` for shimmer effect
+- **Guard**: Do NOT add external dependencies like `react-native-skeleton-placeholder`. Use built-in `Animated` API.
+- **DoD**: ☐ Loading state shows animated skeleton ☐ No "Loading..." text visible ☐ Skeleton matches final card shape
+
+---
+
+### STG-191 — Menu — status panel statusBadge uses transparent bg (surfaceAlt), no outline
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [MenuScreen.tsx:1253-1258](src/screens/MenuScreen.tsx#L1253-L1258)
+- **Scope**: `src/screens/MenuScreen.tsx` styles
+- **Problem**: Default statusBadge has `backgroundColor: colors.surfaceAlt` which is nearly identical to the card's `surface` background. The badge is invisible without the active/inactive/warning variant. Loading state badges blend into the card.
+- **Expected**: Add a subtle border `borderWidth: 1, borderColor: colors.border` to default statusBadge so it's visible even in loading state.
+- **Migration**: None
+- **Test**: Loading state badges visible and distinct from card background
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**: In styles (~lines 1253-1258), add to `statusBadge`: `borderWidth: 1, borderColor: colors.border`
+- **Guard**: Do NOT change active/inactive/warning badge colors.
+- **DoD**: ☐ Default/loading badges have visible border ☐ Active/warning badges still look correct
+
+---
+
+### STG-192 — Menu — menuIcon 36x36 too small for touch targets on budget Android
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:1294-1302](src/screens/MenuScreen.tsx#L1294-L1302)
+- **Scope**: `src/screens/MenuScreen.tsx` styles
+- **Problem**: `menuIcon: { width: 36, height: 36 }` — while the Pressable wrapping the entire menu item is the touch target, the icon at 36px is below Material Design's recommended 40-48px minimum icon container. On budget Android screens, the icon appears small and doesn't convey "tappable".
+- **Expected**: Increase icon container to 40x40 with 20px border-radius. Increase icon size from 20 to 22.
+- **Migration**: None
+- **Test**: Icons visually proportionate on Redmi device
+- **Depends on**: STG-003 (spacing tokens)
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**: In styles (~lines 1294-1302), change `menuIcon: { width: 36, height: 36, borderRadius: 18 }` → `width: 40, height: 40, borderRadius: 20`. Change icon `size` prop from 20 → 22 in all `<MaterialCommunityIcons>` inside menu items.
+- **Guard**: Do NOT change icon names or colors.
+- **DoD**: ☐ Icon container 40x40 ☐ Icon size 22 ☐ Visual check on device
+
+---
+
+### STG-193 — Menu — "Z-Report and cash reconciliation" subtitle jargon for kirana users
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:962](src/screens/MenuScreen.tsx#L962)
+- **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/*.json`
+- **Problem**: "Z-Report" is retail industry terminology that kirana store owners don't use. "Cash reconciliation" is accounting jargon. A kirana retailer would understand "दिन की कमाई का हिसाब" (day's earnings account).
+- **Expected**: Change to "End-of-day sales summary and cash count" or "Day-end closing — count your cash drawer".
+- **Migration**: None
+- **Test**: Non-technical retailer understands what the menu item does from the subtitle
+- **Depends on**: STG-054
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Replace hardcoded "Z-Report and cash reconciliation" (~line 962) with `t('menu.dailyClosingSubtitle')`. In `en.json`: `"dailyClosingSubtitle": "End-of-day sales summary and cash count"`. Add Hindi translation.
+- **Guard**: Do NOT change DailyClosing navigation or logic.
+- **DoD**: ☐ Subtitle is plain language ☐ Localized in both languages
+
+---
+
+### STG-194 — Menu — "Start, end, and view shift history" assumes shift concept familiarity
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [MenuScreen.tsx:972](src/screens/MenuScreen.tsx#L972)
+- **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/*.json`
+- **Problem**: Small kirana stores with 1-2 employees may not use formal shifts. The subtitle "Start, end, and view shift history" assumes multi-shift operations. For single-person stores, this is confusing.
+- **Expected**: Change to "Track staff working hours" or show context-aware subtitle based on staff count.
+- **Migration**: None
+- **Test**: Subtitle makes sense for single-person store
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Replace "Start, end, and view shift history" (~line 972) with `t('menu.shiftManagementSubtitle')`. `en.json`: `"shiftManagementSubtitle": "Track staff working hours"`. Hindi translation.
+- **Guard**: Text-only change. Do NOT modify shift logic.
+- **DoD**: ☐ Subtitle plain language ☐ Localized
+
+---
+
+### STG-195 — Menu — "AI & Intelligence" section title too technical, rename to "Smart Insights"
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:828](src/screens/MenuScreen.tsx#L828)
+- **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/*.json`
+- **Problem**: "AI & Intelligence" section title uses tech buzzwords. Kirana retailers don't care about AI — they care about actionable business suggestions. "Intelligence" is vague.
+- **Expected**: Rename to "Smart Insights" or "Business Tips" or "सुझाव" (Suggestions) in Hindi.
+- **Migration**: None
+- **Test**: Section title is approachable and non-technical
+- **Depends on**: STG-054
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Replace "AI & Intelligence" (~line 828) with `t('menu.smartInsights')`. `en.json`: `"smartInsights": "Smart Insights"`. `hi.json`: `"smartInsights": "स्मार्ट सुझाव"`.
+- **Guard**: Text-only. Do NOT rename AI components or APIs.
+- **DoD**: ☐ Section title is "Smart Insights" ☐ Localized
+
+---
+
+### STG-196 — Menu — "Alerts, forecasts, slow movers, expiry tracking" subtitle info-dense
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [MenuScreen.tsx:837](src/screens/MenuScreen.tsx#L837)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: Subtitle lists 4 concepts in 7 words: "Alerts, forecasts, slow movers, expiry tracking". "Slow movers" is retail jargon. "Forecasts" is business analytics jargon. Too much for a subtitle.
+- **Expected**: Simplify to "See what's selling, what's expiring, what to restock" — action-oriented language.
+- **Migration**: None
+- **Test**: Subtitle is clear and conversational
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Replace "Alerts, forecasts, slow movers, expiry tracking" (~line 837) with `t('menu.aiInsightsSubtitle')`. `en.json`: `"aiInsightsSubtitle": "See what's selling, expiring, and what to restock"`. Hindi translation.
+- **Guard**: Text-only.
+- **DoD**: ☐ Subtitle is action-oriented ☐ Localized
+
+---
+
+### STG-197 — Menu — "Browse and apply for credit offers" subtitle implies retailer is borrowing
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [MenuScreen.tsx:849](src/screens/MenuScreen.tsx#L849)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: "Browse and apply for credit offers" — the word "credit" is loaded. Indian kirana owners may interpret this as borrowing/debt (negative connotation) rather than wholesale credit lines.
+- **Expected**: Reword to "Bulk purchase financing — get stock now, pay later" to frame it positively.
+- **Migration**: None
+- **Test**: Subtitle conveys value proposition clearly
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Replace "Browse and apply for credit offers" (~line 849) with `t('menu.bulkPurchaseCreditSubtitle')`. `en.json`: `"bulkPurchaseCreditSubtitle": "Get stock now, pay later with bulk financing"`. Hindi translation.
+- **Guard**: Text-only.
+- **DoD**: ☐ Subtitle frames value positively ☐ Localized
+
+---
+
+### STG-198 — Menu — content padding 16px identical to item padding, creates visual merge
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [MenuScreen.tsx:1149](src/screens/MenuScreen.tsx#L1149)
+- **Scope**: `src/screens/MenuScreen.tsx` styles
+- **Problem**: `content: { padding: 16 }` and `menuItem: { padding: 14 }` — nearly identical padding. Menu items visually merge with the scroll container edge. There's no clear "gutter" separation.
+- **Expected**: Reduce content padding to 12px or increase it to 20px to create visual distinction from card padding.
+- **Migration**: None
+- **Test**: Cards feel inset from screen edges with clear gutter
+- **Depends on**: STG-003
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**: In styles (~line 1149), change `content: { padding: 16 }` → `padding: 12` to create visual distinction from card's `padding: 14`.
+- **Guard**: Do NOT change card padding itself.
+- **DoD**: ☐ Visible gutter between screen edge and card edges ☐ Cards don't feel flush with container
+
+---
+
+### STG-199 — Menu — ScrollView has no scrollbar indicator styling
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [MenuScreen.tsx:391](src/screens/MenuScreen.tsx#L391)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: The ScrollView has no `showsVerticalScrollIndicator` or custom scrollbar. With 20+ menu items requiring 8 screens of scrolling, users have no spatial awareness of how far they've scrolled.
+- **Expected**: Keep default scroll indicator visible, or add a branded scroll track. Consider `scrollIndicatorInsets` for proper positioning.
+- **Migration**: None
+- **Test**: Scroll indicator visible during scroll
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**: On `<ScrollView>` (~line 391), ensure `showsVerticalScrollIndicator={true}` is set (or remove any `showsVerticalScrollIndicator={false}`). Add `scrollIndicatorInsets={{ right: 1 }}` for proper positioning.
+- **Guard**: Do NOT add custom scrollbar components. Use native indicator.
+- **DoD**: ☐ Scroll indicator visible during scrolling ☐ Fades out when idle
+
+---
+
+### STG-200 — Enroll — "hello@supermandi.tech" email in error hints, kirana users won't email
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [EnrollDeviceScreen.tsx:86](src/screens/EnrollDeviceScreen.tsx#L86)
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx`
+- **Problem**: STORE_INACTIVE error hint says "Contact hello@supermandi.tech for help." Kirana store owners in India primarily use WhatsApp and phone calls, not email. An email address is effectively useless for the target audience.
+- **Expected**: Replace email with WhatsApp link or phone number: "WhatsApp us at +91-XXXXXXXXXX" or make it a tappable link that opens WhatsApp.
+- **Migration**: None
+- **Test**: Error hint shows WhatsApp/phone, not email
+- **Depends on**: STG-059
+#### Execution Scope
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`
+- **Changes**: Line ~86: Replace `"Contact hello@supermandi.tech for help."` with `"WhatsApp us for help"` + tappable link to `https://wa.me/91XXXXXXXXXX` (use same support phone from WhatsApp Support feature in MenuScreen). Use `Linking.openURL()` on tap.
+- **Guard**: Do NOT change the error detection logic. Only the hint text and CTA.
+- **DoD**: ☐ STORE_INACTIVE error shows WhatsApp link ☐ Tapping opens WhatsApp ☐ No email address visible
+
+---
+
+### STG-201 — Enroll — "Superadmin" used in error messages (deviceInactive, storeInactive)
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — `src/i18n/locales/en.json` lines 382-383
+- **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**:
+  1. `status.storeInactive`: "POS is inactive. Add UPI ID in Superadmin to start billing."
+  2. `status.deviceInactive`: "This device is disabled. Contact Superadmin to enable it."
+  "Superadmin" is an internal system name. Retailers don't know what "Superadmin" is.
+- **Expected**: Replace "Superadmin" with "your store dashboard" or "support team". E.g., "Contact support to enable this device."
+- **Migration**: None
+- **Test**: No mention of "Superadmin" visible to POS users
+- **Depends on**: STG-057
+#### Execution Scope
+- **Files**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. `en.json` line ~382: Change `"storeInactive": "POS is inactive. Add UPI ID in Superadmin to start billing."` → `"storeInactive": "Your store is being set up. Contact support if billing doesn't activate within 24 hours."`
+  2. `en.json` line ~383: Change `"deviceInactive": "This device is disabled. Contact Superadmin to enable it."` → `"deviceInactive": "This device is disabled. Contact support to re-enable it."`
+  3. Update corresponding Hindi translations
+- **Guard**: Do NOT change the status keys or where they're referenced. Only string values.
+- **DoD**: ☐ No "Superadmin" in en.json status strings ☐ Hindi updated ☐ grep confirms zero "Superadmin" in locale files
+
+---
+
+### STG-202 — Enroll — STORE_INACTIVE hint says "Contact hello@supermandi.tech for help"
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [EnrollDeviceScreen.tsx:86](src/screens/EnrollDeviceScreen.tsx#L86)
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx`
+- **Problem**: Same as STG-200, but specific to the STORE_INACTIVE error code. The hint provides an email that kirana users won't use. This is the most common enrollment error (store pending approval) and the support path is broken.
+- **Expected**: Show WhatsApp support button directly in the error state, not just a text hint.
+- **Migration**: None
+- **Test**: STORE_INACTIVE error shows tappable WhatsApp support button
+- **Depends on**: STG-059
+#### Execution Scope
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`
+- **Changes**: Line ~86: Add a `<Pressable>` with WhatsApp icon that calls `Linking.openURL('https://wa.me/91...')` in the STORE_INACTIVE error hint area. Reuse the support phone number from config.
+- **Guard**: Do NOT change enrollment API call logic. This is a UI addition only.
+- **DoD**: ☐ STORE_INACTIVE shows tappable WhatsApp button ☐ Opens WhatsApp on tap
+
+---
+
+### STG-203 — Enroll — "RETAILER_PHONE" hardcoded as deviceType, OEM_HANDHELD never sent
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [EnrollDeviceScreen.tsx:196](src/screens/EnrollDeviceScreen.tsx#L196)
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx`
+- **Problem**: Line 196: `deviceType: "RETAILER_PHONE" as const` — hardcoded. The enrollment flow originally had device type chips (Mobile, OEM Handheld) per STG-038, but the code now hardcodes RETAILER_PHONE. If OEM handheld POS devices are used, they'll be incorrectly classified.
+- **Expected**: Auto-detect device type from hardware characteristics (screen size, thermal printer presence, etc.) or show device type selector for edge cases.
+- **Migration**: None
+- **Test**: OEM handheld device correctly identified during enrollment
+- **Depends on**: STG-038
+#### Execution Scope
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`
+- **Changes**: Line ~196: Replace hardcoded `"RETAILER_PHONE" as const` with auto-detection logic using `expo-device` properties (e.g., check for thermal printer, screen size < 5", or specific OEM model lists). Fallback to "RETAILER_PHONE" if detection fails.
+- **Guard**: Keep the `deviceType` field in the enrollment API payload unchanged. Only change how the value is determined.
+- **DoD**: ☐ Device type auto-detected ☐ RETAILER_PHONE fallback works ☐ Enrollment API still receives valid type
+
+---
+
+### STG-204 — Enroll — defaultLabel uses Device.modelName raw (e.g. "23106RN0DA")
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [EnrollDeviceScreen.tsx:187](src/screens/EnrollDeviceScreen.tsx#L187)
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx`
+- **Problem**: Line 187: `const defaultLabel = Device.modelName || Device.deviceName || ""`. On many Android devices, `Device.modelName` returns the internal model code (e.g., "23106RN0DA" for Redmi Note 13 Pro). This becomes the default device label shown to the retailer and in the System Status panel.
+- **Expected**: Map internal model codes to friendly names (e.g., "Redmi Note 13 Pro"). Or use a simpler default like "Counter-1" and let the user customize.
+- **Migration**: None
+- **Test**: Default device label shows friendly model name, not internal code
+- **Depends on**: STG-064
+#### Execution Scope
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`
+- **Changes**: Line ~187: Replace `Device.modelName || Device.deviceName || ""` with a friendly name mapping. Create a small `getDeviceFriendlyName()` utility that maps known internal codes to marketing names (e.g., "23106RN0DA" → "Redmi Note 13 Pro"). Fallback to `Device.deviceName` then "Counter-1".
+- **Guard**: Do NOT change the enrollment API. The label is user-facing only.
+- **DoD**: ☐ Internal model codes mapped to friendly names ☐ Unknown devices get "Counter-1" default ☐ User can still edit the label
+
+---
+
+### STG-205 — Enroll — deep link re-enrollment alert uses English literals, no i18n
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [EnrollDeviceScreen.tsx:229-235](src/screens/EnrollDeviceScreen.tsx#L229-L235)
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx`, `src/i18n/locales/*.json`
+- **Problem**: Lines 229-235: `Alert.alert("Replace Existing Enrollment?", "This device is already enrolled...")` — hardcoded English.
+- **Expected**: Use i18n keys for both title and body.
+- **Migration**: None
+- **Test**: Hindi mode, open deep link on already-enrolled device, verify Hindi alert
+- **Depends on**: STG-054
+#### Execution Scope
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. Add to `en.json` → `enroll`: `"replaceTitle": "Replace Existing Enrollment?"`, `"replaceMessage": "This device is already enrolled to {{storeName}}. Re-enrolling will clear all local data."`, `"replaceButton": "Replace"`, `"keepButton": "Keep Current"`
+  2. Add Hindi translations
+  3. Lines ~229-235: Replace `Alert.alert("Replace Existing Enrollment?", ...)` with i18n calls
+- **Guard**: Do NOT change re-enrollment logic.
+- **DoD**: ☐ Deep link re-enrollment alert localized ☐ Hindi renders correctly
+
+---
+
+### STG-206 — Enroll — missing code alert says "superadmin account activation"
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [EnrollDeviceScreen.tsx:256](src/screens/EnrollDeviceScreen.tsx#L256)
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx`
+- **Problem**: Line 256: `"Enter the activation code shared after retailer registration and superadmin account activation."` — mentions "superadmin account activation" which is internal jargon. The user already complained about this exact text in the previous session.
+- **Expected**: Change to "Enter the activation code you received after completing your store registration." Remove all mentions of "superadmin".
+- **Migration**: None
+- **Test**: Missing code alert contains no "superadmin" reference
+- **Depends on**: STG-057
+#### Execution Scope
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`
+- **Changes**: Line ~256: Change `"Enter the activation code shared after retailer registration and superadmin account activation."` → `"Enter the activation code you received after completing your store registration."`
+- **Guard**: Single string change. Do NOT modify the alert structure.
+- **DoD**: ☐ No "superadmin" in missing code alert ☐ Message is self-explanatory
+
+---
+
+### STG-207 — Enroll — error codes DEVICE_FINGERPRINT_INVALID says "Reinstall the app"
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [EnrollDeviceScreen.tsx:112-118](src/screens/EnrollDeviceScreen.tsx#L112-L118)
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx`
+- **Problem**: DEVICE_FINGERPRINT_INVALID and DEVICE_TYPE_REQUIRED both say "Reinstall the app and try again." Asking kirana retailers to reinstall is a last-resort action. They may not know how to reinstall from Play Store. This should be a support contact path, not self-service.
+- **Expected**: Change to "Please contact support — we'll help you get set up." with WhatsApp link.
+- **Migration**: None
+- **Test**: Technical device errors show support contact, not "reinstall" instruction
+- **Depends on**: STG-059
+#### Execution Scope
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`
+- **Changes**: Lines ~112-118: Replace `"Reinstall the app and try again."` hints for DEVICE_FINGERPRINT_INVALID and DEVICE_TYPE_REQUIRED with `"Please contact support — we'll help you get set up."` + WhatsApp link button (reuse pattern from STG-200).
+- **Guard**: Do NOT change error code detection. Only hint text and CTA.
+- **DoD**: ☐ Technical errors show support contact ☐ No "reinstall" instruction ☐ WhatsApp button present
+
+---
+
+### STG-208 — Enroll — ENROLLMENT_RATE_LIMITED says "wait 15 minutes" but no countdown
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [EnrollDeviceScreen.tsx:97](src/screens/EnrollDeviceScreen.tsx#L97)
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx`
+- **Problem**: Rate limit error says "Please wait 15 minutes before trying again." but there's no countdown timer. The user doesn't know when they can retry. They'll tap every minute until it works.
+- **Expected**: Add a countdown timer showing "Try again in 14:32" that counts down. Disable the Activate button during cooldown.
+- **Migration**: None
+- **Test**: Rate limit shows live countdown, Activate button disabled until timer expires
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`
+- **Changes**:
+  1. Add `const [cooldownEnd, setCooldownEnd] = useState<number | null>(null)` state
+  2. On ENROLLMENT_RATE_LIMITED error (~line 97): `setCooldownEnd(Date.now() + 15 * 60 * 1000)`
+  3. Add `useEffect` with `setInterval` that updates countdown text every second: "Try again in MM:SS"
+  4. Disable Activate button when `cooldownEnd && Date.now() < cooldownEnd`
+  5. Clear timer when cooldown expires
+- **Guard**: Do NOT change the rate limit detection or API retry logic. Add UI feedback only.
+- **DoD**: ☐ Live countdown "Try again in 14:32" ☐ Activate button disabled during cooldown ☐ Button re-enables after 15 min
+
+---
+
+### STG-209 — Payment — uses TouchableOpacity instead of Pressable (inconsistent with rest)
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [PaymentScreen.tsx:14](src/screens/PaymentScreen.tsx#L14)
+- **Scope**: `src/screens/PaymentScreen.tsx`
+- **Problem**: PaymentScreen imports and uses `TouchableOpacity` while the rest of the app (MenuScreen, SellScanScreen, EnrollDeviceScreen) uses `Pressable`. TouchableOpacity is the legacy RN touch component. This causes inconsistent press feedback (opacity vs ripple), harder maintenance, and no `android_ripple` support.
+- **Expected**: Replace all `TouchableOpacity` with `Pressable` in PaymentScreen for consistency.
+- **Migration**: None
+- **Test**: Payment buttons use same press feedback style as rest of app
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/PaymentScreen.tsx`
+- **Changes**:
+  1. Replace `import { TouchableOpacity } from 'react-native'` with `import { Pressable } from 'react-native'` (~line 14)
+  2. Find-replace all `<TouchableOpacity` → `<Pressable` and `</TouchableOpacity>` → `</Pressable>` throughout the file
+  3. Add `android_ripple={{ color: colors.primary + '20' }}` to interactive Pressables
+  4. For opacity feedback, use `style={({ pressed }) => [existingStyle, pressed && { opacity: 0.85 }]}`
+- **Guard**: Do NOT change `onPress` handlers or business logic. Component swap only.
+- **DoD**: ☐ Zero `TouchableOpacity` imports ☐ All buttons use `Pressable` ☐ Ripple on Android ☐ Typecheck passes
+
+---
+
+### STG-210 — Payment — "Low Stock Warning" and "Partial Sale" alerts in English, no i18n
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [PaymentScreen.tsx:404-424](src/screens/PaymentScreen.tsx#L404-L424), [PaymentScreen.tsx:758-779](src/screens/PaymentScreen.tsx#L758-L779)
+- **Scope**: `src/screens/PaymentScreen.tsx`, `src/i18n/locales/*.json`
+- **Problem**: Multiple alerts use hardcoded English:
+  1. "Low Stock Warning" / "Do you want to proceed anyway?"
+  2. "Partial Sale" / "X item(s) will remain in cart"
+  3. "Payment Error" / "Sale is not ready yet"
+  4. "Price Freshness Warning"
+  5. "Payment in Progress"
+  6. "Previous UPI Payment Pending"
+  7. "Pending UPI Payment"
+- **Expected**: All alert strings through i18n.
+- **Migration**: None
+- **Test**: Hindi mode, trigger each alert, verify Hindi text
+- **Depends on**: STG-054
+#### Execution Scope
+- **Files**: `src/screens/PaymentScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. Add to `en.json` → `payment`: `"lowStockWarning"`, `"lowStockMessage"`, `"partialSale"`, `"partialSaleMessage"`, `"paymentError"`, `"saleNotReady"`, `"priceFreshnessWarning"`, `"paymentInProgress"`, `"paymentInProgressMessage"`, `"previousUpiPending"`, `"pendingUpiPayment"`, `"proceedAnyway"`, `"waitForPayment"`
+  2. Add Hindi translations for all keys
+  3. Replace all hardcoded alert strings at lines ~404-424, ~758-779, ~706 with `t()` calls
+- **Guard**: Do NOT change alert logic (conditions, button handlers). Only text strings.
+- **DoD**: ☐ All payment alerts localized ☐ Hindi renders for every alert ☐ Zero hardcoded English in alerts
+
+---
+
+### STG-211 — Payment — "UPI Error: UPI ID not configured or QR failed" too vague
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [PaymentScreen.tsx:618](src/screens/PaymentScreen.tsx#L618)
+- **Scope**: `src/screens/PaymentScreen.tsx`
+- **Problem**: Catch-all error `Alert.alert("UPI Error", "UPI ID not configured or QR failed.")` — combines two different problems into one message. The retailer can't tell if their UPI VPA is missing (admin issue) or if the QR generation failed (temporary issue).
+- **Expected**: Separate into two clear messages: "UPI ID not set — ask your account manager to add UPI ID" vs "QR code generation failed — tap to retry".
+- **Migration**: None
+- **Test**: UPI errors show specific, actionable message
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/PaymentScreen.tsx`
+- **Changes**: Line ~618: Split the catch-all `"UPI ID not configured or QR failed."` into two branches:
+  1. Check if `upiVpa` is falsy → "UPI ID not set up. Ask your account manager to add your UPI ID."
+  2. Else (QR generation failed) → "Could not generate QR code. Tap to retry."
+- **Guard**: Do NOT change the UPI payment flow. Only error message branching.
+- **DoD**: ☐ Two distinct UPI error messages ☐ Each is actionable ☐ Unit test covers both branches
+
+---
+
+### STG-212 — Payment — "POS Inactive" and "Store Missing" alerts reference "Superadmin"
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [PaymentScreen.tsx:493](src/screens/PaymentScreen.tsx#L493), [PaymentScreen.tsx:500](src/screens/PaymentScreen.tsx#L500)
+- **Scope**: `src/screens/PaymentScreen.tsx`, `src/utils/uiStatus.ts`
+- **Problem**: Line 493: `Alert.alert("POS Inactive", POS_MESSAGES.storeInactive)` — `POS_MESSAGES.storeInactive` likely contains "Superadmin" reference (from `status.storeInactive` in en.json: "Add UPI ID in Superadmin to start billing"). Line 500: `"Check Superadmin setup"`.
+- **Expected**: Replace all "Superadmin" references with "support" or "store dashboard".
+- **Migration**: None
+- **Test**: No "Superadmin" visible in any payment error
+- **Depends on**: STG-057, STG-201
+#### Execution Scope
+- **Files**: `src/screens/PaymentScreen.tsx`, `src/utils/uiStatus.ts`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. Line ~493: Replace `POS_MESSAGES.storeInactive` usage → use updated i18n string (from STG-201)
+  2. Line ~500: Replace `"Check Superadmin setup"` → `"Contact support for setup"`
+  3. In `uiStatus.ts`: If `POS_MESSAGES` contains "Superadmin", update to "support"
+  4. Grep all of `PaymentScreen.tsx` for any remaining "Superadmin" or "superadmin" references
+- **Guard**: Do NOT change payment flow logic. Only error text.
+- **DoD**: ☐ `grep -i superadmin PaymentScreen.tsx` returns zero matches ☐ uiStatus.ts clean
+
+---
+
+### STG-213 — Payment — "Payment in Progress" back-block alert is bare, no spinner
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [PaymentScreen.tsx:706](src/screens/PaymentScreen.tsx#L706)
+- **Scope**: `src/screens/PaymentScreen.tsx`
+- **Problem**: When user presses Android back button during payment, `Alert.alert("Payment in Progress", "Please wait for the payment to complete.")` shows a basic alert. No spinner, no progress indicator, no estimated time. User feels stuck.
+- **Expected**: Show a modal overlay with spinner and "Processing payment..." text instead of a dismissible Alert. Or show the Alert with an ActivityIndicator.
+- **Migration**: None
+- **Test**: Back press during payment shows spinner overlay, not bare alert
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/PaymentScreen.tsx`
+- **Changes**: Line ~706: Replace `Alert.alert("Payment in Progress", ...)` with a modal overlay:
+  1. Add `<Modal visible={isProcessing && backPressed} transparent>` with `<ActivityIndicator>` + "Processing payment..." text
+  2. Add `const [backPressed, setBackPressed] = useState(false)` — set on back press, clear when payment completes
+  3. The modal should be non-dismissible (no touch-outside-to-close)
+- **Guard**: Do NOT change the actual payment processing. Only the back-press UI feedback.
+- **DoD**: ☐ Back during payment shows modal with spinner ☐ Modal non-dismissible ☐ Clears when payment finishes
+
+---
+
+### STG-214 — Payment — QR expiry countdown exists but no visual regenerate button
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [PaymentScreen.tsx:650-671](src/screens/PaymentScreen.tsx#L650-L671)
+- **Scope**: `src/screens/PaymentScreen.tsx`
+- **Problem**: QR expiry countdown logic exists (T-204) — when QR expires, it clears `upiIntent`. But there's no visible "Regenerate QR" button for the user. The UPI tab just shows... nothing? The user has to figure out that selecting another payment mode and coming back to UPI will regenerate the QR.
+- **Expected**: Show a "QR Expired — Tap to generate new QR" button when countdown reaches 0. Show countdown timer visually near the QR code (e.g., "Expires in 4:32").
+- **Migration**: None
+- **Test**: QR expires, user sees "Tap to regenerate" button. New QR generates on tap.
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/PaymentScreen.tsx`
+- **Changes**:
+  1. Lines ~650-671: When QR countdown reaches 0 (upiIntent clears), instead of just hiding the QR, show a "QR Expired" state with a "Tap to generate new QR" button
+  2. Add `<Pressable onPress={regenerateQR}>` in the UPI tab's expired state
+  3. The `regenerateQR` function calls the same QR generation logic used initially
+  4. Add visible countdown near QR: `"Expires in {mm}:{ss}"`
+- **Guard**: Do NOT change the QR generation API call or intent format. Only add UI for expiry state.
+- **DoD**: ☐ Countdown visible near QR ☐ Expired state shows "Tap to regenerate" ☐ Regeneration works ☐ New countdown starts
+
+---
+
+### STG-215 — Payment — stale price warning threshold 4 hours is hardcoded, not configurable
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [PaymentScreen.tsx:6](src/screens/PaymentScreen.tsx#L6)
+- **Scope**: `src/screens/PaymentScreen.tsx`
+- **Problem**: `const PRICE_FRESHNESS_THRESHOLD_MS = 4 * 60 * 60 * 1000` — 4 hours hardcoded. Different stores may need different thresholds (daily price changes vs weekly).
+- **Expected**: Move to a configurable constant or store setting.
+- **Migration**: None
+- **Test**: Threshold is configurable or uses a sensible default
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/PaymentScreen.tsx`, `src/config/api.ts`
+- **Changes**: Move `const PRICE_FRESHNESS_THRESHOLD_MS = 4 * 60 * 60 * 1000` from PaymentScreen.tsx to `src/config/api.ts` as a named export. Import in PaymentScreen.
+- **Guard**: Value stays 4 hours. Just moving the constant to config for future configurability.
+- **DoD**: ☐ Constant in config ☐ PaymentScreen imports it ☐ No behavior change
+
+---
+
+### STG-216 — Payment — "Price Freshness Warning" title confusing for kirana user
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [PaymentScreen.tsx:789](src/screens/PaymentScreen.tsx#L789)
+- **Scope**: `src/screens/PaymentScreen.tsx`
+- **Problem**: "Price Freshness Warning" — "freshness" is a tech term for data staleness. A kirana retailer would understand "Prices may have changed" but not "Price Freshness Warning".
+- **Expected**: Change title to "Prices May Have Changed" and body to "Some items were added over 4 hours ago. Prices might be different now. Continue?"
+- **Migration**: None
+- **Test**: Alert title is plain language
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/PaymentScreen.tsx`
+- **Changes**: Line ~789: Change `Alert.alert("Price Freshness Warning", ...)` → `Alert.alert("Prices May Have Changed", "Some items were added over 4 hours ago. Continue with current prices?")`
+- **Guard**: Single string change. Do NOT change the staleness check logic.
+- **DoD**: ☐ Alert title is "Prices May Have Changed" ☐ Body is plain language
+
+---
+
+### STG-217 — Payment — sale creation error shows generic "Unable to start payment"
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [PaymentScreen.tsx:505](src/screens/PaymentScreen.tsx#L505)
+- **Scope**: `src/screens/PaymentScreen.tsx`
+- **Problem**: Line 505: `setSaleError("Unable to start payment. Please try again.")` — this is the catch-all for any unhandled createSale error. The actual error (network timeout, server 500, etc.) is swallowed. User has no idea why payment can't start.
+- **Expected**: Show specific error: "Network error — check your connection" or "Server busy — try again in a moment" based on error type.
+- **Migration**: None
+- **Test**: Different error causes show different user-facing messages
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/PaymentScreen.tsx`
+- **Changes**: Line ~505: Replace catch-all `"Unable to start payment. Please try again."` with error-type branching:
+  1. `if (err.message?.includes('network') || err.code === 'NETWORK_ERROR')` → "Check your internet connection and try again"
+  2. `if (err.response?.status >= 500)` → "Server busy — please try again in a moment"
+  3. Default → "Could not start payment. Please try again."
+- **Guard**: Do NOT change the createSale call. Only the error display logic.
+- **DoD**: ☐ Network errors show connection message ☐ Server errors show server message ☐ Generic fallback exists
+
+---
+
+### STG-218 — Payment — "Previous UPI Payment Pending" alert shows raw paymentId hash
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [PaymentScreen.tsx:257](src/screens/PaymentScreen.tsx#L257)
+- **Scope**: `src/screens/PaymentScreen.tsx`
+- **Problem**: Alert body includes `pending.paymentId.slice(0, 8)…` — showing a raw hash like "a1b2c3d4…" to the user. Kirana retailers don't understand UUIDs. This is developer debug info leaking to the UI.
+- **Expected**: Remove paymentId from the user-facing message. Just say "A previous payment was interrupted. Please verify with the customer whether it was completed."
+- **Migration**: None
+- **Test**: Pending UPI alert contains no raw IDs or hashes
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/PaymentScreen.tsx`
+- **Changes**: Line ~257: Remove `pending.paymentId.slice(0, 8)…` from the alert body. Change to: `"A previous UPI payment was interrupted. Please check with the customer whether it was completed before starting a new payment."`
+- **Guard**: Do NOT remove the paymentId from the logic (still needed for recovery). Only remove from UI display.
+- **DoD**: ☐ No raw IDs/hashes in user-facing alerts ☐ Message is actionable
+
+---
+
+### STG-219 — Payment — "UPI Offline" / "UPI Missing" / "UPI Timeout" all different alert styles
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — PaymentScreen.tsx
+- **Scope**: `src/screens/PaymentScreen.tsx`
+- **Problem**: Multiple UPI-related alerts have inconsistent titles and structures: "UPI Offline", "UPI Missing", "UPI Timeout", "UPI Error". No consistent alert component or style.
+- **Expected**: Standardize all UPI alerts with consistent structure: Icon + Title + Body + Action button. Use a shared alert utility.
+- **Migration**: None
+- **Test**: All UPI errors follow same visual pattern
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/PaymentScreen.tsx`
+- **Changes**: Create a helper function `showUpiAlert(title: string, body: string, actions?: AlertButton[])` that standardizes all UPI alerts with consistent structure. Replace all ad-hoc UPI `Alert.alert()` calls (~5 instances) with this helper.
+- **Guard**: Do NOT change button handlers. Only wrap existing alerts in a consistent helper.
+- **DoD**: ☐ Single `showUpiAlert` helper ☐ All UPI alerts use it ☐ Consistent title format "UPI: <Issue>"
+
+---
+
+### STG-220 — SellScan — CART_SHEET_COLLAPSED_RATIO 0.55 covers 55% screen, too much
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [SellScanScreen.tsx:291](src/screens/SellScanScreen.tsx#L291)
+- **Scope**: `src/screens/SellScanScreen.tsx`
+- **Problem**: `CART_SHEET_COLLAPSED_RATIO = 0.55` — cart bottom sheet covers 55% of screen height when collapsed. This leaves only 45% for product browsing. On small phones (5-5.5"), only 2-3 product tiles are visible above the cart sheet.
+- **Expected**: Reduce to 0.40-0.45 collapsed ratio, showing only cart total bar and first item. Full cart accessible by swiping up.
+- **Migration**: None
+- **Test**: With cart open on Redmi device, at least 4 product tiles visible above
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/SellScanScreen.tsx`
+- **Changes**: Line ~291: Change `CART_SHEET_COLLAPSED_RATIO = 0.55` → `0.42`. This shows cart total bar + first item preview while leaving ~58% for product grid.
+- **Guard**: Do NOT change cart expansion behavior or swipe gestures.
+- **DoD**: ☐ Collapsed cart covers ~42% of screen ☐ At least 4 tiles visible above on 6" screen ☐ Cart still swipeable to full
+
+---
+
+### STG-221 — SellScan — SMALL_SCREEN_WIDTH=400 threshold may not cover all budget phones
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [SellScanScreen.tsx:296](src/screens/SellScanScreen.tsx#L296)
+- **Scope**: `src/screens/SellScanScreen.tsx`
+- **Problem**: `SMALL_SCREEN_WIDTH = 400` — budget Android phones (Samsung Galaxy A03, Redmi 9A) have 360dp width. At 400dp threshold, these would be classified as "small" correctly. But the `SMALL_SCREEN_HEIGHT = 750` may misclassify some phones. This needs validation across target device matrix.
+- **Expected**: Test on actual target devices and adjust thresholds. Consider using aspect ratio instead of absolute dimensions.
+- **Migration**: None
+- **Test**: Layout works correctly on 360dp-wide budget Android phones
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/SellScanScreen.tsx`
+- **Changes**: Line ~296: Validate `SMALL_SCREEN_WIDTH = 400` and `SMALL_SCREEN_HEIGHT = 750` against target device matrix (360dp Samsung A03, 393dp Pixel 7a, etc.). Adjust thresholds if needed based on device testing.
+- **Guard**: This is a validation/adjustment task. Only change thresholds if testing reveals issues.
+- **DoD**: ☐ Layout tested on 360dp device ☐ No text overflow or clipping ☐ Thresholds documented
+
+---
+
+### STG-222 — SellScan — product tile formatPrice shows ".00" on round amounts (₹28.00)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [SellTile.tsx:55-59](src/components/sell/SellTile.tsx#L55-L59)
+- **Scope**: `src/components/sell/SellTile.tsx`
+- **Problem**: `formatPrice()` uses `.toFixed(2)` always, showing "₹28.00" for a ₹28 item. In Indian retail, round amounts never show decimals. ".00" wastes horizontal space and looks unnatural to kirana users who think in whole rupees.
+- **Expected**: Smart formatting: show "₹28" for round amounts, "₹28.50" for amounts with paise. Use `formatMoney()` from `utils/money.ts` for consistency.
+- **Migration**: None
+- **Test**: ₹28 shows as "₹28", ₹28.50 shows as "₹28.50"
+- **Depends on**: STG-117
+#### Execution Scope
+- **Files**: `src/components/sell/SellTile.tsx`
+- **Changes**: Lines ~55-59: In `formatPrice()`, change from `.toFixed(2)` to smart formatting: `paise % 100 === 0 ? (paise / 100).toString() : (paise / 100).toFixed(2)`. Prefix with "₹". Or better: use `formatMoney()` from `src/utils/money.ts` for consistency.
+- **Guard**: Do NOT change how `paise` is passed or calculated. Only display formatting.
+- **DoD**: ☐ Round amounts show "₹28" ☐ Fractional amounts show "₹28.50" ☐ Unit test for both cases
+
+---
+
+### STG-223 — SellScan — no empty state illustration when search returns zero products
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — SellScanScreen.tsx
+- **Scope**: `src/screens/SellScanScreen.tsx`
+- **Problem**: When product search returns zero results, there's likely just a text message. No illustration, no guidance, no "Add this product" CTA. The empty state should guide the user to either refine search or add a new product.
+- **Expected**: Show empty state illustration with "No products found" + "Try a different search" + "Add new product" button.
+- **Migration**: None
+- **Test**: Search for non-existent product, verify helpful empty state with illustration
+- **Depends on**: STG-035
+#### Execution Scope
+- **Files**: `src/screens/SellScanScreen.tsx`, `src/components/ui/EmptyState.tsx`
+- **Changes**: In the product search results area of SellScanScreen, when search returns zero results, render `<EmptyState>` component with: title "No products found", subtitle "Try a different search or add a new product", and an "Add Product" button that navigates to AddStoreProductModal.
+- **Guard**: Do NOT change search API logic. Only the zero-results UI.
+- **DoD**: ☐ Empty search shows EmptyState with CTA ☐ "Add Product" button works ☐ Illustration present
+
+---
+
+### STG-224 — SellScan — category rail DEMO_CATEGORIES may show dummy data in production
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [SellScanScreen.tsx:61](src/screens/SellScanScreen.tsx#L61)
+- **Scope**: `src/screens/SellScanScreen.tsx`, `src/components/sell/CategoryRail.tsx`
+- **Problem**: Import `{ DEMO_CATEGORIES }` from CategoryRail — demo/dummy categories might be used as fallback when API fails to load real categories. If the API is down or slow, users might see demo category names instead of their actual store categories.
+- **Expected**: Verify that DEMO_CATEGORIES is only used in development mode. In production, show loading skeleton or "Categories unavailable" message, never dummy data.
+- **Migration**: None
+- **Test**: Kill category API in production build, verify no demo data shown
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/SellScanScreen.tsx`, `src/components/sell/CategoryRail.tsx`
+- **Changes**:
+  1. Check `CategoryRail.tsx` — verify `DEMO_CATEGORIES` is only used as fallback. If used unconditionally, wrap with `if (__DEV__)`.
+  2. In SellScanScreen (~line 61): If `DEMO_CATEGORIES` import is used in production code paths, remove or gate with `__DEV__`
+  3. When API fails in production, show loading skeleton or "Categories unavailable" — never dummy names
+- **Guard**: Do NOT change the CategoryRail component API. Only gate demo data.
+- **DoD**: ☐ `DEMO_CATEGORIES` behind `__DEV__` ☐ Production: API fail → skeleton/message ☐ No dummy category names in release
+
+---
+
+### STG-225 — SellScan — NUM_COLUMNS=2 hardcoded, no responsive columns for tablets
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [SellScanScreen.tsx:283](src/screens/SellScanScreen.tsx#L283)
+- **Scope**: `src/screens/SellScanScreen.tsx`
+- **Problem**: `const NUM_COLUMNS = 2` — hardcoded. On wider screens (tablets, foldables, landscape), 2 columns wastes space. On very narrow phones (<320dp), 2 columns may be too cramped.
+- **Expected**: Calculate columns based on screen width: `Math.max(2, Math.floor(screenWidth / 180))`.
+- **Migration**: None
+- **Test**: Tablet shows 3-4 columns, narrow phone shows 2
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/SellScanScreen.tsx`
+- **Changes**: Line ~283: Replace `const NUM_COLUMNS = 2` with `const NUM_COLUMNS = Math.max(2, Math.floor(screenWidth / 180))` where `screenWidth` is from `Dimensions.get('window').width` (already available in the file).
+- **Guard**: Minimum 2 columns always. Do NOT change tile aspect ratio.
+- **DoD**: ☐ 360dp → 2 cols ☐ 768dp → 4 cols ☐ No layout breakage
+
+---
+
+### STG-226 — SellTile — "—" dash for null price, should show "Price not set"
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [SellTile.tsx:56](src/components/sell/SellTile.tsx#L56)
+- **Scope**: `src/components/sell/SellTile.tsx`
+- **Problem**: `if (paise === null || paise === undefined) return "—"` — an em dash is cryptic. The user doesn't know if the price is loading, not set, or an error. Products without prices should be clearly labeled.
+- **Expected**: Show "Price not set" in warning color with a "Set price" tap affordance. Or hide price and show "Tap to set price".
+- **Migration**: None
+- **Test**: Product with null price shows "Price not set" label
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/components/sell/SellTile.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. Line ~56: Change `return "—"` → `return t('sell.priceNotSet')` (or pass through a prop callback)
+  2. Add `en.json` → `sell`: `"priceNotSet": "Price not set"`
+  3. Add Hindi translation
+  4. Style the "Price not set" text in warning color (`colors.warning`)
+- **Guard**: Do NOT change how null price products behave in the cart. Only display.
+- **DoD**: ☐ Null price shows "Price not set" in warning color ☐ Localized ☐ Em dash removed
+
+---
+
+### STG-227 — SellTile — expiry days calculation doesn't account for timezone (IST)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [SellTile.tsx:86-95](src/components/sell/SellTile.tsx#L86-L95)
+- **Scope**: `src/components/sell/SellTile.tsx`
+- **Problem**: `daysUntilExpiry()` uses `new Date()` which uses device local time, and `Date.UTC()` for comparison. But the expiry date ISO string from the backend might be in UTC while the user is in IST (+5:30). This can cause off-by-one day calculation near midnight.
+- **Expected**: Normalize both dates to IST (Asia/Kolkata) before calculating days difference. Use the same `toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })` pattern used elsewhere.
+- **Migration**: None
+- **Test**: Expiry date calculation is correct at 11:30 PM IST
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/components/sell/SellTile.tsx`
+- **Changes**: Lines ~86-95: In `daysUntilExpiry()`, normalize both dates to IST before comparison:
+  ```
+  const todayIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+  const expiryIST = new Date(new Date(expiryDate).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+  ```
+  Then calculate day difference from normalized dates.
+- **Guard**: Do NOT change expiry badge colors or visibility logic.
+- **DoD**: ☐ Expiry calculation correct at 11:30 PM IST ☐ No off-by-one near midnight ☐ Unit test for edge case
+
+---
+
+### STG-228 — SellTile — no MRP strikethrough visual when sell price < MRP
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — SellTile.tsx
+- **Scope**: `src/components/sell/SellTile.tsx`
+- **Problem**: SellTile has `mrp` field but may not show MRP with strikethrough styling when sell price is lower. Indian customers expect to see "~~₹35~~ ₹28" format to understand the discount. Without MRP strikethrough, the value proposition is invisible.
+- **Expected**: When `mrp > sellPrice`, show MRP in grey with strikethrough (textDecorationLine: 'line-through') next to the sell price.
+- **Migration**: None
+- **Test**: Product with MRP ₹35 and sell price ₹28 shows "~~₹35~~ ₹28"
+- **Depends on**: STG-032
+#### Execution Scope
+- **Files**: `src/components/sell/SellTile.tsx`
+- **Changes**: In the price display area, add MRP strikethrough when `mrp > sellPrice`:
+  1. Add a conditional `<Text>` with `style={{ textDecorationLine: 'line-through', color: colors.textTertiary, fontSize: 11 }}>₹{mrp/100}</Text>` next to the sell price
+  2. Only show when both mrp and sellPrice are non-null and mrp > sellPrice
+- **Guard**: Do NOT change the price data model or calculations.
+- **DoD**: ☐ MRP strikethrough visible when mrp > sellPrice ☐ Hidden when mrp === sellPrice ☐ Hidden when mrp is null
+
+---
+
+### STG-229 — SellTile — LOOSE mode "per KG" label not translated
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [SellTile.tsx:73](src/components/sell/SellTile.tsx#L73)
+- **Scope**: `src/components/sell/SellTile.tsx`
+- **Problem**: `packSizeLabel()` returns `"per ${rateUnit}"` with English "per" hardcoded. In Hindi, "per KG" should be "प्रति किलो" or "/किलो".
+- **Expected**: Use i18n for "per" prefix. Localize unit names (KG → किलो in Hindi).
+- **Migration**: None
+- **Test**: Hindi mode, LOOSE product shows "प्रति किलो" not "per KG"
+- **Depends on**: STG-054
+#### Execution Scope
+- **Files**: `src/components/sell/SellTile.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. Line ~73: Replace hardcoded `"per ${rateUnit}"` with `t('sell.perUnit', { unit: t('units.' + rateUnit.toLowerCase()) })`
+  2. Add to `en.json`: `"sell.perUnit": "per {{unit}}"`, `"units.kg": "KG"`, `"units.g": "g"`, `"units.l": "L"`, `"units.ml": "ml"`
+  3. Add Hindi: `"sell.perUnit": "प्रति {{unit}}"`, `"units.kg": "किलो"`, etc.
+- **Guard**: Do NOT change how `rateUnit` is determined or stored.
+- **DoD**: ☐ "per KG" localized ☐ Hindi shows "प्रति किलो" ☐ All unit types covered
+
+---
+
+### STG-230 — SellTile — brand name not displayed if available
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [SellTile.tsx:33](src/components/sell/SellTile.tsx#L33)
+- **Scope**: `src/components/sell/SellTile.tsx`
+- **Problem**: `SellTileProduct` interface has `brand?: string | null` field, and the product data includes brand info. But the tile may not display the brand name prominently. Brand recognition is important for kirana customers (e.g., "Tata Salt" vs generic "Salt").
+- **Expected**: Show brand name in a subtle badge or as a secondary text line above the product name.
+- **Migration**: None
+- **Test**: Products with brand show brand name on tile
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/components/sell/SellTile.tsx`
+- **Changes**: In the tile render, add a brand display line:
+  1. After the product name `<Text>`, add: `{product.brand && <Text style={styles.brandText}>{product.brand}</Text>}`
+  2. Add `brandText` style: `{ fontSize: 10, color: colors.textSecondary, marginTop: 2 }`
+  3. Brand appears as subtle secondary text above or below product name
+- **Guard**: Do NOT change tile height or grid layout. Brand text should truncate with ellipsis if long.
+- **DoD**: ☐ Brand name visible when present ☐ Hidden when null ☐ Doesn't break tile layout
+
+---
+
+### STG-231 — Colors — "accent" and "secondary" are identical (#14B8A6), redundant token
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [colors.ts:7-12](src/theme/colors.ts#L7-L12)
+- **Scope**: `src/theme/colors.ts`
+- **Problem**: Lines 7-12: `accent: "#14B8A6"`, `secondary: "#14B8A6"` — identical. `accentDark`/`secondaryDark` identical. `accentLight`/`secondaryLight` identical. Having two token names for the same color creates confusion about when to use which.
+- **Expected**: Pick one name (recommend "accent") and remove the other. Or differentiate them for future brand expansion.
+- **Migration**: None — search-replace secondary → accent across codebase
+- **Test**: No visual change after consolidation
+- **Depends on**: STG-003
+#### Execution Scope
+- **Files**: `src/theme/colors.ts`, and all files importing `colors.secondary`
+- **Changes**:
+  1. In `colors.ts`: Remove `secondary`, `secondaryDark`, `secondaryLight` from both light and dark palettes (they're identical to `accent` variants)
+  2. Global find-replace across codebase: `colors.secondary` → `colors.accent`, `colors.secondaryDark` → `colors.accentDark`, `colors.secondaryLight` → `colors.accentLight`
+  3. Update TypeScript type if `Colors` interface is explicitly defined
+- **Guard**: Verify zero visual change after consolidation (colors are identical). Do NOT change actual color values.
+- **DoD**: ☐ No `secondary` color token ☐ All usages point to `accent` ☐ Typecheck passes ☐ No visual change
+
+---
+
+### STG-232 — Colors — no dedicated "disabled" color token for greyed-out buttons
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — colors.ts
+- **Scope**: `src/theme/colors.ts`
+- **Problem**: No `disabled`, `disabledText`, or `disabledBg` color tokens. Components ad-hoc use `textTertiary`, `surfaceAlt`, or opacity to create disabled states, leading to inconsistent disabled button appearances across screens.
+- **Expected**: Add `disabled: "#CBD5E1"`, `disabledText: "#94A3B8"`, `disabledBg: "#F1F5F9"` to the color palette. Use consistently for all disabled buttons/inputs.
+- **Migration**: None
+- **Test**: All disabled buttons have consistent grey appearance
+- **Depends on**: STG-003
+#### Execution Scope
+- **Files**: `src/theme/colors.ts`
+- **Changes**: Add to both light and dark palettes:
+  - Light: `disabled: "#CBD5E1"`, `disabledText: "#94A3B8"`, `disabledBg: "#F1F5F9"`
+  - Dark: `disabled: "#475569"`, `disabledText: "#64748B"`, `disabledBg: "#1E293B"`
+- **Guard**: Adding tokens only. Do NOT refactor existing disabled styles in this ticket — that's a separate adoption ticket.
+- **DoD**: ☐ Three disabled tokens in both palettes ☐ TypeScript type updated ☐ Typecheck passes
+
+---
+
+### STG-233 — Colors — dark mode "ink" is #F8FAFC but light mode "ink" is #0B1220, never used
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [colors.ts:61](src/theme/colors.ts#L61), [colors.ts:124](src/theme/colors.ts#L124)
+- **Scope**: `src/theme/colors.ts`
+- **Problem**: `ink` color token exists in both light (#0B1220) and dark (#F8FAFC) palettes but doesn't appear to be used anywhere in the app. Dead color token clutters the palette.
+- **Expected**: Either use `ink` for a specific purpose (e.g., receipt printing background) or remove it to simplify the palette.
+- **Migration**: None
+- **Test**: No visual impact from removal
+- **Depends on**: STG-003
+#### Execution Scope
+- **Files**: `src/theme/colors.ts`
+- **Changes**:
+  1. Grep codebase for `colors.ink` — if zero usages, remove `ink` from both palettes
+  2. If used somewhere, document the usage and keep the token
+- **Guard**: Only remove if confirmed unused. Run `grep -r "colors\.ink\|\.ink" src/ --include="*.tsx" --include="*.ts"` first.
+- **DoD**: ☐ `ink` removed if unused ☐ If used, documented and kept ☐ Typecheck passes
+
+---
+
+### STG-234 — i18n — status.storeInactive says "Add UPI ID in Superadmin to start billing"
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [en.json:382](src/i18n/locales/en.json#L382)
+- **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: `"storeInactive": "POS is inactive. Add UPI ID in Superadmin to start billing."` — "Superadmin" is internal jargon. The retailer doesn't manage UPI VPA in "Superadmin" — their account manager or SuperMandi support does this.
+- **Expected**: Change to "Your store is being set up. Contact support if billing doesn't activate within 24 hours."
+- **Migration**: None
+- **Test**: Store inactive message is user-friendly, no "Superadmin"
+- **Depends on**: STG-057
+#### Execution Scope
+- **Files**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Same as STG-201 (consolidated). `en.json` line ~382: `"storeInactive": "Your store is being set up. Contact support if billing doesn't activate within 24 hours."` Hindi: `"storeInactive": "आपकी दुकान सेटअप हो रही है। अगर 24 घंटे में बिलिंग शुरू नहीं होती तो सहायता से संपर्क करें।"`
+- **Guard**: Same key name. Only value change. No code changes needed — string is already referenced via i18n.
+- **DoD**: ☐ No "Superadmin" in storeInactive string ☐ Hindi updated ☐ Message is actionable
+
+---
+
+### STG-235 — i18n — status.deviceInactive says "Contact Superadmin to enable it"
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [en.json:383](src/i18n/locales/en.json#L383)
+- **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: `"deviceInactive": "This device is disabled. Contact Superadmin to enable it."` — same "Superadmin" jargon.
+- **Expected**: Change to "This device is disabled. Contact support to re-enable it." with tappable support link.
+- **Migration**: None
+- **Test**: Device inactive message has no "Superadmin"
+- **Depends on**: STG-057
+#### Execution Scope
+- **Files**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: `en.json` line ~383: `"deviceInactive": "This device is disabled. Contact support to re-enable it."` Hindi: `"deviceInactive": "यह डिवाइस अक्षम है। इसे पुनः सक्रिय करने के लिए सहायता से संपर्क करें।"`
+- **Guard**: Same key, value-only change.
+- **DoD**: ☐ No "Superadmin" ☐ Hindi updated
+
+---
+
+### STG-236 — i18n — errors.deviceAlreadyEnrolled says "Ask Superadmin to reset the token"
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [en.json:393](src/i18n/locales/en.json#L393)
+- **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: `"deviceAlreadyEnrolled": "This label is already active. Ask Superadmin to reset the token."` — "Superadmin" jargon AND "token" is a developer term. The retailer has no idea what a "token" is.
+- **Expected**: Change to "This device name is already in use. Contact support to reset it, or choose a different name."
+- **Migration**: None
+- **Test**: Error message is plain language, no "Superadmin" or "token"
+- **Depends on**: STG-057
+#### Execution Scope
+- **Files**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: `en.json` line ~393: `"deviceAlreadyEnrolled": "This device name is already in use. Contact support to reset it, or choose a different name."` Hindi: update accordingly.
+- **Guard**: Same key, value-only change.
+- **DoD**: ☐ No "Superadmin" or "token" ☐ Hindi updated ☐ Message guides user to action
+
+---
+
+### STG-237 — i18n — errors.sessionExpired says "Please login again" but POS has no login
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [en.json:406](src/i18n/locales/en.json#L406)
+- **Scope**: `src/i18n/locales/en.json`
+- **Problem**: `"sessionExpired": "Session expired. Please login again."` — POS doesn't have a "login" flow. It has device enrollment + staff PIN. "Login again" sends the user looking for a login screen that doesn't exist.
+- **Expected**: Change to "Session expired. Please re-enter your staff PIN." or "Session expired. The app will restart."
+- **Migration**: None
+- **Test**: Session expired message matches actual re-auth flow
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: `en.json` line ~406: `"sessionExpired": "Session expired. Please re-enter your staff PIN."` Hindi: `"sessionExpired": "सत्र समाप्त हो गया। कृपया अपना स्टाफ PIN दोबारा दर्ज करें।"`
+- **Guard**: Value-only change.
+- **DoD**: ☐ Message matches actual re-auth flow (PIN, not login) ☐ Hindi updated
+
+---
+
+### STG-238 — i18n — sell.digitiseMode says "Digitise mode on" — jargon for kirana user
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [en.json:146](src/i18n/locales/en.json#L146)
+- **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: `"digitiseMode": "Digitise mode on. Scan products to save."` — "Digitise" is tech jargon. Kirana retailers don't know what "digitising" means. They understand "Add products to your catalog."
+- **Expected**: Change to "Add to catalog mode — scan products to add them to your store."
+- **Migration**: None
+- **Test**: Digitise mode shows plain-language explanation
+- **Depends on**: STG-054
+#### Execution Scope
+- **Files**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: `en.json` line ~146: `"digitiseMode": "Add to catalog mode — scan products to add them to your store."` Hindi: `"digitiseMode": "कैटलॉग में जोड़ें — स्कैन करें और अपनी दुकान में उत्पाद जोड़ें।"`
+- **Guard**: Value-only change.
+- **DoD**: ☐ No "Digitise" jargon ☐ Hindi is natural language
+
+---
+
+### STG-239 — i18n — purchase.moq "MOQ" acronym not spelled out for kirana users
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [en.json:116](src/i18n/locales/en.json#L116)
+- **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: `"moq": "MOQ"` — Minimum Order Quantity is a B2B wholesale term. Kirana retailers may know "minimum order" but not the acronym "MOQ".
+- **Expected**: Change to "Min. Order" or "Minimum Order" or show full form on first use.
+- **Migration**: None
+- **Test**: MOQ label is understandable without business degree
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: `en.json` line ~116: `"moq": "Min. Order"`. Hindi: `"moq": "न्यूनतम ऑर्डर"`
+- **Guard**: Value-only change. Search for any other "MOQ" string usages in the app.
+- **DoD**: ☐ "MOQ" replaced with "Min. Order" ☐ Hindi updated
+
+---
+
+### STG-240 — i18n — tabs use ALL CAPS ("SELL", "PURCHASE", "REORDER") — shouty
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [en.json:93-100](src/i18n/locales/en.json#L93-L100)
+- **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`, `src/screens/PosRootLayout.tsx`
+- **Problem**: Tab labels are all uppercase: "SELL", "PURCHASE", "REORDER", "CREDIT", "MENU". ALL CAPS feels aggressive/shouty in modern UI design. Material Design 3 recommends sentence case or title case for tab labels.
+- **Expected**: Change to title case: "Sell", "Purchase", "Reorder", "Credit", "Menu". Or use the `textTransform: 'uppercase'` style so the i18n keys can be normal case.
+- **Migration**: None
+- **Test**: Tab labels use title case, feel professional
+- **Depends on**: STG-007, STG-069
+#### Execution Scope
+- **Files**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`, `src/screens/PosRootLayout.tsx`
+- **Changes**:
+  1. `en.json` lines ~93-100: Change `"sell": "SELL"` → `"sell": "Sell"`, `"purchase": "PURCHASE"` → `"purchase": "Purchase"`, etc. for all tab labels
+  2. OR in `PosRootLayout.tsx`: Add `textTransform: 'none'` to tab label styles (if currently using uppercase transform)
+  3. Update Hindi labels to match casing convention
+- **Guard**: Do NOT change tab navigation logic or icons.
+- **DoD**: ☐ Tab labels in title case ☐ No ALL CAPS ☐ Hindi labels updated
+
+---
+
+### STG-241 — i18n — reorder.dismissSuggestedFrom template too complex for Hindi translation
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [en.json:251](src/i18n/locales/en.json#L251)
+- **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: `"dismissSuggestedFrom": "Suggested: {{qty}} units from {{supplier}}"` — Hindi word order is different (supplier comes before quantity in natural Hindi). Complex interpolation templates with multiple variables are hard to translate naturally.
+- **Expected**: Split into simpler strings or allow translators to reorder variables.
+- **Migration**: None
+- **Test**: Hindi translation reads naturally, not word-for-word English
+- **Depends on**: STG-054
+#### Execution Scope
+- **Files**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: `en.json` line ~251: Simplify to `"dismissSuggestedFrom": "Suggested: {{qty}} from {{supplier}}"` (shorter). Hindi: Reorder variables naturally: `"dismissSuggestedFrom": "{{supplier}} से सुझाव: {{qty}} यूनिट"` (supplier first in Hindi).
+- **Guard**: Do NOT change the interpolation variable names ({{qty}}, {{supplier}}).
+- **DoD**: ☐ Hindi reads naturally ☐ Variables correctly interpolated
+
+---
+
+### STG-242 — i18n — credit section uses financial jargon (EMI, KYC, PAN, Aadhaar) without explanation
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [en.json:484-536](src/i18n/locales/en.json#L484-L536)
+- **Scope**: `src/i18n/locales/en.json`
+- **Problem**: Credit section i18n keys use financial acronyms: "EMI", "KYC", "PAN", "Aadhaar", "BNPL", "UTR". While kirana owners may know EMI and PAN, KYC and UTR are less familiar. No tooltips or explanations provided.
+- **Expected**: Add brief explanations: "KYC (identity check)", "UTR (payment reference number)". Or show full forms on first encounter.
+- **Migration**: None
+- **Test**: Financial terms have contextual explanations
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: In credit section (~lines 484-536): Add full-form expansions:
+  - `"kyc": "KYC (Identity Verification)"` → `"kyc": "Identity Check (KYC)"`
+  - `"utr": "UTR"` → `"utr": "Payment Reference (UTR)"`
+  - Keep EMI, PAN, Aadhaar as-is (well-known in India)
+  - Update Hindi translations
+- **Guard**: Value-only changes. Do NOT rename JSON keys.
+- **DoD**: ☐ KYC and UTR have contextual explanations ☐ Hindi updated
+
+---
+
+### STG-243 — i18n — bnpl.upiInstructions sentence too long (2 clauses + technical term UTR)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [en.json:461](src/i18n/locales/en.json#L461)
+- **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: `"upiInstructions": "Complete the payment in your UPI app, then enter the UTR (transaction reference) below to confirm."` — 20 words in one instruction. Combines 3 steps (open UPI app, pay, enter UTR) in one sentence. UTR is technical.
+- **Expected**: Break into numbered steps: "1. Pay in your UPI app  2. Copy the payment reference  3. Paste it below"
+- **Migration**: None
+- **Test**: UPI instructions are step-by-step, not run-on sentence
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: `en.json` line ~461: Change `"upiInstructions"` to step-by-step: `"upiInstructions": "1. Pay in your UPI app\n2. Copy the payment reference\n3. Paste it below to confirm"`. Hindi: `"upiInstructions": "1. अपने UPI ऐप में भुगतान करें\n2. भुगतान संदर्भ कॉपी करें\n3. पुष्टि के लिए नीचे पेस्ट करें"`
+- **Guard**: Value-only change. Ensure the newlines render correctly in the UI component.
+- **DoD**: ☐ Instructions are numbered steps ☐ No "UTR" jargon ☐ Hindi step-by-step
+
+---
+
+### STG-244 — i18n — grn.title "Goods Receipt Note" — warehouse jargon
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [en.json:292](src/i18n/locales/en.json#L292)
+- **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: `"title": "Goods Receipt Note"` — GRN is formal warehouse/supply-chain terminology. Kirana retailers say "maal aaya" (goods arrived) or "stock received".
+- **Expected**: Change to "Stock Received" or "Confirm Delivery".
+- **Migration**: None
+- **Test**: GRN screen title is plain language
+- **Depends on**: STG-054
+#### Execution Scope
+- **Files**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: `en.json` → GRN section line ~292: Change `"title": "Goods Receipt Note"` → `"title": "Confirm Delivery"`. Hindi: `"title": "डिलीवरी पुष्टि"`. Also update subtitle if it references "GRN".
+- **Guard**: Do NOT rename the GRN screen component or route name. Only user-facing title text.
+- **DoD**: ☐ GRN screen title is "Confirm Delivery" ☐ Hindi updated ☐ No "Goods Receipt Note" visible to users
+
+---
+
+### STG-245 — Tab nav — "REORDER • ON" / "REORDER • OFF" unusual tab label convention
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [en.json:98-99](src/i18n/locales/en.json#L98-L99)
+- **Scope**: `src/i18n/locales/en.json`, `src/screens/PosRootLayout.tsx`
+- **Problem**: Tab labels include state indicators: "REORDER • ON" and "REORDER • OFF". Embedding state in a navigation label is unusual — tabs should be stable labels. The ON/OFF state should be shown as a badge or indicator on the tab, not in the label text itself.
+- **Expected**: Keep tab label as "Reorder". Show ON/OFF state as a green/grey dot indicator or small badge on the tab icon.
+- **Migration**: None
+- **Test**: Reorder tab label is stable "Reorder" with state shown via icon/badge
+- **Depends on**: STG-007
+#### Execution Scope
+- **Files**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`, `src/screens/PosRootLayout.tsx`
+- **Changes**:
+  1. `en.json` lines ~98-99: Change `"reorderOn": "REORDER • ON"`, `"reorderOff": "REORDER • OFF"` → single `"reorder": "Reorder"`
+  2. In `PosRootLayout.tsx`: Remove conditional label logic that switches between ON/OFF labels. Use stable "Reorder" label.
+  3. Add a green dot (or `TabBadge`) component on the Reorder tab icon when reorder is ON, grey dot when OFF.
+- **Guard**: Do NOT change the reorder ON/OFF state logic. Only the tab label display.
+- **DoD**: ☐ Tab label is stable "Reorder" ☐ ON/OFF shown via dot badge on icon ☐ Badge updates reactively
+
+---
+
+### STG-246 — Tab nav — 5 tabs but CREDIT tab is greyed/disabled, confusing affordance
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit + screenshot observation
+- **Scope**: `src/screens/PosRootLayout.tsx`, `src/screens/CreditScreen.tsx`
+- **Problem**: The CREDIT tab is always visible but may be greyed out (disabled) if credit features aren't enabled for the store. A permanently grey tab confuses users — they tap it expecting content and get nothing. 5 tabs is also at the Material Design maximum.
+- **Expected**: Hide disabled tabs entirely. Or show them with a "Coming Soon" indicator when tapped. Consider reducing to 4 tabs (SELL, PURCHASE, MENU + move Credit into Menu).
+- **Migration**: None
+- **Test**: Disabled features don't show as ghost tabs
+- **Depends on**: STG-030
+#### Execution Scope
+- **Files**: `src/screens/PosRootLayout.tsx`, `src/screens/CreditScreen.tsx`
+- **Changes**:
+  1. In `PosRootLayout.tsx`: Add conditional rendering for Credit tab — hide entirely when credit feature is not enabled for the store (check feature flag or store config)
+  2. When credit is disabled: 4 tabs only (Sell, Purchase, Reorder, Menu)
+  3. If hiding is not desired: show "Coming Soon" toast on tap of disabled tab
+- **Guard**: Do NOT change the Credit screen itself. Only tab visibility.
+- **DoD**: ☐ Disabled Credit tab hidden or shows "Coming Soon" ☐ Tab bar renders cleanly with 4 tabs ☐ Credit-enabled stores still have 5 tabs
+
+---
+
+### STG-247 — Menu — "Customers & Credit" section has 4 items (Khata, Customers, Customer Management, Overdue) — 3 overlap
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [MenuScreen.tsx:775-824](src/screens/MenuScreen.tsx#L775-L824)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: The "Customers & Credit" section has 4 separate menu items:
+  1. "Khata (Credit Book)" → KhataScreen
+  2. "Customers" → CustomerListScreen
+  3. "Customer Management" → CustomerManagementScreen
+  4. "Overdue Dues" → OverdueDuesScreen
+  "Customers" and "Customer Management" are essentially the same thing (view vs edit). "Khata" overlaps with both. This creates decision paralysis — "which one do I tap to find a customer?"
+- **Expected**: Consolidate into 2 items max: "Customers" (combined list + management) and "Credit & Dues" (Khata + Overdue). Already flagged in STG-157 but this ticket addresses the full consolidation.
+- **Migration**: None
+- **Test**: Customer section has max 2 clear menu items
+- **Depends on**: STG-157
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**:
+  1. Lines ~775-824: Remove "Customer Management" menu item entirely (merge into "Customers")
+  2. Rename "Khata (Credit Book)" subtitle to include overdue context: "Credit book and due payments"
+  3. "Customers" subtitle: "View, add, and manage customer profiles"
+  4. Keep "Overdue Dues" only if it navigates to a distinct screen; otherwise merge into Khata
+  5. Result: max 3 items — "Customers", "Credit Book", "Overdue Payments" (or 2 if Overdue merges into Credit Book)
+- **Guard**: Do NOT delete screens — just remove redundant menu entry points.
+- **DoD**: ☐ Max 2-3 items in Customers section ☐ No "Customer Management" card ☐ All functions still accessible
+
+---
+
+### STG-248 — Menu — menuItem marginTop:16 creates 16px gap, but first item after sectionHeader has 16+4=20px gap inconsistency
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — MenuScreen.tsx styles
+- **Scope**: `src/screens/MenuScreen.tsx` styles
+- **Problem**: `menuItem: { marginTop: 16 }` and `sectionHeader: { marginBottom: 4 }`. The first menu item after a section header has 4 + 16 = 20px total gap, but subsequent items have only 16px gap. This asymmetry is subtle but visible.
+- **Expected**: Use consistent spacing: either remove sectionHeader marginBottom and let menuItem marginTop handle all spacing, or add a dedicated first-item class.
+- **Migration**: None
+- **Test**: Visual check — consistent spacing between all menu items
+- **Depends on**: STG-003
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**: In styles: Change `sectionHeader: { marginBottom: 4 }` → `marginBottom: 0`. This makes the first menu item after a header have only `marginTop: 16` gap (matching all other items).
+- **Guard**: Single value change.
+- **DoD**: ☐ All inter-item gaps are consistent 16px ☐ No visual asymmetry
+
+---
+
+### STG-249 — Menu — printerStatusRow sits between Bills and Barcode with no card container
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:648-659](src/screens/MenuScreen.tsx#L648-L659)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: The printer status row (line 648-659) is styled as a bare row (`printerStatusRow`) between the Bill Actions cards and the Barcode Sheets card. It has no card container, no border, no background — just floating text and icons. It looks like an orphan element, not a proper menu item.
+- **Expected**: Either wrap in a card container matching menuItem style, or integrate it into the Bills/Barcode section header as a status indicator.
+- **Migration**: None
+- **Test**: Printer status has visual container or is integrated into a section
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**: Lines ~648-659: Wrap `printerStatusRow` in a card container matching `menuItem` style: add `backgroundColor: colors.surface`, `borderRadius: 12`, `padding: 14`, `borderWidth: 1, borderColor: colors.border`. Or merge it into the section header of the Bills section.
+- **Guard**: Do NOT change printer detection or test print logic.
+- **DoD**: ☐ Printer status has card container ☐ Visually consistent with other menu items
+
+---
+
+### STG-250 — Menu — "Switch Store" in Settings section but it's a destructive action, needs separation
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:1072-1081](src/screens/MenuScreen.tsx#L1072-L1081)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: "Switch Store" appears alongside benign settings (Language, Theme, Printer Settings). But Switch Store is destructive — it clears all local data and forces re-enrollment. It should be visually separated from regular settings to prevent accidental taps. Currently has red icon (`menuIconDanger`) but is still inline with other items.
+- **Expected**: Move "Switch Store" to a dedicated "Danger Zone" section at the bottom of the menu, below Settings. Add extra padding/separator. Show a warning icon prominently.
+- **Migration**: None
+- **Test**: Switch Store is visually isolated from regular settings
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**:
+  1. Move "Switch Store" from Settings section to a new "Danger Zone" section at the very bottom of the menu
+  2. Add `<View style={styles.dangerZone}>` with `marginTop: 32` separator
+  3. Add a section header "Danger Zone" in red/warning color
+  4. Add extra confirmation: "This will clear all local data" in the subtitle
+- **Guard**: Do NOT change Switch Store logic. Only its visual placement.
+- **DoD**: ☐ Switch Store below all other items ☐ Visually separated ☐ Warning styling
+
+---
+
+### STG-251 — Menu — no confirmation count on "Daily Closing" (e.g., "2 shifts open")
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:956-965](src/screens/MenuScreen.tsx#L956-L965)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: "Daily Closing" menu item has no badge showing pending actions (e.g., shifts not closed, cash not reconciled). The retailer has to open the screen to discover if they have pending closing tasks.
+- **Expected**: Show a badge count (e.g., red "1" badge) when daily closing is pending. Or show subtitle "Today's closing pending" dynamically.
+- **Migration**: None
+- **Test**: Daily Closing shows "Pending" indicator when close-of-day hasn't been done
+- **Depends on**: STG-161
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`, `src/stores/dailyClosingStore.ts`
+- **Changes**:
+  1. Import daily closing status from `dailyClosingStore` (check if today's closing is done)
+  2. On Daily Closing menu item (~lines 956-965): Add conditional badge or subtitle change: `subtitle={todaysClosed ? "Completed ✓" : "Today's closing pending"}`
+  3. Optional: Add red dot badge to match STG-161 pattern
+- **Guard**: Do NOT change daily closing logic. Only read status for display.
+- **DoD**: ☐ Dynamic subtitle based on closing status ☐ "Pending" indicator when not done ☐ "Completed" when done
+
+---
+
+### STG-252 — Menu — "Chat" subtitle says "Message suppliers and support" but no unread count
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — [MenuScreen.tsx:859-868](src/screens/MenuScreen.tsx#L859-L868)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: Chat menu item has static subtitle "Message suppliers and support" but no unread message count badge. If a supplier sends a message, the retailer won't know until they open Chat.
+- **Expected**: Show unread count badge (red dot with number) on Chat menu item when there are unread messages.
+- **Migration**: None
+- **Test**: Receive a chat message, verify badge appears on Chat menu item
+- **Depends on**: STG-161
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**:
+  1. Import unread chat count (from chat API or local state — check `src/services/api/chatApi.ts`)
+  2. On Chat menu item (~lines 859-868): Add badge component showing unread count when > 0
+  3. Use `<TabBadge>` from `src/components/TabBadge.tsx` or a simple red dot `<View>`
+- **Guard**: Do NOT implement push notification logic. Only read locally available unread count.
+- **DoD**: ☐ Unread badge shows when messages exist ☐ Badge clears after visiting Chat ☐ No badge when 0 unread
+
+---
+
+### STG-253 — Enroll — TEST_STORE_CONFIG imported but may auto-fill in production builds
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Code audit — [EnrollDeviceScreen.tsx:40](src/screens/EnrollDeviceScreen.tsx#L40)
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx`, `src/config/api.ts`
+- **Problem**: Line 40 imports `TEST_STORE_CONFIG` from `../config/api`. If this config contains test enrollment codes or test store IDs and is used to auto-fill the enrollment form in any code path, it could cause production devices to accidentally enroll to a test store.
+- **Expected**: Verify `TEST_STORE_CONFIG` is only used behind `__DEV__` guard. If it's included in production bundle, remove the import and wrap any usage with `if (__DEV__)`.
+- **Migration**: None
+- **Test**: Production build contains no test store configuration
+- **Depends on**: STG-144
+#### Execution Scope
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`, `src/config/api.ts`
+- **Changes**:
+  1. Check `src/config/api.ts` for `TEST_STORE_CONFIG` definition — verify it's behind `__DEV__` guard
+  2. In `EnrollDeviceScreen.tsx` line ~40: Wrap the import with `__DEV__` check: `const TEST_STORE_CONFIG = __DEV__ ? require('../config/api').TEST_STORE_CONFIG : null`
+  3. Any usage of `TEST_STORE_CONFIG` must be guarded: `if (__DEV__ && TEST_STORE_CONFIG) { ... }`
+- **Guard**: Do NOT remove TEST_STORE_CONFIG — it's useful in dev. Only gate its inclusion in production bundles.
+- **DoD**: ☐ `TEST_STORE_CONFIG` not in production bundle ☐ Dev auto-fill still works ☐ Production enrollment uses only user input
+
+---
+
+### STG-254 — Payment — formatMoney not using Indian lakh system (1,45,000 vs 145,000)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Code audit — `src/utils/money.ts` used by PaymentScreen
+- **Scope**: `src/utils/money.ts`
+- **Problem**: `formatMoney()` may use Western comma grouping (₹1,45,000 vs ₹145,000). Indian number system groups after the first 3 digits in pairs of 2 (1,45,000 not 145,000). This was flagged in STG-116 for the payment screen but applies to ALL uses of formatMoney across the app (Menu Today's Sales, cart, bills, etc.).
+- **Expected**: Implement Indian lakh numbering system in `formatMoney()` using `Intl.NumberFormat('en-IN')` or manual grouping.
+- **Migration**: None
+- **Test**: ₹145000 displays as "₹1,45,000" everywhere in the app
+- **Depends on**: STG-116
+#### Execution Scope
+- **Files**: `src/utils/money.ts`
+- **Changes**: In `formatMoney()` function, switch to Indian lakh numbering:
+  1. Use `new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount)`
+  2. Or manual grouping: split after first 3 digits, then groups of 2
+  3. This single change applies everywhere `formatMoney` is called (Menu, cart, bills, payment)
+- **Guard**: Do NOT change `formatMoney` signature. Only internal formatting logic.
+- **DoD**: ☐ ₹145000 → "₹1,45,000" ☐ ₹1500 → "₹1,500" (no change for <10000) ☐ Unit test for lakh formatting
+
+---
+
+### STG-255 — Menu — summaryCard and statusPanel have same border/radius but different marginTop
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [MenuScreen.tsx:1221-1228](src/screens/MenuScreen.tsx#L1221-L1228), [MenuScreen.tsx:1471-1478](src/screens/MenuScreen.tsx#L1471-L1478)
+- **Scope**: `src/screens/MenuScreen.tsx` styles
+- **Problem**: `statusPanel: { marginTop: 12 }` and `summaryCard: { marginTop: 12 }` — same margin. But both have `borderRadius: 12` and `padding: 12`. The visual rhythm is monotonous — two identical-looking cards stacked with 12px gap. They blend into one blob.
+- **Expected**: Differentiate visually — give summaryCard a subtle accent border or different background tint to distinguish it from statusPanel. Or increase gap between them to 20px.
+- **Migration**: None
+- **Test**: System Status and Today's Sales cards are visually distinct
+- **Depends on**: STG-003
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**: In styles, differentiate `summaryCard` from `statusPanel`:
+  1. Add `borderLeftWidth: 3, borderLeftColor: colors.primary` to `summaryCard` for a subtle accent stripe
+  2. OR increase `marginTop` from 12 to 20 for `summaryCard` to create more visual separation
+- **Guard**: Do NOT change card content or data display.
+- **DoD**: ☐ Two cards visually distinct ☐ Clear separation visible
+
+---
+
+### STG-256 — Menu — no swipe gesture to dismiss/collapse System Status panel
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Code audit — [MenuScreen.tsx:426-518](src/screens/MenuScreen.tsx#L426-L518)
+- **Scope**: `src/screens/MenuScreen.tsx`
+- **Problem**: System Status panel is always fully expanded. On repeat visits, the retailer already knows their store is active and synced. There's no way to collapse it (STG-148 flagged collapsible, this covers gesture). A swipe-up gesture to minimize it to a single status dot row would save scroll space.
+- **Expected**: Add a "minimize" gesture or tap handler that collapses the panel to a single-line summary: "Store active · Synced · Online" with a chevron to expand.
+- **Migration**: None
+- **Test**: Swipe or tap to collapse System Status to one-line summary
+- **Depends on**: STG-148
+#### Execution Scope
+- **Files**: `src/screens/MenuScreen.tsx`
+- **Changes**:
+  1. Add `const [statusCollapsed, setStatusCollapsed] = useState(true)` (default collapsed)
+  2. Wrap System Status content in a collapsible container: collapsed shows "Store active · Synced · Online ▼" one-liner, expanded shows full 3-row detail
+  3. Tap header row toggles `statusCollapsed`
+  4. Auto-expand when any status is NOT active/synced (use existing `opStatus` data)
+  5. Use `Animated.View` with height animation for smooth collapse/expand
+- **Guard**: Do NOT change status data fetching. Only presentation.
+- **DoD**: ☐ Default collapsed to one line ☐ Tap expands ☐ Auto-expands on issues ☐ Smooth animation
+
+---
+
+## UI Audit Tickets (STG-257 — STG-330)
+
+> **Source**: Comprehensive UI audit of all 44 POS screens and 48 components (2026-03-13)
+> **Scope**: Text clarity, i18n coverage, accessibility, brand consistency, UX usability
+> **Rule**: Do NOT implement until operator approves full ticket list
+
+---
+
+### — CATEGORY A: Screen-Level i18n Coverage (Hardcoded English → t() wrapping) —
+
+---
+
+### STG-257 — PaymentSetupScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [PaymentSetupScreen.tsx](src/screens/PaymentSetupScreen.tsx)
+- **Scope**: `src/screens/PaymentSetupScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: ~20 hardcoded English strings including "Set Up Payments", "UPI ID (VPA)", "Bank Account Number", "Skip for Now", "You can set this up later from Settings", plus all Alert.alert() validation messages ("UPI ID is required", "Invalid UPI ID", "No internet connection...").
+- **Fix**: Import `useTranslation`, wrap all user-visible strings with `t()`, add keys to en.json and hi.json under `paymentSetup.*` namespace.
+- **Migration**: None
+- **Test**: All text renders from i18n keys; switching locale shows Hindi text
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/PaymentSetupScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**:
+  1. Add `const { t } = useTranslation()` import
+  2. Wrap all string literals at lines ~265, 285, 311, 334, 388, 73, 75, 80, 86, 105, 128, 137-138 with `t()` calls
+  3. Add ~20 keys to en.json under `paymentSetup.*`
+  4. Add corresponding Hindi translations to hi.json
+- **Guard**: Do NOT change validation logic or navigation flow. Only text wrapping.
+- **DoD**: ☐ Zero hardcoded English in PaymentSetupScreen ☐ All Alert.alert() use t() ☐ Hindi translations added
+
+---
+
+### STG-258 — SalesHistoryScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [SalesHistoryScreen.tsx](src/screens/SalesHistoryScreen.tsx)
+- **Scope**: `src/screens/SalesHistoryScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: Hardcoded strings "Bills", "No sales yet", "Bills will appear here after you make sales.", "Make Your First Sale" not wrapped in `t()`.
+- **Fix**: Wrap all with `t()` calls under `salesHistory.*` namespace.
+- **Migration**: None
+- **Test**: Empty state and header text render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/SalesHistoryScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines ~260, 273, 274, 282 with `t()`. Add 4+ keys to locale files.
+- **Guard**: Do NOT change data fetching or list rendering logic.
+- **DoD**: ☐ Zero hardcoded English ☐ Hindi translations for empty state
+
+---
+
+### STG-259 — BillDetailScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [BillDetailScreen.tsx](src/screens/BillDetailScreen.tsx)
+- **Scope**: `src/screens/BillDetailScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: 30+ hardcoded strings: "Bill not found", "Failed to load bill", "Share unavailable", "Reprint Bill", "Print queued", "Printer error", "Printer not connected", "WhatsApp not found", "Bill Details", "Loading...", "Subtotal", "Discount", "Total", "Bill Ref", "Status", "Payment", "No barcode", "each". None use i18n.
+- **Fix**: Full i18n coverage using `useTranslation` hook under `billDetail.*` namespace.
+- **Migration**: None
+- **Test**: All labels, alerts, and error messages render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/BillDetailScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap ~30 strings at lines 49, 57, 78, 80, 101, 106, 108, 110, 130, 319-330, 344, 353, 362, 368-377, 380, 392 with `t()`. Add keys to locale files.
+- **Guard**: Do NOT change print/share logic. Only text wrapping.
+- **DoD**: ☐ Zero hardcoded English ☐ All Alert.alert() localized ☐ Hindi translations added
+
+---
+
+### STG-260 — SalesStatementScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [SalesStatementScreen.tsx](src/screens/SalesStatementScreen.tsx)
+- **Scope**: `src/screens/SalesStatementScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: Hardcoded strings: "Inventory Cost Statement", "Cost Value", "Sales", "Items", "No sales data", "Sales transactions will appear here after you make sales.", "Make Your First Sale".
+- **Fix**: Wrap with `t()` under `salesStatement.*` namespace.
+- **Migration**: None
+- **Test**: All labels render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/SalesStatementScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines ~355, 365, 370, 375, 395, 397, 402 with `t()`.
+- **Guard**: Do NOT change cost calculation logic.
+- **DoD**: ☐ Zero hardcoded English ☐ Hindi translations added
+
+---
+
+### STG-261 — DailyReportScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [DailyReportScreen.tsx](src/screens/DailyReportScreen.tsx)
+- **Scope**: `src/screens/DailyReportScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: 25+ hardcoded strings in print/HTML generation: "SUPERMANDI POS", "DAILY REPORT", "Date:", "SUMMARY", "Total Sales:", "Revenue:", "Transactions:", "PAYMENT SPLIT", "Cash:", "UPI:", "Due:", "Card:", "TOP 5 PRODUCTS", "Generated:", plus UI labels "Total Sales", "Revenue", "Payment Split", "Top 5 Products", "Method", "Amount", "Product", "Qty".
+- **Fix**: Full i18n for both thermal print content and UI labels under `dailyReport.*`.
+- **Migration**: None
+- **Test**: Report UI and printed content render from i18n keys
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/DailyReportScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap ~25 strings at lines 82-108, 114, 170-179, 301, 320, 328 with `t()`.
+- **Guard**: Do NOT change report data aggregation. Only text.
+- **DoD**: ☐ Zero hardcoded English in UI and print output ☐ Hindi translations
+
+---
+
+### STG-262 — DailyClosingScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [DailyClosingScreen.tsx](src/screens/DailyClosingScreen.tsx)
+- **Scope**: `src/screens/DailyClosingScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: 40+ hardcoded strings: tab labels ("Summary", "History"), button text ("Close Day"), field labels ("Opening Cash", "Expected Cash", "Enter Actual Cash", "Variance"), error messages ("Invalid Amount"), status labels ("MATCH", "MISMATCH"), history labels ("Closed by", "Expected Cash", "Actual Cash"). Plus hardcoded "₹" currency symbol at line 371.
+- **Fix**: Full i18n coverage under `dailyClosing.*`. Replace hardcoded "₹" with currency utility.
+- **Migration**: None
+- **Test**: All text renders from i18n; currency symbol from locale
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/DailyClosingScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap ~40 strings at lines 138-475 with `t()`. Replace "₹" at line 371 with currency utility.
+- **Guard**: Do NOT change closing logic or cash calculation.
+- **DoD**: ☐ Zero hardcoded English ☐ Currency symbol from locale ☐ Hindi translations
+
+---
+
+### STG-263 — InwardScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [InwardScreen.tsx](src/screens/InwardScreen.tsx)
+- **Scope**: `src/screens/InwardScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: ~15 hardcoded strings: "Select Supplier", "No supplier (manual entry)", "Loading suppliers...", "No suppliers linked to this store", "Manual stock inward", "Search product by name or barcode", "No products found", "Type 2+ characters to search", "Clear all", "Add notes (optional)". Plus Alert.alert() strings: "Stock Check Failed", "Inward Failed".
+- **Fix**: Full i18n coverage under `inward.*`.
+- **Migration**: None
+- **Test**: All UI text and alerts render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/InwardScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines 64, 74, 83, 86, 481-482, 503, 521, 569, 585, 625, 629, 663, 677 with `t()`.
+- **Guard**: Do NOT change stock inward logic.
+- **DoD**: ☐ Zero hardcoded English ☐ Hindi translations
+
+---
+
+### STG-264 — GRNScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [GRNScreen.tsx](src/screens/GRNScreen.tsx)
+- **Scope**: `src/screens/GRNScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: ~15 hardcoded strings in UI ("Receive Goods", "Scan barcode or search...", "Add notes (optional)...", "Set receive quantity:", "Receive") and Alert.alert() calls ("Not Found", "Error", "Success", "Excess Receipt Warning", "Confirm Receive"). Line 388 references "SuperAdmin" in excess alert.
+- **Fix**: Full i18n under `grn.*`. Replace "SuperAdmin" with "store manager".
+- **Migration**: None
+- **Test**: All text and alerts render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/GRNScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines 177, 315, 365-402, 457, 481, 512, 539, 561, 628, 661, 710 with `t()`. Replace "SuperAdmin" at line 388.
+- **Guard**: Do NOT change receive logic.
+- **DoD**: ☐ Zero hardcoded English ☐ No "SuperAdmin" references ☐ Hindi translations
+
+---
+
+### STG-265 — OpeningStockScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [OpeningStockScreen.tsx](src/screens/OpeningStockScreen.tsx)
+- **Scope**: `src/screens/OpeningStockScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: ~12 hardcoded strings: Alert.alert() calls ("Search Failed", "Already Has Stock", "Already Added", "No Entries", "Confirm Opening Stock", "Submission Failed") and UI text ("Add More Products", intro text about opening stock, search placeholder).
+- **Fix**: Full i18n under `openingStock.*`.
+- **Migration**: None
+- **Test**: All alerts and UI text render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/OpeningStockScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines 136, 179-180, 187, 243-245, 250-252, 289-291, 541, 551-556, 575-578, 591 with `t()`.
+- **Guard**: Do NOT change stock submission logic.
+- **DoD**: ☐ Zero hardcoded English ☐ Hindi translations
+
+---
+
+### STG-266 — PurchaseScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [PurchaseScreen.tsx](src/screens/PurchaseScreen.tsx)
+- **Scope**: `src/screens/PurchaseScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: ~15 Alert.alert() calls with hardcoded English: "No Items", "Scan items to add", "Incomplete", "Fill name, buy & sell price for all items", "Error", "Store not configured. Please re-enroll this device." and multiple error messages.
+- **Fix**: Full i18n under `purchase.*`.
+- **Migration**: None
+- **Test**: All alerts render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/PurchaseScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines 451, 456, 481, 492, 501, 968, 999, 1005, 1011, 1015 with `t()`.
+- **Guard**: Do NOT change purchase flow logic.
+- **DoD**: ☐ Zero hardcoded English ☐ Hindi translations
+
+---
+
+### STG-267 — BarcodeSheetScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [BarcodeSheetScreen.tsx](src/screens/BarcodeSheetScreen.tsx)
+- **Scope**: `src/screens/BarcodeSheetScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: Alert.alert() calls ("Download unavailable", "Download failed", "Share unavailable", "Share failed", "Limit reached", "Maximum 100 products per sheet") and UI text ("No products match your search", "Generating preview...").
+- **Fix**: Full i18n under `barcodeSheet.*`.
+- **Migration**: None
+- **Test**: All alerts and UI text render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/BarcodeSheetScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines 250, 252, 269, 271, 286, 477, 571, 576 with `t()`.
+- **Guard**: Do NOT change PDF generation logic.
+- **DoD**: ☐ Zero hardcoded English ☐ Hindi translations
+
+---
+
+### STG-268 — BnplDuesScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [BnplDuesScreen.tsx](src/screens/BnplDuesScreen.tsx)
+- **Scope**: `src/screens/BnplDuesScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: 9+ Alert.alert() calls hardcoded English: "Payment Confirmed", "Invalid Amount", "Amount Too High", "Payment Failed", "Enter UTR", "Confirmation Failed", "Select Reason", "Dispute Failed", "UPI Unavailable". Plus modal titles "Pay BNPL Due", "Record Payment", "Submit Dispute" and dropdown labels.
+- **Fix**: Full i18n under `bnpl.*`.
+- **Migration**: None
+- **Test**: All alerts, modal titles, and form labels render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/BnplDuesScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines 223, 265, 270, 317, 328, 341, 352, 393, 407, 423, 557, 584, 668, 773, 821, 849, 879, 927, 932 with `t()`.
+- **Guard**: Do NOT change payment or dispute logic.
+- **DoD**: ☐ Zero hardcoded English ☐ Hindi translations
+
+---
+
+### STG-269 — KhataScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [KhataScreen.tsx](src/screens/KhataScreen.tsx)
+- **Scope**: `src/screens/KhataScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: 6+ Alert.alert() calls ("Invalid Phone", "Invalid Amount", "Success", "Credit entry added", "Payment recorded") plus modal titles ("Add Credit", "Record Payment") and form labels ("Customer Phone *", "Amount (₹) *", "Description", "Payment Method *") all hardcoded English.
+- **Fix**: Full i18n under `khata.*`.
+- **Migration**: None
+- **Test**: All text renders from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/KhataScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines 112, 163, 168, 183, 199, 204, 217, 773, 778-816, 828, 849, 854-872, 932 with `t()`.
+- **Guard**: Do NOT change credit/payment recording logic.
+- **DoD**: ☐ Zero hardcoded English ☐ Hindi translations
+
+---
+
+### STG-270 — CustomerListScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [CustomerListScreen.tsx](src/screens/CustomerListScreen.tsx)
+- **Scope**: `src/screens/CustomerListScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: Alert.alert() calls ("Error", "Required", "Customer added", "Customer updated", "WhatsApp Not Found") hardcoded English.
+- **Fix**: Full i18n under `customerList.*`.
+- **Migration**: None
+- **Test**: All alerts render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/CustomerListScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines 104, 154, 158, 171, 175, 195, 209, 707 with `t()`.
+- **Guard**: Do NOT change customer CRUD logic.
+- **DoD**: ☐ Zero hardcoded English ☐ Hindi translations
+
+---
+
+### STG-271 — OverdueDuesScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [OverdueDuesScreen.tsx](src/screens/OverdueDuesScreen.tsx)
+- **Scope**: `src/screens/OverdueDuesScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: Loading text "Loading overdue dues...", severity labels ("Critical", "Overdue", "Due Soon"), WhatsApp reminder template hardcoded English ("Dear {{name}}, you have an outstanding payment...").
+- **Fix**: Full i18n under `overdueDues.*`. Hindi WhatsApp template for customer reminders.
+- **Migration**: None
+- **Test**: All labels and WhatsApp message render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/OverdueDuesScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines 64-68, 318-324, 502 with `t()`. Create Hindi WhatsApp template.
+- **Guard**: Do NOT change due calculation or reminder sending logic.
+- **DoD**: ☐ Zero hardcoded English ☐ Hindi WhatsApp template ☐ Severity labels translated
+
+---
+
+### STG-272 — ShiftScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [ShiftScreen.tsx](src/screens/ShiftScreen.tsx)
+- **Scope**: `src/screens/ShiftScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: 5 Alert.alert() calls with hardcoded English: "Error", "Invalid Amount", "Shift Started", "Shift Ended". Plus form labels and cash match/variance text.
+- **Fix**: Full i18n under `shift.*`.
+- **Migration**: None
+- **Test**: All alerts and form labels render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/ShiftScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines 128, 145, 159, 172, 197, 207-209, 755-797 with `t()`.
+- **Guard**: Do NOT change shift management logic.
+- **DoD**: ☐ Zero hardcoded English ☐ Hindi translations
+
+---
+
+### STG-273 — OrderDetailScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [OrderDetailScreen.tsx](src/screens/OrderDetailScreen.tsx)
+- **Scope**: `src/screens/OrderDetailScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: 4 Alert.alert() calls: "Cancel Order", "Error", "Success", "WhatsApp Not Found". Plus UI labels.
+- **Fix**: Full i18n under `orderDetail.*`.
+- **Migration**: None
+- **Test**: All alerts render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/OrderDetailScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines 146, 165, 201, 228, 337, 375-421, 453-456 with `t()`.
+- **Guard**: Do NOT change order management logic.
+- **DoD**: ☐ Zero hardcoded English ☐ Hindi translations
+
+---
+
+### STG-274 — ReturnScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [ReturnScreen.tsx](src/screens/ReturnScreen.tsx)
+- **Scope**: `src/screens/ReturnScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: 4 Alert.alert() calls: "Enter Bill #", "Bill not found", "Return Failed", "Return Processed". Plus refund method labels "UPI (Manual)", "Khata Credit".
+- **Fix**: Full i18n under `return.*`.
+- **Migration**: None
+- **Test**: All alerts and labels render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/ReturnScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines 66-67, 153, 172, 245, 898, 901 with `t()`.
+- **Guard**: Do NOT change return/refund logic.
+- **DoD**: ☐ Zero hardcoded English ☐ Hindi translations
+
+---
+
+### STG-275 — BuyScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [BuyScreen.tsx](src/screens/BuyScreen.tsx)
+- **Scope**: `src/screens/BuyScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: Hardcoded: "Failed to load products. Pull to refresh.", "Failed to refresh. Try again.", "No more products", "You're offline — showing cached catalog", "Showing cached data...", "Refresh", "Loading catalog...".
+- **Fix**: Full i18n under `buy.*`.
+- **Migration**: None
+- **Test**: All UI text renders from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/BuyScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines 269, 314, 415, 622-623, 631, 675 with `t()`.
+- **Guard**: Do NOT change catalog loading logic.
+- **DoD**: ☐ Zero hardcoded English ☐ Hindi translations
+
+---
+
+### STG-276 — CreditScreen — hardcoded English alert strings and form labels not using i18n
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [CreditScreen.tsx](src/screens/CreditScreen.tsx)
+- **Scope**: `src/screens/CreditScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: Alert messages with financial jargon: "Invalid PAN format (e.g., ABCDE1234F)", "KYC verification is being processed", "Invalid Aadhaar format". Uses `t()` with fallback defaults in some places but hardcoded in others.
+- **Fix**: Ensure consistent i18n under `credit.*` with plain-language fallbacks.
+- **Migration**: None
+- **Test**: All credit flow text renders from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/CreditScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Audit and wrap remaining hardcoded strings at lines 128-131, 199, 219, 241, 250, 277, 282, 290, 829, 864, 882, 927 with `t()`.
+- **Guard**: Do NOT change KYC verification logic.
+- **DoD**: ☐ Consistent i18n across all Credit screen text ☐ Hindi translations
+
+---
+
+### STG-277 — ReorderScreen + ReorderPoliciesScreen — hardcoded English strings not using i18n
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [ReorderScreen.tsx](src/screens/ReorderScreen.tsx), [ReorderPoliciesScreen.tsx](src/screens/ReorderPoliciesScreen.tsx)
+- **Scope**: `src/screens/ReorderScreen.tsx`, `src/screens/ReorderPoliciesScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: Empty state text ("All caught up!", "No pending reorders", "No matching policies"), header text ("Pending Reorders"), and subtitles hardcoded English.
+- **Fix**: Full i18n under `reorder.*` and `reorderPolicy.*`.
+- **Migration**: None
+- **Test**: All empty states and headers render from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/ReorderScreen.tsx`, `src/screens/ReorderPoliciesScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at ReorderScreen lines 441-443, 453-456 and ReorderPoliciesScreen lines 343-346, 358-361, 380 with `t()`.
+- **Guard**: Do NOT change reorder logic.
+- **DoD**: ☐ Zero hardcoded English in both screens ☐ Hindi translations
+
+---
+
+### STG-278 — BulkPurchaseCreditScreen — no i18n setup, all strings hardcoded
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [BulkPurchaseCreditScreen.tsx](src/screens/BulkPurchaseCreditScreen.tsx)
+- **Scope**: `src/screens/BulkPurchaseCreditScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: No `useTranslation()` import at all. All text hardcoded: "Apply for Credit", "Success", "Error", "Max Amount", "Bulk Purchase Credit", "Interest Rate", "Tenure", "EMI", "Apply Now", "No Credit Offers Available".
+- **Fix**: Add `useTranslation()` import, full i18n under `bulkCredit.*`.
+- **Migration**: None
+- **Test**: All text renders from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/BulkPurchaseCreditScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Add `useTranslation` import, wrap all strings at lines 106-118, 151-200, 222-223 with `t()`.
+- **Guard**: Do NOT change credit application logic.
+- **DoD**: ☐ useTranslation imported ☐ Zero hardcoded English ☐ Hindi translations
+
+---
+
+### STG-279 — ErrorBoundary component — hardcoded English error text
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [ErrorBoundary.tsx](src/components/ErrorBoundary.tsx)
+- **Scope**: `src/components/ErrorBoundary.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Problem**: "Something went wrong", "The app encountered an unexpected error", "Try Again" hardcoded English. Error boundary is shown to users during crashes — must be localized.
+- **Fix**: Use i18n `t()` calls under `error.*` namespace.
+- **Migration**: None
+- **Test**: Error boundary renders Hindi text when locale is hi
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/components/ErrorBoundary.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Wrap strings at lines 40-46 with `t()`.
+- **Guard**: Do NOT change error catching logic.
+- **DoD**: ☐ Localized error boundary ☐ Hindi translations
+
+---
+
+### — CATEGORY B: Jargon & Terminology Fixes —
+
+---
+
+### STG-280 — PaymentSetupScreen — "UPI ID (VPA)" jargon, simplify for kirana users
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [PaymentSetupScreen.tsx:265](src/screens/PaymentSetupScreen.tsx#L265)
+- **Scope**: `src/screens/PaymentSetupScreen.tsx`
+- **Problem**: Label "UPI ID (VPA)" is technical jargon. Kirana retailers don't know "VPA". IFSC input also lacks explanation.
+- **Fix**: Change label to "Your UPI ID" with help text "e.g., yourname@upi". Add helper for IFSC: "Your bank's code (e.g., SBIN0001234). Ask your bank if unsure."
+- **Migration**: None
+- **Test**: Labels show simplified text with examples
+- **Depends on**: STG-257
+#### Execution Scope
+- **Files**: `src/screens/PaymentSetupScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Update label at line ~265 from "UPI ID (VPA)" to `t('paymentSetup.upiLabel', 'Your UPI ID')`. Add help text below IFSC input at lines 332-354.
+- **Guard**: Do NOT change validation regex.
+- **DoD**: ☐ No "VPA" jargon ☐ IFSC help text added ☐ Hindi translations
+
+---
+
+### STG-281 — DailyClosingScreen — "Variance" accounting jargon confusing for retailers
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [DailyClosingScreen.tsx:413-418](src/screens/DailyClosingScreen.tsx#L413-L418)
+- **Scope**: `src/screens/DailyClosingScreen.tsx`
+- **Problem**: Label "Variance" is accounting jargon. Sub-labels "Excess cash"/"Short cash" are more intuitive but "Variance" header is opaque.
+- **Fix**: Change to "Difference from Expected" or "Cash Mismatch".
+- **Migration**: None
+- **Test**: Label shows plain language
+- **Depends on**: STG-262
+#### Execution Scope
+- **Files**: `src/screens/DailyClosingScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update "Variance" label at lines 413-414, 418 to "Difference" via i18n key.
+- **Guard**: Do NOT change variance calculation.
+- **DoD**: ☐ No "Variance" jargon ☐ Plain language label
+
+---
+
+### STG-282 — SalesStatementScreen — "Inventory Cost Statement" title misleading
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [SalesStatementScreen.tsx:355](src/screens/SalesStatementScreen.tsx#L355)
+- **Scope**: `src/screens/SalesStatementScreen.tsx`
+- **Problem**: Title "Inventory Cost Statement" and label "Cost Value" confuse retailers who expect to see sales revenue, not cost price.
+- **Fix**: Change title to "Cost History" or "Inventory Movement". Add help text explaining this shows cost price, not revenue.
+- **Migration**: None
+- **Test**: Title clearly communicates purpose
+- **Depends on**: STG-260
+#### Execution Scope
+- **Files**: `src/screens/SalesStatementScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update title at line 355 to clearer label. Add subtitle explaining "Shows cost price of items sold".
+- **Guard**: Do NOT change data display.
+- **DoD**: ☐ Clear title ☐ Help text added
+
+---
+
+### STG-283 — BnplDuesScreen — BNPL/UTR/UPI jargon unexplained
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [BnplDuesScreen.tsx](src/screens/BnplDuesScreen.tsx)
+- **Scope**: `src/screens/BnplDuesScreen.tsx`
+- **Problem**: "BNPL" (Buy Now Pay Later), "UTR" (UPI Transaction Reference), "UPI" used without explanation. Line 932 mentions "email" contact which is inappropriate for kirana users.
+- **Fix**: Replace "BNPL" with "Pay in Installments". Add help text for UTR: "12-digit number from your payment app". Replace "email" with "WhatsApp".
+- **Migration**: None
+- **Test**: No unexplained acronyms visible
+- **Depends on**: STG-268
+#### Execution Scope
+- **Files**: `src/screens/BnplDuesScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Update text at lines 557, 584, 639, 668, 764, 777, 821, 932. Replace "BNPL" → "Pay Later", "UTR" → "Transaction Number" (with help text), "email" → "WhatsApp".
+- **Guard**: Do NOT change payment verification logic.
+- **DoD**: ☐ No unexplained BNPL/UTR ☐ WhatsApp instead of email ☐ Hindi translations
+
+---
+
+### STG-284 — CreditScreen — PAN/Aadhaar/KYC jargon needs help text
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [CreditScreen.tsx:88-89, 864, 882](src/screens/CreditScreen.tsx#L88)
+- **Scope**: `src/screens/CreditScreen.tsx`
+- **Problem**: Labels use "PAN Number", "Aadhaar Last 4 Digits", "KYC Verification" without explanation. Kirana retailers may not understand these terms.
+- **Fix**: Add placeholder examples and help text: "PAN (10-char ID from income tax): ABCDE1234F", "Last 4 digits of Aadhaar card", "KYC = Government identity verification".
+- **Migration**: None
+- **Test**: Each field has visible help text
+- **Depends on**: STG-276
+#### Execution Scope
+- **Files**: `src/screens/CreditScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Add help text beneath PAN input at line ~864, Aadhaar input at line ~882. Add tooltip/info icon for KYC.
+- **Guard**: Do NOT change validation logic.
+- **DoD**: ☐ Help text on PAN/Aadhaar/KYC fields ☐ Hindi help text
+
+---
+
+### STG-285 — GRNScreen — "GRN" jargon, needs subtitle explaining purpose
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [GRNScreen.tsx:457](src/screens/GRNScreen.tsx#L457)
+- **Scope**: `src/screens/GRNScreen.tsx`
+- **Problem**: Screen title "Receive Goods" is fine but no context explaining why this flow is distinct from Purchase/Inward. Navigation menu may show "GRN" which is warehouse jargon.
+- **Fix**: Add subtitle: "Confirm receipt of ordered goods". Ensure nav menu says "Receive Goods" not "GRN".
+- **Migration**: None
+- **Test**: Subtitle visible, no "GRN" jargon in navigation
+- **Depends on**: STG-264
+#### Execution Scope
+- **Files**: `src/screens/GRNScreen.tsx`, `src/screens/MenuScreen.tsx` (if GRN label exists there)
+- **Changes**: Add subtitle at line ~457. Check MenuScreen for "GRN" label and replace with "Receive Goods".
+- **Guard**: Do NOT change receive logic.
+- **DoD**: ☐ Subtitle added ☐ No "GRN" in user-facing text
+
+---
+
+### STG-286 — OpeningStockScreen — "Opening Stock" needs contextual explanation
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [OpeningStockScreen.tsx:575-578](src/screens/OpeningStockScreen.tsx#L575)
+- **Scope**: `src/screens/OpeningStockScreen.tsx`
+- **Problem**: Intro text explains "opening stock" but doesn't clarify when to use this vs Purchase/Inward flows.
+- **Fix**: Clarify intro: "Add initial stock quantities for new products. Use this when starting your store or adding a product for the first time."
+- **Migration**: None
+- **Test**: Intro text clearly explains when to use this screen
+- **Depends on**: STG-265
+#### Execution Scope
+- **Files**: `src/screens/OpeningStockScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update intro text at lines 575-578 with clearer explanation and use case guidance.
+- **Guard**: Do NOT change stock submission logic.
+- **DoD**: ☐ Clear explanation of when to use ☐ Hindi translation
+
+---
+
+### STG-287 — BuyScreen — "BNPL" badge jargon unexplained
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [BuyScreen.tsx:518-526](src/screens/BuyScreen.tsx#L518)
+- **Scope**: `src/screens/BuyScreen.tsx`
+- **Problem**: Badge displays "BNPL" text with no explanation. Kirana users won't understand the acronym.
+- **Fix**: Replace with "Pay Later Available". Add accessibility hint.
+- **Migration**: None
+- **Test**: Badge shows "Pay Later" not "BNPL"
+- **Depends on**: STG-275
+#### Execution Scope
+- **Files**: `src/screens/BuyScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update badge text at lines 518-526 from "BNPL" to `t('buy.payLater', 'Pay Later')`.
+- **Guard**: Do NOT change BNPL eligibility logic.
+- **DoD**: ☐ No "BNPL" acronym visible ☐ Hindi translation
+
+---
+
+### STG-288 — ShiftScreen — "Variance" terminology, same as DailyClosing
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [ShiftScreen.tsx:207-209, 766-797](src/screens/ShiftScreen.tsx#L207)
+- **Scope**: `src/screens/ShiftScreen.tsx`
+- **Problem**: "Variance" label used for cash mismatch at shift end. Same jargon issue as STG-281.
+- **Fix**: Change to "Difference from Expected Cash" or "Cash Mismatch".
+- **Migration**: None
+- **Test**: No "Variance" jargon visible
+- **Depends on**: STG-272
+#### Execution Scope
+- **Files**: `src/screens/ShiftScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update "Variance" labels at lines 207-209, 766-797.
+- **Guard**: Do NOT change variance calculation.
+- **DoD**: ☐ Plain language label ☐ Hindi translation
+
+---
+
+### STG-289 — ReturnScreen — "Khata Credit" and "UPI (Manual)" need clarification
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [ReturnScreen.tsx:66-67](src/screens/ReturnScreen.tsx#L66)
+- **Scope**: `src/screens/ReturnScreen.tsx`
+- **Problem**: "Khata Credit" is Hindi biz jargon that new users may not know = store credit. "UPI (Manual)" doesn't explain what "manual" means.
+- **Fix**: "Khata Credit" → "Store Credit (Khata)". "UPI (Manual)" → "UPI Transfer (you send manually)".
+- **Migration**: None
+- **Test**: Refund method labels clearly explained
+- **Depends on**: STG-274
+#### Execution Scope
+- **Files**: `src/screens/ReturnScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update labels at lines 66-67. Add helper text explaining manual UPI transfer.
+- **Guard**: Do NOT change refund processing logic.
+- **DoD**: ☐ Clear refund method labels ☐ Hindi translations
+
+---
+
+### STG-290 — AIInsightsScreen — "Slow", "Forecast", "Expiry" tab labels unclear
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [AIInsightsScreen.tsx:102-104](src/screens/AIInsightsScreen.tsx#L102)
+- **Scope**: `src/screens/AIInsightsScreen.tsx`
+- **Problem**: Tab labels "Slow" (= slow movers), "Forecast" (= demand prediction), "Expiry" (= products expiring soon) are too terse for kirana retailers.
+- **Fix**: "Slow" → "Not Selling", "Forecast" → "Predicted Sales", "Expiry" → "Expiring Soon".
+- **Migration**: None
+- **Test**: Tab labels are self-explanatory
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/AIInsightsScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
+- **Changes**: Update tab labels at lines 102-104.
+- **Guard**: Do NOT change insights data logic.
+- **DoD**: ☐ Clear tab labels ☐ Hindi translations
+
+---
+
+### STG-291 — Components — hardcoded English in SellTile, CartItem, SupplierRow
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — multiple components
+- **Scope**: `src/components/sell/SellTile.tsx`, `src/components/buy/CartItem.tsx`, `src/components/buy/SupplierRow.tsx`
+- **Problem**: Hardcoded strings: "/unit", "/KG", "Stock: —", "EXPIRED" not using i18n.
+- **Fix**: Use `t()` calls: `t("common.perUnit")`, `t("common.stock")`, `t("common.expired")`.
+- **Migration**: None
+- **Test**: Component text renders from i18n
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/components/sell/SellTile.tsx` (line 158), `src/components/buy/CartItem.tsx` (line 58), `src/components/buy/SupplierRow.tsx` (line 113)
+- **Changes**: Wrap hardcoded strings with `t()`. Add keys to en.json and hi.json.
+- **Guard**: Do NOT change component logic.
+- **DoD**: ☐ Zero hardcoded English in components ☐ Hindi translations
+
+---
+
+### STG-292 — LimitedModeBanner — "Place Orders (BUY)" and "Run Reorders" jargon
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [LimitedModeBanner.tsx:112-117](src/components/LimitedModeBanner.tsx#L112)
+- **Scope**: `src/components/LimitedModeBanner.tsx`
+- **Problem**: BLOCKED_ACTIONS shows "Place Orders (BUY)" and "Run Reorders" — technical jargon.
+- **Fix**: Change to "Create Purchase Orders" and "Run Automatic Reorders".
+- **Migration**: None
+- **Test**: Banner shows clear action descriptions
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/components/LimitedModeBanner.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update text at lines 112-117 with plain language.
+- **Guard**: Do NOT change limited mode logic.
+- **DoD**: ☐ Clear action descriptions ☐ Hindi translations
+
+---
+
+### — CATEGORY C: Accessibility Fixes —
+
+---
+
+### STG-293 — Font sizes below 12px across Purchase/Stock screens
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — multiple screens
+- **Scope**: `src/screens/InwardScreen.tsx`, `src/screens/PurchaseScreen.tsx`, `src/screens/BarcodeSheetScreen.tsx`
+- **Problem**: InwardScreen: fontSize 9 (line 926), 10 (lines 949, 998). PurchaseScreen: fontSize 8 (line 1247!), 10 (lines 1197, 1233, 1299, 1397). BarcodeSheetScreen: fontSize 8 (lines 1185, 1198, 1218), 10 (lines 1092, 1096, 1192, 1203, 1403). fontSize 8 is effectively unreadable on mobile.
+- **Fix**: Increase all to minimum 12px. Priority: fix 8px values immediately.
+- **Migration**: None
+- **Test**: No text below 12px; verify on budget Android
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/InwardScreen.tsx`, `src/screens/PurchaseScreen.tsx`, `src/screens/BarcodeSheetScreen.tsx`
+- **Changes**: Update all fontSize values below 12 to 12: InwardScreen lines 926, 949, 998; PurchaseScreen lines 1197, 1233, 1247, 1299, 1397; BarcodeSheetScreen lines 1092, 1096, 1185, 1192, 1198, 1203, 1218, 1403.
+- **Guard**: Do NOT change layout structure. Only font sizes.
+- **DoD**: ☐ Zero fontSize below 12px ☐ Visual verification on small screen
+
+---
+
+### STG-294 — Font sizes below 12px across Sales/Closing screens
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — multiple screens
+- **Scope**: `src/screens/BillDetailScreen.tsx`, `src/screens/SalesStatementScreen.tsx`, `src/screens/DailyClosingScreen.tsx`
+- **Problem**: BillDetailScreen: 11px (line 235). SalesStatementScreen: 10px (lines 146, 252). DailyClosingScreen: 11px (lines 569, 594, 721, 744).
+- **Fix**: Increase all to minimum 12px.
+- **Migration**: None
+- **Test**: No text below 12px
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/BillDetailScreen.tsx`, `src/screens/SalesStatementScreen.tsx`, `src/screens/DailyClosingScreen.tsx`
+- **Changes**: Update fontSize at identified lines to minimum 12.
+- **Guard**: Only font sizes.
+- **DoD**: ☐ Zero fontSize below 12px
+
+---
+
+### STG-295 — Font sizes below 12px across Credit/Customer/Orders screens
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — multiple screens
+- **Scope**: `src/screens/CreditScreen.tsx`, `src/screens/BulkPurchaseCreditScreen.tsx`, `src/screens/OrderDetailScreen.tsx`, `src/screens/ReturnScreen.tsx`, `src/screens/ReorderPoliciesScreen.tsx`
+- **Problem**: CreditScreen: 10px (lines 1075, 1270). BulkPurchaseCreditScreen: 11px (line 51). OrderDetailScreen: 10-11px (lines 561, 581, 804). ReturnScreen: 10px (lines 397-398). ReorderPoliciesScreen: 10px (lines 267, 516-517).
+- **Fix**: Increase all to minimum 12px.
+- **Migration**: None
+- **Test**: No text below 12px
+- **Depends on**: None
+#### Execution Scope
+- **Files**: Listed screens
+- **Changes**: Update all fontSize values below 12 to 12.
+- **Guard**: Only font sizes.
+- **DoD**: ☐ Zero fontSize below 12px
+
+---
+
+### STG-296 — Font sizes below 12px in Chat/ForceUpdate screens and TabBadge
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — multiple
+- **Scope**: `src/screens/ChatConversationScreen.tsx`, `src/screens/ChatListScreen.tsx`, `src/screens/ForceUpdateScreen.tsx`, `src/components/TabBadge.tsx`
+- **Problem**: ChatConversation: 10px (line 255). ChatList: 11px (lines 41, 42, 66, 73). ForceUpdate: 11px (lines 218, 264). TabBadge: 9px (line 87).
+- **Fix**: Increase all to minimum 12px (11px for TabBadge small variant).
+- **Migration**: None
+- **Test**: No text below 11px
+- **Depends on**: None
+#### Execution Scope
+- **Files**: Listed screens + `src/components/TabBadge.tsx`
+- **Changes**: Update fontSize at identified lines.
+- **Guard**: Only font sizes.
+- **DoD**: ☐ Minimum 11px everywhere ☐ 12px for body text
+
+---
+
+### STG-297 — SplitPaymentModal — font size 10px and missing accessibility labels
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [SplitPaymentModal.tsx](src/components/sell/SplitPaymentModal.tsx)
+- **Scope**: `src/components/sell/SplitPaymentModal.tsx`
+- **Problem**: Step labels ("SPLIT", "UPI", "CASH") at fontSize 10 (lines 908-909). Close button (line 803), "Verify & Proceed" (line 718), "Reopen UPI App" (line 518) missing accessibilityLabel.
+- **Fix**: Increase font size to 12px. Add accessibilityLabel to all interactive elements.
+- **Migration**: None
+- **Test**: All labels ≥12px; screen reader announces button purposes
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/components/sell/SplitPaymentModal.tsx`
+- **Changes**: Update fontSize at lines 654-662, 907-909. Add accessibilityLabel to Pressable/TouchableOpacity at lines 518, 709, 718, 803.
+- **Guard**: Do NOT change payment flow logic.
+- **DoD**: ☐ Minimum 12px ☐ All buttons have accessibility labels
+
+---
+
+### STG-298 — Missing accessibility labels on icon-only buttons across all screens
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — all screens
+- **Scope**: Multiple screens
+- **Problem**: Icon-only buttons (back chevron, refresh, date navigation, scan, close) across SalesHistoryScreen, BillDetailScreen, SalesStatementScreen, DailyReportScreen, DailyClosingScreen, BuyScreen, InwardScreen, GRNScreen, ReorderScreen lack accessibilityLabel. Screen readers cannot describe purpose.
+- **Fix**: Add accessibilityLabel to every icon-only Pressable: "Go back", "Refresh list", "Previous day", "Next day", "Scan barcode", "Close".
+- **Migration**: None
+- **Test**: VoiceOver/TalkBack announces all button purposes
+- **Depends on**: None
+#### Execution Scope
+- **Files**: All screens with icon-only buttons (see audit references)
+- **Changes**: Add accessibilityLabel prop to each icon-only Pressable across ~10 screens.
+- **Guard**: Do NOT change button behavior.
+- **DoD**: ☐ Every icon-only button has accessibilityLabel ☐ Labels are descriptive
+
+---
+
+### STG-299 — Missing accessibility labels on form inputs across screens
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — multiple screens
+- **Scope**: `src/screens/PaymentSetupScreen.tsx`, `src/screens/DailyClosingScreen.tsx`, `src/screens/ShiftScreen.tsx`, `src/screens/EnrollDeviceScreen.tsx`
+- **Problem**: TextInputs have minimal or no accessibilityLabel/accessibilityHint. PaymentSetupScreen inputs (lines 287-350), DailyClosingScreen cash input (lines 372-381), ShiftScreen opening/closing cash (lines 755-763, 841-849), EnrollDeviceScreen activation code (line 481).
+- **Fix**: Add descriptive accessibilityLabel and accessibilityHint to all form inputs.
+- **Migration**: None
+- **Test**: Screen reader announces field purpose and format
+- **Depends on**: None
+#### Execution Scope
+- **Files**: Listed screens
+- **Changes**: Add accessibilityLabel and accessibilityHint to all TextInput components.
+- **Guard**: Do NOT change form logic.
+- **DoD**: ☐ All inputs have accessibilityLabel ☐ Hints describe expected format
+
+---
+
+### STG-300 — GRNScreen — checkboxes missing accessibilityState
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [GRNScreen.tsx:414-425](src/screens/GRNScreen.tsx#L414)
+- **Scope**: `src/screens/GRNScreen.tsx`
+- **Problem**: Bulk mode checkboxes use `accessibilityRole="checkbox"` but no `accessibilityLabel` or `accessibilityState`. Screen readers won't announce checked/unchecked state.
+- **Fix**: Add `accessibilityLabel={item.productName}` and `accessibilityState={{checked: selectedItems.has(item.id)}}`.
+- **Migration**: None
+- **Test**: TalkBack announces "Product Name, checkbox, checked/unchecked"
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/GRNScreen.tsx`
+- **Changes**: Add accessibility props to checkbox Pressable at lines 414-425.
+- **Guard**: Do NOT change selection logic.
+- **DoD**: ☐ Checkboxes announce state to screen readers
+
+---
+
+### STG-301 — OrderDetailScreen — status badge relies only on color (colorblind issue)
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [OrderDetailScreen.tsx:313-316](src/screens/OrderDetailScreen.tsx#L313)
+- **Scope**: `src/screens/OrderDetailScreen.tsx`
+- **Problem**: Order status badges use color-only coding (green=delivered, red=cancelled). No icon or pattern fallback for colorblind users.
+- **Fix**: Add icon + color combination: green checkmark + "Delivered", red X + "Cancelled", orange clock + "Processing".
+- **Migration**: None
+- **Test**: Status distinguishable without color
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/OrderDetailScreen.tsx`
+- **Changes**: Add status icons at lines 313-316 alongside color badges.
+- **Guard**: Do NOT change status logic.
+- **DoD**: ☐ Each status has unique icon + color ☐ Readable in grayscale
+
+---
+
+### — CATEGORY D: Brand & Contact Consistency —
+
+---
+
+### STG-302 — HelpScreen — email-first contact, should be WhatsApp-first
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [HelpScreen.tsx:26, 45-50, 573-574](src/screens/HelpScreen.tsx#L26)
+- **Scope**: `src/screens/HelpScreen.tsx`
+- **Problem**: Email (hello@supermandi.tech) shown as primary support contact. WhatsApp card exists but appears secondary. Kirana retailers use WhatsApp, not email.
+- **Fix**: Swap card order — WhatsApp first, email secondary with "slower response" note.
+- **Migration**: None
+- **Test**: WhatsApp card appears first on Help screen
+- **Depends on**: STG-059
+#### Execution Scope
+- **Files**: `src/screens/HelpScreen.tsx`
+- **Changes**: Reorder support cards at lines ~45-50 so WhatsApp appears first. Add subtitle "slower response" to email card.
+- **Guard**: Do NOT remove email option entirely.
+- **DoD**: ☐ WhatsApp first ☐ Email secondary with note
+
+---
+
+### STG-303 — BnplDuesScreen — "contacted via phone or email" should include WhatsApp
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [BnplDuesScreen.tsx:932](src/screens/BnplDuesScreen.tsx#L932)
+- **Scope**: `src/screens/BnplDuesScreen.tsx`
+- **Problem**: Dispute resolution message says "contacted via phone or email". Kirana retailers don't check email.
+- **Fix**: Change to "contacted via WhatsApp or phone within 2-3 business days".
+- **Migration**: None
+- **Test**: Message mentions WhatsApp
+- **Depends on**: STG-268
+#### Execution Scope
+- **Files**: `src/screens/BnplDuesScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update text at line 932.
+- **Guard**: Do NOT change dispute logic.
+- **DoD**: ☐ WhatsApp mentioned ☐ Email removed from this context
+
+---
+
+### STG-304 — CustomerListScreen + CustomerManagementScreen — email field inappropriate
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [CustomerListScreen.tsx:793-802](src/screens/CustomerListScreen.tsx#L793), [CustomerManagementScreen.tsx:745-746](src/screens/CustomerManagementScreen.tsx#L745)
+- **Scope**: `src/screens/CustomerListScreen.tsx`, `src/screens/CustomerManagementScreen.tsx`
+- **Problem**: Email field present in add/edit customer modals. Kirana customers rarely have/share email. Field adds confusion and visual clutter.
+- **Fix**: Hide email field by default. Show only via "Add more details" expandable section.
+- **Migration**: None
+- **Test**: Email field not visible by default in customer forms
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/CustomerListScreen.tsx`, `src/screens/CustomerManagementScreen.tsx`
+- **Changes**: Move email field at CustomerListScreen lines 793-802 and CustomerManagementScreen lines 745-746 into a collapsible "More details" section.
+- **Guard**: Do NOT remove email field entirely — keep for optional use.
+- **DoD**: ☐ Email hidden by default ☐ Expandable to reveal ☐ Phone remains primary
+
+---
+
+### STG-305 — DeviceBlockedScreen — "SuperAdmin"/"administrator" jargon in messages
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [DeviceBlockedScreen.tsx:211](src/screens/DeviceBlockedScreen.tsx#L211)
+- **Scope**: `src/screens/DeviceBlockedScreen.tsx`
+- **Problem**: Message says "This device has been disabled by the administrator. Contact your SuperAdmin." Uses internal terminology.
+- **Fix**: Replace with "This device has been disabled. Contact the SuperMandi support team on WhatsApp."
+- **Migration**: None
+- **Test**: No "SuperAdmin" or "administrator" in blocked screen
+- **Depends on**: STG-201
+#### Execution Scope
+- **Files**: `src/screens/DeviceBlockedScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update message at line 211. Update POS_MESSAGES constant if used.
+- **Guard**: Do NOT change device blocking logic.
+- **DoD**: ☐ No "SuperAdmin" ☐ WhatsApp support reference
+
+---
+
+### — CATEGORY E: UX — Empty/Loading/Error States —
+
+---
+
+### STG-306 — DailyReportScreen — vague empty state messaging
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [DailyReportScreen.tsx:605-618](src/screens/DailyReportScreen.tsx#L605)
+- **Scope**: `src/screens/DailyReportScreen.tsx`
+- **Problem**: Empty state says "No report data for this date" / "Try selecting a date when the store was open." Doesn't help user diagnose why (no sales, not synced, future date).
+- **Fix**: Change to "No sales recorded for this date. Check that your device is synced and you made sales on this day."
+- **Migration**: None
+- **Test**: Empty state shows helpful guidance
+- **Depends on**: STG-261
+#### Execution Scope
+- **Files**: `src/screens/DailyReportScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update empty state text at lines 605-618.
+- **Guard**: Do NOT change data fetching.
+- **DoD**: ☐ Helpful empty state ☐ Hindi translation
+
+---
+
+### STG-307 — BillDetailScreen — print/share buttons show "..." instead of spinner
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [BillDetailScreen.tsx:336-364](src/screens/BillDetailScreen.tsx#L336)
+- **Scope**: `src/screens/BillDetailScreen.tsx`
+- **Problem**: Print/WhatsApp/Share buttons show "..." text when loading (lines 344, 353, 362) instead of ActivityIndicator spinner. Inconsistent with app patterns.
+- **Fix**: Replace "..." with `<ActivityIndicator size="small" />` during loading state.
+- **Migration**: None
+- **Test**: Spinner visible during print/share actions
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/BillDetailScreen.tsx`
+- **Changes**: Replace "..." text with ActivityIndicator at lines 344, 353, 362.
+- **Guard**: Do NOT change print/share logic.
+- **DoD**: ☐ Spinner on all action buttons during loading
+
+---
+
+### STG-308 — InwardScreen — raw product ID shown when barcode is null
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [InwardScreen.tsx:543](src/screens/InwardScreen.tsx#L543)
+- **Scope**: `src/screens/InwardScreen.tsx`
+- **Problem**: When product barcode is null, displays raw UUID: `{item.primaryBarcode ?? item.id}`. User sees cryptic identifier.
+- **Fix**: Fallback to product name only. Hide barcode line entirely if no barcode.
+- **Migration**: None
+- **Test**: No raw UUIDs visible to users
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/InwardScreen.tsx`
+- **Changes**: Update fallback at line 543 to show product name or hide line.
+- **Guard**: Do NOT change product lookup logic.
+- **DoD**: ☐ No raw UUIDs ☐ Clean fallback display
+
+---
+
+### STG-309 — ReturnScreen — raw refundId displayed to users
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [ReturnScreen.tsx:898](src/screens/ReturnScreen.tsx#L898)
+- **Scope**: `src/screens/ReturnScreen.tsx`
+- **Problem**: Success screen shows "Refund ID: {refundResult.refundId}" — raw UUID/hash meaningless to retailers.
+- **Fix**: Format as "Refund #R-{last6chars}" or similar human-readable reference. Change label to "Refund Reference".
+- **Migration**: None
+- **Test**: Formatted reference shown, not raw ID
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/ReturnScreen.tsx`
+- **Changes**: Format refundId at line 898: show last 6 chars with "R-" prefix.
+- **Guard**: Do NOT change refund logic.
+- **DoD**: ☐ Human-readable refund reference ☐ "Refund Reference" label
+
+---
+
+### STG-310 — SplashScreen — "Continue without session" jargon
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [SplashScreen.tsx:210-237](src/screens/SplashScreen.tsx#L210)
+- **Scope**: `src/screens/SplashScreen.tsx`
+- **Problem**: Error recovery shows "Continue without session" — technical jargon. Users don't understand "session".
+- **Fix**: Change to "Continue to enrollment" with explanation: "Start enrolling this device even if connection check failed."
+- **Migration**: None
+- **Test**: Recovery button has clear label
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/SplashScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update button text and add explanation at lines 210-237.
+- **Guard**: Do NOT change splash flow logic.
+- **DoD**: ☐ Clear recovery label ☐ Explanation text
+
+---
+
+### STG-311 — AIInsightsScreen — "not yet available" error too vague
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [AIInsightsScreen.tsx:74](src/screens/AIInsightsScreen.tsx#L74)
+- **Scope**: `src/screens/AIInsightsScreen.tsx`
+- **Problem**: "AI Insights are not yet available for your store. This feature will be activated soon." No timeline, no reason, no action for user.
+- **Fix**: Change to "AI Insights require 7 days of sales data. Come back after your first week of using SuperMandi POS."
+- **Migration**: None
+- **Test**: Message explains prerequisite
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/AIInsightsScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update message at line 74.
+- **Guard**: Do NOT change insights availability logic.
+- **DoD**: ☐ Clear prerequisite explanation ☐ Hindi translation
+
+---
+
+### STG-312 — DailyReportScreen + DailyClosingScreen — missing offline/sync indication
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [DailyReportScreen.tsx](src/screens/DailyReportScreen.tsx), [DailyClosingScreen.tsx](src/screens/DailyClosingScreen.tsx)
+- **Scope**: `src/screens/DailyReportScreen.tsx`, `src/screens/DailyClosingScreen.tsx`
+- **Problem**: No indication whether report data is synced or stale. User doesn't know if displayed data is current.
+- **Fix**: Add "Last synced at: [time]" or "Synced ✓" badge to report headers.
+- **Migration**: None
+- **Test**: Sync timestamp visible on report screens
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/DailyReportScreen.tsx`, `src/screens/DailyClosingScreen.tsx`
+- **Changes**: Add sync status badge near screen header.
+- **Guard**: Do NOT change data fetching.
+- **DoD**: ☐ Sync timestamp visible ☐ "Synced"/"Not synced" indicator
+
+---
+
+### STG-313 — Network error messages across screens — no recovery guidance
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — StaffLoginScreen, DeviceBlockedScreen, ForceUpdateScreen, EnrollDeviceScreen
+- **Scope**: Multiple screens
+- **Problem**: "No connection" / "No internet" messages lack recovery steps. Users don't know what to do.
+- **Fix**: Add hint: "Move closer to your WiFi router or check your mobile data, then try again."
+- **Migration**: None
+- **Test**: Network error shows actionable recovery hint
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/StaffLoginScreen.tsx`, `src/screens/DeviceBlockedScreen.tsx`, `src/screens/ForceUpdateScreen.tsx`, `src/screens/EnrollDeviceScreen.tsx`
+- **Changes**: Update network error messages to include recovery hint.
+- **Guard**: Do NOT change connectivity check logic.
+- **DoD**: ☐ All network errors show recovery hint ☐ Hindi translations
+
+---
+
+### STG-314 — PaymentSetupScreen — no success confirmation after saving
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [PaymentSetupScreen.tsx:123](src/screens/PaymentSetupScreen.tsx#L123)
+- **Scope**: `src/screens/PaymentSetupScreen.tsx`
+- **Problem**: After saving payment settings, navigates directly to SellScan without showing success confirmation. User doesn't know if save worked.
+- **Fix**: Show brief success toast "Payment settings saved!" before navigation.
+- **Migration**: None
+- **Test**: Success toast visible after save
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/PaymentSetupScreen.tsx`
+- **Changes**: Add success toast/alert at line 123 before navigation.
+- **Guard**: Do NOT change save logic.
+- **DoD**: ☐ Success feedback shown ☐ Then navigates
+
+---
+
+### STG-315 — ReorderScreen — missing confirmation before dismissing suggestion
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [ReorderScreen.tsx:256-265](src/screens/ReorderScreen.tsx#L256)
+- **Scope**: `src/screens/ReorderScreen.tsx`
+- **Problem**: After selecting dismiss reason, reorder suggestion is dismissed without "Are you sure?" confirmation. Accidental dismissal loses suggestion permanently.
+- **Fix**: Add confirmation Alert: "Dismiss {item} from reorder suggestions? You can manually re-request it later."
+- **Migration**: None
+- **Test**: Confirmation prompt shown before dismiss
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/ReorderScreen.tsx`
+- **Changes**: Add Alert.alert() confirmation at lines 256-265 before API call.
+- **Guard**: Do NOT change dismiss API logic.
+- **DoD**: ☐ Confirmation prompt ☐ Cancel option available
+
+---
+
+### — CATEGORY F: Button/Style Consistency —
+
+---
+
+### STG-316 — SplitPaymentModal — TouchableOpacity should be Pressable
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: UI audit — [SplitPaymentModal.tsx](src/components/sell/SplitPaymentModal.tsx)
+- **Scope**: `src/components/sell/SplitPaymentModal.tsx`
+- **Problem**: Mix of TouchableOpacity and Pressable. Rest of codebase uses Pressable exclusively.
+- **Fix**: Replace all TouchableOpacity with Pressable at lines 531, 573, 619, 709, 758, 803, 818, 821.
+- **Migration**: None
+- **Test**: All interactions still work with Pressable
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/components/sell/SplitPaymentModal.tsx`
+- **Changes**: Replace TouchableOpacity imports and usages with Pressable.
+- **Guard**: Do NOT change payment flow.
+- **DoD**: ☐ Zero TouchableOpacity ☐ All interactions work
+
+---
+
+### STG-317 — Inconsistent disabled button opacity across all screens
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — multiple screens
+- **Scope**: App-wide
+- **Problem**: Disabled buttons use different opacity values: 0.4 (ReturnScreen line 417), 0.5 (some screens), 0.6 (PaymentSetupScreen). Visual inconsistency confuses users about disabled state.
+- **Fix**: Define `DISABLED_OPACITY = 0.5` in theme and reference globally across all disabled button states.
+- **Migration**: None
+- **Test**: All disabled buttons have consistent opacity
+- **Depends on**: STG-003
+#### Execution Scope
+- **Files**: `src/theme/colors.ts` (add constant), all screens with disabled buttons
+- **Changes**: Add `export const DISABLED_OPACITY = 0.5` to theme. Update all opacity references.
+- **Guard**: Do NOT change button enable/disable logic.
+- **DoD**: ☐ Single opacity constant ☐ Applied everywhere
+
+---
+
+### STG-318 — KhataScreen — Add Credit (red) / Record Payment (green) color semantics wrong
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [KhataScreen.tsx:654-662](src/screens/KhataScreen.tsx#L654)
+- **Scope**: `src/screens/KhataScreen.tsx`
+- **Problem**: "Add Credit" uses `colors.error` (red) which implies danger. "Record Payment" uses `colors.success` (green). Red for a normal action confuses users.
+- **Fix**: Change "Add Credit" to `colors.primary` or `colors.warning`. Keep "Record Payment" green.
+- **Migration**: None
+- **Test**: Both buttons use appropriate semantic colors
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/KhataScreen.tsx`
+- **Changes**: Update button color at lines 654-662.
+- **Guard**: Do NOT change credit/payment logic.
+- **DoD**: ☐ "Add Credit" not red ☐ Clear visual distinction between actions
+
+---
+
+### STG-319 — Inconsistent modal button styling across components
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: UI audit — SplitPaymentModal, EditReorderModal, DismissReasonModal
+- **Scope**: `src/components/sell/SplitPaymentModal.tsx`, `src/components/reorder/EditReorderModal.tsx`, `src/components/reorder/DismissReasonModal.tsx`
+- **Problem**: Primary buttons have different padding (14px vs 12px), icon placement, and text alignment across modals.
+- **Fix**: Standardize: all primary buttons = 14px padding, centered text, consistent icon size.
+- **Migration**: None
+- **Test**: Visual consistency across modals
+- **Depends on**: STG-003
+#### Execution Scope
+- **Files**: Listed components
+- **Changes**: Align button styles in SplitPaymentModal lines 1040-1050, EditReorderModal lines 753-770, DismissReasonModal lines 396-405.
+- **Guard**: Do NOT change modal logic.
+- **DoD**: ☐ Consistent button padding ☐ Consistent text alignment
+
+---
+
+### — CATEGORY G: Miscellaneous UX Improvements —
+
+---
+
+### STG-320 — OverdueDuesScreen — "Due Soon" uses info color (blue) instead of warning
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [OverdueDuesScreen.tsx:56-68](src/screens/OverdueDuesScreen.tsx#L56)
+- **Scope**: `src/screens/OverdueDuesScreen.tsx`
+- **Problem**: Severity "Due Soon" (0-7 days) uses `colors.info` (blue). "Overdue" (7-30 days) uses `colors.warning`. Blue doesn't convey urgency for items due within a week.
+- **Fix**: Change "Due Soon" to `colors.warning` (orange). Keep "Overdue" as `colors.error`.
+- **Migration**: None
+- **Test**: Color semantics match urgency
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/OverdueDuesScreen.tsx`
+- **Changes**: Update getSeverityColor() at lines 56-68.
+- **Guard**: Do NOT change due date calculation.
+- **DoD**: ☐ Due Soon = warning color ☐ Visual urgency progression
+
+---
+
+### STG-321 — ChatConversationScreen — "No messages yet. Say hello!" vague empty state
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [ChatConversationScreen.tsx:329](src/screens/ChatConversationScreen.tsx#L329)
+- **Scope**: `src/screens/ChatConversationScreen.tsx`
+- **Problem**: Empty state "No messages yet. Say hello!" doesn't explain if this is a new conversation or failed load.
+- **Fix**: Change to "Start a conversation by typing your first message below."
+- **Migration**: None
+- **Test**: Clear call-to-action in empty chat
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/ChatConversationScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update text at line 329.
+- **Guard**: Do NOT change chat logic.
+- **DoD**: ☐ Clear CTA text ☐ Hindi translation
+
+---
+
+### STG-322 — ChatConversationScreen — 24-hour time format without AM/PM
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [ChatConversationScreen.tsx:148](src/screens/ChatConversationScreen.tsx#L148)
+- **Scope**: `src/screens/ChatConversationScreen.tsx`, `src/screens/ChatListScreen.tsx`
+- **Problem**: Uses `toLocaleTimeString('en-IN')` without `hour12: true`. Shows "14:30" instead of "2:30 PM". Kirana merchants may not read 24-hour time.
+- **Fix**: Add `hour12: true` to locale options.
+- **Migration**: None
+- **Test**: Time shows AM/PM format
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/ChatConversationScreen.tsx` (line 148), `src/screens/ChatListScreen.tsx` (line 121)
+- **Changes**: Add `hour12: true` to toLocaleTimeString options.
+- **Guard**: Do NOT change timestamp data.
+- **DoD**: ☐ AM/PM visible ☐ 12-hour format
+
+---
+
+### STG-323 — ForceUpdateScreen — "iOS update coming soon" vague with no timeline
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [ForceUpdateScreen.tsx:74-80](src/screens/ForceUpdateScreen.tsx#L74)
+- **Scope**: `src/screens/ForceUpdateScreen.tsx`
+- **Problem**: Alert says "iOS App Store listing is being prepared. Please check back soon or contact support." No timeline or alternative.
+- **Fix**: Add ETA: "iOS update will be available soon. For immediate help, contact support on WhatsApp."
+- **Migration**: None
+- **Test**: Message provides actionable guidance
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/ForceUpdateScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update alert text at lines 74-80.
+- **Guard**: Do NOT change update check logic.
+- **DoD**: ☐ WhatsApp contact mentioned ☐ Hindi translation
+
+---
+
+### STG-324 — EnrollDeviceScreen — activation code placeholder lacks help text
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [EnrollDeviceScreen.tsx:481](src/screens/EnrollDeviceScreen.tsx#L481)
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx`
+- **Problem**: Placeholder "SM-XXXXXX" doesn't explain what an activation code is or where to get it. New retailers are confused.
+- **Fix**: Add help text below input: "You received this code via WhatsApp after registration approval".
+- **Migration**: None
+- **Test**: Help text visible below activation code input
+- **Depends on**: STG-253
+#### Execution Scope
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Add helper text after input at line 481. Update placeholder to "SM-ABC123".
+- **Guard**: Do NOT change activation logic.
+- **DoD**: ☐ Help text visible ☐ Example code shown ☐ Hindi translation
+
+---
+
+### STG-325 — EnrollDeviceScreen — "Activate POS" vs "Activate Your POS" inconsistency
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: UI audit — [EnrollDeviceScreen.tsx:469, 534](src/screens/EnrollDeviceScreen.tsx#L469)
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx`
+- **Problem**: Title says "Activate Your POS" (line 469) but button says "Activate POS" (line 534). Inconsistent.
+- **Fix**: Standardize to "Activate POS" everywhere.
+- **Migration**: None
+- **Test**: Consistent text
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`
+- **Changes**: Unify text at lines 469 and 534.
+- **Guard**: Do NOT change activation flow.
+- **DoD**: ☐ Consistent button/title text
+
+---
+
+### STG-326 — EnrollDeviceScreen — required field indicators inconsistent
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [EnrollDeviceScreen.tsx:479, 496-497](src/screens/EnrollDeviceScreen.tsx#L479)
+- **Scope**: `src/screens/EnrollDeviceScreen.tsx`
+- **Problem**: Device Name shows red asterisk for required, but Activation Code (also required) doesn't. Inconsistent.
+- **Fix**: Add red asterisk to both required field labels.
+- **Migration**: None
+- **Test**: Both required fields marked consistently
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/EnrollDeviceScreen.tsx`
+- **Changes**: Add required indicator to Activation Code label at line ~479.
+- **Guard**: Do NOT change validation.
+- **DoD**: ☐ Both required fields marked ☐ Consistent visual treatment
+
+---
+
+### STG-327 — StaffLoginScreen — button doesn't change text during cooldown
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [StaffLoginScreen.tsx:326-340](src/screens/StaffLoginScreen.tsx#L326)
+- **Scope**: `src/screens/StaffLoginScreen.tsx`
+- **Problem**: During rate-limit cooldown, button becomes disabled but still says "Login". User doesn't know why they can't tap.
+- **Fix**: Update button text during cooldown: "Please wait..." and update accessibilityLabel.
+- **Migration**: None
+- **Test**: Button text changes during cooldown
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/StaffLoginScreen.tsx`
+- **Changes**: Add conditional text at lines 326-340: `{cooldown ? "Please wait..." : loading ? <ActivityIndicator> : "Login"}`.
+- **Guard**: Do NOT change auth logic.
+- **DoD**: ☐ Cooldown text shown ☐ Accessible
+
+---
+
+### STG-328 — ForceUpdateScreen — "unknown" version display lacks explanation
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [ForceUpdateScreen.tsx:68-69](src/screens/ForceUpdateScreen.tsx#L68)
+- **Scope**: `src/screens/ForceUpdateScreen.tsx`
+- **Problem**: If version detection fails, shows "unknown". Users don't understand why or what to do.
+- **Fix**: When version is "unknown", show "Cannot detect app version. Please restart the app or update manually."
+- **Migration**: None
+- **Test**: "unknown" replaced with helpful message
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/screens/ForceUpdateScreen.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Add conditional display at lines 68-69 and 305-306.
+- **Guard**: Do NOT change version detection.
+- **DoD**: ☐ No raw "unknown" shown ☐ Helpful fallback message
+
+---
+
+### STG-329 — ProductDetailModal — "No suppliers available" lacks actionable guidance
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: UI audit — [ProductDetailModal.tsx:265-273](src/components/buy/ProductDetailModal.tsx#L265)
+- **Scope**: `src/components/buy/ProductDetailModal.tsx`
+- **Problem**: "No suppliers available" shown with icon but no next step. User doesn't know why or what to do.
+- **Fix**: Add text: "No suppliers linked to this product yet. Contact SuperMandi support for help."
+- **Migration**: None
+- **Test**: Actionable guidance shown in empty state
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/components/buy/ProductDetailModal.tsx`, `src/i18n/locales/en.json`
+- **Changes**: Update empty state at lines 265-273 with guidance text.
+- **Guard**: Do NOT change supplier loading logic.
+- **DoD**: ☐ Helpful empty state ☐ Hindi translation
+
+---
+
+### STG-330 — DismissReasonModal — predefined reasons store English values to backend
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: UI audit — [DismissReasonModal.tsx:39-46](src/components/reorder/DismissReasonModal.tsx#L39)
+- **Scope**: `src/components/reorder/DismissReasonModal.tsx`
+- **Problem**: PREDEFINED_REASONS uses i18n keys for display but sends hardcoded English values (e.g., "Not needed at this time") to backend. If multilingual support is needed, backend receives English regardless of UI language.
+- **Fix**: Store language-agnostic reason IDs (e.g., "NOT_NEEDED", "OVERSTOCKED") and send those to backend. Display i18n text in UI.
+- **Migration**: None (backend already stores strings)
+- **Test**: Backend receives reason IDs, UI shows translated text
+- **Depends on**: None
+#### Execution Scope
+- **Files**: `src/components/reorder/DismissReasonModal.tsx`
+- **Changes**: Change value field at lines 39-46 from English strings to enum IDs. Keep i18n keys for display.
+- **Guard**: Verify backend accepts new IDs or add backward compatibility.
+- **DoD**: ☐ Language-agnostic reason IDs ☐ Display text from i18n
+
+---
+
+## SELL & PURCHASE Deep Audit (STG-331 — STG-411)
+
+> **Source**: Deep functional + UX audit of SELL and PURCHASE screens (2026-03-13)
+> **Scope**: 18 audit areas — search, scan, categories, cart, payment, voice, stock, sync, offline, devices
+> **Rule**: Do NOT implement until operator approves full ticket list
+
+---
+
+### — AREA 1: Search Bar Logic (SELL Screen) —
+
+---
+
+### STG-331 — SELL — Remove separate manual barcode field, unify into main search bar
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 1 — [SellScanScreen.tsx:2709-2858](src/screens/SellScanScreen.tsx#L2709-L2858)
+- **Problem**: Two separate input fields exist: (1) primary search bar at lines 2724-2763, and (2) manual barcode entry at lines 2823-2857, visible only when search bar is collapsed. This creates navigation friction — cashiers scanning via HID cannot access manual fallback without collapsing search first.
+- **Impact**: Breaks "always accessible fallback" principle. Cashiers can't simultaneously see search results and manual barcode entry.
+- **Fix**: Remove the separate manual barcode field. Integrate barcode entry directly into the main search bar. Update placeholder to "Scan or search products". Search bar should accept: barcode input, product name, SKU.
+- **Migration**: None
+- **Test**: Single unified input accepts both barcode (numeric) and text search; no separate barcode field visible
+- **Depends on**: None
+
+---
+
+### STG-332 — SELL — Search bar placeholder doesn't indicate barcode input support
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 1 — [SellScanScreen.tsx:2724](src/screens/SellScanScreen.tsx#L2724)
+- **Problem**: Placeholder says "Search products..." but search bar accepts barcodes (via regex `/^\d{8,}$/` at line 1737). No visual hint that barcode entry is supported.
+- **Impact**: Retailers using HID scanners don't realize search bar accepts scan output. They use the separate manual field (slower).
+- **Fix**: Change placeholder to `t('sell.searchOrScan', 'Scan barcode or search products')`. Add small barcode icon inside input.
+- **Migration**: None
+- **Test**: Placeholder mentions barcode; icon visible
+- **Depends on**: STG-331
+
+---
+
+### STG-333 — SELL — 300ms debounce delays barcode resolution unnecessarily
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 1 — [SellScanScreen.tsx:1942-1957](src/screens/SellScanScreen.tsx#L1942)
+- **Problem**: Search debounce of 300ms applies equally to text search and barcode input. HID scanners emit complete barcodes instantly, but results display is delayed by 300ms after full barcode is entered.
+- **Impact**: Perceived lag on barcode-heavy workflows. On budget Android, feels like a freeze.
+- **Fix**: Skip debounce for barcode-like input (matches `/^\d{8,}$/`). Process immediately. Keep 300ms debounce for text search only.
+- **Migration**: None
+- **Test**: Barcode input resolves in <50ms; text search still debounced
+- **Depends on**: None
+
+---
+
+### — AREA 2: Product Scan Logic (SELL Screen) —
+
+---
+
+### STG-334 — SELL — Barcode heuristic `/^\d{8,}$/` too broad, matches phone numbers
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 2 — [SellScanScreen.tsx:1737](src/screens/SellScanScreen.tsx#L1737)
+- **Problem**: Regex `/^\d{8,}$/` matches any 8+ digit number including phone numbers (10 digits), order IDs, timestamps. A cashier entering "9876543210" (phone number) gets routed to barcode handler instead of text search.
+- **Impact**: False-positive barcode routing. Confusing error messages ("Product not found") for non-barcode inputs.
+- **Fix**: Use stricter validation: EAN-13 (13 digits), UPC-A (12 digits), or 8-14 digits with check digit validation. Also use `source` hint from HID scanner service to distinguish keyboard vs scanner input.
+- **Migration**: None
+- **Test**: 10-digit phone number triggers text search, not barcode lookup; valid EAN-13 triggers barcode lookup
+- **Depends on**: None
+
+---
+
+### STG-335 — SELL — Duplicate scan 2000ms window too strict for same-item multiples
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 2 — [handleScan.ts:69, 114-122](src/services/scan/handleScan.ts#L69)
+- **Problem**: `DUPLICATE_WINDOW_MS = 2000` rejects re-scans of same barcode within 2 seconds. For kirana cashiers scanning same item multiple times (customer buying 3 milks), they must wait 2+ seconds between scans. No user feedback when scan is silently rejected.
+- **Impact**: Workflow friction for same-item multiples. Cashiers default to slower manual quantity entry.
+- **Fix**: Reduce to 800-1000ms. Show toast when duplicate scan is rejected: "Item already scanned — use +/- to adjust quantity". Make configurable per store.
+- **Migration**: None
+- **Test**: Same barcode scanned at 1.2s interval is accepted; at 0.5s is rejected with toast
+- **Depends on**: None
+
+---
+
+### STG-336 — SELL — Scan storm detection per-barcode limit (8 in 2s) with no user feedback
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 2 — [handleScan.ts:74-76, 124-164](src/services/scan/handleScan.ts#L74)
+- **Problem**: Storm protection: 8 scans of same barcode in 2000ms triggers 1000ms cooldown. No visibility into storm state — cashier sees "scan_storm" warning but doesn't know which barcode triggered it or cooldown duration.
+- **Impact**: Artificial ceiling on scanning speed. No feedback on why scanner appears frozen.
+- **Fix**: Show toast with cooldown countdown: "Scanner paused for 1s — too many rapid scans". Increase limit to 12 scans in 2s for high-volume stores.
+- **Migration**: None
+- **Test**: Storm toast visible with countdown; scanner resumes after cooldown
+- **Depends on**: None
+
+---
+
+### STG-337 — SELL — Intermediate barcode prefixes trigger search results flicker
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 2/11 — [SellScanScreen.tsx:1645-1660](src/screens/SellScanScreen.tsx#L1645)
+- **Problem**: As HID scanner sends barcode character-by-character, each intermediate value (e.g., "890", "8901") triggers search debounce. Partial matches flash on screen before full barcode resolves.
+- **Impact**: Visual flicker/jitter in search results during HID scanning. Confusing on slow devices.
+- **Fix**: Suppress search results while HID scan is in progress (detect via `feedHidKey` state). Show "Scanning..." placeholder until barcode is complete.
+- **Migration**: None
+- **Test**: No partial search results during HID barcode entry; "Scanning..." shown instead
+- **Depends on**: STG-333
+
+---
+
+### — AREA 3: Scan State Handling —
+
+---
+
+### STG-338 — SELL — Unknown barcode modal lacks clear field guidance
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 3 — [SellScanScreen.tsx:3596-3708](src/screens/SellScanScreen.tsx#L3596)
+- **Problem**: When unknown barcode is scanned, "New product" modal shows 4 fields (name, sell price, purchase price, opening stock) with minimal guidance. "Purchase price" says "(optional)" without explaining why it matters. "Opening stock" has tooltip "Creates ledger entry if greater than 0" — too technical for cashiers.
+- **Impact**: Onboarding friction. Cashiers may skip opening stock (creating stock parity issues) or be confused about price fields.
+- **Fix**: Add icons/tooltips: "Selling Price = what your customer pays", "Purchase Price = what you paid (optional, for profit tracking)", "Opening Stock = how many you have on shelf (leave 0 to add later)".
+- **Migration**: None
+- **Test**: Each field has visible help text; tooltips show on tap
+- **Depends on**: None
+
+---
+
+### STG-339 — SELL — LOOSE_BULK variant picker gated by multiple checks, may never trigger
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 3 — [handleScan.ts:475-485](src/services/scan/handleScan.ts#L475)
+- **Problem**: Variant picker for LOOSE_BULK products requires ALL of: product_mode='LOOSE_BULK', store_product_id exists, runtime.onVariantPicker set, !variantPickerActive. If store_product_id is null (globally registered but not in-store), variant picker is skipped entirely.
+- **Impact**: Loose/bulk products (dal, rice) sold without weight variant selection. Stock shows "1 unit" instead of "500g". Inventory tracking breaks for weight-based products.
+- **Fix**: Make variant picker mandatory for LOOSE_BULK regardless of store_product_id. Add fallback manual weight entry if product not registered locally.
+- **Migration**: None
+- **Test**: All LOOSE_BULK scans show variant picker; manual weight entry if no store_product_id
+- **Depends on**: None
+
+---
+
+### STG-340 — SELL — Price error silently blocks checkout with no feedback
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 3 — [SellScanScreen.tsx:1341-1343, 758-765](src/screens/SellScanScreen.tsx#L1341)
+- **Problem**: Items with `priceResolutionError=true` and `priceMinor=0` disable the checkout button silently. No error toast, no highlighting of which item needs attention. Cashier sees disabled button and assumes app is frozen.
+- **Impact**: Checkout UX breaks silently. Cashier must manually scan cart to find the problematic item. Slow and frustrating.
+- **Fix**: When checkout is blocked: show toast "Item '[name]' needs a price — tap to edit". Add quick-edit shortcut from checkout button. Highlight problem item in cart with pulsing animation.
+- **Migration**: None
+- **Test**: Checkout blocked → toast identifies problematic item; tapping toast scrolls to item
+- **Depends on**: None
+
+---
+
+### — AREA 4: Automatic Category Formation —
+
+---
+
+### STG-341 — SELL — DEMO_CATEGORIES hardcoded, no dynamic loading from store products
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 4 — [CategoryRail.tsx:67-83](src/components/sell/CategoryRail.tsx#L67)
+- **Problem**: 15 hardcoded demo categories as fallback. Feature flag `category_browsing` gates the entire category rail. Stores without the flag see no categories at all. Categories don't reflect actual product mix in the store.
+- **Impact**: Retailers without feature flag cannot filter by category. Categories show empty categories with zero products.
+- **Fix**: Always show category rail (remove feature flag gate). Filter out categories with zero products. Show product count badge per category.
+- **Migration**: None
+- **Test**: Category rail visible for all stores; empty categories hidden; count badges shown
+- **Depends on**: None
+
+---
+
+### STG-342 — SELL — Category selection does NOT filter displayed products
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 4 — [SellScanScreen.tsx:2803-2809](src/screens/SellScanScreen.tsx#L2803)
+- **Problem**: When a category is selected (`selectedCategory` state), the product grid continues showing ALL products. No filtering is applied to the FlatList. Category tap has zero effect on displayed products.
+- **Impact**: Feature feels broken. Defeats the entire purpose of the category rail.
+- **Fix**: When `selectedCategory` changes, filter `catalogItems` to only products in that category. Fetch category products via API or filter locally. Show loading spinner while filtering.
+- **Migration**: None
+- **Test**: Selecting "Atta-Dal" shows only Atta-Dal products; selecting "All" shows everything
+- **Depends on**: STG-341
+
+---
+
+### — AREA 5: Search Bar Logic (PURCHASE Screen) —
+
+---
+
+### STG-343 — PURCHASE — BuyScreen search bar missing barcode lookup capability
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 5 — [BuyScreen.tsx:476-505](src/screens/BuyScreen.tsx#L476)
+- **Problem**: BuyScreen search is purely text-based (product name). No barcode scanning or barcode lookup. PurchaseScreen has `buyBarcodeSearch` but BuyScreen does not. Inconsistent UX between two purchase interfaces.
+- **Impact**: Retailers cannot scan barcode on BUY screen grid view. Must type product name or switch to PurchaseScreen.
+- **Fix**: Integrate `buyBarcodeSearch` into BuyScreen. When barcode scanned: lookup in supplier catalog → open ProductDetailModal. Add barcode icon to search bar.
+- **Migration**: None
+- **Test**: Scanning barcode on BuyScreen opens product detail; text search still works
+- **Depends on**: None
+
+---
+
+### STG-344 — PURCHASE — Search debounce 400ms creates perceived slowness
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 5 — [BuyScreen.tsx:64](src/screens/BuyScreen.tsx#L64)
+- **Problem**: `SEARCH_DEBOUNCE_MS = 400` plus API call time means total response can exceed 1 second on 2G/3G networks.
+- **Impact**: Search feels sluggish for fast typers. No search-as-you-type feel.
+- **Fix**: Reduce to 250-300ms. Implement request cancellation (abort previous request when new one fires).
+- **Migration**: None
+- **Test**: Search results appear noticeably faster after typing stops
+- **Depends on**: None
+
+---
+
+### STG-345 — PURCHASE — No search autocomplete/suggestions before full results
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 5 — [BuyScreen.tsx:476-505](src/screens/BuyScreen.tsx#L476)
+- **Problem**: No autocomplete dropdown, no real-time suggestions, no "did you mean" alternatives. User must wait for full page reload after typing.
+- **Impact**: Users unsure if product exists before waiting for results. Longer product discovery time.
+- **Fix**: Implement search suggestions: show top 3-5 matching products in dropdown as user types, including name, price, stock status.
+- **Migration**: None
+- **Test**: Autocomplete dropdown appears after 2 characters; shows product name + price
+- **Depends on**: None
+
+---
+
+### STG-346 — PURCHASE — Stock filter applied client-side, causes pagination issues
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 5/6 — [BuyScreen.tsx:371-377](src/screens/BuyScreen.tsx#L371)
+- **Problem**: Stock status filter (in_stock, low_stock, out_of_stock) is applied client-side AFTER API returns all products. Pagination shows "no more products" but more in-stock products may exist on next page.
+- **Impact**: Inconsistent pagination. Users see page of out-of-stock products they can't order.
+- **Fix**: Move stock filter to API layer. Add `stockStatus` param to `getBuyCatalog` call.
+- **Migration**: None
+- **Test**: Stock filter applied server-side; pagination correct for filtered results
+- **Depends on**: None
+
+---
+
+### — AREA 6: Quick On-Counter Purchase Workflow —
+
+---
+
+### STG-347 — PURCHASE — Quick purchase mode adds items with empty metadata
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 6 — [PurchaseScreen.tsx:65-72, 287-309](src/screens/PurchaseScreen.tsx#L65)
+- **Problem**: Quick purchase adds items with `productName: ""`, `buyPrice: 0`, `sellPrice: 0`. Retailer must manually enter everything. No automatic lookup from supplier catalog.
+- **Impact**: "Quick purchase" isn't quick — defeats FMCG quick-scan workflow. Error-prone manual entry.
+- **Fix**: When barcode added: lookup in supplier catalog, pre-fill productName and buyPrice from best supplier. Allow override for manual entry.
+- **Migration**: None
+- **Test**: Quick purchase barcode scan auto-fills product name and price from catalog
+- **Depends on**: None
+
+---
+
+### STG-348 — PURCHASE — No barcode lookup loading state in PurchaseScreen
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 6 — [PurchaseScreen.tsx:232-284](src/screens/PurchaseScreen.tsx#L232)
+- **Problem**: Barcode lookup can take 2-3s. `setScanResolving` is set but not displayed in UI. No loading indicator visible during lookup.
+- **Impact**: Retailer thinks scan failed. May rescan, causing confusion.
+- **Fix**: Show loading indicator while barcode lookup in progress: "Searching supplier catalog..."
+- **Migration**: None
+- **Test**: Loading spinner visible during barcode lookup; disappears on result
+- **Depends on**: None
+
+---
+
+### — AREA 7: Product Search Enrichment —
+
+---
+
+### STG-349 — SELL — Search results missing brand, image, pack size vs grid tiles
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 7 — [SellScanScreen.tsx:2597-2659](src/screens/SellScanScreen.tsx#L2597)
+- **Problem**: Search panel `renderAddRow` (lines 2597-2659) shows only: product name, barcode, price, stock status. The grid SellTile component (lines 113-284) DOES show image, brand, pack size, mode badge, expiry — but the search results list uses a simpler row layout that lacks these fields.
+- **Impact**: Multi-variant products (Flour 500g vs 1kg) only distinguishable by barcode in search. Harder to scan results quickly vs grid.
+- **Fix**: In `renderAddRow` (SellScanScreen.tsx:2597-2659), add: (1) `ProductImage` component at 32x32 before name, (2) brand text below name in 11px secondary color, (3) pack size/unit after brand (e.g., "500g"). Data is already in the SkuItem type — just not rendered in search results. Do NOT reuse SellTile (too tall for list rows).
+- **Migration**: None
+- **Test**: Search results show product image, brand, and pack size
+- **Depends on**: None
+
+---
+
+### STG-350 — SELL — Autocomplete dropdown shows only name+barcode, too minimal
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 7 — [SellScanScreen.tsx:2860-2880](src/screens/SellScanScreen.tsx#L2860)
+- **Problem**: Autocomplete suggestions show only product name and barcode (gray, small). No image, price, stock. Max 5 suggestions.
+- **Impact**: High error rate — tapping wrong product by name alone for similar products.
+- **Fix**: In `renderItem` at SellScanScreen.tsx:2866-2876: (1) Add `ProductImage` 24x24 before `autocompleteName`, (2) Add price on right side using `item.price` from `autocompleteSuggestions` data, (3) Add stock badge (green/amber/red) based on `item.stock`, (4) Highlight matching substring in product name using `<Text style={{fontWeight:'bold'}}>` for the matching portion, (5) Increase max from 5 to 7 suggestions (line 3154: change `.slice(0,5)` to `.slice(0,7)`).
+- **Migration**: None
+- **Test**: Autocomplete shows image + price + stock; matching text highlighted
+- **Depends on**: None
+
+---
+
+### STG-351 — PURCHASE — Supplier name not visible in grid card, only in small text
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 7 — [CatalogProductCard.tsx:201-205](src/components/buy/CatalogProductCard.tsx#L201)
+- **Problem**: Supplier name shown at bottom of card in 11px tertiary text. Multiple suppliers selling same product at different prices are indistinguishable without clicking each.
+- **Impact**: Can't do quick price comparison in grid view. Slower purchase workflow.
+- **Fix**: Make supplier name prominent (2nd line after product name, 13px). Show best price clearly.
+- **Migration**: None
+- **Test**: Supplier name clearly visible in card without clicking
+- **Depends on**: None
+
+---
+
+### STG-352 — PURCHASE — MOV (Minimum Order Value) not shown anywhere before checkout
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 8 — [CatalogProductCard.tsx, ProductDetailModal.tsx, SupplierRow.tsx](src/components/buy/)
+- **Problem**: Minimum Order Value from `supplier_store_links.min_order_value` is NOT displayed in grid card, product detail modal, or supplier row. Only validated at cart checkout (SupplierCartSection line 60). Retailers discover MOV requirement after building entire cart.
+- **Impact**: Major checkout friction. Retailers frustrated they wasted time. Must add more items to meet MOV.
+- **Fix**: Show MOV in CatalogProductCard ("Min Order: ₹5000"), ProductDetailModal per supplier, and SupplierRow header.
+- **Migration**: None
+- **Test**: MOV visible in card, detail modal, and supplier row when > 0
+- **Depends on**: None
+
+---
+
+### STG-353 — PURCHASE — MOQ shown only when > 1 and in small 11px font
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 7 — [CatalogProductCard.tsx:107-108, 341](src/components/buy/CatalogProductCard.tsx#L107)
+- **Problem**: MOQ only shown when > 1, in 11px font. For products with MOQ=10+ (common in FMCG wholesale), not prominent enough.
+- **Impact**: Retailers don't know MOQ before adding to cart. Discover violations at payment.
+- **Fix**: Always show MOQ (even if 1). Increase to 12-13px. Highlight high MOQs (>5) with warning badge.
+- **Migration**: None
+- **Test**: MOQ always visible; high MOQ highlighted
+- **Depends on**: None
+
+---
+
+### STG-354 — PURCHASE — "Cost" price label ambiguous, should be "Buy Price"
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 7 — [CatalogProductCard.tsx:169-171](src/components/buy/CatalogProductCard.tsx#L169)
+- **Problem**: Price label says "Cost ₹XX/pack" — ambiguous for Indian retailers. Could mean wholesale cost, item cost, or COGS.
+- **Impact**: Confusion about what price they're paying.
+- **Fix**: Change "Cost" to "Buy Price" or "Purchase Price".
+- **Migration**: None
+- **Test**: Label says "Buy Price" not "Cost"
+- **Depends on**: None
+
+---
+
+### STG-355 — PURCHASE — No variant/pack size shown when metadata missing
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 7 — [CatalogProductCard.tsx:37-48](src/components/buy/CatalogProductCard.tsx#L37)
+- **Problem**: Pack size only shown if `netContentValue` and `netContentUnit` exist. For incomplete metadata, card shows only name+price. Two SKUs of same product may look identical.
+- **Impact**: Wrong pack sizes ordered (500g vs 5kg indistinguishable).
+- **Fix**: Fallback to `packSize` or `product.unit`. Always display something: "500g" or "5 Pack" or "Bulk".
+- **Migration**: None
+- **Test**: Every product card shows some pack/unit info even with incomplete metadata
+- **Depends on**: None
+
+---
+
+### — AREA 8: SKU Metadata Visibility —
+
+---
+
+### STG-356 — SELL — SellTile brand truncates when pack size present on narrow screens
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 8 — [SellTile.tsx:198-229](src/components/sell/SellTile.tsx#L198)
+- **Problem**: Brand, mode badge, and pack size render in single `metaRow` with `flexWrap`. Long brand names (e.g., "Hindustan Unilever Beverages") get truncated on 360px screens.
+- **Impact**: Brand identity lost on small screens. Hard to parse meta row.
+- **Fix**: Use `numberOfLines={1}` on brand with ellipsis. Prioritize: brand > mode > pack size (hide pack size if space tight).
+- **Migration**: None
+- **Test**: Brand visible with ellipsis on 360px screen; no wrapping issues
+- **Depends on**: None
+
+---
+
+### STG-357 — SELL — Expiry badge overlaps with stock on small screens
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 8 — [SellTile.tsx:160-176, 252-267](src/components/sell/SellTile.tsx#L160)
+- **Problem**: Stock status + expiry warning both render in `bottomLeft`. Two tall lines cause inconsistent tile heights (160px vs 200px).
+- **Impact**: Visual noise — hard to scan many tiles quickly. Tile height inconsistency breaks grid layout.
+- **Fix**: Combine into single line: "Stock: 10 | Exp: 15-Mar (14d)" for items near expiry. Collapse to icon + tooltip on long-press for others.
+- **Migration**: None
+- **Test**: Consistent tile heights; combined stock+expiry line
+- **Depends on**: None
+
+---
+
+### STG-358 — PURCHASE — No supplier comparison table in ProductDetailModal
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 8 — [ProductDetailModal.tsx:253-289](src/components/buy/ProductDetailModal.tsx#L253)
+- **Problem**: Multiple suppliers shown individually in expandable rows. No price/MOQ/MOV comparison summary. Must expand each supplier to compare.
+- **Impact**: Slow supplier selection. Retailers miss better deals.
+- **Fix**: In ProductDetailModal.tsx before the SupplierRow list (line ~253): (1) Add a "Quick Compare" card when suppliers.length > 1, showing a 2-column mini-table: Supplier | Price | MOQ | Stock. (2) Sort by price ascending. (3) Highlight cheapest with green badge. (4) Include MOV column if any supplier has min_order_value set. Data available: `supplierName`, `purchasePrice`, `mrp`, `stockStatus`, `stockQuantity`, `moq`, `maxQty` from CatalogSupplier type. Component: simple `<View>` table with flexDirection rows, not a full DataTable.
+- **Migration**: None
+- **Test**: Comparison summary visible when multiple suppliers exist
+- **Depends on**: STG-352
+
+---
+
+### STG-359 — PURCHASE — No expiry date/batch info visible for incoming products
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 8 — all purchase components
+- **Problem**: No product expiry date, batch number, or manufacturing date visible anywhere in purchase flow. Critical for FMCG/grocery.
+- **Impact**: Can't verify freshness of incoming stock. Compliance/audit trail missing.
+- **Fix**: If backend provides expiry_date and batch fields, display in ProductDetailModal and cart items.
+- **Migration**: None
+- **Test**: Expiry and batch info visible when available
+- **Depends on**: None
+
+---
+
+### — AREA 9: Voice Module —
+
+---
+
+### STG-360 — VOICE — No confirmation before auto-executing voice commands
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 9 — [voiceClient.ts:435-439](src/services/voice/voiceClient.ts#L435)
+- **Problem**: When voice interpretation succeeds, `executeVoiceAction` is called with `confirmed=true` automatically. No UI confirmation modal. If LLM misunderstands "2kg rice" as "2 units MILK" (high confidence), wrong product added silently.
+- **Impact**: Cart corruption. Risk of accidental bulk adds from voice mishearing. No undo.
+- **Fix**: Check `result.requiresConfirmation`; if true, show modal with candidates before executing. Always show "Did you mean: [product]?" for first-time voice users.
+- **Migration**: None
+- **Test**: Voice add shows confirmation modal before cart add; cancel available
+- **Depends on**: None
+
+---
+
+### STG-361 — VOICE — Product search stub not implemented, all lookups fail
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 9 — [voiceOrderService.ts:431-457](backend/src/services/ai/voiceOrderService.ts#L431), [voice.ts:74-79](backend/src/routes/v1/pos/voice.ts#L74)
+- **Problem**: `resolveProducts()` calls `searchProducts()` which is registered as empty stub returning `[]`. Every non-exact product name triggers NEEDS_CLARIFICATION. No fuzzy match against store catalog.
+- **Impact**: Voice advantage completely lost. Every command → clarification loop → manual search anyway.
+- **Fix**: Implement `registerProductSearch` in voice.ts to query store-products/search endpoint. Return top 3 candidates. Show picker in POS app.
+- **Migration**: None
+- **Test**: Voice "add rice" matches products in store catalog; candidate picker shown
+- **Depends on**: None
+
+---
+
+### STG-362 — VOICE — Locale toggle (EN/HI) not wired to backend STT
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 9 — [VoiceSheet.tsx:134-173](src/components/voice/VoiceSheet.tsx#L134), [openaiProvider.ts:438](backend/src/services/ai/openaiProvider.ts#L438)
+- **Problem**: VoiceSheet renders EN/HI toggle but locale is only used in UI state. Backend always transcribes with `language="hi"` (hardcoded). English speech → Hindi STT model = degraded accuracy.
+- **Impact**: Selecting English in UI has no effect. English voice commands fail silently.
+- **Fix**: Pass voiceLocale from SellScanScreen → interpretVoice → OpenAI speechToText with correct language code.
+- **Migration**: None
+- **Test**: Switching to EN in voice sheet causes English STT; Hindi command in EN mode shows warning
+- **Depends on**: None
+
+---
+
+### STG-363 — VOICE — NEEDS_CLARIFICATION flag returned but never shown as picker
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 9 — [SellScanScreen.tsx:3024-3030](src/screens/SellScanScreen.tsx#L3024)
+- **Problem**: When backend returns `requiresConfirmation` with candidates, POS shows error state. No interactive candidate picker. Retailer must dismiss and retry with more specific name.
+- **Impact**: Ambiguous matches require manual re-entry. Multiple re-records = frustration.
+- **Fix**: If `result.requiresConfirmation && result.intent?.candidates`, render modal with candidate buttons. Tap to select, then execute.
+- **Migration**: None
+- **Test**: Ambiguous voice result shows 3 candidate buttons; tapping one adds to cart
+- **Depends on**: STG-361
+
+---
+
+### STG-364 — VOICE — No visual confidence score or product match feedback
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 9 — [VoiceSheet.tsx:187-192](src/components/voice/VoiceSheet.tsx#L187)
+- **Problem**: Success state shows only "Done!" without showing WHICH product was matched or confidence score. Retailer can't verify correctness.
+- **Impact**: Reduces confidence in voice feature. Cart quality unknown.
+- **Fix**: Show matched product name + confidence: "Added 2 kg Rice (92% match)".
+- **Migration**: None
+- **Test**: Success state shows product name and match percentage
+- **Depends on**: None
+
+---
+
+### STG-365 — VOICE — No mic permission guidance when denied
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 9 — [SellScanScreen.tsx:2985-2987](src/screens/SellScanScreen.tsx#L2985)
+- **Problem**: When mic permission denied, generic toast: "Microphone permission required". No guidance on how to enable it (Settings → App → Permissions). `openAppSettings()` exists but isn't called.
+- **Impact**: First-time retailer denies permission, can't figure out how to re-enable. Voice feature appears broken.
+- **Fix**: Show detailed alert with "Open Settings" button that launches app permissions screen.
+- **Migration**: None
+- **Test**: Permission denied → alert with "Open Settings" button that navigates to system settings
+- **Depends on**: None
+
+---
+
+### STG-366 — VOICE — No timeout on slow API, app hangs indefinitely
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 9 — [voiceClient.ts:269-320](src/services/voice/voiceClient.ts#L269)
+- **Problem**: `interpretVoice()` makes fetch with no explicit timeout. If OpenAI API is slow/hangs, POS waits indefinitely showing "Processing...".
+- **Impact**: Retailer stuck watching indefinite spinner. Must force-close app.
+- **Fix**: Add 30-second fetch timeout. Show error "Voice service taking too long. Please try again." with retry button.
+- **Migration**: None
+- **Test**: Slow API → timeout error shown after 30s; retry button works
+- **Depends on**: None
+
+---
+
+### STG-367 — VOICE — Prompt injection vulnerability (regex-only mitigation)
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 9 — [voiceOrderService.ts:283-311](backend/src/services/ai/voiceOrderService.ts#L283)
+- **Problem**: Sanitization uses regex pattern matching which can be bypassed (unicode homoglyphs, leetspeak). Confidence set to 0.0 on detection, but if detection fails, LLM could be compromised.
+- **Impact**: Malicious voice commands could execute unauthorized actions (e.g., "set price to 1 rupee").
+- **Fix**: Use OpenAI function calling with strict JSON schema (no open-ended LLM instructions). Add tokenization-based injection detection beyond regex.
+- **Migration**: None
+- **Test**: Injection attempt "ignore previous instructions" → blocked with 0.0 confidence; function-call schema enforced
+- **Depends on**: None
+
+---
+
+### — AREA 10: Tap-to-Add Cart Flow —
+
+---
+
+### STG-368 — SELL — No immediate visual feedback on product tile tap (50-200ms lag)
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 10 — [SellScanScreen.tsx:2505-2544](src/screens/SellScanScreen.tsx#L2505)
+- **Problem**: Tapping a product tile fires `handleAddSku` but no animation on the tile itself. No haptic feedback. Cart bar flash at bottom is 260ms and too far from tap location.
+- **Impact**: On slow devices, tap feels unresponsive. Retailer taps again → duplicate item.
+- **Fix**: Add scale animation (0.98) on `onPressIn`. Add opacity pulse (0.7→1) on success. Trigger `Haptics.impact()`. Show "+1" badge near tap location.
+- **Migration**: None
+- **Test**: Tile animates on tap; haptic fires; +1 badge visible near product
+- **Depends on**: None
+
+---
+
+### STG-369 — SELL — VariantPickerModal lacks images, stock, and price context
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 10 — [VariantPickerModal.tsx:103-118, 249-257](src/components/sell/VariantPickerModal.tsx#L103)
+- **Problem**: Variant cards show only: variant label, quantity+unit, price. Missing: product image, stock level per variant, MRP/discount, "best value" indicator.
+- **Impact**: Retailers can't visually distinguish variants. No stock visibility per variant. Slow checkout for loose goods.
+- **Fix**: Add product image, stock per variant, unit price calc ("₹30/100g"), and "Most Popular" badge on top-selling variant.
+- **Migration**: None
+- **Test**: Variant cards show image + stock + unit price; popular badge visible
+- **Depends on**: None
+
+---
+
+### STG-370 — SELL — Cart add persistence not awaited, silent data loss on crash
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 10 — [SellScanScreen.tsx:2431-2489](src/screens/SellScanScreen.tsx#L2431)
+- **Problem**: `cartState.addItem({...})` is fire-and-forget. No error handling for AsyncStorage write failure. If storage is corrupted or full, item disappears silently. On next restart, cart is empty.
+- **Impact**: Silent data loss. Retailer adds items, app crashes, items vanish.
+- **Fix**: Await `cartState.addItem`. Wrap in try-catch; show toast on failure: "Failed to add item. Retry?"
+- **Migration**: None
+- **Test**: Storage failure → error toast shown; retry option available
+- **Depends on**: None
+
+---
+
+### — AREA 11: HID Scanner Integration —
+
+---
+
+### STG-371 — HID — Scanner timing parameters hardcoded, no calibration for budget hardware
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 11 — [hidScannerService.ts:6-11](src/services/hidScannerService.ts#L6)
+- **Problem**: `HID_MAX_INTERVAL_MS=80`, `HID_MAX_DURATION_MS=1200`, `HID_IDLE_TIMEOUT_MS=120` are hardcoded. Budget/slow HID scanners with USB lag (150ms per char) fail validation silently.
+- **Impact**: Legitimate scans rejected on budget hardware. Cashier assumes product doesn't exist instead of re-scanning.
+- **Fix**: Increase `HID_MAX_INTERVAL_MS` to 150-200ms for compatibility. Make configurable via store settings. Show feedback when scan rejected due to timing: "Barcode read too slowly — re-scan or enter manually".
+- **Migration**: None
+- **Test**: Slow HID scanner (150ms interval) accepted; timing-rejected scan shows helpful error
+- **Depends on**: None
+
+---
+
+### STG-372 — HID — Buffer not reset on SellScanScreen mount/unmount
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 11 — [SellScanScreen.tsx](src/screens/SellScanScreen.tsx), [hidScannerService.ts:67-73](src/services/hidScannerService.ts#L67)
+- **Problem**: `resetHidTracking()` is never called from SellScanScreen on mount/unmount. HID state (buffer, lastValue) persists across navigations.
+- **Impact**: Low risk currently (resets on length change/idle) but code smell. Future HID changes could break.
+- **Fix**: Add `useEffect(() => { resetHidTracking(); return () => { resetHidTracking(); }; }, [])` on SellScanScreen mount.
+- **Migration**: None
+- **Test**: HID state clean on screen navigation; no carry-over from previous screen
+- **Depends on**: None
+
+---
+
+### — AREA 12: Sell Cart Workflow —
+
+---
+
+### STG-373 — SELL — Cart sheet covers 55-75% of screen, too much on small devices
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 12 — [SellScanScreen.tsx:290-296](src/screens/SellScanScreen.tsx#L290)
+- **Problem**: Cart sheet collapsed ratio: 55% (normal), 75% (small screens ≤400x750). On handheld POS (Sunmi V2, 400px), only ~188px left for product grid.
+- **Impact**: Retailers can barely browse products while cart is visible on small devices.
+- **Fix**: Reduce `CART_SHEET_COLLAPSED_RATIO_SMALL` from 0.75 to 0.60-0.65. Preserve at least 300px for product browsing.
+- **Migration**: None
+- **Test**: On 400px device, product grid visible with ≥250px while cart is collapsed
+- **Depends on**: None
+
+---
+
+### STG-374 — SELL — No cart item limit enforced, performance degrades with 100+ items
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 12 — [cartStore.ts:289-354](src/stores/cartStore.ts#L289)
+- **Problem**: No maximum item limit. 500+ unique items cause FlatList rendering and AsyncStorage deserialization delays.
+- **Impact**: Performance degradation on budget devices. No guidance to complete sale before adding more.
+- **Fix**: Enforce max 100 unique cart items. Show: "Cart is full (100 items). Complete this sale before adding more."
+- **Migration**: None
+- **Test**: 101st item → error toast; max 100 items enforced
+- **Depends on**: None
+
+---
+
+### STG-375 — SELL — Cart item removal undo has no countdown indicator
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 12 — [SellScanScreen.tsx undo logic](src/screens/SellScanScreen.tsx)
+- **Problem**: Undo button appears for 3 seconds after removal but no visual countdown. Users miss the window.
+- **Impact**: Users click undo after 3s window, nothing happens. Must re-add item manually.
+- **Fix**: Add countdown: "Undo in 2s" updating every 100ms. Extend timeout to 5 seconds.
+- **Migration**: None
+- **Test**: Countdown visible; undo available for 5 seconds
+- **Depends on**: None
+
+---
+
+### STG-376 — SELL — No cart hold/park feature for multi-customer scenarios
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Deep audit Area 12 — [SellScanScreen.tsx](src/screens/SellScanScreen.tsx)
+- **Problem**: No way to "hold" current cart and start a fresh one for another customer. Retailer must clear cart or wait, losing the current sale.
+- **Impact**: Workflow inefficiency in multi-customer kirana environments.
+- **Fix**: In `cartStore.ts` (Zustand store): (1) Add `heldCarts: HeldCart[]` state where `HeldCart = { id: string, items: CartItem[], discount: Discount, heldAt: Date, customerName?: string }`. (2) Add `holdCart()` method: saves current cart to `heldCarts`, clears active cart. (3) Add `resumeCart(holdId)` method: swaps held cart back to active. (4) Max 5 held carts, FIFO eviction. (5) Persist to AsyncStorage via Zustand persist middleware. In `SellScanScreen.tsx:3413-3435` (cart header): Add "Hold" icon button next to "Clear". When held carts exist, show "Held (N)" badge. Tap → shows list of held carts with timestamp + item count + total → tap to resume.
+- **Migration**: None
+- **Test**: Hold button saves cart; new empty cart created; held cart restorable
+- **Depends on**: None
+
+---
+
+### — AREA 13: Payment Workflow —
+
+---
+
+### STG-377 — PAYMENT — Payment method tabs not locked during active transaction
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 13 — [PaymentScreen.tsx:715-717, 938-970](src/screens/PaymentScreen.tsx#L715)
+- **Problem**: While payment is processing (`submitting=true`), user can still tap different payment method tabs. Switching from UPI to CASH while UPI is pending causes state confusion — receipt may show wrong payment method.
+- **Impact**: Reconciliation nightmare. UPI payment succeeds but receipt shows CASH.
+- **Fix**: Disable all payment mode tabs while `submitting || loadingSale`. Apply same guard as split button.
+- **Migration**: None
+- **Test**: During payment processing, all tabs are disabled and greyed out
+- **Depends on**: None
+
+---
+
+### STG-378 — PAYMENT — UPI QR expiry countdown reaches 0:00 but QR stays visible
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 13 — [PaymentScreen.tsx:1260-1271](src/screens/PaymentScreen.tsx#L1260)
+- **Problem**: When QR countdown reaches 0, QR remains on screen showing "0:00". "Payment Received" button still active. Customer may scan expired QR.
+- **Impact**: Customer scans expired QR → payment fails → time wasted.
+- **Fix**: When `qrSecondsLeft` reaches 0: disable "Payment Received" button, hide QR, show "QR Expired — Tap to Regenerate" with auto-regenerate option.
+- **Migration**: None
+- **Test**: QR auto-hides at 0:00; regenerate button appears; "Payment Received" disabled
+- **Depends on**: None
+
+---
+
+### STG-379 — PAYMENT — No offline payment fallback messaging
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 13 — [PaymentScreen.tsx:1198, 815-821](src/screens/PaymentScreen.tsx#L1198)
+- **Problem**: When offline, UPI tab is greyed out with no tooltip explaining why. If store is "UPI only" and goes offline, retailer has ZERO payment options and gets stuck.
+- **Impact**: Store configured UPI-only, network drops, customer waiting, no way to pay.
+- **Fix**: Tooltip on disabled tab: "UPI unavailable offline — check internet". If ALL methods disabled, show: "No payment methods available — check internet or enable Cash in settings."
+- **Migration**: None
+- **Test**: Offline → UPI tab shows tooltip; all-disabled shows full error with settings link
+- **Depends on**: None
+
+---
+
+### STG-380 — PAYMENT — Cart lock on failure doesn't explain 5-minute timeout
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 13 — [PaymentScreen.tsx:879-927](src/screens/PaymentScreen.tsx#L879)
+- **Problem**: Payment failure triggers `lockCart()` (5-minute lock). Error alert says "Unable to complete payment. Try again." but doesn't mention the lock or its duration. Subsequent taps do nothing.
+- **Impact**: Retailer confused why button doesn't work after failure. Doesn't know about 5-minute wait.
+- **Fix**: Error message: "Payment failed. Cart is locked for 5 minutes for safety. Please wait and try again."
+- **Migration**: None
+- **Test**: Payment failure error message mentions lock duration
+- **Depends on**: None
+
+---
+
+### STG-381 — PAYMENT — PENDING_UPI_KEY defined but never used for crash recovery
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 13 — [PaymentScreen.tsx:7-8](src/screens/PaymentScreen.tsx#L7)
+- **Problem**: `PENDING_UPI_KEY` and `PENDING_UPI_TTL_MS` (15 min) are defined but NEVER USED. No logic saves paymentId before completeCheckout. If app crashes during UPI payment, in-flight paymentId is lost. Customer may be double-charged on retry.
+- **Impact**: App crash during UPI → paymentId lost → double charge risk.
+- **Fix**: Before `completeCheckout`, save `{ paymentId, saleId, timestamp }` to AsyncStorage. On mount, check for pending payment and attempt recovery.
+- **Migration**: None
+- **Test**: App crash during UPI → restart recovers pending payment → no double charge
+- **Depends on**: None
+
+---
+
+### STG-382 — PAYMENT — Split payment manual UTR input shown too late (after 10 polls)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 13 — [SplitPaymentModal.tsx:193-206](src/components/sell/SplitPaymentModal.tsx#L193)
+- **Problem**: Manual UTR input appears after 10 failed auto-polling attempts (~5+ minutes with exponential backoff). No "Cancel" option visible during wait.
+- **Impact**: Retailer stuck watching "Checking payment..." for 5+ minutes with no exit.
+- **Fix**: Show manual UTR input after 3 attempts (not 10). Add prominent "Cancel & Refund" button.
+- **Migration**: None
+- **Test**: Manual UTR visible after 3 polls; cancel button available immediately
+- **Depends on**: None
+
+---
+
+### STG-383 — PAYMENT — No refund/void mechanism post-payment from POS
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 13 — [SuccessPrintScreenV2.tsx](src/screens/SuccessPrintScreenV2.tsx)
+- **Problem**: After payment confirmation, SuccessPrintScreen offers Print/WhatsApp/No Print but NO "Void Sale" or "Issue Refund" option. Immediate refunds require admin portal or support call.
+- **Impact**: Customer changes mind 2 minutes after checkout. Retailer cannot refund from POS.
+- **Fix**: Add "Refund/Void Sale" button on success screen. Confirmation modal → call voidSale API. Support full and partial refunds.
+- **Migration**: None
+- **Test**: Void button on success screen; confirmation modal; refund processes correctly
+- **Depends on**: None
+
+---
+
+### STG-384 — PAYMENT — Item discount vs cart discount not clearly distinguished on receipt
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 13 — [SuccessPrintScreenV2.tsx:120](src/screens/SuccessPrintScreenV2.tsx#L120)
+- **Problem**: Receipt shows single "DISCOUNT" line that combines item-level and cart-level discounts. Retailer can't tell which discount was which.
+- **Impact**: Retailer thinks system double-discounted. Calls support for reconciliation.
+- **Fix**: Show separate lines: "ITEM DISCOUNTS: -₹50" and "CART DISCOUNT: -₹50".
+- **Migration**: None
+- **Test**: Receipt shows separate discount lines for item vs cart discounts
+- **Depends on**: None
+
+---
+
+### — AREA 14: Stock Editing Modals —
+
+---
+
+### STG-385 — STOCK — No standalone stock adjustment modal from SELL screen
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 14 — [SellScanScreen.tsx:965-2310](src/screens/SellScanScreen.tsx#L965)
+- **Problem**: Stock editing only available within cart context. No way to adjust stock (shrinkage, damage, count error) without creating a transaction.
+- **Impact**: Retailers must create dummy sales/returns or use retailer portal for stock corrections.
+- **Fix**: Add stock adjustment modal accessible from product tile long-press. Specify quantity + reason (shrinkage, damage, count error).
+- **Migration**: None
+- **Test**: Long-press product → stock adjustment option → adjust with reason
+- **Depends on**: None
+
+---
+
+### STG-386 — STOCK — Stock limit notification doesn't explain WHY quantity was capped
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 14 — [SellScanScreen.tsx:846-870, cartStore.ts:195-210](src/stores/cartStore.ts#L195)
+- **Problem**: `stockLimitEvent` includes reason (out_of_stock, capped, unknown_stock) but UI notification only shows item count, not the reason.
+- **Impact**: Retailers can't distinguish "stock was zero" vs "stock unknown" vs "capped by business logic".
+- **Fix**: Include reason in notification: "2 items reduced — stock was unknown for Tata Salt".
+- **Migration**: None
+- **Test**: Stock limit notification shows reason text
+- **Depends on**: None
+
+---
+
+### — AREA 15: Stock Sync with Retailer Portal —
+
+---
+
+### STG-387 — SYNC — No push-based stock sync, only 5-minute polling
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 15 — [stockService.ts:254-268](src/services/stockService.ts#L254)
+- **Problem**: Stock sync is PULL-based (every 5 minutes). No push notifications or WebSocket for stock changes from retailer portal. Portal changes invisible to POS for up to 5 minutes.
+- **Impact**: If portal adjusts stock (100→50), POS may oversell for 5 minutes. Critical stock parity issues.
+- **Fix**: Implement push notification or SSE channel for `inventory_updated` events. Update cache immediately on push.
+- **Migration**: None
+- **Test**: Portal stock change → POS reflects within 10 seconds (not 5 minutes)
+- **Depends on**: None
+
+---
+
+### STG-388 — SYNC — Stock sync conflicts silently resolved as "server wins"
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 15 — [SyncConflictPanel.tsx:254-270, syncStore.ts:11-17](src/components/ui/SyncConflictPanel.tsx#L254)
+- **Problem**: SyncConflictPanel shows drifts but "Force Sync" assumes server is correct. If POS sold 10 units offline while portal changed stock, those 10 units might be lost or duplicated. No explicit resolution policy.
+- **Impact**: Offline sales data lost. Inventory drift undetected.
+- **Fix**: Implement conflict resolution: (1) log drift, (2) apply server-wins with adjustment entry, (3) notify user of discrepancy amount, (4) allow manual override.
+- **Migration**: None
+- **Test**: Conflict detected → user notified with drift amount → resolution logged
+- **Depends on**: None
+
+---
+
+### — AREA 16: Offline Capabilities —
+
+---
+
+### STG-389 — OFFLINE — Offline queue 24h expiry with no warning before transaction loss
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 16 — [offlineQueue.ts:12, 144-146](src/services/offlineQueue.ts#L12)
+- **Problem**: Offline transactions expire after 24 hours (MAX_AGE_MS). No warnings before expiry. If device stays offline 23+ hours, transactions silently disappear.
+- **Impact**: Sales data permanently lost without audit trail.
+- **Fix**: Add 2-hour expiry warning in SyncStatusWidget: "X transactions expire in 2 hours — please connect to internet."
+- **Migration**: None
+- **Test**: Warning shown when transactions within 2 hours of expiry; count displayed
+- **Depends on**: None
+
+---
+
+### STG-390 — OFFLINE — Offline price cache not refreshed from portal on reconnect
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 16 — [offline/scan.ts:44-90](src/services/offline/scan.ts#L44)
+- **Problem**: When scanning offline, app uses cached prices. If retailer changed sell price on portal, offline cache has old price. No refresh on sync completion.
+- **Impact**: Products sold at wrong prices during intermittent connectivity. No reconciliation.
+- **Fix**: On sync completion, refresh `offline_prices` table with current sell prices from portal.
+- **Migration**: None
+- **Test**: Portal price change → next sync → offline cache updated → correct price used
+- **Depends on**: None
+
+---
+
+### STG-391 — OFFLINE — No post-checkout sync confirmation, sale status ambiguous
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 16 — [SellScanScreen.tsx:2120-2150](src/screens/SellScanScreen.tsx#L2120)
+- **Problem**: Checkout completes locally without waiting for sync. Cart cleared immediately. Retailer doesn't know if sale was submitted to server.
+- **Impact**: May ring up duplicate sales thinking first one failed.
+- **Fix**: Add post-checkout "Syncing..." modal that blocks closing until at least one sync attempt completes. Show "Sale recorded locally — waiting to sync" if offline.
+- **Migration**: None
+- **Test**: Post-checkout shows sync status; offline shows "recorded locally" message
+- **Depends on**: None
+
+---
+
+### STG-392 — OFFLINE — No graceful recovery when offline SQLite database is corrupted
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 16 — [localDb.ts:60-74](src/services/offline/localDb.ts#L60)
+- **Problem**: If SQLite corrupts, hydration logs error and falls back to empty state. All offline products, prices, and pending transactions lost silently.
+- **Impact**: After corruption, no cached products/prices. Retailer can't scan anything offline.
+- **Fix**: Add corruption detection, notify user, provide "Rebuild Offline Cache" button to re-download all products.
+- **Migration**: None
+- **Test**: Corruption detected → user notified → rebuild button re-downloads products
+- **Depends on**: None
+
+---
+
+### — AREA 17: Device Compatibility —
+
+---
+
+### STG-393 — DEVICE — No device type detection (POS terminal vs phone vs tablet)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 17 — [deviceInfo.ts:17-37, EnrollDeviceScreen.tsx:80](src/services/deviceInfo.ts#L17)
+- **Problem**: Device metadata is captured but not used. `deviceType` hardcoded as "RETAILER_PHONE". No distinction between dedicated POS terminals (with scanner, printer, cash drawer) and phones.
+- **Impact**: Backend can't tailor features. Printer settings shown for phones without printers.
+- **Fix**: Add device type selector in enrollment: "Dedicated POS Terminal" vs "Retailer Phone". Use to conditionally enable scanner/printer features.
+- **Migration**: None
+- **Test**: Enrollment shows device type selector; features differ by type
+- **Depends on**: None
+
+---
+
+### STG-394 — DEVICE — Touch targets too small for compact mode on small phones
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 17 — [QuantityPicker.tsx:175-184](src/components/buy/QuantityPicker.tsx#L175)
+- **Problem**: QuantityPicker buttons are 32x32px in compact mode (phones <400px). No hitSlop increase. Below WCAG 44px minimum.
+- **Impact**: Retailers with small phones struggle to tap +/- buttons accurately.
+- **Fix**: Increase `hitSlop` on small screens: `hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}`.
+- **Migration**: None
+- **Test**: QuantityPicker touch targets ≥44px effective area on small screens
+- **Depends on**: None
+
+---
+
+### — AREA 18: Screen Size Compatibility —
+
+---
+
+### STG-395 — LAYOUT — NUM_COLUMNS=2 hardcoded, no responsive column count
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 18 — [SellScanScreen.tsx:283](src/screens/SellScanScreen.tsx#L283)
+- **Problem**: Product grid always uses 2 columns. On 16:9 tablets in landscape, excess whitespace. On 4" phones, tiles are cramped.
+- **Impact**: Wasteful on tablets; cramped on tiny phones.
+- **Fix**: At SellScanScreen.tsx:283, replace `const NUM_COLUMNS = 2` with: `const { width: screenWidth } = useWindowDimensions(); const NUM_COLUMNS = screenWidth > 700 ? 4 : screenWidth > 500 ? 3 : screenWidth < 350 ? 1 : 2;` — `useWindowDimensions` is already imported at line 19 and used at lines 377, 790. Must be inside component function scope (not top-level constant). Also update FlatList `key` prop to force re-render on column change: `key={`grid-${NUM_COLUMNS}`}`.
+- **Migration**: None
+- **Test**: Tablet shows 3+ columns; 4" phone shows 1-2 columns appropriately
+- **Depends on**: None
+
+---
+
+### STG-396 — LAYOUT — Cart sheet snap points not optimized for tablets/landscape
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 18 — [SellScanScreen.tsx:291-293](src/screens/SellScanScreen.tsx#L291)
+- **Problem**: Cart sheet collapsed ratio fixed at 55%. On 12" tablet landscape, cart takes ~400px height leaving only ~300px for products.
+- **Impact**: Cart dominates tablet screen.
+- **Fix**: For landscape (aspect ratio > 1.5), reduce collapsed ratio to 40%. Consider side-by-side layout on wide screens.
+- **Migration**: None
+- **Test**: Tablet landscape → product grid gets ≥60% of height
+- **Depends on**: None
+
+---
+
+### STG-397 — LAYOUT — No safe area handling for notched phones in SellScanScreen
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 18 — [SellScanScreen.tsx:25](src/screens/SellScanScreen.tsx#L25)
+- **Problem**: `useSafeAreaInsets` imported but not applied to root View or SyncStatusWidget. On notched phones (iPhone X+, newer Android), UI renders behind notch.
+- **Impact**: Top UI elements partially hidden under notch.
+- **Fix**: Apply `paddingTop: insets.top` to root container. Wrap SyncStatusWidget with SafeAreaView.
+- **Migration**: None
+- **Test**: On notched device, all UI visible below notch
+- **Depends on**: None
+
+---
+
+### STG-398 — LAYOUT — Modal dialogs stretch full-width on tablets
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 18 — SellScanScreen editor/payment modals
+- **Problem**: Editor and payment modals render full-width on tablets. Input fields stretch 400+px on 12" screen.
+- **Impact**: Hard to use one-handed; poor visual layout.
+- **Fix**: Add `maxWidth: 500` to modal content on screens wider than 600px.
+- **Migration**: None
+- **Test**: Modal constrained to 500px max on tablets
+- **Depends on**: None
+
+---
+
+### — ADDITIONAL CROSS-CUTTING ISSUES —
+
+---
+
+### STG-399 — SELL — Price edit in cart not persisted to AsyncStorage separately
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 12 — [SellScanScreen.tsx:496+](src/screens/SellScanScreen.tsx#L496)
+- **Problem**: If user edits a product's price in cart via `handlePriceCommit`, the price is saved to backend but local edit is only in component state. If app crashes before payment, in-memory price edit lost. Cart shows ₹0 again on restart.
+- **Impact**: Edited prices vanish on crash. Retailer re-edits everything.
+- **Fix**: Store `pendingPriceEdits` as persisted slice in cartStore. On deserialization, apply pending edits.
+- **Migration**: None
+- **Test**: Edit price → force-close app → restart → edited price preserved
+- **Depends on**: None
+
+---
+
+### STG-400 — SELL — No quantity input validation for extremely large numbers
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 12 — [SellScanScreen.tsx:327-331](src/screens/SellScanScreen.tsx#L327)
+- **Problem**: No max per-item quantity limit. User can enter 999999 units. Stock cap prevents over-ordering vs available stock but not nonsensical quantities.
+- **Impact**: Fat-finger "5000" instead of "50" → cart total ₹500,000 → confusion.
+- **Fix**: Enforce max 9,999 per item. Show warning on entry ≥100: "Large quantity — are you sure?"
+- **Migration**: None
+- **Test**: Quantity >9999 rejected; ≥100 shows confirmation
+- **Depends on**: None
+
+---
+
+### STG-401 — PAYMENT — Cart-to-payment data consistency not validated on navigation
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 13 — [PaymentScreen.tsx:170-195](src/screens/PaymentScreen.tsx#L170)
+- **Problem**: Cart items passed as `saleItemIds` in route params. If user modifies cart between opening Payment and confirming, stale total shown.
+- **Impact**: Payment for wrong amount. Inventory deducted for wrong set of items.
+- **Fix**: Validate saleItemIds match current cart on PaymentScreen render. If mismatch, show alert and navigate back to SellScan.
+- **Migration**: None
+- **Test**: Modify cart after opening payment → alert shown → navigate back
+- **Depends on**: None
+
+---
+
+### STG-402 — SELL — Search history unbounded, no expiration or clear-all
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 7 — [SellScanScreen.tsx:2882-2911](src/screens/SellScanScreen.tsx#L2882)
+- **Problem**: Search history displays all recent terms as horizontal chips with no limit or expiration. Over weeks, 50+ terms accumulate. No "clear all" button.
+- **Impact**: Cluttered search history. Touch lag scrolling through chips.
+- **Fix**: Limit to 15 terms. Auto-expire after 7 days. Add "Clear all" button.
+- **Migration**: None
+- **Test**: Max 15 history terms; older than 7 days removed; clear-all works
+- **Depends on**: None
+
+---
+
+### STG-403 — SELL — Cart bar flash animation invisible on slow devices (260ms)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 10 — [SellScanScreen.tsx:2032-2038, 4235-4267](src/screens/SellScanScreen.tsx#L2032)
+- **Problem**: Cart bar flash is 260ms style change. On ≤60fps budget Android, flash completes before user glances at cart bar.
+- **Impact**: Add confirmation invisible on low-end devices.
+- **Fix**: Extend to 400ms. Add scale animation (+5%). Add "Added" toast near cart for 2s. Add haptic feedback.
+- **Migration**: None
+- **Test**: Cart flash visible on budget Android; haptic fires; toast visible for 2s
+- **Depends on**: STG-368
+
+---
+
+### STG-404 — PAYMENT — No UPI polling status visible during QR wait
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 13 — [PaymentScreen.tsx:1232-1275](src/screens/PaymentScreen.tsx#L1232)
+- **Problem**: After QR displayed, no polling status. QR countdown ticks but no indication system is listening for payment.
+- **Impact**: Customer scans QR, bank shows "Processing", POS shows static QR. Retailer thinks payment failed. Duplicate payment risk.
+- **Fix**: Add status line below QR: "Listening for payment..." with pulsing dot. When detected: "Payment detected! Confirming..."
+- **Migration**: None
+- **Test**: QR displayed → "Listening..." status visible; payment detected → "Confirming..." shown
+- **Depends on**: None
+
+---
+
+### STG-405 — PAYMENT — Discount application has no undo
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 12/13 — [SellScanScreen.tsx:2392-2405](src/screens/SellScanScreen.tsx#L2392)
+- **Problem**: Cart-level discount applied instantly. No "undo" action like item removal has.
+- **Impact**: Wrong discount requires manual navigation back to discount input to clear.
+- **Fix**: Show "Discount Applied" toast with inline "Undo" button. 5-second timeout.
+- **Migration**: None
+- **Test**: Discount applied → undo toast visible for 5s; undo removes discount
+- **Depends on**: None
+
+---
+
+### STG-406 — PAYMENT — Offline receipts may not get "OFF-" prefix consistently
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 13/16 — [SuccessPrintScreenV2.tsx:94-129](src/screens/SuccessPrintScreenV2.tsx#L94)
+- **Problem**: Receipt checks `billNumber.startsWith("OFF-")` for offline sales. But bill ref generation may not always add "OFF-" prefix for offline sales. If missed, receipt shows no sync-pending warning.
+- **Impact**: Offline sale receipt doesn't indicate sync status. Customer receipt doesn't match backend.
+- **Fix**: In SellScanScreen, always prepend "OFF-" to offline sale billRef during creation.
+- **Migration**: None
+- **Test**: Every offline sale has "OFF-" prefixed bill ref; receipt shows "OFFLINE SALE" warning
+- **Depends on**: None
+
+---
+
+### STG-407 — PURCHASE — BNPL badge shown without terms explanation
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 8 — [CatalogProductCard.tsx:209-212, SupplierRow.tsx:95-104](src/components/buy/CatalogProductCard.tsx#L209)
+- **Problem**: BNPL badge shows "BNPL ✓" with no explanation of days to pay, limit, or terms.
+- **Impact**: BNPL feature underutilized because retailers don't understand what it means.
+- **Fix**: Show "Pay Later (30 days)" or on long-press show BNPL terms popup.
+- **Migration**: None
+- **Test**: BNPL badge shows payment terms; long-press shows details
+- **Depends on**: STG-287
+
+---
+
+### STG-408 — PURCHASE — Cart quantity badge confusing when same product from multiple suppliers
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 7 — [BuyScreen.tsx:133-141](src/screens/BuyScreen.tsx#L133)
+- **Problem**: Cart badge shows total quantity across ALL suppliers for a product. If same product from 2 suppliers, badge shows combined total. User may think it's duplicate.
+- **Impact**: Confusing when multi-sourcing same product.
+- **Fix**: Show supplier count: "2 suppliers" badge when product in cart from multiple sources.
+- **Migration**: None
+- **Test**: Same product from 2 suppliers → badge shows "2 suppliers" not combined qty
+- **Depends on**: None
+
+---
+
+### STG-409 — VOICE — No recording duration countdown visible during recording
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 9 — [voiceClient.ts:78, 139-145](src/services/voice/voiceClient.ts#L78)
+- **Problem**: Max recording 60 seconds. No visual countdown or warning. Recording silently stops at 60s — retailer may be mid-sentence.
+- **Impact**: Incomplete transcripts. Voice commands fail because words were cut off.
+- **Fix**: Show countdown timer on recording panel. Flash red at 50s remaining. Play subtle beep at 60s.
+- **Migration**: None
+- **Test**: Countdown visible during recording; red flash at 50s; stops at 60s with feedback
+- **Depends on**: None
+
+---
+
+### STG-410 — VOICE — Rate limit 429 errors show no retry-after guidance
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 9 — [voice.ts:64-65](backend/src/routes/v1/pos/voice.ts#L64)
+- **Problem**: 20 requests/minute limit. After limit hit, client shows "Too many requests. Please wait." — no indication of when to retry.
+- **Impact**: Retailer doesn't know if wait is 10 seconds or 5 minutes. May abandon voice feature.
+- **Fix**: Include Retry-After header in 429 response. Client shows "Please wait 45 seconds" with countdown.
+- **Migration**: None
+- **Test**: Rate limit hit → countdown shown with exact seconds remaining
+- **Depends on**: None
+
+---
+
+### STG-411 — VOICE — Zero E2E test coverage for voice flow
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 9 — e2e-tests/
+- **Problem**: No E2E tests for voice: tap-to-record, hold-to-record, clarification modal, product matching, mic permission denial. Backend has unit tests but no integration tests.
+- **Impact**: Regressions in voice UI ship without detection.
+- **Fix**: Add E2E test suite covering all 4-state UX (idle→recording→processing→success/error) + candidate picker.
+- **Migration**: None
+- **Test**: E2E tests for voice flow pass in CI
+- **Depends on**: None
+
+---
+
+## REORDER & CREDIT Deep Audit (STG-412 — STG-480)
+
+> **Source**: Deep functional, UX, and integration audit of REORDER and CREDIT modules (2026-03-13)
+> **Scope**: 8 audit areas — manual reorder, SKU recall, auto-reorder, supplier mapping, reorder UX, trigger conditions, credit/BNPL lifecycle, compliance
+> **Rule**: Do NOT implement until operator approves full ticket list
+
+---
+
+### — AREA 1: Manual Reorder Flow —
+
+---
+
+### STG-412 — REORDER — No manual quick-reorder from purchase history
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 1a — [ReorderScreen.tsx](src/screens/ReorderScreen.tsx)
+- **Problem**: Retailers cannot manually initiate a reorder from previously purchased products. The only path to reorder is via auto-generated pending suggestions. PurchaseHistoryScreen references `reorder.quickReorder` but no flow exists to select past purchases and add to a reorder cart.
+- **Impact**: Retailers who know what they need can't proactively reorder — they must wait for auto-suggestions or manually navigate to the PURCHASE tab.
+- **Fix**: Add "Reorder Again" button on purchase history items that creates a pending reorder (or directly adds to purchase cart with supplier pre-selected).
+- **Migration**: None
+- **Test**: Tap "Reorder Again" on purchase history item → item added to purchase cart with correct supplier/quantity
+- **Depends on**: None
+
+---
+
+### STG-413 — REORDER — Quantity edits in EditReorderModal not persisted to database
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 1a — [EditReorderModal.tsx:160-182](src/components/reorder/EditReorderModal.tsx#L160-L182)
+- **Problem**: `handleSave` only updates local React state via `onSave` callback. The pending reorder record in the database is NEVER updated with the new quantity/supplier. If user edits quantity, navigates away without approving, changes are lost.
+- **Impact**: Retailers believe their quantity edits are saved, but they're temporary. Data inconsistency between what user sees and what DB stores.
+- **Fix**: Add a PATCH endpoint `PATCH /api/v1/reorder/pending/:id` to update quantity, supplier, unitPrice. Call from frontend on save.
+- **Migration**: None
+- **Test**: Edit quantity → navigate away → return → quantity shows updated value from DB
+- **Depends on**: None
+
+---
+
+### STG-414 — REORDER — No reorder history/audit trail visible on POS
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 1a — [ReorderScreen.tsx](src/screens/ReorderScreen.tsx)
+- **Problem**: No screen shows "Reorders You've Approved" or past reorder decisions. Only superadmin has audit log. Retailers can't trace which reorders led to which purchase orders.
+- **Impact**: No accountability or traceability. Retailer can't dispute or review past reorder decisions.
+- **Fix**: Add "Reorder History" tab/section showing approved, dismissed, and expired reorders with timestamps.
+- **Migration**: None
+- **Test**: Approve reorder → navigate to history → approved item visible with PO link
+- **Depends on**: None
+
+---
+
+### — AREA 2: SKU Recall Logic —
+
+---
+
+### STG-415 — REORDER — Pending reorders are snapshots, no staleness detection
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 2b — [reorder.ts:364-395](backend/src/routes/v1/reorder.ts#L364-L395)
+- **Problem**: Pending reorder records capture `current_stock`, `min_threshold`, `suggested_quantity` at creation time. If stock changes after creation (e.g., new shipment arrived), the suggestion is stale but still shows the old quantity.
+- **Impact**: Retailer approves a reorder for 50 units when they only need 10 (new stock arrived since suggestion was created).
+- **Fix**: Add `isStale: boolean` flag comparing current live stock vs snapshot stock. Show warning badge on stale suggestions.
+- **Migration**: None
+- **Test**: Create suggestion → receive stock → suggestion shows "Stock changed" badge
+- **Depends on**: None
+
+---
+
+### STG-416 — REORDER — Expired reorders silently disappear, no re-trigger option
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 2b — [ReorderScreen.tsx:203](src/screens/ReorderScreen.tsx#L203), [reorderApi.ts:10](src/services/api/reorderApi.ts#L10)
+- **Problem**: Backend supports `status = 'expired'` but frontend hardcodes filter to `status: "pending"`. Expired suggestions vanish with no UI to show them or re-trigger.
+- **Impact**: Retailers may not realize a needed reorder expired. No way to bring it back without waiting for the next auto-suggestion cycle.
+- **Fix**: Show expired reorders in a separate section with a "Re-trigger" button that creates a new pending reorder.
+- **Migration**: None
+- **Test**: Expired reorder visible in "Expired" section → tap "Re-trigger" → new pending reorder created
+- **Depends on**: None
+
+---
+
+### STG-417 — REORDER — No expiry cleanup job marks pending reorders as expired
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 2 — [reorder.ts](backend/src/routes/v1/reorder.ts)
+- **Problem**: `pending_reorders` have an `expires_at` field but no background job transitions them to 'expired' status when TTL passes. They remain in 'pending' status indefinitely.
+- **Impact**: Stale suggestions accumulate. Retailer sees outdated reorder suggestions that should have expired.
+- **Fix**: Add daily cron job: `UPDATE pending_reorders SET status='expired' WHERE status='pending' AND expires_at < NOW()`.
+- **Migration**: None
+- **Test**: Pending reorder with past expires_at → cron runs → status = 'expired'
+- **Depends on**: None
+
+---
+
+### — AREA 3: Auto-Reorder Feature —
+
+---
+
+### STG-418 — REORDER — No scheduler generates reorder suggestions (CRITICAL)
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: Deep audit Area 3c — backend/src/services/reorder-service/
+- **Problem**: No cron job or scheduler exists to generate pending reorder suggestions. Endpoints exist to read/approve/dismiss suggestions, but nothing creates them. The `reorder.reorder_runs` audit table exists but is never written to. Event inbox/outbox tables are created but unused.
+- **Impact**: Auto-reorder is effectively non-functional. Retailers enable the feature but never receive suggestions.
+- **Fix**: Implement suggestion generation job: for each store with `reorder_enabled=true`, query `reorder_policies` where `is_enabled=true`, compare `stock_balances.current_qty` vs `min_stock`, create `pending_reorders` where stock is below threshold. Run daily (configurable).
+- **Migration**: None (tables exist)
+- **Test**: Stock drops below min → scheduler runs → pending reorder created with correct suggested quantity
+- **Depends on**: None
+
+---
+
+### STG-419 — REORDER — Auto-approve threshold setting has no effect
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 3c — [reorder.ts:51](backend/src/routes/v1/reorder.ts#L51)
+- **Problem**: Backend returns `autoApproveThreshold` in settings, and PATCH accepts it. ReorderSettingsScreen displays it. But NO business logic uses this threshold to auto-approve reorders below a certain value.
+- **Impact**: Retailers configure a setting that does nothing. Misleading UI.
+- **Fix**: Either implement auto-approval in the suggestion generation job (approve if `suggestedQuantity * unitPrice < threshold`) or remove the setting.
+- **Migration**: None
+- **Test**: Set threshold to ₹500 → suggestion created for ₹300 → auto-approved without user action
+- **Depends on**: STG-418
+
+---
+
+### STG-420 — REORDER — No quantity optimization algorithm (EOQ/MOQ)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 3c — backend reorder logic
+- **Problem**: Suggested quantity is implicitly `target_stock - current_stock` with no consideration of: MOQ from supplier, lead time, holding costs, or Economic Order Quantity (EOQ) formula. Suggestions may be below supplier MOQ.
+- **Impact**: Retailer approves reorder for 5 units but supplier MOQ is 10. PO rejected by supplier.
+- **Fix**: Calculate suggested quantity as `MAX(target_stock - current_stock, supplier_moq)`. Consider adding EOQ calculation for high-volume items.
+- **Migration**: None
+- **Test**: Product with MOQ=10, deficit=5 → suggestion shows 10 units (not 5)
+- **Depends on**: STG-418
+
+---
+
+### STG-421 — REORDER — Approved reorders create draft POs but no submission workflow
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 3c — [reorder.ts:445-600](backend/src/routes/v1/reorder.ts#L445-L600)
+- **Problem**: When retailer approves pending reorders, draft `purchase_orders` are created with `source_reorder_ids`. But no async job transitions them to 'submitted', no supplier notification is sent, and no workflow exists to send POs to suppliers.
+- **Impact**: Approval creates drafts that sit idle. Retailer thinks order was placed but supplier never receives it.
+- **Fix**: After approval, either auto-submit the PO to supplier (via supplier API/notification) or clearly show the PO as "Draft — Submit to Supplier" with a CTA.
+- **Migration**: None
+- **Test**: Approve reorder → PO created → supplier notified OR clear "Submit" button visible
+- **Depends on**: None
+
+---
+
+### STG-422 — REORDER — GRN auto-close doesn't mark reorders as fulfilled
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 3c — Migration 151
+- **Problem**: Migration 151 adds index on `pending_reorders(purchase_order_id)` for approved reorders, with a comment that GRN should auto-close. But no code performs this. When a PO GRN is created, linked pending reorders are NOT updated to 'fulfilled'.
+- **Impact**: Approved reorders stay in 'approved' status forever. No completion signal.
+- **Fix**: In GRN creation endpoint, query `pending_reorders WHERE purchase_order_id = $1` and update status to 'fulfilled'.
+- **Migration**: None
+- **Test**: Create GRN for reorder PO → linked pending reorders → status = 'fulfilled'
+- **Depends on**: None
+
+---
+
+### — AREA 4: Supplier Mapping —
+
+---
+
+### STG-423 — REORDER — No dynamic supplier mapping algorithm
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: Deep audit Area 4d — backend reorder + catalog services
+- **Problem**: Supplier selection uses only `reorder_policies.preferred_supplier_id` (one fixed supplier per product). No algorithm queries `catalog.supplier_products` to find all available suppliers and select the best one based on price, lead time, MOQ, or rating.
+- **Impact**: If preferred supplier is out of stock or has high prices, system can't automatically find alternatives. Retailer must manually edit each suggestion.
+- **Fix**: Implement supplier mapping: query `catalog.supplier_products` for all suppliers offering the product, rank by unit price (ascending), filter by MOQ compatibility, select best. Fall back to preferred supplier.
+- **Migration**: None
+- **Test**: Product with 3 suppliers → suggestion picks cheapest available supplier
+- **Depends on**: STG-418
+
+---
+
+### STG-424 — REORDER — Supplier picker in EditReorderModal doesn't show pack variants
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 4d — [EditReorderModal.tsx:98-111](src/components/reorder/EditReorderModal.tsx#L98-L111)
+- **Problem**: `getProductSuppliers` returns suppliers for a product, but if the same supplier offers multiple variants/pack sizes (e.g., 500g and 1kg), the UI doesn't distinguish between them. User can't choose which pack size to order.
+- **Impact**: Retailer can't specify pack preferences in reorder, leading to wrong quantities arriving.
+- **Fix**: Extend supplier selection UI to show pack size, MOQ, and allow selection of specific supplier-product-variant tuples.
+- **Migration**: None
+- **Test**: Supplier offers 2 pack sizes → both shown in picker with price/MOQ per variant
+- **Depends on**: None
+
+---
+
+### STG-425 — REORDER — Supplier picker loses original supplier if not in catalog
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 4d — [EditReorderModal.tsx:91-139](src/components/reorder/EditReorderModal.tsx#L91-L139)
+- **Problem**: When editing a pending reorder, the modal calls `catalogApi.getProductSuppliers()`. If the original `suggestedSupplierId` is from a supplier not currently in the catalog for that product, the user can't revert to the original choice after opening the modal.
+- **Impact**: Original supplier mapping lost if user opens and cancels the edit modal.
+- **Fix**: In EditReorderModal.tsx `loadSuppliers()` (lines 91-139): After `catalogApi.getProductSuppliers()` returns the list, check if `item.suggestedSupplierId` is in the returned array. If NOT found: (1) Create a synthetic supplier entry `{ supplierId: item.suggestedSupplierId, supplierName: item.suggestedSupplierName || 'Original Supplier', isOriginal: true }` and prepend to supplier list. (2) Mark with "(Original)" badge in picker UI. Lines 102-108 already have a fallback that tries to select current supplier — extend this to also inject missing supplier into the options list. Lines 116-128 create a "placeholder supplier" on API failure but don't add it to the picker dropdown — fix this.
+- **Migration**: None
+- **Test**: Edit reorder with supplier X (not in catalog) → supplier X still visible in picker
+- **Depends on**: None
+
+---
+
+### — AREA 5: Reorder UI/UX —
+
+---
+
+### STG-426 — REORDER — Payment terms not returned by backend, dead code in frontend
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 5e — [reorder.ts:364-395](backend/src/routes/v1/reorder.ts#L364-L395), [PendingReorderCard.tsx:153-164](src/components/reorder/PendingReorderCard.tsx#L153-L164)
+- **Problem**: Backend pending reorders SELECT does NOT include `payment_terms` column. Frontend PendingReorderCard tries to display `item.paymentTerms` but it's always undefined. Feature is dead code.
+- **Impact**: Payment terms information never shown despite UI being built for it.
+- **Fix**: Add `pr.payment_terms as "paymentTerms"` to the backend SELECT query. Source payment terms from supplier-store link or reorder policy.
+- **Migration**: None
+- **Test**: Pending reorder card shows payment terms (e.g., "Net 7 days")
+- **Depends on**: None
+
+---
+
+### STG-427 — REORDER — Approval response missing supplier names
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 5e — [reorder.ts:500-576](backend/src/routes/v1/reorder.ts#L500-L576)
+- **Problem**: Approval endpoint returns `draftPurchaseOrders` with `supplierId` but not `supplierName`. The Alert in ReorderScreen only shows counts ("Approved 5 reorders → Created 2 POs") without naming which suppliers.
+- **Impact**: Minimal feedback. Retailer doesn't know which suppliers the POs are for.
+- **Fix**: Include `supplierName` in the `draftPurchaseOrders` response array. Show "Created PO for Supplier A (3 items), Supplier B (2 items)".
+- **Migration**: None
+- **Test**: Approve 5 reorders → success message names each supplier
+- **Depends on**: None
+
+---
+
+### STG-428 — REORDER — Partial approval failure is silent (transaction rollback)
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 5e — [reorder.ts:445-600](backend/src/routes/v1/reorder.ts#L445-L600)
+- **Problem**: Approval uses a DB transaction. If any one item fails PO creation, the ENTIRE transaction rolls back. Frontend shows "Approved N reorders" but actually 0 were approved.
+- **Impact**: Silent failure. Retailer thinks reorder was approved but nothing happened.
+- **Fix**: Return partial success with details: "Approved 3 of 5. Failed: Item X (reason), Item Y (reason)". Consider per-item transactions.
+- **Migration**: None
+- **Test**: 5 items approved, 1 has invalid supplier → 4 succeed, 1 reported failed
+- **Depends on**: None
+
+---
+
+### STG-429 — REORDER — Empty state message misleading when auto-reorder is off
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 5e — [ReorderScreen.tsx:434-446](src/screens/ReorderScreen.tsx#L434-L446)
+- **Problem**: Empty state says "All caught up! The system will automatically detect low stock items." But if `reorderEnabled === false`, this is a lie — the system is NOT detecting anything.
+- **Impact**: Retailer thinks auto-reorder is working when it's disabled.
+- **Fix**: In ReorderScreen.tsx:434-446: Read `reorderEnabled` from ReorderSettingsScreen state (line 241: `settings?.reorderEnabled ?? false`). If `reorderEnabled === false`: replace "All caught up!" with "Auto-reorder is turned off. Enable it in Reorder Settings to get stock suggestions." + "Go to Settings" button navigating to ReorderSettingsScreen. If `reorderEnabled === true` AND no pending: keep "All caught up! No low stock items detected."
+- **Migration**: None
+- **Test**: Auto-reorder off + no pending → message says "Auto-reorder disabled"
+- **Depends on**: None
+
+---
+
+### STG-430 — REORDER — Selection bar disappears causing layout shift
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Deep audit Area 5e — [ReorderScreen.tsx:460-486](src/screens/ReorderScreen.tsx#L460-L486)
+- **Problem**: When `pendingReorders.length === 0`, the selection bar (containing "Select All") is not rendered, causing the header to shift vertically. Jarring UX when toggling selections.
+- **Impact**: UI jank when deselecting the last item.
+- **Fix**: Keep selection bar visible but disabled when no items present.
+- **Migration**: None
+- **Test**: No pending items → selection bar visible but greyed out, no layout shift
+- **Depends on**: None
+
+---
+
+### STG-431 — REORDER — EditReorderModal original quantity reference too subtle
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Deep audit Area 5e — [EditReorderModal.tsx:244-256](src/components/reorder/EditReorderModal.tsx#L244-L256)
+- **Problem**: "Originally: X units" label in the quantity section is tiny and easy to miss. Retailer might change quantity without understanding what the "original" reference means.
+- **Impact**: Accidental quantity changes without context.
+- **Fix**: Emphasize original quantity (bold, larger font, or different background). Add tooltip "System suggested X units based on your stock policy."
+- **Migration**: None
+- **Test**: Edit modal clearly shows original vs new quantity with visual distinction
+- **Depends on**: None
+
+---
+
+### STG-432 — REORDER — Supplier load error hidden until save attempt
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 5e — [EditReorderModal.tsx:263-283](src/components/reorder/EditReorderModal.tsx#L263-L283)
+- **Problem**: If supplier data fails to load, error is stored but only displayed after user tries to save. User might not realize suppliers failed to load and sees an empty list.
+- **Impact**: Bad UX — retailer tries to approve with no supplier info, then sees error.
+- **Fix**: Show error state immediately when supplier load fails, with a "Retry" button.
+- **Migration**: None
+- **Test**: Supplier API fails → error shown immediately with retry button
+- **Depends on**: None
+
+---
+
+### STG-433 — REORDER — maxReorderQty not visible in policy list
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Deep audit Area 5e — [PolicyRow.tsx](src/components/reorder/PolicyRow.tsx)
+- **Problem**: EditPolicyModal allows setting `maxReorderQty`, backend stores it, but PolicyRow only shows it conditionally (when not null) in small text. Retailer can't easily verify their max quantity setting without opening the edit modal.
+- **Impact**: Setting is hidden. Retailer doesn't know their configured max until they re-edit.
+- **Fix**: Display max reorder quantity in PolicyRow by default (alongside min/target stock).
+- **Migration**: None
+- **Test**: Policy row shows min, target, and max stock values
+- **Depends on**: None
+
+---
+
+### STG-434 — REORDER — Threshold visual guide proportions misleading
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Deep audit Area 5e — [EditPolicyModal.tsx:298-327](src/components/reorder/EditPolicyModal.tsx#L298-L327)
+- **Problem**: Visual guide bar uses hardcoded flex proportions (1:2:3) for critical:low:target sections, but actual thresholds may not match these ratios. If min=10, target=15, bar shows as if 1:2:3 — visually misleading.
+- **Impact**: Retailers misunderstand their threshold settings based on inaccurate visual.
+- **Fix**: Calculate flex values dynamically from actual min/target values.
+- **Migration**: None
+- **Test**: Set min=10, target=50 → bar proportions reflect actual ratio
+- **Depends on**: None
+
+---
+
+### STG-435 — REORDER — Catalog supplier data not cached, re-fetched on every modal open
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Deep audit Area 5e — [EditReorderModal.tsx:91-139](src/components/reorder/EditReorderModal.tsx#L91-L139)
+- **Problem**: Every time user opens EditReorderModal, `loadSuppliers()` fetches from `catalogApi.getProductSuppliers()`. No caching. Opening/closing modal 10 times = 10 API calls.
+- **Impact**: Unnecessary API calls and slower perceived performance.
+- **Fix**: Cache supplier data at ReorderScreen level or use React Query/SWR.
+- **Migration**: None
+- **Test**: Open/close modal 3 times → only 1 API call (cached)
+- **Depends on**: None
+
+---
+
+### — AREA 6: Reorder Trigger Conditions —
+
+---
+
+### STG-436 — REORDER — minStock/minThreshold naming inconsistency across frontend/backend
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 6f — [reorderApi.ts:19](src/services/api/reorderApi.ts#L19), [reorder.ts:218](backend/src/routes/v1/reorder.ts#L218)
+- **Problem**: Frontend uses `minThreshold`, backend schema uses `min_stock`, EditPolicyModal label says "Minimum Stock Level". Different names for the same concept across codebase.
+- **Impact**: Confusing for maintenance. Risk of serialization bugs in future changes.
+- **Fix**: Standardize on one name everywhere (recommend `minThreshold` frontend, `min_stock` backend with consistent alias in queries).
+- **Migration**: None
+- **Test**: All API responses use consistent field name for minimum stock threshold
+- **Depends on**: None
+
+---
+
+### STG-437 — REORDER — Stock status threshold mismatch between frontend and backend
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 6f — [PolicyRow.tsx:160-165](src/components/reorder/PolicyRow.tsx#L160-L165), [reorder.ts:166](backend/src/routes/v1/reorder.ts#L166)
+- **Problem**: Backend filters products where `current_qty <= min_stock` (absolute threshold). Frontend's `isCriticallyLow()` returns true if `currentStock < minThreshold * 0.5` (50% of min). These are different thresholds — "critical" in UI may not match what triggered the suggestion.
+- **Impact**: UI severity badges don't align with backend filtering logic.
+- **Fix**: Move stock status calculation to backend, return it in API response. Frontend displays what backend determines.
+- **Migration**: None
+- **Test**: Backend returns `stockStatus: "critical"|"low"|"ok"` → frontend displays matching badge
+- **Depends on**: None
+
+---
+
+### STG-438 — REORDER — Policy validation frontend-only, no server-side bounds checking
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 6f — [EditPolicyModal.tsx:108-129](src/components/reorder/EditPolicyModal.tsx#L108-L129), [reorder.ts:278](backend/src/routes/v1/reorder.ts#L278)
+- **Problem**: Frontend validates min ≥ 0, target > min, but backend PATCH has no validation that `minStock ≤ targetStock ≤ maxReorderQty`. Direct API calls can store invalid combinations. Min=0 is allowed (always triggers).
+- **Impact**: Invalid policy configs reach database. Bad policies break reorder logic.
+- **Fix**: Add server-side validation: `min_stock > 0`, `target_stock > min_stock`, `max_reorder_qty >= target_stock - min_stock` (if set).
+- **Migration**: None
+- **Test**: API call with minStock=50, targetStock=10 → 400 Bad Request
+- **Depends on**: None
+
+---
+
+### STG-439 — REORDER — No auto-reorder cron visibility or manual trigger on POS
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 6f — [reorder.types.ts:54-65](backend/src/services/reorder-service/)
+- **Problem**: Backend has `reorder_runs` table for tracking evaluations, but POS has no visibility into when last reorder run occurred, no way to manually trigger a run, and no status indicator.
+- **Impact**: Retailers can't tell if auto-reorder is working or if suggestions are stale.
+- **Fix**: In ReorderSettingsScreen.tsx: (1) Query `reorder_runs` table for latest run timestamp: `SELECT MAX(completed_at) FROM reorder_runs WHERE store_id=$1`. (2) Display below Auto Reorder toggle: "Last checked: 2 hours ago" (or "Never" if no runs). (3) Add "Check Now" button that calls `POST /api/v1/reorder/evaluate` to trigger immediate evaluation. (4) Show spinner during evaluation, then refresh pending reorders count. Backend already has `reorder_runs` table — just need an API endpoint to read latest run and a trigger endpoint.
+- **Migration**: None
+- **Test**: Tap "Check Now" → evaluation runs → new suggestions appear
+- **Depends on**: STG-418
+
+---
+
+### STG-440 — REORDER — No bulk policy management
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 6f — [ReorderPoliciesScreen.tsx](src/screens/ReorderPoliciesScreen.tsx)
+- **Problem**: Backend has `bulkUpdatePolicies()` DTO but frontend has no bulk edit feature. If retailer has 100 products and needs to adjust all min stocks by 10%, they must edit each one individually.
+- **Impact**: Extremely tedious for stores with large product catalogs.
+- **Fix**: Add select-multiple + bulk action bar (enable/disable, set preferred supplier, adjust thresholds).
+- **Migration**: None
+- **Test**: Select 10 policies → "Set Min Stock = 5" → all 10 updated
+- **Depends on**: None
+
+---
+
+### STG-441 — REORDER — Filter labels in ReorderPoliciesScreen hardcoded English
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 5e i18n — [ReorderPoliciesScreen.tsx:415-440](src/screens/ReorderPoliciesScreen.tsx#L415-L440)
+- **Problem**: Filter labels ("All", "Enabled", "Disabled", "Low Stock") are hardcoded English, not wrapped in `t()`.
+- **Impact**: Labels won't translate when app supports Hindi/other languages.
+- **Fix**: Wrap all filter labels in `t()` function with corresponding i18n keys.
+- **Migration**: None
+- **Test**: Switch to Hindi locale → filter labels appear in Hindi
+- **Depends on**: None
+
+---
+
+### STG-442 — REORDER — Dismiss reason codes sent as translated strings to backend
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 5e — [DismissReasonModal.tsx:39-46](src/components/reorder/DismissReasonModal.tsx#L39-L46)
+- **Problem**: Predefined dismiss reasons have both a translation key and an English value. The `value` (English text) is sent to backend. If another language is active, backend still receives English, breaking analytics consistency.
+- **Impact**: Backend analytics on dismiss reasons will be inconsistent across languages.
+- **Fix**: Backend should accept reason codes ("NOT_NEEDED", "ALT_SUPPLIER", "OVERSTOCKED") instead of translated strings.
+- **Migration**: None
+- **Test**: Dismiss in Hindi locale → backend receives reason code, not Hindi text
+- **Depends on**: None
+
+---
+
+### STG-443 — REORDER — Dismissal reason max length not validated on backend
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Deep audit Area 5e security — [reorder.ts:616](backend/src/routes/v1/reorder.ts#L616)
+- **Problem**: Frontend limits custom reason to 200 chars (`maxLength={200}`), but backend only checks `reason.trim().length === 0`. No max length validation. Direct API call with 100KB string would be stored.
+- **Impact**: Possible data bloat via direct API abuse.
+- **Fix**: Add `reason.trim().length <= 500` validation on backend.
+- **Migration**: None
+- **Test**: API call with 1000-char reason → 400 Bad Request
+- **Depends on**: None
+
+---
+
+### STG-444 — REORDER — Missing accessibility labels on interactive elements
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 5e a11y — [EditReorderModal.tsx:291](src/components/reorder/EditReorderModal.tsx#L291), [PolicyRow.tsx:41](src/components/reorder/PolicyRow.tsx#L41)
+- **Problem**: Pressable supplier options in EditReorderModal and policy content area in PolicyRow lack `accessibilityLabel` and `accessibilityRole` props.
+- **Impact**: Screen reader users can't distinguish interactive elements.
+- **Fix**: Add `accessibilityLabel` to all interactive Pressable components.
+- **Migration**: None
+- **Test**: Screen reader announces supplier name when focused on picker option
+- **Depends on**: None
+
+---
+
+### STG-445 — REORDER — formatMoney null safety risk on price display
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 5e — [PendingReorderCard.tsx](src/components/reorder/PendingReorderCard.tsx)
+- **Problem**: `formatMoney(suggestedUnitPrice)` called without null check. If `suggestedUnitPrice` is null/undefined, result could be "NaN" or crash.
+- **Impact**: Runtime error or "NaN" displayed to retailer.
+- **Fix**: Add null check: `suggestedUnitPrice ? formatMoney(suggestedUnitPrice) : t('reorder.priceNotSet')`.
+- **Migration**: None
+- **Test**: Pending reorder with null price → shows "Price not set" instead of NaN
+- **Depends on**: None
+
+---
+
+### STG-446 — REORDER — No unit tests for reorder helper functions
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 6f testing — [reorderApi.ts:357-375](src/services/api/reorderApi.ts#L357-L375)
+- **Problem**: Helper functions `getStockDeficit()`, `isCriticallyLow()`, `getEstimatedTotal()` have no unit tests. Threshold calculations not verified.
+- **Impact**: Silent bugs in stock calculations. No regression safety net.
+- **Fix**: Add unit tests with edge cases (stock=0, negative prices, null values, boundary conditions).
+- **Migration**: None
+- **Test**: Unit tests for all 3 helpers pass with 100% branch coverage
+- **Depends on**: None
+
+---
+
+### STG-447 — REORDER — Idempotency framework created but unused
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Deep audit Area 6f — reorder schema
+- **Problem**: `reorder.idempotency_keys` table and event inbox/outbox tables exist but no endpoint validates idempotency keys. Duplicate approval requests could create duplicate POs.
+- **Impact**: Risk of duplicate purchase orders on network retry.
+- **Fix**: Add Idempotency-Key header validation on POST `/pending/approve` and POST `/pending/:id/dismiss`.
+- **Migration**: None
+- **Test**: Send same approval request twice with same idempotency key → second returns cached result
+- **Depends on**: None
+
+---
+
+### — AREA 7: Credit Screen & Financial Offers —
+
+---
+
+### STG-448 — CREDIT — Feature gate hardcoded `false` in PaymentOptionsSheet
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: Deep audit Area 7 — [PaymentOptionsSheet.tsx:100](src/components/buy/PaymentOptionsSheet.tsx#L100)
+- **Problem**: `const creditFeatureEnabled = false;` is hardcoded. Credit is ALWAYS disabled in checkout, regardless of backend configuration. Even if backend enables credit offers, POS blocks them.
+- **Impact**: Credit feature is completely inaccessible to retailers. Entire credit module unusable.
+- **Fix**: At PaymentOptionsSheet.tsx:100, replace `const creditFeatureEnabled = false;` with: `const creditFeatureEnabled = process.env.EXPO_PUBLIC_CREDIT_ENABLED === 'true';` (matching backend pattern at credit.ts:17 which reads `CREDIT_ENABLED` env var). Set `EXPO_PUBLIC_CREDIT_ENABLED=true` in staging `.env` and `false` in production until ready. Long-term: read from platform_settings API via Zustand store.
+- **Migration**: None
+- **Test**: Backend credit enabled + store eligible → credit option visible in payment sheet
+- **Depends on**: None
+
+---
+
+### STG-449 — CREDIT — Credit scoring algorithm is simplified mock, not production-grade
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 9 — [credit.ts:52-184](backend/src/routes/v1/pos/credit.ts#L52-L184)
+- **Problem**: Scoring uses 4 factors with arbitrary thresholds (₹1L=EXCELLENT, ₹50K=GOOD). No consideration of: GST compliance, previous defaults, supplier ratings, inventory velocity, churn rate, industry risk, seasonal patterns. Hardcoded tier amounts.
+- **Impact**: High-risk retailers may get high limits, safe ones get low limits. Not RBI-compliant for microfinance.
+- **Fix**: (1) Move tier thresholds from credit.ts:155-167 to `payments.credit_score_tiers` config table (see STG-450). (2) Current 4 factors are: GMV (0-30pts, line 125-131), Transaction count (0-20pts, line 133-137), BNPL repayment rate (0-30pts with -20 penalty for defaults, line 139-143), Account age (0-20pts, line 145-149). Total = 100pts max. (3) Add 2 new factors: GST compliance (+10pts if GSTIN registered and filing current), Default history (-30pts if any drawdown defaulted in last 12 months). Adjust existing weights proportionally to keep total at 100. (4) Add `scoring_version` field to credit_offers to track which algorithm generated the score.
+- **Migration**: New table `payments.credit_score_tiers` for configurable thresholds
+- **Test**: Store with high GMV but past defaults → lower score than clean store with moderate GMV
+- **Depends on**: None
+
+---
+
+### STG-450 — CREDIT — Credit score tiers hardcoded in source code
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 9 — [credit.ts:155-167](backend/src/routes/v1/pos/credit.ts#L155-L167)
+- **Problem**: Score thresholds and eligible amounts are hardcoded (≥80=EXCELLENT/₹2L, ≥60=GOOD/₹1L, etc.). Any change requires a code deploy.
+- **Impact**: Can't adjust credit limits operationally without deploying new code.
+- **Fix**: Move to `payments.credit_score_tiers` config table. Query at runtime.
+- **Migration**: `CREATE TABLE payments.credit_score_tiers (id SERIAL, min_points INT, score VARCHAR, eligible_amount_minor BIGINT)`
+- **Test**: Update tier in DB → next score calculation uses new thresholds
+- **Depends on**: None
+
+---
+
+### STG-451 — CREDIT — No credit disbursement endpoint after admin approval
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: Deep audit Area 11 — [credit.ts admin routes](backend/src/routes/v1/admin/credit.ts)
+- **Problem**: Admin can approve a credit application, but no endpoint triggers actual disbursement. Application stays in 'approved' status with no path to 'disbursed'. No `createDrawdown()` call happens.
+- **Impact**: Credit approval is a dead end. No money flows. The entire credit lifecycle is incomplete.
+- **Fix**: Add `POST /admin/credit/applications/:id/disburse` that creates a drawdown via the provider, transitions app to 'disbursed', and returns loan details.
+- **Migration**: None
+- **Test**: Admin approves → admin disburses → drawdown created → app status = 'disbursed'
+- **Depends on**: None
+
+---
+
+### STG-452 — CREDIT — KYC validation is format-only, no real identity verification
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 12 — [credit.ts:525](backend/src/routes/v1/pos/credit.ts#L525)
+- **Problem**: KYC checks only PAN format (`^[A-Z]{5}[0-9]{4}[A-Z]$`) and Aadhaar last 4 length. No real UIDAI/PAN/GST API verification. Any correctly-formatted string passes.
+- **Impact**: Fake identities can submit credit applications. Fraud risk. Non-compliant with RBI KYC norms.
+- **Fix**: Phase 1: Add checksums (PAN 4th char indicates entity type). Phase 2: Integrate real KYC verification API (UIDAI, NSDL PAN verify).
+- **Migration**: None
+- **Test**: Invalid PAN checksum → rejected. Valid format but fake PAN → flagged for manual review.
+- **Depends on**: None
+
+---
+
+### STG-453 — CREDIT — No KYC document upload endpoint
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 12 — [kyc_documents table](backend migrations)
+- **Problem**: `payments.kyc_documents` and `kyc_provider_submissions` tables exist but no API endpoint accepts document uploads (GSTIN, bank statements). Current KYC only captures PAN + Aadhaar last 4 as text fields.
+- **Impact**: Enhanced credit scoring impossible without full KYC documentation.
+- **Fix**: Add `POST /api/v1/pos/credit/:appId/kyc/upload` accepting document files (GSTIN cert, bank statement PDF). Store in GCS.
+- **Migration**: None
+- **Test**: Upload GSTIN PDF → stored in GCS → linked to application
+- **Depends on**: None
+
+---
+
+### STG-454 — CREDIT — Credit offers have no expiry cleanup job
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 7 — [credit.ts:277-323](backend/src/routes/v1/pos/credit.ts#L277-L323)
+- **Problem**: Offers have `valid_until` date and endpoint checks expiry before allowing application. But no background job deletes/archives expired offers. Stale offers accumulate in DB.
+- **Impact**: DB bloat. Possible confusion if expired offers appear in queries due to race conditions.
+- **Fix**: Add daily cron: `UPDATE payments.credit_offers SET status='expired' WHERE status='available' AND valid_until < NOW()`.
+- **Migration**: None
+- **Test**: Offer past valid_until → cron runs → status = 'expired', no longer shown
+- **Depends on**: None
+
+---
+
+### — AREA 8: Financial Offer Aggregation —
+
+---
+
+### STG-455 — CREDIT — No external credit providers integrated (only internal BNPL)
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 11 — [CreditProviderRegistry.ts:20-29](backend/src/services/credit/CreditProviderRegistry.ts#L20-L29)
+- **Problem**: Provider registry architecture is ready (interface, registry, aggregation). But only SuperMandi internal and Mock providers are registered. No Rupifi, KredX, Mintifi, or other external providers.
+- **Impact**: Retailers have only one credit option (internal BNPL). No competitive offers. If SuperMandi hits credit limit, no fallback.
+- **Fix**: Provider interface (from CreditProvider.ts) requires implementing 4 methods: `getOffers(storeId): Promise<CreditOffer[]>`, `checkEligibility(storeId): Promise<EligibilityResult>`, `getBalance(storeId): Promise<BalanceResult>`, `healthCheck(): Promise<ProviderHealth>`. Steps: (1) Create `backend/src/services/credit/RupifiProvider.ts` implementing CreditProvider interface, (2) Register in CreditProviderRegistry.ts alongside SuperMandi and Mock providers, (3) Add Rupifi API key to Secret Manager, (4) Handle webhook callbacks for loan status updates. Target: Rupifi (India's largest embedded BNPL for B2B). Alternative: KredX or Mintifi. This is Phase 2 work — Phase 1 is internal BNPL only.
+- **Migration**: Provider config entries in `payments.credit_provider_configs`
+- **Test**: External provider returns offers → aggregated with internal offers → sorted by cost
+- **Depends on**: None
+
+---
+
+### STG-456 — CREDIT — Provider failure silently hides offers, no partial result indicator
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 11 — [CreditProviderRegistry.ts:67-92](backend/src/services/credit/CreditProviderRegistry.ts#L67-L92)
+- **Problem**: If an external provider times out or errors, its offers are silently dropped. Other providers' offers still returned. No indication to frontend that results are partial.
+- **Impact**: Retailer sees only some offers, doesn't know others exist but failed to load.
+- **Fix**: In CreditProviderRegistry.ts `getAllOffers()` method (lines 77-79): currently logs warning and continues. Modify to: (1) Track provider status: `const providerHealth: Record<string, 'healthy'|'degraded'|'down'> = {}`. Mark 'healthy' on success, 'down' on error, 'degraded' on timeout >3s. (2) Return alongside offers: `{ offers, providerHealth, isPartialResult: Object.values(providerHealth).some(s => s !== 'healthy') }`. (3) Frontend CreditScreen.tsx: when `isPartialResult === true`, show amber banner at top: "Some credit providers are unavailable. You may not be seeing all offers." with "Retry" button.
+- **Migration**: None
+- **Test**: Provider X times out → response includes `isPartialResult: true` → banner shown
+- **Depends on**: STG-455
+
+---
+
+### — AREA 9: Eligibility Logic —
+
+---
+
+### STG-457 — CREDIT — No consent management before credit scoring (DPDP Act)
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: Deep audit Area 12 — [credit.ts:275](backend/src/routes/v1/pos/credit.ts#L275)
+- **Problem**: Credit score calculated using retailer's transaction history, purchase volumes, and BNPL repayment data WITHOUT explicit consent. DPDP Act 2023 requires: clear notification, purpose disclosure, right to refuse, opt-out option.
+- **Impact**: Non-compliance with DPDP Act 2023. Legal exposure.
+- **Fix**: Add consent flow: (1) "We'll analyze your business to show credit offers. Proceed?" (2) If yes, calculate and show. (3) Store consent timestamp. (4) Allow opt-out.
+- **Migration**: Add `credit_consent_given_at TIMESTAMPTZ` to stores table
+- **Test**: First credit screen visit → consent prompt → accept → offers shown. Decline → no scoring.
+- **Depends on**: None
+
+---
+
+### STG-458 — CREDIT — No re-eligibility check at application time
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 9 — [credit.ts apply endpoint](backend/src/routes/v1/pos/credit.ts)
+- **Problem**: Eligibility is checked when offers are generated but NOT re-checked when retailer applies. If circumstances changed (e.g., new default, lower GMV) between offer generation and application, stale eligibility is used.
+- **Impact**: Retailers could apply for offers they're no longer eligible for. Approval race condition.
+- **Fix**: Re-run eligibility check at application time. If no longer eligible, reject with explanation.
+- **Migration**: None
+- **Test**: Generate offer → simulate GMV drop → apply → rejected with "Eligibility changed"
+- **Depends on**: None
+
+---
+
+### — AREA 10: Offer Display & Interaction —
+
+---
+
+### STG-459 — CREDIT — No application status timeline or tracking UI
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 10 — [CreditScreen.tsx](src/screens/CreditScreen.tsx)
+- **Problem**: After application, no timeline shows progress. If status = "kyc_verified", user doesn't know: Has approval been given? When will money arrive? No "View Details" or "Check Status" CTA.
+- **Impact**: Retailer confusion. Can't track application without re-opening tab.
+- **Fix**: In CreditScreen.tsx (1,498 lines, 3 tabs: "offers"|"loans"|"history"): (1) Add timeline component in the existing "loans" tab for active applications. Use `src/components/orders/StatusTimeline.tsx` as reference (already exists for order tracking). (2) Timeline steps: Applied → KYC Submitted → KYC Verified → Admin Review → Approved → Disbursed. (3) Map application status field to step index. (4) Show estimated time for next step based on average processing time. (5) Add "View Application" CTA on credit offer cards that navigates to a detail view with the timeline. Component placement: inside the loans tab when an application exists, above the active loans list.
+- **Migration**: None
+- **Test**: Application in kyc_verified → timeline shows steps 1-3 complete, step 4 pending
+- **Depends on**: None
+
+---
+
+### STG-460 — CREDIT — PaymentOptionsSheet credit option shows no cost details
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 10 — [PaymentOptionsSheet.tsx:344-376](src/components/buy/PaymentOptionsSheet.tsx#L344-L376)
+- **Problem**: Credit option shows "Available: ₹50,000" but doesn't show interest rate, tenure, monthly EMI, or total repayable. BNPL shows "Pay by [date]" but credit option is bare.
+- **Impact**: Retailer doesn't understand credit cost vs BNPL. May assume credit is free.
+- **Fix**: In PaymentOptionsSheet.tsx:344-376, the credit option currently shows: icon (bank-outline), "Use Credit", and "Available: {{amount}}" (line 365). Enrich to: (1) Below availability line, add: "Interest: 18% p.a. | EMI: ₹X/mo" using offer data from credit API response. (2) EMI calculation: `principal * (rate/1200) * (1+rate/1200)^months / ((1+rate/1200)^months - 1)`. (3) If multiple offers, show best rate. (4) Data source: the `creditOffers` array from `useCreditStore()` — pass best offer's `interestRate` and `tenureMonths` to PaymentOptionsSheet via props or store.
+- **Migration**: None
+- **Test**: Credit option in payment sheet shows interest rate and EMI estimate
+- **Depends on**: STG-448
+
+---
+
+### STG-461 — CREDIT — CreditScreen extremely large (55KB), needs component extraction
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 10 — [CreditScreen.tsx](src/screens/CreditScreen.tsx)
+- **Problem**: CreditScreen is 55KB managing 3 tabs (offers, loans, history) with complex modals for application, KYC, and repayment. No component extraction.
+- **Impact**: Maintenance difficulty, potential performance issues on lower-end devices, hard to test.
+- **Fix**: CreditScreen.tsx is 1,498 lines. Extract into 5 components in `src/components/credit/`: (1) `CreditOffersTab.tsx` — offers list + score breakdown display (from "offers" tab, ~300 lines), (2) `ActiveLoansList.tsx` — active loans with status + payment progress (from "loans" tab, ~250 lines), (3) `CreditHistoryTab.tsx` — past loans and completed applications (from "history" tab, ~200 lines), (4) `ApplicationModal.tsx` — the apply flow with steps "amount" | "kyc" | "success" (lines 82-100 state + modal content, ~300 lines), (5) `ScoreBreakdownCard.tsx` — credit score visualization (shared by offers and detail views, ~100 lines). Share state via props. Parent CreditScreen.tsx becomes tab orchestrator (~200 lines): tab state, data fetching, modal visibility. Use `TabId = "offers" | "loans" | "history"` type (already at line 43).
+- **Migration**: None
+- **Test**: All extracted components render correctly, no regression in functionality
+- **Depends on**: None
+
+---
+
+### — AREA 11: BNPL Specific —
+
+---
+
+### STG-462 — BNPL — Interest calculation doesn't prorate by tenure days
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 7 — [bnpl.ts:73-78](backend/src/routes/v1/pos/bnpl.ts#L73-L78)
+- **Problem**: Interest uses simple `principal * rate / 100` without accounting for tenure days. A 30-day drawdown at 10% annual should be ~0.82%, not 10%. Current formula charges the full annual rate regardless of tenure.
+- **Impact**: Retailers are overcharged on interest. Trust erosion.
+- **Fix**: Prorate: `interestMinor = Math.round(principal * (rate / 100) * daysRemaining / 365)`.
+- **Migration**: None
+- **Test**: 7-day drawdown at 12% annual → interest = principal * 0.12 * 7 / 365
+- **Depends on**: None
+
+---
+
+### STG-463 — BNPL — No overdue visual hierarchy in BnplDuesScreen
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 7 — [BnplDuesScreen.tsx](src/screens/BnplDuesScreen.tsx)
+- **Problem**: Overdue drawdowns not visually distinct. No red banner, no "ACTION REQUIRED" badge. User scrolling quickly might miss overdue items.
+- **Impact**: Retailers miss payment deadlines, unintentional defaults.
+- **Fix**: Add sticky overdue alert header: "{N} overdue payments — Pay now to avoid credit suspension".
+- **Migration**: None
+- **Test**: 2 overdue drawdowns → red sticky banner at top with count
+- **Depends on**: None
+
+---
+
+### STG-464 — BNPL — Dispute has no audit trail or status history
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 7 — [bnpl.ts:583-679](backend/src/routes/v1/pos/bnpl.ts#L583-L679)
+- **Problem**: Dispute created but no: timestamp of creation, who created it (staff vs retailer), initial status reason, history of status changes (submitted → under_review → resolved).
+- **Impact**: Support can't trace dispute lifecycle. No accountability if disputes are lost.
+- **Fix**: Add `created_by`, `status_changed_at`, and `status_history JSONB` column to `bnpl_disputes`.
+- **Migration**: ALTER TABLE payments.bnpl_disputes ADD COLUMN status_history JSONB DEFAULT '[]'
+- **Test**: Dispute created → status_history contains initial entry with timestamp + actor
+- **Depends on**: None
+
+---
+
+### STG-465 — BNPL — No drawdown limit per supplier
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 7 — [bnpl.ts](backend/src/routes/v1/pos/bnpl.ts)
+- **Problem**: Retailer can take unlimited BNPL from same supplier across multiple drawdowns. No aggregate check per supplier. Only store-level `bnpl_credit_limit` exists (bnpl.ts:63). No `supplier_bnpl_limit` or per-supplier-store cap in schema.
+- **Impact**: Excessive credit exposure to single supplier. Financial risk for SuperMandi.
+- **Fix**: (1) Add `bnpl_limit_minor BIGINT DEFAULT NULL` column to `supplier_store_links` table — NULL means use store-level default. (2) In bnpl.ts drawdown creation (around line 63): after store-level check, add: `SELECT COALESCE(SUM(principal_minor - paid_amount_minor), 0) FROM bnpl_drawdowns WHERE store_id=$1 AND supplier_id=$2 AND status IN ('active','partial','overdue')` and compare against `supplier_store_links.bnpl_limit_minor`. (3) Return 400 with message "Supplier credit limit reached (₹X outstanding of ₹Y limit)".
+- **Migration**: None
+- **Test**: Supplier limit ₹50k → existing ₹45k outstanding → new ₹10k drawdown → rejected
+- **Depends on**: None
+
+---
+
+### STG-466 — BNPL — Payment status polling race condition
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 7 — [bnplApi.ts:169-274](src/services/api/bnplApi.ts#L169-L274)
+- **Problem**: `pollBnplPaymentStatus` has race condition: after `await getBnplPaymentStatus()`, between the check and resolve/reject, another poll could resolve first. If two polls race, the first resolve "wins" but second poll's cleanup might not fire.
+- **Impact**: Memory leak — setInterval not cleared if promise resolves while interval is pending.
+- **Fix**: Use AbortController explicitly. Clear interval BEFORE resolving. Add mutex on resolve/reject.
+- **Migration**: None
+- **Test**: Concurrent poll attempts → only one resolves, interval cleared, no memory leak
+- **Depends on**: None
+
+---
+
+### STG-467 — BNPL — Overdue maturation job functions exist but no scheduler
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 7 — backend BNPL overdue service
+- **Problem**: `processOverdueDrawdowns()` and `getOverdueForReminders()` functions exist but no cron job is scheduled to run them. Drawdowns past due date are never automatically marked 'overdue'.
+- **Impact**: Overdue drawdowns stay in 'active' status. No notifications sent. Credit risk unmeasured.
+- **Fix**: Add daily cron job (2 AM IST) to run `processOverdueDrawdowns()` and dispatch FCM notifications.
+- **Migration**: None
+- **Test**: Drawdown past due date → cron runs → status = 'overdue' → FCM notification sent
+- **Depends on**: None
+
+---
+
+### STG-468 — BNPL — Max days hardcoded to 7, not configurable per store type
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 7 — [SuperMandiCreditProvider.ts:38](backend/src/services/credit/SuperMandiCreditProvider.ts#L38)
+- **Problem**: `const maxDays = store.bnpl_max_days || 7;` defaults to 7 days. Not configurable per store type. Wholesale retailers may need 30 days.
+- **Impact**: Wholesale stores forced into 7-day payment terms, which is too short.
+- **Fix**: Add store type logic or make configurable via admin: wholesale = 30 days, retail = 7 days.
+- **Migration**: None
+- **Test**: Wholesale store → BNPL offers show 30-day tenure
+- **Depends on**: None
+
+---
+
+### — AREA 12: Khata (Store Credit) —
+
+---
+
+### STG-469 — KHATA — Phone number validation too weak (length only)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 12 — [KhataScreen.tsx:162](src/screens/KhataScreen.tsx#L162)
+- **Problem**: Only checks `phone.length < 10`. Accepts "0000000000" or non-numeric characters. No regex validation.
+- **Impact**: Invalid phone numbers stored in khata ledger, causing downstream lookup failures.
+- **Fix**: Add regex: `/^\d{10}$/.test(phone)` and Indian prefix validation.
+- **Migration**: None
+- **Test**: Enter "abcdefghij" → rejected. Enter "9876543210" → accepted.
+- **Depends on**: None
+
+---
+
+### STG-470 — KHATA — Transaction type semantics unclear (DEBIT vs PAYMENT)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 12 — [khataService.ts:20](src/services/khataService.ts#L20)
+- **Problem**: Types include "CREDIT", "DEBIT", "PAYMENT" but DEBIT and PAYMENT both reduce balance. Is DEBIT a refund or a reversal? Frontend doesn't use DEBIT.
+- **Impact**: Ambiguous ledger. Auditors can't distinguish reversed credits from actual payments.
+- **Fix**: In khataService.ts:20 and backend khata.ts: (1) Keep CREDIT (store gives credit to customer, increases balance), (2) Keep PAYMENT (customer pays back, reduces balance), (3) Remove DEBIT (currently unused in frontend, same icon as PAYMENT at lines 589-593 — redundant), (4) Add REFUND (store returns money to customer, reduces balance, linked to original CREDIT entry), (5) Add VOID (correction of erroneous entry, linked to original entry via `linked_entry_id`). Schema change: add `linked_entry_id UUID REFERENCES khata_entries(id)` column. Frontend: update KhataScreen.tsx icon mapping and color coding per type.
+- **Migration**: ALTER TYPE to add new variants, migrate existing data
+- **Test**: Record reversal → type = 'REVERSAL' with linkedEntryId pointing to original
+- **Depends on**: None
+
+---
+
+### STG-471 — KHATA — No entry correction or void mechanism
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 12 — [khata.ts:256](backend/src/routes/v1/pos/khata.ts#L256)
+- **Problem**: Records `created_by: deviceId` (not staff name). No "deleted" or "voided" entry type. Incorrect entries are left in ledger with no correction path.
+- **Impact**: Ledger integrity compromised. Disputes impossible to resolve.
+- **Fix**: (1) In backend khata.ts:256: change `created_by` from deviceId to `staffId` (from JWT token). Add `staff_name` denormalized field for display. (2) Add void mechanism: `POST /api/v1/pos/khata/entries/:id/void` with body `{ reason: string }`. Sets `voided_at=NOW(), void_reason=$reason, voided_by=$staffId`. (3) Voided entries: excluded from balance calculation (`WHERE voided_at IS NULL`), shown in ledger with strikethrough + red "VOIDED" badge. (4) Frontend KhataScreen.tsx: add long-press on entry → "Void this entry?" confirmation with reason input. Only MANAGER role can void.
+- **Migration**: Add `voided_at`, `void_reason`, `voided_by` columns
+- **Test**: Void an entry → original marked voided → reversal entry created → balance recalculated
+- **Depends on**: None
+
+---
+
+### STG-472 — KHATA — No bulk actions (settle, export, record payment for multiple)
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 12 — [KhataScreen.tsx](src/screens/KhataScreen.tsx)
+- **Problem**: Every khata entry is one-by-one. Can't: select multiple customers and record payment to all, bulk export ledger, or bulk settle accounts.
+- **Impact**: Manager spends 10+ minutes recording daily settlements.
+- **Fix**: Add checkbox selection + "Record Payment for Selected" button. Add "Export Ledger" option.
+- **Migration**: None
+- **Test**: Select 5 customers → "Record Payment ₹500 each" → all 5 updated
+- **Depends on**: None
+
+---
+
+### STG-473 — KHATA — Customer phone numbers stored without consent (DPDP risk)
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit Area 12 compliance — [KhataScreen.tsx](src/screens/KhataScreen.tsx), [khata.ts](backend/src/routes/v1/pos/khata.ts)
+- **Problem**: Phone numbers stored without: consent from customers, purpose disclosure, retention policy, deletion mechanism. Informal credit ledger collects PII with no data protection.
+- **Impact**: Data breach exposes customer phone numbers + balances without permission. DPDP Act non-compliance.
+- **Fix**: (1) In KhataScreen.tsx, before first entry creation (Add Credit modal at lines 778-787 and Record Payment modal at lines 854-863): show consent checkbox "Customer agrees to store their phone number for credit tracking" — block save if unchecked. (2) Backend khata.ts: add `consent_given_at TIMESTAMPTZ` column to `khata_customers` table. Reject entry creation if `consent_given_at IS NULL`. (3) Retention: add daily cron job to anonymize phone numbers (replace with hash) for customers with no active balance and last transaction > 2 years. (4) Add "Delete My Data" button in customer detail → removes phone, keeps anonymized ledger for accounting.
+- **Migration**: Add `consent_given_at` column to khata_customers
+- **Test**: First khata entry → consent prompt → accept → entry created with consent timestamp
+- **Depends on**: None
+
+---
+
+### — AREA 13: Compliance & Data Security —
+
+---
+
+### STG-474 — CREDIT — PAN number stored in plaintext (DPDP Act violation)
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: Deep audit Area 12 — [credit.ts:550](backend/src/routes/v1/pos/credit.ts#L550)
+- **Problem**: Full PAN (10 characters) stored in plain text in `credit_applications` table. No column-level encryption, no key rotation. Full backup exposure.
+- **Impact**: Data breach = retailer privacy violation + DPDP Act 2023 non-compliance.
+- **Fix**: Encrypt PAN at rest using AES-256 with key from Secrets Manager. Add pgcrypto for transparent column encryption. Audit all DB backups for PII exposure.
+- **Migration**: Encrypt existing PAN values in credit_applications
+- **Test**: PAN stored → DB column shows encrypted value → decrypt API returns original
+- **Depends on**: None
+
+---
+
+### STG-475 — CREDIT — No rate limiting on credit offer generation endpoint
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 13 — [credit.ts](backend/src/routes/v1/pos/credit.ts)
+- **Problem**: BNPL payment endpoints are rate-limited via `financialOperationsRateLimiter`, but credit offer generation (which triggers expensive scoring calculation) is not rate-limited.
+- **Impact**: Repeated calls could overload scoring logic. Potential DoS vector.
+- **Fix**: In backend credit.ts, import existing `financialOperationsRateLimiter` from bnpl.ts (already used at bnpl.ts:9). Apply to `GET /api/v1/pos/credit/offers` route (around line 264): `router.get('/offers', financialOperationsRateLimiter, async (req, res) => { ... })`. The existing rate limiter is Redis-based and per-store (keyed by storeId from JWT). Configure: 5 requests per minute per store for offer generation, 10 per minute for read-only queries.
+- **Migration**: None
+- **Test**: 6 rapid requests → 6th returns 429 with retry-after header
+- **Depends on**: None
+
+---
+
+### STG-476 — CREDIT — Missing composite index on bnpl_drawdowns for hot queries
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Deep audit Area 13 performance — [bnpl.ts](backend/src/routes/v1/pos/bnpl.ts)
+- **Problem**: No explicit index on `bnpl_drawdowns(store_id, status, due_date DESC)`. Active/summary queries do full table scan.
+- **Impact**: Query performance degrades as drawdown count grows.
+- **Fix**: `CREATE INDEX idx_bnpl_drawdowns_store_status ON payments.bnpl_drawdowns(store_id, status, due_date DESC)`.
+- **Migration**: Add index migration
+- **Test**: EXPLAIN ANALYZE on active drawdowns query → uses index scan
+- **Depends on**: None
+
+---
+
+### — Cross-Cutting Issues —
+
+---
+
+### STG-477 — CREDIT — Hardcoded ₹ currency symbol in multiple screens
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Deep audit cross-cutting — [BulkPurchaseCreditScreen.tsx:152](src/screens/BulkPurchaseCreditScreen.tsx#L152), [KhataScreen.tsx:576](src/screens/KhataScreen.tsx#L576)
+- **Problem**: Hardcoded `₹` (Unicode `\u20B9`) in multiple screens instead of using i18n currency formatting.
+- **Impact**: If SuperMandi expands to non-India regions, wrong currency shown.
+- **Fix**: 3 hardcoded ₹ occurrences found: KhataScreen.tsx:798 ("Amount (₹) *"), KhataScreen.tsx:865 ("Amount (₹) *"), BnplDuesScreen.tsx:678 (currency display). CreditScreen uses `formatMoney()` correctly. Replace hardcoded ₹ with `formatMoney()` from `src/utils/money.ts` or use i18n: `t('common.currency', { amount })`. Low priority — India-only for now, but consistency with CreditScreen pattern is good practice.
+- **Migration**: None
+- **Test**: Locale switch → currency symbol changes accordingly
+- **Depends on**: None
+
+---
+
+### STG-478 — CREDIT — BnplDuesScreen 55KB, same extraction needed as CreditScreen
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Deep audit cross-cutting — [BnplDuesScreen.tsx](src/screens/BnplDuesScreen.tsx)
+- **Problem**: BnplDuesScreen is 55KB, same issue as CreditScreen (STG-461). Both manage complex modals and state in a single file.
+- **Impact**: Maintenance difficulty, performance on low-end devices.
+- **Fix**: BnplDuesScreen.tsx is 1,439 lines. Extract into 4 components in `src/components/bnpl/`: (1) `ActiveDrawdownsList.tsx` — main list with status badges and payment actions (lines ~400-700), (2) `OverdueBanner.tsx` — top banner showing overdue count + total amount (lines ~150-200), (3) `RepaymentModal.tsx` — payment recording form with UTR input + polling (lines ~700-1000), (4) `DisputeModal.tsx` — dispute creation and status tracking (lines ~1000-1200). Share state via props or Zustand store. Parent BnplDuesScreen.tsx becomes orchestrator (~200 lines): data fetching + modal visibility state + layout composition.
+- **Migration**: None
+- **Test**: Extracted components render correctly, no regression
+- **Depends on**: None
+
+---
+
+### STG-479 — REORDER/CREDIT — No E2E test for reorder approval → PO creation lifecycle
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Deep audit testing — e2e-tests/
+- **Problem**: No E2E test covering: suggestion generation → pending reorder → edit quantity → approve → draft PO created → supplier linked. Also no E2E for credit: apply → KYC → approve → disburse.
+- **Impact**: Critical business flows untested end-to-end. Regressions ship undetected.
+- **Fix**: Split into 2 test files: (1) `e2e-tests/tests/reorder-approval/reorder-approval.spec.ts`: Setup store with products below min_stock → trigger reorder run API → verify pending reorders created → edit quantity via API → approve selected → verify draft PO created with correct supplier + quantities → verify reorder status = 'approved'. Note: `e2e-tests/tests/reorder-lifecycle/reorder-lifecycle.spec.ts` already exists (50+ lines) covering settings → policies — extend it or add separate approval file. (2) `e2e-tests/tests/credit-lifecycle/credit-lifecycle.spec.ts` (NEW): Setup store with sufficient GMV history → request credit offers → verify score + tier → submit application with KYC → admin approve → verify application status timeline. No credit E2E exists currently.
+- **Migration**: None
+- **Test**: E2E suite covers reorder approval + credit application flows
+- **Depends on**: None
+
+---
+
+### STG-480 — BNPL — No early repayment incentive or standing instructions
+
+- **Status**: OPEN
+- **Priority**: P3
+- **Source**: Deep audit Area 7 — BNPL payment flow
+- **Problem**: No discount for early BNPL repayment. No auto-debit or recurring mandate option. Manual UTR entry required every time.
+- **Impact**: No incentive for retailers to pay early. Manual process increases friction.
+- **Fix**: Phase 1 — In bnpl.ts payment endpoint (lines 73-78 where `interest = principal * rate / 100`): (1) Calculate `daysRemaining = due_date - payment_date`. If `daysRemaining > 0` (early payment): `earlyDiscount = interest * (daysRemaining / totalTenureDays) * 0.5` (50% of remaining interest waived). (2) Show discount in BnplDuesScreen repayment modal: "Pay now and save ₹X (early payment discount)". (3) Store `early_payment_discount_minor` in payment record. Phase 2 (future): UPI mandate via `POST /bnpl/:drawdownId/mandate` using NPCI recurring mandate API — separate ticket when UPI mandate integration is available.
+- **Migration**: None
+- **Test**: Pay 5 days early on 7-day term → interest reduced by proportional amount
+- **Depends on**: None
+
+---
+
+<!-- NEW TICKETS BELOW THIS LINE — next ticket: STG-493 -->
+
+## GUARD Tickets (STG-481 — STG-492)
+
+> These tickets were generated by the Loophole Guard Protocol (LGP) audit on 2026-03-14.
+> Each is a P0 prerequisite that MUST be completed before the layer that depends on it.
+
+---
+
+### STG-481 — GUARD: i18n validation script — en/hi key parity check
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: LGP audit — LH-010
+- **Layer**: 2-PREREQ (must complete before Layer 2 i18n tickets)
+- **Problem**: No build-time validation that `en.json` and `hi.json` have matching keys. Tickets STG-257–279 add i18n keys to screens, but if a key is added to `en.json` and missed in `hi.json`, Hindi users see raw key strings. No automated catch.
+- **Impact**: Silent i18n regression — Hindi-speaking retailers see `sellScan.searchPlaceholder` instead of translated text.
+- **Fix**: Create `scripts/i18n-validate.js` that: (1) Reads `src/i18n/en.json` and `src/i18n/hi.json`. (2) Computes symmetric difference of flattened key sets. (3) Reports missing keys in either file. (4) Exits with code 1 if any mismatch. Add `"i18n:validate": "node scripts/i18n-validate.js"` to root `package.json` scripts. Wire into pre-commit hook via `fix-guard.js` or `lint-staged`.
+- **Migration**: None
+- **Test**: Add a key to `en.json` only → run script → expect exit 1 with clear error. Add matching key to `hi.json` → run script → expect exit 0.
+- **Depends on**: None
+
+---
+
+### STG-482 — GUARD: i18n key naming convention document
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: LGP audit — LH-011
+- **Layer**: 2-PREREQ (must complete before Layer 2 i18n tickets)
+- **Problem**: No defined convention for i18n key naming. Different tickets may use `sell.search`, `sellScan.search`, `screens.sell.search` — causing key collisions and inconsistency.
+- **Impact**: Merge conflicts between parallel i18n tickets. Inconsistent key paths make maintenance difficult.
+- **Fix**: Create `src/i18n/NAMING.md` defining: (1) `common.*` = truly generic strings shared across screens ("Loading", "Error", "Retry", "Cancel", "Save"). (2) `{screenName}.*` = screen-specific strings using camelCase screen name ("sellScan.searchPlaceholder", "payment.completeButton"). (3) `components.*` = shared component strings ("cartItem.quantity", "sellTile.outOfStock"). (4) Flat keys within namespace — no deeper than 2 levels. (5) **RULE**: Every STG-257–279 ticket MUST follow this convention. Add validation to STG-481 script to check key depth ≤ 2.
+- **Migration**: None
+- **Test**: Review convention doc for completeness. Verify STG-481 script enforces max depth.
+- **Depends on**: None
+
+---
+
+### STG-483 — GUARD: Refactor SellTile.formatPrice() → use formatMoney()
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: LGP audit — LH-007
+- **Layer**: 1 (must complete before Layer 4 SellTile tickets)
+- **Problem**: `SellTile.tsx` has a local `formatPrice()` function that duplicates `src/utils/money.ts:formatMoney()`. When STG-116 updates `formatMoney()` to use Indian lakh formatting, `SellTile.formatPrice()` won't get the update — prices on sell tiles will display differently from everywhere else.
+- **Impact**: Inconsistent price display between sell tiles and cart/payment/receipt.
+- **Fix**: In `src/components/SellTile.tsx`: (1) Remove the local `formatPrice()` function. (2) Import `formatMoney` from `src/utils/money`. (3) Replace all `formatPrice(x)` calls with `formatMoney(x)`. Verify no behavioral difference (both should produce `₹X.XX` format currently).
+- **Migration**: None
+- **Test**: Typecheck passes. Sell tile prices render identically before and after. Snapshot test if available.
+- **Depends on**: None
+
+---
+
+### STG-484 — GUARD: Refactor CartItem + SupplierRow → useThemeColors() hook
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: LGP audit — LH-013, LH-014
+- **Layer**: 4-PREREQ (must complete before Layer 4 theme-dependent tickets)
+- **Problem**: `CartItem.tsx` and `SupplierRow.tsx` use static `import { theme } from '../theme/colors'` instead of the `useThemeColors()` hook. This means dark mode themes don't apply to these components. Also, `SupplierRow.tsx:120` uses `stockColor + "20"` (string concatenation for opacity) which breaks if color format changes from hex to rgb.
+- **Impact**: Cart items and supplier rows don't respond to dark mode toggle. Opacity hack produces invalid colors if theme changes color format.
+- **Fix**: In both files: (1) Replace `import { theme }` with `const colors = useThemeColors()`. (2) Update all `theme.xxx` references to `colors.xxx`. (3) In `SupplierRow.tsx:120`, replace `stockColor + "20"` with `{ backgroundColor: stockColor, opacity: 0.12 }` using proper React Native style.
+- **Migration**: None
+- **Test**: Typecheck passes. Both components render correctly in light mode. If dark mode exists, verify colors switch.
+- **Depends on**: None
+
+---
+
+### STG-485 — GUARD: consent_records table + consent API (DPDP)
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: LGP audit — LH-004, LH-029
+- **Layer**: 0A (must complete before any DPDP ticket in Layer 0C)
+- **Problem**: DPDP Act 2023 requires explicit consent tracking for PII collection (phone, PAN, address). No `consent_records` table exists. No API to record or verify consent. STG-229 (PAN encryption) and STG-230 (phone consent) depend on this infrastructure.
+- **Impact**: DPDP non-compliance. No audit trail for consent. Cannot prove when/how consent was obtained.
+- **Fix**: (1) Create migration `xxx_create_consent_records.sql`: table `consent_records` with columns `id SERIAL PRIMARY KEY`, `user_id INT NOT NULL`, `consent_type VARCHAR(50) NOT NULL` (e.g., 'phone_collection', 'pan_storage', 'credit_scoring'), `granted BOOLEAN NOT NULL`, `granted_at TIMESTAMPTZ`, `revoked_at TIMESTAMPTZ`, `ip_address INET`, `user_agent TEXT`, `consent_version VARCHAR(20)`. (2) Add `POST /api/v1/consent` endpoint to record consent. (3) Add `GET /api/v1/consent/:userId` to check active consents. (4) Add middleware `requireConsent('pan_storage')` that checks consent before allowing PAN operations.
+- **Migration**: Yes — new table `consent_records`
+- **Test**: POST consent → GET returns granted. Revoke → GET returns revoked. Middleware blocks without consent.
+- **Depends on**: None
+
+---
+
+### STG-486 — GUARD: Encryption key management infra (GCP Secret Manager)
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: LGP audit — LH-005
+- **Layer**: 0A (must complete before STG-229 PAN encryption)
+- **Problem**: STG-229 requires encrypting PAN numbers at rest, but no encryption key management exists. No key rotation strategy. Hardcoding encryption keys in env vars is insecure and doesn't support rotation.
+- **Impact**: Cannot implement PAN encryption without key infrastructure. Plaintext keys in env vars risk exposure.
+- **Fix**: (1) Create `backend/src/utils/encryption.ts` with `encrypt(plaintext, purpose)` and `decrypt(ciphertext, purpose)` using AES-256-GCM. (2) Key retrieval from GCP Secret Manager via `@google-cloud/secret-manager`. (3) Key caching with TTL (5 min) to avoid per-request Secret Manager calls. (4) Support key versioning for rotation: `encrypt` always uses latest version, `decrypt` reads version from ciphertext prefix. (5) Add `GCP_KMS_KEY_RING` and `GCP_KMS_CRYPTO_KEY` env vars to `.env.example`.
+- **Migration**: None (key management is infrastructure, not schema)
+- **Test**: Encrypt → decrypt round-trip. Decrypt with wrong key fails gracefully. Key caching reduces Secret Manager calls.
+- **Depends on**: GCP Secret Manager access (operator must create key)
+
+---
+
+### STG-487 — GUARD: Backend staff role + max discount API
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: LGP audit — LH-015
+- **Layer**: 7-PREREQ (must complete before STG-102 max discount limit)
+- **Problem**: STG-102 (max discount limit + manager approval) assumes backend endpoints exist for: (a) getting the current staff member's role and max discount authority, (b) setting store-level max discount percentage. Neither endpoint exists. Without them, the frontend has no data to enforce limits.
+- **Impact**: STG-102 would be dead code — discount limits in UI with no backend enforcement. Staff could bypass limits by editing requests.
+- **Fix**: (1) Add `GET /api/v1/pos/staff/me` endpoint returning `{ role, display_name, max_discount_pct }` from JWT + store config. (2) Add `PUT /api/v1/admin/stores/:storeId/config` for superadmin to set `max_discount_pct` (default 10%). (3) Add `max_discount_pct NUMERIC(5,2) DEFAULT 10.00` column to `stores` table. (4) Add server-side validation in checkout: reject if discount > staff's max_discount_pct (unless manager-approved).
+- **Migration**: Yes — add `max_discount_pct` column to stores table
+- **Test**: Staff with 10% limit tries 15% discount → rejected. Manager approves → accepted. Superadmin updates limit → staff sees new limit.
+- **Depends on**: None
+
+---
+
+### STG-488 — GUARD: Backend manager PIN verification endpoint
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: LGP audit — LH-015
+- **Layer**: 7-PREREQ (must complete before STG-102 manager approval flow)
+- **Problem**: STG-102 requires manager approval for discounts exceeding staff limit. The approval flow needs a PIN verification endpoint so the manager can enter their PIN on the POS device to authorize the override. No such endpoint exists.
+- **Impact**: Manager approval modal in STG-102 would have no backend to verify the PIN against. Approval would be client-side only — no audit trail, no security.
+- **Fix**: (1) Add `POST /api/v1/pos/staff/verify-pin` endpoint accepting `{ pin, staffId }`. (2) Verify PIN against hashed `manager_pin` in `pos_staff` table. (3) Return `{ verified: true, staffId, role, display_name }` on success. (4) Log verification attempt (success/failure) for audit. (5) Rate limit: max 5 failed attempts per 15 minutes per staff.
+- **Migration**: Add `manager_pin_hash VARCHAR(255)` column to `pos_staff` table if not exists
+- **Test**: Correct PIN → verified. Wrong PIN → rejected. 6th attempt in 15min → rate limited.
+- **Depends on**: None
+
+---
+
+### STG-489 — GUARD: Backend void/refund sale endpoint
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: LGP audit — LH-018
+- **Layer**: 8-PREREQ (must complete before STG-383 refund/void mechanism)
+- **Problem**: STG-383 adds a post-payment refund/void button, but no backend endpoint exists to void or refund a completed sale. The button would submit to nothing — the sale remains completed, stock isn't restored, and the ledger isn't adjusted.
+- **Impact**: Dead refund button. No stock reversal. Ledger imbalance. Customer charged with no recourse on POS.
+- **Fix**: (1) Add `POST /api/v1/pos/sales/:saleId/void` endpoint. (2) Validate: sale exists, belongs to store (JWT), not already voided, within void window (configurable, default 24h). (3) Create reversal transaction: negate line items, restore stock quantities, mark original sale as `VOIDED`. (4) For UPI payments: record void but do NOT auto-refund (manual bank refund required — flag for superadmin). (5) For cash payments: mark as refunded, cashier must return cash manually. (6) Audit log entry with staff who voided, reason, timestamp.
+- **Migration**: Add `voided_at TIMESTAMPTZ`, `voided_by INT`, `void_reason TEXT` columns to `sales` table
+- **Test**: Void cash sale → stock restored, ledger balanced. Void UPI sale → flagged for manual refund. Void after 24h → rejected. Double void → rejected.
+- **Depends on**: None
+
+---
+
+### STG-490 — GUARD: Backend credit disbursement endpoint
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: LGP audit — LH-025
+- **Layer**: 15-PREREQ (must complete before STG-451 credit disbursement)
+- **Problem**: STG-451 wires the credit approval → disbursement flow, but no endpoint exists to actually disburse funds. Approved credit applications would be stuck in `APPROVED` status forever with no path to `DISBURSED`.
+- **Impact**: Credit feature is broken end-to-end. Retailers apply, get approved, but never receive funds.
+- **Fix**: (1) Create migration for `credit_disbursements` table: `id SERIAL PRIMARY KEY`, `application_id INT REFERENCES credit_applications(id)`, `amount_minor BIGINT NOT NULL`, `disbursement_method VARCHAR(20)` (BANK_TRANSFER, UPI), `bank_reference VARCHAR(100)`, `status VARCHAR(20)` (PENDING, COMPLETED, FAILED), `initiated_at TIMESTAMPTZ`, `completed_at TIMESTAMPTZ`. (2) Add `POST /api/v1/credit/applications/:id/disburse` endpoint. (3) Validate: application status = APPROVED, amount matches approved amount, idempotency key. (4) Create disbursement record, update application status to DISBURSED. (5) Integration point for payment provider (stub for now, real integration in STG-455).
+- **Migration**: Yes — new table `credit_disbursements`
+- **Test**: Disburse approved application → status changes. Disburse non-approved → rejected. Double disburse (idempotency) → returns existing record.
+- **Depends on**: None
+
+---
+
+### STG-491 — GUARD: Backend reorder PO submission endpoint
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: LGP audit — LH-022
+- **Layer**: 14-PREREQ (must complete before STG-421 PO submission flow)
+- **Problem**: STG-421 wires approved reorders to PO creation, but no endpoint exists to submit the PO to a supplier. Draft POs are created but never reach suppliers — they sit in `DRAFT` status forever.
+- **Impact**: Reorder system is broken end-to-end. POs created but never sent. Suppliers never receive orders. Stock never replenished via auto-reorder.
+- **Fix**: (1) Add `POST /api/v1/reorder/purchase-orders/:poId/submit` endpoint. (2) Validate: PO exists, status = DRAFT, belongs to store (JWT). (3) Update PO status to SUBMITTED, set `submitted_at`. (4) Create notification for supplier (email/in-app via supplier portal). (5) Return submitted PO with supplier acknowledgment status. (6) Idempotency: re-submit of already-submitted PO returns existing record.
+- **Migration**: Add `submitted_at TIMESTAMPTZ`, `supplier_notified BOOLEAN DEFAULT FALSE` columns to `purchase_orders` table if not exists
+- **Test**: Submit draft PO → status changes to SUBMITTED. Submit non-draft → rejected. Re-submit → idempotent. Supplier notification created.
+- **Depends on**: None
+
+---
+
+### STG-492 — GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge)
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: LGP audit — LH-017
+- **Layer**: 0B (must complete in Layer 0 — this is a financial safety bug)
+- **Problem**: In `PaymentScreen.tsx:826`, `PENDING_UPI_KEY` is defined as a constant but NEVER written to AsyncStorage before calling `completeCheckout()`. If the app crashes mid-checkout, there is no record of the pending UPI payment. On restart, the user may initiate checkout again — resulting in a double charge.
+- **Impact**: CRITICAL financial bug. Retailers can be double-charged on UPI payments if app crashes during checkout.
+- **Fix**: (1) Before calling `completeCheckout()`, write `{ paymentId, amount, timestamp, cartHash }` to `AsyncStorage.setItem(PENDING_UPI_KEY, JSON.stringify(...))`. (2) On `PaymentScreen` mount, check `AsyncStorage.getItem(PENDING_UPI_KEY)`. If found: (a) Show recovery modal: "A payment of ₹X was in progress. Check your bank app before retrying." (b) Provide "Payment went through" (clear key, show receipt) and "Payment failed" (clear key, allow retry) buttons. (3) After successful checkout confirmation, remove the key: `AsyncStorage.removeItem(PENDING_UPI_KEY)`. (4) Add `cartHash` comparison — if cart changed since pending, warn user.
+- **Migration**: None (AsyncStorage is client-side)
+- **Test**: Write pending key → kill app → restart → recovery modal shown. Complete checkout → key removed. Different cart → warning shown.
+- **Depends on**: None
