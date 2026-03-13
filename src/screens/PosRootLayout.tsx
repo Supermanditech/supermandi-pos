@@ -277,7 +277,8 @@ export default function PosRootLayout() {
   const showCameraTimeoutNote = !isMobileDevice && !hidConnected;
   // R7: Raised compact threshold to 320dp to cover small-phone devices (280-320dp range)
   const compactTabs = screenWidth <= 320;
-  const reorderLabel = reorderEnabled ? t('tabs.reorderOn') : t('tabs.reorderOff');
+  // STG-245: Stable "REORDER" label (badge shows ON/OFF status instead of label change)
+  const reorderLabel = t('tabs.reorder', { defaultValue: 'REORDER' });
   const reorderStatusLabel = reorderEnabled ? "ON" : "OFF";
   const tabLabels: Record<PosTab, string> = {
     MENU: t('tabs.menu'),
@@ -1208,6 +1209,8 @@ export default function PosRootLayout() {
         printerOk={printerOk}
         scannerOk={scannerOk}
         cameraAvailable={cameraAvailable}
+        staffName={staffSession?.name}
+        staffRole={staffSession?.role}
       />
 
       {/* T-175: Sync status widget — shows sync progress, queue depth, and drift info */}
@@ -1290,7 +1293,8 @@ export default function PosRootLayout() {
                 }
                 // UI-REVEAL: Show toast for feature-disabled tabs instead of hiding them
                 if (isFeatureDisabled) {
-                  const featureName = isPurchase ? "Purchase Orders" : isReorder ? "Reorder" : "Credit";
+                  // STG-246: Show "Coming Soon" for Credit, specific messages for others
+                  const featureName = isCredit ? "Credit (Coming Soon)" : isPurchase ? "Purchase Orders" : "Reorder";
                   showToast(`${featureName} is not enabled for this store`);
                   return;
                 }
@@ -1599,6 +1603,12 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     position: "relative",
+    // STG-070: Subtle shadow for smooth header-to-body transition
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
   },
   tabIndicator: {
     position: "absolute",

@@ -155,9 +155,28 @@ export function SyncStatusWidget() {
   const hasDrifts = stockDrifts.length > 0;
   const hasSyncError = !!lastSyncError; // FIX-033
 
+  // STG-006: Collapse when healthy — only show when there's something to report
+  const isHealthy = connectionStatus === "connected" && !syncing && !hasPendingItems && !hasDeadletterItems && !hasDrifts && !hasSyncError;
+
+  // STG-006: If healthy and not expanded, minimize to a single dot
+  if (isHealthy && !expanded) {
+    return (
+      <Pressable
+        style={styles.healthyBar}
+        onPress={handleToggle}
+        accessibilityRole="button"
+        accessibilityLabel={`Synced ${relativeTime}. Tap for details.`}
+      >
+        {/* STG-071: Checkmark connected with last sync time */}
+        <MaterialCommunityIcons name="check-circle" size={12} color={theme.colors.success} />
+        <Text style={styles.healthySyncText}>{relativeTime}</Text>
+      </Pressable>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Compact bar — always visible */}
+      {/* Compact bar — visible when issues exist or expanded */}
       <Pressable
         style={styles.compactBar}
         onPress={handleToggle}
@@ -192,6 +211,7 @@ export function SyncStatusWidget() {
           <MaterialCommunityIcons name="alert" size={12} color={theme.colors.error} />
         ) : null}
 
+        {/* STG-071: Last sync time next to status */}
         <Text style={styles.lastSyncText}>{relativeTime}</Text>
 
         <MaterialCommunityIcons
@@ -204,25 +224,25 @@ export function SyncStatusWidget() {
       {/* Expanded details panel */}
       {expanded ? (
         <View style={styles.expandedPanel}>
-          {/* Connection status */}
+          {/* STG-010: Plain-language labels */}
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Status</Text>
+            <Text style={styles.detailLabel}>Connection</Text>
             <Text style={[styles.detailValue, { color: statusColor }]}>
-              {syncing ? "Syncing..." : connectionStatus}
+              {syncing ? "Uploading data..." : connectionStatus === "connected" ? "Connected" : connectionStatus === "connecting" ? "Reconnecting..." : "Offline"}
             </Text>
           </View>
 
-          {/* Outbox queue */}
+          {/* STG-021: Queue count with badge */}
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Outbox queue</Text>
+            <Text style={styles.detailLabel}>Pending bills</Text>
             <Text style={styles.detailValue}>
-              {outboxCount === 0 ? "Empty" : `${outboxCount} pending`}
+              {outboxCount === 0 ? "All sent" : `${outboxCount} waiting`}
             </Text>
           </View>
 
-          {/* Last sync */}
+          {/* Last sync timestamp */}
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Last synced</Text>
+            <Text style={styles.detailLabel}>Last upload</Text>
             <Text style={styles.detailValue}>{relativeTime}</Text>
           </View>
 
@@ -320,6 +340,22 @@ export function SyncStatusWidget() {
 }
 
 const styles = StyleSheet.create({
+  // STG-006: Healthy collapsed state — minimal footprint
+  healthyBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    gap: 4,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  healthySyncText: {
+    fontSize: 9,
+    fontWeight: "500",
+    color: theme.colors.success,
+  },
   container: {
     backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,

@@ -1491,12 +1491,14 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     paddingHorizontal: 4,
   },
   summaryValue: {
-    fontSize: 18,
-    fontWeight: "700",
+    // STG-051: Larger, more prominent values for quick glance
+    fontSize: 20,
+    fontWeight: "800",
     color: colors.textPrimary,
   },
   summaryLabel: {
     fontSize: 11,
+    fontWeight: "600",
     color: colors.textSecondary,
     marginTop: 2,
   },

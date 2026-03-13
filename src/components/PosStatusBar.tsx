@@ -24,6 +24,9 @@ type PosStatusBarProps = {
   printerOk?: boolean | null;
   scannerOk?: boolean | null;
   cameraAvailable?: boolean | null;
+  // STG-017: Staff name/role display
+  staffName?: string | null;
+  staffRole?: string | null;
 };
 
 type StatusPopover = {
@@ -40,6 +43,13 @@ const POPOVER_ARROW_SIZE = 10;
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
 
+// STG-036: Format current time as HH:MM
+function formatTime(date: Date): string {
+  const h = date.getHours().toString().padStart(2, "0");
+  const m = date.getMinutes().toString().padStart(2, "0");
+  return `${h}:${m}`;
+}
+
 export default function PosStatusBar({
   storeActive,
   deviceActive,
@@ -50,7 +60,9 @@ export default function PosStatusBar({
   storeCode,
   printerOk,
   scannerOk,
-  cameraAvailable
+  cameraAvailable,
+  staffName,
+  staffRole,
 }: PosStatusBarProps) {
   const [popover, setPopover] = useState<StatusPopover | null>(null);
   const [popoverSize, setPopoverSize] = useState<{ width: number; height: number } | null>(null);
@@ -64,6 +76,13 @@ export default function PosStatusBar({
   const cameraRef = useRef<View>(null);
   const popoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+
+  // STG-036: Live clock display
+  const [currentTime, setCurrentTime] = useState(() => formatTime(new Date()));
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(formatTime(new Date())), 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   // FIX-032: Mounted ref prevents setState after unmount if callback fires during cleanup
   const mountedRef = useRef(true);
@@ -130,7 +149,8 @@ export default function PosStatusBar({
 
   const iconActiveColor = theme.colors.textSecondary;
   const iconInactiveColor = theme.colors.textTertiary;
-  const iconSize = 12;
+  // STG-005: Larger icons for readability
+  const iconSize = 14;
 
   const networkConnected =
     networkState.isConnected !== false && networkState.isInternetReachable !== false;
@@ -276,6 +296,33 @@ export default function PosStatusBar({
       <View
         style={styles.container}
       >
+        {/* STG-052: Store name row with truncation handling */}
+        <View style={styles.storeRow} pointerEvents="none">
+          <Text
+            style={styles.storeName}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            testID="status-bar-store-name"
+          >
+            {storeLabel}
+          </Text>
+          {/* STG-036: Date/time display */}
+          <Text style={styles.timeText} testID="status-bar-time">{currentTime}</Text>
+        </View>
+
+        {/* STG-017: Staff name/role + store code */}
+        <View style={styles.metaRow} pointerEvents="none">
+          {staffName ? (
+            <Text style={styles.staffText} numberOfLines={1} testID="status-bar-staff">
+              {staffName}{staffRole ? ` · ${staffRole}` : ""}
+            </Text>
+          ) : null}
+          <Text style={styles.storeCodeText} numberOfLines={1}>
+            {storeIdLabel}
+          </Text>
+        </View>
+
+        {/* STG-005: Decluttered icon row with labels (STG-067) */}
         <View style={styles.iconRow} pointerEvents="box-none">
           <Pressable
             ref={networkRef}
@@ -284,18 +331,12 @@ export default function PosStatusBar({
             accessible
             accessibilityLabel={networkLabel}
             accessibilityRole="button"
-            onPress={(e) => {
-              e.stopPropagation();
-              openPopover("network");
-            }}
+            onPress={(e) => { e.stopPropagation(); openPopover("network"); }}
             hitSlop={8}
-            style={styles.iconSlot}
+            style={styles.iconWithLabel}
           >
-            <MaterialCommunityIcons
-              name={networkIcon}
-              size={iconSize}
-              color={networkConnected ? iconActiveColor : iconInactiveColor}
-            />
+            <MaterialCommunityIcons name={networkIcon} size={iconSize} color={networkConnected ? iconActiveColor : iconInactiveColor} />
+            <Text style={[styles.iconLabel, { color: networkConnected ? iconActiveColor : iconInactiveColor }]}>Net</Text>
           </Pressable>
 
           <Pressable
@@ -305,18 +346,12 @@ export default function PosStatusBar({
             accessible
             accessibilityLabel={printerLabel}
             accessibilityRole="button"
-            onPress={(e) => {
-              e.stopPropagation();
-              openPopover("printer");
-            }}
+            onPress={(e) => { e.stopPropagation(); openPopover("printer"); }}
             hitSlop={8}
-            style={styles.iconSlot}
+            style={styles.iconWithLabel}
           >
-            <MaterialCommunityIcons
-              name={printerIcon}
-              size={iconSize}
-              color={printerReady ? iconActiveColor : iconInactiveColor}
-            />
+            <MaterialCommunityIcons name={printerIcon} size={iconSize} color={printerReady ? iconActiveColor : iconInactiveColor} />
+            <Text style={[styles.iconLabel, { color: printerReady ? iconActiveColor : iconInactiveColor }]}>Print</Text>
           </Pressable>
 
           <Pressable
@@ -326,20 +361,15 @@ export default function PosStatusBar({
             accessible
             accessibilityLabel={scannerLabel}
             accessibilityRole="button"
-            onPress={(e) => {
-              e.stopPropagation();
-              openPopover("scanner");
-            }}
+            onPress={(e) => { e.stopPropagation(); openPopover("scanner"); }}
             hitSlop={8}
-            style={styles.iconSlot}
+            style={styles.iconWithLabel}
           >
-            <MaterialCommunityIcons
-              name={scannerIcon}
-              size={iconSize}
-              color={scannerDetected ? iconActiveColor : iconInactiveColor}
-            />
+            <MaterialCommunityIcons name={scannerIcon} size={iconSize} color={scannerDetected ? iconActiveColor : iconInactiveColor} />
+            <Text style={[styles.iconLabel, { color: scannerDetected ? iconActiveColor : iconInactiveColor }]}>Scan</Text>
           </Pressable>
 
+          {/* STG-049: Camera icon with label */}
           <Pressable
             ref={cameraRef}
             collapsable={false}
@@ -347,38 +377,20 @@ export default function PosStatusBar({
             accessible
             accessibilityLabel={cameraLabel}
             accessibilityRole="button"
-            onPress={(e) => {
-              e.stopPropagation();
-              openPopover("camera");
-            }}
+            onPress={(e) => { e.stopPropagation(); openPopover("camera"); }}
             hitSlop={8}
-            style={styles.iconSlot}
+            style={styles.iconWithLabel}
           >
-            <MaterialCommunityIcons
-              name={cameraIcon}
-              size={iconSize}
-              color={cameraReady ? iconActiveColor : iconInactiveColor}
-            />
+            <MaterialCommunityIcons name={cameraIcon} size={iconSize} color={cameraReady ? iconActiveColor : iconInactiveColor} />
+            <Text style={[styles.iconLabel, { color: cameraReady ? iconActiveColor : iconInactiveColor }]}>Cam</Text>
           </Pressable>
-        </View>
 
-        <View style={styles.storeInfo} pointerEvents="none">
-          <Text
-            style={styles.storeName}
-            numberOfLines={2}
-            ellipsizeMode="clip"
-          >
-            {storeLabel}
-          </Text>
-          <Text
-            style={styles.storeMeta}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            ID {storeIdLabel}
-            {" | "}
-            <Text style={[styles.statusMessage, { color: statusTone.text }]}>{statusMessage}</Text>
-          </Text>
+          {/* STG-045: Larger status message */}
+          <View style={[styles.statusPill, { backgroundColor: statusTone.bg, borderColor: statusTone.border }]}>
+            <Text style={[styles.statusMessage, { color: statusTone.text }]} numberOfLines={1} testID="status-bar-message">
+              {statusMessage}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -415,44 +427,76 @@ export default function PosStatusBar({
 
 const styles = StyleSheet.create({
   container: {
-    minHeight: 32,
-    alignItems: "flex-start",
+    minHeight: 36,
     paddingHorizontal: 12,
     paddingVertical: 4,
     backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+    gap: 2,
   },
-  iconRow: {
+  storeRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     alignSelf: "stretch",
-    overflow: "visible",
-  },
-  iconSlot: {
-    width: 16,
-    height: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "visible",
-  },
-  storeInfo: {
-    alignSelf: "stretch",
-    marginTop: 4,
   },
   storeName: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
-    color: theme.colors.textSecondary,
+    color: theme.colors.textPrimary,
+    flex: 1,
   },
-  storeMeta: {
-    marginTop: 2,
+  timeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.textTertiary,
+    marginLeft: 8,
+    fontVariant: ["tabular-nums"],
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "stretch",
+  },
+  staffText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: theme.colors.primary,
+    flex: 1,
+  },
+  storeCodeText: {
     fontSize: 10,
     fontWeight: "600",
     color: theme.colors.textTertiary,
   },
+  iconRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "stretch",
+    overflow: "visible",
+  },
+  iconWithLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    overflow: "visible",
+  },
+  iconLabel: {
+    fontSize: 9,
+    fontWeight: "600",
+  },
+  statusPill: {
+    marginLeft: "auto",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
   statusMessage: {
+    fontSize: 10,
     fontWeight: "700",
   },
   popoverOverlay: {

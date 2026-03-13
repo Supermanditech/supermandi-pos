@@ -2530,11 +2530,11 @@
     {
       "ticket": "STG-172",
       "file": "src/screens/MenuScreen.tsx",
-      "description": "MenuScreen i18n — replace 36+ hardcoded strings, remove defaultValue/positional fallbacks",
+      "description": "MenuScreen i18n — replace 36+ hardcoded strings (updated Layer 6: summary font size)",
       "test_file": "src/__tests__/screens/MenuScreen.stg-172.i18n.unit.test.ts",
       "start_line": 1,
-      "end_line": 1602,
-      "checksum": "d7a8881e4f937ed9",
+      "end_line": 1603,
+      "checksum": "7f8bd6ce2be73f53",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
