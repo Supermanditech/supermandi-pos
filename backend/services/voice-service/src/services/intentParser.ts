@@ -256,6 +256,69 @@ function calculateConfidence(
   return Math.min(confidence, 1.0);
 }
 
+// =============================================================================
+// STG-367: Input sanitization — strip SQL keywords, injection patterns
+// =============================================================================
+
+const SQL_KEYWORDS = /\b(SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|EXEC|UNION|FROM|WHERE|TABLE|GRANT|REVOKE|TRUNCATE|INTO|VALUES|SET|OR\s+1\s*=\s*1|AND\s+1\s*=\s*1|--|;|'|")\b/gi;
+
+const INJECTION_PATTERNS = [
+  /ignore\s+(all\s+)?previous\s+instructions/i,
+  /you\s+are\s+now\s+a/i,
+  /system\s*:\s*/i,
+  /\bprompt\s*injection\b/i,
+  /set\s+price\s+to/i,
+  /delete\s+all/i,
+  /admin\s+mode/i,
+];
+
+/**
+ * STG-367: Sanitize product name to prevent SQL injection and prompt injection.
+ * Strips SQL keywords, detects injection patterns, enforces length limit.
+ */
+export function sanitizeProductName(name: string | null | undefined): string | null {
+  if (!name) return null;
+
+  // Length limit: 200 chars max for product names
+  let sanitized = name.slice(0, 200);
+
+  // Check for injection patterns BEFORE stripping — detect on raw input
+  for (const pattern of INJECTION_PATTERNS) {
+    if (pattern.test(sanitized)) {
+      return null;
+    }
+  }
+
+  // Strip SQL keywords
+  sanitized = sanitized.replace(SQL_KEYWORDS, '').trim();
+
+  // Clean up multiple spaces left by stripping
+  sanitized = sanitized.replace(/\s+/g, ' ').trim();
+
+  return sanitized || null;
+}
+
+// =============================================================================
+// STG-367: PII redaction — remove phone numbers, Aadhaar, PAN from transcripts
+// =============================================================================
+
+/**
+ * Redact PII patterns from transcript before storing in memory.
+ */
+export function redactPII(text: string): string {
+  return text
+    // Indian phone numbers (10 digits, optional +91/0 prefix)
+    .replace(/(?:\+91|0)?[6-9]\d{9}/g, '[PHONE]')
+    // Aadhaar (12 digits, with optional spaces/dashes)
+    .replace(/\b\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g, '[AADHAAR]')
+    // PAN (ABCDE1234F format)
+    .replace(/\b[A-Z]{5}\d{4}[A-Z]\b/g, '[PAN]')
+    // Email addresses
+    .replace(/\b[\w.-]+@[\w.-]+\.\w{2,}\b/g, '[EMAIL]');
+}
+
 export default {
   parseIntent,
+  sanitizeProductName,
+  redactPII,
 };

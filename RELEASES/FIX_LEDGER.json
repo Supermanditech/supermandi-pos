@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 11,
+  "version": 12,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -383,6 +383,46 @@
         "test_guard": true
       },
       "registered_at": "2026-03-13T20:08:27.298Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "true",
+        "backend_api": "true",
+        "operator_approved": "true",
+        "parity_scanned": "true",
+        "parity_fixed": "true",
+        "gcp_parity": "true",
+        "regression_check": "true",
+        "test_guard": "true",
+        "db_schema": "N/A"
+      }
+    },
+    {
+      "ticket": "STG-367",
+      "file": "backend/services/voice-service/src/services/intentParser.ts",
+      "start_line": 259,
+      "end_line": 299,
+      "checksum": "67a8f497ada7d39e",
+      "description": "Prompt injection prevention: sanitizeProductName strips SQL keywords + detects injection patterns, redactPII removes phone/Aadhaar/PAN/email, input length limit, rate limiter on /interpret",
+      "test_file": "backend/tests/voice.stg-367.prompt-injection.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T20:12:04.511Z",
       "status": "ACTIVE",
       "checklist_evidence": {
         "business_logic": "true",

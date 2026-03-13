@@ -14,11 +14,25 @@ import { config } from '../config';
 
 const logger = createLogger({ service: 'voice-service', level: process.env.LOG_LEVEL || 'info' });
 import { transcribeAudio } from '../services/sttService';
-import { parseIntent, type ParsedIntent } from '../services/intentParser';
+import { parseIntent, sanitizeProductName, redactPII, type ParsedIntent } from '../services/intentParser';
+import rateLimit from 'express-rate-limit';
 
 const router: ReturnType<typeof Router> = Router();
 router.use(authenticate);
 router.use(requireActorType('store'));
+
+// STG-367: Rate limiter — 30 requests per minute per store
+const interpretLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  keyGenerator: (req: Request) => getAuthUser(req).actorId || req.ip || 'unknown',
+  message: { success: false, error: 'Too many voice requests. Please try again in a minute.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// STG-367: Max transcript input length (1000 chars)
+const MAX_TRANSCRIPT_LENGTH = 1000;
 
 // =============================================================================
 // MULTER SETUP FOR FILE UPLOADS
@@ -115,6 +129,7 @@ setInterval(() => {
  */
 router.post(
   '/interpret',
+  interpretLimiter,
   upload.single('audio'),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const audioFile = req.file;
@@ -142,15 +157,28 @@ router.post(
       // Step 1: Transcribe audio
       const transcription = await transcribeAudio(audioFile.path);
 
+      // STG-367: Enforce input length limit on transcript
+      const rawText = transcription.text.slice(0, MAX_TRANSCRIPT_LENGTH);
+
       // Step 2: Parse intent
-      const intent = parseIntent(transcription.text);
+      const intent = parseIntent(rawText);
+
+      // STG-367: Sanitize product name to prevent SQL/prompt injection
+      intent.productName = sanitizeProductName(intent.productName) ?? undefined;
+      // If sanitization nullified the product name, drop confidence
+      if (!intent.productName && rawText.length > 3) {
+        intent.confidence = Math.min(intent.confidence, 0.1);
+      }
+
+      // STG-367: Redact PII from transcript before storing in memory
+      const redactedTranscript = redactPII(rawText);
 
       // Step 3: Store request for execute step
       const requestId = uuidv4();
       const voiceRequest: VoiceRequest = {
         requestId,
         storeId,
-        transcript: transcription.text,
+        transcript: redactedTranscript,
         intent,
         createdAt: new Date(),
         executed: false,
