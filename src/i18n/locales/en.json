@@ -284,7 +284,25 @@
     "cartLocked": "Locked",
     "searchResults": "Search results",
     "recentProducts": "Recent products",
-    "noRecentProducts": "No recent products."
+    "noRecentProducts": "No recent products.",
+    "priceNotSet": "Price not set",
+    "expiringFirst": "Expiring Soon",
+    "expiringFirstOn": "Expiring Soon ON"
+  },
+  "limitedMode": {
+    "badge": "LIMITED MODE",
+    "status": "Status: {{label}}",
+    "hideRestrictions": "Hide restrictions",
+    "viewRestrictions": "View restrictions",
+    "blocked": "Blocked:",
+    "allowed": "Allowed:",
+    "createSales": "Create Sales",
+    "processPayments": "Process Payments",
+    "placeOrders": "Place Orders (BUY)",
+    "runReorders": "Run Reorders",
+    "viewMenu": "View Menu",
+    "viewProducts": "View Products",
+    "syncData": "Sync Data"
   },
   "payment": {
     "selectPaymentMethod": "Select Payment Method",
@@ -1291,5 +1309,8 @@
     "timeline": "Timeline",
     "cancelOrder": "Cancel Order",
     "receiveGoods": "Receive Goods"
+  },
+  "voice": {
+    "tapToSpeak": "Tap to speak"
   }
 }

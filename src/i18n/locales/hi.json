@@ -284,7 +284,25 @@
     "cartLocked": "लॉक",
     "searchResults": "खोज परिणाम",
     "recentProducts": "हाल के उत्पाद",
-    "noRecentProducts": "कोई हाल का उत्पाद नहीं।"
+    "noRecentProducts": "कोई हाल का उत्पाद नहीं।",
+    "priceNotSet": "कीमत निर्धारित नहीं",
+    "expiringFirst": "जल्द समाप्त",
+    "expiringFirstOn": "जल्द समाप्त ON"
+  },
+  "limitedMode": {
+    "badge": "सीमित मोड",
+    "status": "स्थिति: {{label}}",
+    "hideRestrictions": "प्रतिबंध छिपाएं",
+    "viewRestrictions": "प्रतिबंध देखें",
+    "blocked": "अवरुद्ध:",
+    "allowed": "अनुमत:",
+    "createSales": "बिक्री बनाएं",
+    "processPayments": "भुगतान प्रक्रिया",
+    "placeOrders": "ऑर्डर दें (खरीदें)",
+    "runReorders": "रीऑर्डर चलाएं",
+    "viewMenu": "मेनू देखें",
+    "viewProducts": "उत्पाद देखें",
+    "syncData": "डेटा सिंक करें"
   },
   "payment": {
     "selectPaymentMethod": "भुगतान मोड चुनें",
@@ -1291,5 +1309,8 @@
     "refundIdLabel": "रिफंड ID",
     "stockReversedNote": "स्टॉक सर्वर-साइड पर वापस कर दिया गया है।",
     "processAnotherReturn": "एक और वापसी करें"
+  },
+  "voice": {
+    "tapToSpeak": "बोलने के लिए टैप करें"
   }
 }

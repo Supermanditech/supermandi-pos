@@ -1,17 +1,22 @@
 // VoiceButton - VOICE-001
+// STG-012: Brand-colored FAB with contextual "Tap to speak" label
+// STG-048: Position fix — proper elevation/shadow for floating effect
 // Floating push-to-talk microphone button for voice commands
 
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Pressable,
-  StyleSheet,
   ActivityIndicator,
   View,
+  Text,
+  Platform,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
-import { theme } from "../../theme";
+import { useThemeColors } from "../../theme";
 
 // =============================================================================
 // TYPES
@@ -52,6 +57,8 @@ export interface VoiceButtonProps {
 
 const BUTTON_SIZE = 56;
 const PULSE_SIZE = 72;
+/** AsyncStorage key for tracking first-use label dismissal */
+const VOICE_LABEL_DISMISSED_KEY = "@supermandi/voice_label_dismissed";
 
 // =============================================================================
 // COMPONENT
@@ -62,6 +69,7 @@ const PULSE_SIZE = 72;
  *
  * Press and hold to record, release to submit.
  * Shows pulsing animation while recording, spinner while processing.
+ * STG-012: Shows contextual "Tap to speak" label on first use.
  *
  * @example
  * <VoiceButton
@@ -77,8 +85,47 @@ export function VoiceButton({
   disabled = false,
   testID = "voice-button",
 }: VoiceButtonProps) {
+  const colors = useThemeColors();
+  const { t } = useTranslation();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0.6)).current;
+  const labelOpacity = useRef(new Animated.Value(0)).current;
+
+  // STG-012: Contextual label — shown once on first use, then hidden
+  const [showLabel, setShowLabel] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    AsyncStorage.getItem(VOICE_LABEL_DISMISSED_KEY)
+      .then((value) => {
+        if (mounted && value !== "true") {
+          setShowLabel(true);
+          // Fade in
+          Animated.timing(labelOpacity, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start();
+        }
+      })
+      .catch(() => {
+        // Silently ignore storage errors — label just won't show
+      });
+    return () => { mounted = false; };
+  }, [labelOpacity]);
+
+  const dismissLabel = useCallback(() => {
+    if (!showLabel) return;
+    // Fade out then persist dismissal
+    Animated.timing(labelOpacity, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowLabel(false);
+      AsyncStorage.setItem(VOICE_LABEL_DISMISSED_KEY, "true").catch(() => {});
+    });
+  }, [showLabel, labelOpacity]);
 
   // Pulsing animation when recording
   useEffect(() => {
@@ -124,17 +171,98 @@ export function VoiceButton({
   const isProcessing = state === "processing";
   const isDisabled = disabled || isProcessing;
 
+  // STG-012: Brand colors from theme (not hardcoded)
   const buttonBackgroundColor = isRecording
-    ? theme.colors.error
-    : theme.colors.primary;
+    ? colors.error
+    : colors.primary;
+
+  // STG-048: Dynamic styles with proper elevation/shadow for floating effect
+  const dynamicStyles = useMemo(() => ({
+    container: {
+      width: PULSE_SIZE,
+      height: PULSE_SIZE,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    pulseRing: {
+      position: "absolute" as const,
+      width: PULSE_SIZE,
+      height: PULSE_SIZE,
+      borderRadius: PULSE_SIZE / 2,
+      backgroundColor: colors.error,
+    },
+    button: {
+      width: BUTTON_SIZE,
+      height: BUTTON_SIZE,
+      borderRadius: BUTTON_SIZE / 2,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      // STG-048: Enhanced elevation/shadow for proper floating effect
+      elevation: 8,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    // STG-012: Contextual label styles
+    labelContainer: {
+      position: "absolute" as const,
+      right: PULSE_SIZE + 4,
+      top: (PULSE_SIZE - 28) / 2,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 14,
+      elevation: 4,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      // Prevent label from wrapping
+      ...Platform.select({
+        ios: { minWidth: 100 },
+        android: { minWidth: 100 },
+        default: { minWidth: 100 },
+      }),
+    },
+    labelText: {
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: "600" as const,
+      textAlign: "center" as const,
+    },
+  }), [colors]);
+
+  const handlePressIn = useCallback(() => {
+    // Dismiss contextual label on first interaction
+    dismissLabel();
+    if (!isDisabled) {
+      onPressIn();
+    }
+  }, [isDisabled, onPressIn, dismissLabel]);
 
   return (
-    <View style={styles.container} testID={testID}>
+    <View style={dynamicStyles.container} testID={testID}>
+      {/* STG-012: Contextual "Tap to speak" label (first use only) */}
+      {showLabel && state === "idle" && !isDisabled && (
+        <Animated.View
+          style={[dynamicStyles.labelContainer, { opacity: labelOpacity }]}
+          testID={`${testID}-label`}
+        >
+          <Text style={dynamicStyles.labelText}>
+            {t("voice.tapToSpeak")}
+          </Text>
+        </Animated.View>
+      )}
+
       {/* Pulse ring (visible when recording) */}
       {isRecording && (
         <Animated.View
           style={[
-            styles.pulseRing,
+            dynamicStyles.pulseRing,
             {
               transform: [{ scale: pulseAnim }],
               opacity: opacityAnim,
@@ -146,11 +274,11 @@ export function VoiceButton({
       {/* Main button */}
       <Pressable
         style={[
-          styles.button,
+          dynamicStyles.button,
           { backgroundColor: buttonBackgroundColor },
-          isDisabled && styles.buttonDisabled,
+          isDisabled && dynamicStyles.buttonDisabled,
         ]}
-        onPressIn={isDisabled ? undefined : onPressIn}
+        onPressIn={handlePressIn}
         onPressOut={isDisabled ? undefined : onPressOut}
         disabled={isDisabled}
         testID={`${testID}-pressable`}
@@ -167,14 +295,14 @@ export function VoiceButton({
         {isProcessing ? (
           <ActivityIndicator
             size="small"
-            color={theme.colors.textInverse}
+            color={colors.textInverse}
             testID={`${testID}-spinner`}
           />
         ) : (
           <MaterialCommunityIcons
             name={isRecording ? "microphone" : "microphone-outline"}
             size={28}
-            color={theme.colors.textInverse}
+            color={colors.textInverse}
             testID={`${testID}-icon`}
           />
         )}
@@ -182,36 +310,5 @@ export function VoiceButton({
     </View>
   );
 }
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = StyleSheet.create({
-  container: {
-    width: PULSE_SIZE,
-    height: PULSE_SIZE,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pulseRing: {
-    position: "absolute",
-    width: PULSE_SIZE,
-    height: PULSE_SIZE,
-    borderRadius: PULSE_SIZE / 2,
-    backgroundColor: theme.colors.error,
-  },
-  button: {
-    width: BUTTON_SIZE,
-    height: BUTTON_SIZE,
-    borderRadius: BUTTON_SIZE / 2,
-    alignItems: "center",
-    justifyContent: "center",
-    ...theme.shadows.lg,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-});
 
 export default VoiceButton;

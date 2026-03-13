@@ -1,12 +1,12 @@
 // SupplierRow - V3.0.9 compliant
 // Individual supplier option in product detail modal
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme } from "../../theme";
+import { theme, useThemeColors } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import { QuantityPicker } from "./QuantityPicker";
 import type { CatalogSupplier } from "../../services/api/catalogApi";
@@ -50,6 +50,8 @@ export function SupplierRow({
   bnplEligible = false,
 }: SupplierRowProps) {
   const { t } = useTranslation();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [quantity, setQuantity] = useState(supplier.moq);
   const stockColor = getStockStatusColor(
     supplier.stockStatus as "in_stock" | "low_stock" | "out_of_stock"
@@ -88,7 +90,7 @@ export function SupplierRow({
                 <MaterialCommunityIcons
                   name="star"
                   size={10}
-                  color={theme.colors.warning}
+                  color={colors.warning}
                 />
                 <Text style={styles.preferredText}>Preferred</Text>
               </View>
@@ -99,7 +101,7 @@ export function SupplierRow({
                 <MaterialCommunityIcons
                   name="clock-outline"
                   size={10}
-                  color={theme.colors.accent}
+                  color={colors.accent}
                 />
                 <Text style={styles.bnplText}>BNPL</Text>
               </View>
@@ -119,7 +121,7 @@ export function SupplierRow({
         </View>
 
         <View style={styles.headerRight}>
-          <View style={[styles.stockBadge, { backgroundColor: stockColor + "20" }]}>
+          <View style={[styles.stockBadge, { backgroundColor: stockColor, opacity: 0.12 }]}>
             <View style={[styles.stockDot, { backgroundColor: stockColor }]} />
             <Text style={[styles.stockText, { color: stockColor }]}>
               {supplier.stockQuantity}
@@ -129,7 +131,7 @@ export function SupplierRow({
             <MaterialCommunityIcons
               name={expanded ? "chevron-up" : "chevron-down"}
               size={20}
-              color={theme.colors.textTertiary}
+              color={colors.textTertiary}
             />
           )}
         </View>
@@ -166,7 +168,7 @@ export function SupplierRow({
               <MaterialCommunityIcons
                 name="cart"
                 size={14}
-                color={theme.colors.primary}
+                color={colors.primary}
               />
               <Text style={styles.cartInfoText}>
                 {cartQuantity} in cart
@@ -198,7 +200,7 @@ export function SupplierRow({
                 <MaterialCommunityIcons
                   name={cartQuantity > 0 ? "cart-plus" : "cart-outline"}
                   size={18}
-                  color={theme.colors.textInverse}
+                  color={colors.textInverse}
                 />
                 <Text style={styles.addButtonText}>
                   {cartQuantity > 0 ? t("components.cartItem.addMore") : t("components.cartItem.add")}
@@ -212,7 +214,7 @@ export function SupplierRow({
               <MaterialCommunityIcons
                 name="alert-circle-outline"
                 size={16}
-                color={theme.colors.error}
+                color={colors.error}
               />
               <Text style={styles.outOfStockText}>
                 Currently out of stock
@@ -229,190 +231,192 @@ export function SupplierRow({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
-  },
-  containerPreferred: {
-    borderColor: theme.colors.warning,
-    borderWidth: 2,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: theme.spacing.md,
-  },
-  headerLeft: {
-    flex: 1,
-    marginRight: theme.spacing.sm,
-  },
-  supplierNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-    marginBottom: 4,
-  },
-  supplierName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    flexShrink: 1,
-  },
-  preferredBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.warningSoft,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: theme.borderRadius.sm,
-    gap: 2,
-  },
-  preferredText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: theme.colors.warning,
-  },
-  // SM-020: BNPL badge styles
-  bnplBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.accentSoft,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: theme.borderRadius.sm,
-    gap: 2,
-  },
-  bnplText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: theme.colors.accent,
-  },
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: theme.spacing.sm,
-  },
-  price: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  mrp: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-    textDecorationLine: "line-through",
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-  },
-  stockBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: theme.borderRadius.full,
-    gap: 4,
-  },
-  stockDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  stockText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  expandedContent: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surfaceAlt,
-  },
-  metaRow: {
-    flexDirection: "row",
-    gap: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-  },
-  metaItem: {
-    alignItems: "center",
-  },
-  metaLabel: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginBottom: 2,
-  },
-  metaValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  cartInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.accentSoft,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.borderRadius.sm,
-    gap: 6,
-    marginBottom: theme.spacing.md,
-    alignSelf: "flex-start",
-  },
-  cartInfoText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: theme.colors.primary,
-  },
-  actionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.md,
-  },
-  totalSection: {
-    flex: 1,
-    alignItems: "center",
-  },
-  totalLabel: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-  },
-  totalValue: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.md,
-    gap: 6,
-  },
-  addButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textInverse,
-  },
-  outOfStockMessage: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-    padding: theme.spacing.sm,
-    backgroundColor: theme.colors.errorSoft,
-    borderRadius: theme.borderRadius.sm,
-  },
-  outOfStockText: {
-    fontSize: 13,
-    color: theme.colors.error,
-  },
-});
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    container: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: "hidden",
+    },
+    containerPreferred: {
+      borderColor: colors.warning,
+      borderWidth: 2,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: theme.spacing.md,
+    },
+    headerLeft: {
+      flex: 1,
+      marginRight: theme.spacing.sm,
+    },
+    supplierNameRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.sm,
+      marginBottom: 4,
+    },
+    supplierName: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      flexShrink: 1,
+    },
+    preferredBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.warningSoft,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: theme.borderRadius.sm,
+      gap: 2,
+    },
+    preferredText: {
+      fontSize: 10,
+      fontWeight: "600",
+      color: colors.warning,
+    },
+    // SM-020: BNPL badge styles
+    bnplBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.accentSoft,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: theme.borderRadius.sm,
+      gap: 2,
+    },
+    bnplText: {
+      fontSize: 10,
+      fontWeight: "600",
+      color: colors.accent,
+    },
+    priceRow: {
+      flexDirection: "row",
+      alignItems: "baseline",
+      gap: theme.spacing.sm,
+    },
+    price: {
+      fontSize: 17,
+      fontWeight: "700",
+      color: colors.primary,
+    },
+    mrp: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      textDecorationLine: "line-through",
+    },
+    headerRight: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.sm,
+    },
+    stockBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: 4,
+      borderRadius: theme.borderRadius.full,
+      gap: 4,
+    },
+    stockDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    stockText: {
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    expandedContent: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      padding: theme.spacing.md,
+      backgroundColor: colors.surfaceAlt,
+    },
+    metaRow: {
+      flexDirection: "row",
+      gap: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
+    },
+    metaItem: {
+      alignItems: "center",
+    },
+    metaLabel: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginBottom: 2,
+    },
+    metaValue: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    cartInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.accentSoft,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: theme.spacing.xs,
+      borderRadius: theme.borderRadius.sm,
+      gap: 6,
+      marginBottom: theme.spacing.md,
+      alignSelf: "flex-start",
+    },
+    cartInfoText: {
+      fontSize: 13,
+      fontWeight: "500",
+      color: colors.primary,
+    },
+    actionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.md,
+    },
+    totalSection: {
+      flex: 1,
+      alignItems: "center",
+    },
+    totalLabel: {
+      fontSize: 11,
+      color: colors.textTertiary,
+    },
+    totalValue: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    addButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.primary,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.borderRadius.md,
+      gap: 6,
+    },
+    addButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+    outOfStockMessage: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.sm,
+      padding: theme.spacing.sm,
+      backgroundColor: colors.errorSoft,
+      borderRadius: theme.borderRadius.sm,
+    },
+    outOfStockText: {
+      fontSize: 13,
+      color: colors.error,
+    },
+  });
+}
 
 export default SupplierRow;

@@ -1,12 +1,12 @@
 // CartItem - V3.0.9 compliant
 // Individual item row in purchase cart
 
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme } from "../../theme";
+import { theme, useThemeColors } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import { QuantityPicker } from "./QuantityPicker";
 import type { PurchaseCartItem } from "../../stores/purchaseCartStore";
@@ -27,6 +27,8 @@ export interface CartItemProps {
 
 export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
   const { t } = useTranslation();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const lineTotal = item.quantity * item.unitPrice;
   const isBelowMoq = item.quantity < item.moq;
 
@@ -80,7 +82,7 @@ export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
             <MaterialCommunityIcons
               name="alert"
               size={12}
-              color={theme.colors.warning}
+              color={colors.warning}
             />
             <Text style={styles.moqWarningText}>
               {t("components.supplierRow.minOrder", { qty: item.moq })}
@@ -104,7 +106,7 @@ export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
         <MaterialCommunityIcons
           name="trash-can-outline"
           size={18}
-          color={theme.colors.error}
+          color={colors.error}
         />
       </Pressable>
     </View>
@@ -115,79 +117,81 @@ export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  containerWarning: {
-    backgroundColor: theme.colors.warningSoft,
-  },
-  productInfo: {
-    flex: 1,
-    marginRight: theme.spacing.md,
-  },
-  productName: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: theme.colors.textPrimary,
-    marginBottom: 2,
-  },
-  barcode: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginBottom: 4,
-  },
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 4,
-  },
-  unitPrice: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-  },
-  perUnit: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-  },
-  mrp: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    textDecorationLine: "line-through",
-    marginLeft: theme.spacing.sm,
-  },
-  quantitySection: {
-    alignItems: "center",
-    minWidth: 100,
-  },
-  moqWarning: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-    gap: 2,
-  },
-  moqWarningText: {
-    fontSize: 10,
-    color: theme.colors.warning,
-    fontWeight: "500",
-  },
-  lineTotal: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginTop: theme.spacing.xs,
-  },
-  removeButton: {
-    padding: theme.spacing.sm,
-    marginLeft: theme.spacing.sm,
-  },
-});
+function createStyles(colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    container: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    containerWarning: {
+      backgroundColor: colors.warningSoft,
+    },
+    productInfo: {
+      flex: 1,
+      marginRight: theme.spacing.md,
+    },
+    productName: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: colors.textPrimary,
+      marginBottom: 2,
+    },
+    barcode: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginBottom: 4,
+    },
+    priceRow: {
+      flexDirection: "row",
+      alignItems: "baseline",
+      gap: 4,
+    },
+    unitPrice: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textSecondary,
+    },
+    perUnit: {
+      fontSize: 11,
+      color: colors.textTertiary,
+    },
+    mrp: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      textDecorationLine: "line-through",
+      marginLeft: theme.spacing.sm,
+    },
+    quantitySection: {
+      alignItems: "center",
+      minWidth: 100,
+    },
+    moqWarning: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 4,
+      gap: 2,
+    },
+    moqWarningText: {
+      fontSize: 10,
+      color: colors.warning,
+      fontWeight: "500",
+    },
+    lineTotal: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginTop: theme.spacing.xs,
+    },
+    removeButton: {
+      padding: theme.spacing.sm,
+      marginLeft: theme.spacing.sm,
+    },
+  });
+}
 
 export default CartItem;

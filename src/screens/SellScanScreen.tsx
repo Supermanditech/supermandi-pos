@@ -3273,7 +3273,7 @@ export default function SellScanScreen({
               hitSlop={8}
               style={[styles.fefoToggle, fefoSort && styles.fefoToggleActive]}
               testID="fefo-toggle-btn"
-              accessibilityLabel={fefoSort ? "FEFO sort active — tap to disable" : "Enable FEFO sort (earliest expiry first)"}
+              accessibilityLabel={fefoSort ? t("sell.expiringFirstOn") : t("sell.expiringFirst")}
             >
               <MaterialCommunityIcons
                 name="clock-alert-outline"
@@ -3281,7 +3281,7 @@ export default function SellScanScreen({
                 color={fefoSort ? colors.surface : colors.textTertiary}
               />
               <Text style={[styles.fefoToggleText, fefoSort && styles.fefoToggleTextActive]}>
-                {fefoSort ? "FEFO ON" : "FEFO"}
+                {fefoSort ? t("sell.expiringFirstOn") : t("sell.expiringFirst")}
               </Text>
             </Pressable>
             {/* Category filter label */}
@@ -4283,21 +4283,23 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   // VOICE-001: Floating voice button (FAB)
   // ISSUE-052: Raised from bottom:16 to bottom:80 to avoid overlapping product card price pills
+  // STG-048: Position fix — bottom:80 keeps FAB above tab bar; elevation:8 for proper floating effect
+  // STG-012: Brand color — uses primary (not accent) for brand consistency
   voiceFab: {
     position: "absolute",
     right: 16,
     bottom: 80,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.accent,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    elevation: 6,
+    elevation: 8,
     shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.27,
-    shadowRadius: 4.65,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
     zIndex: 100,
   },
   voiceFabRecording: {
@@ -4305,7 +4307,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     transform: [{ scale: 1.1 }],
   },
   voiceFabWithCart: {
-    bottom: 140,
+    bottom: 148,
   },
   // VOICE-001: Expanded recording panel
   voiceRecordingPanel: {

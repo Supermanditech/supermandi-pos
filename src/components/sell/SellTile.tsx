@@ -51,12 +51,14 @@ export interface SellTileProps {
 // =============================================================================
 
 /**
- * Format paise → "₹28.00"
- * For LOOSE mode: "₹28.00/KG"
+ * Format paise → "₹28" (round) or "₹28.50" (fractional)
+ * For LOOSE mode: "₹28/KG"
  * STG-483: Delegates to formatMoney() — single source of truth for currency formatting
+ * STG-222: Smart formatting handled by formatMoney (drops .00 on round amounts)
+ * STG-226: Returns null for missing price — component renders localized "Price not set"
  */
-function formatPrice(paise: number | null, rateUnit?: string | null): string {
-  if (paise === null || paise === undefined) return "—";
+function formatPrice(paise: number | null, rateUnit?: string | null): string | null {
+  if (paise === null || paise === undefined) return null;
   const formatted = formatMoney(paise);
   if (rateUnit) return `${formatted}/${rateUnit}`;
   return formatted;
@@ -85,15 +87,20 @@ function packSizeLabel(
 /**
  * Compute days remaining from today to expiry date.
  * Returns null if no date.
+ * STG-227: Normalize both dates to IST (Asia/Kolkata) before calculating day difference.
+ * This prevents off-by-one errors near midnight when the device timezone differs from IST.
  */
 function daysUntilExpiry(expiryIso: string | null | undefined): number | null {
   if (!expiryIso) return null;
   const expiry = new Date(expiryIso);
   if (isNaN(expiry.getTime())) return null;
   const now = new Date();
+  // Normalize both dates to IST to avoid timezone-dependent off-by-one
+  const istNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+  const istExpiry = new Date(expiry.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
   // Zero-out time component for day-level calculation
-  const nowDay = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  const expDay = Date.UTC(expiry.getFullYear(), expiry.getMonth(), expiry.getDate());
+  const nowDay = Date.UTC(istNow.getFullYear(), istNow.getMonth(), istNow.getDate());
+  const expDay = Date.UTC(istExpiry.getFullYear(), istExpiry.getMonth(), istExpiry.getDate());
   return Math.round((expDay - nowDay) / (1000 * 60 * 60 * 24));
 }
 
@@ -135,12 +142,15 @@ export function SellTile({ product, testID }: SellTileProps) {
   } = product;
 
   // --- Price labels ---
-  const sellPriceLabel = formatPrice(
+  // STG-226: formatPrice returns null for missing price; show localized warning instead of em dash
+  const formattedSellPrice = formatPrice(
     sellPriceMinor,
     mode === "LOOSE" ? (rate_unit ?? undefined) : undefined
   );
+  const sellPriceLabel = formattedSellPrice ?? t("sell.priceNotSet");
+  const isSellPriceNotSet = formattedSellPrice === null;
   const mrpLabel =
-    mrp && mrp > 0 ? `MRP ${formatPrice(mrp)}` : null;
+    mrp && mrp > 0 ? `MRP ${formatPrice(mrp) ?? ""}` : null;
 
   // --- Pack size ---
   const packSizeRaw = packSizeLabel(mode, net_content_value, net_content_unit, rate_unit);
@@ -240,7 +250,10 @@ export function SellTile({ product, testID }: SellTileProps) {
 
       {/* Row 2: Sell price + MRP */}
       <View style={styles.priceRow}>
-        <Text style={styles.sellPrice} testID="sell-tile-sell-price">
+        <Text
+          style={[styles.sellPrice, isSellPriceNotSet && { color: colors.warning }]}
+          testID="sell-tile-sell-price"
+        >
           {sellPriceLabel}
         </Text>
         {mrpLabel ? (

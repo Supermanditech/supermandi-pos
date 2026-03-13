@@ -255,23 +255,23 @@ describe("SellScanScreen", () => {
     unmount();
   });
 
-  it("FEFO toggle button shows 'FEFO' text when inactive", () => {
+  it("FEFO toggle button shows 'Expiring Soon' text when inactive", () => {
     const { getByTestId, unmount } = render(
       <SellScanScreen storeActive={true} scanDisabled={false} onOpenScanner={jest.fn()} />
     );
     const fefoBtn = getByTestId("fefo-toggle-btn");
-    // Should contain "FEFO" text (inactive state)
+    // Should contain "Expiring Soon" text (inactive state)
     expect(fefoBtn).toBeTruthy();
     unmount();
   });
 
   it("FEFO sort is disabled by default", () => {
-    // The toggle button should NOT show 'FEFO ON' text initially
+    // The toggle button should NOT show 'Expiring Soon ON' text initially
     const { queryByText, unmount } = render(
       <SellScanScreen storeActive={true} scanDisabled={false} onOpenScanner={jest.fn()} />
     );
-    // "FEFO ON" should not be visible when toggle is off
-    expect(queryByText("FEFO ON")).toBeNull();
+    // "Expiring Soon ON" should not be visible when toggle is off
+    expect(queryByText("Expiring Soon ON")).toBeNull();
     unmount();
   });
 });

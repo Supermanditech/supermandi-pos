@@ -6,6 +6,7 @@
 import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View, Pressable } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 import { useThemeColors } from "../theme";
 import type { ColorPalette } from "../theme/colors";
@@ -108,20 +109,20 @@ function getDefaultConfig(colors: ColorPalette) {
   };
 }
 
-// Actions blocked in LIMITED MODE
-const BLOCKED_ACTIONS = [
-  "Create Sales",
-  "Process Payments",
-  "Place Orders (BUY)",
-  "Run Reorders",
-];
+// i18n keys for actions blocked in LIMITED MODE
+const BLOCKED_ACTION_KEYS = [
+  "limitedMode.createSales",
+  "limitedMode.processPayments",
+  "limitedMode.placeOrders",
+  "limitedMode.runReorders",
+] as const;
 
-// Actions allowed in LIMITED MODE
-const ALLOWED_ACTIONS = [
-  "View Menu",
-  "View Products",
-  "Sync Data",
-];
+// i18n keys for actions allowed in LIMITED MODE
+const ALLOWED_ACTION_KEYS = [
+  "limitedMode.viewMenu",
+  "limitedMode.viewProducts",
+  "limitedMode.syncData",
+] as const;
 
 interface LimitedModeBannerProps {
   status: string | null;
@@ -135,6 +136,7 @@ export default function LimitedModeBanner({
   compact = false,
 }: LimitedModeBannerProps) {
   const colors = useThemeColors();
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
   const statusConfig = useMemo(() => getStatusConfig(colors), [colors]);
@@ -156,7 +158,7 @@ export default function LimitedModeBanner({
       <View style={[styles.compactContainer, { backgroundColor: config.bgColor, borderColor: config.borderColor }]}>
         <MaterialCommunityIcons name={config.icon as any} size={14} color={config.color} />
         <Text style={[styles.compactText, { color: config.color }]}>
-          LIMITED MODE
+          {t("limitedMode.badge")}
         </Text>
       </View>
     );
@@ -170,11 +172,11 @@ export default function LimitedModeBanner({
           <MaterialCommunityIcons name={config.icon as any} size={18} color={config.color} />
           <View style={styles.headerLabels}>
             <View style={[styles.badge, { backgroundColor: config.borderColor }]}>
-              <Text style={styles.badgeText}>LIMITED MODE</Text>
+              <Text style={styles.badgeText}>{t("limitedMode.badge")}</Text>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: colors.surface }]}>
               <Text style={[styles.statusText, { color: config.color }]}>
-                Status: {config.label}
+                {t("limitedMode.status", { label: config.label })}
               </Text>
             </View>
           </View>
@@ -193,7 +195,7 @@ export default function LimitedModeBanner({
         hitSlop={8}
       >
         <Text style={styles.expandText}>
-          {expanded ? "Hide restrictions" : "View restrictions"}
+          {expanded ? t("limitedMode.hideRestrictions") : t("limitedMode.viewRestrictions")}
         </Text>
         <MaterialCommunityIcons
           name={expanded ? "chevron-up" : "chevron-down"}
@@ -205,20 +207,20 @@ export default function LimitedModeBanner({
       {expanded && (
         <View style={styles.restrictionsContainer}>
           <View style={styles.restrictionColumn}>
-            <Text style={styles.restrictionHeader}>Blocked:</Text>
-            {BLOCKED_ACTIONS.map((action) => (
-              <View key={action} style={styles.restrictionRow}>
+            <Text style={styles.restrictionHeader}>{t("limitedMode.blocked")}</Text>
+            {BLOCKED_ACTION_KEYS.map((key) => (
+              <View key={key} style={styles.restrictionRow}>
                 <MaterialCommunityIcons name="close-circle" size={12} color={colors.error} />
-                <Text style={styles.restrictionText}>{action}</Text>
+                <Text style={styles.restrictionText}>{t(key)}</Text>
               </View>
             ))}
           </View>
           <View style={styles.restrictionColumn}>
-            <Text style={[styles.restrictionHeader, { color: colors.success }]}>Allowed:</Text>
-            {ALLOWED_ACTIONS.map((action) => (
-              <View key={action} style={styles.restrictionRow}>
+            <Text style={[styles.restrictionHeader, { color: colors.success }]}>{t("limitedMode.allowed")}</Text>
+            {ALLOWED_ACTION_KEYS.map((key) => (
+              <View key={key} style={styles.restrictionRow}>
                 <MaterialCommunityIcons name="check-circle" size={12} color={colors.success} />
-                <Text style={styles.restrictionText}>{action}</Text>
+                <Text style={styles.restrictionText}>{t(key)}</Text>
               </View>
             ))}
           </View>
