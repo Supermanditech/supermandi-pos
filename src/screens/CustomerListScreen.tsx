@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import { useTranslation } from "react-i18next";
 import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { formatDateTime } from "../i18n/formatters";
@@ -49,6 +50,7 @@ interface CustomerListScreenProps {
 }
 
 export default function CustomerListScreen({ onBack }: CustomerListScreenProps) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const {
     customers,
@@ -101,7 +103,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
 
   useEffect(() => {
     if (error) {
-      Alert.alert("Error", error);
+      Alert.alert(t("customerList.errorTitle"), error);
       clearError();
     }
   }, [error]);
@@ -151,11 +153,11 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
     const name = formName.trim();
     const phone = formPhone.trim();
     if (!name) {
-      Alert.alert("Required", "Please enter the customer name.");
+      Alert.alert(t("customerList.requiredTitle"), t("customerList.nameRequired"));
       return;
     }
     if (!phone || phone.length < 10) {
-      Alert.alert("Required", "Please enter a valid 10-digit phone number.");
+      Alert.alert(t("customerList.requiredTitle"), t("customerList.phoneRequired"));
       return;
     }
     setFormSubmitting(true);
@@ -168,11 +170,11 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       });
       if (success) {
         setShowAddModal(false);
-        Alert.alert("Success", "Customer added.");
+        Alert.alert(t("customerList.successTitle"), t("customerList.customerAdded"));
       }
     } catch (err) {
       // ISSUE-150: Prevent form lock on unexpected errors
-      Alert.alert("Error", err instanceof Error ? err.message : "Failed to add customer.");
+      Alert.alert(t("customerList.errorTitle"), err instanceof Error ? err.message : t("customerList.addFailed"));
     } finally {
       setFormSubmitting(false);
     }
@@ -192,7 +194,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
     if (!selectedCustomer) return;
     const name = formName.trim();
     if (!name) {
-      Alert.alert("Required", "Please enter the customer name.");
+      Alert.alert(t("customerList.requiredTitle"), t("customerList.nameRequired"));
       return;
     }
     setFormSubmitting(true);
@@ -206,7 +208,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       setShowEditModal(false);
       // Refresh detail
       void fetchCustomerDetail(selectedCustomer.id);
-      Alert.alert("Success", "Customer updated.");
+      Alert.alert(t("customerList.successTitle"), t("customerList.customerUpdated"));
     }
   }, [selectedCustomer, formName, formEmail, formAddress, updateCustomer, fetchCustomerDetail]);
 
@@ -226,14 +228,14 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
           <Text style={styles.customerPhone}>{item.phone}</Text>
           <View style={styles.customerStats}>
             <Text style={styles.customerStat}>
-              {formatMoney(item.totalPurchasesMinor)} spent
+              {t("customerList.spentAmount", { amount: formatMoney(item.totalPurchasesMinor) })}
             </Text>
             <Text style={styles.customerStatDivider}>|</Text>
-            <Text style={styles.customerStat}>{item.visitCount} visits</Text>
+            <Text style={styles.customerStat}>{t("customerList.visitCount", { count: item.visitCount })}</Text>
           </View>
           {item.lastVisitAt && (
             <Text style={styles.customerLastVisit}>
-              Last visit: {formatDateDDMMYYYY(item.lastVisitAt)}
+              {t("customerList.lastVisitDate", { date: formatDateDDMMYYYY(item.lastVisitAt) })}
             </Text>
           )}
         </View>
@@ -247,10 +249,10 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
   const renderPurchaseItem = useCallback((purchase: CustomerPurchase) => (
     <View key={purchase.saleId} style={styles.purchaseItem}>
       <View style={styles.purchaseInfo}>
-        <Text style={styles.purchaseBillRef}>Bill #{purchase.billRef}</Text>
+        <Text style={styles.purchaseBillRef}>{t("customerList.billRef", { ref: purchase.billRef })}</Text>
         <Text style={styles.purchaseDate}>{formatDateDDMMYYYY(purchase.createdAt)}</Text>
         <View style={styles.purchaseMeta}>
-          <Text style={styles.purchaseMetaText}>{purchase.itemCount} items</Text>
+          <Text style={styles.purchaseMetaText}>{t("customerList.itemCount", { count: purchase.itemCount })}</Text>
           <Text style={styles.purchaseMetaDivider}>|</Text>
           <Text style={styles.purchaseMetaText}>{purchase.paymentMode}</Text>
         </View>
@@ -599,14 +601,14 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
 
   return (
     <View style={styles.container}>
-      <BackHeader title="Customers" onBack={onBack} />
+      <BackHeader title={t("customerList.title")} onBack={onBack} />
 
       {/* Search bar */}
       <View style={styles.searchBar}>
         <MaterialCommunityIcons name="magnify" size={20} color={colors.textTertiary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by name or phone..."
+          placeholder={t("customerList.searchPlaceholder")}
           placeholderTextColor={colors.textTertiary}
           value={searchQuery}
           onChangeText={handleSearch}
@@ -623,20 +625,20 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       {/* Add button */}
       <Pressable accessibilityRole="button" style={styles.addButton} onPress={handleOpenAddModal}>
         <MaterialCommunityIcons name="account-plus-outline" size={18} color={colors.primary} />
-        <Text style={styles.addButtonText}>Add Customer</Text>
+        <Text style={styles.addButtonText}>{t("customerList.addCustomer")}</Text>
       </Pressable>
 
       {/* Customer list */}
       {loading && customers.length === 0 ? (
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading customers...</Text>
+          <Text style={styles.loadingText}>{t("customerList.loadingCustomers")}</Text>
         </View>
       ) : customers.length === 0 ? (
         <EmptyState
           icon="account-group-outline"
-          title="No customers yet"
-          description="Add your first customer to start building your customer profiles."
+          title={t("customerList.noCustomersTitle")}
+          description={t("customerList.noCustomersDescription")}
         />
       ) : (
         <FlatList
@@ -667,7 +669,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={handleCloseDetail}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
-            <Text style={styles.modalTitle}>Customer Profile</Text>
+            <Text style={styles.modalTitle}>{t("customerList.customerProfile")}</Text>
             <Pressable accessibilityRole="button" style={styles.modalEditButton} onPress={handleOpenEditModal}>
               <MaterialCommunityIcons name="pencil-outline" size={20} color={colors.primary} />
             </Pressable>
@@ -694,9 +696,9 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
                     accessibilityRole="link"
                     style={styles.whatsappIconButton}
                     onPress={() => {
-                      const name = selectedCustomer.name || "Customer";
+                      const name = selectedCustomer.name || t("customerList.defaultCustomerName");
                       const message = encodeURIComponent(
-                        `Hi ${name}, greetings from SuperMandi!`
+                        t("customerList.whatsappGreeting", { name })
                       );
                       let phone = selectedCustomer.phone.replace(/\D/g, "");
                       // STG-470: Prepend India country code if 10-digit number
@@ -704,7 +706,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
                       // wa.me universal link works on both Android and iOS
                       const url = `https://wa.me/${phone}?text=${message}`;
                       Linking.openURL(url).catch(() => {
-                        Alert.alert("WhatsApp Not Found", "Please install WhatsApp to use this feature.");
+                        Alert.alert(t("customerList.whatsappNotFoundTitle"), t("customerList.whatsappNotFoundMessage"));
                       });
                     }}
                     hitSlop={8}
@@ -727,24 +729,24 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
                   <Text style={styles.statValue}>
                     {formatMoney(selectedCustomer.totalPurchasesMinor)}
                   </Text>
-                  <Text style={styles.statLabel}>Total Purchases</Text>
+                  <Text style={styles.statLabel}>{t("customerList.totalPurchases")}</Text>
                 </View>
                 <View style={styles.statCard}>
                   <Text style={styles.statValue}>{selectedCustomer.visitCount}</Text>
-                  <Text style={styles.statLabel}>Visits</Text>
+                  <Text style={styles.statLabel}>{t("customerList.visits")}</Text>
                 </View>
                 <View style={styles.statCard}>
                   <Text style={styles.statValue}>
                     {formatDateDDMMYYYY(selectedCustomer.lastVisitAt)}
                   </Text>
-                  <Text style={styles.statLabel}>Last Visit</Text>
+                  <Text style={styles.statLabel}>{t("customerList.lastVisit")}</Text>
                 </View>
               </View>
 
               {/* Purchase history */}
-              <Text style={styles.sectionTitle}>Purchase History</Text>
+              <Text style={styles.sectionTitle}>{t("customerList.purchaseHistory")}</Text>
               {selectedCustomer.purchases.length === 0 ? (
-                <Text style={styles.noPurchases}>No purchase history available.</Text>
+                <Text style={styles.noPurchases}>{t("customerList.noPurchaseHistory")}</Text>
               ) : (
                 selectedCustomer.purchases.map(renderPurchaseItem)
               )}
@@ -765,24 +767,24 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={() => setShowAddModal(false)}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
-            <Text style={styles.modalTitle}>Add Customer</Text>
+            <Text style={styles.modalTitle}>{t("customerList.addCustomer")}</Text>
             <View style={styles.modalHeaderSpacer} />
           </View>
 
           <ScrollView style={styles.modalFormContent} keyboardShouldPersistTaps="handled">
-            <Text style={styles.formLabel}>Name *</Text>
+            <Text style={styles.formLabel}>{t("customerList.nameLabel")}</Text>
             <TextInput
               style={styles.formInput}
-              placeholder="Customer name"
+              placeholder={t("customerList.namePlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={formName}
               onChangeText={setFormName}
             />
 
-            <Text style={styles.formLabel}>Phone *</Text>
+            <Text style={styles.formLabel}>{t("customerList.phoneLabel")}</Text>
             <TextInput
               style={styles.formInput}
-              placeholder="10-digit phone number"
+              placeholder={t("customerList.phonePlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={formPhone}
               onChangeText={setFormPhone}
@@ -790,10 +792,10 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               maxLength={10}
             />
 
-            <Text style={styles.formLabel}>Email (Optional)</Text>
+            <Text style={styles.formLabel}>{t("customerList.emailLabel")}</Text>
             <TextInput
               style={styles.formInput}
-              placeholder="email@example.com"
+              placeholder={t("customerList.emailPlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={formEmail}
               onChangeText={setFormEmail}
@@ -801,10 +803,10 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               autoCapitalize="none"
             />
 
-            <Text style={styles.formLabel}>Address (Optional)</Text>
+            <Text style={styles.formLabel}>{t("customerList.addressLabel")}</Text>
             <TextInput
               style={[styles.formInput, styles.formTextArea]}
-              placeholder="Customer address"
+              placeholder={t("customerList.addressPlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={formAddress}
               onChangeText={setFormAddress}
@@ -821,7 +823,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               {formSubmitting ? (
                 <ActivityIndicator size="small" color={colors.textInverse} />
               ) : (
-                <Text style={styles.submitButtonText}>Add Customer</Text>
+                <Text style={styles.submitButtonText}>{t("customerList.addCustomer")}</Text>
               )}
             </Pressable>
           </ScrollView>
@@ -840,31 +842,31 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={() => setShowEditModal(false)}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
-            <Text style={styles.modalTitle}>Edit Customer</Text>
+            <Text style={styles.modalTitle}>{t("customerList.editCustomer")}</Text>
             <View style={styles.modalHeaderSpacer} />
           </View>
 
           <ScrollView style={styles.modalFormContent} keyboardShouldPersistTaps="handled">
-            <Text style={styles.formLabel}>Name *</Text>
+            <Text style={styles.formLabel}>{t("customerList.nameLabel")}</Text>
             <TextInput
               style={styles.formInput}
-              placeholder="Customer name"
+              placeholder={t("customerList.namePlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={formName}
               onChangeText={setFormName}
             />
 
-            <Text style={styles.formLabel}>Phone (read-only)</Text>
+            <Text style={styles.formLabel}>{t("customerList.phoneReadOnly")}</Text>
             <TextInput
               style={[styles.formInput, styles.formInputDisabled]}
               value={formPhone}
               editable={false}
             />
 
-            <Text style={styles.formLabel}>Email (Optional)</Text>
+            <Text style={styles.formLabel}>{t("customerList.emailLabel")}</Text>
             <TextInput
               style={styles.formInput}
-              placeholder="email@example.com"
+              placeholder={t("customerList.emailPlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={formEmail}
               onChangeText={setFormEmail}
@@ -872,10 +874,10 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               autoCapitalize="none"
             />
 
-            <Text style={styles.formLabel}>Address (Optional)</Text>
+            <Text style={styles.formLabel}>{t("customerList.addressLabel")}</Text>
             <TextInput
               style={[styles.formInput, styles.formTextArea]}
-              placeholder="Customer address"
+              placeholder={t("customerList.addressPlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={formAddress}
               onChangeText={setFormAddress}
@@ -892,7 +894,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               {formSubmitting ? (
                 <ActivityIndicator size="small" color={colors.textInverse} />
               ) : (
-                <Text style={styles.submitButtonText}>Save Changes</Text>
+                <Text style={styles.submitButtonText}>{t("customerList.saveChanges")}</Text>
               )}
             </Pressable>
           </ScrollView>

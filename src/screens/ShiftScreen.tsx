@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import { useTranslation } from "react-i18next";
 import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { useShiftStore } from "../stores/shiftStore";
@@ -67,6 +68,7 @@ interface ShiftScreenProps {
 }
 
 export default function ShiftScreen({ onBack }: ShiftScreenProps) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const {
     currentShift,
@@ -125,7 +127,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
 
   useEffect(() => {
     if (error) {
-      Alert.alert("Error", error);
+      Alert.alert(t("shift.errorTitle"), error);
       clearError();
     }
   }, [error, clearError]);
@@ -142,21 +144,21 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
     const cashStr = openingCash.trim();
     const openingCashMinor = Math.round(parseFloat(cashStr) * 100);
     if (!cashStr || isNaN(openingCashMinor) || openingCashMinor < 0) {
-      Alert.alert("Invalid Amount", "Please enter the opening cash amount.");
+      Alert.alert(t("shift.invalidAmount"), t("shift.enterOpeningCash"));
       return;
     }
     Alert.alert(
-      "Start Shift",
-      `Start shift with opening cash of \u20B9${(openingCashMinor / 100).toFixed(2)}?`,
+      t("shift.startShiftTitle"),
+      t("shift.startShiftConfirm", { amount: `\u20B9${(openingCashMinor / 100).toFixed(2)}` }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("shift.cancel"), style: "cancel" },
         {
-          text: "Start",
+          text: t("shift.start"),
           onPress: async () => {
             const success = await startShift({ openingCashMinor });
             if (success) {
               setOpeningCash("");
-              Alert.alert("Shift Started", "Your shift has been started successfully.");
+              Alert.alert(t("shift.shiftStarted"), t("shift.shiftStartedMessage"));
             }
           },
         },
@@ -169,22 +171,22 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
     const cashStr = closingCash.trim();
     const closingCashMinor = Math.round(parseFloat(cashStr) * 100);
     if (!cashStr || isNaN(closingCashMinor) || closingCashMinor < 0) {
-      Alert.alert("Invalid Amount", "Please enter a valid closing cash amount (must be zero or positive).");
+      Alert.alert(t("shift.invalidAmount"), t("shift.enterValidClosingCash"));
       return;
     }
 
     // ISSUE-105: Warn on zero closing cash — likely a mistake
     const confirmMessage = closingCashMinor === 0
-      ? "Closing cash is ₹0. Are you sure you want to end your shift with zero cash?"
-      : "Are you sure you want to end your current shift?";
+      ? t("shift.zeroCashWarning")
+      : t("shift.endShiftConfirm");
 
     Alert.alert(
-      "End Shift",
+      t("shift.endShiftTitle"),
       confirmMessage,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("shift.cancel"), style: "cancel" },
         {
-          text: "End Shift",
+          text: t("shift.endShiftButton"),
           style: "destructive",
           onPress: async () => {
             const success = await endShift({
@@ -194,7 +196,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
             if (success) {
               setClosingCash("");
               setEndNotes("");
-              Alert.alert("Shift Ended", "Your shift has been closed.");
+              Alert.alert(t("shift.shiftEnded"), t("shift.shiftEndedMessage"));
             }
           },
         },
@@ -554,34 +556,34 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
           </View>
           <View style={[styles.historyBadge, { backgroundColor: varianceColor + "15" }]}>
             <Text style={[styles.historyBadgeText, { color: varianceColor }]}>
-              {shift.status === "ACTIVE" ? "ACTIVE" : isMatch ? "MATCH" : "MISMATCH"}
+              {shift.status === "ACTIVE" ? t("shift.active") : isMatch ? t("shift.match") : t("shift.mismatch")}
             </Text>
           </View>
         </View>
 
         <View style={styles.historyDetails}>
           <View style={styles.historyRow}>
-            <Text style={styles.historyLabel}>Time</Text>
+            <Text style={styles.historyLabel}>{t("shift.time")}</Text>
             <Text style={styles.historyValue}>
               {formatTime12h(shift.startedAt)} -{" "}
-              {shift.endedAt ? formatTime12h(shift.endedAt) : "Ongoing"}
+              {shift.endedAt ? formatTime12h(shift.endedAt) : t("shift.ongoing")}
             </Text>
           </View>
           <View style={styles.historyRow}>
-            <Text style={styles.historyLabel}>Duration</Text>
+            <Text style={styles.historyLabel}>{t("shift.duration")}</Text>
             <Text style={styles.historyValue}>
               {calculateDuration(shift.startedAt, shift.endedAt)}
             </Text>
           </View>
           <View style={styles.historyRow}>
-            <Text style={styles.historyLabel}>Sales</Text>
+            <Text style={styles.historyLabel}>{t("shift.sales")}</Text>
             <Text style={styles.historyValue}>
-              {shift.salesCount} orders ({formatMoney(shift.salesTotalMinor)})
+              {t("shift.ordersWithTotal", { count: shift.salesCount, total: formatMoney(shift.salesTotalMinor) })}
             </Text>
           </View>
           {shift.varianceMinor !== null && (
             <View style={styles.historyRow}>
-              <Text style={styles.historyLabel}>Variance</Text>
+              <Text style={styles.historyLabel}>{t("shift.variance")}</Text>
               <Text style={[styles.historyValue, { color: varianceColor, fontWeight: "700" }]}>
                 {shift.varianceMinor >= 0 ? "+" : ""}
                 {formatMoney(shift.varianceMinor)}
@@ -591,7 +593,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
         </View>
 
         {shift.notes && (
-          <Text style={styles.historyNotes}>Notes: {shift.notes}</Text>
+          <Text style={styles.historyNotes}>{t("shift.notesLabel")}: {shift.notes}</Text>
         )}
       </View>
     );
@@ -599,7 +601,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
 
   return (
     <View style={styles.container}>
-      <BackHeader title="Shift Management" onBack={onBack} />
+      <BackHeader title={t("shift.title")} onBack={onBack} />
 
       {/* Tab switcher */}
       <View style={styles.tabRow}>
@@ -609,7 +611,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
           onPress={() => setActiveTab("CURRENT")}
         >
           <Text style={[styles.tabText, activeTab === "CURRENT" && styles.tabTextActive]}>
-            Current Shift
+            {t("shift.currentShift")}
           </Text>
         </Pressable>
         <Pressable
@@ -618,7 +620,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
           onPress={() => setActiveTab("HISTORY")}
         >
           <Text style={[styles.tabText, activeTab === "HISTORY" && styles.tabTextActive]}>
-            History
+            {t("shift.history")}
           </Text>
         </Pressable>
       </View>
@@ -640,7 +642,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
           {loading ? (
             <View style={styles.centerContent}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Loading shift info...</Text>
+              <Text style={styles.loadingText}>{t("shift.loadingShiftInfo")}</Text>
             </View>
           ) : currentShift ? (
             /* Active shift view */
@@ -648,7 +650,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
               <View style={styles.activeShiftCard}>
                 <View style={styles.activeShiftHeader}>
                   <View style={styles.activeShiftDot} />
-                  <Text style={styles.activeShiftTitle}>Active Shift</Text>
+                  <Text style={styles.activeShiftTitle}>{t("shift.activeShift")}</Text>
                 </View>
 
                 <View style={styles.shiftInfoRow}>
@@ -658,32 +660,32 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                 <View style={styles.shiftInfoRow}>
                   <MaterialCommunityIcons name="clock-start" size={16} color={colors.textSecondary} />
                   <Text style={styles.shiftInfoText}>
-                    Started at {formatTime12h(currentShift.startedAt)} ({formatDateDDMMYYYY(currentShift.startedAt)})
+                    {t("shift.startedAt", { time: formatTime12h(currentShift.startedAt), date: formatDateDDMMYYYY(currentShift.startedAt) })}
                   </Text>
                 </View>
                 <View style={styles.shiftInfoRow}>
                   <MaterialCommunityIcons name="timer-outline" size={16} color={colors.textSecondary} />
                   <Text style={styles.shiftInfoText}>
-                    Duration: {calculateDuration(currentShift.startedAt)}
+                    {t("shift.durationValue", { duration: calculateDuration(currentShift.startedAt) })}
                   </Text>
                 </View>
                 <View style={styles.shiftInfoRow}>
                   <MaterialCommunityIcons name="cash" size={16} color={colors.textSecondary} />
                   <Text style={styles.shiftInfoText}>
-                    Opening Cash: {formatMoney(currentShift.openingCashMinor)}
+                    {t("shift.openingCashValue", { amount: formatMoney(currentShift.openingCashMinor) })}
                   </Text>
                 </View>
               </View>
 
               {/* Shift summary */}
               <View style={styles.summaryCard}>
-                <Text style={styles.summaryTitle}>Shift Summary</Text>
+                <Text style={styles.summaryTitle}>{t("shift.shiftSummary")}</Text>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Sales Count</Text>
+                  <Text style={styles.summaryLabel}>{t("shift.salesCount")}</Text>
                   <Text style={styles.summaryValue}>{currentShift.salesCount}</Text>
                 </View>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Sales Total</Text>
+                  <Text style={styles.summaryLabel}>{t("shift.salesTotal")}</Text>
                   <Text style={styles.summaryValueLarge}>
                     {formatMoney(currentShift.salesTotalMinor)}
                   </Text>
@@ -694,7 +696,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                     <View style={styles.summaryRow}>
                       <View style={styles.summaryRowIcon}>
                         <MaterialCommunityIcons name="cash" size={16} color={colors.success} />
-                        <Text style={styles.summaryLabel}>Cash</Text>
+                        <Text style={styles.summaryLabel}>{t("shift.cash")}</Text>
                       </View>
                       <Text style={styles.summaryValue}>
                         {formatMoney(currentShift.salesByPaymentType.cashMinor)}
@@ -703,7 +705,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                     <View style={styles.summaryRow}>
                       <View style={styles.summaryRowIcon}>
                         <MaterialCommunityIcons name="cellphone-nfc" size={16} color={colors.primary} />
-                        <Text style={styles.summaryLabel}>UPI</Text>
+                        <Text style={styles.summaryLabel}>{t("shift.upi")}</Text>
                       </View>
                       <Text style={styles.summaryValue}>
                         {formatMoney(currentShift.salesByPaymentType.upiMinor)}
@@ -712,7 +714,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                     <View style={styles.summaryRow}>
                       <View style={styles.summaryRowIcon}>
                         <MaterialCommunityIcons name="clock-outline" size={16} color={colors.warning} />
-                        <Text style={styles.summaryLabel}>Due</Text>
+                        <Text style={styles.summaryLabel}>{t("shift.due")}</Text>
                       </View>
                       <Text style={styles.summaryValue}>
                         {formatMoney(currentShift.salesByPaymentType.dueMinor)}
@@ -722,7 +724,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                       <View style={styles.summaryRow}>
                         <View style={styles.summaryRowIcon}>
                           <MaterialCommunityIcons name="credit-card-outline" size={16} color={colors.accent} />
-                          <Text style={styles.summaryLabel}>Card</Text>
+                          <Text style={styles.summaryLabel}>{t("shift.card")}</Text>
                         </View>
                         <Text style={styles.summaryValue}>
                           {formatMoney(currentShift.salesByPaymentType.cardMinor)}
@@ -736,7 +738,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                   <>
                     <View style={styles.summaryDivider} />
                     <View style={styles.summaryRow}>
-                      <Text style={[styles.summaryLabel, { fontWeight: "700" }]}>Expected Cash</Text>
+                      <Text style={[styles.summaryLabel, { fontWeight: "700" }]}>{t("shift.expectedCash")}</Text>
                       <Text style={[styles.summaryValue, { fontWeight: "700" }]}>
                         {formatMoney(currentShift.expectedCashMinor)}
                       </Text>
@@ -747,9 +749,9 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
 
               {/* End shift form */}
               <View style={styles.endShiftCard}>
-                <Text style={styles.endShiftTitle}>End Shift</Text>
+                <Text style={styles.endShiftTitle}>{t("shift.endShiftTitle")}</Text>
 
-                <Text style={styles.formLabel}>Closing Cash (₹)</Text>
+                <Text style={styles.formLabel}>{t("shift.closingCashLabel")}</Text>
                 <View style={styles.cashInputRow}>
                   <Text style={styles.cashInputPrefix}>₹</Text>
                   <TextInput
@@ -790,16 +792,16 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                       ]}
                     >
                       {endVarianceMinor === 0
-                        ? "Cash matches"
-                        : `Variance: ${endVarianceMinor > 0 ? "+" : ""}${formatMoney(endVarianceMinor)}`}
+                        ? t("shift.cashMatches")
+                        : t("shift.varianceAmount", { amount: `${endVarianceMinor > 0 ? "+" : ""}${formatMoney(endVarianceMinor)}` })}
                     </Text>
                   </View>
                 )}
 
-                <Text style={styles.formLabel}>Notes (Optional)</Text>
+                <Text style={styles.formLabel}>{t("shift.notesOptional")}</Text>
                 <TextInput
                   style={[styles.formInput, styles.formTextArea]}
-                  placeholder="Any notes about the shift..."
+                  placeholder={t("shift.notesPlaceholder")}
                   placeholderTextColor={colors.textTertiary}
                   value={endNotes}
                   onChangeText={setEndNotes}
@@ -818,7 +820,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                   ) : (
                     <>
                       <MaterialCommunityIcons name="clock-end" size={18} color={colors.textInverse} />
-                      <Text style={styles.endShiftButtonText}>End Shift</Text>
+                      <Text style={styles.endShiftButtonText}>{t("shift.endShiftButton")}</Text>
                     </>
                   )}
                 </Pressable>
@@ -829,12 +831,12 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
             <View style={styles.startShiftContainer}>
               <View style={styles.startShiftCard}>
                 <MaterialCommunityIcons name="clock-plus-outline" size={48} color={colors.primary} />
-                <Text style={styles.startShiftTitle}>Start Your Shift</Text>
+                <Text style={styles.startShiftTitle}>{t("shift.startYourShift")}</Text>
                 <Text style={styles.startShiftSubtitle}>
-                  {staffSession?.name || "Staff"}, enter your opening cash to begin.
+                  {t("shift.enterOpeningCashToBegin", { name: staffSession?.name || t("shift.staff") })}
                 </Text>
 
-                <Text style={styles.formLabel}>Opening Cash (₹)</Text>
+                <Text style={styles.formLabel}>{t("shift.openingCashLabel")}</Text>
                 <View style={styles.cashInputRow}>
                   <Text style={styles.cashInputPrefix}>₹</Text>
                   <TextInput
@@ -859,7 +861,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                   ) : (
                     <>
                       <MaterialCommunityIcons name="clock-start" size={18} color={colors.textInverse} />
-                      <Text style={styles.startShiftButtonText}>Start Shift</Text>
+                      <Text style={styles.startShiftButtonText}>{t("shift.startShift")}</Text>
                     </>
                   )}
                 </Pressable>
@@ -889,8 +891,8 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
           ) : history.length === 0 ? (
             <EmptyState
               icon="history"
-              title="No shift history"
-              description="Shift records will appear here after you complete your first shift."
+              title={t("shift.noShiftHistory")}
+              description={t("shift.noShiftHistoryDescription")}
             />
           ) : (
             history.map(renderHistoryItem)

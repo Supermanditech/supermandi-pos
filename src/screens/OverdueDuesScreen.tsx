@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 import { theme, useThemeColors, type ColorPalette } from "../theme";
 import { formatMoney } from "../utils/money";
@@ -60,11 +61,11 @@ function getSeverityColor(daysOverdue: number, colors: ColorPalette): string {
   return colors.info;                            // STG-447: blue for Due Soon (was same as warning)
 }
 
-/** Get severity label */
-function getSeverityLabel(daysOverdue: number): string {
-  if (daysOverdue > 30) return "Critical";
-  if (daysOverdue > 7) return "Overdue";
-  return "Due Soon";
+/** Get severity label key */
+function getSeverityLabelKey(daysOverdue: number): string {
+  if (daysOverdue > 30) return "overdueDues.severityCritical";
+  if (daysOverdue > 7) return "overdueDues.severityOverdue";
+  return "overdueDues.severityDueSoon";
 }
 
 /** Format DD/MM/YYYY for Indian locale */
@@ -102,6 +103,7 @@ export default function OverdueDuesScreen({
   onBack,
   onNavigateToPayment,
 }: OverdueDuesScreenProps) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
 
   const styles = useMemo(() => StyleSheet.create({
@@ -299,7 +301,7 @@ export default function OverdueDuesScreen({
     } catch (_e: unknown) {
     const e = asError(_e);
       if (__DEV__) console.error("[OverdueDuesScreen] Failed to load overdue dues:", e);
-      setError(e?.message || "Failed to load overdue dues");
+      setError(e?.message || t("overdueDues.loadFailed"));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -320,8 +322,8 @@ export default function OverdueDuesScreen({
     async (due: OverdueDue) => {
       const storeName = "SuperMandi"; // fallback store name
       const amountStr = formatMoney(due.outstandingMinor);
-      const dateStr = due.dueDate ? formatIndianDate(due.dueDate) : "N/A";
-      const message = `Dear ${due.customerName}, you have an outstanding payment of ${amountStr} from ${dateStr}. Please pay at your earliest. - ${storeName}`;
+      const dateStr = due.dueDate ? formatIndianDate(due.dueDate) : t("overdueDues.notAvailable");
+      const message = t("overdueDues.whatsappReminderTemplate", { name: due.customerName, amount: amountStr, date: dateStr, storeName });
 
       // ISSUE-099: Normalize phone to 91XXXXXXXXXX format without double-prefix
       let phone = due.customerPhone.replace(/\D/g, "");
@@ -357,7 +359,7 @@ export default function OverdueDuesScreen({
             [due.id]: new Date().toISOString(),
           }));
         } catch {
-          Alert.alert("Error", "Could not send reminder");
+          Alert.alert(t("common.error"), t("overdueDues.reminderFailed"));
         }
       }
     },
@@ -370,7 +372,7 @@ export default function OverdueDuesScreen({
         // STG-139: Backend returns 'id' which is the sale ID
         onNavigateToPayment(due.id);
       } else {
-        Alert.alert("Record Payment", "Navigate to payment screen to record payment for this due.");
+        Alert.alert(t("overdueDues.recordPayment"), t("overdueDues.navigateToPayment"));
       }
     },
     [onNavigateToPayment]
@@ -384,7 +386,7 @@ export default function OverdueDuesScreen({
       // STG-139: daysOverdue can be null if no due_date set
       const daysOverdue = item.daysOverdue ?? 0;
       const severityColor = getSeverityColor(daysOverdue, colors);
-      const severityLabel = getSeverityLabel(daysOverdue);
+      const severityLabel = t(getSeverityLabelKey(daysOverdue));
       const reminderSent = reminderSentMap[item.id];
 
       return (
@@ -416,31 +418,31 @@ export default function OverdueDuesScreen({
           {/* Details */}
           <View style={styles.cardDetails}>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Phone</Text>
+              <Text style={styles.detailLabel}>{t("overdueDues.phone")}</Text>
               <Text style={styles.detailValue}>+91 {item.customerPhone}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Bill #</Text>
+              <Text style={styles.detailLabel}>{t("overdueDues.billNumber")}</Text>
               <Text style={styles.detailValue}>{item.billRef}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Outstanding</Text>
+              <Text style={styles.detailLabel}>{t("overdueDues.outstanding")}</Text>
               <Text style={[styles.detailValueBold, { color: severityColor }]}>
                 {formatMoney(item.outstandingMinor)}
               </Text>
             </View>
             {item.dueDate && (
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Due Date</Text>
+                <Text style={styles.detailLabel}>{t("overdueDues.dueDate")}</Text>
                 <Text style={styles.detailValue}>
                   {formatIndianDate(item.dueDate)}
                 </Text>
               </View>
             )}
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Days Overdue</Text>
+              <Text style={styles.detailLabel}>{t("overdueDues.daysOverdue")}</Text>
               <Text style={[styles.detailValueBold, { color: severityColor }]}>
-                {daysOverdue} days
+                {t("overdueDues.daysCount", { count: daysOverdue })}
               </Text>
             </View>
           </View>
@@ -454,7 +456,7 @@ export default function OverdueDuesScreen({
                 color={colors.success}
               />
               <Text style={styles.reminderSentText}>
-                Reminder sent {formatDate(reminderSent, "short")}
+                {t("overdueDues.reminderSent", { date: formatDate(reminderSent, "short") })}
               </Text>
             </View>
           )}
@@ -471,7 +473,7 @@ export default function OverdueDuesScreen({
                 size={16}
                 color={colors.success}
               />
-              <Text style={styles.reminderButtonText}>Send Reminder</Text>
+              <Text style={styles.reminderButtonText}>{t("overdueDues.sendReminder")}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -483,7 +485,7 @@ export default function OverdueDuesScreen({
                 size={16}
                 color={colors.textInverse}
               />
-              <Text style={styles.paymentButtonText}>Record Payment</Text>
+              <Text style={styles.paymentButtonText}>{t("overdueDues.recordPayment")}</Text>
             </Pressable>
           </View>
         </View>
@@ -496,10 +498,10 @@ export default function OverdueDuesScreen({
   if (loading) {
     return (
       <View style={styles.container}>
-        <BackHeader title="Overdue Dues" onBack={onBack} />
+        <BackHeader title={t("overdueDues.title")} onBack={onBack} />
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading overdue dues...</Text>
+          <Text style={styles.loadingText}>{t("overdueDues.loading")}</Text>
         </View>
       </View>
     );
@@ -509,7 +511,7 @@ export default function OverdueDuesScreen({
   if (error) {
     return (
       <View style={styles.container}>
-        <BackHeader title="Overdue Dues" onBack={onBack} />
+        <BackHeader title={t("overdueDues.title")} onBack={onBack} />
         <View style={styles.centerContent}>
           <MaterialCommunityIcons
             name="alert-circle-outline"
@@ -518,7 +520,7 @@ export default function OverdueDuesScreen({
           />
           <Text style={styles.errorText}>{error}</Text>
           <Pressable accessibilityRole="button" style={styles.retryButton} onPress={() => { setLoading(true); void loadDues(); }}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
           </Pressable>
         </View>
       </View>
@@ -527,18 +529,18 @@ export default function OverdueDuesScreen({
 
   return (
     <View style={styles.container}>
-      <BackHeader title="Overdue Dues" onBack={onBack} />
+      <BackHeader title={t("overdueDues.title")} onBack={onBack} />
 
       {/* Summary bar */}
       {dues.length > 0 && (
         <View style={styles.summaryBar}>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Total Overdue</Text>
+            <Text style={styles.summaryLabel}>{t("overdueDues.totalOverdue")}</Text>
             <Text style={styles.summaryValue}>{formatMoney(totalOverdue)}</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Customers</Text>
+            <Text style={styles.summaryLabel}>{t("overdueDues.customers")}</Text>
             <Text style={styles.summaryValue}>{dues.length}</Text>
           </View>
         </View>
@@ -548,8 +550,8 @@ export default function OverdueDuesScreen({
       {dues.length === 0 ? (
         <EmptyState
           icon="check-circle-outline"
-          title="No overdue dues"
-          description="All customer payments are up to date. Great job!"
+          title={t("overdueDues.noOverdueDues")}
+          description={t("overdueDues.allPaymentsUpToDate")}
         />
       ) : (
         <FlatList

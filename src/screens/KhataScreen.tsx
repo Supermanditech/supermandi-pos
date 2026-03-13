@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import { useTranslation } from "react-i18next";
 import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { formatDateTime } from "../i18n/formatters";
@@ -50,6 +51,7 @@ interface KhataScreenProps {
 }
 
 export default function KhataScreen({ onBack }: KhataScreenProps) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const {
     customers,
@@ -109,7 +111,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
 
   useEffect(() => {
     if (error) {
-      Alert.alert("Error", error);
+      Alert.alert(t("khata.errorTitle"), error);
       clearError();
     }
   }, [error]);
@@ -160,12 +162,12 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
     const phone = creditPhone.trim();
     const amountStr = creditAmount.trim();
     if (!phone || phone.length < 10) {
-      Alert.alert("Invalid Phone", "Please enter a valid 10-digit phone number.");
+      Alert.alert(t("khata.invalidPhone"), t("khata.invalidPhoneMessage"));
       return;
     }
     const amountMinor = Math.round(parseFloat(amountStr) * 100);
     if (!amountStr || isNaN(amountMinor) || amountMinor <= 0) {
-      Alert.alert("Invalid Amount", "Please enter a valid amount.");
+      Alert.alert(t("khata.invalidAmount"), t("khata.invalidAmountMessage"));
       return;
     }
     setCreditSubmitting(true);
@@ -174,13 +176,13 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       customerName: creditName.trim() || undefined,
       type: "CREDIT",
       amountMinor,
-      description: creditDescription.trim() || "Credit given",
+      description: creditDescription.trim() || t("khata.creditGiven"),
     });
     setCreditSubmitting(false);
     if (success) {
       setShowCreditModal(false);
       void fetchCustomers(searchQuery || undefined);
-      Alert.alert("Success", "Credit entry added.");
+      Alert.alert(t("khata.successTitle"), t("khata.creditEntryAdded"));
     }
   }, [creditPhone, creditName, creditAmount, creditDescription, addEntry, fetchCustomers, searchQuery]);
 
@@ -196,12 +198,12 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
     const phone = paymentPhone.trim();
     const amountStr = paymentAmount.trim();
     if (!phone || phone.length < 10) {
-      Alert.alert("Invalid Phone", "Please enter a valid 10-digit phone number.");
+      Alert.alert(t("khata.invalidPhone"), t("khata.invalidPhoneMessage"));
       return;
     }
     const amountMinor = Math.round(parseFloat(amountStr) * 100);
     if (!amountStr || isNaN(amountMinor) || amountMinor <= 0) {
-      Alert.alert("Invalid Amount", "Please enter a valid amount.");
+      Alert.alert(t("khata.invalidAmount"), t("khata.invalidAmountMessage"));
       return;
     }
     setPaymentSubmitting(true);
@@ -214,7 +216,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
     if (success) {
       setShowPaymentModal(false);
       void fetchCustomers(searchQuery || undefined);
-      Alert.alert("Success", "Payment recorded.");
+      Alert.alert(t("khata.successTitle"), t("khata.paymentRecorded"));
     }
   }, [paymentPhone, paymentAmount, paymentMethod, recordPayment, fetchCustomers, searchQuery]);
 
@@ -549,7 +551,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
         : isCredit
           ? colors.success
           : colors.textSecondary;
-      const balanceLabel = isOwes ? "Owes" : isCredit ? "Advance" : "Settled";
+      const balanceLabel = isOwes ? t("khata.owes") : isCredit ? t("khata.advance") : t("khata.settled");
 
       return (
         <Pressable accessibilityRole="button" style={styles.customerCard} onPress={() => handleCustomerTap(item)}>
@@ -566,7 +568,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               <Text style={styles.customerPhone}>{item.phone}</Text>
               {item.lastEntryAt && (
                 <Text style={styles.customerLastEntry}>
-                  Last: {formatDateDDMMYYYY(item.lastEntryAt)}
+                  {t("khata.last")}: {formatDateDDMMYYYY(item.lastEntryAt)}
                 </Text>
               )}
             </View>
@@ -607,7 +609,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             {formatDateTime(entry.createdAt, { dateStyle: "short", timeStyle: "short" }).split(",").pop()?.trim()}
           </Text>
           {entry.paymentMethod && (
-            <Text style={styles.ledgerPaymentMethod}>via {entry.paymentMethod}</Text>
+            <Text style={styles.ledgerPaymentMethod}>{t("khata.viaMethod", { method: entry.paymentMethod })}</Text>
           )}
         </View>
         <View style={styles.ledgerAmounts}>
@@ -615,7 +617,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             {entrySign}{formatMoney(entry.amountMinor)}
           </Text>
           <Text style={styles.ledgerRunningBalance}>
-            Bal: {formatMoney(entry.runningBalanceMinor)}
+            {t("khata.bal")}: {formatMoney(entry.runningBalanceMinor)}
           </Text>
         </View>
       </View>
@@ -629,14 +631,14 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
 
   return (
     <View style={styles.container}>
-      <BackHeader title="Khata (Credit Book)" onBack={onBack} />
+      <BackHeader title={t("khata.title")} onBack={onBack} />
 
       {/* Search bar */}
       <View style={styles.searchBar}>
         <MaterialCommunityIcons name="magnify" size={20} color={colors.textTertiary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by name or phone..."
+          placeholder={t("khata.searchPlaceholder")}
           placeholderTextColor={colors.textTertiary}
           value={searchQuery}
           onChangeText={handleSearch}
@@ -654,11 +656,11 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       <View style={styles.actionRow}>
         <Pressable accessibilityRole="button" style={styles.actionButton} onPress={handleOpenCreditModal}>
           <MaterialCommunityIcons name="plus-circle-outline" size={18} color={colors.error} />
-          <Text style={[styles.actionButtonText, { color: colors.error }]}>Add Credit</Text>
+          <Text style={[styles.actionButtonText, { color: colors.error }]}>{t("khata.addCredit")}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" style={styles.actionButton} onPress={handleOpenPaymentModal}>
           <MaterialCommunityIcons name="cash-check" size={18} color={colors.success} />
-          <Text style={[styles.actionButtonText, { color: colors.success }]}>Record Payment</Text>
+          <Text style={[styles.actionButtonText, { color: colors.success }]}>{t("khata.recordPayment")}</Text>
         </Pressable>
       </View>
 
@@ -666,13 +668,13 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       {loading && customers.length === 0 ? (
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading khata...</Text>
+          <Text style={styles.loadingText}>{t("khata.loadingKhata")}</Text>
         </View>
       ) : customers.length === 0 ? (
         <EmptyState
           icon="book-open-variant"
-          title="No credit entries yet"
-          description="Add credit or record payments to start tracking your khata."
+          title={t("khata.emptyTitle")}
+          description={t("khata.emptyDescription")}
         />
       ) : (
         <FlatList
@@ -704,7 +706,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>
-              {selectedCustomer?.name || "Customer"} Ledger
+              {t("khata.customerLedger", { name: selectedCustomer?.name || t("khata.customer") })}
             </Text>
             <View style={styles.modalHeaderSpacer} />
           </View>
@@ -714,7 +716,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               <Text style={styles.ledgerSummaryName}>{selectedCustomer.name}</Text>
               <Text style={styles.ledgerSummaryPhone}>{selectedCustomer.phone}</Text>
               <View style={styles.ledgerSummaryBalance}>
-                <Text style={styles.ledgerSummaryLabel}>Current Balance</Text>
+                <Text style={styles.ledgerSummaryLabel}>{t("khata.currentBalance")}</Text>
                 <Text
                   style={[
                     styles.ledgerSummaryAmount,
@@ -730,10 +732,10 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
                 >
                   {formatMoney(Math.abs(selectedCustomer.balanceMinor))}
                   {selectedCustomer.balanceMinor > 0
-                    ? " (owes)"
+                    ? ` (${t("khata.owes").toLowerCase()})`
                     : selectedCustomer.balanceMinor < 0
-                      ? " (advance)"
-                      : " (settled)"}
+                      ? ` (${t("khata.advance").toLowerCase()})`
+                      : ` (${t("khata.settled").toLowerCase()})`}
                 </Text>
               </View>
             </View>
@@ -746,8 +748,8 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
           ) : customerEntries.length === 0 ? (
             <EmptyState
               icon="notebook-outline"
-              title="No entries"
-              description="No credit or payment entries found for this customer."
+              title={t("khata.noEntries")}
+              description={t("khata.noEntriesDescription")}
             />
           ) : (
             <ScrollView style={styles.ledgerList} contentContainerStyle={styles.ledgerListContent}>
@@ -770,15 +772,15 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={() => setShowCreditModal(false)}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
-            <Text style={styles.modalTitle}>Add Credit</Text>
+            <Text style={styles.modalTitle}>{t("khata.addCredit")}</Text>
             <View style={styles.modalHeaderSpacer} />
           </View>
 
           <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
-            <Text style={styles.formLabel}>Customer Phone *</Text>
+            <Text style={styles.formLabel}>{t("khata.customerPhoneLabel")}</Text>
             <TextInput
               style={styles.formInput}
-              placeholder="10-digit phone number"
+              placeholder={t("khata.phonePlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={creditPhone}
               onChangeText={setCreditPhone}
@@ -786,16 +788,16 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               maxLength={10}
             />
 
-            <Text style={styles.formLabel}>Customer Name (new customer)</Text>
+            <Text style={styles.formLabel}>{t("khata.customerNameLabel")}</Text>
             <TextInput
               style={styles.formInput}
-              placeholder="Name (optional for existing)"
+              placeholder={t("khata.namePlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={creditName}
               onChangeText={setCreditName}
             />
 
-            <Text style={styles.formLabel}>Amount (₹) *</Text>
+            <Text style={styles.formLabel}>{t("khata.amountLabel")}</Text>
             <TextInput
               style={styles.formInput}
               placeholder="0.00"
@@ -805,10 +807,10 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               keyboardType="decimal-pad"
             />
 
-            <Text style={styles.formLabel}>Description</Text>
+            <Text style={styles.formLabel}>{t("khata.descriptionLabel")}</Text>
             <TextInput
               style={[styles.formInput, styles.formTextArea]}
-              placeholder="e.g. Purchased groceries on credit"
+              placeholder={t("khata.descriptionPlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={creditDescription}
               onChangeText={setCreditDescription}
@@ -825,7 +827,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               {creditSubmitting ? (
                 <ActivityIndicator size="small" color={colors.textInverse} />
               ) : (
-                <Text style={styles.submitButtonText}>Add Credit Entry</Text>
+                <Text style={styles.submitButtonText}>{t("khata.addCreditEntry")}</Text>
               )}
             </Pressable>
           </ScrollView>
@@ -846,15 +848,15 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={() => setShowPaymentModal(false)}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
-            <Text style={styles.modalTitle}>Record Payment</Text>
+            <Text style={styles.modalTitle}>{t("khata.recordPayment")}</Text>
             <View style={styles.modalHeaderSpacer} />
           </View>
 
           <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
-            <Text style={styles.formLabel}>Customer Phone *</Text>
+            <Text style={styles.formLabel}>{t("khata.customerPhoneLabel")}</Text>
             <TextInput
               style={styles.formInput}
-              placeholder="10-digit phone number"
+              placeholder={t("khata.phonePlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={paymentPhone}
               onChangeText={setPaymentPhone}
@@ -862,7 +864,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               maxLength={10}
             />
 
-            <Text style={styles.formLabel}>Amount (₹) *</Text>
+            <Text style={styles.formLabel}>{t("khata.amountLabel")}</Text>
             <TextInput
               style={styles.formInput}
               placeholder="0.00"
@@ -872,7 +874,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               keyboardType="decimal-pad"
             />
 
-            <Text style={styles.formLabel}>Payment Method *</Text>
+            <Text style={styles.formLabel}>{t("khata.paymentMethodLabel")}</Text>
             <View style={styles.paymentMethodRow}>
               <Pressable
                 accessibilityRole="button"
@@ -893,7 +895,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
                     paymentMethod === "CASH" && styles.paymentMethodTextActive,
                   ]}
                 >
-                  Cash
+                  {t("khata.cash")}
                 </Text>
               </Pressable>
               <Pressable
@@ -915,7 +917,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
                     paymentMethod === "UPI" && styles.paymentMethodTextActive,
                   ]}
                 >
-                  UPI
+                  {t("khata.upi")}
                 </Text>
               </Pressable>
             </View>
@@ -929,7 +931,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               {paymentSubmitting ? (
                 <ActivityIndicator size="small" color={colors.textInverse} />
               ) : (
-                <Text style={styles.submitButtonText}>Record Payment</Text>
+                <Text style={styles.submitButtonText}>{t("khata.recordPayment")}</Text>
               )}
             </Pressable>
           </ScrollView>
