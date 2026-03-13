@@ -1011,7 +1011,9 @@
       "stockUnavailable": "स्टॉक: —",
       "expired": "समाप्त",
       "expiryWarning": "एक्सपायरी: {{date}} ({{days}} दिन)",
-      "gst": "GST {{rate}}%"
+      "gst": "GST {{rate}}%",
+      "discountOff": "-{{percent}}%",
+      "addToBill": "बिल में जोड़ें"
     },
     "cartItem": {
       "add": "जोड़ें",

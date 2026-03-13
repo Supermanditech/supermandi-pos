@@ -796,8 +796,8 @@
     {
       "ticket": "STG-003",
       "file": "src/components/sell/SellTile.tsx",
-      "start_line": 348,
-      "end_line": 352,
+      "start_line": 387,
+      "end_line": 391,
       "checksum": "04b1913ff2e579f2",
       "description": "Remove ?? hex fallbacks from theme token usage in SellTile",
       "test_file": "src/__tests__/theme/colors.stg-003.no-hex-fallbacks.unit.test.ts",
@@ -833,7 +833,7 @@
         "wiring": "no wiring change",
         "navigation": "no navigation change"
       },
-      "line_shifted_at": "2026-03-13T22:12:07.460Z"
+      "line_shifted_at": "2026-03-13T22:30:00.073Z"
     },
     {
       "ticket": "STG-233",
@@ -1561,7 +1561,7 @@
       "file": "src/components/sell/SellTile.tsx",
       "start_line": 115,
       "end_line": 180,
-      "checksum": "75aa4051a1336ea2",
+      "checksum": "801abd6395b94f5b",
       "description": "Component-level i18n: SellTile uses t() for stock, expiry, mode badge, GST, pack size",
       "test_file": "src/__tests__/components/SellTile-CartItem-SupplierRow.stg-291.i18n.unit.test.ts",
       "depends_on": null,
@@ -2571,8 +2571,8 @@
       "description": "Hindi translation completion — 100% en/hi key parity",
       "test_file": "src/__tests__/i18n/locale-completion.stg-054.unit.test.ts",
       "start_line": 1,
-      "end_line": 1296,
-      "checksum": "935fff4c562f6bfb",
+      "end_line": 1319,
+      "checksum": "5e14973af8d524fd",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": "N/A",
@@ -2707,8 +2707,8 @@
       "description": "SellTile smart price formatting + null price label + IST timezone fix",
       "test_file": "src/__tests__/components/SellTile.stg-222.fixes.unit.test.ts",
       "start_line": 1,
-      "end_line": 419,
-      "checksum": "f63c864a5c8805ec",
+      "end_line": 555,
+      "checksum": "595a1c38bbc13f9c",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2819,8 +2819,8 @@
       "ticket": "STG-009",
       "file": "src/components/sell/SellTile.tsx",
       "start_line": 1,
-      "end_line": 477,
-      "checksum": "2bdc6f1edf7cccd8",
+      "end_line": 555,
+      "checksum": "595a1c38bbc13f9c",
       "description": "SellTile redesign with stock badges, brand display, thumbnails",
       "test_file": "src/__tests__/components/SellTile.stg-009.redesign.unit.test.ts",
       "status": "ACTIVE",
@@ -2852,7 +2852,45 @@
         "regression_check": "Zero drift",
         "test_guard": "61 tests pass"
       }
+    },
+    {
+      "ticket": "STG-228",
+      "file": "src/components/sell/SellTile.tsx",
+      "start_line": 1,
+      "end_line": 555,
+      "checksum": "595a1c38bbc13f9c",
+      "description": "MRP strikethrough + discount badge + add button on SellTile",
+      "test_file": "src/__tests__/components/SellTile.stg-228.dependents.unit.test.ts",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "business_logic": "N/A",
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "checklist_evidence": {
+        "ui_elements": "MRP strikethrough + discount badge + add button",
+        "ux_states": "Conditional display on mrp > sellPrice",
+        "wiring": "onPress handler reused",
+        "operator_approved": "Source analysis tests sufficient",
+        "navigation": "N/A",
+        "parity_scanned": "Parity scan clean — 5 files, 0 issues at 2026-03-13T22:32:45.188Z",
+        "parity_fixed": "No parity gaps found — nothing to fix",
+        "gcp_parity": "N/A",
+        "regression_check": "Zero drift",
+        "test_guard": "37 tests pass"
+      }
     }
   ],
-  "machine_state_version": 264
+  "machine_state_version": 265
 }

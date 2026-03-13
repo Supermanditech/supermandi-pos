@@ -1011,7 +1011,9 @@
       "stockUnavailable": "Stock: —",
       "expired": "EXPIRED",
       "expiryWarning": "Exp: {{date}} ({{days}}d)",
-      "gst": "GST {{rate}}%"
+      "gst": "GST {{rate}}%",
+      "discountOff": "-{{percent}}%",
+      "addToBill": "Add to bill"
     },
     "cartItem": {
       "add": "Add",

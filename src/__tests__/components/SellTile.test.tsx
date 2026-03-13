@@ -90,12 +90,22 @@ describe("SellTile", () => {
     expect(screen.getByTestId("sell-tile-image-fallback")).toBeTruthy();
   });
 
-  it("displays MRP when mrp > 0", () => {
-    render(<SellTile product={{ ...baseProduct, mrp: 3000 }} />);
+  it("displays MRP strikethrough when mrp > sellPrice (STG-228)", () => {
+    render(<SellTile product={{ ...baseProduct, mrp: 3000, sellPriceMinor: 2800 }} />);
+    // STG-228: When mrp > sellPrice, shows strikethrough MRP instead of plain MRP
+    const mrpStrikethrough = screen.getByTestId("sell-tile-mrp-strikethrough");
+    expect(mrpStrikethrough).toBeTruthy();
+    expect(mrpStrikethrough.props.children).toContain("₹30");
+    // Plain MRP should NOT be shown when strikethrough is active
+    expect(screen.queryByTestId("sell-tile-mrp")).toBeNull();
+  });
+
+  it("displays plain MRP when mrp > 0 but mrp <= sellPrice", () => {
+    // When sell price equals or exceeds MRP, show plain MRP label (no discount)
+    render(<SellTile product={{ ...baseProduct, mrp: 2500, sellPriceMinor: 2800 }} />);
     const mrp = screen.getByTestId("sell-tile-mrp");
     expect(mrp).toBeTruthy();
-    // Should show formatted MRP
-    expect(mrp.props.children).toContain("₹30.00");
+    expect(mrp.props.children).toContain("₹25");
   });
 
   it("does NOT display MRP element when mrp is null", () => {

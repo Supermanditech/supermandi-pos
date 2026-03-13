@@ -163,6 +163,16 @@ export function SellTile({ product, onPress, testID }: SellTileProps) {
   const mrpLabel =
     mrp && mrp > 0 ? `MRP ${formatPrice(mrp) ?? ""}` : null;
 
+  // STG-228: MRP strikethrough when sell price < MRP
+  const showMrpStrikethrough =
+    mrp != null && mrp > 0 && sellPriceMinor != null && mrp > sellPriceMinor;
+  const mrpStrikethroughLabel = showMrpStrikethrough ? formatPrice(mrp) : null;
+
+  // STG-032: Discount percentage badge when sell price < MRP
+  const discountPercent = showMrpStrikethrough
+    ? Math.round(((mrp! - sellPriceMinor!) / mrp!) * 100)
+    : 0;
+
   // --- Pack size ---
   const packSizeRaw = packSizeLabel(mode, net_content_value, net_content_unit, rate_unit);
   const packSize = mode === "LOOSE" && rate_unit ? t("components.sellTile.perUnit", { unit: rate_unit }) : packSizeRaw;
@@ -283,15 +293,31 @@ export function SellTile({ product, onPress, testID }: SellTileProps) {
           </View>
         </View>
 
-        {/* Right: Price + Stock badge */}
+        {/* Right: Price + Stock badge + Add button */}
         <View style={styles.rightBlock}>
-          <Text
-            style={[styles.sellPrice, isSellPriceNotSet && { color: colors.warning }]}
-            testID="sell-tile-sell-price"
-          >
-            {sellPriceLabel}
-          </Text>
-          {mrpLabel ? (
+          {/* STG-228/032: Sell price row with strikethrough MRP and discount badge */}
+          <View style={styles.priceRow}>
+            {mrpStrikethroughLabel ? (
+              <Text style={styles.mrpStrikethrough} testID="sell-tile-mrp-strikethrough">
+                {mrpStrikethroughLabel}
+              </Text>
+            ) : null}
+            <Text
+              style={[styles.sellPrice, isSellPriceNotSet && { color: colors.warning }]}
+              testID="sell-tile-sell-price"
+            >
+              {sellPriceLabel}
+            </Text>
+          </View>
+          {/* STG-032: Discount percentage badge */}
+          {discountPercent > 0 ? (
+            <View style={styles.discountBadge} testID="sell-tile-discount-badge">
+              <Text style={styles.discountBadgeText}>
+                {t("components.sellTile.discountOff", { percent: discountPercent })}
+              </Text>
+            </View>
+          ) : null}
+          {mrpLabel && !showMrpStrikethrough ? (
             <Text style={styles.mrp} testID="sell-tile-mrp">
               {mrpLabel}
             </Text>
@@ -311,6 +337,19 @@ export function SellTile({ product, onPress, testID }: SellTileProps) {
             <Text style={styles.stockDetail} testID="sell-tile-stock-detail">
               {stockDetailLabel}
             </Text>
+          ) : null}
+          {/* STG-068: "+" tap affordance button for adding to bill */}
+          {onPress ? (
+            <Pressable
+              style={styles.addButton}
+              onPress={handlePress}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t("components.sellTile.addToBill")}
+              testID="sell-tile-add-button"
+            >
+              <Text style={styles.addButtonText}>+</Text>
+            </Pressable>
           ) : null}
         </View>
       </View>
@@ -423,10 +462,33 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       backgroundColor: colors.border,
       marginVertical: 6,
     },
+    priceRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
     sellPrice: {
       fontSize: 16,
       fontWeight: "700",
       color: colors.textPrimary,
+    },
+    // STG-228: Strikethrough MRP shown before sell price when discounted
+    mrpStrikethrough: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      textDecorationLine: "line-through",
+    },
+    // STG-032: Discount percentage badge
+    discountBadge: {
+      backgroundColor: colors.success + "1A",
+      borderRadius: 4,
+      paddingHorizontal: 4,
+      paddingVertical: 1,
+    },
+    discountBadgeText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: colors.success,
     },
     mrp: {
       fontSize: 11,
@@ -471,6 +533,22 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       fontSize: 10,
       color: colors.textTertiary,
       maxWidth: 120,
+    },
+    // STG-068: "+" tap affordance button
+    addButton: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 4,
+    },
+    addButtonText: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.surface,
+      lineHeight: 20,
     },
   });
 }
