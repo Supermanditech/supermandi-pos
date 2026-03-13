@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 24,
+  "version": 25,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -796,8 +796,8 @@
     {
       "ticket": "STG-003",
       "file": "src/components/sell/SellTile.tsx",
-      "start_line": 330,
-      "end_line": 334,
+      "start_line": 332,
+      "end_line": 336,
       "checksum": "facded4573d29495",
       "description": "Remove ?? hex fallbacks from theme token usage in SellTile",
       "test_file": "src/__tests__/theme/colors.stg-003.no-hex-fallbacks.unit.test.ts",
@@ -832,7 +832,8 @@
         "ux_states": "no UX states affected, cosmetic only",
         "wiring": "no wiring change",
         "navigation": "no navigation change"
-      }
+      },
+      "line_shifted_at": "2026-03-13T20:41:13.619Z"
     },
     {
       "ticket": "STG-233",
@@ -906,6 +907,47 @@
         "gcp_parity": "pure frontend",
         "regression_check": "23 fixes intact",
         "test_guard": "6 tests pass"
+      }
+    },
+    {
+      "ticket": "STG-483",
+      "file": "src/components/sell/SellTile.tsx",
+      "start_line": 52,
+      "end_line": 62,
+      "checksum": "c7b4be696c3d3fdd",
+      "description": "Refactor formatPrice to delegate to formatMoney, removing duplicate formatter",
+      "test_file": "src/__tests__/components/SellTile.stg-483.format-price.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "business_logic": "N/A",
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T20:41:13.471Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "formatPrice delegates to formatMoney",
+        "wiring": "formatMoney import added",
+        "operator_approved": "refactor, output equivalent",
+        "parity_scanned": "no dev URLs",
+        "parity_fixed": "no gaps",
+        "gcp_parity": "pure frontend",
+        "regression_check": "24 fixes intact",
+        "test_guard": "4 tests pass",
+        "ux_states": "null returns dash, same behavior",
+        "navigation": "no navigation change"
       }
     }
   ]

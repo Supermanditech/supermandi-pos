@@ -6,6 +6,7 @@
 import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useThemeColors } from "../../theme";
+import { formatMoney } from "../../utils/money";
 import { ProductImage } from "../ProductImage";
 
 // =============================================================================
@@ -51,12 +52,13 @@ export interface SellTileProps {
 /**
  * Format paise → "₹28.00"
  * For LOOSE mode: "₹28.00/KG"
+ * STG-483: Delegates to formatMoney() — single source of truth for currency formatting
  */
 function formatPrice(paise: number | null, rateUnit?: string | null): string {
   if (paise === null || paise === undefined) return "—";
-  const rupees = (paise / 100).toFixed(2);
-  if (rateUnit) return `₹${rupees}/${rateUnit}`;
-  return `₹${rupees}`;
+  const formatted = formatMoney(paise);
+  if (rateUnit) return `${formatted}/${rateUnit}`;
+  return formatted;
 }
 
 /**
