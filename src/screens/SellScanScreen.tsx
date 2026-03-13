@@ -60,6 +60,7 @@ import {
 import { theme, useThemeColors } from "../theme";
 import { CategoryRail, DEMO_CATEGORIES, fmcgCategoryToItem, type CategoryItem } from "../components/sell/CategoryRail";
 import { SellTile } from "../components/sell/SellTile";
+import { hapticFeedback } from "../utils/haptics";
 import { useSettingsStore } from "../stores/settingsStore";
 import { getFmcgCategories, getCategoryProducts, type CategoryProduct } from "../services/api/catalogApi";
 import { useFeatureEnabled } from "../utils/featureFlags";
@@ -2504,7 +2505,9 @@ export default function SellScanScreen({
       // SCALE-B1: Wrap SellTile in Pressable for tap/long-press gestures
       <Pressable
         accessibilityRole="button"
+        accessibilityHint={t("sell.tapForDetails")}
         style={storeActive === false && styles.skuCardDisabled}
+        android_ripple={{ color: colors.primary + "20" }}
         onPressIn={() => {
           detailPressRef.current = false;
         }}
@@ -2518,6 +2521,7 @@ export default function SellScanScreen({
             detailPressRef.current = false;
             return;
           }
+          hapticFeedback.light();
           handleAddSku(item);
         }}
         disabled={storeActive === false}

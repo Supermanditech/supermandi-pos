@@ -3,11 +3,12 @@
 // stock color-coded, GST%, expiry warning, barcode.
 // EXPLICITLY HIDDEN: purchase_price, margin, supplier_name
 
-import React, { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useMemo } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import { formatMoney } from "../../utils/money";
+import { hapticFeedback } from "../../utils/haptics";
 import { ProductImage } from "../ProductImage";
 
 // =============================================================================
@@ -43,6 +44,8 @@ export interface SellTileProduct {
 
 export interface SellTileProps {
   product: SellTileProduct;
+  /** Optional press handler — wraps tile in Pressable with ripple + haptic */
+  onPress?: () => void;
   testID?: string;
 }
 
@@ -120,10 +123,18 @@ function formatExpiryDate(expiryIso: string): string {
 // COMPONENT
 // =============================================================================
 
-export function SellTile({ product, testID }: SellTileProps) {
+export function SellTile({ product, onPress, testID }: SellTileProps) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  // STG-056: Haptic feedback on press
+  const handlePress = useCallback(() => {
+    if (onPress) {
+      hapticFeedback.light();
+      onPress();
+    }
+  }, [onPress]);
 
   const {
     barcode,
@@ -156,7 +167,7 @@ export function SellTile({ product, testID }: SellTileProps) {
   const packSizeRaw = packSizeLabel(mode, net_content_value, net_content_unit, rate_unit);
   const packSize = mode === "LOOSE" && rate_unit ? t("components.sellTile.perUnit", { unit: rate_unit }) : packSizeRaw;
 
-  // --- Stock color ---
+  // --- Stock badge ---
   const stockCount =
     currentStock !== null && currentStock !== undefined && !isNaN(Number(currentStock))
       ? Number(currentStock)
@@ -169,8 +180,16 @@ export function SellTile({ product, testID }: SellTileProps) {
         : stockCount <= 10
           ? colors.warning
           : colors.success;
-  const stockLabel =
-    stockCount === null ? t("components.sellTile.stockUnavailable") : t("components.sellTile.stockWithCount", { count: stockCount });
+  const stockBadgeLabel =
+    stockCount === null
+      ? t("components.sellTile.stockUnavailable")
+      : stockCount === 0
+        ? t("sell.outOfStock")
+        : stockCount <= 10
+          ? t("sell.lowStock")
+          : t("sell.inStock");
+  const stockDetailLabel =
+    stockCount === null ? null : t("components.sellTile.stockWithCount", { count: stockCount });
 
   // --- Expiry warning ---
   const daysLeft = daysUntilExpiry(expiry_date);
@@ -193,11 +212,31 @@ export function SellTile({ product, testID }: SellTileProps) {
   // --- Mode badge label ---
   const modeBadge = mode ?? null;
 
+  // STG-046: Accessibility hint for tap interaction
+  const tileAccessibilityHint = t("sell.tapForDetails");
+
+  // STG-056: Wrap in Pressable with android_ripple when onPress is provided
+  const Wrapper = onPress ? Pressable : View;
+  const wrapperProps = onPress
+    ? {
+        style: styles.tile,
+        testID: testID ?? "sell-tile",
+        onPress: handlePress,
+        accessibilityRole: "button" as const,
+        accessibilityHint: tileAccessibilityHint,
+        android_ripple: { color: colors.primary + "20" },
+      }
+    : {
+        style: styles.tile,
+        testID: testID ?? "sell-tile",
+        accessibilityHint: tileAccessibilityHint,
+      };
+
   return (
-    <View style={styles.tile} testID={testID ?? "sell-tile"}>
-      {/* Row 1: Image + name/brand/badge/pack-size */}
-      <View style={styles.topRow}>
-        {/* SCALE-E2: ProductImage handles remote load, null, and error fallback */}
+    <Wrapper {...wrapperProps}>
+      {/* Main row: Image | Name+Brand | Price+Stock */}
+      <View style={styles.mainRow}>
+        {/* Left: Product image or first-letter avatar */}
         <ProductImage
           uri={image_url}
           size={40}
@@ -205,17 +244,17 @@ export function SellTile({ product, testID }: SellTileProps) {
           testID={image_url ? "sell-tile-image" : "sell-tile-image-fallback"}
         />
 
-        {/* Name + meta */}
-        <View style={styles.nameBlock}>
+        {/* Center: Brand + Name + mode/pack */}
+        <View style={styles.centerBlock}>
+          {brand ? (
+            <Text style={styles.brand} numberOfLines={1} testID="sell-tile-brand">
+              {brand}
+            </Text>
+          ) : null}
           <Text style={styles.name} numberOfLines={2} testID="sell-tile-name">
             {name}
           </Text>
           <View style={styles.metaRow}>
-            {brand ? (
-              <Text style={styles.brand} numberOfLines={1} testID="sell-tile-brand">
-                {brand}
-              </Text>
-            ) : null}
             {modeBadge ? (
               <View
                 style={[
@@ -243,61 +282,70 @@ export function SellTile({ product, testID }: SellTileProps) {
             ) : null}
           </View>
         </View>
-      </View>
 
-      {/* Divider */}
-      <View style={styles.divider} />
-
-      {/* Row 2: Sell price + MRP */}
-      <View style={styles.priceRow}>
-        <Text
-          style={[styles.sellPrice, isSellPriceNotSet && { color: colors.warning }]}
-          testID="sell-tile-sell-price"
-        >
-          {sellPriceLabel}
-        </Text>
-        {mrpLabel ? (
-          <Text style={styles.mrp} testID="sell-tile-mrp">
-            {mrpLabel}
-          </Text>
-        ) : null}
-      </View>
-
-      {/* Divider */}
-      <View style={styles.divider} />
-
-      {/* Row 3: Stock + GST | Expiry + Barcode */}
-      <View style={styles.bottomRow}>
-        <View style={styles.bottomLeft}>
+        {/* Right: Price + Stock badge */}
+        <View style={styles.rightBlock}>
           <Text
-            style={[styles.stock, { color: stockColor }]}
-            testID="sell-tile-stock"
+            style={[styles.sellPrice, isSellPriceNotSet && { color: colors.warning }]}
+            testID="sell-tile-sell-price"
           >
-            {stockLabel}
+            {sellPriceLabel}
           </Text>
-          {expiryText ? (
+          {mrpLabel ? (
+            <Text style={styles.mrp} testID="sell-tile-mrp">
+              {mrpLabel}
+            </Text>
+          ) : null}
+          <View
+            style={[styles.stockBadge, { backgroundColor: stockColor + "1A" }]}
+            testID="sell-tile-stock-badge"
+          >
             <Text
-              style={[styles.expiry, { color: expiryColor! }]}
-              testID="sell-tile-expiry"
+              style={[styles.stockBadgeText, { color: stockColor }]}
+              testID="sell-tile-stock"
             >
-              {expiryText}
+              {stockBadgeLabel}
             </Text>
-          ) : null}
-        </View>
-        <View style={styles.bottomRight}>
-          {gst_rate != null ? (
-            <Text style={styles.gst} testID="sell-tile-gst">
-              {t("components.sellTile.gst", { rate: gst_rate })}
-            </Text>
-          ) : null}
-          {barcode ? (
-            <Text style={styles.barcode} numberOfLines={1} testID="sell-tile-barcode">
-              {barcode}
+          </View>
+          {stockDetailLabel ? (
+            <Text style={styles.stockDetail} testID="sell-tile-stock-detail">
+              {stockDetailLabel}
             </Text>
           ) : null}
         </View>
       </View>
-    </View>
+
+      {/* Bottom row: Expiry + GST + Barcode */}
+      {(expiryText || gst_rate != null || barcode) ? (
+        <>
+          <View style={styles.divider} />
+          <View style={styles.bottomRow}>
+            <View style={styles.bottomLeft}>
+              {expiryText ? (
+                <Text
+                  style={[styles.expiry, { color: expiryColor! }]}
+                  testID="sell-tile-expiry"
+                >
+                  {expiryText}
+                </Text>
+              ) : null}
+            </View>
+            <View style={styles.bottomRight}>
+              {gst_rate != null ? (
+                <Text style={styles.gst} testID="sell-tile-gst">
+                  {t("components.sellTile.gst", { rate: gst_rate })}
+                </Text>
+              ) : null}
+              {barcode ? (
+                <Text style={styles.barcode} numberOfLines={1} testID="sell-tile-barcode">
+                  {barcode}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        </>
+      ) : null}
+    </Wrapper>
   );
 }
 
@@ -315,30 +363,35 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       padding: 10,
       marginBottom: 8,
     },
-    topRow: {
+    mainRow: {
       flexDirection: "row",
       alignItems: "flex-start",
       gap: 8,
-      marginBottom: 8,
     },
-    nameBlock: {
+    centerBlock: {
       flex: 1,
+    },
+    rightBlock: {
+      alignItems: "flex-end",
+      gap: 2,
     },
     name: {
       fontSize: 14,
       fontWeight: "700",
       color: colors.textPrimary,
-      marginBottom: 4,
+      marginBottom: 2,
     },
     metaRow: {
       flexDirection: "row",
       alignItems: "center",
       flexWrap: "wrap",
       gap: 4,
+      marginTop: 2,
     },
     brand: {
       fontSize: 11,
       color: colors.textSecondary,
+      marginBottom: 1,
     },
     modeBadge: {
       borderRadius: 4,
@@ -370,18 +423,27 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       backgroundColor: colors.border,
       marginVertical: 6,
     },
-    priceRow: {
-      flexDirection: "row",
-      alignItems: "baseline",
-      gap: 8,
-    },
     sellPrice: {
       fontSize: 16,
       fontWeight: "700",
       color: colors.textPrimary,
     },
     mrp: {
-      fontSize: 12,
+      fontSize: 11,
+      color: colors.textTertiary,
+    },
+    stockBadge: {
+      borderRadius: 4,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      marginTop: 2,
+    },
+    stockBadgeText: {
+      fontSize: 10,
+      fontWeight: "700",
+    },
+    stockDetail: {
+      fontSize: 10,
       color: colors.textTertiary,
     },
     bottomRow: {
@@ -396,10 +458,6 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     bottomRight: {
       alignItems: "flex-end",
       gap: 2,
-    },
-    stock: {
-      fontSize: 11,
-      fontWeight: "600",
     },
     expiry: {
       fontSize: 11,

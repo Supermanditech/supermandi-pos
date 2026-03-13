@@ -287,7 +287,8 @@
     "noRecentProducts": "कोई हाल का उत्पाद नहीं।",
     "priceNotSet": "कीमत निर्धारित नहीं",
     "expiringFirst": "जल्द समाप्त",
-    "expiringFirstOn": "जल्द समाप्त ON"
+    "expiringFirstOn": "जल्द समाप्त ON",
+    "tapForDetails": "विवरण के लिए टैप करें"
   },
   "limitedMode": {
     "badge": "सीमित मोड",

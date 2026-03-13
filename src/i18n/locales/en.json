@@ -287,7 +287,8 @@
     "noRecentProducts": "No recent products.",
     "priceNotSet": "Price not set",
     "expiringFirst": "Expiring Soon",
-    "expiringFirstOn": "Expiring Soon ON"
+    "expiringFirstOn": "Expiring Soon ON",
+    "tapForDetails": "Tap for details"
   },
   "limitedMode": {
     "badge": "LIMITED MODE",
