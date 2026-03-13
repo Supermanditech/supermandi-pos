@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 15,
+  "version": 16,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -555,6 +555,46 @@
         "regression_check": "true",
         "test_guard": "true",
         "db_schema": "N/A"
+      }
+    },
+    {
+      "ticket": "STG-485",
+      "file": "backend/src/routes/v1/consent.ts",
+      "start_line": 1,
+      "end_line": 30,
+      "checksum": "5ebf9baaa41915ff",
+      "description": "DPDP consent records API: POST /consent/record, GET /consent/check, POST /consent/revoke. Migration 188 creates platform.consent_records table.",
+      "test_file": "backend/tests/consent.stg-485.consent-records.unit.test.ts",
+      "depends_on": null,
+      "migration": "188_consent_records.sql",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T20:21:40.650Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "true",
+        "backend_api": "true",
+        "db_schema": "true",
+        "operator_approved": "true",
+        "parity_scanned": "true",
+        "parity_fixed": "true",
+        "gcp_parity": "true",
+        "regression_check": "true",
+        "test_guard": "true"
       }
     }
   ]

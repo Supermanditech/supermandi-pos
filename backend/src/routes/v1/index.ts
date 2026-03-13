@@ -115,6 +115,7 @@ import { adminImportsRouter } from "./admin/imports";  // SA-P2-008: Bulk import
 import { adminPriceBoundsRouter } from "./admin/priceBounds";  // SA-P0-003: Price bounds
 import { adminAnomalyAlertsRouter } from "./admin/anomalyAlerts";  // SA-P1-010: Anomaly detection alerts
 import { posExpiryAlertsRouter } from "./pos/expiryAlerts";  // SCALE-C2: POS expiry alerts
+import { consentRouter } from "./consent";  // STG-485: DPDP consent records
 
 export const v1Router = Router();
 
@@ -162,6 +163,7 @@ v1Router.use("/pos", posRefundRequestsRouter);  // T-219: UPI refund request man
 v1Router.use("/pos", posWhatsAppRouter);  // WA-001: WhatsApp Cloud API bill sharing
 v1Router.use("/pos", posExpiryAlertsRouter);  // SCALE-C2: Expiry alerts
 v1Router.use("/pos/translations", posTranslationsRouter);
+v1Router.use("/", consentRouter);  // STG-485: DPDP consent API (available to POS + portals)
 v1Router.use("/reorder", reorderRouter);
 v1Router.use("/orders", ordersRouter);
 v1Router.use("/catalog", catalogRouter);  // AUD-GOLIVE-003: Store catalog endpoints
