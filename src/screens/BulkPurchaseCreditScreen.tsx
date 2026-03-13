@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Alert as RNAlert, BackHandler, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { theme, useThemeColors } from '../theme';
 // UIUX-POS-009: Use apiClient instead of raw fetch (handles auth refresh, rate limiting, error handling)
 import { apiClient } from '../services/api/apiClient';
@@ -28,6 +29,7 @@ interface Props {
 // UIUX-POS-009: Replaced raw fetch with apiClient (auth refresh, rate limiting, error handling)
 
 export default function BulkPurchaseCreditScreen({ onBack }: Props) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
 
   const styles = useMemo(() => StyleSheet.create({
@@ -89,7 +91,7 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
       const res = await apiClient.get<{ offers: CreditOffer[] }>('/api/v1/pos/credit/offers');
       setOffers(res.offers || []);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load');
+      setError(err instanceof Error ? err.message : t("bulkCredit.failedToLoad"));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -103,19 +105,19 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
   const applyingRef = useRef(false);
   const applyForCredit = async (offerId: string) => {
     if (applyingRef.current) return;
-    RNAlert.alert('Apply for Credit', 'Submit application for this credit offer?', [
-      { text: 'Cancel', style: 'cancel' },
+    RNAlert.alert(t("bulkCredit.applyForCredit"), t("bulkCredit.submitApplicationConfirm"), [
+      { text: t("common.cancel"), style: 'cancel' },
       {
-        text: 'Apply',
+        text: t("bulkCredit.apply"),
         onPress: async () => {
           if (applyingRef.current) return;
           applyingRef.current = true;
           try {
             await apiClient.post('/api/v1/pos/credit/apply', { offerId });
-            RNAlert.alert('Success', 'Application submitted. You will be notified of the status.');
+            RNAlert.alert(t("common.success"), t("bulkCredit.applicationSubmitted"));
             void fetchOffers();
           } catch (err) {
-            RNAlert.alert('Error', err instanceof Error ? err.message : 'Failed to submit application.');
+            RNAlert.alert(t("common.error"), err instanceof Error ? err.message : t("bulkCredit.failedToSubmit"));
           } finally {
             applyingRef.current = false;
           }
@@ -148,19 +150,19 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
 
       <View style={styles.cardBody}>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Max Amount</Text>
+          <Text style={styles.infoLabel}>{t("bulkCredit.maxAmount")}</Text>
           <Text style={styles.infoValue}>{'\u20B9'}{(item.amountMinor / 100).toLocaleString('en-IN')}</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Interest Rate</Text>
+          <Text style={styles.infoLabel}>{t("bulkCredit.interestRate")}</Text>
           <Text style={styles.infoValue}>{item.interestRateAnnual}% p.a.</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Tenure</Text>
+          <Text style={styles.infoLabel}>{t("bulkCredit.tenure")}</Text>
           <Text style={styles.infoValue}>{item.tenureMonths} months</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>EMI</Text>
+          <Text style={styles.infoLabel}>{t("bulkCredit.emi")}</Text>
           <Text style={styles.infoValue}>{'\u20B9'}{(item.emiMinor / 100).toLocaleString('en-IN')}/mo</Text>
         </View>
       </View>
@@ -169,17 +171,17 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
         <Pressable
           style={styles.applyBtn}
           onPress={() => applyForCredit(item.id)}
-          accessibilityLabel="Apply Now"
+          accessibilityLabel={t("bulkCredit.applyNow")}
           accessibilityRole="button"
           testID="credit-apply-btn"
         >
           <MaterialCommunityIcons name="file-document-edit-outline" size={16} color={colors.textInverse} />
-          <Text style={styles.applyBtnText}>Apply Now</Text>
+          <Text style={styles.applyBtnText}>{t("bulkCredit.applyNow")}</Text>
         </Pressable>
       )}
 
       {item.status === 'applied' && (
-        <Text style={styles.appliedText}>Application submitted</Text>
+        <Text style={styles.appliedText}>{t("bulkCredit.applicationSubmittedStatus")}</Text>
       )}
     </View>
   );
@@ -187,17 +189,17 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
-        <Pressable onPress={onBack} style={styles.backBtn} accessibilityLabel="Go back" accessibilityRole="button">
+        <Pressable onPress={onBack} style={styles.backBtn} accessibilityLabel={t("common.back")} accessibilityRole="button">
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Bulk Purchase Credit</Text>
+        <Text style={styles.headerTitle}>{t("bulkCredit.title")}</Text>
       </View>
 
       {/* Info Banner */}
       <View style={styles.infoBanner}>
         <MaterialCommunityIcons name="information-outline" size={18} color={colors.primary} />
         <Text style={styles.infoBannerText}>
-          Apply for credit to finance bulk purchases from your suppliers. Get competitive rates from multiple providers.
+          {t("bulkCredit.infoBanner")}
         </Text>
       </View>
 
@@ -219,8 +221,8 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
           ListEmptyComponent={
             <View style={styles.center}>
               <MaterialCommunityIcons name="bank-off-outline" size={48} color={colors.textTertiary} />
-              <Text style={styles.emptyTitle}>No Credit Offers Available</Text>
-              <Text style={styles.emptyDesc}>Credit offers will appear here when providers are configured for your store.</Text>
+              <Text style={styles.emptyTitle}>{t("bulkCredit.noOffersTitle")}</Text>
+              <Text style={styles.emptyDesc}>{t("bulkCredit.noOffersDescription")}</Text>
             </View>
           }
         />

@@ -266,13 +266,13 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           }
         }
 
-        setError("Failed to load products. Pull to refresh.");
+        setError(t('buy.failedToLoad'));
       } finally {
         setLoading(false);
         setLoadingMore(false);
       }
     },
-    [storeId, debouncedQuery, selectedCategory]
+    [storeId, debouncedQuery, selectedCategory, t]
   );
 
   // Load products when filters change
@@ -311,11 +311,11 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
       setError(null);
     } catch (err) {
       if (__DEV__) console.error("[BuyScreen] Refresh failed:", err);
-      setError("Failed to refresh. Try again.");
+      setError(t('buy.failedToRefresh'));
     } finally {
       setRefreshing(false);
     }
-  }, [storeId, debouncedQuery, selectedCategory]);
+  }, [storeId, debouncedQuery, selectedCategory, t]);
 
   // Load more on scroll
   // GO-LIVE-170: Added pagination safeguard to prevent infinite loops
@@ -412,12 +412,12 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
     if (!hasMore && filteredProducts.length > 0) {
       return (
         <View style={styles.footer}>
-          <Text style={styles.footerText}>No more products</Text>
+          <Text style={styles.footerText}>{t('buy.noMoreProducts')}</Text>
         </View>
       );
     }
     return null;
-  }, [loadingMore, hasMore, filteredProducts.length]);
+  }, [loadingMore, hasMore, filteredProducts.length, t]);
 
   // Empty state - TICKET-003: Updated to include stock filter
   const hasActiveFilters = debouncedQuery || selectedCategory || selectedStockStatus !== "all";
@@ -619,8 +619,8 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           />
           <Text style={styles.offlineBannerText}>
             {isOffline
-              ? "You're offline — showing cached catalog"
-              : `Showing cached data${cacheAge ? ` (${cacheAge})` : ""}`}
+              ? t('buy.offlineCachedCatalog')
+              : t('buy.showingCachedData', { age: cacheAge ? ` (${cacheAge})` : '' })}
           </Text>
           {!isOffline && (
             <Pressable
@@ -628,7 +628,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
               style={styles.offlineRefreshButton}
               onPress={handleRefresh}
             >
-              <Text style={styles.offlineRefreshText}>Refresh</Text>
+              <Text style={styles.offlineRefreshText}>{t('common.refresh')}</Text>
             </Pressable>
           )}
         </View>
@@ -672,7 +672,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
       {loading && filteredProducts.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading catalog...</Text>
+          <Text style={styles.loadingText}>{t('buy.loadingCatalog')}</Text>
         </View>
       ) : (
         <FlatList

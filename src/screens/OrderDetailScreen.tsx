@@ -16,6 +16,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useTranslation } from "react-i18next";
 import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import { formatDate } from "../i18n/formatters";
@@ -56,6 +57,7 @@ export default function OrderDetailScreen({
   onBack,
   onNavigateToGRN,
 }: OrderDetailScreenProps) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
 
@@ -93,7 +95,7 @@ export default function OrderDetailScreen({
       setEvents(eventsData);
     } catch (err) {
       if (__DEV__) console.error("[OrderDetailScreen] Failed to load order:", err);
-      setError("Failed to load order details");
+      setError(t("orderDetail.failedToLoadOrder"));
     } finally {
       setLoading(false);
     }
@@ -143,12 +145,12 @@ export default function OrderDetailScreen({
     if (!storeId || !order || !canCancel(order.status)) return;
 
     Alert.alert(
-      "Cancel Order",
-      `Are you sure you want to cancel order ${formatOrderNumber(order.orderNumber)}?`,
+      t("orderDetail.cancelOrderTitle"),
+      t("orderDetail.cancelOrderConfirm", { orderNumber: formatOrderNumber(order.orderNumber) }),
       [
-        { text: "No", style: "cancel" },
+        { text: t("orderDetail.no"), style: "cancel" },
         {
-          text: "Yes, Cancel",
+          text: t("orderDetail.yesCancel"),
           style: "destructive",
           onPress: async () => {
             setCancelling(true);
@@ -162,7 +164,7 @@ export default function OrderDetailScreen({
               setEvents(eventsData);
             } catch (err) {
               if (__DEV__) console.error("[OrderDetailScreen] Failed to cancel:", err);
-              Alert.alert("Error", "Failed to cancel order. Please try again.");
+              Alert.alert(t("orderDetail.errorTitle"), t("orderDetail.failedToCancelOrder"));
             } finally {
               setCancelling(false);
             }
@@ -198,10 +200,10 @@ export default function OrderDetailScreen({
         );
       }
       setTrackingEditing(false);
-      Alert.alert("Success", "Tracking number updated");
+      Alert.alert(t("orderDetail.successTitle"), t("orderDetail.trackingUpdated"));
     } catch (err) {
       if (__DEV__) console.error("[OrderDetailScreen] Failed to update tracking:", err);
-      Alert.alert("Error", "Failed to update tracking number");
+      Alert.alert(t("orderDetail.errorTitle"), t("orderDetail.failedToUpdateTracking"));
     } finally {
       setTrackingSaving(false);
     }
@@ -214,18 +216,18 @@ export default function OrderDetailScreen({
       .slice(0, 5)
       .map((item) => `- ${item.productName} x${item.orderedQuantity}`)
       .join("\n");
-    const moreItems = order.items.length > 5 ? `\n... and ${order.items.length - 5} more items` : "";
+    const moreItems = order.items.length > 5 ? `\n... ${t("orderDetail.andMoreItems", { count: order.items.length - 5 })}` : "";
     const message = encodeURIComponent(
-      `Hi, regarding order ${formatOrderNumber(order.orderNumber)} (${getStatusLabel(order.status)}):\n\n` +
-      `Total: ${formatMoney(order.totalAmount)}\n` +
-      `Items:\n${itemsSummary}${moreItems}\n\n` +
-      `Please update on the status. Thank you.`
+      `${t("orderDetail.whatsappGreeting", { orderNumber: formatOrderNumber(order.orderNumber), status: getStatusLabel(order.status) })}\n\n` +
+      `${t("orderDetail.whatsappTotal")}: ${formatMoney(order.totalAmount)}\n` +
+      `${t("orderDetail.whatsappItems")}:\n${itemsSummary}${moreItems}\n\n` +
+      t("orderDetail.whatsappStatusRequest")
     );
     // TODO: Include supplierPhone in PurchaseOrder API response for direct wa.me/{phone} links
     // For now, open WhatsApp with pre-filled message — user picks the supplier contact
     const url = `https://wa.me/?text=${message}`;
     Linking.openURL(url).catch(() => {
-      Alert.alert("WhatsApp Not Found", "Please install WhatsApp to use this feature.");
+      Alert.alert(t("orderDetail.whatsappNotFound"), t("orderDetail.whatsappNotFoundMessage"));
     });
   }, [order]);
 
@@ -246,11 +248,11 @@ export default function OrderDetailScreen({
               />
             </Pressable>
           )}
-          <Text style={styles.headerTitle}>Order Details</Text>
+          <Text style={styles.headerTitle}>{t("orderDetail.title")}</Text>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading order details...</Text>
+          <Text style={styles.loadingText}>{t("orderDetail.loadingOrderDetails")}</Text>
         </View>
       </View>
     );
@@ -270,7 +272,7 @@ export default function OrderDetailScreen({
               />
             </Pressable>
           )}
-          <Text style={styles.headerTitle}>Order Details</Text>
+          <Text style={styles.headerTitle}>{t("orderDetail.title")}</Text>
         </View>
         <View style={styles.errorContainer}>
           <MaterialCommunityIcons
@@ -278,9 +280,9 @@ export default function OrderDetailScreen({
             size={48}
             color={colors.error}
           />
-          <Text style={styles.errorText}>{error || "Order not found"}</Text>
+          <Text style={styles.errorText}>{error || t("orderDetail.orderNotFound")}</Text>
           <Pressable accessibilityRole="button" style={styles.retryButton} onPress={loadOrder}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{t("orderDetail.retry")}</Text>
           </Pressable>
         </View>
       </View>
@@ -334,7 +336,7 @@ export default function OrderDetailScreen({
                 ]}
               />
             </View>
-            <Text style={styles.progressText}>{progress}% Complete</Text>
+            <Text style={styles.progressText}>{t("orderDetail.percentComplete", { progress })}</Text>
           </View>
         )}
 
@@ -346,24 +348,24 @@ export default function OrderDetailScreen({
               size={18}
               color={colors.primary}
             />
-            <Text style={styles.cardTitle}>Supplier</Text>
+            <Text style={styles.cardTitle}>{t("orderDetail.supplier")}</Text>
           </View>
           <Text style={styles.supplierName}>{order.supplierName}</Text>
 
           <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Order Type</Text>
+              <Text style={styles.infoLabel}>{t("orderDetail.orderType")}</Text>
               <Text style={styles.infoValue}>
-                {order.orderType === "reorder" ? "Reorder" : "Manual"}
+                {order.orderType === "reorder" ? t("orderDetail.reorder") : t("orderDetail.manual")}
               </Text>
             </View>
             <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Created</Text>
+              <Text style={styles.infoLabel}>{t("orderDetail.created")}</Text>
               <Text style={styles.infoValue}>{formatDate(order.createdAt)}</Text>
             </View>
             {order.expectedDeliveryDate && (
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Expected Delivery</Text>
+                <Text style={styles.infoLabel}>{t("orderDetail.expectedDelivery")}</Text>
                 <Text style={styles.infoValue}>
                   {formatDate(order.expectedDeliveryDate)}
                 </Text>
@@ -371,14 +373,14 @@ export default function OrderDetailScreen({
             )}
             {/* GO-LIVE-242: Editable tracking number */}
             <View style={styles.trackingSection}>
-              <Text style={styles.infoLabel}>Tracking Number</Text>
+              <Text style={styles.infoLabel}>{t("orderDetail.trackingNumber")}</Text>
               {trackingEditing ? (
                 <View style={styles.trackingEditRow}>
                   <TextInput
                     style={styles.trackingInput}
                     value={trackingNumber}
                     onChangeText={setTrackingNumber}
-                    placeholder="Enter tracking number"
+                    placeholder={t("orderDetail.enterTrackingNumber")}
                     placeholderTextColor={colors.textTertiary}
                     autoFocus
                     editable={!trackingSaving}
@@ -414,7 +416,7 @@ export default function OrderDetailScreen({
                   onPress={() => setTrackingEditing(true)}
                 >
                   <Text style={[styles.infoValue, !order.trackingNumber && styles.trackingPlaceholder]}>
-                    {order.trackingNumber || "Add tracking..."}
+                    {order.trackingNumber || t("orderDetail.addTracking")}
                   </Text>
                   <MaterialCommunityIcons name="pencil" size={14} color={colors.primary} />
                 </Pressable>
@@ -424,7 +426,7 @@ export default function OrderDetailScreen({
 
           {order.storeNotes && (
             <View style={styles.notesSection}>
-              <Text style={styles.notesLabel}>Notes</Text>
+              <Text style={styles.notesLabel}>{t("orderDetail.notes")}</Text>
               <Text style={styles.notesText}>{order.storeNotes}</Text>
             </View>
           )}
@@ -439,7 +441,7 @@ export default function OrderDetailScreen({
               color={colors.primary}
             />
             <Text style={styles.cardTitle}>
-              Items ({order.items.length})
+              {t("orderDetail.itemsCount", { count: order.items.length })}
             </Text>
           </View>
 
@@ -453,7 +455,7 @@ export default function OrderDetailScreen({
 
           {/* Total */}
           <View style={styles.totalSection}>
-            <Text style={styles.totalLabel}>Total Amount</Text>
+            <Text style={styles.totalLabel}>{t("orderDetail.totalAmount")}</Text>
             <Text style={styles.totalValue}>
               {formatMoney(order.totalAmount)}
             </Text>
@@ -468,7 +470,7 @@ export default function OrderDetailScreen({
               size={18}
               color={colors.primary}
             />
-            <Text style={styles.cardTitle}>Timeline</Text>
+            <Text style={styles.cardTitle}>{t("orderDetail.timeline")}</Text>
           </View>
 
           <StatusTimeline events={events} currentStatus={order.status} />
@@ -493,7 +495,7 @@ export default function OrderDetailScreen({
                   size={18}
                   color={colors.error}
                 />
-                <Text style={styles.cancelButtonText}>Cancel Order</Text>
+                <Text style={styles.cancelButtonText}>{t("orderDetail.cancelOrder")}</Text>
               </>
             )}
           </Pressable>
@@ -514,7 +516,7 @@ export default function OrderDetailScreen({
               size={18}
               color={colors.textInverse}
             />
-            <Text style={styles.receiveButtonText}>Receive Goods</Text>
+            <Text style={styles.receiveButtonText}>{t("orderDetail.receiveGoods")}</Text>
           </Pressable>
         )}
       </View>
@@ -532,6 +534,7 @@ interface OrderItemRowProps {
 }
 
 function OrderItemRow({ item, isLast }: OrderItemRowProps) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const receivedPercent =
     item.orderedQuantity > 0
@@ -600,11 +603,11 @@ function OrderItemRow({ item, isLast }: OrderItemRowProps) {
         )}
         <View style={itemStyles.itemQuantities}>
           <Text style={itemStyles.itemQuantity}>
-            Ordered: {item.orderedQuantity}
+            {t("orderDetail.ordered")}: {item.orderedQuantity}
           </Text>
           {item.receivedQuantity > 0 && (
             <Text style={itemStyles.itemReceived}>
-              Received: {item.receivedQuantity} ({receivedPercent}%)
+              {t("orderDetail.received")}: {item.receivedQuantity} ({receivedPercent}%)
             </Text>
           )}
         </View>

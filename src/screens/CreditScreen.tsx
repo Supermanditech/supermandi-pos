@@ -386,7 +386,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
             <View style={styles.offerDetailItem}>
               <Text style={styles.offerDetailLabel}>{t("credit.emi", "EMI")}</Text>
               <Text style={styles.offerDetailValue}>
-                {creditApi.formatEmiAmount(offer.emiMinor)}/mo
+                {creditApi.formatEmiAmount(offer.emiMinor)}{t("credit.perMonth", "/mo")}
               </Text>
             </View>
           </View>
@@ -501,7 +501,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
                 {t("credit.interestRate", "Rate")}
               </Text>
               <Text style={styles.loanDetailValue}>
-                {app.interestRateAnnual}% p.a.
+                {app.interestRateAnnual}{t("credit.perAnnum", "% p.a.")}
               </Text>
             </View>
           </View>

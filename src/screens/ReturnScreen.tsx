@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
@@ -61,10 +62,10 @@ const RETURN_REASONS: ReturnReason[] = [
   "Other",
 ];
 
-const REFUND_METHODS: { id: RefundMethod; label: string; icon: string }[] = [
-  { id: "CASH", label: "Cash", icon: "cash" },
-  { id: "UPI", label: "UPI (Manual)", icon: "cellphone" },
-  { id: "KHATA_CREDIT", label: "Khata Credit", icon: "notebook-outline" },
+const REFUND_METHODS: { id: RefundMethod; labelKey: string; icon: string }[] = [
+  { id: "CASH", labelKey: "returnScreen.refundCash", icon: "cash" },
+  { id: "UPI", labelKey: "returnScreen.refundUpi", icon: "cellphone" },
+  { id: "KHATA_CREDIT", labelKey: "returnScreen.refundKhataCredit", icon: "notebook-outline" },
 ];
 
 // =============================================================================
@@ -118,6 +119,7 @@ type ScreenStep = "LOOKUP" | "SELECT" | "CONFIRM" | "SUCCESS";
 
 export default function ReturnScreen({ onBack }: ReturnScreenProps) {
   const colors = useThemeColors();
+  const { t } = useTranslation();
   // Step state
   const [step, setStep] = useState<ScreenStep>("LOOKUP");
 
@@ -150,7 +152,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
   const handleLookup = useCallback(async () => {
     const trimmed = billRefInput.trim();
     if (!trimmed) {
-      Alert.alert("Enter Bill #", "Please enter a bill number or scan a barcode.");
+      Alert.alert(t("returnScreen.enterBillTitle"), t("returnScreen.enterBillMessage"));
       return;
     }
 
@@ -169,11 +171,11 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
     } catch (_e: unknown) {
     const e = asError(_e);
       if (__DEV__) console.error("[ReturnScreen] Lookup failed:", e);
-      setLookupError(e?.message || "Bill not found. Please check the number.");
+      setLookupError(e?.message || t("returnScreen.billNotFound"));
     } finally {
       setLookupLoading(false);
     }
-  }, [billRefInput]);
+  }, [billRefInput, t]);
 
   // ==========================================================================
   // STEP 2: SELECT ITEMS
@@ -218,7 +220,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
     try {
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
-        Alert.alert("No Connection", "Refund requires an internet connection. Please connect and try again.");
+        Alert.alert(t("returnScreen.noConnectionTitle"), t("returnScreen.noConnectionMessage"));
         return;
       }
     } catch { /* NetInfo failed — proceed anyway */ }
@@ -241,8 +243,8 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
     const e = asError(_e);
       if (__DEV__) console.error("[ReturnScreen] Process return failed:", e);
       Alert.alert(
-        "Return Failed",
-        e?.message || "Could not process the return. Please try again."
+        t("returnScreen.returnFailedTitle"),
+        e?.message || t("returnScreen.returnFailedMessage")
       );
     } finally {
       setProcessing(false);
@@ -605,7 +607,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
 
   return (
     <View style={styles.container}>
-      <BackHeader title="Return / Refund" onBack={onBack} />
+      <BackHeader title={t("returnScreen.title")} onBack={onBack} />
 
       {/* STEP: LOOKUP */}
       {step === "LOOKUP" && (
@@ -616,13 +618,13 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
               size={32}
               color={colors.primary}
             />
-            <Text style={styles.lookupTitle}>Find Original Sale</Text>
+            <Text style={styles.lookupTitle}>{t("returnScreen.findOriginalSale")}</Text>
             <Text style={styles.lookupSubtitle}>
-              Enter the bill number or scan the receipt barcode
+              {t("returnScreen.findOriginalSaleSubtitle")}
             </Text>
             <TextInput
               style={styles.lookupInput}
-              placeholder="Bill # (e.g. B-00123)"
+              placeholder={t("returnScreen.billPlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={billRefInput}
               onChangeText={setBillRefInput}
@@ -649,7 +651,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                   color={colors.textInverse}
                 />
               ) : (
-                <Text style={styles.lookupButtonText}>Look Up Sale</Text>
+                <Text style={styles.lookupButtonText}>{t("returnScreen.lookUpSale")}</Text>
               )}
             </Pressable>
           </View>
@@ -665,29 +667,29 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
           {/* Sale info */}
           <View style={styles.saleInfoCard}>
             <View style={styles.saleInfoRow}>
-              <Text style={styles.saleInfoLabel}>Bill #</Text>
+              <Text style={styles.saleInfoLabel}>{t("returnScreen.billLabel")}</Text>
               <Text style={styles.saleInfoValue}>{sale.billRef}</Text>
             </View>
             <View style={styles.saleInfoRow}>
-              <Text style={styles.saleInfoLabel}>Date</Text>
+              <Text style={styles.saleInfoLabel}>{t("returnScreen.dateLabel")}</Text>
               <Text style={styles.saleInfoValue}>
                 {formatIndianDate(sale.createdAt)}
               </Text>
             </View>
             <View style={styles.saleInfoRow}>
-              <Text style={styles.saleInfoLabel}>Total</Text>
+              <Text style={styles.saleInfoLabel}>{t("returnScreen.totalLabel")}</Text>
               <Text style={styles.saleInfoValue}>
                 {formatMoney(sale.totalMinor)}
               </Text>
             </View>
             <View style={styles.saleInfoRow}>
-              <Text style={styles.saleInfoLabel}>Payment</Text>
+              <Text style={styles.saleInfoLabel}>{t("returnScreen.paymentLabel")}</Text>
               <Text style={styles.saleInfoValue}>{sale.paymentMode}</Text>
             </View>
           </View>
 
           {/* Items to return */}
-          <Text style={styles.sectionTitle}>Select Items to Return</Text>
+          <Text style={styles.sectionTitle}>{t("returnScreen.selectItemsToReturn")}</Text>
           {sale.items.map((item) => {
             const returnQty = returnQuantities[item.id] || 0;
             return (
@@ -697,7 +699,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                     {item.productName}
                   </Text>
                   <Text style={styles.itemMeta}>
-                    Qty: {item.quantity} x {formatMoney(item.priceMinor)} ={" "}
+                    {t("returnScreen.qtyPrefix")}: {item.quantity} x {formatMoney(item.priceMinor)} ={" "}
                     {formatMoney(item.totalMinor)}
                   </Text>
                 </View>
@@ -754,7 +756,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
           })}
 
           {/* Reason */}
-          <Text style={styles.sectionTitle}>Reason for Return</Text>
+          <Text style={styles.sectionTitle}>{t("returnScreen.reasonForReturn")}</Text>
           {RETURN_REASONS.map((r) => (
             <Pressable
               accessibilityRole="radio"
@@ -776,12 +778,12 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                     : colors.textTertiary
                 }
               />
-              <Text style={styles.reasonText}>{r}</Text>
+              <Text style={styles.reasonText}>{t(`returnScreen.reason${r.replace(/\s/g, "")}`)}</Text>
             </Pressable>
           ))}
 
           {/* Refund method */}
-          <Text style={styles.sectionTitle}>Refund Method</Text>
+          <Text style={styles.sectionTitle}>{t("returnScreen.refundMethod")}</Text>
           <View style={styles.refundMethods}>
             {REFUND_METHODS.map((m) => (
               <Pressable
@@ -808,7 +810,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                     refundMethod === m.id && styles.refundMethodTextActive,
                   ]}
                 >
-                  {m.label}
+                  {t(m.labelKey)}
                 </Text>
               </Pressable>
             ))}
@@ -817,7 +819,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
           {/* Summary */}
           {selectedItems.length > 0 && (
             <View style={styles.refundSummary}>
-              <Text style={styles.refundSummaryTitle}>Refund Summary</Text>
+              <Text style={styles.refundSummaryTitle}>{t("returnScreen.refundSummary")}</Text>
               {selectedItems.map((item) => (
                 <View key={item.id} style={styles.refundSummaryRow}>
                   <Text style={styles.refundSummaryItem} numberOfLines={1}>
@@ -831,7 +833,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                 </View>
               ))}
               <View style={styles.refundTotalRow}>
-                <Text style={styles.refundTotalLabel}>Total Refund</Text>
+                <Text style={styles.refundTotalLabel}>{t("returnScreen.totalRefund")}</Text>
                 <Text style={styles.refundTotalAmount}>
                   {formatMoney(refundTotal)}
                 </Text>
@@ -848,13 +850,14 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
             ]}
             onPress={() => {
               Alert.alert(
-                "Confirm Return",
-                `Process return for ${formatMoney(refundTotal)} via ${
-                  REFUND_METHODS.find((m) => m.id === refundMethod)?.label
-                }?`,
+                t("returnScreen.confirmReturnTitle"),
+                t("returnScreen.confirmReturnMessage", {
+                  amount: formatMoney(refundTotal),
+                  method: t(REFUND_METHODS.find((m) => m.id === refundMethod)?.labelKey ?? ""),
+                }),
                 [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Process Return", onPress: handleProcessReturn },
+                  { text: t("returnScreen.cancelButton"), style: "cancel" },
+                  { text: t("returnScreen.processReturnButton"), onPress: handleProcessReturn },
                 ]
               );
             }}
@@ -872,7 +875,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                   size={18}
                   color={colors.textInverse}
                 />
-                <Text style={styles.processButtonText}>Process Return</Text>
+                <Text style={styles.processButtonText}>{t("returnScreen.processReturnButton")}</Text>
               </>
             )}
           </Pressable>
@@ -890,19 +893,19 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                 color={colors.success}
               />
             </View>
-            <Text style={styles.successTitle}>Return Processed</Text>
+            <Text style={styles.successTitle}>{t("returnScreen.returnProcessed")}</Text>
             <Text style={styles.successAmount}>
               {formatMoney(refundResult.refundAmountMinor)}
             </Text>
             <Text style={styles.successSubtitle}>
-              Refund ID: {refundResult.refundId}
+              {t("returnScreen.refundIdLabel")}: {refundResult.refundId}
             </Text>
             <Text style={styles.successNote}>
-              Stock has been reversed server-side.
+              {t("returnScreen.stockReversedNote")}
             </Text>
             <Pressable accessibilityRole="button" style={styles.newReturnButton} onPress={handleNewReturn}>
               <Text style={styles.newReturnButtonText}>
-                Process Another Return
+                {t("returnScreen.processAnotherReturn")}
               </Text>
             </Pressable>
           </View>

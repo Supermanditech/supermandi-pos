@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { theme, useThemeColors } from "../theme";
 import { PolicyRow } from "../components/reorder/PolicyRow";
@@ -42,6 +43,7 @@ export default function ReorderPoliciesScreen({
 }: ReorderPoliciesScreenProps) {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   // State
   const [storeId, setStoreId] = useState<string | null>(null);
@@ -76,7 +78,7 @@ export default function ReorderPoliciesScreen({
         setPolicies(response.data);
       } catch (err) {
         if (__DEV__) console.error("[ReorderPoliciesScreen] Failed to load policies:", err);
-        setError("Failed to load reorder policies");
+        setError(t("reorderPolicy.loadFailed"));
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -182,7 +184,7 @@ export default function ReorderPoliciesScreen({
         setPolicies((prev) =>
           prev.map((p) => (p.id === policy.id ? { ...p, isEnabled: !enabled } : p))
         );
-        Alert.alert("Error", "Failed to update policy. Please try again.");
+        Alert.alert(t("common.error"), t("reorderPolicy.updateFailed"));
       }
     },
     [storeId]
@@ -326,7 +328,7 @@ export default function ReorderPoliciesScreen({
           />
           <Text style={styles.emptyText}>{error}</Text>
           <Pressable accessibilityRole="button" style={styles.retryButton} onPress={() => loadPolicies()}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
           </Pressable>
         </View>
       );
@@ -340,9 +342,9 @@ export default function ReorderPoliciesScreen({
             size={48}
             color={colors.textTertiary}
           />
-          <Text style={styles.emptyTitle}>No matching policies</Text>
+          <Text style={styles.emptyTitle}>{t("reorderPolicy.noMatchingPolicies")}</Text>
           <Text style={styles.emptyText}>
-            Try adjusting your search or filter
+            {t("reorderPolicy.adjustSearchOrFilter")}
           </Text>
         </View>
       );
@@ -355,9 +357,9 @@ export default function ReorderPoliciesScreen({
           size={48}
           color={colors.textTertiary}
         />
-        <Text style={styles.emptyTitle}>No Policies Yet</Text>
+        <Text style={styles.emptyTitle}>{t("reorderPolicy.noPoliciesYet")}</Text>
         <Text style={styles.emptyText}>
-          Reorder policies will be created automatically when products are added to your catalog.
+          {t("reorderPolicy.noPoliciesDescription")}
         </Text>
       </View>
     );
@@ -377,9 +379,9 @@ export default function ReorderPoliciesScreen({
           </Pressable>
         )}
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Reorder Policies</Text>
+          <Text style={styles.headerTitle}>{t("reorderPolicy.title")}</Text>
           <Text style={styles.headerSubtitle}>
-            {stats.total} products | {stats.enabled} enabled | {stats.lowStock} low stock
+            {t("reorderPolicy.statsSubtitle", { total: stats.total, enabled: stats.enabled, lowStock: stats.lowStock })}
           </Text>
         </View>
       </View>
@@ -394,7 +396,7 @@ export default function ReorderPoliciesScreen({
           />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search products..."
+            placeholder={t("reorderPolicy.searchPlaceholder")}
             placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -414,24 +416,24 @@ export default function ReorderPoliciesScreen({
       {/* Filter Chips */}
       <View style={styles.filterContainer}>
         <FilterChip
-          label="All"
+          label={t("reorderPolicy.filterAll")}
           selected={filter === "all"}
           onPress={() => setFilter("all")}
         />
         <FilterChip
-          label="Enabled"
+          label={t("reorderPolicy.filterEnabled")}
           selected={filter === "enabled"}
           onPress={() => setFilter("enabled")}
           count={stats.enabled}
         />
         <FilterChip
-          label="Disabled"
+          label={t("reorderPolicy.filterDisabled")}
           selected={filter === "disabled"}
           onPress={() => setFilter("disabled")}
           count={stats.total - stats.enabled}
         />
         <FilterChip
-          label="Low Stock"
+          label={t("reorderPolicy.filterLowStock")}
           selected={filter === "low_stock"}
           onPress={() => setFilter("low_stock")}
           count={stats.lowStock}
@@ -443,7 +445,7 @@ export default function ReorderPoliciesScreen({
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading policies...</Text>
+          <Text style={styles.loadingText}>{t("reorderPolicy.loadingPolicies")}</Text>
         </View>
       ) : (
         <FlatList

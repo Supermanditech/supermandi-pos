@@ -206,7 +206,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
         setPendingReorders(response.data);
       } catch (err) {
         if (__DEV__) console.error("[ReorderScreen] Failed to load pending reorders:", err);
-        setError("Failed to load pending reorders");
+        setError(t("reorder.loadFailed"));
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -311,8 +311,8 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
         });
       } catch (err) {
         Alert.alert(
-          "Dismiss Failed",
-          err instanceof Error ? err.message : "Could not dismiss reorder. Please try again."
+          t("reorder.dismissFailedTitle"),
+          err instanceof Error ? err.message : t("reorder.dismissFailedMessage")
         );
       }
     },
@@ -424,8 +424,8 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
             color={colors.error}
           />
           <Text style={styles.emptyText}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={() => loadPendingReorders()} accessibilityLabel="Retry loading reorders" accessibilityRole="button" testID="reorder-retry-btn">
-            <Text style={styles.retryButtonText}>Retry</Text>
+          <Pressable style={styles.retryButton} onPress={() => loadPendingReorders()} accessibilityLabel={t("common.retry")} accessibilityRole="button" testID="reorder-retry-btn">
+            <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
           </Pressable>
         </View>
       );
@@ -438,9 +438,9 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
           size={48}
           color={colors.success}
         />
-        <Text style={styles.emptyTitle}>All caught up!</Text>
+        <Text style={styles.emptyTitle}>{t("reorder.allCaughtUp")}</Text>
         <Text style={styles.emptyText}>
-          No pending reorders at this time. The system will automatically detect low stock items.
+          {t("reorder.noPendingDescription")}
         </Text>
       </View>
     );
@@ -450,9 +450,9 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Pending Reorders</Text>
+        <Text style={styles.headerTitle}>{t("reorder.pendingReorders")}</Text>
         <Text style={styles.headerSubtitle}>
-          {pendingReorders.length} item{pendingReorders.length !== 1 ? "s" : ""} need attention
+          {t("reorder.itemsNeedAttention", { count: pendingReorders.length })}
         </Text>
       </View>
 
@@ -462,7 +462,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
           <Pressable
             style={styles.selectAllButton}
             onPress={allSelected ? handleDeselectAll : handleSelectAll}
-            accessibilityLabel={allSelected ? "Deselect All" : "Select All"}
+            accessibilityLabel={allSelected ? t("reorder.deselectAll") : t("reorder.selectAll")}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: allSelected }}
             testID="reorder-select-all"
@@ -473,13 +473,13 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
               color={colors.primary}
             />
             <Text style={styles.selectAllText}>
-              {allSelected ? "Deselect All" : "Select All"}
+              {allSelected ? t("reorder.deselectAll") : t("reorder.selectAll")}
             </Text>
           </Pressable>
 
           {someSelected && (
             <Text style={styles.selectedCount}>
-              {selectedIds.size} selected
+              {t("reorder.selectedCount", { count: selectedIds.size })}
             </Text>
           )}
         </View>
@@ -489,7 +489,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading pending reorders...</Text>
+          <Text style={styles.loadingText}>{t("reorder.loadingPending")}</Text>
         </View>
       ) : (
         <FlatList
@@ -520,7 +520,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
             style={[styles.approveButton, approving && styles.approveButtonDisabled]}
             onPress={handleApproveSelected}
             disabled={approving}
-            accessibilityLabel={`Approve ${selectedIds.size} selected reorders`}
+            accessibilityLabel={t("reorder.approveSelectedLabel", { count: selectedIds.size })}
             accessibilityRole="button"
             testID="reorder-approve-btn"
           >
@@ -534,7 +534,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
                   color={colors.textInverse}
                 />
                 <Text style={styles.approveButtonText}>
-                  Approve Selected ({selectedIds.size})
+                  {t("reorder.approveSelected", { count: selectedIds.size })}
                 </Text>
               </>
             )}
