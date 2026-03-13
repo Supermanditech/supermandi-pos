@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 12,
+  "version": 13,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -434,6 +434,47 @@
         "regression_check": "true",
         "test_guard": "true",
         "db_schema": "N/A"
+      }
+    },
+    {
+      "ticket": "STG-492",
+      "file": "src/screens/PaymentScreen.tsx",
+      "start_line": 825,
+      "end_line": 843,
+      "checksum": "7f9892d25e261eb8",
+      "description": "Write PENDING_UPI_KEY to AsyncStorage BEFORE completeCheckout, clear after success — crash recovery for UPI double-charge prevention",
+      "test_file": "src/__tests__/screens/PaymentScreen.stg-492.upi-crash-recovery.unit.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "business_logic": "N/A",
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T20:13:56.847Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "true",
+        "ux_states": "true",
+        "wiring": "true",
+        "navigation": "N/A",
+        "operator_approved": "true",
+        "parity_scanned": "true",
+        "parity_fixed": "true",
+        "gcp_parity": "true",
+        "regression_check": "true",
+        "test_guard": "true"
       }
     }
   ]

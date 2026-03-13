@@ -822,6 +822,12 @@ const PaymentScreen = () => {
         }
       }
 
+      // STG-492: Write PENDING_UPI_KEY BEFORE checkout to prevent double-charge on crash
+      if (selectedMode === "UPI" && paymentId && saleId) {
+        const pending = { paymentId, saleId, timestamp: Date.now() };
+        await AsyncStorage.setItem(PENDING_UPI_KEY, JSON.stringify(pending));
+      }
+
       // Complete checkout with payment + inventory deduction
       const result = await completeCheckout({
         saleId,
@@ -833,6 +839,11 @@ const PaymentScreen = () => {
         currency,
         transactionId,
       });
+
+      // STG-492: Clear pending UPI after successful checkout
+      if (selectedMode === "UPI") {
+        AsyncStorage.removeItem(PENDING_UPI_KEY).catch(() => {});
+      }
 
       // Log stock deduction (for debugging/audit trail)
       const stockLogs = buildStockDeductionLogs(saleItems, saleId);
