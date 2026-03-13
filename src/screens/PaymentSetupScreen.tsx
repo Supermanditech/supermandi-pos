@@ -24,6 +24,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTranslation } from "react-i18next";
 
 import { updatePaymentSettings } from "../services/api/enrollApi";
 import { ApiError } from "../services/api/apiClient";
@@ -50,6 +51,7 @@ const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 export default function PaymentSetupScreen() {
   const colors = useThemeColors();
   const navigation = useNavigation<Nav>();
+  const { t } = useTranslation();
 
   const [upiVpa, setUpiVpa] = useState("");
   const [bankAccount, setBankAccount] = useState("");
@@ -70,20 +72,20 @@ export default function PaymentSetupScreen() {
 
     const trimmedVpa = upiVpa.trim().toLowerCase();
     if (!trimmedVpa) {
-      errs.upiVpa = "UPI ID is required";
+      errs.upiVpa = t("paymentSetup.validationUpiRequired");
     } else if (!VPA_REGEX.test(trimmedVpa) || trimmedVpa.length < 6 || trimmedVpa.length > 100) {
-      errs.upiVpa = "Invalid UPI ID. Expected format: name@bank (e.g., store@ybl)";
+      errs.upiVpa = t("paymentSetup.validationUpiInvalid");
     }
 
     if (bankAccount.trim()) {
       if (!BANK_ACCT_REGEX.test(bankAccount.trim())) {
-        errs.bankAccount = "Bank account must be 9-18 digits";
+        errs.bankAccount = t("paymentSetup.validationBankAccount");
       }
     }
 
     if (ifsc.trim()) {
       if (!IFSC_REGEX.test(ifsc.trim().toUpperCase())) {
-        errs.ifsc = "Invalid IFSC. Expected format: SBIN0001234";
+        errs.ifsc = t("paymentSetup.validationIfsc");
       }
     }
 
@@ -102,7 +104,7 @@ export default function PaymentSetupScreen() {
     try {
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
-        Alert.alert("No Internet", "Please connect to the internet and try again.");
+        Alert.alert(t("paymentSetup.noInternetTitle"), t("paymentSetup.noInternetMessage"));
         return;
       }
     } catch {
@@ -125,16 +127,16 @@ export default function PaymentSetupScreen() {
       // PAYMENT-SETUP-AUTH-ERROR-HANDLING: detect 401 and guide re-enrollment
       // STG-438: Navigate to EnrollDevice on dismiss so user isn't trapped
       if (err instanceof ApiError && (err.status === 401 || err.message === "device_unauthorized")) {
-        Alert.alert("Session Expired", "Your device session has expired. Please re-enroll this device to continue.", [
-          { text: "OK", onPress: () => navigation.replace("EnrollDevice") },
+        Alert.alert(t("paymentSetup.sessionExpiredTitle"), t("paymentSetup.sessionExpiredMessage"), [
+          { text: t("common.ok"), onPress: () => navigation.replace("EnrollDevice") },
         ]);
         return;
       }
       const msg =
         err instanceof ApiError
-          ? err.message || "Failed to save payment settings"
-          : "Network error. Check your connection and try again.";
-      Alert.alert("Error", msg);
+          ? err.message || t("paymentSetup.saveFailed")
+          : t("paymentSetup.networkError");
+      Alert.alert(t("paymentSetup.errorTitle"), msg);
     } finally {
       setSaving(false);
     }
@@ -262,9 +264,9 @@ export default function PaymentSetupScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Set Up Payments</Text>
+          <Text style={styles.title}>{t("paymentSetup.title")}</Text>
           <Text style={styles.subtitle}>
-            Add your UPI ID to accept digital payments from customers
+            {t("paymentSetup.subtitle")}
           </Text>
         </View>
 
@@ -272,7 +274,7 @@ export default function PaymentSetupScreen() {
         {isOffline && (
           <View style={styles.offlineBanner} testID="payment-offline-banner">
             <Text style={styles.offlineBannerText}>
-              No internet connection. Connect to save payment settings.
+              {t("paymentSetup.offlineBanner")}
             </Text>
           </View>
         )}
@@ -282,11 +284,11 @@ export default function PaymentSetupScreen() {
           {/* UPI VPA */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>
-              UPI ID (VPA) <Text style={styles.required}>*</Text>
+              {t("paymentSetup.upiLabel")} <Text style={styles.required}>*</Text>
             </Text>
             <TextInput
               style={[styles.input, errors.upiVpa ? styles.inputError : null]}
-              placeholder="yourname@upi"
+              placeholder={t("paymentSetup.upiPlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={upiVpa}
               onChangeText={(t) => {
@@ -298,7 +300,7 @@ export default function PaymentSetupScreen() {
               keyboardType="email-address"
               editable={!saving}
               testID="payment-upi-input"
-              accessibilityLabel="UPI ID"
+              accessibilityLabel={t("paymentSetup.upiAccessibility")}
               accessibilityRole="text"
             />
             {errors.upiVpa ? (
@@ -308,10 +310,10 @@ export default function PaymentSetupScreen() {
 
           {/* Bank Account */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Bank Account Number (optional)</Text>
+            <Text style={styles.label}>{t("paymentSetup.bankAccountLabel")}</Text>
             <TextInput
               style={[styles.input, errors.bankAccount ? styles.inputError : null]}
-              placeholder="123456789012"
+              placeholder={t("paymentSetup.bankAccountPlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={bankAccount}
               onChangeText={(t) => {
@@ -321,7 +323,7 @@ export default function PaymentSetupScreen() {
               keyboardType="number-pad"
               editable={!saving}
               testID="payment-bank-input"
-              accessibilityLabel="Bank account number"
+              accessibilityLabel={t("paymentSetup.bankAccountAccessibility")}
               accessibilityRole="text"
             />
             {errors.bankAccount ? (
@@ -331,10 +333,10 @@ export default function PaymentSetupScreen() {
 
           {/* IFSC */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>IFSC Code (optional)</Text>
+            <Text style={styles.label}>{t("paymentSetup.ifscLabel")}</Text>
             <TextInput
               style={[styles.input, errors.ifsc ? styles.inputError : null]}
-              placeholder="SBIN0001234"
+              placeholder={t("paymentSetup.ifscPlaceholder")}
               placeholderTextColor={colors.textTertiary}
               value={ifsc}
               onChangeText={(t) => {
@@ -345,7 +347,7 @@ export default function PaymentSetupScreen() {
               autoCorrect={false}
               editable={!saving}
               testID="payment-ifsc-input"
-              accessibilityLabel="IFSC code"
+              accessibilityLabel={t("paymentSetup.ifscAccessibility")}
               accessibilityRole="text"
             />
             {errors.ifsc ? (
@@ -361,14 +363,14 @@ export default function PaymentSetupScreen() {
             onPress={handleSave}
             disabled={saving || isOffline}
             testID="payment-save-button"
-            accessibilityLabel={saving ? "Saving payment settings" : "Save and continue"}
+            accessibilityLabel={saving ? t("paymentSetup.savingAccessibility") : t("paymentSetup.saveAccessibility")}
             accessibilityRole="button"
             accessibilityState={{ disabled: saving || isOffline }}
           >
             {saving ? (
               <ActivityIndicator color={colors.surface} size="small" />
             ) : (
-              <Text style={styles.saveButtonText}>Save & Continue</Text>
+              <Text style={styles.saveButtonText}>{t("paymentSetup.saveButton")}</Text>
             )}
           </Pressable>
 
@@ -377,15 +379,15 @@ export default function PaymentSetupScreen() {
             onPress={handleSkip}
             disabled={saving}
             testID="payment-skip-button"
-            accessibilityLabel="Skip payment setup for now"
+            accessibilityLabel={t("paymentSetup.skipAccessibility")}
             accessibilityRole="button"
             accessibilityState={{ disabled: saving }}
           >
-            <Text style={styles.skipButtonText}>Skip for Now</Text>
+            <Text style={styles.skipButtonText}>{t("paymentSetup.skipButton")}</Text>
           </Pressable>
 
           <Text style={styles.skipHint}>
-            You can set this up later from Settings
+            {t("paymentSetup.skipHint")}
           </Text>
         </View>
       </ScrollView>

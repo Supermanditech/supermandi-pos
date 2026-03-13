@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
+import { useTranslation } from "react-i18next";
 import { fetchBillSnapshot } from "../services/api/billingApi";
 import type { BillSnapshot } from "../services/billing/billTypes";
 import { buildBillText } from "../services/billing/billFormatter";
@@ -24,6 +25,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList, "BillDetail">;
 type Rt = RouteProp<RootStackParamList, "BillDetail">;
 
 export default function BillDetailScreen() {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
@@ -46,7 +48,7 @@ export default function BillDetailScreen() {
         const result = await fetchBillSnapshot(saleId);
         if (!active) return;
         if (!result) {
-          setError("Bill not found.");
+          setError(t("billDetail.billNotFound"));
           setSnapshot(null);
           return;
         }
@@ -54,7 +56,7 @@ export default function BillDetailScreen() {
       } catch (_e: unknown) {
     const e = asError(_e);
         if (!active) return;
-        setError(e?.message ? String(e.message) : "Failed to load bill.");
+        setError(e?.message ? String(e.message) : t("billDetail.loadFailed"));
       } finally {
         if (active) setLoading(false);
       }
@@ -75,9 +77,9 @@ export default function BillDetailScreen() {
     const e = asError(_e);
       const message = e?.message ? String(e.message) : "share_failed";
       if (message === "sharing_unavailable") {
-        Alert.alert("Share unavailable", "Sharing is not available on this device.");
+        Alert.alert(t("billDetail.shareUnavailableTitle"), t("billDetail.shareUnavailableMessage"));
       } else {
-        Alert.alert("Share failed", "Unable to share this bill.");
+        Alert.alert(t("billDetail.shareFailedTitle"), t("billDetail.shareFailedMessage"));
       }
     } finally {
       setSharing(false);
@@ -88,26 +90,26 @@ export default function BillDetailScreen() {
   const handlePrint = () => {
     if (!snapshot || printing) return;
     Alert.alert(
-      "Reprint Bill",
-      "Are you sure you want to reprint this bill?",
+      t("billDetail.reprintTitle"),
+      t("billDetail.reprintMessage"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("billDetail.cancel"), style: "cancel" },
         {
-          text: "Print",
+          text: t("billDetail.print"),
           onPress: async () => {
             setPrinting(true);
             try {
               await printerService.printReceipt(buildBillText(snapshot));
-              Alert.alert("Print queued", "Bill sent to printer.");
+              Alert.alert(t("billDetail.printQueued"), t("billDetail.printQueuedMessage"));
             } catch (_e: unknown) {
     const e = asError(_e);
               const message = e?.message ? String(e.message) : "print_failed";
               if (message.toLowerCase().includes("paper")) {
-                Alert.alert("Printer error", "Printer is out of paper.");
+                Alert.alert(t("billDetail.printerErrorTitle"), t("billDetail.printerOutOfPaper"));
               } else if (message.toLowerCase().includes("connected")) {
-                Alert.alert("Printer error", "Printer not connected.");
+                Alert.alert(t("billDetail.printerErrorTitle"), t("billDetail.printerNotConnected"));
               } else {
-                Alert.alert("Print failed", "Unable to print this bill.");
+                Alert.alert(t("billDetail.printFailedTitle"), t("billDetail.printFailedMessage"));
               }
             } finally {
               setPrinting(false);
@@ -127,9 +129,9 @@ export default function BillDetailScreen() {
     const e = asError(_e);
       const message = e?.message ? String(e.message) : "whatsapp_failed";
       if (message === "whatsapp_not_installed") {
-        Alert.alert("WhatsApp not found", "Please install WhatsApp to share bills.");
+        Alert.alert(t("billDetail.whatsappNotFoundTitle"), t("billDetail.whatsappNotFoundMessage"));
       } else {
-        Alert.alert("Share failed", "Unable to share via WhatsApp.");
+        Alert.alert(t("billDetail.shareFailedTitle"), t("billDetail.whatsappFailedMessage"));
       }
     } finally {
       setWhatsapping(false);
@@ -316,15 +318,15 @@ export default function BillDetailScreen() {
   const header = snapshot ? (
     <View style={styles.summaryCard}>
       <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>Bill Ref</Text>
+        <Text style={styles.summaryLabel}>{t("billDetail.billRef")}</Text>
         <Text style={styles.summaryValue}>{snapshot.billRef || billRef || "--"}</Text>
       </View>
       <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>Status</Text>
+        <Text style={styles.summaryLabel}>{t("billDetail.status")}</Text>
         <Text style={styles.summaryValue}>{snapshot.status || snapshot.paymentMode}</Text>
       </View>
       <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>Payment</Text>
+        <Text style={styles.summaryLabel}>{t("billDetail.payment")}</Text>
         <Text style={styles.summaryValue}>{snapshot.paymentMode}</Text>
       </View>
       <Text style={styles.summaryMeta}>{formatDateTime(new Date(snapshot.createdAt))}</Text>
@@ -341,7 +343,7 @@ export default function BillDetailScreen() {
           disabled={printing}
         >
           <MaterialCommunityIcons name="printer-outline" size={18} color={colors.primary} />
-          <Text style={styles.actionText}>{printing ? "..." : "Print"}</Text>
+          <Text style={styles.actionText}>{printing ? "..." : t("billDetail.print")}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -350,7 +352,7 @@ export default function BillDetailScreen() {
           disabled={whatsapping}
         >
           <MaterialCommunityIcons name="whatsapp" size={18} color={colors.textInverse} />
-          <Text style={styles.actionTextPrimary}>{whatsapping ? "..." : "WhatsApp"}</Text>
+          <Text style={styles.actionTextPrimary}>{whatsapping ? "..." : t("billDetail.whatsapp")}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -359,25 +361,25 @@ export default function BillDetailScreen() {
           disabled={sharing}
         >
           <MaterialCommunityIcons name="share-variant" size={18} color={colors.textInverse} />
-          <Text style={styles.actionTextPrimary}>{sharing ? "..." : "Share"}</Text>
+          <Text style={styles.actionTextPrimary}>{sharing ? "..." : t("billDetail.share")}</Text>
         </Pressable>
       </View>
 
       <View style={styles.totalsCard}>
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Subtotal</Text>
+          <Text style={styles.summaryLabel}>{t("billDetail.subtotal")}</Text>
           <Text style={styles.summaryValue}>
             {formatMoney(snapshot.subtotalMinor, snapshot.currency)}
           </Text>
         </View>
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Discount</Text>
+          <Text style={styles.summaryLabel}>{t("billDetail.discount")}</Text>
           <Text style={styles.summaryValue}>
             {formatMoney(snapshot.discountMinor, snapshot.currency)}
           </Text>
         </View>
         <View style={[styles.summaryRow, styles.totalRow]}>
-          <Text style={styles.totalLabel}>Total</Text>
+          <Text style={styles.totalLabel}>{t("billDetail.total")}</Text>
           <Text style={styles.totalValue}>
             {formatMoney(snapshot.totalMinor, snapshot.currency)}
           </Text>
@@ -389,12 +391,12 @@ export default function BillDetailScreen() {
   return (
     <View style={styles.container}>
       {/* T-122: Standardized back header with Android BackHandler */}
-      <BackHeader title="Bill Details" />
+      <BackHeader title={t("billDetail.title")} />
 
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} />
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>{t("billDetail.loading")}</Text>
         </View>
       ) : error ? (
         <View style={styles.center}>
@@ -409,7 +411,7 @@ export default function BillDetailScreen() {
               <View style={styles.itemInfo}>
                 <Text style={styles.itemName}>{item.name}</Text>
                 <Text style={styles.itemMeta}>
-                  {item.barcode ?? "No barcode"} - Qty {item.quantity}
+                  {item.barcode ?? t("billDetail.noBarcode")} - {t("billDetail.qty")} {item.quantity}
                 </Text>
               </View>
               <View style={styles.itemTotals}>
@@ -417,7 +419,7 @@ export default function BillDetailScreen() {
                   {formatMoney(item.lineTotalMinor, snapshot.currency)}
                 </Text>
                 <Text style={styles.itemUnit}>
-                  {formatMoney(item.priceMinor, snapshot.currency)} each
+                  {formatMoney(item.priceMinor, snapshot.currency)} {t("billDetail.each")}
                 </Text>
               </View>
             </View>

@@ -61,7 +61,7 @@ export default function SalesHistoryScreen() {
     } catch (_e: unknown) {
     const e = asError(_e);
       // GL-CRIT-0095: Use i18n for error messages
-      setError(e?.message ? String(e.message) : t('history.loadError', 'Failed to load bills.'));
+      setError(e?.message ? String(e.message) : t('salesHistory.loadError', 'Failed to load bills.'));
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -234,7 +234,7 @@ export default function SalesHistoryScreen() {
       onPress={() => navigation.navigate("BillDetail", { saleId: item.saleId, billRef: item.billRef })}
     >
       <View style={styles.billMain}>
-        <Text style={styles.billRef}>Bill #{item.billRef}</Text>
+        <Text style={styles.billRef}>{t('salesHistory.billRef', 'Bill #{{ref}}', { ref: item.billRef })}</Text>
         <Text style={styles.billMeta}>{formatDateTime(new Date(item.createdAt))}</Text>
         <View style={styles.badgeRow}>
           <View style={styles.badge}>
@@ -242,7 +242,7 @@ export default function SalesHistoryScreen() {
           </View>
           {item.source === "local" && (
             <View style={[styles.badge, styles.badgeWarning]}>
-              <Text style={[styles.badgeText, styles.badgeWarningText]}>OFFLINE</Text>
+              <Text style={[styles.badgeText, styles.badgeWarningText]}>{t('salesHistory.offline', 'OFFLINE')}</Text>
             </View>
           )}
         </View>
@@ -257,7 +257,7 @@ export default function SalesHistoryScreen() {
   return (
     <View style={styles.container}>
       {/* T-122: Standardized back header with Android BackHandler */}
-      <BackHeader title="Bills" />
+      <BackHeader title={t('salesHistory.title', 'Bills')} />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -270,8 +270,8 @@ export default function SalesHistoryScreen() {
         /* T-109: Branded empty state */
         <EmptyState
           icon="receipt"
-          title={t('history.noBills', 'No sales yet')}
-          description={t('history.noBillsHint', 'Bills will appear here after you make sales.')}
+          title={t('salesHistory.noBills', 'No sales yet')}
+          description={t('salesHistory.noBillsHint', 'Bills will appear here after you make sales.')}
         >
           <Pressable
             accessibilityRole="button"
@@ -279,7 +279,7 @@ export default function SalesHistoryScreen() {
             onPress={() => (navigation as any).navigate("SellScan")}
           >
             <MaterialCommunityIcons name="cart-outline" size={18} color={colors.textInverse} />
-            <Text style={styles.ctaButtonText}>{t('history.makeFirstSale', 'Make Your First Sale')}</Text>
+            <Text style={styles.ctaButtonText}>{t('salesHistory.makeFirstSale', 'Make Your First Sale')}</Text>
           </Pressable>
         </EmptyState>
       ) : (

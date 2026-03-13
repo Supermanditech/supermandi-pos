@@ -16,10 +16,12 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useTranslation } from "react-i18next";
 import { getSalesHistory, type LedgerEntry } from "../services/api/inventoryApi";
 import { formatMoney } from "../utils/money";
 import { theme, useThemeColors } from "../theme";
 import type { ColorPalette } from "../theme";
+import type { TFunction } from "i18next";
 
 interface SalesStatementScreenProps {
   onBack: () => void;
@@ -35,17 +37,17 @@ interface DailySales {
   entries: LedgerEntry[];
 }
 
-function formatDateLabel(dateStr: string): string {
+function formatDateLabel(dateStr: string, t: TFunction): string {
   const date = new Date(dateStr);
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
 
   if (date.toDateString() === today.toDateString()) {
-    return "Today";
+    return t("salesStatement.today");
   }
   if (date.toDateString() === yesterday.toDateString()) {
-    return "Yesterday";
+    return t("salesStatement.yesterday");
   }
 
   return date.toLocaleDateString("en-IN", {
@@ -56,7 +58,7 @@ function formatDateLabel(dateStr: string): string {
   });
 }
 
-function groupEntriesByDate(entries: LedgerEntry[]): DailySales[] {
+function groupEntriesByDate(entries: LedgerEntry[], t: TFunction): DailySales[] {
   const groups = new Map<string, DailySales>();
 
   for (const entry of entries) {
@@ -75,7 +77,7 @@ function groupEntriesByDate(entries: LedgerEntry[]): DailySales[] {
     } else {
       groups.set(dateKey, {
         date: dateKey,
-        dateLabel: formatDateLabel(entry.createdAt),
+        dateLabel: formatDateLabel(entry.createdAt, t),
         transactions: 1,
         totalQty: Math.abs(entry.deltaQty),
         totalValue: entryValue,
@@ -264,6 +266,7 @@ function createStyles(colors: ColorPalette) {
 function SalesDayCard({ day }: { day: DailySales }) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
 
   return (
     <View style={styles.card}>
@@ -279,15 +282,15 @@ function SalesDayCard({ day }: { day: DailySales }) {
         {/* STG-469: Label corrected — unitCost is cost price, not sell/revenue */}
         <View style={styles.cardStat}>
           <Text style={styles.cardStatValue}>{formatMoney(day.totalValue)}</Text>
-          <Text style={styles.cardStatLabel}>Cost Value</Text>
+          <Text style={styles.cardStatLabel}>{t("salesStatement.costValue")}</Text>
         </View>
         <View style={styles.cardStat}>
           <Text style={styles.cardStatValue}>{day.transactions}</Text>
-          <Text style={styles.cardStatLabel}>Sales</Text>
+          <Text style={styles.cardStatLabel}>{t("salesStatement.sales")}</Text>
         </View>
         <View style={[styles.cardStat, styles.cardStatRight]}>
           <Text style={styles.cardStatValue}>{day.totalQty}</Text>
-          <Text style={styles.cardStatLabel}>Items</Text>
+          <Text style={styles.cardStatLabel}>{t("salesStatement.items")}</Text>
         </View>
       </View>
     </View>
@@ -298,6 +301,7 @@ export default function SalesStatementScreen({ onBack, onNavigateToSell }: Sales
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   // UIUX-POS-004: Android hardware back button support
   useEffect(() => {
@@ -324,16 +328,16 @@ export default function SalesStatementScreen({ onBack, onNavigateToSell }: Sales
 
     try {
       const entries = await getSalesHistory();
-      const grouped = groupEntriesByDate(entries);
+      const grouped = groupEntriesByDate(entries, t);
       setDailySales(grouped);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load data";
+      const message = err instanceof Error ? err.message : t("salesStatement.failedToLoad");
       setError(message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadData();
@@ -352,7 +356,7 @@ export default function SalesStatementScreen({ onBack, onNavigateToSell }: Sales
         <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Inventory Cost Statement</Text>
+        <Text style={styles.title}>{t("salesStatement.title")}</Text>
         <Pressable accessibilityRole="button" style={styles.refreshButton} onPress={() => loadData(true)}>
           <MaterialCommunityIcons name="refresh" size={22} color={colors.textSecondary} />
         </Pressable>
@@ -362,17 +366,17 @@ export default function SalesStatementScreen({ onBack, onNavigateToSell }: Sales
       <View style={styles.summaryBar}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{formatMoney(totalRevenue)}</Text>
-          <Text style={styles.summaryLabel}>Cost Value</Text>
+          <Text style={styles.summaryLabel}>{t("salesStatement.costValue")}</Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{totalTransactions}</Text>
-          <Text style={styles.summaryLabel}>Sales</Text>
+          <Text style={styles.summaryLabel}>{t("salesStatement.sales")}</Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{totalQtySold}</Text>
-          <Text style={styles.summaryLabel}>Items</Text>
+          <Text style={styles.summaryLabel}>{t("salesStatement.items")}</Text>
         </View>
       </View>
 
@@ -386,20 +390,20 @@ export default function SalesStatementScreen({ onBack, onNavigateToSell }: Sales
           <MaterialCommunityIcons name="alert-circle" size={48} color={colors.error} />
           <Text style={styles.errorText}>{error}</Text>
           <Pressable accessibilityRole="button" style={styles.retryButton} onPress={() => loadData()}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t("salesStatement.retry")}</Text>
           </Pressable>
         </View>
       ) : dailySales.length === 0 ? (
         <View style={styles.centerContent}>
           <MaterialCommunityIcons name="chart-line" size={48} color={colors.textTertiary} />
-          <Text style={styles.emptyTitle}>No sales data</Text>
+          <Text style={styles.emptyTitle}>{t("salesStatement.noSalesData")}</Text>
           <Text style={styles.emptyText}>
-            Sales transactions will appear here after you make sales.
+            {t("salesStatement.noSalesDescription")}
           </Text>
           {onNavigateToSell && (
             <Pressable accessibilityRole="button" style={styles.ctaButton} onPress={onNavigateToSell}>
               <MaterialCommunityIcons name="cart-outline" size={18} color={colors.textInverse} />
-              <Text style={styles.ctaButtonText}>Make Your First Sale</Text>
+              <Text style={styles.ctaButtonText}>{t("salesStatement.makeFirstSale")}</Text>
             </Pressable>
           )}
         </View>
