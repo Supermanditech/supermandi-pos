@@ -609,6 +609,34 @@ export default function EnrollDeviceScreen() {
         </View>
       )}
 
+      {/* STG-055: App version display */}
+      <View style={styles.versionRow}>
+        <Text style={[styles.versionText, { color: tc.textTertiary }]}>
+          v{getAppVersion()}
+        </Text>
+      </View>
+
+      {/* STG-026: Terms & Privacy Policy link */}
+      <View style={styles.termsRow}>
+        <Text
+          style={[styles.termsLink, { color: tc.primary }]}
+          onPress={() => Linking.openURL("https://supermandi.tech/terms")}
+          accessibilityRole="link"
+          testID="enroll-terms-link"
+        >
+          Terms of Service
+        </Text>
+        <Text style={[styles.termsDivider, { color: tc.textTertiary }]}> · </Text>
+        <Text
+          style={[styles.termsLink, { color: tc.primary }]}
+          onPress={() => Linking.openURL("https://supermandi.tech/privacy")}
+          accessibilityRole="link"
+          testID="enroll-privacy-link"
+        >
+          Privacy Policy
+        </Text>
+      </View>
+
       {/* LIVE.POS.BUILDSTAMP.RUNTIME_GCP_PARITY.001: Theme-aware release stamp */}
       <View style={styles.releaseBuildInfo}>
         <Text style={[styles.releaseBuildInfoText, { color: tc.textTertiary }]}>
@@ -879,8 +907,31 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     fontStyle: "italic",
     lineHeight: 14,
   },
-  releaseBuildInfo: {
+  versionRow: {
     marginTop: spacing.lg,
+    alignItems: "center",
+  },
+  versionText: {
+    fontSize: 12,
+    color: colors.textTertiary,
+  },
+  termsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: spacing.sm,
+  },
+  termsLink: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.primary,
+  },
+  termsDivider: {
+    fontSize: 12,
+    color: colors.textTertiary,
+  },
+  releaseBuildInfo: {
+    marginTop: spacing.sm,
     alignItems: "center",
   },
   releaseBuildInfoText: {

@@ -218,12 +218,12 @@ export default function MenuScreen() {
       const count = await pendingOutboxCount();
       setOpStatus((prev) => ({ ...prev, pendingOutboxCount: count }));
       if (count === 0) {
-        Alert.alert(t('menu.syncComplete', { defaultValue: "Sync Complete" }), t('menu.allDataSynced', { defaultValue: "All data has been synced." }));
+        Alert.alert(t('menu.syncComplete'), t('menu.allDataSynced'));
       }
     } catch (_e: unknown) {
     const e = asError(_e);
       if (__DEV__) console.error("[MenuScreen] sync failed:", e);
-      Alert.alert(t('menu.syncFailed', { defaultValue: "Sync Failed" }), e.message || "Please try again.");
+      Alert.alert(t('menu.syncFailed'), e.message || t('menu.syncFailedRetry'));
     } finally {
       setSyncing(false);
     }
@@ -240,10 +240,10 @@ export default function MenuScreen() {
     try {
       await printerService.testPrint();
       setPrinterStatus(printerService.getStatus());
-      Alert.alert(t('menu.printerOk', 'Printer OK'), t('menu.testPrintSuccess', 'Test page sent successfully.'));
+      Alert.alert(t('menu.printerOk'), t('menu.testPrintSuccess'));
     } catch {
       setPrinterStatus(printerService.getStatus());
-      Alert.alert(t('menu.printerError', 'Printer Error'), t('menu.testPrintFailed', 'Could not print test page.'));
+      Alert.alert(t('menu.printerError'), t('menu.testPrintFailed'));
     }
   }, [t]);
 
@@ -280,12 +280,12 @@ export default function MenuScreen() {
 
   const handleSwitchStaff = () => {
     Alert.alert(
-      "Switch Staff",
-      `Logged in as ${staffSession?.name ?? "Unknown"} (${staffSession?.role ?? ""}). Switch to a different staff member?`,
+      t('menu.switchStaffTitle'),
+      t('menu.switchStaffMessage', { name: staffSession?.name ?? "Unknown", role: staffSession?.role ?? "" }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t('common.cancel'), style: "cancel" },
         {
-          text: "Switch",
+          text: t('menu.switchButton'),
           style: "destructive",
           onPress: () => clearStaffSession(),
         },
@@ -417,7 +417,7 @@ export default function MenuScreen() {
         {!isOnline && (
           <View style={styles.offlineIndicator}>
             <MaterialCommunityIcons name="wifi-off" size={14} color={tc.error} />
-            <Text style={styles.offlineText}>{t('menu.offline', { defaultValue: "Offline" })}</Text>
+            <Text style={styles.offlineText}>{t('menu.offline')}</Text>
           </View>
         )}
       </View>
@@ -476,7 +476,7 @@ export default function MenuScreen() {
           </View>
         )}
         <View style={styles.statusRow}>
-          <Text style={styles.statusLabel}>Sync</Text>
+          <Text style={styles.statusLabel}>{t('menu.syncLabel')}</Text>
           <View style={styles.syncRow}>
             <View style={[
               styles.statusBadge,
@@ -509,7 +509,7 @@ export default function MenuScreen() {
                   color={syncing ? tc.textTertiary : tc.primary}
                 />
                 <Text style={[styles.syncButtonText, syncing && styles.syncButtonTextDisabled]}>
-                  {syncing ? t('menu.syncing', { defaultValue: "Syncing..." }) : t('menu.syncNow', { defaultValue: "Sync Now" })}
+                  {syncing ? t('menu.syncing') : t('menu.syncNow')}
                 </Text>
               </Pressable>
             )}
@@ -521,7 +521,7 @@ export default function MenuScreen() {
       <View style={styles.summaryCard}>
         <View style={styles.statusHeader}>
           <MaterialCommunityIcons name="chart-bar" size={16} color={tc.primary} />
-          <Text style={styles.statusHeaderText}>{t('menu.todaysSales', { defaultValue: "Today's Sales" })}</Text>
+          <Text style={styles.statusHeaderText}>{t('menu.todaysSales')}</Text>
           <Pressable
             onPress={() => { void loadDailySummary(); }}
             style={styles.summaryRefresh}
@@ -540,14 +540,14 @@ export default function MenuScreen() {
           </Pressable>
         </View>
         {summaryLoading ? (
-          <Text style={styles.summaryLoading}>{t('common.loading', { defaultValue: 'Loading...' })}</Text>
+          <Text style={styles.summaryLoading}>{t('common.loading')}</Text>
         ) : summaryError ? (
           /* GL-RJ-009: Error state with retry */
           <View style={styles.summaryErrorContainer}>
             <MaterialCommunityIcons name="alert-circle-outline" size={24} color={tc.error} />
             <Text style={styles.summaryErrorText}>{summaryError}</Text>
             <Pressable style={styles.summaryRetryButton} onPress={loadDailySummary} accessibilityRole="button" accessibilityLabel="Retry loading daily summary">
-              <Text style={styles.summaryRetryText}>{t('common.retry', { defaultValue: 'Retry' })}</Text>
+              <Text style={styles.summaryRetryText}>{t('common.retry')}</Text>
             </Pressable>
           </View>
         ) : dailySummary ? (
@@ -558,51 +558,51 @@ export default function MenuScreen() {
                 <Text style={styles.summaryValue}>{formatMoney(dailySummary.totalSales)}</Text>
                 {renderTrend(dailySummary.totalSales, yesterdaySummary?.totalSales)}
               </View>
-              <Text style={styles.summaryLabel}>{t('menu.totalSales', { defaultValue: 'Total Sales' })}</Text>
+              <Text style={styles.summaryLabel}>{t('menu.totalSales')}</Text>
             </View>
             <View style={styles.summaryItem}>
               <View style={styles.summaryValueRow}>
                 <Text style={styles.summaryValue}>{dailySummary.totalBills}</Text>
                 {renderTrend(dailySummary.totalBills, yesterdaySummary?.totalBills)}
               </View>
-              <Text style={styles.summaryLabel}>{t('menu.bills', { defaultValue: 'Bills' })}</Text>
+              <Text style={styles.summaryLabel}>{t('menu.bills')}</Text>
             </View>
             <View style={styles.summaryItem}>
               <View style={styles.summaryValueRow}>
                 <Text style={styles.summaryValue}>{formatMoney(dailySummary.averageBillValue)}</Text>
                 {renderTrend(dailySummary.averageBillValue, yesterdaySummary?.averageBillValue)}
               </View>
-              <Text style={styles.summaryLabel}>{t('menu.avgBill', { defaultValue: 'Avg Bill' })}</Text>
+              <Text style={styles.summaryLabel}>{t('menu.avgBill')}</Text>
             </View>
             <View style={styles.summaryItem}>
               <View style={styles.summaryValueRow}>
                 <Text style={styles.summaryValue}>{dailySummary.itemsSold}</Text>
                 {renderTrend(dailySummary.itemsSold, yesterdaySummary?.itemsSold)}
               </View>
-              <Text style={styles.summaryLabel}>{t('menu.itemsSold', { defaultValue: 'Items Sold' })}</Text>
+              <Text style={styles.summaryLabel}>{t('menu.itemsSold')}</Text>
             </View>
           </View>
         ) : (
-          <Text style={styles.summaryLoading}>{t('menu.noSalesYet', { defaultValue: 'No sales yet today' })}</Text>
+          <Text style={styles.summaryLoading}>{t('menu.noSalesYet')}</Text>
         )}
         {dailySummary && dailySummary.totalSales > 0 && (
           <View style={styles.paymentBreakdown}>
-            <Text style={styles.breakdownTitle}>{t('menu.paymentModes', { defaultValue: 'Payment Modes' })}</Text>
+            <Text style={styles.breakdownTitle}>{t('menu.paymentModes')}</Text>
             <View style={styles.breakdownRow}>
               {dailySummary.paymentBreakdown.cash > 0 && (
-                <Text style={styles.breakdownItem}>Cash: {formatMoney(dailySummary.paymentBreakdown.cash)}</Text>
+                <Text style={styles.breakdownItem}>{t('menu.cashLabel')} {formatMoney(dailySummary.paymentBreakdown.cash)}</Text>
               )}
               {dailySummary.paymentBreakdown.upi > 0 && (
-                <Text style={styles.breakdownItem}>UPI: {formatMoney(dailySummary.paymentBreakdown.upi)}</Text>
+                <Text style={styles.breakdownItem}>{t('menu.upiLabel')} {formatMoney(dailySummary.paymentBreakdown.upi)}</Text>
               )}
               {dailySummary.paymentBreakdown.card > 0 && (
-                <Text style={styles.breakdownItem}>Card: {formatMoney(dailySummary.paymentBreakdown.card)}</Text>
+                <Text style={styles.breakdownItem}>{t('menu.cardLabel')} {formatMoney(dailySummary.paymentBreakdown.card)}</Text>
               )}
             </View>
           </View>
         )}
         <Pressable onPress={goToSalesStatement} style={styles.summaryTapArea} accessibilityRole="button" accessibilityLabel="View sales details">
-          <Text style={styles.summaryTapText}>{t('menu.viewDetails', { defaultValue: 'View Details' })}</Text>
+          <Text style={styles.summaryTapText}>{t('menu.viewDetails')}</Text>
           <MaterialCommunityIcons name="chevron-right" size={14} color={tc.primary} />
         </Pressable>
       </View>
@@ -639,8 +639,8 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"rotate-left" as any} size={20} color={tc.error} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Return / Refund</Text>
-          <Text style={styles.menuSubtitle}>Process returns and issue refunds</Text>
+          <Text style={styles.menuTitle}>{t('menu.returnRefund')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.returnRefundSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
@@ -653,9 +653,9 @@ export default function MenuScreen() {
           color={printerStatus.connected ? tc.success : tc.error}
         />
         <Text style={[styles.printerStatusText, { color: printerStatus.connected ? tc.success : tc.error }]}>
-          {printerStatus.connected ? t('menu.printerReady', 'Printer Ready') : t('menu.printerUnavailable', 'Printer Unavailable')}
+          {printerStatus.connected ? t('menu.printerReady') : t('menu.printerUnavailable')}
         </Text>
-        <Text style={styles.printerTestLink}>{t('menu.testPrint', 'Test')}</Text>
+        <Text style={styles.printerTestLink}>{t('menu.testPrint')}</Text>
       </Pressable>
 
       <Pressable style={styles.menuItem} onPress={() => navigation.navigate("BarcodeSheet")} accessibilityRole="button" accessibilityLabel="Barcode Sheets">
@@ -695,8 +695,8 @@ export default function MenuScreen() {
                   <MaterialCommunityIcons name={"storefront-outline" as any} size={20} color={tc.primary} />
                 </View>
                 <View style={styles.menuText}>
-                  <Text style={styles.menuTitle}>{t('menu.productCatalog', { defaultValue: 'Product Catalog' })}</Text>
-                  <Text style={styles.menuSubtitle}>{t('menu.productCatalogSubtitle', { defaultValue: 'Browse and add products to purchase' })}</Text>
+                  <Text style={styles.menuTitle}>{t('menu.productCatalog')}</Text>
+                  <Text style={styles.menuSubtitle}>{t('menu.productCatalogSubtitle')}</Text>
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
               </Pressable>
@@ -707,8 +707,8 @@ export default function MenuScreen() {
                   <MaterialCommunityIcons name={"clock-outline" as any} size={20} color={tc.accent} />
                 </View>
                 <View style={styles.menuText}>
-                  <Text style={styles.menuTitle}>{t('menu.bnplDues', { defaultValue: 'BNPL Dues' })}</Text>
-                  <Text style={styles.menuSubtitle}>{t('menu.bnplDuesSubtitle', { defaultValue: 'View and pay pending BNPL dues' })}</Text>
+                  <Text style={styles.menuTitle}>{t('menu.bnplDues')}</Text>
+                  <Text style={styles.menuSubtitle}>{t('menu.bnplDuesSubtitle')}</Text>
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
               </Pressable>
@@ -766,15 +766,15 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"package-variant-plus" as any} size={20} color={tc.primary} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Opening Stock</Text>
-          <Text style={styles.menuSubtitle}>Initialize stock for new products</Text>
+          <Text style={styles.menuTitle}>{t('menu.openingStock')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.openingStockSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
 
       {/* T-154 / T-155: Customers & Credit Section */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Customers & Credit</Text>
+        <Text style={styles.sectionTitle}>{t('menu.customersCredit')}</Text>
       </View>
 
       <Pressable style={styles.menuItem} onPress={goToKhata} accessibilityRole="button" accessibilityLabel="Khata Credit Book">
@@ -782,8 +782,8 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"book-open-variant" as any} size={20} color={tc.primary} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Khata (Credit Book)</Text>
-          <Text style={styles.menuSubtitle}>Track credit and payments</Text>
+          <Text style={styles.menuTitle}>{t('menu.khata')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.khataSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
@@ -793,8 +793,8 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"account-group-outline" as any} size={20} color={tc.primary} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Customers</Text>
-          <Text style={styles.menuSubtitle}>Customer profiles and purchase history</Text>
+          <Text style={styles.menuTitle}>{t('menu.customers')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.customersSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
@@ -805,8 +805,8 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"account-details-outline" as any} size={20} color={tc.primary} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Customer Management</Text>
-          <Text style={styles.menuSubtitle}>Add, edit, and manage customer profiles</Text>
+          <Text style={styles.menuTitle}>{t('menu.customerManagement')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.customerManagementSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
@@ -817,15 +817,15 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"alert-circle-outline" as any} size={20} color={tc.error} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Overdue Dues</Text>
-          <Text style={styles.menuSubtitle}>Collect overdue DUE payments and send reminders</Text>
+          <Text style={styles.menuTitle}>{t('menu.overdueDues')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.overdueDuesSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
 
       {/* T-307: AI & Intelligence Section */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>AI & Intelligence</Text>
+        <Text style={styles.sectionTitle}>{t('menu.aiSection')}</Text>
       </View>
 
       <Pressable style={styles.menuItem} onPress={goToAIInsights} accessibilityRole="button" accessibilityLabel="AI Insights">
@@ -833,8 +833,8 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"brain" as any} size={20} color={tc.primary} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>AI Insights</Text>
-          <Text style={styles.menuSubtitle}>Alerts, forecasts, slow movers, expiry tracking</Text>
+          <Text style={styles.menuTitle}>{t('menu.aiInsights')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.aiInsightsSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
@@ -845,15 +845,15 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"cash-multiple" as any} size={20} color={tc.primary} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Bulk Purchase Credit</Text>
-          <Text style={styles.menuSubtitle}>Browse and apply for credit offers</Text>
+          <Text style={styles.menuTitle}>{t('menu.bulkPurchaseCredit')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.bulkPurchaseCreditSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
 
       {/* T-294: Chat / Messaging Section */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Messages</Text>
+        <Text style={styles.sectionTitle}>{t('menu.messages')}</Text>
       </View>
 
       <Pressable style={styles.menuItem} onPress={goToChat} accessibilityRole="button" accessibilityLabel="Chat">
@@ -861,8 +861,8 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"chat-outline" as any} size={20} color={tc.primary} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Chat</Text>
-          <Text style={styles.menuSubtitle}>Message suppliers and support</Text>
+          <Text style={styles.menuTitle}>{t('menu.chat')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.chatSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
@@ -874,17 +874,17 @@ export default function MenuScreen() {
         onPress={() => {
           let supportPhone = process.env.EXPO_PUBLIC_SUPPORT_PHONE;
           if (!supportPhone) {
-            Alert.alert("Support Unavailable", "Support phone not configured. Please contact support via email.");
+            Alert.alert(t('menu.supportUnavailableTitle'), t('menu.supportUnavailableMessage'));
             return;
           }
           supportPhone = supportPhone.replace(/\D/g, "");
           if (supportPhone.length === 10) supportPhone = `91${supportPhone}`;
           const message = encodeURIComponent(
-            `Hi SuperMandi Support,\n\nStore: ${opStatus.storeName || "N/A"}\nDevice: ${opStatus.deviceLabel || "N/A"}\n\nI need help with: `
+            t('menu.whatsappSupportMessage', { storeName: opStatus.storeName || "N/A", deviceLabel: opStatus.deviceLabel || "N/A" })
           );
           const url = `https://wa.me/${supportPhone}?text=${message}`;
           Linking.openURL(url).catch(() => {
-            Alert.alert("WhatsApp Not Found", "Please install WhatsApp to use this feature.");
+            Alert.alert(t('menu.whatsappNotFoundTitle'), t('menu.whatsappNotFoundMessage'));
           });
         }}
       >
@@ -892,8 +892,8 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"whatsapp" as any} size={20} color={tc.whatsapp} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>WhatsApp Support</Text>
-          <Text style={styles.menuSubtitle}>Chat with SuperMandi support team</Text>
+          <Text style={styles.menuTitle}>{t('menu.whatsappSupport')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.whatsappSupportSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
@@ -942,15 +942,15 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"file-chart-outline" as any} size={20} color={tc.primary} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Daily Report</Text>
-          <Text style={styles.menuSubtitle}>View, print, and share daily sales report</Text>
+          <Text style={styles.menuTitle}>{t('menu.dailyReport')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.dailyReportSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
 
       {/* T-191 / T-192: Operations Section */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Operations</Text>
+        <Text style={styles.sectionTitle}>{t('menu.operations')}</Text>
       </View>
 
       <Pressable style={styles.menuItem} onPress={goToDailyClosing} accessibilityRole="button" accessibilityLabel="Daily Closing">
@@ -958,8 +958,8 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"clipboard-check-outline" as any} size={20} color={tc.primary} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Daily Closing</Text>
-          <Text style={styles.menuSubtitle}>Z-Report and cash reconciliation</Text>
+          <Text style={styles.menuTitle}>{t('menu.dailyClosing')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.dailyClosingSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
@@ -969,8 +969,8 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"clock-outline" as any} size={20} color={tc.primary} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Shift Management</Text>
-          <Text style={styles.menuSubtitle}>Start, end, and view shift history</Text>
+          <Text style={styles.menuTitle}>{t('menu.shiftManagement')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.shiftManagementSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
@@ -999,7 +999,7 @@ export default function MenuScreen() {
           <Text style={[
             styles.langOption,
             language === 'hi' && styles.langOptionActive
-          ]}>हि</Text>
+          ]}>हिंदी</Text>
         </View>
       </Pressable>
 
@@ -1013,9 +1013,9 @@ export default function MenuScreen() {
           />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Theme</Text>
+          <Text style={styles.menuTitle}>{t('menu.theme')}</Text>
           <Text style={styles.menuSubtitle}>
-            {themeMode === 'dark' ? 'Dark mode' : 'Light mode'}
+            {themeMode === 'dark' ? t('menu.darkMode') : t('menu.lightMode')}
           </Text>
         </View>
         <View style={styles.languageToggle}>
@@ -1037,9 +1037,9 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"account-switch" as any} size={20} color={tc.primary} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Switch Staff</Text>
+          <Text style={styles.menuTitle}>{t('menu.switchStaff')}</Text>
           <Text style={styles.menuSubtitle}>
-            {staffSession ? `${staffSession.name} (${staffSession.role})` : "Not logged in"}
+            {staffSession ? t('menu.switchStaffSubtitle', { name: staffSession.name, role: staffSession.role }) : t('menu.switchStaffNotLoggedIn')}
           </Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
@@ -1051,8 +1051,8 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"printer-outline" as any} size={20} color={tc.primary} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>Printer Settings</Text>
-          <Text style={styles.menuSubtitle}>Paper width, auto-print, copies</Text>
+          <Text style={styles.menuTitle}>{t('menu.printerSettings')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.printerSettingsSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
@@ -1063,8 +1063,8 @@ export default function MenuScreen() {
           <MaterialCommunityIcons name={"help-circle-outline" as any} size={20} color={tc.primary} />
         </View>
         <View style={styles.menuText}>
-          <Text style={styles.menuTitle}>{"Help & Support"}</Text>
-          <Text style={styles.menuSubtitle}>Contact us, quick links</Text>
+          <Text style={styles.menuTitle}>{t('menu.helpSupport')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.helpSupportSubtitle')}</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={tc.textSecondary} />
       </Pressable>
