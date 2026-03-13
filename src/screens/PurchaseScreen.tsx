@@ -26,15 +26,15 @@ import { useFeatureReadiness, useProbeOnFocus } from "../hooks/useReadinessGate"
 // ROTATING HINTS
 // =============================================================================
 
-const ROTATING_HINTS = [
-  "Search & Buy",
-  "Live Suppliers",
-  "Best Rates Here",
-  "Type product name",
-  "Product search karo…",
-  "Live suppliers se buy karo →",
-  "Quick purchase ⚡",
-  "SKU / naam type karo…",
+const ROTATING_HINT_KEYS = [
+  "purchase.hintSearchBuy",
+  "purchase.hintLiveSuppliers",
+  "purchase.hintBestRates",
+  "purchase.hintTypeProduct",
+  "purchase.hintSearchKaro",
+  "purchase.hintBuyKaro",
+  "purchase.hintQuickPurchase",
+  "purchase.hintTypeKaro",
 ];
 
 import { theme, useThemeColors } from "../theme";
@@ -206,7 +206,7 @@ export default function PurchaseScreen({
         useNativeDriver: true,
       }).start(() => {
         // Change text
-        setHintIndex((prev) => (prev + 1) % ROTATING_HINTS.length);
+        setHintIndex((prev) => (prev + 1) % ROTATING_HINT_KEYS.length);
         // Fade in
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -324,7 +324,7 @@ export default function PurchaseScreen({
       setCatalogError(null);
       const storeId = await getDeviceStoreId();
       if (!storeId) {
-        setCatalogError("Store not configured");
+        setCatalogError(t("purchase.storeNotConfigured"));
         return;
       }
       const res = await getBuyCatalog(storeId, {
@@ -341,11 +341,11 @@ export default function PurchaseScreen({
       setCatalogHasMore(res.pagination.hasMore);
     } catch (err) {
       if (__DEV__) console.error("fetchCatalog error:", err);
-      setCatalogError("Failed to load catalog");
+      setCatalogError(t("purchase.failedToLoadCatalog"));
     } finally {
       setCatalogLoading(false);
     }
-  }, [liveSuppliersReady]);
+  }, [liveSuppliersReady, t]);
 
   // POS-BUY-001: Debounced search effect
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -448,12 +448,12 @@ export default function PurchaseScreen({
 
   const proceedWithSubmit = useCallback(async () => {
     if (quickItems.length === 0) {
-      Alert.alert("No Items", "Scan items to add.");
+      Alert.alert(t("purchase.noItemsTitle"), t("purchase.scanItemsToAdd"));
       return;
     }
     const incomplete = quickItems.filter((i) => !i.productName || i.buyPrice <= 0 || i.sellPrice <= 0);
     if (incomplete.length > 0) {
-      Alert.alert("Incomplete", "Fill name, buy & sell price for all items.");
+      Alert.alert(t("purchase.incompleteTitle"), t("purchase.fillAllFields"));
       return;
     }
 
@@ -479,8 +479,10 @@ export default function PurchaseScreen({
         ? await submitStockIn(payload)
         : await submitStockInDemo(payload);
       Alert.alert(
-        stockInReady ? "Done" : "Demo Mode",
-        `${result.itemsProcessed} items ${stockInReady ? "added to ledger" : "saved locally (not synced)"}.`
+        stockInReady ? t("common.done") : t("purchase.demoMode"),
+        stockInReady
+          ? t("purchase.itemsAddedToLedger", { count: result.itemsProcessed })
+          : t("purchase.itemsSavedLocally", { count: result.itemsProcessed })
       );
       setQuickItems([]);
       setWalkInSupplierName("");
@@ -488,27 +490,27 @@ export default function PurchaseScreen({
       setShowSupplierFields(false);
     } catch (error: any) {
       // STG-444: Surface specific error type instead of generic message
-      const msg = error?.message || "Failed to submit. Try again.";
-      Alert.alert("Error", msg);
+      const msg = error?.message || t("purchase.failedToSubmit");
+      Alert.alert(t("common.error"), msg);
     } finally {
       setSubmitting(false);
     }
-  }, [quickItems, stockInReady, walkInSupplierName, walkInSupplierGstin]);
+  }, [quickItems, stockInReady, walkInSupplierName, walkInSupplierGstin, t]);
 
   const handleQuickSubmit = useCallback(async () => {
     // GATE-000: Gate Stock In when API not available
     if (!stockInReady) {
       Alert.alert(
-        "Backend Pending",
-        `Stock In API is not deployed yet. Your data will be saved locally but not synced to backend.\n\n${stockInBlocker || "Blocked by: API-003"}`,
+        t("purchase.backendPending"),
+        t("purchase.stockInNotDeployed", { blocker: stockInBlocker || t("purchase.blockedByApi") }),
         [
-          { text: "Cancel", style: "cancel" },
+          { text: t("common.cancel"), style: "cancel" },
           {
-            text: "Retry Check",
+            text: t("purchase.retryCheck"),
             onPress: () => retryStockIn(),
           },
           {
-            text: "Save Locally (Demo)",
+            text: t("purchase.saveLocallyDemo"),
             onPress: () => proceedWithSubmit(),
           },
         ]
@@ -541,7 +543,7 @@ export default function PurchaseScreen({
       </View>
       <TextInput
         style={styles.quickNameInput}
-        placeholder="Product name"
+        placeholder={t("purchase.productName")}
         placeholderTextColor={colors.textTertiary}
         value={item.productName}
         onChangeText={(t) => updateQuickItem(item.id, "productName", t)}
@@ -557,25 +559,25 @@ export default function PurchaseScreen({
           </Pressable>
         </View>
         <View style={styles.priceInputWrap}>
-          <Text style={styles.priceLabel}>Buy</Text>
+          <Text style={styles.priceLabel}>{t("purchase.buyPrice")}</Text>
           <TextInput
             style={styles.priceInput}
             keyboardType="decimal-pad"
             placeholder="0"
             placeholderTextColor={colors.textTertiary}
             value={item.buyPrice > 0 ? String(item.buyPrice) : ""}
-            onChangeText={(t) => updateQuickItem(item.id, "buyPrice", parseFloat(t) || 0)}
+            onChangeText={(val) => updateQuickItem(item.id, "buyPrice", parseFloat(val) || 0)}
           />
         </View>
         <View style={styles.priceInputWrap}>
-          <Text style={styles.priceLabel}>Sell</Text>
+          <Text style={styles.priceLabel}>{t("purchase.sellPrice")}</Text>
           <TextInput
             style={styles.priceInput}
             keyboardType="decimal-pad"
             placeholder="0"
             placeholderTextColor={colors.textTertiary}
             value={item.sellPrice > 0 ? String(item.sellPrice) : ""}
-            onChangeText={(t) => updateQuickItem(item.id, "sellPrice", parseFloat(t) || 0)}
+            onChangeText={(val) => updateQuickItem(item.id, "sellPrice", parseFloat(val) || 0)}
           />
         </View>
       </View>
@@ -629,7 +631,7 @@ export default function PurchaseScreen({
                 accessibilityRole="tab"
                 testID="purchase-quick-tab"
               >
-                <Text style={styles.halfSegmentText}>Quick Purchase</Text>
+                <Text style={styles.halfSegmentText}>{t("purchase.quickPurchase")}</Text>
               </Pressable>
 
               {/* Divider */}
@@ -643,11 +645,11 @@ export default function PurchaseScreen({
                   setQuickItems([]);
                   setTimeout(() => searchInputRef.current?.focus(), 100);
                 }}
-                accessibilityLabel="Live Suppliers"
+                accessibilityLabel={t("purchase.liveSuppliers")}
                 accessibilityRole="tab"
                 testID="purchase-suppliers-tab"
               >
-                <Text style={styles.halfSegmentText}>Live Suppliers</Text>
+                <Text style={styles.halfSegmentText}>{t("purchase.liveSuppliers")}</Text>
               </Pressable>
             </>
           ) : expandedSegment === "quick" ? (
@@ -662,7 +664,7 @@ export default function PurchaseScreen({
                 style={[styles.expandedSegmentText, { opacity: fadeAnim }]}
                 numberOfLines={1}
               >
-                {ROTATING_HINTS[hintIndex]}
+                {t(ROTATING_HINT_KEYS[hintIndex])}
               </Animated.Text>
             </Pressable>
           ) : (
@@ -708,7 +710,7 @@ export default function PurchaseScreen({
                     style={[styles.rotatingHintExpanded, { opacity: fadeAnim }]}
                     numberOfLines={1}
                   >
-                    {ROTATING_HINTS[hintIndex]}
+                    {t(ROTATING_HINT_KEYS[hintIndex])}
                   </Animated.Text>
                 </Pressable>
               )}
@@ -730,7 +732,7 @@ export default function PurchaseScreen({
       {scanResolving && (
         <View style={styles.scanFeedbackBar}>
           <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={styles.scanFeedbackText}>Checking supplier catalog...</Text>
+          <Text style={styles.scanFeedbackText}>{t("purchase.checkingCatalog")}</Text>
         </View>
       )}
       {lastScanResult && !scanResolving && (
@@ -748,8 +750,8 @@ export default function PurchaseScreen({
             { color: lastScanResult === "supplier" ? colors.success : colors.warning },
           ]}>
             {lastScanResult === "supplier"
-              ? "Added from supplier catalog"
-              : "Not in catalog — manual entry"}
+              ? t("purchase.addedFromCatalog")
+              : t("purchase.notInCatalogManual")}
           </Text>
         </View>
       )}
@@ -782,12 +784,12 @@ export default function PurchaseScreen({
                   color={colors.textSecondary}
                 />
                 <Text style={styles.supplierToggleText}>
-                  Supplier Details (Optional)
+                  {t("purchase.supplierDetailsOptional")}
                 </Text>
                 {(walkInSupplierName.trim() || walkInSupplierGstin.trim()) && (
                   <View style={styles.supplierBadge}>
                     <Text style={styles.supplierBadgeText}>
-                      {walkInSupplierGstin.trim() ? "GSTIN" : "Name"}
+                      {walkInSupplierGstin.trim() ? t("purchase.gstin") : t("purchase.name")}
                     </Text>
                   </View>
                 )}
@@ -798,7 +800,7 @@ export default function PurchaseScreen({
                     style={styles.supplierInput}
                     value={walkInSupplierName}
                     onChangeText={setWalkInSupplierName}
-                    placeholder="Supplier Name"
+                    placeholder={t("purchase.supplierName")}
                     placeholderTextColor={colors.textTertiary}
                     autoCapitalize="words"
                   />
@@ -806,7 +808,7 @@ export default function PurchaseScreen({
                     style={styles.supplierInput}
                     value={walkInSupplierGstin}
                     onChangeText={(text) => setWalkInSupplierGstin(text.toUpperCase())}
-                    placeholder="GSTIN (e.g. 27AABCU9603R1ZM)"
+                    placeholder={t("purchase.gstinPlaceholder")}
                     placeholderTextColor={colors.textTertiary}
                     autoCapitalize="characters"
                     maxLength={15}
@@ -819,11 +821,11 @@ export default function PurchaseScreen({
           {/* Quick Purchase Action Bar */}
           <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
             <View style={styles.actionSummary}>
-              <Text style={styles.actionText}>{quickItems.length} items</Text>
+              <Text style={styles.actionText}>{t("purchase.itemsCount", { count: quickItems.length })}</Text>
               <Text style={styles.actionTotal}>{formatMoney(quickTotal)}</Text>
               {/* GATE-000: Show demo mode indicator when API not ready */}
               {!stockInReady && (
-                <Text style={styles.demoModeIndicator}>Demo Mode</Text>
+                <Text style={styles.demoModeIndicator}>{t("purchase.demoMode")}</Text>
               )}
             </View>
             <Pressable
@@ -834,12 +836,12 @@ export default function PurchaseScreen({
               ]}
               onPress={handleQuickSubmit}
               disabled={submitting}
-              accessibilityLabel={stockInReady ? "Stock In" : "Stock In Draft"}
+              accessibilityLabel={stockInReady ? t("purchase.stockIn") : t("purchase.stockInDraft")}
               accessibilityRole="button"
               testID="purchase-stock-in-btn"
             >
               <Text style={styles.actionBtnText}>
-                {stockInReady ? "Stock In" : "Stock In (Draft)"}
+                {stockInReady ? t("purchase.stockIn") : t("purchase.stockInDraft")}
               </Text>
             </Pressable>
           </View>
@@ -852,7 +854,7 @@ export default function PurchaseScreen({
               {isCheckingLiveSuppliers ? (
                 <>
                   <ActivityIndicator size="large" color={colors.primary} />
-                  <Text style={styles.emptyStateTitle}>Checking Backend...</Text>
+                  <Text style={styles.emptyStateTitle}>{t("purchase.checkingBackend")}</Text>
                 </>
               ) : (
                 <>
@@ -861,22 +863,22 @@ export default function PurchaseScreen({
                     size={64}
                     color={colors.textTertiary}
                   />
-                  <Text style={styles.emptyStateTitle}>Supplier Catalog Coming Soon</Text>
+                  <Text style={styles.emptyStateTitle}>{t("purchase.catalogComingSoon")}</Text>
                   <Text style={styles.emptyStateMessage}>
-                    Live supplier product catalog is not enabled yet.
+                    {t("purchase.catalogNotEnabled")}
                   </Text>
                   <View style={styles.emptyStateBlocker}>
-                    <Text style={styles.emptyStateBlockerLabel}>Requires:</Text>
+                    <Text style={styles.emptyStateBlockerLabel}>{t("purchase.requires")}</Text>
                     <Text style={styles.emptyStateBlockerText}>
-                      {liveSuppliersBlocker || "Supplier Products API not available"}
+                      {liveSuppliersBlocker || t("purchase.supplierApiNotAvailable")}
                     </Text>
                   </View>
-                  <Pressable style={styles.retryButton} onPress={retryLiveSuppliers} accessibilityLabel="Retry checking live suppliers" accessibilityRole="button">
+                  <Pressable style={styles.retryButton} onPress={retryLiveSuppliers} accessibilityLabel={t("purchase.retryCheckingSuppliers")} accessibilityRole="button">
                     <MaterialCommunityIcons name="refresh" size={16} color={colors.primary} />
-                    <Text style={styles.retryButtonText}>Retry</Text>
+                    <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
                   </Pressable>
                   <Text style={styles.emptyStateHint}>
-                    Use Quick Purchase to scan and add stock manually.
+                    {t("purchase.useQuickPurchaseHint")}
                   </Text>
                 </>
               )}
@@ -885,9 +887,9 @@ export default function PurchaseScreen({
             <View style={styles.emptyStateContainer}>
               <MaterialCommunityIcons name="alert-circle-outline" size={48} color={colors.error} />
               <Text style={styles.emptyStateTitle}>{catalogError}</Text>
-              <Pressable style={styles.retryButton} onPress={() => fetchCatalog(searchQuery, 1)} accessibilityLabel="Retry loading catalog" accessibilityRole="button">
+              <Pressable style={styles.retryButton} onPress={() => fetchCatalog(searchQuery, 1)} accessibilityLabel={t("purchase.retryLoadingCatalog")} accessibilityRole="button">
                 <MaterialCommunityIcons name="refresh" size={16} color={colors.primary} />
-                <Text style={styles.retryButtonText}>Retry</Text>
+                <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
               </Pressable>
             </View>
           ) : catalogProducts.length === 0 && !catalogLoading ? (
@@ -897,9 +899,9 @@ export default function PurchaseScreen({
                 size={48}
                 color={colors.textTertiary}
               />
-              <Text style={styles.emptyStateTitle}>No Products Found</Text>
+              <Text style={styles.emptyStateTitle}>{t("purchase.noProductsFound")}</Text>
               <Text style={styles.emptyStateMessage}>
-                {searchQuery ? `No products match "${searchQuery}"` : "Search for products to add to cart"}
+                {searchQuery ? t("purchase.noProductsMatch", { query: searchQuery }) : t("purchase.searchToAdd")}
               </Text>
             </View>
           ) : (
@@ -939,7 +941,7 @@ export default function PurchaseScreen({
                 <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
                   <View style={styles.actionSummary}>
                     <Text style={styles.actionText}>
-                      {purchaseCartTotals.itemCount} items · {purchaseCartTotals.supplierCount} suppliers
+                      {t("purchase.cartSummary", { items: purchaseCartTotals.itemCount, suppliers: purchaseCartTotals.supplierCount })}
                     </Text>
                     <Text style={styles.actionTotal}>{formatMoney(purchaseCartTotals.grandTotal)}</Text>
                   </View>
@@ -956,16 +958,16 @@ export default function PurchaseScreen({
                         .map((ci) => `${ci.productName || ci.productId.slice(0, 8)} x${ci.quantity}`)
                         .join("\n");
                       Alert.alert(
-                        "Review Order",
-                        `${purchaseCartTotals.itemCount} items from ${purchaseCartTotals.supplierCount} supplier(s)\n\n${summary}\n\nTotal: ${formatMoney(purchaseCartTotals.grandTotal)}`,
+                        t("purchase.reviewOrder"),
+                        t("purchase.reviewOrderSummary", { items: purchaseCartTotals.itemCount, suppliers: purchaseCartTotals.supplierCount, summary, total: formatMoney(purchaseCartTotals.grandTotal) }),
                         [
-                          { text: "Continue Shopping", style: "cancel" },
+                          { text: t("purchase.continueShopping"), style: "cancel" },
                           {
-                            text: "Place Order",
+                            text: t("purchase.placeOrder"),
                             onPress: async () => {
                               const storeId = await getDeviceStoreId();
                               if (!storeId) {
-                                Alert.alert("Error", "Store not configured. Please re-enroll this device.");
+                                Alert.alert(t("common.error"), t("purchase.storeNotConfiguredReenroll"));
                                 return;
                               }
                               setPlacingOrder(true);
@@ -997,22 +999,22 @@ export default function PurchaseScreen({
                                 if (failed.length === 0) {
                                   purchaseCart.clear();
                                   Alert.alert(
-                                    "Orders Placed",
-                                    `${succeeded.length} order(s) created successfully:\n\n${succeeded.join("\n")}`,
-                                    [{ text: "OK" }]
+                                    t("purchase.ordersPlaced"),
+                                    t("purchase.ordersPlacedMessage", { count: succeeded.length, details: succeeded.join("\n") }),
+                                    [{ text: t("common.ok") }]
                                   );
                                 } else if (succeeded.length > 0) {
                                   Alert.alert(
-                                    "Partial Success",
-                                    `${succeeded.length} order(s) placed:\n${succeeded.join("\n")}\n\n${failed.length} failed:\n${failed.map(f => `${f.supplier}: ${f.error}`).join("\n")}\n\nFailed items remain in cart for retry.`,
-                                    [{ text: "OK" }]
+                                    t("purchase.partialSuccess"),
+                                    t("purchase.partialSuccessMessage", { succeeded: succeeded.length, succeededDetails: succeeded.join("\n"), failed: failed.length, failedDetails: failed.map(f => `${f.supplier}: ${f.error}`).join("\n") }),
+                                    [{ text: t("common.ok") }]
                                   );
                                 } else {
-                                  Alert.alert("Order Failed", failed.map(f => `${f.supplier}: ${f.error}`).join("\n"));
+                                  Alert.alert(t("purchase.orderFailed"), failed.map(f => `${f.supplier}: ${f.error}`).join("\n"));
                                 }
                               } catch (err: any) {
-                                const msg = err?.message || "Failed to place order";
-                                Alert.alert("Order Failed", msg);
+                                const msg = err?.message || t("purchase.failedToPlaceOrder");
+                                Alert.alert(t("purchase.orderFailed"), msg);
                               } finally {
                                 setPlacingOrder(false);
                               }
@@ -1023,7 +1025,7 @@ export default function PurchaseScreen({
                     }}
                   >
                     <Text style={styles.actionBtnText}>
-                      {placingOrder ? "Placing Order..." : "Review Order"}
+                      {placingOrder ? t("purchase.placingOrder") : t("purchase.reviewOrder")}
                     </Text>
                   </Pressable>
                 </View>

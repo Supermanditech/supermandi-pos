@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import { useTranslation } from "react-i18next";
 import { theme, useThemeColors } from "../theme";
 import { BackHeader } from "../components/ui/BackHeader";
 import EmptyState from "../components/ui/EmptyState";
@@ -96,6 +97,7 @@ export default function OpeningStockScreen({
   onBack,
 }: OpeningStockScreenProps) {
   const colors = useThemeColors();
+  const { t } = useTranslation();
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -133,7 +135,7 @@ export default function OpeningStockScreen({
     } catch (_e: unknown) {
     const e = asError(_e);
       if (__DEV__) console.error("[OpeningStockScreen] Search failed:", e);
-      Alert.alert("Search Failed", e?.message || "Could not search products.");
+      Alert.alert(t("openingStock.searchFailedTitle"), e?.message || t("openingStock.searchFailedMessage"));
     } finally {
       setSearching(false);
     }
@@ -176,15 +178,15 @@ export default function OpeningStockScreen({
     (product: ProductSearchResult) => {
       if (product.hasExistingStock) {
         Alert.alert(
-          "Already Has Stock",
-          `${product.name} already has stock in the system. Opening stock can only be set once.`
+          t("openingStock.alreadyHasStockTitle"),
+          t("openingStock.alreadyHasStockMessage", { name: product.name })
         );
         return;
       }
 
       // Check if already added
       if (entries.some((e) => e.productId === product.id)) {
-        Alert.alert("Already Added", `${product.name} is already in your list.`);
+        Alert.alert(t("openingStock.alreadyAddedTitle"), t("openingStock.alreadyAddedMessage", { name: product.name }));
         return;
       }
 
@@ -241,22 +243,22 @@ export default function OpeningStockScreen({
   const handleSubmit = useCallback(async () => {
     if (validEntries.length === 0) {
       Alert.alert(
-        "No Entries",
-        "Please add at least one product with a quantity."
+        t("openingStock.noEntriesTitle"),
+        t("openingStock.noEntriesMessage")
       );
       return;
     }
 
     Alert.alert(
-      "Confirm Opening Stock",
-      `Initialize stock for ${validEntries.length} product(s)? This cannot be undone.`,
+      t("openingStock.confirmTitle"),
+      t("openingStock.confirmMessage", { count: validEntries.length }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Submit",
+          text: t("common.submit"),
           onPress: async () => {
             setSubmitting(true);
-            setProgress(`Processing 0/${validEntries.length}...`);
+            setProgress(t("openingStock.processing", { current: 0, total: validEntries.length }));
 
             // STG-455: Hoist interval so it's accessible in finally block
             let progressInterval: ReturnType<typeof setInterval> | null = null;
@@ -269,14 +271,10 @@ export default function OpeningStockScreen({
               );
 
               // Simulate progress updates
+              let progressCount = 0;
               progressInterval = setInterval(() => {
-                setProgress((prev) => {
-                  if (!prev) return null;
-                  const match = prev.match(/(\d+)/);
-                  const current = match ? parseInt(match[1], 10) : 0;
-                  const next = Math.min(current + 1, items.length);
-                  return `Processing ${next}/${items.length}...`;
-                });
+                progressCount = Math.min(progressCount + 1, items.length);
+                setProgress(t("openingStock.processing", { current: progressCount, total: items.length }));
               }, 300);
 
               const result = await submitOpeningStock(items);
@@ -287,8 +285,8 @@ export default function OpeningStockScreen({
     const e = asError(_e);
               if (__DEV__) console.error("[OpeningStockScreen] Submit failed:", e);
               Alert.alert(
-                "Submission Failed",
-                e?.message || "Could not initialize opening stock."
+                t("openingStock.submissionFailedTitle"),
+                e?.message || t("openingStock.submissionFailedMessage")
               );
             } finally {
               // STG-455: Always clear progress interval, even on error
@@ -538,7 +536,7 @@ export default function OpeningStockScreen({
   if (success) {
     return (
       <View style={styles.container}>
-        <BackHeader title="Opening Stock" onBack={onBack} />
+        <BackHeader title={t("openingStock.title")} onBack={onBack} />
         <View style={styles.successContainer}>
           <View style={styles.successCard}>
             <View style={styles.successIconCircle}>
@@ -548,12 +546,12 @@ export default function OpeningStockScreen({
                 color={colors.success}
               />
             </View>
-            <Text style={styles.successTitle}>Stock Initialized</Text>
+            <Text style={styles.successTitle}>{t("openingStock.stockInitialized")}</Text>
             <Text style={styles.successSubtitle}>
-              Stock initialized for {processedCount} product(s)
+              {t("openingStock.stockInitializedMessage", { count: processedCount })}
             </Text>
             <Pressable accessibilityRole="button" style={styles.resetButton} onPress={handleReset}>
-              <Text style={styles.resetButtonText}>Add More Products</Text>
+              <Text style={styles.resetButtonText}>{t("openingStock.addMoreProducts")}</Text>
             </Pressable>
           </View>
         </View>
@@ -563,7 +561,7 @@ export default function OpeningStockScreen({
 
   return (
     <View style={styles.container}>
-      <BackHeader title="Opening Stock" onBack={onBack} />
+      <BackHeader title={t("openingStock.title")} onBack={onBack} />
 
       {/* Intro */}
       <View style={styles.introCard}>
@@ -573,8 +571,7 @@ export default function OpeningStockScreen({
           color={colors.primary}
         />
         <Text style={styles.introText}>
-          Initialize stock for products not yet in inventory. Opening stock can
-          only be set once per product.
+          {t("openingStock.introText")}
         </Text>
       </View>
 
@@ -588,7 +585,7 @@ export default function OpeningStockScreen({
           />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search product by name or scan barcode..."
+            placeholder={t("openingStock.searchPlaceholder")}
             placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={handleSearchQueryChange}
@@ -622,7 +619,7 @@ export default function OpeningStockScreen({
                 </View>
                 {product.hasExistingStock ? (
                   <View style={styles.hasStockBadge}>
-                    <Text style={styles.hasStockText}>Has Stock</Text>
+                    <Text style={styles.hasStockText}>{t("openingStock.hasStock")}</Text>
                   </View>
                 ) : (
                   <MaterialCommunityIcons
@@ -641,8 +638,8 @@ export default function OpeningStockScreen({
       {entries.length === 0 ? (
         <EmptyState
           icon="package-variant-plus"
-          title="No products added"
-          description="Search and add products above to set opening stock quantities."
+          title={t("openingStock.emptyTitle")}
+          description={t("openingStock.emptyDescription")}
         />
       ) : (
         <FlatList
@@ -666,7 +663,7 @@ export default function OpeningStockScreen({
                 onChangeText={(text) =>
                   handleUpdateQuantity(item.productId, text)
                 }
-                placeholder="Qty"
+                placeholder={t("openingStock.qty")}
                 placeholderTextColor={colors.textTertiary}
                 keyboardType="numeric"
                 maxLength={6}
@@ -687,7 +684,7 @@ export default function OpeningStockScreen({
           ListFooterComponent={
             <View style={styles.footer}>
               <Text style={styles.footerInfo}>
-                {validEntries.length} of {entries.length} product(s) ready
+                {t("openingStock.productsReady", { valid: validEntries.length, total: entries.length })}
               </Text>
 
               {/* Submit progress */}
@@ -724,7 +721,7 @@ export default function OpeningStockScreen({
                       color={colors.textInverse}
                     />
                     <Text style={styles.submitButtonText}>
-                      Submit Opening Stock ({validEntries.length})
+                      {t("openingStock.submitButton", { count: validEntries.length })}
                     </Text>
                   </>
                 )}

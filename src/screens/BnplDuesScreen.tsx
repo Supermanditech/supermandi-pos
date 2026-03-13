@@ -187,7 +187,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       setPaymentModal((prev) => ({
         ...prev,
         isPolling: true,
-        pollingStatus: "Waiting for payment...",
+        pollingStatus: t("bnpl.waitingForPayment"),
       }));
 
       try {
@@ -199,12 +199,12 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             if (status.status === "processing") {
               setPaymentModal((prev) => ({
                 ...prev,
-                pollingStatus: "Processing payment...",
+                pollingStatus: t("bnpl.processingPayment"),
               }));
             } else if (status.status === "pending") {
               setPaymentModal((prev) => ({
                 ...prev,
-                pollingStatus: "Waiting for payment...",
+                pollingStatus: t("bnpl.waitingForPayment"),
               }));
             }
           },
@@ -220,9 +220,9 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
           pollingStatus: null,
         }));
 
-        Alert.alert("Payment Confirmed", "Your BNPL payment has been confirmed automatically.", [
+        Alert.alert(t("bnpl.paymentConfirmed"), t("bnpl.bnplPaymentConfirmedAuto"), [
           {
-            text: "OK",
+            text: t("common.ok"),
             onPress: () => {
               setPaymentModal((prev) => ({ ...prev, visible: false }));
               void loadData();
@@ -262,12 +262,12 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         parseFloat(paymentModal.payAmountText || "0") * 100
       );
       if (payAmountMinor <= 0) {
-        Alert.alert("Invalid Amount", "Please enter a valid payment amount.");
+        Alert.alert(t("bnpl.invalidAmount"), t("bnpl.invalidAmountMessage"));
         return;
       }
       const remaining = paymentModal.drawdown.principalMinor - (paymentModal.drawdown.paidAmountMinor || 0);
       if (payAmountMinor > remaining) {
-        Alert.alert("Amount Too High", `Amount exceeds outstanding balance of ${formatMoney(remaining)}.`);
+        Alert.alert(t("bnpl.amountTooHigh"), t("bnpl.amountExceedsBalance", { balance: formatMoney(remaining) }));
         return;
       }
 
@@ -299,11 +299,11 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         } else if (mode === "CASH") {
           // Cash payment is immediately completed
           Alert.alert(
-            "Payment Recorded",
-            "Cash payment has been recorded successfully.",
+            t("bnpl.paymentRecorded"),
+            t("bnpl.cashPaymentSuccess"),
             [
               {
-                text: "OK",
+                text: t("common.ok"),
                 onPress: () => {
                   setPaymentModal((prev) => ({ ...prev, visible: false }));
                   void loadData();
@@ -314,7 +314,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         }
       } catch (error) {
         if (__DEV__) console.error("[BnplDuesScreen] Payment failed:", error);
-        Alert.alert("Payment Failed", "Failed to initiate payment. Please try again.");
+        Alert.alert(t("bnpl.paymentFailed"), t("bnpl.initiatePaymentFailed"));
         setPaymentModal((prev) => ({ ...prev, paying: false }));
       }
     },
@@ -325,7 +325,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
   // Confirm UPI payment with UTR
   const handleConfirmUpiPayment = useCallback(async () => {
     if (!paymentModal.drawdown || !paymentModal.repaymentId || !paymentModal.utrInput) {
-      Alert.alert("Enter UTR", "Please enter the UPI transaction reference (UTR).");
+      Alert.alert(t("bnpl.enterUtr"), t("bnpl.utrRequired"));
       return;
     }
 
@@ -338,9 +338,9 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         paymentModal.utrInput
       );
 
-      Alert.alert("Payment Confirmed", "Your BNPL payment has been confirmed.", [
+      Alert.alert(t("bnpl.paymentConfirmed"), t("bnpl.bnplPaymentConfirmed"), [
         {
-          text: "OK",
+          text: t("common.ok"),
           onPress: () => {
             setPaymentModal((prev) => ({ ...prev, visible: false }));
             void loadData();
@@ -349,7 +349,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       ]);
     } catch (error) {
       if (__DEV__) console.error("[BnplDuesScreen] Confirm payment failed:", error);
-      Alert.alert("Confirmation Failed", "Failed to confirm payment. Please try again.");
+      Alert.alert(t("bnpl.confirmationFailed"), t("bnpl.confirmPaymentFailed"));
       setPaymentModal((prev) => ({ ...prev, paying: false }));
     }
   }, [paymentModal, loadData]);
@@ -390,7 +390,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
   // GO-LIVE-240: Submit dispute
   const handleSubmitDispute = useCallback(async () => {
     if (!disputeModal.drawdown || !disputeModal.reason) {
-      Alert.alert("Select Reason", "Please select a reason for your dispute.");
+      Alert.alert(t("bnpl.selectReason"), t("bnpl.selectReasonMessage"));
       return;
     }
 
@@ -405,11 +405,11 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       );
 
       Alert.alert(
-        "Dispute Submitted",
-        "Your dispute has been submitted. Our team will review it and contact you within 2-3 business days.",
+        t("bnpl.disputeSubmitted"),
+        t("bnpl.disputeSubmittedMessage"),
         [
           {
-            text: "OK",
+            text: t("common.ok"),
             onPress: () => {
               setDisputeModal({ visible: false, drawdown: null, reason: "", description: "", submitting: false });
               void loadData();
@@ -420,13 +420,13 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
     } catch (error) {
       // AUDIT-POS-003: Show error alert on failure — not false success
       if (__DEV__) console.error("[BnplDuesScreen] Dispute submission failed:", error);
-      Alert.alert("Dispute Failed", "Could not submit your dispute. Please try again.", [
+      Alert.alert(t("bnpl.disputeFailed"), t("bnpl.disputeFailedMessage"), [
         {
-          text: "Retry",
+          text: t("common.retry"),
           onPress: () => setDisputeModal((prev) => ({ ...prev, submitting: false })),
         },
         {
-          text: "Cancel",
+          text: t("common.cancel"),
           style: "cancel",
           onPress: () => setDisputeModal({ visible: false, drawdown: null, reason: "", description: "", submitting: false }),
         },
@@ -465,13 +465,13 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
 
           <View style={styles.drawdownDetails}>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Order</Text>
+              <Text style={styles.detailLabel}>{t("bnpl.order")}</Text>
               <Text style={styles.detailValue}>
                 {drawdown.orderNumber ?? `PO-${drawdown.id.slice(0, 8)}`}
               </Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Amount Due</Text>
+              <Text style={styles.detailLabel}>{t("bnpl.amountDue")}</Text>
               <Text style={styles.amountDue}>
                 {formatMoney(drawdown.principalMinor - (drawdown.paidAmountMinor || 0))}
               </Text>
@@ -479,7 +479,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             {/* T-158: Show interest rate if applicable */}
             {(drawdown.interestRatePercent || 0) > 0 && (
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Interest ({drawdown.interestRatePercent}%)</Text>
+                <Text style={styles.detailLabel}>{t("bnpl.interest", { rate: drawdown.interestRatePercent })}</Text>
                 <Text style={[styles.detailValue, { color: colors.warning }]}>
                   +{formatMoney(drawdown.interestMinor || 0)}
                 </Text>
@@ -488,7 +488,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             {/* T-158: Show total with interest if applicable */}
             {(drawdown.interestRatePercent || 0) > 0 && (
               <View style={styles.detailRow}>
-                <Text style={[styles.detailLabel, { fontWeight: '600' }]}>Total Payable</Text>
+                <Text style={[styles.detailLabel, { fontWeight: '600' }]}>{t("bnpl.totalPayable")}</Text>
                 <Text style={[styles.amountDue, { fontSize: 15 }]}>
                   {formatMoney(drawdown.totalWithInterestMinor || drawdown.principalMinor)}
                 </Text>
@@ -497,14 +497,14 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             {/* T-153: Show paid amount for partial payments */}
             {(drawdown.paidAmountMinor || 0) > 0 && (
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Already Paid</Text>
+                <Text style={styles.detailLabel}>{t("bnpl.alreadyPaid")}</Text>
                 <Text style={[styles.detailValue, { color: colors.success }]}>
                   {formatMoney(drawdown.paidAmountMinor || 0)}
                 </Text>
               </View>
             )}
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Due Date</Text>
+              <Text style={styles.detailLabel}>{t("bnpl.dueDate")}</Text>
               <Text style={[styles.detailValue, drawdown.isOverdue && styles.overdueDate]}>
                 {bnplApi.formatDueDate(drawdown.dueDate)}
               </Text>
@@ -523,7 +523,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                 size={16}
                 color={colors.textInverse}
               />
-              <Text style={styles.payButtonText}>Pay Now</Text>
+              <Text style={styles.payButtonText}>{t("bnpl.payNow")}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -535,7 +535,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                 size={16}
                 color={colors.warning}
               />
-              <Text style={styles.disputeButtonText}>Dispute</Text>
+              <Text style={styles.disputeButtonText}>{t("bnpl.dispute")}</Text>
             </Pressable>
           </View>
         </View>
@@ -559,7 +559,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         </View>
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading BNPL Dues...</Text>
+          <Text style={styles.loadingText}>{t("bnpl.loadingDues")}</Text>
         </View>
       </View>
     );
@@ -581,7 +581,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             />
           </Pressable>
         )}
-        <Text style={styles.headerTitle}>BNPL Dues</Text>
+        <Text style={styles.headerTitle}>{t("bnpl.title")}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -590,19 +590,19 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Outstanding</Text>
+              <Text style={styles.summaryLabel}>{t("bnpl.outstanding")}</Text>
               <Text style={styles.summaryValueLarge}>
                 {formatMoney(summary.totalOutstanding)}
               </Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Available Credit</Text>
+              <Text style={styles.summaryLabel}>{t("bnpl.availableCredit")}</Text>
               <Text style={styles.summaryValue}>{formatMoney(summary.availableCredit)}</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Credit Limit</Text>
+              <Text style={styles.summaryLabel}>{t("bnpl.creditLimit")}</Text>
               <Text style={styles.summaryValue}>{formatMoney(summary.creditLimit)}</Text>
             </View>
           </View>
@@ -622,10 +622,9 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
           </View>
           <Text style={styles.creditHint}>
             {/* UIUX-POS-008: Guard against division by zero */}
-            {summary.creditLimit > 0 ? Math.round(
+            {t("bnpl.creditUsed", { percent: summary.creditLimit > 0 ? Math.round(
               ((summary.creditLimit - summary.availableCredit) / summary.creditLimit) * 100
-            ) : 0}
-            % of credit used
+            ) : 0 })}
           </Text>
         </View>
       )}
@@ -635,8 +634,8 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       {isEmpty ? (
         <EmptyState
           icon="check-circle-outline"
-          title="No outstanding dues"
-          description="You don't have any active BNPL payments. All dues are paid."
+          title={t("bnpl.noOutstandingDues")}
+          description={t("bnpl.allDuesPaid")}
         />
       ) : (
         <ScrollView
@@ -647,7 +646,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
           }
         >
           <Text style={styles.sectionTitle}>
-            Active Dues ({drawdowns.length})
+            {t("bnpl.activeDuesCount", { count: drawdowns.length })}
           </Text>
           {drawdowns.map(renderDrawdownItem)}
         </ScrollView>
@@ -665,7 +664,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             <Pressable accessibilityRole="button" style={styles.closeButton} onPress={handleClosePaymentModal}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
-            <Text style={styles.modalTitle}>Pay BNPL Due</Text>
+            <Text style={styles.modalTitle}>{t("bnpl.payBnplDue")}</Text>
             <View style={styles.headerRight} />
           </View>
 
@@ -673,7 +672,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             <View style={styles.modalContent}>
               {/* T-153: Editable payment amount with remaining balance display */}
               <View style={styles.paymentAmountCard}>
-                <Text style={styles.paymentAmountLabel}>Amount to Pay</Text>
+                <Text style={styles.paymentAmountLabel}>{t("bnpl.amountToPay")}</Text>
                 <View style={styles.partialPayInputRow}>
                   <Text style={styles.partialPayCurrency}>₹</Text>
                   <TextInput
@@ -693,9 +692,9 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                   />
                 </View>
                 <Text style={styles.paymentAmountHint}>
-                  Full balance: {formatMoney(paymentModal.drawdown.principalMinor)}
+                  {t("bnpl.fullBalance", { amount: formatMoney(paymentModal.drawdown.principalMinor) })}
                   {paymentModal.drawdown.paidAmountMinor > 0 &&
-                    ` (Paid: ${formatMoney(paymentModal.drawdown.paidAmountMinor)})`}
+                    ` (${t("bnpl.alreadyPaid")}: ${formatMoney(paymentModal.drawdown.paidAmountMinor)})`}
                 </Text>
                 <Text style={styles.paymentSupplier}>
                   {paymentModal.drawdown.supplierName}
@@ -705,7 +704,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
               {/* Payment mode selection */}
               {!paymentModal.mode && (
                 <View style={styles.modeSelection}>
-                  <Text style={styles.modeLabel}>Select Payment Mode</Text>
+                  <Text style={styles.modeLabel}>{t("bnpl.selectPaymentMode")}</Text>
                   <Pressable
                     accessibilityRole="button"
                     style={styles.modeButton}
@@ -717,7 +716,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                       size={24}
                       color={colors.primary}
                     />
-                    <Text style={styles.modeButtonText}>Pay via UPI</Text>
+                    <Text style={styles.modeButtonText}>{t("bnpl.payViaUpi")}</Text>
                     <MaterialCommunityIcons
                       name="chevron-right"
                       size={20}
@@ -735,7 +734,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                       size={24}
                       color={colors.success}
                     />
-                    <Text style={styles.modeButtonText}>Pay with Cash</Text>
+                    <Text style={styles.modeButtonText}>{t("bnpl.payWithCash")}</Text>
                     <MaterialCommunityIcons
                       name="chevron-right"
                       size={20}
@@ -753,15 +752,15 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                     <View style={styles.pollingStatus}>
                       <ActivityIndicator size="small" color={colors.primary} />
                       <Text style={styles.pollingStatusText}>
-                        {paymentModal.pollingStatus || "Waiting for payment..."}
+                        {paymentModal.pollingStatus || t("bnpl.waitingForPayment")}
                       </Text>
                     </View>
                   )}
 
                   <Text style={styles.upiInstructions}>
                     {paymentModal.isPolling
-                      ? "Complete the payment in your UPI app. Payment will be confirmed automatically."
-                      : "Complete the payment in your UPI app, then enter the UTR (transaction reference) below to confirm."}
+                      ? t("bnpl.upiInstructionsPolling")
+                      : t("bnpl.upiInstructionsManual")}
                   </Text>
 
                   {/* Manual UTR entry - shown when not polling or as fallback */}
@@ -769,12 +768,12 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                     <>
                       <View style={styles.manualEntryDivider}>
                         <View style={styles.dividerLine} />
-                        <Text style={styles.dividerText}>or enter manually</Text>
+                        <Text style={styles.dividerText}>{t("bnpl.orEnterManually")}</Text>
                         <View style={styles.dividerLine} />
                       </View>
                       <TextInput
                         style={styles.utrInput}
-                        placeholder="Enter UTR / Transaction Reference"
+                        placeholder={t("bnpl.utrPlaceholder")}
                         placeholderTextColor={colors.textTertiary}
                         value={paymentModal.utrInput}
                         onChangeText={(text) =>
@@ -801,7 +800,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                               size={18}
                               color={colors.textInverse}
                             />
-                            <Text style={styles.confirmButtonText}>Confirm Payment</Text>
+                            <Text style={styles.confirmButtonText}>{t("bnpl.confirmPayment")}</Text>
                           </>
                         )}
                       </Pressable>
@@ -818,7 +817,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                           try {
                             await Linking.openURL(paymentModal.upiDeepLink);
                           } catch {
-                            Alert.alert("UPI Unavailable", "Could not open UPI app. Please enter UTR manually.");
+                            Alert.alert(t("bnpl.upiUnavailable"), t("bnpl.upiUnavailableMessage"));
                           }
                         }
                       }}
@@ -828,7 +827,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                         size={16}
                         color={colors.primary}
                       />
-                      <Text style={styles.reopenUpiText}>Re-open UPI App</Text>
+                      <Text style={styles.reopenUpiText}>{t("bnpl.reopenUpiApp")}</Text>
                     </Pressable>
                   )}
                 </View>
@@ -837,7 +836,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
               {paymentModal.paying && !paymentModal.repaymentId && (
                 <View style={styles.processingContainer}>
                   <ActivityIndicator size="large" color={colors.primary} />
-                  <Text style={styles.processingText}>Processing payment...</Text>
+                  <Text style={styles.processingText}>{t("bnpl.processingPayment")}</Text>
                 </View>
               )}
             </View>
@@ -857,7 +856,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             <Pressable accessibilityRole="button" style={styles.closeButton} onPress={handleCloseDisputeModal}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
-            <Text style={styles.modalTitle}>Dispute Charge</Text>
+            <Text style={styles.modalTitle}>{t("bnpl.disputeCharge")}</Text>
             <View style={styles.headerRight} />
           </View>
 
@@ -865,24 +864,24 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             <ScrollView style={styles.modalContent}>
               {/* Dispute info */}
               <View style={styles.disputeInfoCard}>
-                <Text style={styles.disputeInfoLabel}>Order</Text>
+                <Text style={styles.disputeInfoLabel}>{t("bnpl.order")}</Text>
                 <Text style={styles.disputeInfoValue}>
                   {disputeModal.drawdown.orderNumber ?? `PO-${disputeModal.drawdown.id.slice(0, 8)}`}
                 </Text>
-                <Text style={styles.disputeInfoLabel}>Amount</Text>
+                <Text style={styles.disputeInfoLabel}>{t("bnpl.amount")}</Text>
                 <Text style={styles.disputeInfoValue}>
                   {formatMoney(disputeModal.drawdown.principalMinor)}
                 </Text>
               </View>
 
               {/* Reason selection */}
-              <Text style={styles.disputeReasonLabel}>Select Reason for Dispute</Text>
+              <Text style={styles.disputeReasonLabel}>{t("bnpl.selectReasonForDispute")}</Text>
               {[
-                { id: "wrong_amount", label: "Wrong amount charged" },
-                { id: "not_received", label: "Goods not received" },
-                { id: "defective", label: "Defective/damaged goods" },
-                { id: "already_paid", label: "Already paid by other means" },
-                { id: "other", label: "Other" },
+                { id: "wrong_amount", label: t("bnpl.reasonWrongAmount") },
+                { id: "not_received", label: t("bnpl.reasonNotReceived") },
+                { id: "defective", label: t("bnpl.reasonDefective") },
+                { id: "already_paid", label: t("bnpl.reasonAlreadyPaid") },
+                { id: "other", label: t("bnpl.reasonOther") },
               ].map((reason) => (
                 <Pressable
                   accessibilityRole="radio"
@@ -903,12 +902,12 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
               ))}
 
               {/* Description */}
-              <Text style={styles.disputeDescLabel}>Additional Details (Optional)</Text>
+              <Text style={styles.disputeDescLabel}>{t("bnpl.additionalDetails")}</Text>
               <TextInput
                 style={styles.disputeDescInput}
                 value={disputeModal.description}
                 onChangeText={(text) => setDisputeModal((prev) => ({ ...prev, description: text }))}
-                placeholder="Describe the issue..."
+                placeholder={t("bnpl.describeIssue")}
                 placeholderTextColor={colors.textTertiary}
                 multiline
                 numberOfLines={4}
@@ -924,12 +923,12 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
                 {disputeModal.submitting ? (
                   <ActivityIndicator size="small" color={colors.textInverse} />
                 ) : (
-                  <Text style={styles.disputeSubmitText}>Submit Dispute</Text>
+                  <Text style={styles.disputeSubmitText}>{t("bnpl.submitDispute")}</Text>
                 )}
               </Pressable>
 
               <Text style={styles.disputeNote}>
-                Our team will review your dispute within 2-3 business days. You will be contacted via phone or email.
+                {t("bnpl.disputeReviewNote")}
               </Text>
             </ScrollView>
           )}

@@ -247,9 +247,9 @@ export default function BarcodeSheetScreen() {
     const e = asError(_e);
       const message = e?.message ? String(e.message) : "share_failed";
       if (message === "sharing_unavailable") {
-        Alert.alert("Download unavailable", "Sharing is not available on this device.");
+        Alert.alert(t("barcodeSheet.downloadUnavailableTitle"), t("barcodeSheet.downloadUnavailableMessage"));
       } else {
-        Alert.alert("Download failed", "Unable to export the barcode sheet.");
+        Alert.alert(t("barcodeSheet.downloadFailedTitle"), t("barcodeSheet.downloadFailedMessage"));
       }
     } finally {
       setActionLoading(null);
@@ -266,9 +266,9 @@ export default function BarcodeSheetScreen() {
     const e = asError(_e);
       const message = e?.message ? String(e.message) : "share_failed";
       if (message === "sharing_unavailable") {
-        Alert.alert("Share unavailable", "Sharing is not available on this device.");
+        Alert.alert(t("barcodeSheet.shareUnavailableTitle"), t("barcodeSheet.shareUnavailableMessage"));
       } else {
-        Alert.alert("Share failed", "Unable to share the barcode sheet.");
+        Alert.alert(t("barcodeSheet.shareFailedTitle"), t("barcodeSheet.shareFailedMessage"));
       }
     } finally {
       setActionLoading(null);
@@ -283,7 +283,7 @@ export default function BarcodeSheetScreen() {
         next.delete(barcode);
       } else {
         if (next.size >= MAX_CUSTOM_SELECTION) {
-          Alert.alert("Limit reached", `Maximum ${MAX_CUSTOM_SELECTION} products per sheet.`);
+          Alert.alert(t("barcodeSheet.limitReachedTitle"), t("barcodeSheet.limitReachedMessage", { max: MAX_CUSTOM_SELECTION }));
           return prev;
         }
         next.add(barcode);
@@ -320,7 +320,7 @@ export default function BarcodeSheetScreen() {
     setShowSettingsModal(false);
   }, []);
 
-  const previewTitle = activeTier === "TIER_2" ? "Tier 2 Sheet" : "Tier 1 Sheet";
+  const previewTitle = activeTier === "TIER_2" ? t("barcodeSheet.tier2Sheet") : t("barcodeSheet.tier1Sheet");
   const actionDisabled = !activeTier || finalItems.length === 0 || loading;
   const actionIconColor = actionDisabled ? colors.textTertiary : colors.textInverse;
   const sheetCapacity = activeTier ? getBarcodeSheetCapacity(activeTier) : 0;
@@ -335,20 +335,20 @@ export default function BarcodeSheetScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Barcode Sheet Generator</Text>
-        <Text style={styles.subtitle}>Generate, preview, and share barcode sheets.</Text>
+        <Text style={styles.title}>{t("barcodeSheet.generatorTitle")}</Text>
+        <Text style={styles.subtitle}>{t("barcodeSheet.generatorSubtitle")}</Text>
       </View>
 
       {/* Tier Selection */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Generate Sheets</Text>
+          <Text style={styles.sectionTitle}>{t("barcodeSheet.generateSheets")}</Text>
           {/* T-169: Settings gear button */}
           <Pressable
             accessibilityRole="button"
             style={styles.settingsButton}
             onPress={() => setShowSettingsModal(true)}
-            accessibilityLabel="Print settings"
+            accessibilityLabel={t("barcodeSheet.printSettings")}
           >
             <MaterialCommunityIcons name="cog-outline" size={18} color={colors.textSecondary} />
           </Pressable>
@@ -360,8 +360,8 @@ export default function BarcodeSheetScreen() {
             onPress={() => handleGenerate("TIER_1")}
           >
             <MaterialCommunityIcons name="layers" size={20} color={colors.primary} />
-            <Text style={styles.tierTitle}>Tier 1 Sheet</Text>
-            <Text style={styles.tierSubtitle}>Standard barcode labels</Text>
+            <Text style={styles.tierTitle}>{t("barcodeSheet.tier1Sheet")}</Text>
+            <Text style={styles.tierSubtitle}>{t("barcodeSheet.tier1Subtitle")}</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -369,8 +369,8 @@ export default function BarcodeSheetScreen() {
             onPress={() => handleGenerate("TIER_2")}
           >
             <MaterialCommunityIcons name="layers-triple" size={20} color={colors.primary} />
-            <Text style={styles.tierTitle}>Tier 2 Sheet</Text>
-            <Text style={styles.tierSubtitle}>Dense barcode labels</Text>
+            <Text style={styles.tierTitle}>{t("barcodeSheet.tier2Sheet")}</Text>
+            <Text style={styles.tierSubtitle}>{t("barcodeSheet.tier2Subtitle")}</Text>
           </Pressable>
         </View>
       </View>
@@ -378,7 +378,7 @@ export default function BarcodeSheetScreen() {
       {/* T-166: Category Filter */}
       {hasFetched && allItems.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Filter by Category</Text>
+          <Text style={styles.sectionTitle}>{t("barcodeSheet.filterByCategory")}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -431,12 +431,12 @@ export default function BarcodeSheetScreen() {
                 color={customMode ? colors.textInverse : colors.primary}
               />
               <Text style={[styles.customModeText, customMode && styles.customModeTextActive]}>
-                Custom Selection
+                {t("barcodeSheet.customSelection")}
               </Text>
             </Pressable>
             {customMode && (
               <Text style={styles.selectionCount}>
-                {selectedBarcodes.size}/{MAX_CUSTOM_SELECTION} selected
+                {t("barcodeSheet.selectedCount", { count: selectedBarcodes.size, max: MAX_CUSTOM_SELECTION })}
               </Text>
             )}
           </View>
@@ -448,7 +448,7 @@ export default function BarcodeSheetScreen() {
                 <MaterialCommunityIcons name="magnify" size={18} color={colors.textTertiary} />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="Search by name or barcode..."
+                  placeholder={t("barcodeSheet.searchPlaceholder")}
                   placeholderTextColor={colors.textTertiary}
                   value={searchQuery}
                   onChangeText={(text) => { setSearchQuery(text); setProductListLimit(PRODUCT_PAGE_SIZE); }}
@@ -463,10 +463,10 @@ export default function BarcodeSheetScreen() {
               </View>
               <View style={styles.selectionActions}>
                 <Pressable accessibilityRole="button" style={styles.selectionBtn} onPress={handleSelectAll}>
-                  <Text style={styles.selectionBtnText}>Select All</Text>
+                  <Text style={styles.selectionBtnText}>{t("barcodeSheet.selectAll")}</Text>
                 </Pressable>
                 <Pressable accessibilityRole="button" style={styles.selectionBtn} onPress={handleDeselectAll}>
-                  <Text style={styles.selectionBtnText}>Deselect All</Text>
+                  <Text style={styles.selectionBtnText}>{t("barcodeSheet.deselectAll")}</Text>
                 </Pressable>
               </View>
 
@@ -474,7 +474,7 @@ export default function BarcodeSheetScreen() {
               <View style={styles.productListContainer}>
                 {searchFilteredItems.length === 0 ? (
                   <View style={styles.emptySearch}>
-                    <Text style={styles.emptySearchText}>No products match your search.</Text>
+                    <Text style={styles.emptySearchText}>{t("barcodeSheet.noProductsMatch")}</Text>
                   </View>
                 ) : (
                   searchFilteredItems.slice(0, productListLimit).map((item) => {
@@ -551,7 +551,7 @@ export default function BarcodeSheetScreen() {
                     onPress={() => setProductListLimit((prev) => prev + PRODUCT_PAGE_SIZE)}
                   >
                     <Text style={styles.loadMoreText}>
-                      Load More ({searchFilteredItems.length - productListLimit} remaining)
+                      {t("barcodeSheet.loadMore", { count: searchFilteredItems.length - productListLimit })}
                     </Text>
                   </Pressable>
                 )}
@@ -563,12 +563,12 @@ export default function BarcodeSheetScreen() {
 
       {/* T-168: Preview Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preview</Text>
+        <Text style={styles.sectionTitle}>{t("barcodeSheet.preview")}</Text>
         <View style={styles.previewCard}>
           {loading ? (
             <View style={styles.previewEmpty}>
               <ActivityIndicator color={colors.primary} />
-              <Text style={styles.previewEmptyText}>Generating preview...</Text>
+              <Text style={styles.previewEmptyText}>{t("barcodeSheet.generatingPreview")}</Text>
             </View>
           ) : error ? (
             <View style={styles.previewEmpty}>
@@ -582,8 +582,8 @@ export default function BarcodeSheetScreen() {
                 <Text style={styles.previewTitle}>{previewTitle}</Text>
                 <Text style={styles.previewMeta}>
                   {/* T-170: Show total labels vs products */}
-                  {totalLabelCount} labels ({totalProductCount} products)
-                  {sheetCapacity > 0 ? ` | capacity ${sheetCapacity}` : ""}
+                  {t("barcodeSheet.labelsSummary", { labels: totalLabelCount, products: totalProductCount })}
+                  {sheetCapacity > 0 ? ` | ${t("barcodeSheet.capacity", { count: sheetCapacity })}` : ""}
                 </Text>
               </View>
 
@@ -609,7 +609,7 @@ export default function BarcodeSheetScreen() {
                           </Text>
                         )}
                         <Text style={styles.previewCellName} numberOfLines={1}>
-                          {item.name || "Unnamed"}
+                          {item.name || t("barcodeSheet.unnamed")}
                         </Text>
                         <MaterialCommunityIcons name="barcode" size={22} color={colors.textSecondary} />
                         <Text style={styles.previewCellCode} numberOfLines={1}>
@@ -642,7 +642,7 @@ export default function BarcodeSheetScreen() {
                     style={[styles.paginationBtn, previewPage === 0 && styles.paginationBtnDisabled]}
                     onPress={() => setPreviewPage((p) => Math.max(0, p - 1))}
                     disabled={previewPage === 0}
-                    accessibilityLabel="Previous page"
+                    accessibilityLabel={t("barcodeSheet.previousPage")}
                   >
                     <MaterialCommunityIcons
                       name="chevron-left"
@@ -650,7 +650,7 @@ export default function BarcodeSheetScreen() {
                       color={previewPage === 0 ? colors.textTertiary : colors.primary}
                     />
                     <Text style={[styles.paginationText, previewPage === 0 && styles.paginationTextDisabled]}>
-                      Prev
+                      {t("barcodeSheet.prev")}
                     </Text>
                   </Pressable>
                   <Text style={styles.paginationInfo}>
@@ -661,7 +661,7 @@ export default function BarcodeSheetScreen() {
                     style={[styles.paginationBtn, previewPage >= totalPages - 1 && styles.paginationBtnDisabled]}
                     onPress={() => setPreviewPage((p) => Math.min(totalPages - 1, p + 1))}
                     disabled={previewPage >= totalPages - 1}
-                    accessibilityLabel="Next page"
+                    accessibilityLabel={t("barcodeSheet.nextPage")}
                   >
                     <Text
                       style={[
@@ -669,7 +669,7 @@ export default function BarcodeSheetScreen() {
                         previewPage >= totalPages - 1 && styles.paginationTextDisabled,
                       ]}
                     >
-                      Next
+                      {t("barcodeSheet.next")}
                     </Text>
                     <MaterialCommunityIcons
                       name="chevron-right"
@@ -682,7 +682,7 @@ export default function BarcodeSheetScreen() {
 
               {/* T-168: Showing N labels text */}
               <Text style={styles.showingLabelsText}>
-                Showing {totalLabelCount} labels
+                {t("barcodeSheet.showingLabels", { count: totalLabelCount })}
               </Text>
             </View>
           ) : hasFetched ? (
@@ -717,7 +717,7 @@ export default function BarcodeSheetScreen() {
 
       {/* Actions */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Actions</Text>
+        <Text style={styles.sectionTitle}>{t("barcodeSheet.actions")}</Text>
         <Pressable
           accessibilityRole="button"
           style={[styles.actionButton, styles.downloadButton, actionDisabled && styles.actionButtonDisabled]}
@@ -726,7 +726,7 @@ export default function BarcodeSheetScreen() {
         >
           <MaterialCommunityIcons name="download" size={18} color={actionIconColor} />
           <Text style={[styles.actionText, actionDisabled && styles.actionTextDisabled]}>
-            {actionLoading === "download" ? "Preparing..." : "Download PDF"}
+            {actionLoading === "download" ? t("barcodeSheet.preparing") : t("barcodeSheet.downloadPdf")}
           </Text>
         </Pressable>
         <Pressable
@@ -737,7 +737,7 @@ export default function BarcodeSheetScreen() {
         >
           <MaterialCommunityIcons name="whatsapp" size={18} color={actionIconColor} />
           <Text style={[styles.actionText, actionDisabled && styles.actionTextDisabled]}>
-            {actionLoading === "whatsapp" ? "Sharing..." : "Send via WhatsApp"}
+            {actionLoading === "whatsapp" ? t("barcodeSheet.sharing") : t("barcodeSheet.sendViaWhatsApp")}
           </Text>
         </Pressable>
       </View>
@@ -769,6 +769,7 @@ function PrintSettingsModal({
   onClose: () => void;
 }) {
   const colors = useThemeColors();
+  const { t } = useTranslation();
   const modalStyles = useMemo(() => createModalStyles(colors), [colors]);
   const [paperSize, setPaperSize] = useState<PaperSize>(settings.paperSize);
   const [labelSize, setLabelSize] = useState<LabelSize>(settings.labelSize);
@@ -799,7 +800,7 @@ function PrintSettingsModal({
       <View style={modalStyles.overlay}>
         <View style={modalStyles.card}>
           <View style={modalStyles.header}>
-            <Text style={modalStyles.title}>Print Settings</Text>
+            <Text style={modalStyles.title}>{t("barcodeSheet.printSettings")}</Text>
             <Pressable accessibilityRole="button" onPress={onClose}>
               <MaterialCommunityIcons name="close" size={22} color={colors.textSecondary} />
             </Pressable>
@@ -807,7 +808,7 @@ function PrintSettingsModal({
 
           {/* Paper Size */}
           <View style={modalStyles.fieldGroup}>
-            <Text style={modalStyles.fieldLabel}>Paper Size</Text>
+            <Text style={modalStyles.fieldLabel}>{t("barcodeSheet.paperSize")}</Text>
             <View style={modalStyles.chipRow}>
               {paperSizes.map((ps) => (
                 <Pressable
@@ -826,7 +827,7 @@ function PrintSettingsModal({
 
           {/* Label Size */}
           <View style={modalStyles.fieldGroup}>
-            <Text style={modalStyles.fieldLabel}>Label Size</Text>
+            <Text style={modalStyles.fieldLabel}>{t("barcodeSheet.labelSize")}</Text>
             <View style={modalStyles.chipRow}>
               {labelSizes.map((ls) => (
                 <Pressable
@@ -850,8 +851,8 @@ function PrintSettingsModal({
 
           {/* Labels per row (auto) */}
           <View style={modalStyles.fieldGroup}>
-            <Text style={modalStyles.fieldLabel}>Labels per Row</Text>
-            <Text style={modalStyles.fieldValue}>{labelsPerRow} (auto-calculated)</Text>
+            <Text style={modalStyles.fieldLabel}>{t("barcodeSheet.labelsPerRow")}</Text>
+            <Text style={modalStyles.fieldValue}>{t("barcodeSheet.labelsPerRowValue", { count: labelsPerRow })}</Text>
           </View>
 
           {/* Save */}
@@ -860,7 +861,7 @@ function PrintSettingsModal({
             style={modalStyles.saveButton}
             onPress={() => onSave({ paperSize, labelSize, labelsPerRow })}
           >
-            <Text style={modalStyles.saveButtonText}>Save Settings</Text>
+            <Text style={modalStyles.saveButtonText}>{t("barcodeSheet.saveSettings")}</Text>
           </Pressable>
         </View>
       </View>
