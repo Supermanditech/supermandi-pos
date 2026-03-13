@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 5,
+  "version": 6,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -161,6 +161,43 @@
         "gcp_parity": "No env vars consulted, pure __DEV__",
         "regression_check": "Typecheck passes, all tests pass",
         "test_guard": "4 tests verify function body"
+      }
+    },
+    {
+      "ticket": "STG-253",
+      "file": "src/config/api.ts",
+      "start_line": 118,
+      "end_line": 124,
+      "checksum": "a2877e11c387279a",
+      "description": "TEST_STORE_CONFIG is null in production — __DEV__ ternary guard verified",
+      "test_file": "src/__tests__/screens/EnrollDeviceScreen.stg-253.test-config-guard.unit.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": "N/A",
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-13T19:51:31.100Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "operator_approved": "Mode A, verification only",
+        "parity_scanned": "Client-side",
+        "parity_fixed": "N/A",
+        "gcp_parity": "No env vars leak",
+        "regression_check": "All tests pass",
+        "test_guard": "3 tests verify guard"
       }
     }
   ]

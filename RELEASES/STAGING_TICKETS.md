@@ -279,7 +279,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-250 | Menu — "Switch Store" in Settings section but it's a destructive action, needs separation | P2 | OPEN |
 | STG-251 | Menu — no confirmation count on "Daily Closing" (e.g., "2 shifts open") | P2 | OPEN |
 | STG-252 | Menu — "Chat" subtitle says "Message suppliers and support" but no unread count | P2 | OPEN |
-| STG-253 | Enroll — TEST_STORE_CONFIG imported but may auto-fill in production builds | P1 | OPEN |
+| STG-253 | Enroll — TEST_STORE_CONFIG imported but may auto-fill in production builds | P1 | PARKED |
 | STG-254 | Payment — formatMoney not using Indian lakh system (1,45,000 vs 145,000) | P2 | OPEN |
 | STG-255 | Menu — summaryCard and statusPanel have same border/radius but different marginTop | P3 | OPEN |
 | STG-256 | Menu — no swipe gesture to dismiss/collapse System Status panel | P3 | OPEN |
@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | OPEN |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | OPEN |
 
-**Total**: 492 tickets | 3 PARKED | 1 DONE | 0 IN_PROGRESS | 488 OPEN
+**Total**: 492 tickets | 4 PARKED | 1 DONE | 0 IN_PROGRESS | 487 OPEN
 
 ---
 
@@ -7600,7 +7600,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-253 — Enroll — TEST_STORE_CONFIG imported but may auto-fill in production builds
 
-- **Status**: OPEN
+- **Status**: PARKED — verified guard exists, test added, tag `stg-253-2026-03-14`, test: `src/__tests__/screens/EnrollDeviceScreen.stg-253.test-config-guard.unit.test.tsx`
 - **Priority**: P1
 - **Source**: Code audit — [EnrollDeviceScreen.tsx:40](src/screens/EnrollDeviceScreen.tsx#L40)
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`, `src/config/api.ts`
