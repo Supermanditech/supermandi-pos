@@ -15,6 +15,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useTranslation } from "react-i18next";
 import { theme, useThemeColors } from "../theme";
 import { GRNItemRow } from "../components/grn/GRNItemRow";
 import * as orderApi from "../services/api/orderApi";
@@ -54,6 +55,7 @@ export default function GRNScreen({
   onSuccess,
   onNavigateToBarcodeSheet,
 }: GRNScreenProps) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
 
@@ -103,7 +105,7 @@ export default function GRNScreen({
     } catch (err) {
       if (__DEV__) console.error("[GRNScreen] Failed to load order:", err);
       const online = await isOnline();
-      setError(online ? "Failed to load order details" : "No internet connection. Please check your network and try again.");
+      setError(online ? t("grn.loadError") : t("grn.offlineError"));
     } finally {
       setLoading(false);
     }
@@ -174,7 +176,7 @@ export default function GRNScreen({
       }
     } else {
       setHighlightedItemId(null);
-      Alert.alert("Not Found", "No item found with that barcode or name.");
+      Alert.alert(t("grn.notFoundTitle"), t("grn.notFoundMessage"));
     }
 
     setSearchQuery("");
@@ -185,12 +187,12 @@ export default function GRNScreen({
     if (!order) return;
 
     Alert.alert(
-      "Receive All",
-      "Set all remaining quantities to be received?",
+      t("grn.receiveAll"),
+      t("grn.receiveAllMessage"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Yes",
+          text: t("common.yes"),
           onPress: () => {
             const newQuantities: Record<string, number> = {};
             order.items.forEach((item) => {
@@ -312,7 +314,7 @@ export default function GRNScreen({
       }));
 
     if (items.length === 0) {
-      Alert.alert("Error", "Please enter quantities to receive.");
+      Alert.alert(t("common.error"), t("grn.enterQuantities"));
       return;
     }
 
@@ -347,25 +349,25 @@ export default function GRNScreen({
 
         if (receivedBarcodeItems.length > 0 && onNavigateToBarcodeSheet) {
           successButtons.push({
-            text: "Generate Labels",
+            text: t("grn.generateLabels"),
             onPress: () => onNavigateToBarcodeSheet(receivedBarcodeItems),
           });
           successButtons.push({
-            text: "Skip",
+            text: t("grn.skip"),
             style: "cancel",
             onPress: () => onSuccess?.(),
           });
         } else {
           successButtons.push({
-            text: "OK",
+            text: t("common.ok"),
             onPress: () => onSuccess?.(),
           });
         }
 
         Alert.alert(
-          "Success",
-          `Received ${result.data.itemsUpdated.length} items. Order status: ${getStatusLabel(result.data.order.status)}${
-            receivedBarcodeItems.length > 0 ? "\n\nGenerate barcode labels for received items?" : ""
+          t("grn.successTitle"),
+          `${t("grn.receivedMessage", { count: result.data.itemsUpdated.length, status: getStatusLabel(result.data.order.status) })}${
+            receivedBarcodeItems.length > 0 ? t("grn.generateLabelsPrompt") : ""
           }`,
           successButtons
         );
@@ -373,8 +375,8 @@ export default function GRNScreen({
         if (__DEV__) console.error("[GRNScreen] Failed to receive:", err);
         const online = await isOnline();
         Alert.alert(
-          online ? "Error" : "Offline",
-          online ? "Failed to receive goods. Please try again." : "No internet connection. Your changes were not saved. Please check your network and try again."
+          online ? t("common.error") : t("grn.offline"),
+          online ? t("grn.receiveFailed") : t("grn.receiveFailedOffline")
         );
       } finally {
         setSubmitting(false);
@@ -384,20 +386,20 @@ export default function GRNScreen({
     // SA-P1-004: Show excess warning if any items exceed ordered qty
     if (excessItems.length > 0) {
       Alert.alert(
-        "Excess Receipt Warning",
-        `${excessItems.length} item(s) exceed ordered quantity. This will create an alert for SuperAdmin.\n\nContinue with receiving ${totals.receivingQty} units across ${totals.receivingItems} items?`,
+        t("grn.excessWarning"),
+        t("grn.excessWarningMessage", { count: excessItems.length, qty: totals.receivingQty, items: totals.receivingItems }),
         [
-          { text: "Cancel", style: "cancel" },
-          { text: "Continue Anyway", style: "destructive", onPress: doSubmit },
+          { text: t("common.cancel"), style: "cancel" },
+          { text: t("grn.continueAnyway"), style: "destructive", onPress: doSubmit },
         ]
       );
     } else {
       Alert.alert(
-        "Confirm Receive",
-        `Receive ${totals.receivingQty} units across ${totals.receivingItems} items?`,
+        t("grn.confirmReceive"),
+        t("grn.confirmReceiveMessage", { qty: totals.receivingQty, items: totals.receivingItems }),
         [
-          { text: "Cancel", style: "cancel" },
-          { text: "Receive", onPress: doSubmit },
+          { text: t("common.cancel"), style: "cancel" },
+          { text: t("grn.receive"), onPress: doSubmit },
         ]
       );
     }
@@ -454,11 +456,11 @@ export default function GRNScreen({
               />
             </Pressable>
           )}
-          <Text style={styles.headerTitle}>Receive Goods</Text>
+          <Text style={styles.headerTitle}>{t("grn.title")}</Text>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading order...</Text>
+          <Text style={styles.loadingText}>{t("grn.loadingOrder")}</Text>
         </View>
       </View>
     );
@@ -478,7 +480,7 @@ export default function GRNScreen({
               />
             </Pressable>
           )}
-          <Text style={styles.headerTitle}>Receive Goods</Text>
+          <Text style={styles.headerTitle}>{t("grn.title")}</Text>
         </View>
         <View style={styles.errorContainer}>
           <MaterialCommunityIcons
@@ -486,9 +488,9 @@ export default function GRNScreen({
             size={48}
             color={colors.error}
           />
-          <Text style={styles.errorText}>{error || "Order not found"}</Text>
+          <Text style={styles.errorText}>{error || t("grn.orderNotFound")}</Text>
           <Pressable testID="grn-retry-button" accessibilityRole="button" style={styles.retryButton} onPress={loadOrder}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
           </Pressable>
         </View>
       </View>
@@ -509,7 +511,7 @@ export default function GRNScreen({
           </Pressable>
         )}
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Receive Goods</Text>
+          <Text style={styles.headerTitle}>{t("grn.title")}</Text>
           <Text style={styles.headerSubtitle}>
             {formatOrderNumber(order.orderNumber)} | {order.supplierName}
           </Text>
@@ -518,7 +520,7 @@ export default function GRNScreen({
             <View style={styles.reorderBadge}>
               <MaterialCommunityIcons name="autorenew" size={12} color={colors.primary} />
               <Text style={styles.reorderBadgeText}>
-                Auto Reorder{order.sourceReorderIds?.length ? ` (${order.sourceReorderIds.length} items)` : ""}
+                {t("grn.autoReorder")}{order.sourceReorderIds?.length ? ` (${order.sourceReorderIds.length} ${t("grn.items").toLowerCase()})` : ""}
               </Text>
             </View>
           )}
@@ -536,7 +538,7 @@ export default function GRNScreen({
           <TextInput
             testID="grn-search-input"
             style={styles.searchInput}
-            placeholder="Scan barcode or search..."
+            placeholder={t("grn.searchPlaceholder")}
             placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -568,7 +570,7 @@ export default function GRNScreen({
               color={bulkMode ? colors.textInverse : colors.primary}
             />
             <Text style={[styles.quickActionText, bulkMode && styles.quickActionTextActive]}>
-              {bulkMode ? "Done" : "Bulk"}
+              {bulkMode ? t("grn.done") : t("grn.bulk")}
             </Text>
           </Pressable>
           <Pressable accessibilityRole="button" style={styles.quickAction} onPress={handleReceiveAll}>
@@ -577,7 +579,7 @@ export default function GRNScreen({
               size={16}
               color={colors.primary}
             />
-            <Text style={styles.quickActionText}>All</Text>
+            <Text style={styles.quickActionText}>{t("grn.all")}</Text>
           </Pressable>
           <Pressable accessibilityRole="button" style={styles.quickAction} onPress={handleClearAll}>
             <MaterialCommunityIcons
@@ -586,7 +588,7 @@ export default function GRNScreen({
               color={colors.textSecondary}
             />
             <Text style={[styles.quickActionText, { color: colors.textSecondary }]}>
-              Clear
+              {t("common.clear")}
             </Text>
           </Pressable>
         </View>
@@ -595,13 +597,13 @@ export default function GRNScreen({
         {bulkMode && (
           <View style={styles.bulkSelectionBar}>
             <Pressable accessibilityRole="button" style={styles.bulkSelectButton} onPress={handleSelectAll}>
-              <Text style={styles.bulkSelectButtonText}>Select All Pending</Text>
+              <Text style={styles.bulkSelectButtonText}>{t("grn.selectAllPending")}</Text>
             </Pressable>
             <Pressable accessibilityRole="button" style={styles.bulkSelectButton} onPress={handleDeselectAll}>
-              <Text style={styles.bulkSelectButtonText}>Deselect All</Text>
+              <Text style={styles.bulkSelectButtonText}>{t("grn.deselectAll")}</Text>
             </Pressable>
             <Text style={styles.bulkSelectedCount}>
-              {selectedItems.size} selected
+              {t("grn.selectedCount", { count: selectedItems.size })}
             </Text>
           </View>
         )}
@@ -625,7 +627,7 @@ export default function GRNScreen({
       <View style={styles.notesContainer}>
         <TextInput
           style={styles.notesInput}
-          placeholder="Add notes (optional)..."
+          placeholder={t("grn.notesPlaceholder")}
           placeholderTextColor={colors.textTertiary}
           value={notes}
           onChangeText={setNotes}
@@ -637,7 +639,7 @@ export default function GRNScreen({
       {/* GO-LIVE-248: Bulk Action Bar */}
       {bulkMode && selectedItems.size > 0 && (
         <View style={styles.bulkActionBar}>
-          <Text style={styles.bulkActionTitle}>Set receive quantity:</Text>
+          <Text style={styles.bulkActionTitle}>{t("grn.setReceiveQty")}</Text>
           <View style={styles.bulkActionButtons}>
             <Pressable
               accessibilityRole="button"
@@ -666,7 +668,7 @@ export default function GRNScreen({
               onPress={handleBulkClear}
             >
               <Text style={[styles.bulkActionButtonText, styles.bulkActionButtonTextClear]}>
-                Clear
+                {t("common.clear")}
               </Text>
             </Pressable>
           </View>
@@ -678,13 +680,13 @@ export default function GRNScreen({
         {/* Summary */}
         <View style={styles.summary}>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Items</Text>
+            <Text style={styles.summaryLabel}>{t("grn.items")}</Text>
             <Text style={styles.summaryValue}>
               {totals.receivingItems} / {totals.totalItems}
             </Text>
           </View>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Quantity</Text>
+            <Text style={styles.summaryLabel}>{t("grn.quantity")}</Text>
             <Text style={styles.summaryValue}>{totals.receivingQty}</Text>
           </View>
         </View>
@@ -707,7 +709,7 @@ export default function GRNScreen({
                 color={colors.textInverse}
               />
               <Text style={styles.submitButtonText}>
-                Receive {totals.receivingItems > 0 ? `(${totals.receivingItems})` : ""}
+                {totals.receivingItems > 0 ? t("grn.receiveButton", { count: totals.receivingItems }) : t("grn.receive")}
               </Text>
             </>
           )}

@@ -2,6 +2,7 @@
 // Today's report with summary cards, top products, payment split, print + share
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -234,6 +235,7 @@ interface DailyReportScreenProps {
 export default function DailyReportScreen({
   onBack,
 }: DailyReportScreenProps) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
 
   const [selectedDate, setSelectedDate] = useState<string>(
@@ -299,8 +301,8 @@ export default function DailyReportScreen({
     const e = asError(_e);
       if (__DEV__) console.error("[DailyReportScreen] Print failed:", e);
       Alert.alert(
-        "Print Failed",
-        e?.message || "Could not print the report."
+        t("dailyReport.printFailed"),
+        e?.message || t("dailyReport.printFailedMessage")
       );
     } finally {
       setPrinting(false);
@@ -325,8 +327,8 @@ export default function DailyReportScreen({
       if (!e?.message?.includes("cancel")) {
         if (__DEV__) console.error("[DailyReportScreen] Share failed:", e);
         Alert.alert(
-          "Share Failed",
-          e?.message || "Could not share the report."
+          t("dailyReport.shareFailed"),
+          e?.message || t("dailyReport.shareFailedMessage")
         );
       }
     } finally {
@@ -546,7 +548,7 @@ export default function DailyReportScreen({
 
   return (
     <View style={styles.container}>
-      <BackHeader title="Daily Report" onBack={onBack} />
+      <BackHeader title={t("dailyReport.title")} onBack={onBack} />
 
       {/* Date picker row */}
       <View style={styles.datePicker}>
@@ -559,7 +561,7 @@ export default function DailyReportScreen({
         </Pressable>
         <View style={styles.dateCenter}>
           <Text style={styles.dateText}>{formatDisplayDate(selectedDate)}</Text>
-          {isToday && <Text style={styles.dateBadge}>Today</Text>}
+          {isToday && <Text style={styles.dateBadge}>{t("dailyReport.today")}</Text>}
         </View>
         <Pressable
           accessibilityRole="button"
@@ -579,7 +581,7 @@ export default function DailyReportScreen({
       {loading && (
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading report...</Text>
+          <Text style={styles.loadingText}>{t("dailyReport.loading")}</Text>
         </View>
       )}
 
@@ -597,7 +599,7 @@ export default function DailyReportScreen({
             style={styles.retryButton}
             onPress={() => loadReport(selectedDate)}
           >
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
           </Pressable>
         </View>
       )}
@@ -610,9 +612,9 @@ export default function DailyReportScreen({
             size={48}
             color={colors.textTertiary}
           />
-          <Text style={styles.errorText}>No report data for this date</Text>
+          <Text style={styles.errorText}>{t("dailyReport.noData")}</Text>
           <Text style={[styles.loadingText, { marginTop: 4 }]}>
-            Try selecting a date when the store was open.
+            {t("dailyReport.noDataHint")}
           </Text>
         </View>
       )}
@@ -629,24 +631,24 @@ export default function DailyReportScreen({
               <Text style={styles.summaryValue}>
                 {formatMoney(report.totalSalesMinor)}
               </Text>
-              <Text style={styles.summaryLabel}>Total Sales</Text>
+              <Text style={styles.summaryLabel}>{t("dailyReport.totalSales")}</Text>
             </View>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryValue}>
                 {formatMoney(report.totalRevenueMinor)}
               </Text>
-              <Text style={styles.summaryLabel}>Revenue</Text>
+              <Text style={styles.summaryLabel}>{t("dailyReport.revenue")}</Text>
             </View>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryValue}>
                 {report.transactionCount}
               </Text>
-              <Text style={styles.summaryLabel}>Transactions</Text>
+              <Text style={styles.summaryLabel}>{t("dailyReport.transactions")}</Text>
             </View>
           </View>
 
           {/* Payment split */}
-          <Text style={styles.sectionTitle}>Payment Split</Text>
+          <Text style={styles.sectionTitle}>{t("dailyReport.paymentSplit")}</Text>
           <View style={styles.paymentSplitCard}>
             {report.paymentSplit.cashMinor > 0 && (
               <View style={styles.paymentRow}>
@@ -656,7 +658,7 @@ export default function DailyReportScreen({
                     size={18}
                     color={colors.success}
                   />
-                  <Text style={styles.paymentLabel}>Cash</Text>
+                  <Text style={styles.paymentLabel}>{t("dailyReport.cash")}</Text>
                 </View>
                 <Text style={styles.paymentAmount}>
                   {formatMoney(report.paymentSplit.cashMinor)}
@@ -671,7 +673,7 @@ export default function DailyReportScreen({
                     size={18}
                     color={colors.primary}
                   />
-                  <Text style={styles.paymentLabel}>UPI</Text>
+                  <Text style={styles.paymentLabel}>{t("dailyReport.upi")}</Text>
                 </View>
                 <Text style={styles.paymentAmount}>
                   {formatMoney(report.paymentSplit.upiMinor)}
@@ -686,7 +688,7 @@ export default function DailyReportScreen({
                     size={18}
                     color={colors.warning}
                   />
-                  <Text style={styles.paymentLabel}>Due</Text>
+                  <Text style={styles.paymentLabel}>{t("dailyReport.due")}</Text>
                 </View>
                 <Text style={styles.paymentAmount}>
                   {formatMoney(report.paymentSplit.dueMinor)}
@@ -701,7 +703,7 @@ export default function DailyReportScreen({
                     size={18}
                     color={colors.accent}
                   />
-                  <Text style={styles.paymentLabel}>Card</Text>
+                  <Text style={styles.paymentLabel}>{t("dailyReport.card")}</Text>
                 </View>
                 <Text style={styles.paymentAmount}>
                   {formatMoney(report.paymentSplit.cardMinor)}
@@ -713,18 +715,18 @@ export default function DailyReportScreen({
           {/* Top 5 products */}
           {report.topProducts.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>Top 5 Products</Text>
+              <Text style={styles.sectionTitle}>{t("dailyReport.topProducts")}</Text>
               <View style={styles.topProductsCard}>
                 {/* Table header */}
                 <View style={styles.tableHeader}>
                   <Text style={[styles.tableHeaderText, { flex: 2 }]}>
-                    Product
+                    {t("dailyReport.product")}
                   </Text>
                   <Text style={[styles.tableHeaderText, styles.tableRight]}>
-                    Qty
+                    {t("dailyReport.qty")}
                   </Text>
                   <Text style={[styles.tableHeaderText, styles.tableRight]}>
-                    Revenue
+                    {t("dailyReport.revenueHeader")}
                   </Text>
                 </View>
                 {report.topProducts.slice(0, 5).map((product, idx) => (
@@ -774,7 +776,7 @@ export default function DailyReportScreen({
                     size={18}
                     color={colors.textInverse}
                   />
-                  <Text style={styles.actionButtonText}>Print Report</Text>
+                  <Text style={styles.actionButtonText}>{t("dailyReport.printReport")}</Text>
                 </>
               )}
             </Pressable>
@@ -797,7 +799,7 @@ export default function DailyReportScreen({
                     size={18}
                     color={colors.primary}
                   />
-                  <Text style={styles.shareButtonText}>Share Report</Text>
+                  <Text style={styles.shareButtonText}>{t("dailyReport.shareReport")}</Text>
                 </>
               )}
             </Pressable>

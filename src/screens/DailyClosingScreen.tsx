@@ -135,7 +135,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
     const cashStr = actualCash.trim();
     const actualCashMinor = Math.round(parseFloat(cashStr) * 100);
     if (!cashStr || isNaN(actualCashMinor) || actualCashMinor < 0) {
-      Alert.alert("Invalid Amount", "Please enter the actual cash amount.");
+      Alert.alert(t("dailyClosing.invalidAmount"), t("dailyClosing.invalidAmountMessage"));
       return;
     }
 
@@ -160,7 +160,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
         },
       ]
     );
-  }, [actualCash, selectedDate, closeDay]);
+  }, [actualCash, selectedDate, closeDay, t]);
 
   // Calculate variance
   const varianceMinor = summary
@@ -181,42 +181,41 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
           <Text style={styles.historyDate}>{formatDateDDMMYYYY(record.date)}</Text>
           <View style={[styles.historyBadge, { backgroundColor: varianceColor + "15" }]}>
             <Text style={[styles.historyBadgeText, { color: varianceColor }]}>
-              {isMatch ? "MATCH" : "MISMATCH"}
+              {isMatch ? t("dailyClosing.match") : t("dailyClosing.mismatch")}
             </Text>
           </View>
         </View>
         <View style={styles.historyDetails}>
           <View style={styles.historyRow}>
-            <Text style={styles.historyLabel}>Expected Cash</Text>
+            <Text style={styles.historyLabel}>{t("dailyClosing.expectedCash")}</Text>
             <Text style={styles.historyValue}>{formatMoney(record.expectedCashMinor)}</Text>
           </View>
           <View style={styles.historyRow}>
-            <Text style={styles.historyLabel}>Actual Cash</Text>
+            <Text style={styles.historyLabel}>{t("dailyClosing.actualCash")}</Text>
             <Text style={styles.historyValue}>{formatMoney(record.actualCashMinor)}</Text>
           </View>
           <View style={styles.historyRow}>
-            <Text style={styles.historyLabel}>Variance</Text>
+            <Text style={styles.historyLabel}>{t("dailyClosing.varianceLabel")}</Text>
             <Text style={[styles.historyValue, { color: varianceColor, fontWeight: "700" }]}>
               {record.varianceMinor >= 0 ? "+" : ""}
               {formatMoney(record.varianceMinor)}
             </Text>
           </View>
           <View style={styles.historyRow}>
-            <Text style={styles.historyLabel}>Total Sales</Text>
+            <Text style={styles.historyLabel}>{t("dailyClosing.totalSales")}</Text>
             <Text style={styles.historyValue}>{formatMoney(record.totalSalesMinor)}</Text>
           </View>
         </View>
         <Text style={styles.historyClosedBy}>
-          Closed by {record.closedByStaffName} at{" "}
-          {formatISODateDDMMYYYY(record.closedAt)}
+          {t("dailyClosing.closedBy", { name: record.closedByStaffName, date: formatISODateDDMMYYYY(record.closedAt) })}
         </Text>
       </View>
     );
-  }, [colors, styles]);
+  }, [colors, styles, t]);
 
   return (
     <View style={styles.container}>
-      <BackHeader title="Daily Closing" onBack={onBack} />
+      <BackHeader title={t("dailyClosing.title")} onBack={onBack} />
 
       {/* Tab switcher */}
       <View style={styles.tabRow}>
@@ -226,7 +225,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
           onPress={() => setActiveTab("SUMMARY")}
         >
           <Text style={[styles.tabText, activeTab === "SUMMARY" && styles.tabTextActive]}>
-            Summary
+            {t("dailyClosing.summary")}
           </Text>
         </Pressable>
         <Pressable
@@ -235,7 +234,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
           onPress={() => setActiveTab("HISTORY")}
         >
           <Text style={[styles.tabText, activeTab === "HISTORY" && styles.tabTextActive]}>
-            History
+            {t("dailyClosing.history")}
           </Text>
         </Pressable>
       </View>
@@ -261,7 +260,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
             </Pressable>
             <View style={styles.dateDisplay}>
               <Text style={styles.dateText}>{formatDateDDMMYYYY(selectedDate)}</Text>
-              {isToday && <Text style={styles.dateTodayBadge}>Today</Text>}
+              {isToday && <Text style={styles.dateTodayBadge}>{t("dailyClosing.today")}</Text>}
             </View>
             <Pressable
               accessibilityRole="button"
@@ -280,30 +279,30 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
           {loading ? (
             <View style={styles.centerContent}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Loading summary...</Text>
+              <Text style={styles.loadingText}>{t("dailyClosing.loadingSummary")}</Text>
             </View>
           ) : summary ? (
             <>
               {/* Sales summary */}
               <View style={styles.summaryCard}>
-                <Text style={styles.summaryTitle}>Sales Summary</Text>
+                <Text style={styles.summaryTitle}>{t("dailyClosing.salesSummary")}</Text>
 
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Total Sales</Text>
+                  <Text style={styles.summaryLabel}>{t("dailyClosing.totalSales")}</Text>
                   <Text style={styles.summaryValueLarge}>{formatMoney(summary.totalSalesMinor)}</Text>
                 </View>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Transactions</Text>
+                  <Text style={styles.summaryLabel}>{t("dailyClosing.transactions")}</Text>
                   <Text style={styles.summaryValue}>{summary.transactionCount}</Text>
                 </View>
 
                 <View style={styles.summaryDivider} />
-                <Text style={styles.summarySubTitle}>By Payment Type</Text>
+                <Text style={styles.summarySubTitle}>{t("dailyClosing.byPaymentType")}</Text>
 
                 <View style={styles.summaryRow}>
                   <View style={styles.summaryRowIcon}>
                     <MaterialCommunityIcons name="cash" size={16} color={colors.success} />
-                    <Text style={styles.summaryLabel}>Cash</Text>
+                    <Text style={styles.summaryLabel}>{t("dailyClosing.cash")}</Text>
                   </View>
                   <Text style={styles.summaryValue}>
                     {formatMoney(summary.salesByPaymentType.cashMinor)}
@@ -312,7 +311,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                 <View style={styles.summaryRow}>
                   <View style={styles.summaryRowIcon}>
                     <MaterialCommunityIcons name="cellphone-nfc" size={16} color={colors.primary} />
-                    <Text style={styles.summaryLabel}>UPI</Text>
+                    <Text style={styles.summaryLabel}>{t("dailyClosing.upi")}</Text>
                   </View>
                   <Text style={styles.summaryValue}>
                     {formatMoney(summary.salesByPaymentType.upiMinor)}
@@ -321,7 +320,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                 <View style={styles.summaryRow}>
                   <View style={styles.summaryRowIcon}>
                     <MaterialCommunityIcons name="clock-outline" size={16} color={colors.warning} />
-                    <Text style={styles.summaryLabel}>Due</Text>
+                    <Text style={styles.summaryLabel}>{t("dailyClosing.due")}</Text>
                   </View>
                   <Text style={styles.summaryValue}>
                     {formatMoney(summary.salesByPaymentType.dueMinor)}
@@ -331,7 +330,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                   <View style={styles.summaryRow}>
                     <View style={styles.summaryRowIcon}>
                       <MaterialCommunityIcons name="credit-card-outline" size={16} color={colors.accent} />
-                      <Text style={styles.summaryLabel}>Card</Text>
+                      <Text style={styles.summaryLabel}>{t("dailyClosing.card")}</Text>
                     </View>
                     <Text style={styles.summaryValue}>
                       {formatMoney(summary.salesByPaymentType.cardMinor)}
@@ -343,7 +342,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                   <>
                     <View style={styles.summaryDivider} />
                     <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Refunds</Text>
+                      <Text style={styles.summaryLabel}>{t("dailyClosing.refunds")}</Text>
                       <Text style={[styles.summaryValue, { color: colors.error }]}>
                         -{formatMoney(summary.refundsMinor)}
                       </Text>
@@ -353,11 +352,11 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
 
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Opening Cash</Text>
+                  <Text style={styles.summaryLabel}>{t("dailyClosing.openingCash")}</Text>
                   <Text style={styles.summaryValue}>{formatMoney(summary.openingCashMinor)}</Text>
                 </View>
                 <View style={styles.summaryRow}>
-                  <Text style={[styles.summaryLabel, { fontWeight: "700" }]}>Expected Cash</Text>
+                  <Text style={[styles.summaryLabel, { fontWeight: "700" }]}>{t("dailyClosing.expectedCash")}</Text>
                   <Text style={[styles.summaryValue, { fontWeight: "700", color: colors.textPrimary }]}>
                     {formatMoney(summary.expectedCashMinor)}
                   </Text>
@@ -366,7 +365,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
 
               {/* Actual cash input */}
               <View style={styles.cashInputCard}>
-                <Text style={styles.cashInputLabel}>Enter Actual Cash</Text>
+                <Text style={styles.cashInputLabel}>{t("dailyClosing.enterActualCash")}</Text>
                 <View style={styles.cashInputRow}>
                   <Text style={styles.cashInputPrefix}>₹</Text>
                   <TextInput
@@ -410,12 +409,12 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                         ]}
                       >
                         {varianceMinor === 0
-                          ? "Cash matches expected amount"
-                          : `Variance: ${varianceMinor > 0 ? "+" : ""}${formatMoney(varianceMinor)}`}
+                          ? t("dailyClosing.cashMatches")
+                          : t("dailyClosing.variance", { amount: `${varianceMinor > 0 ? "+" : ""}${formatMoney(varianceMinor)}` })}
                       </Text>
                       {varianceMinor !== 0 && (
                         <Text style={styles.varianceHint}>
-                          {varianceMinor > 0 ? "Excess cash" : "Short cash"}
+                          {varianceMinor > 0 ? t("dailyClosing.excessCash") : t("dailyClosing.shortCash")}
                         </Text>
                       )}
                     </View>
@@ -436,7 +435,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                 ) : (
                   <>
                     <MaterialCommunityIcons name="check-bold" size={18} color={colors.textInverse} />
-                    <Text style={styles.closeDayButtonText}>Close Day</Text>
+                    <Text style={styles.closeDayButtonText}>{t("dailyClosing.closeDay")}</Text>
                   </>
                 )}
               </Pressable>
@@ -444,8 +443,8 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
           ) : (
             <EmptyState
               icon="calendar-blank"
-              title="No data available"
-              description="No sales data found for the selected date."
+              title={t("dailyClosing.noData")}
+              description={t("dailyClosing.noDataDescription")}
             />
           )}
         </ScrollView>
@@ -471,8 +470,8 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
           ) : history.length === 0 ? (
             <EmptyState
               icon="history"
-              title="No closing history"
-              description="Daily closing records will appear here after you close your first day."
+              title={t("dailyClosing.noHistory")}
+              description={t("dailyClosing.noHistoryDescription")}
             />
           ) : (
             history.map(renderHistoryItem)

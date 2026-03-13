@@ -55,13 +55,14 @@ function SupplierPicker({
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable accessibilityRole="button" style={styles.modalOverlay} onPress={onClose}>
         <View style={[styles.pickerSheet, { paddingBottom: 16 + insets.bottom }]}>
           <View style={styles.pickerHandle} />
-          <Text style={styles.pickerTitle}>Select Supplier</Text>
+          <Text style={styles.pickerTitle}>{t("inward.selectSupplierTitle")}</Text>
 
           <Pressable
             accessibilityRole="button"
@@ -71,7 +72,7 @@ function SupplierPicker({
               onClose();
             }}
           >
-            <Text style={styles.pickerOptionText}>No supplier (manual entry)</Text>
+            <Text style={styles.pickerOptionText}>{t("inward.noSupplier")}</Text>
             {!selectedSupplier && (
               <MaterialCommunityIcons name="check" size={20} color={colors.primary} />
             )}
@@ -80,10 +81,10 @@ function SupplierPicker({
           {suppliersLoading ? (
             <View style={styles.suppliersLoading}>
               <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={styles.suppliersLoadingText}>Loading suppliers...</Text>
+              <Text style={styles.suppliersLoadingText}>{t("inward.loadingSuppliers")}</Text>
             </View>
           ) : suppliers.length === 0 ? (
-            <Text style={styles.noSuppliersText}>No suppliers linked to this store</Text>
+            <Text style={styles.noSuppliersText}>{t("inward.noSuppliers")}</Text>
           ) : (
             suppliers.map((supplier) => (
               <Pressable
@@ -128,6 +129,7 @@ function InwardItemRow({
 }) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   const [qtyText, setQtyText] = useState(String(item.quantity));
   const [priceText, setPriceText] = useState((item.purchasePriceMinor / 100).toFixed(2));
   // SCALE-C1: batch_number and expiry_date fields (optional)
@@ -224,8 +226,8 @@ function InwardItemRow({
                 isPriceBad && styles.marketBadgeTextBad,
               ]}>
                 {priceDiff !== null && priceDiff !== 0
-                  ? `${priceDiff > 0 ? "+" : ""}${priceDiff.toFixed(0)}% vs market`
-                  : "At market"
+                  ? t("inward.vsMarket", { pct: `${priceDiff > 0 ? "+" : ""}${priceDiff.toFixed(0)}` })
+                  : t("inward.atMarket")
                 }
               </Text>
             </View>
@@ -235,7 +237,7 @@ function InwardItemRow({
 
       <View style={styles.itemControls}>
         <View style={styles.itemField}>
-          <Text style={styles.itemFieldLabel}>Qty</Text>
+          <Text style={styles.itemFieldLabel}>{t("inward.qty")}</Text>
           <TextInput
             style={styles.itemInput}
             value={qtyText}
@@ -247,7 +249,7 @@ function InwardItemRow({
         </View>
 
         <View style={styles.itemField}>
-          <Text style={styles.itemFieldLabel}>Price</Text>
+          <Text style={styles.itemFieldLabel}>{t("inward.price")}</Text>
           <TextInput
             style={[styles.itemInput, styles.itemInputWide, isPriceBad && styles.itemInputWarning]}
             value={priceText}
@@ -259,7 +261,7 @@ function InwardItemRow({
         </View>
 
         <View style={styles.itemTotalBlock}>
-          <Text style={styles.itemTotalLabel}>Total</Text>
+          <Text style={styles.itemTotalLabel}>{t("inward.total")}</Text>
           <Text style={styles.itemTotalValue}>{lineTotal}</Text>
         </View>
 
@@ -271,7 +273,7 @@ function InwardItemRow({
       {/* SCALE-C1: Optional batch/expiry fields for FEFO tracking */}
       <View style={styles.batchExpiryRow}>
         <View style={styles.batchField}>
-          <Text style={styles.itemFieldLabel}>Batch No. (optional)</Text>
+          <Text style={styles.itemFieldLabel}>{t("inward.batchNumber")}</Text>
           <TextInput
             testID="batch-number-input"
             style={styles.batchInput}
@@ -286,7 +288,7 @@ function InwardItemRow({
         </View>
 
         <View style={styles.expiryField}>
-          <Text style={styles.itemFieldLabel}>Expiry Date (optional)</Text>
+          <Text style={styles.itemFieldLabel}>{t("inward.expiryDate")}</Text>
           <TextInput
             testID="expiry-date-input"
             style={styles.batchInput}
@@ -478,10 +480,10 @@ export default function InwardScreen({
       submittingRef.current = false;
       setSubmitting(false);
       Alert.alert(
-        "Stock Check Failed",
-        "Could not verify current stock levels. Please check your connection and try again.",
+        t("inward.stockCheckFailed"),
+        t("inward.stockCheckFailedMessage"),
         [
-          { text: "OK", style: "cancel" },
+          { text: t("common.ok"), style: "cancel" },
         ]
       );
     }
@@ -504,11 +506,11 @@ export default function InwardScreen({
       await recordManualInward(txItems, userNotes, selectedSupplier);
 
       Alert.alert(
-        "Stock Inward Complete",
-        `${itemCount} items added to inventory.`,
+        t("inward.successTitle"),
+        t("inward.successMessage", { count: itemCount }),
         [
           {
-            text: "OK",
+            text: t("common.ok"),
             onPress: () => {
               clearCart();
               onBack?.();
@@ -518,7 +520,7 @@ export default function InwardScreen({
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      Alert.alert("Inward Failed", message);
+      Alert.alert(t("inward.failedTitle"), message);
     } finally {
       submittingRef.current = false; // ISSUE-139
       setSubmitting(false);
@@ -558,7 +560,7 @@ export default function InwardScreen({
               <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
             </Pressable>
           )}
-          <Text style={styles.headerTitle}>Stock Inward</Text>
+          <Text style={styles.headerTitle}>{t("inward.title")}</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -566,7 +568,7 @@ export default function InwardScreen({
         <Pressable accessibilityRole="button" style={styles.supplierSelector} onPress={() => setShowSupplierPicker(true)}>
           <MaterialCommunityIcons name="truck-delivery" size={18} color={colors.primary} />
           <Text style={styles.supplierText} numberOfLines={1}>
-            {selectedSupplier?.name ?? "Select supplier (optional)"}
+            {selectedSupplier?.name ?? t("inward.selectSupplier")}
           </Text>
           <MaterialCommunityIcons name="chevron-down" size={20} color={colors.textSecondary} />
         </Pressable>
@@ -582,7 +584,7 @@ export default function InwardScreen({
             value={searchQuery}
             onChangeText={setSearchQuery}
             onFocus={() => setShowSearch(true)}
-            placeholder="Search product by name or barcode"
+            placeholder={t("inward.searchProduct")}
             placeholderTextColor={colors.textTertiary}
             returnKeyType="search"
           />
@@ -622,11 +624,11 @@ export default function InwardScreen({
               />
             ) : searchQuery.trim().length >= 2 ? (
               <View style={styles.searchEmpty}>
-                <Text style={styles.searchEmptyText}>No products found</Text>
+                <Text style={styles.searchEmptyText}>{t("inward.noProducts")}</Text>
               </View>
             ) : (
               <View style={styles.searchEmpty}>
-                <Text style={styles.searchEmptyText}>Type 2+ characters to search</Text>
+                <Text style={styles.searchEmptyText}>{t("inward.typeToSearch")}</Text>
               </View>
             )}
           </View>
@@ -658,9 +660,9 @@ export default function InwardScreen({
         ListHeaderComponent={
           items.length > 0 ? (
             <View style={styles.cartHeader}>
-              <Text style={styles.cartTitle}>Items ({items.length})</Text>
+              <Text style={styles.cartTitle}>{t("inward.itemsCount", { count: items.length })}</Text>
               <Pressable accessibilityRole="button" onPress={clearCart}>
-                <Text style={styles.clearText}>Clear all</Text>
+                <Text style={styles.clearText}>{t("inward.clearAll")}</Text>
               </Pressable>
             </View>
           ) : null
@@ -674,7 +676,7 @@ export default function InwardScreen({
             style={styles.notesInput}
             value={notes}
             onChangeText={setNotes}
-            placeholder="Add notes (optional)"
+            placeholder={t("inward.addNotes")}
             placeholderTextColor={colors.textTertiary}
             multiline
             numberOfLines={2}
@@ -685,7 +687,7 @@ export default function InwardScreen({
       {/* Bottom Action Bar */}
       <View style={[styles.actionBar, { paddingBottom: 12 + insets.bottom }]}>
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total ({itemCount} items)</Text>
+          <Text style={styles.totalLabel}>{t("inward.totalItems", { count: itemCount })}</Text>
           <Text style={styles.totalValue}>{formatMoney(total, "INR")}</Text>
         </View>
 
@@ -698,7 +700,7 @@ export default function InwardScreen({
           {submitting ? (
             <ActivityIndicator color={colors.textInverse} />
           ) : (
-            <Text style={styles.submitText}>Submit Inward</Text>
+            <Text style={styles.submitText}>{t("inward.submitInward")}</Text>
           )}
         </Pressable>
       </View>
