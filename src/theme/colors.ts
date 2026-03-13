@@ -64,7 +64,7 @@ export const lightColors = {
   overlay: "rgba(15, 23, 42, 0.45)",
   overlayLight: "rgba(15, 23, 42, 0.2)",
   overlayInverse: "rgba(255, 255, 255, 0.15)",
-  ink: "#0B1220",
+  ink: "#0B1220", // STG-233: High-contrast text — darkest readable on light bg
 } as const;
 
 // LIVE.POS.THEME: Dark palette — mirrors light structure for runtime parity
@@ -133,7 +133,7 @@ export const darkColors: Record<keyof typeof lightColors, string> = {
   overlay: "rgba(0, 0, 0, 0.6)",
   overlayLight: "rgba(0, 0, 0, 0.3)",
   overlayInverse: "rgba(255, 255, 255, 0.1)",
-  ink: "#F8FAFC",
+  ink: "#F8FAFC", // STG-233: High-contrast text — lightest readable on dark bg
 };
 
 // Backward-compatible export — static light palette for StyleSheet.create() usage
