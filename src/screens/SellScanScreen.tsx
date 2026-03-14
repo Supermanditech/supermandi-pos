@@ -356,6 +356,10 @@ type CartItemRowProps = {
   autoFocusPrice?: boolean;
   stockLimitPulse?: number;
   rowTestId?: string;
+  // STG-107: Product image in cart
+  imageUrl?: string | null;
+  // STG-138: Weight/unit label (e.g. "500g", "per KG")
+  unitLabel?: string | null;
   onPressRow?: () => void;
   onAutoFocusConsumed?: (itemId: string) => void;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
@@ -373,6 +377,8 @@ function CartItemRow({
   autoFocusPrice = false,
   stockLimitPulse = 0,
   rowTestId,
+  imageUrl,
+  unitLabel,
   onPressRow,
   onAutoFocusConsumed,
   onUpdateQuantity,
@@ -662,11 +668,19 @@ function CartItemRow({
     >
       {/* Row 1: Product name + badges + delete button */}
       <View style={styles.cartItemNameRow}>
+        {/* STG-107: Product thumbnail in cart */}
+        {imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.cartItemImage} />
+        ) : null}
         <View style={styles.cartItemNameSection}>
           {/* STG-129: Allow 2 lines for long product names */}
           <Text style={[styles.cartItemName, isCompactRow && styles.cartItemNameCompact]} numberOfLines={2} ellipsizeMode="tail" maxFontSizeMultiplier={1.3}>
             {item.name}
           </Text>
+          {/* STG-138: Weight/unit context next to product name */}
+          {unitLabel ? (
+            <Text style={styles.cartItemUnitLabel}>{unitLabel}</Text>
+          ) : null}
           {/* STG-099: Clarify edit icon — label "Edit price" */}
           {enableRowPress ? (
             <Pressable
@@ -1416,6 +1430,20 @@ export default function SellScanScreen({
   const totalLabel = formatMoney(animatedTotalMinor, currency);
   const subtotalLabel = formatMoney(subtotal, currency);
   const discountAmountLabel = formatMoney(Math.max(0, discountTotal ?? 0), currency);
+  // STG-101: Compute GST total from catalog items' gst_rate (inclusive GST)
+  const cartGstTotal = useMemo(() => {
+    let gstSum = 0;
+    for (const cartItem of items) {
+      const sku = catalogItems.find((s) => s.barcode === cartItem.barcode);
+      const rate = sku?.gst_rate;
+      if (rate && rate > 0) {
+        const lineTotal = cartItem.priceMinor * cartItem.quantity;
+        // GST is inclusive: gst = lineTotal - lineTotal / (1 + rate/100)
+        gstSum += Math.round(lineTotal - lineTotal / (1 + rate / 100));
+      }
+    }
+    return gstSum;
+  }, [items, catalogItems]);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const uniqueSkuCount = items.length;
   const cartTitle = cartMode === "PURCHASE" ? "Purchase Cart" : "Sell Cart";
@@ -2561,6 +2589,14 @@ export default function SellScanScreen({
           metadata: {
             storeProductId: item.storeProductId || undefined,
             productId: item.productId || undefined,
+            // STG-399: Store original resolved price for persistence check
+            originalPriceMinor: resolved.priceMinor,
+            // STG-107/138: Store image and unit for cart display
+            imageUrl: item.imageUrl || undefined,
+            netContentValue: item.net_content_value ?? undefined,
+            netContentUnit: item.net_content_unit ?? undefined,
+            mode: item.mode ?? undefined,
+            rateUnit: item.rate_unit ?? undefined,
           },
           // AUD-016: SCALE-A3 batch traceability
           batchNumber: item.batch_number ?? undefined,
@@ -2812,6 +2848,14 @@ export default function SellScanScreen({
   const renderCartItem = ({ item }: { item: CartItem }) => {
     const rowKey = (item.sku ?? item.barcode ?? item.id).replace(/\s+/g, "-");
     const rowTestId = cartMode === "SELL" ? `sell-lineitem-row-${rowKey}` : undefined;
+    // STG-107/138: Look up image and unit from catalog
+    const skuMatch = catalogItems.find((s) => s.barcode === item.barcode);
+    const cartImageUrl = skuMatch?.imageUrl ?? null;
+    const cartUnitLabel = skuMatch ? (
+      skuMatch.mode === "LOOSE" && skuMatch.rate_unit ? `per ${skuMatch.rate_unit}` :
+      skuMatch.net_content_value && skuMatch.net_content_unit ? `${skuMatch.net_content_value}${skuMatch.net_content_unit}` :
+      null
+    ) : null;
     return (
       <CartItemRow
         item={item}
@@ -2819,6 +2863,8 @@ export default function SellScanScreen({
         mode={cartMode}
         availableStock={resolveAvailableStock(item)}
         canEdit={canEditCart}
+        imageUrl={cartImageUrl}
+        unitLabel={cartUnitLabel}
         autoFocusPrice={item.id === autoFocusItemId}
         stockLimitPulse={stockLimitItemId === item.id ? stockLimitPulse : 0}
         rowTestId={rowTestId}
@@ -3485,11 +3531,34 @@ export default function SellScanScreen({
               ) : null
             }
             ListFooterComponent={
-              catalogLoading && !catalogRefreshing ? (
-                <View style={styles.footerLoading}>
-                  <ActivityIndicator color={colors.primary} />
-                </View>
-              ) : null
+              <>
+                {catalogLoading && !catalogRefreshing ? (
+                  <View style={styles.footerLoading}>
+                    <ActivityIndicator color={colors.primary} />
+                  </View>
+                ) : null}
+                {/* STG-029: "Add Product" button at bottom of product list */}
+                {!catalogLoading && gridItems.length > 0 ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    style={styles.addProductFooterButton}
+                    onPress={() => {
+                      openAddExpanded();
+                      focusAddInput();
+                    }}
+                    testID="sell-add-product-footer"
+                  >
+                    <MaterialCommunityIcons name="plus-circle-outline" size={18} color={colors.primary} />
+                    <Text style={styles.addProductFooterText}>{t("sell.addProduct", "Add unlisted product")}</Text>
+                  </Pressable>
+                ) : null}
+                {/* STG-028: Product count footer */}
+                {!catalogLoading && gridItems.length > 0 ? (
+                  <Text style={styles.productCountFooter}>
+                    {t("sell.productCount", "{{count}} products", { count: gridItems.length })}
+                  </Text>
+                ) : null}
+              </>
             }
             refreshControl={
               /* STG-050: Pull-to-refresh on product grid */
@@ -3671,6 +3740,13 @@ export default function SellScanScreen({
                       <MaterialCommunityIcons name="plus" size={16} color={colors.primary} />
                       <Text style={styles.addMoreText}>{t("sell.addMoreItems", "+ Add more items")}</Text>
                     </Pressable>
+                    {/* STG-108: Empty space guidance when few items */}
+                    {items.length <= 2 ? (
+                      <View style={styles.cartGuidanceRow}>
+                        <MaterialCommunityIcons name="barcode-scan" size={16} color={colors.textTertiary} />
+                        <Text style={styles.cartGuidanceText}>{t("sell.cartGuidance", "Scan or search to add more items")}</Text>
+                      </View>
+                    ) : null}
                     <View style={[styles.cartListFooterSpacer, isSmallScreen && styles.cartListFooterSpacerCompact]} />
                   </View>
                 ) : null
@@ -3800,12 +3876,32 @@ export default function SellScanScreen({
                       <AppText style={styles.totalLabel}>{t("sell.subtotal", "Subtotal")}</AppText>
                       <PriceText style={styles.totalValue}>{subtotalLabel}</PriceText>
                     </View>
+                    {/* STG-101: GST/tax line — show estimated GST if any item has gst_rate */}
+                    {cartGstTotal > 0 ? (
+                      <View style={styles.totalRow}>
+                        <AppText style={styles.totalLabel}>{t("sell.gstIncluded", "GST (incl.)")}</AppText>
+                        <PriceText style={styles.totalValue}>{formatMoney(cartGstTotal, currency)}</PriceText>
+                      </View>
+                    ) : null}
                     <View style={styles.totalRow}>
                       <AppText style={styles.totalLabel}>{t("sell.discount", "Discount")}</AppText>
-                      <PriceText style={styles.totalValue}>-{discountAmountLabel}</PriceText>
+                      <PriceText style={[styles.totalValue, styles.discountValue]}>-{discountAmountLabel}</PriceText>
+                    </View>
+                    {/* STG-111: Savings display when discount applied */}
+                    <View style={styles.savingsRow}>
+                      <MaterialCommunityIcons name="tag-outline" size={14} color={colors.success} />
+                      <AppText style={styles.savingsText}>{t("sell.youSave", "You save {{amount}}", { amount: discountAmountLabel })}</AppText>
                     </View>
                   </>
-                ) : null}
+                ) : (
+                  /* STG-101: GST line even without discount */
+                  cartGstTotal > 0 ? (
+                    <View style={styles.totalRow}>
+                      <AppText style={styles.totalLabel}>{t("sell.gstIncluded", "GST (incl.)")}</AppText>
+                      <PriceText style={styles.totalValue}>{formatMoney(cartGstTotal, currency)}</PriceText>
+                    </View>
+                  ) : null
+                )}
                 <View style={[styles.totalRow, styles.totalRowEmphasis]}>
                   <AppText style={styles.totalLabelStrong} bold>{t("sell.total", "Total")}</AppText>
                   <PriceText style={styles.totalValueStrong}>{totalLabel}</PriceText>
@@ -4498,6 +4594,19 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     color: colors.primary,
     fontWeight: "500",
   },
+  // STG-108: Empty space guidance
+  cartGuidanceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 16,
+    opacity: 0.5,
+  },
+  cartGuidanceText: {
+    fontSize: 12,
+    color: colors.textTertiary,
+  },
   // STG-140: Collapsed discount link
   discountCollapsedLink: {
     flexDirection: "row",
@@ -4979,12 +5088,24 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     justifyContent: "space-between",
     gap: 8,
   },
+  // STG-107: Product thumbnail in cart
+  cartItemImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 4,
+    marginRight: 4,
+  },
   cartItemNameSection: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
     gap: 6,
+  },
+  // STG-138: Weight/unit label next to name
+  cartItemUnitLabel: {
+    fontSize: 10,
+    color: colors.textTertiary,
   },
   cartItemActions: {
     flexDirection: "row",
@@ -5357,6 +5478,22 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   totalRowEmphasis: {
     marginTop: 4,
   },
+  // STG-111: Savings row — green "You save" display
+  savingsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 2,
+  },
+  savingsText: {
+    fontSize: 11,
+    color: colors.success,
+    fontWeight: "600",
+  },
+  // STG-101: Discount value color
+  discountValue: {
+    color: colors.success,
+  },
   totalLabel: {
     fontSize: 12,
     color: colors.textSecondary,
@@ -5524,6 +5661,32 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   footerLoading: {
     paddingVertical: 16,
+  },
+  // STG-029: Add product footer button
+  addProductFooterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    marginHorizontal: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: colors.primary + "40",
+    borderRadius: 10,
+    borderStyle: "dashed",
+  },
+  addProductFooterText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: "600",
+  },
+  // STG-028: Product count footer
+  productCountFooter: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    textAlign: "center",
+    paddingVertical: 8,
   },
   cartBar: {
     position: "absolute",
