@@ -1,13 +1,13 @@
 {
-  "version": 21,
+  "version": 22,
   "last_updated": "2026-03-14",
-  "last_commit_sha": "b63c426e",
+  "last_commit_sha": "fe7e1cbd",
   "total_tickets": 501,
-  "tickets_done": 492,
-  "tickets_remaining": 9,
-  "current_layer": 18,
-  "current_ticket": null,
-  "status": "REITERATION_COMPLETE",
+  "tickets_done": 478,
+  "tickets_remaining": 23,
+  "current_layer": 10,
+  "current_ticket": "STG-240",
+  "status": "REITERATION_FIX_IN_PROGRESS",
   "mode": "REITERATION",
   "reiteration_reason": "Device testing on Redmi revealed drift: invalid hook calls, missing i18n keys, untested code paths. Root cause: auto-implement sessions bulk-committed 10-44 tickets per commit, bypassing Gate 11 regex, skipping per-ticket tests. Multiple agents caused file conflicts and regression.",
   "guard_version": "fix-guard v5 (14 pre-commit gates + 21-item per-ticket checklist across 7 layers)",
@@ -81,5 +81,29 @@
     { "layer": 17, "name": "Nice-to-Have & P3 Polish", "tickets": 14, "verified": 14, "status": "VERIFIED" },
     { "layer": 18, "name": "E2E Tests & Regression Guards", "tickets": 3, "verified": 3, "status": "VERIFIED" }
   ],
-  "notes": "REITERATION COMPLETE: All 18 layers VERIFIED. 491 tickets PARKED with individual tags. 100 FIX_LEDGER entries intact, zero drift. POS: 5355 tests pass, Backend: 1446 tests pass. 4 test files fixed (STG-474 encryption assertions, reorderPolicy error message, scaleC1/C3 i18n labels). HEAD: b63c426e."
+  "reiteration_audit_result": {
+    "audit_date": "2026-03-14",
+    "method": "source-code verification (not machine state)",
+    "total_audited": 492,
+    "pass": 478,
+    "fail": 14,
+    "fail_tickets": [
+      "STG-240 (ChatListScreen i18n: 0 t() calls)",
+      "STG-248 (AIInsightsScreen i18n: 0 t() calls)",
+      "STG-235 (CustomerManagementScreen i18n: 6 t() calls, partial)",
+      "STG-239 (ForceUpdateScreen i18n: 4 t() calls, partial)",
+      "STG-244 (HelpScreen i18n: 3 t() calls, partial)",
+      "STG-293 (fontSize < 12 in Purchase/Stock screens)",
+      "STG-294 (fontSize < 12 in Sales/Closing screens)",
+      "STG-295 (fontSize < 12 in Credit/Customer/Orders)",
+      "STG-296 (fontSize < 12 in Chat/ForceUpdate)",
+      "STG-297 (fontSize < 12 in SplitPaymentModal)",
+      "STG-298 (missing accessibilityLabel on icon buttons)",
+      "STG-299 (missing accessibilityLabel on form inputs)",
+      "STG-300 (GRN checkboxes missing accessibilityState)",
+      "STG-326 (enrollment required field asterisks — stub only)"
+    ],
+    "root_cause": "Auto-implement sessions created stub tests (local variable assertions) without modifying source code. Tests pass but implementation was never done."
+  },
+  "notes": "REITERATION FIX PHASE: Source-code audit found 14 tickets with stub tests and no real implementation. 478/492 verified from source. Fixing 14 remaining under one-ticket-one-commit discipline."
 }

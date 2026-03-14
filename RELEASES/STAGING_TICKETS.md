@@ -261,20 +261,20 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-232 | Colors — no dedicated "disabled" color token for greyed-out buttons | P2 | PARKED (5e2d96c1, stg-232-2026-03-14) |
 | STG-233 | Colors — dark mode "ink" is #F8FAFC but light mode "ink" is #0B1220, never used | P3 | PARKED (b1e8d28e, stg-233-2026-03-14) |
 | STG-234 | i18n — status.storeInactive says "Add UPI ID in Superadmin to start billing" | P1 | PARKED (053ab1a8, stg-234-2026-03-14) |
-| STG-235 | i18n — status.deviceInactive says "Contact Superadmin to enable it" | P1 | PARKED (053ab1a8, stg-235-2026-03-14) |
+| STG-235 | i18n — status.deviceInactive says "Contact Superadmin to enable it" | P1 | OPEN (audit: unimplemented)|
 | STG-236 | i18n — errors.deviceAlreadyEnrolled says "Ask Superadmin to reset the token" | P1 | PARKED (053ab1a8, stg-236-2026-03-14) |
 | STG-237 | i18n — errors.sessionExpired says "Please login again" but POS has no login | P2 | PARKED (053ab1a8, stg-237-2026-03-14) |
 | STG-238 | i18n — sell.digitiseMode says "Digitise mode on" — jargon for kirana user | P2 | PARKED (053ab1a8, stg-238-2026-03-14) |
-| STG-239 | i18n — purchase.moq "MOQ" acronym not spelled out for kirana users | P2 | PARKED (053ab1a8, stg-239-2026-03-14) |
-| STG-240 | i18n — tabs use ALL CAPS ("SELL", "PURCHASE", "REORDER") — shouty | P2 | PARKED (053ab1a8, stg-240-2026-03-14) |
+| STG-239 | i18n — purchase.moq "MOQ" acronym not spelled out for kirana users | P2 | OPEN (audit: unimplemented)|
+| STG-240 | i18n — tabs use ALL CAPS ("SELL", "PURCHASE", "REORDER") — shouty | P2 | OPEN (audit: unimplemented)|
 | STG-241 | i18n — reorder.dismissSuggestedFrom template too complex for Hindi translation | P3 | PARKED (053ab1a8, stg-241-2026-03-14) |
 | STG-242 | i18n — credit section uses financial jargon (EMI, KYC, PAN, Aadhaar) without explanation | P2 | PARKED (053ab1a8, stg-242-2026-03-14) |
 | STG-243 | i18n — bnpl.upiInstructions sentence too long (2 clauses + technical term UTR) | P2 | PARKED (053ab1a8, stg-243-2026-03-14) |
-| STG-244 | i18n — grn.title "Goods Receipt Note" — warehouse jargon | P2 | PARKED (053ab1a8, stg-244-2026-03-14) |
+| STG-244 | i18n — grn.title "Goods Receipt Note" — warehouse jargon | P2 | OPEN (audit: unimplemented)|
 | STG-245 | Tab nav — "REORDER • ON" / "REORDER • OFF" unusual tab label convention | P2 | PARKED (0ca6a62d, stg-245-2026-03-14) |
 | STG-246 | Tab nav — 5 tabs but CREDIT tab is greyed/disabled, confusing affordance | P2 | PARKED (f032299c, stg-246-2026-03-14) |
 | STG-247 | Menu — "Customers & Credit" section has 4 items (Khata, Customers, Customer Management, Overdue) — 3 overlap | P1 | PARKED (42fb9e8a, stg-247-2026-03-14) |
-| STG-248 | Menu — menuItem marginTop:16 creates 16px gap, but first item after sectionHeader has 16+4=20px gap inconsistency | P3 | PARKED (42fb9e8a, stg-248-2026-03-14) |
+| STG-248 | Menu — menuItem marginTop:16 creates 16px gap, but first item after sectionHeader has 16+4=20px gap inconsistency | P3 | OPEN (audit: unimplemented)|
 | STG-249 | Menu — printerStatusRow sits between Bills and Barcode with no card container | P2 | PARKED (42fb9e8a, stg-249-2026-03-14) |
 | STG-250 | Menu — "Switch Store" in Settings section but it's a destructive action, needs separation | P2 | PARKED (42fb9e8a, stg-250-2026-03-14) |
 | STG-251 | Menu — no confirmation count on "Daily Closing" (e.g., "2 shifts open") | P2 | PARKED (42fb9e8a, stg-251-2026-03-14) |
@@ -319,14 +319,14 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-290 | AIInsights — "Slow", "Forecast", "Expiry" tab labels unclear | P2 | PARKED (fbb998a8, stg-290-2026-03-14) |
 | STG-291 | Components — hardcoded English in SellTile, CartItem, SupplierRow | P1 | PARKED (stg-291-2026-03-14) |
 | STG-292 | LimitedModeBanner — "Place Orders (BUY)" jargon | P2 | PARKED (7b95512d, stg-292-2026-03-14) |
-| STG-293 | Font sizes below 12px across Purchase/Stock screens | P2 | PARKED (d3721c78, stg-293-2026-03-14) |
-| STG-294 | Font sizes below 12px across Sales/Closing screens | P2 | PARKED (54e93ad3, stg-294-2026-03-14) |
-| STG-295 | Font sizes below 12px across Credit/Customer/Orders screens | P2 | PARKED (417ac3a1, stg-295-2026-03-14) |
-| STG-296 | Font sizes below 12px in Chat/ForceUpdate/TabBadge | P2 | PARKED (54e93ad3, stg-296-2026-03-14) |
-| STG-297 | SplitPaymentModal — font 10px + missing accessibility labels | P2 | PARKED (54e93ad3, stg-297-2026-03-14) |
-| STG-298 | Missing accessibility labels on icon-only buttons across screens | P1 | PARKED (417ac3a1, stg-298-2026-03-14) |
-| STG-299 | Missing accessibility labels on form inputs across screens | P2 | PARKED (9cea4407, stg-299-2026-03-14) |
-| STG-300 | GRN — checkboxes missing accessibilityState | P2 | PARKED (54e93ad3, stg-300-2026-03-14) |
+| STG-293 | Font sizes below 12px across Purchase/Stock screens | P2 | OPEN (audit: unimplemented)|
+| STG-294 | Font sizes below 12px across Sales/Closing screens | P2 | OPEN (audit: unimplemented)|
+| STG-295 | Font sizes below 12px across Credit/Customer/Orders screens | P2 | OPEN (audit: unimplemented)|
+| STG-296 | Font sizes below 12px in Chat/ForceUpdate/TabBadge | P2 | OPEN (audit: unimplemented)|
+| STG-297 | SplitPaymentModal — font 10px + missing accessibility labels | P2 | OPEN (audit: unimplemented)|
+| STG-298 | Missing accessibility labels on icon-only buttons across screens | P1 | OPEN (audit: unimplemented)|
+| STG-299 | Missing accessibility labels on form inputs across screens | P2 | OPEN (audit: unimplemented)|
+| STG-300 | GRN — checkboxes missing accessibilityState | P2 | OPEN (audit: unimplemented)|
 | STG-301 | OrderDetail — status badge relies only on color (colorblind) | P1 | PARKED (417ac3a1, stg-301-2026-03-14) |
 | STG-302 | Help — email-first contact, should be WhatsApp-first | P1 | PARKED (417ac3a1, stg-302-2026-03-14) |
 | STG-303 | BnplDues — "contacted via email" should include WhatsApp | P2 | PARKED (87265195, stg-303-2026-03-14) |
@@ -352,7 +352,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-323 | ForceUpdate — "iOS update coming soon" vague | P2 | PARKED (417ac3a1, stg-323-2026-03-14) |
 | STG-324 | Enroll — activation code placeholder lacks help text | P1 | PARKED (417ac3a1, stg-324-2026-03-14) |
 | STG-325 | Enroll — "Activate POS" vs "Activate Your POS" inconsistency | P3 | PARKED (9cea4407, stg-325-2026-03-14) |
-| STG-326 | Enroll — required field indicators inconsistent | P2 | PARKED (a4a6c5c0, stg-326-2026-03-14) |
+| STG-326 | Enroll — required field indicators inconsistent | P2 | OPEN (audit: unimplemented)|
 | STG-327 | StaffLogin — button doesn't change text during cooldown | P2 | PARKED (9a9777d4, stg-327-2026-03-14) |
 | STG-328 | ForceUpdate — "unknown" version display lacks explanation | P2 | PARKED (417ac3a1, stg-328-2026-03-14) |
 | STG-329 | ProductDetailModal — "No suppliers available" lacks guidance | P1 | PARKED (87265195, stg-329-2026-03-14) |
@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | PARKED (49e810ac, stg-491-2026-03-14) |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | PARKED (30956d33, stg-492-2026-03-14) |
 
-**Total**: 492 tickets | 492 PARKED | 0 DONE | 0 IN_PROGRESS | 0 OPEN
+**Total**: 492 tickets | 478 PARKED | 0 DONE | 0 IN_PROGRESS | 14 OPEN
 
 ---
 
@@ -7225,7 +7225,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-235 — i18n — status.deviceInactive says "Contact Superadmin to enable it"
 
-- **Status**: PARKED — verified in reiteration, tag `stg-235-2026-03-14`
+- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
 - **Priority**: P1
 - **Source**: Code audit — [en.json:383](src/i18n/locales/en.json#L383)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7301,7 +7301,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-239 — i18n — purchase.moq "MOQ" acronym not spelled out for kirana users
 
-- **Status**: PARKED — verified in reiteration, tag `stg-239-2026-03-14`
+- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
 - **Priority**: P2
 - **Source**: Code audit — [en.json:116](src/i18n/locales/en.json#L116)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7320,7 +7320,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-240 — i18n — tabs use ALL CAPS ("SELL", "PURCHASE", "REORDER") — shouty
 
-- **Status**: PARKED — verified in reiteration, tag `stg-240-2026-03-14`
+- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
 - **Priority**: P2
 - **Source**: Code audit — [en.json:93-100](src/i18n/locales/en.json#L93-L100)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`, `src/screens/PosRootLayout.tsx`
@@ -7403,7 +7403,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-244 — i18n — grn.title "Goods Receipt Note" — warehouse jargon
 
-- **Status**: PARKED — verified in reiteration, tag `stg-244-2026-03-14`
+- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
 - **Priority**: P2
 - **Source**: Code audit — [en.json:292](src/i18n/locales/en.json#L292)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7495,7 +7495,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-248 — Menu — menuItem marginTop:16 creates 16px gap, but first item after sectionHeader has 16+4=20px gap inconsistency
 
-- **Status**: PARKED — verified in reiteration, tag `stg-248-2026-03-14`
+- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
 - **Priority**: P3
 - **Source**: Code audit — MenuScreen.tsx styles
 - **Scope**: `src/screens/MenuScreen.tsx` styles
@@ -8397,7 +8397,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-293 — Font sizes below 12px across Purchase/Stock screens
 
-- **Status**: PARKED — verified in reiteration, tag `stg-293-2026-03-14`
+- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
 - **Priority**: P2
 - **Source**: UI audit — multiple screens
 - **Scope**: `src/screens/InwardScreen.tsx`, `src/screens/PurchaseScreen.tsx`, `src/screens/BarcodeSheetScreen.tsx`
@@ -8416,7 +8416,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-294 — Font sizes below 12px across Sales/Closing screens
 
-- **Status**: PARKED — verified in reiteration, tag `stg-294-2026-03-14`
+- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
 - **Priority**: P2
 - **Source**: UI audit — multiple screens
 - **Scope**: `src/screens/BillDetailScreen.tsx`, `src/screens/SalesStatementScreen.tsx`, `src/screens/DailyClosingScreen.tsx`
@@ -8435,7 +8435,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-295 — Font sizes below 12px across Credit/Customer/Orders screens
 
-- **Status**: PARKED — verified in reiteration, tag `stg-295-2026-03-14`
+- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
 - **Priority**: P2
 - **Source**: UI audit — multiple screens
 - **Scope**: `src/screens/CreditScreen.tsx`, `src/screens/BulkPurchaseCreditScreen.tsx`, `src/screens/OrderDetailScreen.tsx`, `src/screens/ReturnScreen.tsx`, `src/screens/ReorderPoliciesScreen.tsx`
@@ -8454,7 +8454,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-296 — Font sizes below 12px in Chat/ForceUpdate screens and TabBadge
 
-- **Status**: PARKED — verified in reiteration, tag `stg-296-2026-03-14`
+- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
 - **Priority**: P2
 - **Source**: UI audit — multiple
 - **Scope**: `src/screens/ChatConversationScreen.tsx`, `src/screens/ChatListScreen.tsx`, `src/screens/ForceUpdateScreen.tsx`, `src/components/TabBadge.tsx`
@@ -8473,7 +8473,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-297 — SplitPaymentModal — font size 10px and missing accessibility labels
 
-- **Status**: PARKED — verified in reiteration, tag `stg-297-2026-03-14`
+- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
 - **Priority**: P2
 - **Source**: UI audit — [SplitPaymentModal.tsx](src/components/sell/SplitPaymentModal.tsx)
 - **Scope**: `src/components/sell/SplitPaymentModal.tsx`
@@ -8492,7 +8492,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-298 — Missing accessibility labels on icon-only buttons across all screens
 
-- **Status**: PARKED — verified in reiteration, tag `stg-298-2026-03-14`
+- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
 - **Priority**: P1
 - **Source**: UI audit — all screens
 - **Scope**: Multiple screens
@@ -8511,7 +8511,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-299 — Missing accessibility labels on form inputs across screens
 
-- **Status**: PARKED — verified in reiteration, tag `stg-299-2026-03-14`
+- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
 - **Priority**: P2
 - **Source**: UI audit — multiple screens
 - **Scope**: `src/screens/PaymentSetupScreen.tsx`, `src/screens/DailyClosingScreen.tsx`, `src/screens/ShiftScreen.tsx`, `src/screens/EnrollDeviceScreen.tsx`
@@ -8530,7 +8530,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-300 — GRNScreen — checkboxes missing accessibilityState
 
-- **Status**: PARKED — verified in reiteration, tag `stg-300-2026-03-14`
+- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
 - **Priority**: P2
 - **Source**: UI audit — [GRNScreen.tsx:414-425](src/screens/GRNScreen.tsx#L414)
 - **Scope**: `src/screens/GRNScreen.tsx`
@@ -9040,7 +9040,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-326 — EnrollDeviceScreen — required field indicators inconsistent
 
-- **Status**: PARKED — verified in reiteration, tag `stg-326-2026-03-14`
+- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
 - **Priority**: P2
 - **Source**: UI audit — [EnrollDeviceScreen.tsx:479, 496-497](src/screens/EnrollDeviceScreen.tsx#L479)
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`
