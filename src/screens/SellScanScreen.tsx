@@ -31,7 +31,9 @@ import { logger } from "../services/logger";
 
 import { AppText, ButtonText, PriceText, LabelText } from "../components/ui/AppText";
 import { useCartStore } from "../stores/cartStore";
-import type { CartItem, StockAdjustment } from "../stores/cartStore";
+import type { CartItem, StockAdjustment, CartCustomer } from "../stores/cartStore";
+// STG-134: Swipeable for swipe-to-delete gesture on cart items
+import { Swipeable } from "react-native-gesture-handler";
 import { useProductsStore } from "../stores/productsStore";
 import { formatMoney } from "../utils/money";
 import * as productsApi from "../services/api/productsApi";
@@ -360,12 +362,18 @@ type CartItemRowProps = {
   imageUrl?: string | null;
   // STG-138: Weight/unit label (e.g. "500g", "per KG")
   unitLabel?: string | null;
+  // STG-128: Batch/expiry info for perishable items
+  batchNumber?: string | null;
+  expiryDate?: string | null;
   onPressRow?: () => void;
   onAutoFocusConsumed?: (itemId: string) => void;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
   onUpdatePrice: (itemId: string, priceMinor: number) => void;
   onSaveDefaultPrice: (item: CartItem, priceMinor: number) => Promise<boolean>;
   onRemoveItem: (itemId: string) => void;
+  // STG-134: Swipe-to-delete
+  onSwipeDelete?: (itemId: string, itemName: string) => void;
+  swipeableRef?: (ref: Swipeable | null) => void;
 };
 
 function CartItemRow({
@@ -379,12 +387,16 @@ function CartItemRow({
   rowTestId,
   imageUrl,
   unitLabel,
+  batchNumber,
+  expiryDate,
   onPressRow,
   onAutoFocusConsumed,
   onUpdateQuantity,
   onUpdatePrice,
   onSaveDefaultPrice,
-  onRemoveItem
+  onRemoveItem,
+  onSwipeDelete,
+  swipeableRef,
 }: CartItemRowProps) {
   const { t } = useTranslation();
   const colors = useThemeColors();
@@ -840,6 +852,31 @@ function CartItemRow({
           <Text style={styles.priceErrorText}>Stock data unavailable — check connection</Text>
         </View>
       )}
+      {/* STG-128: Batch/expiry info for perishable items in cart */}
+      {(batchNumber || expiryDate) ? (
+        <View style={styles.batchExpiryRow}>
+          {batchNumber ? (
+            <Text style={styles.batchLabel}>Batch: {batchNumber}</Text>
+          ) : null}
+          {expiryDate ? (() => {
+            const expDate = new Date(expiryDate);
+            const now = new Date();
+            const daysUntilExpiry = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            const isExpired = daysUntilExpiry < 0;
+            const isExpiringSoon = daysUntilExpiry >= 0 && daysUntilExpiry <= 30;
+            return (
+              <Text style={[
+                styles.expiryLabel,
+                isExpired && styles.expiryLabelExpired,
+                isExpiringSoon && styles.expiryLabelSoon,
+              ]}>
+                {isExpired ? `Expired ${expiryDate}` : `Exp: ${expiryDate}`}
+                {isExpiringSoon && !isExpired ? ` (${daysUntilExpiry}d)` : ""}
+              </Text>
+            );
+          })() : null}
+        </View>
+      ) : null}
       {/* GL-RJ-007: Price resolution error warning */}
       {hasPriceError && (
         <View style={styles.priceErrorRow}>
@@ -852,11 +889,40 @@ function CartItemRow({
     </Pressable>
   );
 
-  return (
+  // STG-134: Swipe-to-delete wrapper
+  const renderSwipeDeleteAction = () => (
+    <View style={styles.swipeDeletePanel}>
+      <MaterialCommunityIcons name="trash-can-outline" size={22} color="#fff" />
+      <Text style={styles.swipeDeleteText}>Delete</Text>
+    </View>
+  );
+
+  const cartRow = (
     <Animated.View style={[styles.cartItemRow, isCompactRow && styles.cartItemRowCompact, rowStyle]}>
       {rowBody}
     </Animated.View>
   );
+
+  // STG-134: If swipe delete is enabled, wrap in Swipeable
+  if (onSwipeDelete && canEdit) {
+    return (
+      <Swipeable
+        ref={(ref) => swipeableRef?.(ref)}
+        renderRightActions={renderSwipeDeleteAction}
+        onSwipeableOpen={(direction) => {
+          if (direction === "right") {
+            onSwipeDelete(item.id, item.name);
+          }
+        }}
+        overshootRight={false}
+        friction={2}
+      >
+        {cartRow}
+      </Swipeable>
+    );
+  }
+
+  return cartRow;
 }
 
 export default function SellScanScreen({
@@ -1103,6 +1169,31 @@ export default function SellScanScreen({
   const [voiceRecordingDuration, setVoiceRecordingDuration] = useState(0);
   const voiceHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const voiceDurationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // STG-103: Customer info for credit sales
+  const cartCustomer = useCartStore((s) => s.customer);
+  const setCartCustomer = useCartStore((s) => s.setCustomer);
+  const [customerExpanded, setCustomerExpanded] = useState(false);
+  const [customerNameInput, setCustomerNameInput] = useState(cartCustomer?.name ?? "");
+  const [customerPhoneInput, setCustomerPhoneInput] = useState(cartCustomer?.phone ?? "");
+
+  // STG-112: Order note/memo
+  const cartNote = useCartStore((s) => s.note);
+  const setCartNote = useCartStore((s) => s.setNote);
+  const [noteExpanded, setNoteExpanded] = useState(false);
+  const [noteInput, setNoteInput] = useState(cartNote ?? "");
+
+  // STG-033: Quick-sell favorites (top 10 from catalog by recent usage)
+  const quickSellItems = useMemo(() => {
+    if (catalogItems.length === 0) return [];
+    // Take top 10 products — catalogItems are ordered by recent usage
+    return catalogItems.slice(0, 10);
+  }, [catalogItems]);
+
+  // STG-134: Swipeable refs for cart items
+  const swipeableRefs = useRef<Map<string, Swipeable | null>>(new Map());
+  const undoDeleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const resetCategoryAutoCollapse = useCallback(() => {
     // GL-CRIT-0090: Auto-collapse disabled (CATEGORY_AUTO_COLLAPSE_MS = 0)
@@ -2856,6 +2947,9 @@ export default function SellScanScreen({
       skuMatch.net_content_value && skuMatch.net_content_unit ? `${skuMatch.net_content_value}${skuMatch.net_content_unit}` :
       null
     ) : null;
+    // STG-128: Look up batch/expiry from catalog or cart metadata
+    const cartBatchNumber = item.batchNumber ?? skuMatch?.batch_number ?? null;
+    const cartExpiryDate = skuMatch?.expiry_date ?? null;
     return (
       <CartItemRow
         item={item}
@@ -2865,6 +2959,8 @@ export default function SellScanScreen({
         canEdit={canEditCart}
         imageUrl={cartImageUrl}
         unitLabel={cartUnitLabel}
+        batchNumber={cartBatchNumber}
+        expiryDate={cartExpiryDate}
         autoFocusPrice={item.id === autoFocusItemId}
         stockLimitPulse={stockLimitItemId === item.id ? stockLimitPulse : 0}
         rowTestId={rowTestId}
@@ -2874,6 +2970,8 @@ export default function SellScanScreen({
         onUpdatePrice={updatePrice}
         onSaveDefaultPrice={handleSaveDefaultPrice}
         onRemoveItem={handleRemoveItem}
+        onSwipeDelete={handleSwipeDelete}
+        swipeableRef={(ref) => swipeableRefs.current.set(item.id, ref)}
       />
     );
   };
@@ -3137,6 +3235,53 @@ export default function SellScanScreen({
     </View>
   );
 
+  // STG-134: Swipe-to-delete handler with undo toast
+  const handleSwipeDelete = useCallback((itemId: string, itemName: string) => {
+    // Close the swipeable first
+    swipeableRefs.current.get(itemId)?.close();
+    // Remove the item
+    removeItem(itemId);
+    // Show undo toast with 5-second timer
+    if (undoDeleteTimerRef.current) clearTimeout(undoDeleteTimerRef.current);
+    setPendingDeleteId(itemId);
+    showToast(`"${itemName}" removed — tap Undo to restore`);
+    undoDeleteTimerRef.current = setTimeout(() => {
+      setPendingDeleteId(null);
+      undoDeleteTimerRef.current = null;
+    }, 5000);
+  }, [removeItem]);
+
+  // STG-134: Undo delete
+  const handleUndoDelete = useCallback(() => {
+    if (pendingDeleteId) {
+      undoLastAction();
+      setPendingDeleteId(null);
+      if (undoDeleteTimerRef.current) {
+        clearTimeout(undoDeleteTimerRef.current);
+        undoDeleteTimerRef.current = null;
+      }
+    }
+  }, [pendingDeleteId, undoLastAction]);
+
+  // STG-103: Commit customer info to store
+  const commitCustomerInfo = useCallback(() => {
+    const name = customerNameInput.trim();
+    const phone = customerPhoneInput.trim();
+    if (name) {
+      setCartCustomer({ name, phone: phone || undefined });
+    } else {
+      setCartCustomer(null);
+    }
+    setCustomerExpanded(false);
+  }, [customerNameInput, customerPhoneInput, setCartCustomer]);
+
+  // STG-112: Commit note to store
+  const commitNote = useCallback(() => {
+    const trimmed = noteInput.trim();
+    setCartNote(trimmed || null);
+    setNoteExpanded(false);
+  }, [noteInput, setCartNote]);
+
   const handleCheckout = () => {
     // STG-340: Show toast identifying problematic item when checkout blocked by price error
     if (hasUnresolvedPriceError) {
@@ -3147,6 +3292,13 @@ export default function SellScanScreen({
       return;
     }
     if (!canPay) return;
+    // STG-103: Auto-commit customer info before checkout
+    const name = customerNameInput.trim();
+    const phone = customerPhoneInput.trim();
+    if (name) setCartCustomer({ name, phone: phone || undefined });
+    // STG-112: Auto-commit note before checkout
+    const trimmedNote = noteInput.trim();
+    if (trimmedNote) setCartNote(trimmedNote);
     // ISSUE-130: Cancel active voice recording before navigating to payment
     if (voiceButtonState === "recording") {
       void cancelVoiceRecording();
@@ -3462,6 +3614,30 @@ export default function SellScanScreen({
           </View>
         ) : null}
 
+        {/* STG-033: Quick-sell favorites strip */}
+        {quickSellItems.length > 0 && !addExpanded ? (
+          <View style={styles.quickSellSection}>
+            <Text style={styles.quickSellTitle}>{t("sell.quickSell", "Quick Sell")}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickSellScroll} keyboardShouldPersistTaps="handled">
+              {quickSellItems.map((qItem) => {
+                const resolved = resolveSkuPrice(qItem);
+                return (
+                  <Pressable
+                    key={qItem.barcode}
+                    accessibilityRole="button"
+                    style={styles.quickSellChip}
+                    onPress={() => { hapticFeedback.light(); handleAddSku(qItem); }}
+                    disabled={storeActive === false}
+                  >
+                    <Text style={styles.quickSellName} numberOfLines={1}>{qItem.name}</Text>
+                    <Text style={styles.quickSellPrice}>{formatMoney(resolved.priceMinor, qItem.currency ?? "INR")}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : null}
+
         {/* Product Grid */}
         <View style={styles.productGridContainer}>
           {/* SCALE-C3: FEFO sort toggle + Category filter label row */}
@@ -3730,6 +3906,27 @@ export default function SellScanScreen({
               ListFooterComponent={
                 items.length ? (
                   <View>
+                    {/* STG-131: "Also add" suggestions when cart has few items */}
+                    {items.length < 3 && quickSellItems.length > 0 ? (
+                      <View style={styles.alsoAddSection}>
+                        <Text style={styles.alsoAddTitle}>{t("sell.alsoAdd", "Also add")}</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.alsoAddScroll}>
+                          {quickSellItems
+                            .filter((qi) => !items.some((ci) => ci.barcode === qi.barcode))
+                            .slice(0, 5)
+                            .map((qi) => (
+                              <Pressable
+                                key={qi.barcode}
+                                accessibilityRole="button"
+                                style={styles.alsoAddChip}
+                                onPress={() => { hapticFeedback.light(); handleAddSku(qi); }}
+                              >
+                                <Text style={styles.alsoAddChipText} numberOfLines={1}>{qi.name}</Text>
+                              </Pressable>
+                            ))}
+                        </ScrollView>
+                      </View>
+                    ) : null}
                     {/* STG-098: "Add more items" link in cart */}
                     <Pressable
                       accessibilityRole="button"
@@ -3746,6 +3943,17 @@ export default function SellScanScreen({
                         <MaterialCommunityIcons name="barcode-scan" size={16} color={colors.textTertiary} />
                         <Text style={styles.cartGuidanceText}>{t("sell.cartGuidance", "Scan or search to add more items")}</Text>
                       </View>
+                    ) : null}
+                    {/* STG-134: Undo delete bar */}
+                    {pendingDeleteId ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        style={styles.undoDeleteBar}
+                        onPress={handleUndoDelete}
+                      >
+                        <MaterialCommunityIcons name="undo" size={16} color={colors.surface} />
+                        <Text style={styles.undoDeleteText}>{t("common.undo", "Undo")}</Text>
+                      </Pressable>
                     ) : null}
                     <View style={[styles.cartListFooterSpacer, isSmallScreen && styles.cartListFooterSpacerCompact]} />
                   </View>
@@ -3865,6 +4073,84 @@ export default function SellScanScreen({
                 >
                   <MaterialCommunityIcons name="tag-plus-outline" size={16} color={colors.primary} />
                   <Text style={styles.discountCollapsedText}>{t("sell.addDiscount", "Add Discount")}</Text>
+                </Pressable>
+              )}
+
+              {/* STG-103: Customer name/phone for credit sales */}
+              {customerExpanded || cartCustomer ? (
+                <View style={styles.customerSection}>
+                  <View style={styles.customerHeader}>
+                    <Text style={styles.customerTitle}>{t("sell.customer", "Customer")}</Text>
+                    {cartCustomer ? (
+                      <Pressable accessibilityRole="button" onPress={() => { setCartCustomer(null); setCustomerNameInput(""); setCustomerPhoneInput(""); setCustomerExpanded(false); }} hitSlop={8}>
+                        <MaterialCommunityIcons name="close-circle" size={16} color={colors.textTertiary} />
+                      </Pressable>
+                    ) : (
+                      <Pressable accessibilityRole="button" onPress={() => setCustomerExpanded(false)} hitSlop={8}>
+                        <MaterialCommunityIcons name="chevron-up" size={16} color={colors.textTertiary} />
+                      </Pressable>
+                    )}
+                  </View>
+                  <View style={styles.customerFields}>
+                    <TextInput
+                      style={styles.customerInput}
+                      value={customerNameInput}
+                      onChangeText={setCustomerNameInput}
+                      placeholder={t("sell.customerName", "Customer name")}
+                      placeholderTextColor={colors.textTertiary}
+                      onBlur={commitCustomerInfo}
+                    />
+                    <TextInput
+                      style={styles.customerInput}
+                      value={customerPhoneInput}
+                      onChangeText={setCustomerPhoneInput}
+                      placeholder={t("sell.customerPhone", "Phone (optional)")}
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="phone-pad"
+                      onBlur={commitCustomerInfo}
+                    />
+                  </View>
+                </View>
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.customerCollapsedLink}
+                  onPress={() => setCustomerExpanded(true)}
+                  hitSlop={8}
+                >
+                  <MaterialCommunityIcons name="account-plus-outline" size={16} color={colors.primary} />
+                  <Text style={styles.customerCollapsedText}>{t("sell.addCustomer", "Add Customer")}</Text>
+                </Pressable>
+              )}
+
+              {/* STG-112: Order note/memo */}
+              {noteExpanded || cartNote ? (
+                <View style={styles.noteSection}>
+                  <View style={styles.noteHeader}>
+                    <Text style={styles.noteTitle}>{t("sell.note", "Note")}</Text>
+                    <Text style={styles.noteCharCount}>{noteInput.length}/140</Text>
+                  </View>
+                  <TextInput
+                    style={styles.noteInput}
+                    value={noteInput}
+                    onChangeText={(v) => setNoteInput(v.slice(0, 140))}
+                    placeholder={t("sell.addNotePlaceholder", "Add order notes...")}
+                    placeholderTextColor={colors.textTertiary}
+                    multiline
+                    numberOfLines={2}
+                    maxLength={140}
+                    onBlur={commitNote}
+                  />
+                </View>
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.noteCollapsedLink}
+                  onPress={() => setNoteExpanded(true)}
+                  hitSlop={8}
+                >
+                  <MaterialCommunityIcons name="note-plus-outline" size={16} color={colors.primary} />
+                  <Text style={styles.noteCollapsedText}>{t("sell.addNote", "Add Note")}</Text>
                 </Pressable>
               )}
 
@@ -6273,5 +6559,213 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderRadius: 4,
     backgroundColor: colors.border,
     width: "60%",
+  },
+  // STG-033: Quick-sell favorites strip
+  quickSellSection: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  quickSellTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.textSecondary,
+    marginBottom: 6,
+  },
+  quickSellScroll: {
+    gap: 8,
+  },
+  quickSellChip: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 80,
+    alignItems: "center",
+  },
+  quickSellName: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: colors.textPrimary,
+    maxWidth: 100,
+  },
+  quickSellPrice: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.success,
+    marginTop: 2,
+  },
+  // STG-128: Batch/expiry info in cart items
+  batchExpiryRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingTop: 2,
+    paddingHorizontal: 4,
+  },
+  batchLabel: {
+    fontSize: 11,
+    color: colors.textTertiary,
+  },
+  expiryLabel: {
+    fontSize: 11,
+    color: colors.textTertiary,
+  },
+  expiryLabelExpired: {
+    color: colors.error,
+    fontWeight: "600",
+  },
+  expiryLabelSoon: {
+    color: colors.warning,
+    fontWeight: "600",
+  },
+  // STG-134: Swipe-to-delete panel
+  swipeDeletePanel: {
+    backgroundColor: colors.error,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 80,
+    borderRadius: 8,
+    marginVertical: 2,
+  },
+  swipeDeleteText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  // STG-134: Undo delete bar
+  undoDeleteBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: colors.textPrimary,
+    borderRadius: 8,
+    paddingVertical: 10,
+    marginHorizontal: 12,
+    marginTop: 8,
+  },
+  undoDeleteText: {
+    color: colors.surface,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  // STG-103: Customer info section
+  customerSection: {
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  customerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  customerTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.textSecondary,
+  },
+  customerFields: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  customerInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 13,
+    color: colors.textPrimary,
+    backgroundColor: colors.surfaceAlt,
+  },
+  customerCollapsedLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+    paddingVertical: 4,
+  },
+  customerCollapsedText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: "500",
+  },
+  // STG-112: Note/memo section
+  noteSection: {
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  noteHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  noteTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.textSecondary,
+  },
+  noteCharCount: {
+    fontSize: 11,
+    color: colors.textTertiary,
+  },
+  noteInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 13,
+    color: colors.textPrimary,
+    backgroundColor: colors.surfaceAlt,
+    minHeight: 40,
+    maxHeight: 60,
+    textAlignVertical: "top",
+  },
+  noteCollapsedLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 6,
+    paddingVertical: 4,
+  },
+  noteCollapsedText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: "500",
+  },
+  // STG-131: "Also add" suggestions
+  alsoAddSection: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  alsoAddTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.textTertiary,
+    marginBottom: 6,
+  },
+  alsoAddScroll: {
+    gap: 6,
+  },
+  alsoAddChip: {
+    backgroundColor: colors.primaryLight ?? colors.surfaceAlt,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: colors.primary + "30",
+  },
+  alsoAddChipText: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: "500",
+    maxWidth: 120,
   },
 }); }

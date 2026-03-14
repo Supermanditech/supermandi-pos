@@ -38,6 +38,15 @@ export interface CartDiscount {
   reason?: string;
 }
 
+// STG-103: Customer info for credit/due sales
+export interface CartCustomer {
+  name: string;
+  phone?: string;
+}
+
+// STG-112: Order note/memo
+export type CartNote = string;
+
 export type StockLimitReason = "out_of_stock" | "capped" | "unknown_stock";
 
 export type StockLimitEvent = {
@@ -68,6 +77,8 @@ const CART_LOCK_TIMEOUT_MS = 5 * 60 * 1000;
 interface CartState {
   items: CartItem[];
   discount: CartDiscount | null;
+  customer: CartCustomer | null; // STG-103: Customer for credit sales
+  note: CartNote | null; // STG-112: Order note/memo
   mutationHistory: CartMutation[];
   locked: boolean;
   lockedAt: number | null; // GL-CRIT-0011: Timestamp when cart was locked
@@ -98,6 +109,8 @@ interface CartState {
   unlockCart: () => void;
   autoUnlockIfExpired: () => boolean; // GL-CRIT-0011: Auto-unlock if lock timed out
   isCartLocked: () => boolean; // GL-CRIT-0011: Check if locked (respects timeout)
+  setCustomer: (customer: CartCustomer | null) => void; // STG-103
+  setNote: (note: CartNote | null) => void; // STG-112
   resetForStore: () => void;
   normalizeItemsToStock: () => { changed: boolean; adjustments: StockAdjustment[] }; // GL-CRIT-0014: Return adjustments for notification
   clearLastStockAdjustments: () => void; // GL-CRIT-0014: Clear after UI has shown notification
@@ -272,6 +285,8 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
       discount: null,
+      customer: null, // STG-103
+      note: null, // STG-112
       mutationHistory: [],
       locked: false,
       lockedAt: null, // GL-CRIT-0011: Track when cart was locked
@@ -620,6 +635,8 @@ export const useCartStore = create<CartState>()(
     set({
       items: [],
       discount: null,
+      customer: null, // STG-103: Clear customer on cart clear
+      note: null, // STG-112: Clear note on cart clear
       subtotal: 0,
       itemDiscountAmount: 0,
       cartDiscountAmount: 0,
@@ -737,10 +754,23 @@ export const useCartStore = create<CartState>()(
     return true;
   },
 
+  // STG-103: Set customer info for credit sales
+  setCustomer: (customer) => {
+    set({ customer });
+  },
+
+  // STG-112: Set order note/memo (max 140 chars)
+  setNote: (note) => {
+    const trimmed = note ? note.slice(0, 140) : null;
+    set({ note: trimmed || null });
+  },
+
   resetForStore: () => {
     set({
       items: [],
       discount: null,
+      customer: null, // STG-103
+      note: null, // STG-112
       mutationHistory: [],
       locked: false,
       lockedAt: null, // GL-CRIT-0011
@@ -804,6 +834,8 @@ export const useCartStore = create<CartState>()(
       partialize: (state) => ({
         items: state.items,
         discount: state.discount,
+        customer: state.customer, // STG-103: Persist customer info
+        note: state.note, // STG-112: Persist order note
         locked: state.locked,
         lockedAt: state.lockedAt  // GL-CRIT-0011: Persist for timeout-based auto-unlock
       }),
