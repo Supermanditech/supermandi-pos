@@ -40,7 +40,7 @@ export default function ChatConversationScreen({
   // STG-452: Load device ID on mount if currentUserId is empty
   useEffect(() => {
     if (!propUserId) {
-      getDeviceIdFromSession().then(id => { if (id) setCurrentUserId(id); });
+      getDeviceIdFromSession().then(id => { if (id) setCurrentUserId(id); }).catch(() => {});
     }
   }, [propUserId]);
 

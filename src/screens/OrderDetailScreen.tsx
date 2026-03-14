@@ -90,7 +90,7 @@ export default function OrderDetailScreen({
 
   // Load store ID on mount
   useEffect(() => {
-    getDeviceStoreId().then(setStoreId);
+    getDeviceStoreId().then(setStoreId).catch(() => {});
   }, []);
 
   // Load order data

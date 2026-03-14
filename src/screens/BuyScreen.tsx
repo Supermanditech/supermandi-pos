@@ -166,7 +166,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
 
   // Load store ID and features on mount
   useEffect(() => {
-    getDeviceStoreId().then(setStoreId);
+    getDeviceStoreId().then(setStoreId).catch(() => {});
     // GL-AUD-007: Fetch BNPL status for badge
     fetchUiStatus().then((status) => {
       setBnplEnabled(status.features?.bnplEnabled ?? false);
@@ -201,7 +201,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
   // T-146: Subscribe to network status changes
   useEffect(() => {
     // Check initial state
-    isOnline().then((online) => setIsOffline(!online));
+    isOnline().then((online) => setIsOffline(!online)).catch(() => {});
     // Subscribe to changes
     const unsubscribe = subscribeNetworkStatus((online) => {
       setIsOffline(!online);

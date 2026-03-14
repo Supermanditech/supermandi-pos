@@ -58,7 +58,7 @@ export default function ReorderSettingsScreen({
 
   // Load store ID on mount
   useEffect(() => {
-    getDeviceStoreId().then(setStoreId);
+    getDeviceStoreId().then(setStoreId).catch(() => {});
   }, []);
 
   // Load settings

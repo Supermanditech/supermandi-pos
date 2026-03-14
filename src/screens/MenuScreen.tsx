@@ -263,7 +263,7 @@ export default function MenuScreen() {
   useEffect(() => {
     void loadDailySummary();
     // POS-PRINT-002: Check printer connectivity on menu mount
-    printerService.checkConnectivity().then(setPrinterStatus);
+    printerService.checkConnectivity().then(setPrinterStatus).catch(() => {});
   }, []);
 
   // POS-PRINT-002: Test printer handler

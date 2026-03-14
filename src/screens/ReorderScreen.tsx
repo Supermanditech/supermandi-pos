@@ -381,7 +381,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
 
   // Load store ID on mount
   useEffect(() => {
-    getDeviceStoreId().then(setStoreId);
+    getDeviceStoreId().then(setStoreId).catch(() => {});
   }, []);
 
   // STG-429: Load settings to check if auto-reorder is enabled

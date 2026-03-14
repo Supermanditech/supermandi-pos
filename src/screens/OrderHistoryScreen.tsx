@@ -200,7 +200,7 @@ export default function OrderHistoryScreen({
 
   // Load store ID on mount
   useEffect(() => {
-    getDeviceStoreId().then(setStoreId);
+    getDeviceStoreId().then(setStoreId).catch(() => {});
   }, []);
 
   // Get status filter based on filter option
