@@ -468,7 +468,7 @@ export default function GRNScreen({
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           {onBack && (
-            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityLabel="Go back" accessibilityRole="button" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
@@ -492,7 +492,7 @@ export default function GRNScreen({
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           {onBack && (
-            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityLabel="Go back" accessibilityRole="button" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
@@ -522,7 +522,7 @@ export default function GRNScreen({
       {/* Header */}
       <View style={styles.header}>
         {onBack && (
-          <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
+          <Pressable accessibilityLabel="Go back" accessibilityRole="button" style={styles.backButton} onPress={onBack}>
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
@@ -582,7 +582,9 @@ export default function GRNScreen({
         <View style={styles.quickActions}>
           {/* GO-LIVE-248: Bulk mode toggle */}
           <Pressable
-            accessibilityRole="button"
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: bulkMode }}
+            accessibilityLabel="Toggle bulk selection mode"
             style={[styles.quickAction, bulkMode && styles.quickActionActive]}
             onPress={handleToggleBulkMode}
           >
