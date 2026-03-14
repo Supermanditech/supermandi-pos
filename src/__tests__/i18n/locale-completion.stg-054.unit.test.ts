@@ -76,6 +76,7 @@ describe("STG-054: en/hi locale key parity", () => {
       "grn.autoReorder",
       // Technical terms / brand names / placeholders that are intentionally the same
       "components.sellTile.gst",        // "GST {{rate}}%" — universal abbreviation
+      "components.sellTile.discountOff", // "-{{percent}}%" — universal format string
       "customerList.emailPlaceholder",   // "email@example.com" — placeholder format
       "enroll.wifi",                     // "WiFi" — brand/technical term
       "menu.switchStaffSubtitle",        // "{{name}} ({{role}})" — interpolation-only

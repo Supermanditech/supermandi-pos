@@ -23,6 +23,8 @@ export const POS_MESSAGES = {
   printerMissing: "Printer not connected. You can still bill; printing will be available once connected.",
   scannerMissing: "Scanner not ready. You can still type barcodes.",
   scanStorm: "Too many scans. Pause for a moment.",
+  duplicateScan: "Item already scanned — use +/- to adjust quantity.",
+  scanStormCooldown: "Scanner paused briefly — too many rapid scans.",
   digitiseSaved: "Saved. You can scan the next product.",
   pricePrompt: "New item found. Enter the price to add it to cart.",
   newItemWarning: "⚠ New item detected — confirm stock later",

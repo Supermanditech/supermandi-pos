@@ -288,7 +288,22 @@
     "priceNotSet": "कीमत निर्धारित नहीं",
     "expiringFirst": "जल्द समाप्त",
     "expiringFirstOn": "जल्द समाप्त ON",
-    "tapForDetails": "विवरण के लिए टैप करें"
+    "tapForDetails": "विवरण के लिए टैप करें",
+    "searchOrScan": "बारकोड स्कैन करें या प्रोडक्ट खोजें",
+    "noSearchResults": "कोई प्रोडक्ट नहीं मिला",
+    "tryDifferentSearch": "दूसरा नाम खोजें या बारकोड स्कैन करें।",
+    "emptyStoreTitle": "अपनी दुकान में प्रोडक्ट जोड़ें!",
+    "emptyStoreHint": "प्रोडक्ट बारकोड स्कैन करें या खोजें।",
+    "addMoreItems": "+ और आइटम जोड़ें",
+    "addDiscount": "छूट जोड़ें",
+    "discountApplied": "लागू",
+    "flat": "₹ फ्लैट",
+    "discountPctPlaceholder": "% दर्ज करें",
+    "discountFlatPlaceholder": "₹ दर्ज करें",
+    "clearCartTitle": "कार्ट साफ़ करें",
+    "clearCartConfirm": "क्या आप सभी आइटम हटाना चाहते हैं?",
+    "cartCleared": "कार्ट साफ़",
+    "cartClearedUndo": "सभी आइटम हटा दिए गए।"
   },
   "limitedMode": {
     "badge": "सीमित मोड",

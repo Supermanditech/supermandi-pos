@@ -63,16 +63,13 @@ export type ScanRuntime = {
 };
 
 // GL-CRIT-0045: Unified duplicate detection window (consolidated from two overlapping windows)
-// ISSUE-MICRO-073: Increased from 1000ms to 2000ms for low-end phones with slow processing.
-// On budget Android devices (Redmi etc.), barcode scanner callbacks can fire twice within 1000ms
-// due to slow JS thread processing, causing duplicate cart additions.
-const DUPLICATE_WINDOW_MS = 2000;
+// STG-335: Reduced from 2000ms to 1000ms — cashiers scan same item for multiples frequently.
+// Toast nudges user to use +/- stepper instead.
+const DUPLICATE_WINDOW_MS = 1000;
 // GL-CRIT-0024: Per-barcode storm detection to allow rapid scanning of different items
-// ISSUE-MICRO-074: Tuned thresholds — raised max from 5→8 to reduce false positives on
-// budget phones where scanner callbacks fire multiple times per physical scan.
-// Reduced cooldown from 1500→1000ms for faster recovery.
+// STG-336: Raised max from 8→12 for high-volume stores; added user-visible cooldown toast.
 const STORM_WINDOW_MS = 2000;
-const STORM_MAX_SCANS_PER_BARCODE = 8;
+const STORM_MAX_SCANS_PER_BARCODE = 12;
 const STORM_COOLDOWN_MS = 1000;
 let runtime: ScanRuntime = { intent: "SELL", mode: "SELL" };
 let lastScan: { key: string; ts: number } | null = null;
@@ -111,10 +108,13 @@ function notify(notice: ScanNotice | null): void {
 }
 
 // GL-CRIT-0045: Unified duplicate detection - checks barcode+intent+mode
+// STG-335: Reduced window + toast feedback for duplicate scans
 function isDuplicate(barcode: string, intent: ScanIntent, mode: ScanMode): boolean {
   const key = `${intent}:${mode}:${barcode}`;
   const now = Date.now();
   if (lastScan && lastScan.key === key && now - lastScan.ts < DUPLICATE_WINDOW_MS) {
+    // STG-335: Inform cashier to use qty stepper instead of re-scanning
+    notify({ tone: "info", message: POS_MESSAGES.duplicateScan ?? "Item already scanned — use +/- to adjust quantity" });
     return true;
   }
   lastScan = { key, ts: now };
@@ -144,7 +144,8 @@ function isScanStorm(barcode: string): boolean {
     stormUntilByBarcode.set(key, now + STORM_COOLDOWN_MS);
     if (now - lastStormNotice > STORM_COOLDOWN_MS) {
       lastStormNotice = now;
-      notify({ tone: "warning", message: POS_MESSAGES.scanStorm });
+      // STG-336: User-visible cooldown feedback instead of silent drop
+      notify({ tone: "warning", message: POS_MESSAGES.scanStormCooldown ?? POS_MESSAGES.scanStorm });
     }
     return true;
   }

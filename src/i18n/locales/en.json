@@ -288,7 +288,22 @@
     "priceNotSet": "Price not set",
     "expiringFirst": "Expiring Soon",
     "expiringFirstOn": "Expiring Soon ON",
-    "tapForDetails": "Tap for details"
+    "tapForDetails": "Tap for details",
+    "searchOrScan": "Scan barcode or search products",
+    "noSearchResults": "No products found",
+    "tryDifferentSearch": "Try a different search term or scan the barcode.",
+    "emptyStoreTitle": "Let's stock your store!",
+    "emptyStoreHint": "Scan a product barcode or search to add your first items.",
+    "addMoreItems": "+ Add more items",
+    "addDiscount": "Add Discount",
+    "discountApplied": "Applied",
+    "flat": "₹ Flat",
+    "discountPctPlaceholder": "Enter %",
+    "discountFlatPlaceholder": "Enter ₹",
+    "clearCartTitle": "Clear Cart",
+    "clearCartConfirm": "Are you sure you want to remove all items?",
+    "cartCleared": "Cart Cleared",
+    "cartClearedUndo": "All items have been removed."
   },
   "limitedMode": {
     "badge": "LIMITED MODE",

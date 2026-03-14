@@ -164,10 +164,74 @@ These files are from the pre-Cloud Run VM era. They remain in the repo for histo
 
 ---
 
+## MANDATORY AUTO-CONTINUATION PROTOCOL
+
+> **This section overrides all other session-start behavior. Claude MUST follow this protocol at the start of EVERY session — whether triggered by compaction, layer completion, manual restart, or any other reason — until all 492 tickets across all 18 layers are implemented.**
+
+### On Every Session Start (No Exceptions):
+
+1. **Read machine state**: `cat RELEASES/IMPLEMENTATION_STATE.json` — determine `current_layer`, `tickets_done`, `tickets_remaining`, and `status`
+2. **Run fix-guard**: `node scripts/fix-guard.js session-start` then `node scripts/fix-guard.js check`
+3. **Check git state**: `git log --oneline -5` and `git status`
+4. **Read ticket registry**: `RELEASES/STAGING_TICKETS.md` — find the next OPEN ticket in the current layer
+5. **Resume implementation immediately** — do NOT wait for operator input, do NOT ask questions, do NOT summarize prior work
+
+### Continuation Rules:
+
+- **If `status` = "READY_FOR_NEXT_LAYER"**: Start the next PENDING layer. Read the layer's ticket list from STAGING_TICKETS.md and begin with the first OPEN ticket.
+- **If `status` = "IN_PROGRESS"**: Resume from `current_ticket` — check if it's partially done (check git diff), complete it, then continue to next ticket.
+- **If `status` = "BLOCKED"**: Read the `blocked_reason` field, attempt to resolve, or skip to next non-blocked ticket.
+- **If `tickets_remaining` = 0**: All done. Report completion to operator and stop.
+
+### After Each Commit Batch:
+
+1. Update `RELEASES/IMPLEMENTATION_STATE.json`:
+   - Increment `tickets_done` by the number of tickets committed
+   - Decrement `tickets_remaining`
+   - Update `current_layer` and layer status if layer is complete
+   - Set `last_commit_sha` to HEAD
+   - Set `last_updated` to today's date
+   - Increment `version`
+2. Continue to next ticket — do NOT stop unless blocked or context limit reached
+
+### Before Session Ends (Compaction Warning):
+
+If you detect you're running low on context:
+1. Commit any in-progress work
+2. Update IMPLEMENTATION_STATE.json with current position
+3. The next session will automatically pick up from this state
+
+### System-Level Auto-Trigger:
+
+The system automatically restarts Claude sessions until `tickets_remaining` hits 0. No manual intervention required after initial launch.
+
+**Auto-start options (pick one):**
+
+1. **VS Code auto-run** (recommended): The `.vscode/tasks.json` has `"runOn": "folderOpen"` — opening this project in VS Code automatically starts the loop. Accept the "Run automatic task" prompt once.
+
+2. **Terminal one-liner**: Run once, walks away:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts/auto-implement.ps1
+   ```
+
+3. **Windows Task Scheduler** (survives reboots): Create a scheduled task that runs `auto-implement.ps1` at logon:
+   ```powershell
+   $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File C:\supermandi-pos\scripts\auto-implement.ps1"
+   $trigger = New-ScheduledTaskTrigger -AtLogOn
+   Register-ScheduledTask -TaskName "SuperMandi-AutoImplement" -Action $action -Trigger $trigger -Description "Auto-implement staging tickets"
+   ```
+
+**How it works**: `scripts/auto-implement.ps1` runs an infinite `while($true)` loop → launches `claude --yes --max-turns 200 -p <prompt>` → Claude reads `IMPLEMENTATION_STATE.json` → implements tickets → updates state → session ends → script reads state → if `tickets_remaining > 0` → launches next session → repeat until 0.
+
+### Key Principle:
+**The system never stops until all 492 tickets are done.** Claude implements as many tickets as possible per session. When context fills up, it saves state and exits. The wrapper script immediately launches the next session. Zero human intervention between sessions.
+
+---
+
 ## Session Mode
 
 ### Mode A: Pre-Staging (CURRENT)
-- **Session start**: Claude MUST run `node scripts/fix-guard.js session-start` FIRST
+- **Session start**: Follow AUTO-CONTINUATION PROTOCOL above FIRST
 - Claude starts independently — no operator paste required
 - Claude can work on staging tickets directly
 - No deploy risk — but branches + PRs still required (Claude self-merges)

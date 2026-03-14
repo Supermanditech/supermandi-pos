@@ -4,9 +4,12 @@ import { logger } from "./logger";
 type HidScanHandler = (value: string) => void;
 
 const HID_MIN_LENGTH = 4;
-const HID_MAX_INTERVAL_MS = 80;
+// STG-371: Increased from 80→150ms for budget HID scanners (e.g. cheap USB barcode readers)
+// that send characters with 100-150ms intervals between keystrokes.
+const HID_MAX_INTERVAL_MS = 150;
 const HID_MAX_DURATION_MS = 1200;
-const HID_IDLE_TIMEOUT_MS = 120;
+// STG-371: Increased idle timeout from 120→200ms to match higher max interval
+const HID_IDLE_TIMEOUT_MS = 200;
 const HID_TERMINATORS = new Set(["Enter", "Tab", "Return", "NumpadEnter", "\n", "\t", "\r"]);
 const HID_NEWLINE_REGEX = /[\r\n]+/g;
 
@@ -63,6 +66,11 @@ const logScanComplete = (value: string) => {
 const logScanIgnored = () => {
   logger.debug("HID", "scan_ignored");
 };
+
+// STG-337: Expose HID scan-in-progress state to suppress search flicker
+export function isHidScanInProgress(): boolean {
+  return hidScanStarted && hidBuffer.length > 0;
+}
 
 export function resetHidBuffer(): void {
   hidBuffer = "";

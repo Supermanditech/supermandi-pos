@@ -1028,8 +1028,8 @@
     {
       "ticket": "STG-234",
       "file": "src/i18n/locales/en.json",
-      "start_line": 453,
-      "end_line": 453,
+      "start_line": 468,
+      "end_line": 468,
       "checksum": "1e47e4c8999c08bd",
       "description": "Rewrite storeInactive: remove Superadmin reference",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1061,13 +1061,13 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-13T21:34:09.881Z"
+      "line_shifted_at": "2026-03-14T00:02:19.597Z"
     },
     {
       "ticket": "STG-235",
       "file": "src/i18n/locales/en.json",
-      "start_line": 454,
-      "end_line": 454,
+      "start_line": 195,
+      "end_line": 195,
       "checksum": "d30807f34f029974",
       "description": "Rewrite deviceInactive: remove Superadmin reference",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1099,13 +1099,13 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-13T21:34:09.885Z"
+      "line_shifted_at": "2026-03-14T00:02:19.601Z"
     },
     {
       "ticket": "STG-236",
       "file": "src/i18n/locales/en.json",
-      "start_line": 464,
-      "end_line": 464,
+      "start_line": 479,
+      "end_line": 479,
       "checksum": "a39b903d8b976262",
       "description": "Rewrite deviceAlreadyEnrolled: remove Superadmin reference",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1137,13 +1137,13 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-13T21:34:09.889Z"
+      "line_shifted_at": "2026-03-14T00:02:19.603Z"
     },
     {
       "ticket": "STG-237",
       "file": "src/i18n/locales/en.json",
-      "start_line": 477,
-      "end_line": 477,
+      "start_line": 492,
+      "end_line": 492,
       "checksum": "246c5ceb9054a067",
       "description": "Rewrite sessionExpired: re-enter staff PIN instead of login again",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1175,7 +1175,7 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-13T21:34:09.894Z"
+      "line_shifted_at": "2026-03-14T00:02:19.606Z"
     },
     {
       "ticket": "STG-238",
@@ -1366,8 +1366,8 @@
     {
       "ticket": "STG-241",
       "file": "src/i18n/locales/hi.json",
-      "start_line": 322,
-      "end_line": 322,
+      "start_line": 337,
+      "end_line": 337,
       "checksum": "1976e153e9dd88ec",
       "description": "Simplified dismissSuggestedFrom Hindi template",
       "test_file": "src/__tests__/i18n/locale-keys.stg-239-244.unit.test.ts",
@@ -1399,13 +1399,13 @@
         "regression_check": "39 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-13T21:34:09.902Z"
+      "line_shifted_at": "2026-03-14T00:02:19.612Z"
     },
     {
       "ticket": "STG-242",
       "file": "src/i18n/locales/en.json",
-      "start_line": 682,
-      "end_line": 683,
+      "start_line": 697,
+      "end_line": 698,
       "checksum": "cdd357376fc56d6f",
       "description": "Explain KYC/UTR/EMI jargon in English locale",
       "test_file": "src/__tests__/i18n/locale-keys.stg-239-244.unit.test.ts",
@@ -1437,7 +1437,7 @@
         "regression_check": "39 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-13T21:34:09.908Z"
+      "line_shifted_at": "2026-03-14T00:02:19.615Z"
     },
     {
       "ticket": "STG-243",
@@ -1480,8 +1480,8 @@
     {
       "ticket": "STG-244",
       "file": "src/i18n/locales/en.json",
-      "start_line": 363,
-      "end_line": 363,
+      "start_line": 378,
+      "end_line": 378,
       "checksum": "561a81e811fc7281",
       "description": "Goods Receipt Note renamed to Stock Received",
       "test_file": "src/__tests__/i18n/locale-keys.stg-239-244.unit.test.ts",
@@ -1513,7 +1513,7 @@
         "regression_check": "39 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-13T21:34:09.912Z"
+      "line_shifted_at": "2026-03-14T00:02:19.618Z"
     },
     {
       "ticket": "STG-279",
@@ -2568,11 +2568,11 @@
     {
       "ticket": "STG-054",
       "file": "src/i18n/locales/hi.json",
-      "description": "Hindi translation completion — 100% en/hi key parity (updated Layer 5: SuperAdmin→store admin)",
+      "description": "Hindi translation completion — 100% en/hi key parity (updated Layer 7: sell i18n keys)",
       "test_file": "src/__tests__/i18n/locale-completion.stg-054.unit.test.ts",
       "start_line": 1,
-      "end_line": 1319,
-      "checksum": "8910cff56502e578",
+      "end_line": 1334,
+      "checksum": "72e40e4513a3b60e",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": "N/A",

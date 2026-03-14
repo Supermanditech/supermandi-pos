@@ -12,6 +12,7 @@ import {
   Modal,
   PanResponder,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -56,6 +57,8 @@ import {
   feedHidText,
   submitHidBuffer,
   wasHidCommitRecent,
+  resetHidTracking,
+  isHidScanInProgress,
 } from "../services/hidScannerService";
 import { theme, useThemeColors } from "../theme";
 import { CategoryRail, DEMO_CATEGORIES, fmcgCategoryToItem, type CategoryItem } from "../components/sell/CategoryRail";
@@ -281,7 +284,8 @@ async function syncProductsToOffline(query?: string, sort?: "fefo" | "default"):
 // GL-CRIT-0089: Use centralized pagination constant
 // GL-CRIT-0089: Use centralized pagination constant
 const PAGE_SIZE = PRODUCTS_PAGE_SIZE;
-const NUM_COLUMNS = 2;
+// STG-225: Dynamic columns based on screen width (min 2, ~180dp per column)
+const getNumColumns = (screenWidth: number): number => Math.max(2, Math.floor(screenWidth / 180));
 // GL-CRIT-0090: Disabled auto-collapse as it was confusing to users.
 // Category rail stays expanded until user manually collapses (back button or tap outside).
 const CATEGORY_AUTO_COLLAPSE_MS = 0; // 0 = disabled
@@ -289,8 +293,9 @@ const SCAN_SEGMENT_DOCKED_WIDTH = 64;
 const PRICE_AUTO_SAVE_DELAY_MS = 300;
 const DISCOUNT_AUTO_APPLY_DELAY_MS = 300;
 // DEV-061: Adjusted ratios for better visibility on handhelds
-const CART_SHEET_COLLAPSED_RATIO = 0.55;
-const CART_SHEET_COLLAPSED_RATIO_SMALL = 0.75;
+// STG-220: Reduced from 0.55 to 0.42 — leaves ~58% for product grid
+const CART_SHEET_COLLAPSED_RATIO = 0.42;
+const CART_SHEET_COLLAPSED_RATIO_SMALL = 0.60;
 const CART_SHEET_EXPANDED_RATIO = 0.95;
 const CART_SHEET_SNAP_DURATION_MS = 180;
 const CART_LIST_FOOTER_SPACER = 100;
@@ -790,6 +795,8 @@ export default function SellScanScreen({
   const navigation = useNavigation<Nav>();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const isSmallScreen = screenWidth <= SMALL_SCREEN_WIDTH || screenHeight <= SMALL_SCREEN_HEIGHT;
+  // STG-225: Dynamic columns for responsive grid
+  const numColumns = useMemo(() => getNumColumns(screenWidth), [screenWidth]);
   const insets = useSafeAreaInsets();
   const products = useProductsStore((state) => state.products);
   const loadProducts = useProductsStore((state) => state.loadProducts);
@@ -917,6 +924,12 @@ export default function SellScanScreen({
     };
   }, []);
 
+  // STG-372: Reset HID scanner buffer on mount/unmount to prevent stale barcode data
+  useEffect(() => {
+    resetHidTracking();
+    return () => { resetHidTracking(); };
+  }, []);
+
   useEffect(() => {
     if (products.length === 0) {
       void loadProducts();
@@ -953,6 +966,8 @@ export default function SellScanScreen({
   const [cartExpanded, setCartExpanded] = useState(false);
   const [discountType, setDiscountType] = useState<DiscountType>("percentage");
   const [discountValue, setDiscountValue] = useState("");
+  // STG-140: Discount section collapsed by default; auto-expand when discount is applied
+  const [discountExpanded, setDiscountExpanded] = useState(false);
   const [stockRefreshTick, setStockRefreshTick] = useState(0);
   const [sellOnboardingPrice, setSellOnboardingPrice] = useState("");
   const [sellOnboardingPurchasePrice, setSellOnboardingPurchasePrice] = useState("");
@@ -1282,8 +1297,8 @@ export default function SellScanScreen({
     }
   }, []);
 
-  // T-128: Manual barcode entry state
-  const [manualBarcode, setManualBarcode] = useState("");
+  // STG-050: Pull-to-refresh state
+  const [catalogRefreshing, setCatalogRefreshing] = useState(false);
   // T-129: Search debounce ref
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addExpandedBeforeCartRef = useRef(false);
@@ -1715,14 +1730,6 @@ export default function SellScanScreen({
     }
   }, []);
 
-  // T-128: Manual barcode entry fallback handler
-  const handleManualBarcodeSubmit = useCallback(() => {
-    const trimmed = manualBarcode.trim();
-    if (!trimmed) return;
-    void onBarcodeScanned(trimmed, undefined, "keyboard");
-    setManualBarcode("");
-  }, [manualBarcode]);
-
   const handleScanSubmit = (event?: { nativeEvent: { text: string } }) => {
     const raw = event?.nativeEvent?.text ?? addQuery;
     const trimmed = raw.trim();
@@ -1840,6 +1847,17 @@ export default function SellScanScreen({
     }
   }, [catalogHasMore, catalogLoading, catalogPage, fefoSort]);
 
+  // STG-050: Pull-to-refresh handler
+  const handlePullToRefresh = useCallback(async () => {
+    setCatalogRefreshing(true);
+    try {
+      await syncProductsToOffline();
+      await loadCatalog(true);
+    } finally {
+      setCatalogRefreshing(false);
+    }
+  }, [loadCatalog]);
+
   const loadAddResults = useCallback(async (reset: boolean) => {
     if (addLoading) return;
     if (!addHasMore && !reset) return;
@@ -1944,6 +1962,16 @@ export default function SellScanScreen({
     if (!addExpanded) return;
     if (lastAddQueryRef.current === addQueryNormalized) return;
     lastAddQueryRef.current = addQueryNormalized;
+    // STG-337: Suppress search while HID scanner is actively sending characters
+    // This prevents intermediate barcode prefixes from causing search result flicker
+    if (isHidScanInProgress()) return;
+    // STG-333: Skip debounce for barcode-like input — resolve immediately
+    // STG-334: Stricter heuristic — only EAN-8(8), UPC-A(12), EAN-13(13), ITF-14(14) digit counts
+    // Excludes 10-digit strings (phone numbers) and other non-barcode lengths
+    const digitCount = addQueryNormalized.length;
+    const isAllDigits = /^\d+$/.test(addQueryNormalized);
+    const isBarcodeInput = isAllDigits && (digitCount === 8 || digitCount === 12 || digitCount === 13 || digitCount === 14);
+    const debounceMs = isBarcodeInput ? 0 : 300;
     const timer = setTimeout(() => {
       setAddHasMore(true);
       setAddPage(0);
@@ -1952,7 +1980,7 @@ export default function SellScanScreen({
       if (addQueryNormalized.length >= 2) {
         void saveSearchTerm(addQueryNormalized);
       }
-    }, 300); // T-129: 300ms search debounce (was 200ms)
+    }, debounceMs); // STG-333: 0ms for barcodes, 300ms for text search
 
     return () => clearTimeout(timer);
   }, [addExpanded, addQueryNormalized, loadAddResults]);
@@ -2755,7 +2783,7 @@ export default function SellScanScreen({
           }}
           onKeyPress={handleAddKeyPress}
           onSubmitEditing={handleAddSubmitEditing}
-          placeholder={t('sell.searchProducts')}
+          placeholder={t('sell.searchOrScan', 'Scan barcode or search products')}
           placeholderTextColor={colors.textTertiary}
           testID="sell-search-input"
           accessibilityLabel="Search products"
@@ -2823,44 +2851,7 @@ export default function SellScanScreen({
   const searchHeader = (
     <View style={styles.searchHeader}>
       {renderSearchBar(addExpanded ? "expanded" : "collapsed")}
-      {/* T-128: Manual barcode entry fallback */}
-      {!addExpanded && (
-        <View style={styles.manualBarcodeRow}>
-          <MaterialCommunityIcons
-            name="barcode-scan"
-            size={18}
-            color={colors.textTertiary}
-          />
-          <TextInput
-            style={styles.manualBarcodeInput}
-            value={manualBarcode}
-            onChangeText={setManualBarcode}
-            placeholder="Enter barcode manually"
-            placeholderTextColor={colors.textTertiary}
-            keyboardType="numeric"
-            returnKeyType="done"
-            onSubmitEditing={handleManualBarcodeSubmit}
-            editable={storeActive !== false}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-          {manualBarcode.length > 0 && (
-            <Pressable
-              accessibilityRole="button"
-              onPress={handleManualBarcodeSubmit}
-              hitSlop={8}
-              style={styles.manualBarcodeSubmit}
-              accessibilityLabel="Submit barcode"
-            >
-              <MaterialCommunityIcons
-                name="arrow-right-circle"
-                size={22}
-                color={colors.primary}
-              />
-            </Pressable>
-          )}
-        </View>
-      )}
+      {/* STG-331: Manual barcode field removed — unified into main search bar (STG-008) */}
       {/* T-137: Autocomplete suggestions dropdown */}
       {autocompleteVisible && addExpanded && addQuery.trim().length >= 2 && (
         <View style={styles.autocompleteDropdown}>
@@ -2932,10 +2923,21 @@ export default function SellScanScreen({
           contentContainerStyle={styles.searchPanelListContent}
           ListEmptyComponent={
             !addLoading ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>
-                  {addQuery.trim() ? t('common.noResults') : t('sell.noRecentProducts')}
+              <View style={styles.emptyStateIllustration}>
+                {/* STG-223: Illustrated empty state for search results */}
+                <MaterialCommunityIcons
+                  name={addQuery.trim() ? "magnify-close" : "history"}
+                  size={36}
+                  color={colors.textTertiary}
+                />
+                <Text style={styles.emptyStateTitle}>
+                  {addQuery.trim() ? t('sell.noSearchResults', 'No products found') : t('sell.noRecentProducts')}
                 </Text>
+                {addQuery.trim() ? (
+                  <Text style={styles.emptyStateSubtitle}>
+                    {t('sell.tryDifferentSearch', 'Try a different search term or scan the barcode.')}
+                  </Text>
+                ) : null}
               </View>
             ) : null
           }
@@ -3310,22 +3312,34 @@ export default function SellScanScreen({
             keyExtractor={(item) => item.barcode}
             renderItem={renderSkuItem}
             extraData={stockRefreshTick}
-            numColumns={NUM_COLUMNS}
+            numColumns={numColumns}
             columnWrapperStyle={styles.skuRow}
             ListHeaderComponent={catalogHeader}
             ListEmptyComponent={
               !catalogLoading && gridItems.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyText}>{t('sell.noRecentProducts')}</Text>
+                <View style={styles.emptyStateIllustration}>
+                  {/* STG-035: Empty state for zero-product store */}
+                  <MaterialCommunityIcons name="store-outline" size={48} color={colors.textTertiary} />
+                  <Text style={styles.emptyStateTitle}>{t('sell.emptyStoreTitle', "Let's stock your store!")}</Text>
+                  <Text style={styles.emptyStateSubtitle}>{t('sell.emptyStoreHint', 'Scan a product barcode or search to add your first items.')}</Text>
                 </View>
               ) : null
             }
             ListFooterComponent={
-              catalogLoading ? (
+              catalogLoading && !catalogRefreshing ? (
                 <View style={styles.footerLoading}>
                   <ActivityIndicator color={colors.primary} />
                 </View>
               ) : null
+            }
+            refreshControl={
+              /* STG-050: Pull-to-refresh on product grid */
+              <RefreshControl
+                refreshing={catalogRefreshing}
+                onRefresh={handlePullToRefresh}
+                colors={[colors.primary]}
+                tintColor={colors.primary}
+              />
             }
             onTouchStart={resetCategoryAutoCollapse}
             onScrollBeginDrag={resetCategoryAutoCollapse}
@@ -3431,7 +3445,10 @@ export default function SellScanScreen({
                   />
                 </Pressable>
                 <View style={styles.cartTitleWrap}>
-                  <Text style={[styles.cartTitle, isSmallScreen && styles.cartTitleCompact]}>{cartTitle}</Text>
+                  {/* STG-105: Item count in cart header */}
+                  <Text style={[styles.cartTitle, isSmallScreen && styles.cartTitleCompact]}>
+                    {cartTitle}{items.length > 0 ? ` (${items.length})` : ""}
+                  </Text>
                 </View>
               </View>
               {items.length > 0 ? (
@@ -3483,7 +3500,21 @@ export default function SellScanScreen({
               contentContainerStyle={styles.cartListContent}
               nestedScrollEnabled
               ListFooterComponent={
-                items.length ? <View style={[styles.cartListFooterSpacer, isSmallScreen && styles.cartListFooterSpacerCompact]} /> : null
+                items.length ? (
+                  <View>
+                    {/* STG-098: "Add more items" link in cart */}
+                    <Pressable
+                      accessibilityRole="button"
+                      style={styles.addMoreLink}
+                      onPress={closeCart}
+                      hitSlop={8}
+                    >
+                      <MaterialCommunityIcons name="plus" size={16} color={colors.primary} />
+                      <Text style={styles.addMoreText}>{t("sell.addMoreItems", "+ Add more items")}</Text>
+                    </Pressable>
+                    <View style={[styles.cartListFooterSpacer, isSmallScreen && styles.cartListFooterSpacerCompact]} />
+                  </View>
+                ) : null
               }
               ListEmptyComponent={
                 <View style={styles.emptyState}>
@@ -3499,82 +3530,117 @@ export default function SellScanScreen({
             />
 
             <View style={[styles.cartFooter, isSmallScreen && styles.cartFooterCompact, { paddingBottom: 8 + insets.bottom }]}>
-              <View style={[styles.discountSection, isSmallScreen && styles.discountSectionCompact]}>
-                <View style={styles.discountHeader}>
-                  <Text style={styles.discountTitle}>Discount</Text>
-                  {discount ? (
-                    <Text style={styles.discountApplied}>Applied</Text>
+              {/* STG-140: Collapsed by default; tap to expand; stays open when discount active */}
+              {discountExpanded || discount ? (
+                <View style={[styles.discountSection, isSmallScreen && styles.discountSectionCompact]}>
+                  <View style={styles.discountHeader}>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => { if (!discount) setDiscountExpanded(false); }}
+                      hitSlop={8}
+                      style={styles.discountHeaderRow}
+                    >
+                      <Text style={styles.discountTitle}>{t("sell.discount", "Discount")}</Text>
+                      {discount ? (
+                        <Text style={styles.discountApplied}>{t("sell.discountApplied", "Applied")}</Text>
+                      ) : (
+                        <MaterialCommunityIcons name="chevron-up" size={16} color={colors.textTertiary} />
+                      )}
+                    </Pressable>
+                  </View>
+                  <View style={styles.discountControls}>
+                    {/* STG-106: Segmented control — consistent styling for %/Flat toggle */}
+                    <View style={styles.discountToggle}>
+                      <Pressable
+                        accessibilityRole="button"
+                        style={[
+                          styles.discountChip,
+                          discountType === "percentage" && styles.discountChipActive
+                        ]}
+                        onPress={() => {
+                          setDiscountType("percentage");
+                          scheduleDiscountApply(discountValue, "percentage");
+                        }}
+                        disabled={!canEditCart}
+                      >
+                        <Text
+                          style={[
+                            styles.discountChipText,
+                            discountType === "percentage" && styles.discountChipTextActive
+                          ]}
+                        >
+                          %
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        style={[
+                          styles.discountChip,
+                          discountType === "fixed" && styles.discountChipActive
+                        ]}
+                        onPress={() => {
+                          setDiscountType("fixed");
+                          scheduleDiscountApply(discountValue, "fixed");
+                        }}
+                        disabled={!canEditCart}
+                      >
+                        <Text
+                          style={[
+                            styles.discountChipText,
+                            discountType === "fixed" && styles.discountChipTextActive
+                          ]}
+                        >
+                          {t("sell.flat", "₹ Flat")}
+                        </Text>
+                      </Pressable>
+                    </View>
+                    <TextInput
+                      style={[styles.discountInput, !canEditCart && styles.inputDisabled]}
+                      value={discountValue}
+                      onChangeText={handleDiscountValueChange}
+                      placeholder={
+                        discountType === "percentage" ? t("sell.discountPctPlaceholder", "Enter %") : t("sell.discountFlatPlaceholder", "Enter ₹")
+                      }
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="numeric"
+                      editable={canEditCart}
+                    />
+                  </View>
+                  {/* STG-130: Live discount preview */}
+                  {discountValue && Number(discountValue) > 0 ? (
+                    <Text style={styles.discountPreview}>
+                      {discountType === "percentage"
+                        ? `-${discountValue}% = -${discountAmountLabel}`
+                        : `-${formatMoney(Math.round(Number(discountValue) * 100), "INR")}`
+                      }
+                    </Text>
                   ) : null}
                 </View>
-                <View style={styles.discountControls}>
-                  <View style={styles.discountToggle}>
-                    <Pressable
-                      accessibilityRole="button"
-                      style={[
-                        styles.discountChip,
-                        discountType === "percentage" && styles.discountChipActive
-                      ]}
-                      onPress={() => {
-                        setDiscountType("percentage");
-                        scheduleDiscountApply(discountValue, "percentage");
-                      }}
-                      disabled={!canEditCart}
-                    >
-                      <Text
-                        style={[
-                          styles.discountChipText,
-                          discountType === "percentage" && styles.discountChipTextActive
-                        ]}
-                      >
-                        %
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      accessibilityRole="button"
-                      style={[
-                        styles.discountChip,
-                        discountType === "fixed" && styles.discountChipActive
-                      ]}
-                      onPress={() => {
-                        setDiscountType("fixed");
-                        scheduleDiscountApply(discountValue, "fixed");
-                      }}
-                      disabled={!canEditCart}
-                    >
-                      <Text
-                        style={[
-                          styles.discountChipText,
-                          discountType === "fixed" && styles.discountChipTextActive
-                        ]}
-                      >
-                        Flat
-                      </Text>
-                    </Pressable>
-                  </View>
-                  <TextInput
-                    style={[styles.discountInput, !canEditCart && styles.inputDisabled]}
-                    value={discountValue}
-                    onChangeText={handleDiscountValueChange}
-                    placeholder={
-                      discountType === "percentage" ? "%" : "INR"
-                    }
-                    placeholderTextColor={colors.textTertiary}
-                    keyboardType="numeric"
-                    editable={canEditCart}
-                  />
-                </View>
-              </View>
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.discountCollapsedLink}
+                  onPress={() => setDiscountExpanded(true)}
+                  hitSlop={8}
+                >
+                  <MaterialCommunityIcons name="tag-plus-outline" size={16} color={colors.primary} />
+                  <Text style={styles.discountCollapsedText}>{t("sell.addDiscount", "Add Discount")}</Text>
+                </Pressable>
+              )}
 
               <View style={[styles.cartTotals, isSmallScreen && styles.cartTotalsCompact]}>
-                <View style={styles.totalRow}>
-                  <AppText style={styles.totalLabel}>{t("sell.subtotal", "Subtotal")}</AppText>
-                  <PriceText style={styles.totalValue}>{subtotalLabel}</PriceText>
-                </View>
+                {/* STG-132: Only show Subtotal row when discount makes it different from Total */}
                 {discountTotal ? (
-                  <View style={styles.totalRow}>
-                    <AppText style={styles.totalLabel}>{t("sell.discount", "Discount")}</AppText>
-                    <PriceText style={styles.totalValue}>-{discountAmountLabel}</PriceText>
-                  </View>
+                  <>
+                    <View style={styles.totalRow}>
+                      <AppText style={styles.totalLabel}>{t("sell.subtotal", "Subtotal")}</AppText>
+                      <PriceText style={styles.totalValue}>{subtotalLabel}</PriceText>
+                    </View>
+                    <View style={styles.totalRow}>
+                      <AppText style={styles.totalLabel}>{t("sell.discount", "Discount")}</AppText>
+                      <PriceText style={styles.totalValue}>-{discountAmountLabel}</PriceText>
+                    </View>
+                  </>
                 ) : null}
                 <View style={[styles.totalRow, styles.totalRowEmphasis]}>
                   <AppText style={styles.totalLabelStrong} bold>{t("sell.total", "Total")}</AppText>
@@ -3590,7 +3656,10 @@ export default function SellScanScreen({
                 accessibilityLabel={t("sell.checkout", "Checkout")}
                 testID="sell-checkout-btn"
               >
-                <ButtonText style={styles.totalCtaText}>{t("sell.checkout", "Checkout")}</ButtonText>
+                {/* STG-109: Item count on checkout button */}
+                <ButtonText style={styles.totalCtaText}>
+                  {t("sell.checkout", "Checkout")} ({items.length})
+                </ButtonText>
                 <PriceText style={styles.totalCtaAmount}>{totalLabel}</PriceText>
               </Pressable>
             </View>
@@ -4229,27 +4298,63 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,
   },
-  // T-128: Manual barcode entry fallback styles
-  manualBarcodeRow: {
-    flexDirection: "row",
+  // STG-035/STG-223: Illustrated empty state with icon + title + subtitle
+  emptyStateIllustration: {
     alignItems: "center",
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    backgroundColor: colors.surface,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
     gap: 8,
   },
-  manualBarcodeInput: {
-    flex: 1,
-    fontSize: 14,
+  emptyStateTitle: {
+    fontSize: 15,
+    fontWeight: "600",
     color: colors.textPrimary,
-    paddingVertical: 0,
+    textAlign: "center",
   },
-  manualBarcodeSubmit: {
-    padding: 2,
+  emptyStateSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  // STG-098: "Add more items" link in cart
+  addMoreLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    gap: 4,
+  },
+  addMoreText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: "500",
+  },
+  // STG-140: Collapsed discount link
+  discountCollapsedLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  discountCollapsedText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: "500",
+  },
+  // STG-140: Discount header row with chevron
+  discountHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  // STG-130: Live discount preview text
+  discountPreview: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
+    fontStyle: "italic",
   },
   searchBar: {
     flexDirection: "row",
