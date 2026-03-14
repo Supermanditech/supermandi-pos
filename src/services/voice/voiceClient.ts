@@ -1,5 +1,8 @@
 // Voice Client Service - VOICE-001
 // Handles audio recording and voice command submission
+// STG-362: Locale pass-through to backend STT
+// STG-366: API timeout handling with AbortController
+// STG-410: 429 rate limit response handling
 
 import { Audio } from "expo-av";
 import { API_BASE_URL } from "../../config/api";
@@ -9,6 +12,9 @@ import {
   prepareForRecording,
   resetAudioSession,
 } from "./voicePermissions";
+
+// STG-366: Default API timeout in milliseconds
+const VOICE_API_TIMEOUT_MS = 10_000;
 
 // =============================================================================
 // TYPES
@@ -234,16 +240,39 @@ export function isRecording(): boolean {
 // API FUNCTIONS
 // =============================================================================
 
+// STG-410: Custom error class for rate limiting with retry-after info
+export class VoiceRateLimitError extends Error {
+  retryAfterSeconds: number;
+  constructor(retryAfter: number) {
+    super(`Rate limited. Retry after ${retryAfter} seconds.`);
+    this.name = "VoiceRateLimitError";
+    this.retryAfterSeconds = retryAfter;
+  }
+}
+
+// STG-366: Custom error class for API timeout
+export class VoiceTimeoutError extends Error {
+  constructor() {
+    super("Voice API request timed out");
+    this.name = "VoiceTimeoutError";
+  }
+}
+
 /**
  * Upload audio file and get voice interpretation.
+ * STG-362: Accepts locale to pass to backend STT engine.
+ * STG-366: Uses AbortController for 10s timeout.
+ * STG-410: Throws VoiceRateLimitError on 429 with retry-after.
  *
  * @param audioUri - URI of the recorded audio file
  * @param storeId - Store ID for context
+ * @param locale - STG-362: Language locale for STT engine ("EN" | "HI")
  * @returns Interpretation response with transcript and intent
  */
 export async function interpretVoice(
   audioUri: string,
-  storeId: string
+  storeId: string,
+  locale?: string
 ): Promise<VoiceInterpretResponse> {
   const token = await getAuthToken();
   const deviceToken = await getDeviceToken();
@@ -263,23 +292,52 @@ export async function interpretVoice(
 
   formData.append("storeId", storeId);
 
-  const url = `${API_BASE_URL}/api/v1/voice/interpret`;
-  console.log("[voiceClient] Uploading audio to:", url);
+  // STG-362: Pass locale to backend for STT language model selection
+  if (locale) {
+    formData.append("locale", locale);
+  }
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(deviceToken ? { "x-device-token": deviceToken } : {}),
-    },
-    body: formData,
-  });
+  const url = `${API_BASE_URL}/api/v1/voice/interpret`;
+  console.log("[voiceClient] Uploading audio to:", url, "locale:", locale ?? "default");
+
+  // STG-366: AbortController for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), VOICE_API_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(deviceToken ? { "x-device-token": deviceToken } : {}),
+      },
+      body: formData,
+      signal: controller.signal,
+    });
+  } catch (error: unknown) {
+    clearTimeout(timeoutId);
+    // STG-366: Detect abort/timeout
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new VoiceTimeoutError();
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const text = await response.text();
   console.log("[voiceClient] Response:", response.status, text.slice(0, 200));
 
   if (!response.ok) {
+    // STG-410: Handle 429 rate limiting with retry-after header
+    if (response.status === 429) {
+      const retryAfterHeader = response.headers.get("retry-after");
+      const retryAfterSeconds = retryAfterHeader ? parseInt(retryAfterHeader, 10) : 30;
+      throw new VoiceRateLimitError(Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : 30);
+    }
+
     let errorMessage = `Voice interpret failed (${response.status})`;
     let errorCode = "";
     try {
@@ -307,8 +365,6 @@ export async function interpretVoice(
       errorMessage = "Voice service is not available. Please try again later.";
     } else if (response.status === 404) {
       errorMessage = "Voice service not found. Please update the app.";
-    } else if (response.status === 429) {
-      errorMessage = "Too many requests. Please wait a moment.";
     } else if (response.status >= 500) {
       errorMessage = "Server error. Please try again.";
     }
@@ -383,20 +439,40 @@ export async function executeVoiceAction(
 // =============================================================================
 
 /**
- * Complete voice flow: stop recording → upload → interpret → execute.
- * Use this for simple flows where no confirmation is needed.
- *
- * @param storeId - Store ID for context
- * @returns Action result with message for user
+ * STG-360: Result from submitVoiceCommand — extended with confirm/clarify fields.
  */
-export async function submitVoiceCommand(
-  storeId: string
-): Promise<{
+export interface VoiceCommandResult {
   success: boolean;
   transcript: string;
   message: string;
   intent?: VoiceIntent;
-}> {
+  /** STG-360: Request ID for deferred execution after confirm */
+  requestId?: string;
+  /** STG-360: Whether the command needs user confirmation before execution */
+  needsConfirm?: boolean;
+  /** STG-360: Human-readable interpreted command description */
+  interpretedCommand?: string;
+  /** STG-363: Whether the result needs clarification (multiple candidates) */
+  needsClarification?: boolean;
+  /** STG-363: Candidate options for clarification */
+  clarifyOptions?: Array<{ label: string; value: string; confidence?: number }>;
+  /** STG-364: Confidence score (0-1) */
+  confidence?: number;
+}
+
+/**
+ * Complete voice flow: stop recording → upload → interpret.
+ * STG-360: Returns interpreted command for confirmation instead of auto-executing.
+ * STG-362: Passes locale to backend for STT language selection.
+ *
+ * @param storeId - Store ID for context
+ * @param locale - STG-362: Language locale for STT engine
+ * @returns Command result — caller should check needsConfirm/needsClarification
+ */
+export async function submitVoiceCommand(
+  storeId: string,
+  locale?: string
+): Promise<VoiceCommandResult> {
   // Stop recording and get URI
   const audioUri = await stopRecording();
   if (!audioUri) {
@@ -407,59 +483,99 @@ export async function submitVoiceCommand(
     };
   }
 
-  try {
-    // Upload and interpret
-    const interpretResult = await interpretVoice(audioUri, storeId);
+  // STG-362: Pass locale to interpretVoice
+  // STG-366/410: Let VoiceTimeoutError and VoiceRateLimitError propagate to caller
+  const interpretResult = await interpretVoice(audioUri, storeId, locale);
 
-    if (!interpretResult.success) {
-      return {
-        success: false,
-        transcript: "",
-        message: "Could not understand. Please try again.",
-      };
-    }
-
-    const { transcript, intent } = interpretResult.data;
-
-    // For unknown intent, just return transcript
-    if (intent.action === "unknown") {
-      return {
-        success: false,
-        transcript,
-        message: "I didn't understand that command. Try saying 'Add 2 kg rice' or 'Search for dal'.",
-        intent,
-      };
-    }
-
-    // Execute the action
-    const executeResult = await executeVoiceAction(
-      interpretResult.data.requestId,
-      storeId,
-      true // Auto-confirm for now
-    );
-
-    return {
-      success: executeResult.success,
-      transcript,
-      message: executeResult.message,
-      intent,
-    };
-  } catch (error) {
-    console.error("[voiceClient] Voice command failed:", error);
-
-    let message = "Voice command failed. Please try again.";
-    if (error instanceof TypeError) {
-      // Network error
-      message = "Cannot connect to voice service. Check your connection.";
-    } else if (error instanceof Error) {
-      message = error.message;
-    }
-
+  if (!interpretResult.success) {
     return {
       success: false,
       transcript: "",
-      message,
+      message: "Could not understand. Please try again.",
     };
+  }
+
+  const { transcript, intent, confidence, requestId } = interpretResult.data;
+
+  // For unknown intent, just return transcript
+  if (intent.action === "unknown" || intent.action === "UNKNOWN") {
+    return {
+      success: false,
+      transcript,
+      message: "I didn't understand that command. Try saying 'Add 2 kg rice' or 'Search for dal'.",
+      intent,
+      confidence,
+    };
+  }
+
+  // STG-360: Build human-readable interpreted command description
+  const interpretedCommand = buildInterpretedCommand(intent);
+
+  // STG-360: Return result for confirmation instead of auto-executing
+  return {
+    success: true,
+    transcript,
+    message: interpretedCommand,
+    intent,
+    requestId,
+    needsConfirm: true,
+    interpretedCommand,
+    confidence,
+  };
+}
+
+/**
+ * STG-360: Execute a confirmed voice command by requestId.
+ */
+export async function confirmAndExecuteVoice(
+  requestId: string,
+  storeId: string
+): Promise<VoiceCommandResult> {
+  try {
+    const executeResult = await executeVoiceAction(requestId, storeId, true);
+    return {
+      success: executeResult.success,
+      transcript: "",
+      message: executeResult.message,
+    };
+  } catch (error) {
+    console.error("[voiceClient] Confirmed voice execution failed:", error);
+    return {
+      success: false,
+      transcript: "",
+      message: error instanceof Error ? error.message : "Voice command failed.",
+    };
+  }
+}
+
+/**
+ * STG-360: Build a human-readable description of the interpreted voice command.
+ */
+function buildInterpretedCommand(intent: VoiceIntent): string {
+  const action = intent.action.toUpperCase();
+  const query = intent.slots?.query || intent.productName || "";
+  const qty = intent.slots?.quantity ?? intent.quantity;
+  const unit = intent.slots?.unit ?? intent.unit ?? "";
+
+  switch (action) {
+    case "ADD_TO_CART":
+      return qty ? `Add ${qty} ${unit} ${query}`.trim() : `Add ${query}`.trim();
+    case "SEARCH":
+      return `Search: ${query}`.trim();
+    case "CHECK_STOCK":
+      return `Check stock: ${query}`.trim();
+    case "REMOVE_FROM_CART":
+      return `Remove: ${query}`.trim();
+    case "CLEAR_CART":
+      return "Clear cart";
+    case "TOTAL":
+      return "Show total";
+    case "CHECKOUT_CONFIRM":
+      return "Proceed to checkout";
+    case "HELP":
+      return "Show help";
+    default:
+      return query || action;
   }
 }
 
@@ -471,4 +587,5 @@ export default {
   interpretVoice,
   executeVoiceAction,
   submitVoiceCommand,
+  confirmAndExecuteVoice,
 };

@@ -350,7 +350,11 @@
     "adjustStockMessage": "{{name}} के लिए सही स्टॉक मात्रा दर्ज करें:",
     "adjust": "एडजस्ट",
     "stockAdjusted": "{{name}} का स्टॉक {{count}} पर अपडेट किया गया",
-    "perKg": "प्रति KG"
+    "perKg": "प्रति KG",
+    "cartItemWarning": "कार्ट में {{count}} आइटम हैं। प्रदर्शन प्रभावित हो सकता है।",
+    "cartItemLimitTitle": "कार्ट आइटम सीमा",
+    "cartItemLimitMessage": "कार्ट {{limit}} आइटम से अधिक नहीं हो सकता। कृपया पहले मौजूदा आइटम का चेकआउट करें।",
+    "cartItemLimitReached": "अधिकतम {{limit}} आइटम पहुँच गए"
   },
   "limitedMode": {
     "badge": "सीमित मोड",
@@ -1414,7 +1418,26 @@
     "processAnotherReturn": "एक और वापसी करें"
   },
   "voice": {
-    "tapToSpeak": "बोलने के लिए टैप करें"
+    "tapToSpeak": "बोलने के लिए टैप करें",
+    "confirmCommand": "कमांड की पुष्टि करें",
+    "interpretedAs": "इस रूप में समझा गया:",
+    "confirmAction": "पुष्टि करें",
+    "cancelAction": "रद्द करें",
+    "needsClarification": "क्या आपका मतलब था:",
+    "confidence": "विश्वसनीयता",
+    "micPermissionDenied": "माइक्रोफ़ोन अनुमति आवश्यक",
+    "micPermissionExplain": "वॉइस कमांड के लिए माइक्रोफ़ोन अनुमति आवश्यक है। कृपया डिवाइस सेटिंग्स में ऐप अनुमतियों से इसे सक्षम करें।",
+    "openSettings": "सेटिंग्स खोलें",
+    "apiTimeout": "वॉइस सेवा का समय समाप्त हो गया। कृपया पुनः प्रयास करें।",
+    "rateLimited": "बहुत अधिक अनुरोध। कृपया {{seconds}} सेकंड प्रतीक्षा करें।",
+    "recordingCountdown": "{{elapsed}} / {{max}}",
+    "listening": "सुन रहे हैं...",
+    "releaseToSubmit": "सबमिट करने के लिए छोड़ें",
+    "processing": "प्रोसेसिंग...",
+    "done": "हो गया!",
+    "couldNotUnderstand": "समझ नहीं आया",
+    "tryAgain": "कृपया पुनः प्रयास करें",
+    "retry": "पुनः प्रयास"
   },
   "posPayment": {
     "previousUpiPendingTitle": "पिछला UPI भुगतान लंबित",

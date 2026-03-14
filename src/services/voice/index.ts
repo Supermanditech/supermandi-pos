@@ -21,7 +21,11 @@ export {
   interpretVoice,
   executeVoiceAction,
   submitVoiceCommand,
+  confirmAndExecuteVoice,
+  VoiceRateLimitError,
+  VoiceTimeoutError,
   type VoiceInterpretResponse,
   type VoiceIntent,
   type VoiceActionResult,
+  type VoiceCommandResult,
 } from "./voiceClient";

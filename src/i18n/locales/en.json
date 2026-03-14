@@ -350,7 +350,11 @@
     "adjustStockMessage": "Enter corrected stock quantity for {{name}}:",
     "adjust": "Adjust",
     "stockAdjusted": "Stock updated to {{count}} for {{name}}",
-    "perKg": "per KG"
+    "perKg": "per KG",
+    "cartItemWarning": "Cart has {{count}} items. Performance may be affected.",
+    "cartItemLimitTitle": "Cart Item Limit",
+    "cartItemLimitMessage": "Cart cannot exceed {{limit}} items. Please checkout current items first.",
+    "cartItemLimitReached": "Maximum {{limit}} items reached"
   },
   "limitedMode": {
     "badge": "LIMITED MODE",
@@ -1414,7 +1418,26 @@
     "receiveGoods": "Receive Goods"
   },
   "voice": {
-    "tapToSpeak": "Tap to speak"
+    "tapToSpeak": "Tap to speak",
+    "confirmCommand": "Confirm Command",
+    "interpretedAs": "Interpreted as:",
+    "confirmAction": "Confirm",
+    "cancelAction": "Cancel",
+    "needsClarification": "Did you mean:",
+    "confidence": "Confidence",
+    "micPermissionDenied": "Microphone Access Required",
+    "micPermissionExplain": "Voice commands need microphone access. Please enable it in your device settings under App Permissions.",
+    "openSettings": "Open Settings",
+    "apiTimeout": "Voice service timed out. Please try again.",
+    "rateLimited": "Too many requests. Please wait {{seconds}} seconds.",
+    "recordingCountdown": "{{elapsed}} / {{max}}",
+    "listening": "Listening...",
+    "releaseToSubmit": "Release to submit",
+    "processing": "Processing...",
+    "done": "Done!",
+    "couldNotUnderstand": "Couldn't understand",
+    "tryAgain": "Please try again",
+    "retry": "Retry"
   },
   "posPayment": {
     "previousUpiPendingTitle": "Previous UPI Payment Pending",

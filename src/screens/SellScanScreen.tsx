@@ -71,8 +71,8 @@ import { hapticFeedback } from "../utils/haptics";
 import { useSettingsStore } from "../stores/settingsStore";
 import { getFmcgCategories, getCategoryProducts, type CategoryProduct } from "../services/api/catalogApi";
 import { useFeatureEnabled } from "../utils/featureFlags";
-import { VoiceSheet, type VoiceButtonState, type VoiceSheetState, type VoiceLocale } from "../components/voice";
-import { startRecording, stopRecording, cancelRecording, submitVoiceCommand } from "../services/voice";
+import { VoiceSheet, type VoiceButtonState, type VoiceSheetState, type VoiceLocale, type VoiceClarifyOption } from "../components/voice";
+import { startRecording, stopRecording, cancelRecording, submitVoiceCommand, confirmAndExecuteVoice, VoiceRateLimitError, VoiceTimeoutError, type VoiceCommandResult } from "../services/voice";
 // GL-CRIT-0089: Import centralized pagination constant
 // GO-LIVE-170: Import pagination safeguard
 import { PRODUCTS_PAGE_SIZE, MAX_PAGINATION_PAGE } from "../config/pagination";
@@ -1218,6 +1218,17 @@ export default function SellScanScreen({
   const [voiceRecordingDuration, setVoiceRecordingDuration] = useState(0);
   const voiceHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const voiceDurationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // STG-360: Voice confirmation state
+  const [voiceInterpretedCommand, setVoiceInterpretedCommand] = useState<string | undefined>();
+  const [voiceConfidence, setVoiceConfidence] = useState<number | undefined>();
+  const [voicePendingRequestId, setVoicePendingRequestId] = useState<string | undefined>();
+  const [voicePendingStoreId, setVoicePendingStoreId] = useState<string | undefined>();
+  // STG-363: Clarification options
+  const [voiceClarifyOptions, setVoiceClarifyOptions] = useState<VoiceClarifyOption[]>([]);
+  // STG-410: Rate limit retry-after seconds
+  const [voiceRetryAfterSeconds, setVoiceRetryAfterSeconds] = useState<number | undefined>();
+  // STG-409: Max recording duration constant (seconds)
+  const VOICE_MAX_RECORDING_SECONDS = 60;
 
   // STG-103: Customer info for credit sales
   const cartCustomer = useCartStore((s) => s.customer);
@@ -2753,6 +2764,10 @@ export default function SellScanScreen({
     };
   }, []);
 
+  // STG-374: Cart item limits for performance
+  const CART_ITEM_WARNING_THRESHOLD = 50;
+  const CART_ITEM_HARD_LIMIT = 100;
+
   const handleAddSku = (item: SkuItem) => {
     if (storeActive === false) return;
     // SD-CATEGORY: Auto-collapse rail when product tapped
@@ -2763,8 +2778,25 @@ export default function SellScanScreen({
     const cartState = useCartStore.getState();
     const cartItems = cartState.items || [];
 
+    // STG-374: Cart item limit check (count unique line items)
+    const uniqueItemCount = cartItems.length;
     // Check for existing item by barcode (handles HID scan items with different id)
     const existing = cartItems.find((entry) => entry.barcode === item.barcode);
+
+    if (!existing) {
+      // Only enforce limits when adding NEW items (not incrementing existing)
+      if (uniqueItemCount >= CART_ITEM_HARD_LIMIT) {
+        Alert.alert(
+          t("sell.cartItemLimitTitle"),
+          t("sell.cartItemLimitMessage", { limit: CART_ITEM_HARD_LIMIT })
+        );
+        return;
+      }
+      if (uniqueItemCount >= CART_ITEM_WARNING_THRESHOLD && uniqueItemCount % 10 === 0) {
+        // Show warning toast every 10 items past threshold
+        showToast(t("sell.cartItemWarning", { count: uniqueItemCount }));
+      }
+    }
 
     if (existing) {
       // Item already in cart - increase quantity instead of adding duplicate
@@ -3433,13 +3465,18 @@ export default function SellScanScreen({
     setVoiceTranscript(undefined);
     setVoiceMessage(undefined);
     setVoiceErrorMessage(undefined);
+    setVoiceInterpretedCommand(undefined);
+    setVoiceConfidence(undefined);
+    setVoicePendingRequestId(undefined);
+    setVoiceClarifyOptions([]);
+    setVoiceRetryAfterSeconds(undefined);
 
     const started = await startRecording();
     if (!started) {
       setVoiceButtonState("idle");
       setVoiceRecordingMode("none");
-      // R5: Show feedback when voice recording fails to start (permission denied or audio error)
-      showToast("Microphone permission required for voice commands");
+      // STG-365: Show permission denied guidance in the voice sheet
+      setVoiceSheetState("permissionDenied");
       return false;
     }
 
@@ -3474,10 +3511,26 @@ export default function SellScanScreen({
         throw new Error("Store not configured");
       }
 
-      const result = await submitVoiceCommand(storeId);
+      // STG-362: Pass locale to submitVoiceCommand for STT language selection
+      const result = await submitVoiceCommand(storeId, voiceLocale);
       setVoiceTranscript(result.transcript);
+      setVoiceConfidence(result.confidence);
 
-      if (result.success) {
+      if (result.success && result.needsConfirm) {
+        // STG-360: Show confirmation UI instead of auto-executing
+        setVoiceInterpretedCommand(result.interpretedCommand);
+        setVoicePendingRequestId(result.requestId);
+        setVoicePendingStoreId(storeId);
+        setVoiceSheetState("confirm");
+      } else if (result.needsClarification && result.clarifyOptions) {
+        // STG-363: Show clarification picker
+        setVoiceClarifyOptions(result.clarifyOptions.map((o) => ({
+          label: o.label,
+          value: o.value,
+          confidence: o.confidence,
+        })));
+        setVoiceSheetState("clarify");
+      } else if (result.success) {
         setVoiceMessage(result.message);
         setVoiceSheetState("success");
       } else {
@@ -3486,15 +3539,25 @@ export default function SellScanScreen({
       }
     } catch (error) {
       if (__DEV__) console.error("[VOICE-001] Voice command failed:", error);
-      setVoiceErrorMessage(
-        error instanceof Error ? error.message : "Voice command failed"
-      );
-      setVoiceSheetState("error");
+
+      // STG-410: Handle 429 rate limit
+      if (error instanceof VoiceRateLimitError) {
+        setVoiceRetryAfterSeconds(error.retryAfterSeconds);
+        setVoiceSheetState("rateLimited");
+      // STG-366: Handle API timeout
+      } else if (error instanceof VoiceTimeoutError) {
+        setVoiceSheetState("timeout");
+      } else {
+        setVoiceErrorMessage(
+          error instanceof Error ? error.message : "Voice command failed"
+        );
+        setVoiceSheetState("error");
+      }
     } finally {
       setVoiceButtonState("idle");
       setVoiceRecordingDuration(0);
     }
-  }, [voiceButtonState]);
+  }, [voiceButtonState, voiceLocale]);
 
   const cancelVoiceRecording = useCallback(async () => {
     // Clear timers
@@ -3564,11 +3627,61 @@ export default function SellScanScreen({
     setVoiceTranscript(undefined);
     setVoiceMessage(undefined);
     setVoiceErrorMessage(undefined);
+    setVoiceInterpretedCommand(undefined);
+    setVoiceConfidence(undefined);
+    setVoicePendingRequestId(undefined);
+    setVoicePendingStoreId(undefined);
+    setVoiceClarifyOptions([]);
+    setVoiceRetryAfterSeconds(undefined);
     // Cancel any in-progress recording
     if (voiceButtonState === "recording") {
       void cancelVoiceRecording();
     }
   }, [voiceButtonState, cancelVoiceRecording]);
+
+  // STG-360: Confirm voice command execution
+  const handleVoiceConfirm = useCallback(async () => {
+    if (!voicePendingRequestId || !voicePendingStoreId) return;
+    setVoiceSheetState("processing");
+    try {
+      const result = await confirmAndExecuteVoice(voicePendingRequestId, voicePendingStoreId);
+      if (result.success) {
+        setVoiceMessage(result.message);
+        setVoiceSheetState("success");
+      } else {
+        setVoiceErrorMessage(result.message);
+        setVoiceSheetState("error");
+      }
+    } catch (error) {
+      setVoiceErrorMessage(error instanceof Error ? error.message : "Execution failed");
+      setVoiceSheetState("error");
+    }
+    setVoicePendingRequestId(undefined);
+    setVoicePendingStoreId(undefined);
+  }, [voicePendingRequestId, voicePendingStoreId]);
+
+  // STG-360: Cancel voice command confirmation
+  const handleVoiceCancel = useCallback(() => {
+    setVoicePendingRequestId(undefined);
+    setVoicePendingStoreId(undefined);
+    setVoiceInterpretedCommand(undefined);
+    handleVoiceSheetDismiss();
+  }, [handleVoiceSheetDismiss]);
+
+  // STG-363: Handle clarification option selection
+  const handleVoiceClarifySelect = useCallback((option: VoiceClarifyOption) => {
+    // Treat selected option as a confirmed command — show success
+    setVoiceMessage(`Selected: ${option.label}`);
+    setVoiceSheetState("success");
+    setVoiceClarifyOptions([]);
+  }, []);
+
+  // STG-366/410: Retry voice recording after timeout or error
+  const handleVoiceRetry = useCallback(() => {
+    handleVoiceSheetDismiss();
+    // Start a new recording immediately
+    void startVoiceRecording("tap");
+  }, [handleVoiceSheetDismiss, startVoiceRecording]);
 
   // T-136: Fetch substitutes for out-of-stock products
   const fetchSubstitutes = useCallback(async (productId: string) => {
@@ -5013,6 +5126,16 @@ export default function SellScanScreen({
         onDismiss={handleVoiceSheetDismiss}
         locale={voiceLocale}
         onLocaleChange={setVoiceLocale}
+        onConfirm={handleVoiceConfirm}
+        onCancel={handleVoiceCancel}
+        interpretedCommand={voiceInterpretedCommand}
+        clarifyOptions={voiceClarifyOptions}
+        onClarifySelect={handleVoiceClarifySelect}
+        confidence={voiceConfidence}
+        onRetry={handleVoiceRetry}
+        recordingElapsed={voiceRecordingDuration}
+        recordingMaxDuration={VOICE_MAX_RECORDING_SECONDS}
+        retryAfterSeconds={voiceRetryAfterSeconds}
         testID="sell-voice-sheet"
       />
     </View>
