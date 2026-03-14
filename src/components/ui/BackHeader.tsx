@@ -1,11 +1,11 @@
 // T-122: Reusable back navigation header for POS detail screens
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { BackHandler, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { theme } from "../../theme";
+import { useThemeColors } from "../../theme";
 
 interface BackHeaderProps {
   title: string;
@@ -16,6 +16,7 @@ interface BackHeaderProps {
 export function BackHeader({ title, subtitle, onBack }: BackHeaderProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
 
   const handleBack = () => {
     if (onBack) {
@@ -37,6 +38,44 @@ export function BackHeader({ title, subtitle, onBack }: BackHeaderProps) {
     return () => handler.remove();
   }, [onBack]);
 
+  const styles = useMemo(() => StyleSheet.create({
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: 8,
+    },
+    backButton: {
+      // STG-394: Minimum 44dp touch target for accessibility
+      width: 44,
+      height: 44,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 22,
+    },
+    titleContainer: {
+      flex: 1,
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    subtitle: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    spacer: {
+      // STG-394: Match back button width for centering
+      width: 44,
+    },
+  }), [colors]);
+
   return (
     <View style={[styles.header, { paddingTop: 8 + insets.top }]}>
       <TouchableOpacity
@@ -46,7 +85,7 @@ export function BackHeader({ title, subtitle, onBack }: BackHeaderProps) {
         accessibilityLabel="Go back"
         accessibilityRole="button"
       >
-        <MaterialCommunityIcons name="chevron-left" size={28} color={theme.colors.textPrimary} />
+        <MaterialCommunityIcons name="chevron-left" size={28} color={colors.textPrimary} />
       </TouchableOpacity>
       <View style={styles.titleContainer}>
         <Text style={styles.title} numberOfLines={1}>
@@ -63,41 +102,3 @@ export function BackHeader({ title, subtitle, onBack }: BackHeaderProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    gap: 8,
-  },
-  backButton: {
-    // STG-394: Minimum 44dp touch target for accessibility
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 22,
-  },
-  titleContainer: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  subtitle: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  spacer: {
-    // STG-394: Match back button width for centering
-    width: 44,
-  },
-});

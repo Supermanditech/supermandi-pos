@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { StatusBar, Platform, View, ActivityIndicator, AppState, AppStateStatus } from "react-native";
+import { Alert, StatusBar, Platform, View, ActivityIndicator, AppState, AppStateStatus } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -158,7 +158,7 @@ function InwardWrapper() {
     <InwardScreen
       storeActive={true}
       scanDisabled={false}
-      onOpenScanner={() => {}}
+      onOpenScanner={() => Alert.alert("Scanner", "Use the BUY tab scanner for barcode scanning.")}
       onBack={() => navigation.goBack()}
     />
   );
