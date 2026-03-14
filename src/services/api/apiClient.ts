@@ -223,6 +223,41 @@ if (__DEV__) {
 
 type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
+// =============================================================================
+// STG-447: Idempotency key support
+// Prevents duplicate operations when retrying critical requests
+// =============================================================================
+
+export interface RequestOptions {
+  /** STG-447: Idempotency key for critical POST/PATCH operations */
+  idempotencyKey?: string;
+}
+
+/**
+ * STG-447: Generate a unique idempotency key using timestamp + random suffix.
+ * Use this for critical operations like reorder approval, PO submission.
+ */
+export function generateIdempotencyKey(prefix?: string): string {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 10);
+  return prefix ? `${prefix}-${timestamp}-${random}` : `${timestamp}-${random}`;
+}
+
+// STG-447: Endpoint patterns that should always include idempotency keys
+const IDEMPOTENT_ENDPOINT_PATTERNS = [
+  /\/reorder\/pending\/approve$/,
+  /\/reorder\/submit-po$/,
+  /\/reorder\/pending\/[^/]+\/dismiss$/,
+  /\/reorder\/pending\/[^/]+\/fulfill$/,
+  /\/sales\/checkout$/,
+  /\/payment\//,
+];
+
+function shouldAutoAddIdempotencyKey(method: HttpMethod, path: string): boolean {
+  if (method !== 'POST') return false;
+  return IDEMPOTENT_ENDPOINT_PATTERNS.some(pattern => pattern.test(path));
+}
+
 // GL-CRIT-0043: Default timeout for API requests
 // ISSUE-MICRO-032: Increased from 30s to 60s for 2G/slow networks
 const API_TIMEOUT_MS = 60000;
@@ -259,7 +294,7 @@ async function attemptTokenRefresh(currentToken: string): Promise<string | null>
   }
 }
 
-async function requestJson<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
+async function requestJson<T>(method: HttpMethod, path: string, body?: unknown, options?: RequestOptions): Promise<T> {
   const token = await getAuthToken();
   const deviceToken = await getDeviceToken();
   // I18N-008: Include locale in Accept-Language header
@@ -295,6 +330,10 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
   // SA-P1-001: Read staff ID once (avoid TOCTOU from double getState() call)
   const staffId = useStaffSessionStore.getState().session?.staffId;
 
+  // STG-447: Determine idempotency key
+  const idempotencyKey = options?.idempotencyKey
+    ?? (shouldAutoAddIdempotencyKey(method, path) ? generateIdempotencyKey() : undefined);
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
@@ -311,6 +350,7 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(deviceToken ? { "x-device-token": deviceToken } : {}),
         ...(staffId ? { "x-staff-id": staffId } : {}),
+        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body)
     });
@@ -362,7 +402,7 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
             if (session) {
               await saveDeviceSession({ ...session, deviceToken: newToken });
               console.log("[apiClient] ISSUE-MICRO-077: Token refreshed, retrying request");
-              return requestJson<T>(method, path, body);
+              return requestJson<T>(method, path, body, options);
             }
           }
         }
@@ -384,8 +424,8 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
 
 export const apiClient = {
   get: <T>(path: string) => requestJson<T>("GET", path),
-  post: <T>(path: string, body?: unknown) => requestJson<T>("POST", path, body),
-  patch: <T>(path: string, body?: unknown) => requestJson<T>("PATCH", path, body),
+  post: <T>(path: string, body?: unknown, options?: RequestOptions) => requestJson<T>("POST", path, body, options),
+  patch: <T>(path: string, body?: unknown, options?: RequestOptions) => requestJson<T>("PATCH", path, body, options),
   del: <T>(path: string) => requestJson<T>("DELETE", path)
 };
 

@@ -17,6 +17,9 @@ export interface PolicyRowProps {
   onEdit: (policy: ReorderPolicy) => void;
   onToggleEnabled: (policy: ReorderPolicy, enabled: boolean) => void;
   disabled?: boolean;
+  // STG-440: Bulk selection support
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 // =============================================================================
@@ -28,6 +31,8 @@ export function PolicyRow({
   onEdit,
   onToggleEnabled,
   disabled,
+  selected,
+  onToggleSelect,
 }: PolicyRowProps) {
   const tc = useThemeColors();
   const styles = useMemo(() => createStyles(tc), [tc]);
@@ -35,12 +40,29 @@ export function PolicyRow({
   const stockStatus = getStockStatus(policy);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, selected && styles.containerSelected]}>
+      {/* STG-440: Bulk selection checkbox */}
+      {onToggleSelect && (
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityLabel={`${policy.productName} ${selected ? "selected" : "not selected"}`}
+          accessibilityState={{ checked: !!selected }}
+          style={styles.bulkCheckbox}
+          onPress={onToggleSelect}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <View style={[styles.bulkCheckboxBox, selected && styles.bulkCheckboxBoxSelected]}>
+            {selected && (
+              <MaterialCommunityIcons name="check" size={14} color={tc.textInverse} />
+            )}
+          </View>
+        </Pressable>
+      )}
       {/* Main Content */}
       <Pressable
         style={styles.content}
-        onPress={() => onEdit(policy)}
-        disabled={disabled}
+        onPress={onToggleSelect ? onToggleSelect : () => onEdit(policy)}
+        disabled={disabled && !onToggleSelect}
       >
         {/* Product Info */}
         <View style={styles.productInfo}>
@@ -77,15 +99,13 @@ export function PolicyRow({
               <Text style={styles.stockLabel}>Target</Text>
               <Text style={styles.stockValue}>{policy.targetStock}</Text>
             </View>
-            {policy.maxReorderQty != null && (
-              <>
-                <View style={styles.stockDivider} />
-                <View style={styles.stockItem}>
-                  <Text style={styles.stockLabel}>Max</Text>
-                  <Text style={styles.stockValue}>{policy.maxReorderQty}</Text>
-                </View>
-              </>
-            )}
+            <View style={styles.stockDivider} />
+            <View style={styles.stockItem}>
+              <Text style={styles.stockLabel}>Max</Text>
+              <Text style={styles.stockValue}>
+                {policy.maxReorderQty != null ? policy.maxReorderQty : "--"}
+              </Text>
+            </View>
           </View>
 
           {/* Preferred Supplier */}
@@ -177,6 +197,27 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
       paddingRight: theme.spacing.md,
+    },
+    containerSelected: {
+      backgroundColor: colors.accentSoft,
+    },
+    bulkCheckbox: {
+      paddingLeft: theme.spacing.md,
+      paddingVertical: theme.spacing.md,
+      justifyContent: "center",
+    },
+    bulkCheckboxBox: {
+      width: 22,
+      height: 22,
+      borderRadius: theme.borderRadius.sm,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    bulkCheckboxBoxSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
     },
     content: {
       flex: 1,

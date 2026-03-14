@@ -117,14 +117,14 @@ export function DismissReasonModal({
       <View style={[styles.container, { paddingTop: insets.top }]}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable style={styles.closeButton} onPress={onClose}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("common.close")} style={styles.closeButton} onPress={onClose}>
             <MaterialCommunityIcons
               name="close"
               size={24}
               color={tc.textPrimary}
             />
           </Pressable>
-          <Text style={styles.headerTitle}>{t("reorder.dismissTitle")}</Text>
+          <Text accessibilityRole="header" style={styles.headerTitle}>{t("reorder.dismissTitle")}</Text>
           <View style={styles.headerRight} />
         </View>
 
@@ -143,10 +143,13 @@ export function DismissReasonModal({
           {/* Reason Selection */}
           <Text style={styles.sectionTitle}>{t("reorder.dismissSelectReason")}</Text>
 
-          <View style={styles.reasonsContainer}>
+          <View style={styles.reasonsContainer} accessibilityRole="radiogroup">
             {PREDEFINED_REASONS.map((r) => (
               <Pressable
                 key={r.value}
+                accessibilityRole="radio"
+                accessibilityLabel={t(r.key)}
+                accessibilityState={{ selected: reason === r.value }}
                 style={[
                   styles.reasonChip,
                   reason === r.value && styles.reasonChipSelected,
@@ -165,6 +168,9 @@ export function DismissReasonModal({
             ))}
 
             <Pressable
+              accessibilityRole="radio"
+              accessibilityLabel={t("reorder.dismissOther")}
+              accessibilityState={{ selected: reason === "other" }}
               style={[
                 styles.reasonChip,
                 reason === "other" && styles.reasonChipSelected,

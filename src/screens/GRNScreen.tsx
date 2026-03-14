@@ -23,6 +23,7 @@ import type { PurchaseOrderWithItems, PurchaseOrderItem } from "../services/api/
 import { formatOrderNumber, getStatusLabel } from "../services/api/orderApi";
 import { getDeviceStoreId } from "../services/deviceSession";
 import { isOnline } from "../services/networkStatus";
+import * as reorderApi from "../services/api/reorderApi";
 
 // =============================================================================
 // TYPES
@@ -341,6 +342,23 @@ export default function GRNScreen({
                 copies: receiveQuantities[orderItem.id] || 1,
               });
             }
+          }
+        }
+
+        // STG-422: Mark linked reorders as fulfilled when GRN completes
+        if (
+          result.data.order.status === "delivered" &&
+          order?.sourceReorderIds &&
+          order.sourceReorderIds.length > 0
+        ) {
+          // Fire-and-forget — don't block GRN success on reorder fulfillment
+          for (const reorderId of order.sourceReorderIds) {
+            reorderApi
+              .markReorderFulfilled(storeId, reorderId)
+              .catch((fulfillErr) => {
+                if (__DEV__)
+                  console.warn("[GRNScreen] Failed to mark reorder fulfilled:", fulfillErr);
+              });
           }
         }
 

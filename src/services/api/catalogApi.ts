@@ -155,6 +155,58 @@ export interface GetCategoryProductsResponse {
 }
 
 // =============================================================================
+// STG-435: In-memory cache for supplier data to avoid redundant API calls
+// when switching between reorder items
+// =============================================================================
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const SUPPLIER_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const SUPPLIER_CACHE_MAX_ENTRIES = 50;
+const supplierCache = new Map<string, CacheEntry<CatalogSupplier[]>>();
+
+function getSupplierCacheKey(storeId: string, productId: string): string {
+  return `${storeId}:${productId}`;
+}
+
+function cleanupSupplierCache(): void {
+  if (supplierCache.size <= SUPPLIER_CACHE_MAX_ENTRIES) return;
+  const now = Date.now();
+  // Remove expired entries first
+  for (const [key, entry] of supplierCache.entries()) {
+    if (now - entry.timestamp > SUPPLIER_CACHE_TTL_MS) {
+      supplierCache.delete(key);
+    }
+  }
+  // If still over limit, remove oldest
+  if (supplierCache.size > SUPPLIER_CACHE_MAX_ENTRIES) {
+    const sorted = [...supplierCache.entries()].sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const toRemove = sorted.slice(0, supplierCache.size - SUPPLIER_CACHE_MAX_ENTRIES);
+    for (const [key] of toRemove) {
+      supplierCache.delete(key);
+    }
+  }
+}
+
+/** STG-435: Invalidate all cached supplier data (e.g., after policy changes) */
+export function invalidateSupplierCache(storeId?: string, productId?: string): void {
+  if (storeId && productId) {
+    supplierCache.delete(getSupplierCacheKey(storeId, productId));
+  } else if (storeId) {
+    for (const key of supplierCache.keys()) {
+      if (key.startsWith(`${storeId}:`)) {
+        supplierCache.delete(key);
+      }
+    }
+  } else {
+    supplierCache.clear();
+  }
+}
+
+// =============================================================================
 // API FUNCTIONS
 // =============================================================================
 
@@ -229,14 +281,32 @@ export async function getProduct(
 
 /**
  * Get all suppliers for a product.
- * Returns the suppliers array from the product detail.
+ * STG-435: Uses in-memory cache to avoid redundant API calls when
+ * switching between reorder items.
  */
 export async function getProductSuppliers(
   storeId: string,
-  productId: string
+  productId: string,
+  options?: { skipCache?: boolean }
 ): Promise<CatalogSupplier[]> {
+  const cacheKey = getSupplierCacheKey(storeId, productId);
+
+  // Check cache first (unless explicitly skipped)
+  if (!options?.skipCache) {
+    const cached = supplierCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < SUPPLIER_CACHE_TTL_MS) {
+      return cached.data;
+    }
+  }
+
   const product = await getProduct(storeId, productId);
-  return product.suppliers;
+  const suppliers = product.suppliers;
+
+  // Store in cache
+  cleanupSupplierCache();
+  supplierCache.set(cacheKey, { data: suppliers, timestamp: Date.now() });
+
+  return suppliers;
 }
 
 /**

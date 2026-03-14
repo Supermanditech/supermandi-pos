@@ -348,6 +348,183 @@ export async function bulkUpdatePolicies(
 }
 
 // =============================================================================
+// STG-421: Submit PO after approval
+// =============================================================================
+
+export interface SubmitPORequest {
+  draftPurchaseOrders: DraftPurchaseOrder[];
+}
+
+export interface SubmitPOResponse {
+  success: boolean;
+  data: {
+    purchaseOrderIds: string[];
+    submittedCount: number;
+  };
+  message: string;
+}
+
+/**
+ * Submit purchase orders from approved reorders (STG-421).
+ */
+export async function submitPurchaseOrders(
+  storeId: string,
+  request: SubmitPORequest
+): Promise<SubmitPOResponse> {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/submit-po`;
+  return apiClient.post<SubmitPOResponse>(path, request);
+}
+
+// =============================================================================
+// STG-413: Patch pending reorder quantity/supplier
+// =============================================================================
+
+export interface PatchPendingReorderRequest {
+  suggestedQuantity?: number;
+  suggestedSupplierId?: string | null;
+  suggestedSupplierName?: string | null;
+  suggestedUnitPrice?: number | null;
+  supplierProductId?: string | null;
+}
+
+/**
+ * Update a pending reorder's quantity or supplier (STG-413).
+ */
+export async function patchPendingReorder(
+  storeId: string,
+  pendingId: string,
+  updates: PatchPendingReorderRequest
+): Promise<PendingReorder> {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/pending/${pendingId}`;
+  const response = await apiClient.patch<GetPendingResponse>(path, updates);
+  return response.data;
+}
+
+// =============================================================================
+// STG-414: Reorder history
+// =============================================================================
+
+export interface ReorderHistoryEntry {
+  id: string;
+  storeId: string;
+  productId: string;
+  productName: string;
+  barcode: string | null;
+  suggestedQuantity: number;
+  suggestedSupplierId: string | null;
+  suggestedSupplierName: string | null;
+  suggestedUnitPrice: number | null;
+  status: PendingReorderStatus | "fulfilled";
+  dismissedReason: string | null;
+  purchaseOrderId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string;
+}
+
+export interface ListHistoryResponse {
+  success: boolean;
+  data: ReorderHistoryEntry[];
+  pagination: {
+    limit: number;
+    offset: number;
+    total: number;
+    hasMore: boolean;
+  };
+}
+
+/**
+ * List reorder history (approved, dismissed, expired, fulfilled) for STG-414.
+ */
+export async function listReorderHistory(
+  storeId: string,
+  params?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }
+): Promise<ListHistoryResponse> {
+  const query = new URLSearchParams();
+
+  if (params?.status) {
+    query.set("status", params.status);
+  }
+  if (params?.limit && params.limit > 0) {
+    query.set("limit", String(params.limit));
+  }
+  if (params?.offset && params.offset > 0) {
+    query.set("offset", String(params.offset));
+  }
+
+  // Exclude 'pending' - we want only completed/historic statuses
+  if (!params?.status) {
+    query.set("status", "approved,dismissed,expired,fulfilled");
+  }
+
+  const queryString = query.toString();
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/pending${queryString ? `?${queryString}` : ""}`;
+
+  return apiClient.get<ListHistoryResponse>(path);
+}
+
+// =============================================================================
+// STG-422: Mark reorder as fulfilled
+// =============================================================================
+
+/**
+ * Mark a pending reorder as fulfilled (e.g., after GRN completion) (STG-422).
+ */
+export async function markReorderFulfilled(
+  storeId: string,
+  pendingId: string
+): Promise<PendingReorder> {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/pending/${pendingId}/fulfill`;
+  const response = await apiClient.post<GetPendingResponse>(path, {});
+  return response.data;
+}
+
+// =============================================================================
+// STG-439: CRON VISIBILITY / MANUAL TRIGGER
+// =============================================================================
+
+export interface ReorderRunInfo {
+  lastRunAt: string | null;
+  lastRunStatus: string | null;
+  itemsChecked: number;
+  pendingCreated: number;
+}
+
+export interface TriggerCheckResponse {
+  success: boolean;
+  data: {
+    checkedCount: number;
+    pendingCreated: number;
+  };
+  message: string;
+}
+
+/**
+ * STG-439: Get last reorder run info for a store.
+ */
+export async function getLastReorderRun(
+  storeId: string
+): Promise<ReorderRunInfo> {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/last-run`;
+  const response = await apiClient.get<{ success: boolean; data: ReorderRunInfo }>(path);
+  return response.data;
+}
+
+/**
+ * STG-439: Manually trigger a reorder stock check for a store.
+ */
+export async function triggerReorderCheck(
+  storeId: string
+): Promise<TriggerCheckResponse> {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/check`;
+  return apiClient.post<TriggerCheckResponse>(path);
+}
+
+// =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
@@ -371,4 +548,26 @@ export function isCriticallyLow(pending: PendingReorder): boolean {
 export function getEstimatedTotal(pending: PendingReorder): number {
   if (!pending.suggestedUnitPrice) return 0;
   return pending.suggestedQuantity * pending.suggestedUnitPrice;
+}
+
+/**
+ * STG-415: Check if a pending reorder is stale (> 3 days old)
+ */
+export function isStale(pending: PendingReorder): boolean {
+  const STALE_DAYS = 3;
+  const created = new Date(pending.createdAt);
+  const now = new Date();
+  const diffMs = now.getTime() - created.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  return diffDays > STALE_DAYS;
+}
+
+/**
+ * STG-415: Get age of a pending reorder in days
+ */
+export function getAgeDays(pending: PendingReorder): number {
+  const created = new Date(pending.createdAt);
+  const now = new Date();
+  const diffMs = now.getTime() - created.getTime();
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }

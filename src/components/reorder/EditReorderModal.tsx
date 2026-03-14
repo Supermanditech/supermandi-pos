@@ -1,5 +1,9 @@
 // EditReorderModal - V3.0.9 compliant
 // Modal for editing pending reorder quantity and supplier
+// STG-431: Show original qty reference alongside editable field
+// STG-424: Show pack size/variant info for each supplier
+// STG-425: Original supplier fallback when no preferred supplier available
+// STG-432: Supplier load error shown early (not deferred)
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -13,6 +17,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { theme, useThemeColors } from "../../theme";
 import { formatMoney } from "../../utils/money";
@@ -58,6 +63,7 @@ export function EditReorderModal({
   useModalBackHandler(visible, onClose);
 
   const tc = useThemeColors();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(tc), [tc]);
 
   const insets = useSafeAreaInsets();
@@ -70,6 +76,8 @@ export function EditReorderModal({
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // STG-432: Track supplier load error separately for early display
+  const [supplierLoadError, setSupplierLoadError] = useState<string | null>(null);
 
   // Load store ID
   useEffect(() => {
@@ -84,6 +92,7 @@ export function EditReorderModal({
       setSelectedSupplier(null);
       setAvailableSuppliers([]);
       setError(null);
+      setSupplierLoadError(null);
     }
   }, [visible, item]);
 
@@ -93,6 +102,7 @@ export function EditReorderModal({
 
     setLoadingSuppliers(true);
     setError(null);
+    setSupplierLoadError(null);
 
     try {
       const suppliers = await catalogApi.getProductSuppliers(storeId, item.productId);
@@ -104,6 +114,7 @@ export function EditReorderModal({
         if (current) {
           setSelectedSupplier(current);
         } else if (suppliers.length > 0) {
+          // STG-425: Preferred supplier not found, fall back to first available
           setSelectedSupplier(suppliers[0]);
         }
       } else if (suppliers.length > 0) {
@@ -111,9 +122,11 @@ export function EditReorderModal({
       }
     } catch (err) {
       if (__DEV__) console.error("[EditReorderModal] Failed to load suppliers:", err);
-      setError("Failed to load suppliers");
+      // STG-432: Show supplier load error immediately
+      const errorMsg = t("reorder.supplierLoadError");
+      setSupplierLoadError(errorMsg);
 
-      // Create a placeholder supplier from current data
+      // STG-425: Create a placeholder supplier from current data (original supplier fallback)
       if (item.suggestedSupplierId && item.suggestedSupplierName) {
         setSelectedSupplier({
           supplierId: item.suggestedSupplierId,
@@ -129,7 +142,7 @@ export function EditReorderModal({
     } finally {
       setLoadingSuppliers(false);
     }
-  }, [storeId, item]);
+  }, [storeId, item, t]);
 
   // Reload suppliers when storeId becomes available
   useEffect(() => {
@@ -175,11 +188,11 @@ export function EditReorderModal({
       onClose();
     } catch (err) {
       if (__DEV__) console.error("[EditReorderModal] Failed to save:", err);
-      setError("Failed to save changes. Please try again.");
+      setError(t("reorder.editSaveFailed"));
     } finally {
       setSaving(false);
     }
-  }, [item, hasChanges, quantity, selectedSupplier, onSave, onClose]);
+  }, [item, hasChanges, quantity, selectedSupplier, onSave, onClose, t]);
 
   // Handle supplier select
   const handleSupplierSelect = useCallback((supplier: CatalogSupplier) => {
@@ -198,16 +211,28 @@ export function EditReorderModal({
       <View style={[styles.container, { paddingTop: insets.top }]}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable style={styles.closeButton} onPress={onClose}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("common.close")} style={styles.closeButton} onPress={onClose}>
             <MaterialCommunityIcons
               name="close"
               size={24}
               color={tc.textPrimary}
             />
           </Pressable>
-          <Text style={styles.headerTitle}>Edit Reorder</Text>
+          <Text accessibilityRole="header" style={styles.headerTitle}>{t("reorder.editReorder")}</Text>
           <View style={styles.headerRight} />
         </View>
+
+        {/* STG-432: Show supplier load error early at the top */}
+        {supplierLoadError && (
+          <View style={styles.supplierErrorBanner}>
+            <MaterialCommunityIcons
+              name="alert-circle"
+              size={16}
+              color={tc.error}
+            />
+            <Text style={styles.supplierErrorText}>{supplierLoadError}</Text>
+          </View>
+        )}
 
         <ScrollView
           style={styles.content}
@@ -225,23 +250,23 @@ export function EditReorderModal({
             )}
             <View style={styles.stockInfo}>
               <View style={styles.stockItem}>
-                <Text style={styles.stockLabel}>Current Stock</Text>
+                <Text style={styles.stockLabel}>{t("reorder.current")}</Text>
                 <Text style={styles.stockValue}>{item.currentStock}</Text>
               </View>
               <View style={styles.stockItem}>
-                <Text style={styles.stockLabel}>Min Threshold</Text>
+                <Text style={styles.stockLabel}>{t("reorder.min")}</Text>
                 <Text style={styles.stockValue}>{item.minThreshold}</Text>
               </View>
               <View style={styles.stockItem}>
-                <Text style={styles.stockLabel}>Target Stock</Text>
+                <Text style={styles.stockLabel}>{t("reorder.target")}</Text>
                 <Text style={styles.stockValue}>{item.targetStock}</Text>
               </View>
             </View>
           </View>
 
-          {/* Quantity Section */}
+          {/* Quantity Section — STG-431: Show original qty reference */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Order Quantity</Text>
+            <Text style={styles.sectionTitle}>{t("reorder.orderQuantity")}</Text>
             <View style={styles.quantityRow}>
               <QuantityPicker
                 value={quantity}
@@ -249,21 +274,40 @@ export function EditReorderModal({
                 moq={1}
               />
               <View style={styles.quantityInfo}>
-                <Text style={styles.quantityInfoLabel}>
-                  Originally: {item.suggestedQuantity} units
-                </Text>
+                {/* STG-431: Original suggested quantity reference */}
+                <View style={styles.originalQtyRow}>
+                  <MaterialCommunityIcons
+                    name="information-outline"
+                    size={14}
+                    color={tc.textTertiary}
+                  />
+                  <Text style={styles.quantityInfoLabel}>
+                    {t("reorder.originalQty", { qty: item.suggestedQuantity })}
+                  </Text>
+                </View>
+                {quantity !== item.suggestedQuantity && (
+                  <Text style={[
+                    styles.quantityDiff,
+                    quantity > item.suggestedQuantity
+                      ? styles.quantityDiffUp
+                      : styles.quantityDiffDown,
+                  ]}>
+                    {quantity > item.suggestedQuantity ? "+" : ""}
+                    {quantity - item.suggestedQuantity} {t("reorder.fromOriginal")}
+                  </Text>
+                )}
               </View>
             </View>
           </View>
 
-          {/* Supplier Section */}
+          {/* Supplier Section — STG-424 pack variants, STG-425 fallback */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Supplier</Text>
+            <Text style={styles.sectionTitle}>{t("reorder.supplier")}</Text>
 
             {loadingSuppliers ? (
               <View style={styles.loadingSuppliers}>
                 <ActivityIndicator size="small" color={tc.primary} />
-                <Text style={styles.loadingText}>Loading suppliers...</Text>
+                <Text style={styles.loadingText}>{t("reorder.loadingSuppliers")}</Text>
               </View>
             ) : availableSuppliers.length === 0 ? (
               <View style={styles.noSuppliers}>
@@ -273,12 +317,20 @@ export function EditReorderModal({
                   color={tc.textTertiary}
                 />
                 <Text style={styles.noSuppliersText}>
-                  No other suppliers available
+                  {t("reorder.noOtherSuppliers")}
                 </Text>
+                {/* STG-425: Show original supplier as fallback */}
                 {selectedSupplier && (
-                  <Text style={styles.currentSupplierText}>
-                    Current: {selectedSupplier.supplierName}
-                  </Text>
+                  <View style={styles.fallbackSupplierRow}>
+                    <MaterialCommunityIcons
+                      name="store"
+                      size={14}
+                      color={tc.textSecondary}
+                    />
+                    <Text style={styles.currentSupplierText}>
+                      {t("reorder.usingOriginalSupplier", { name: selectedSupplier.supplierName })}
+                    </Text>
+                  </View>
                 )}
               </View>
             ) : (
@@ -290,6 +342,9 @@ export function EditReorderModal({
                   return (
                     <Pressable
                       key={supplier.supplierId}
+                      accessibilityRole="radio"
+                      accessibilityLabel={`${supplier.supplierName}, ${formatMoney(supplier.purchasePrice)}`}
+                      accessibilityState={{ selected: isSelected }}
                       style={[
                         styles.supplierOption,
                         isSelected && styles.supplierOptionSelected,
@@ -320,7 +375,7 @@ export function EditReorderModal({
                           </Text>
                           {isOriginal && (
                             <View style={styles.originalBadge}>
-                              <Text style={styles.originalBadgeText}>Current</Text>
+                              <Text style={styles.originalBadgeText}>{t("reorder.currentBadge")}</Text>
                             </View>
                           )}
                           {supplier.isPreferred && (
@@ -339,12 +394,32 @@ export function EditReorderModal({
                             {formatMoney(supplier.purchasePrice)}
                           </Text>
                           <Text style={styles.supplierStock}>
-                            Stock: {supplier.stockQuantity}
+                            {t("reorder.stock")}: {supplier.stockQuantity}
                           </Text>
                           <Text style={styles.supplierMoq}>
                             MOQ: {supplier.moq}
                           </Text>
                         </View>
+
+                        {/* STG-424: Pack size/variant info */}
+                        {(supplier.maxQty != null || supplier.moq > 1) && (
+                          <View style={styles.packVariantRow}>
+                            <MaterialCommunityIcons
+                              name="package-variant"
+                              size={12}
+                              color={tc.textTertiary}
+                            />
+                            <Text style={styles.packVariantText}>
+                              {supplier.moq > 1
+                                ? t("reorder.packSize", { size: supplier.moq })
+                                : ""}
+                              {supplier.maxQty != null
+                                ? (supplier.moq > 1 ? " | " : "") +
+                                  t("reorder.maxOrderQty", { max: supplier.maxQty })
+                                : ""}
+                            </Text>
+                          </View>
+                        )}
                       </View>
                     </Pressable>
                   );
@@ -355,21 +430,21 @@ export function EditReorderModal({
 
           {/* Price Impact */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Price Impact</Text>
+            <Text style={styles.sectionTitle}>{t("reorder.priceImpact")}</Text>
             <View style={styles.priceImpactCard}>
               <View style={styles.priceRow}>
-                <Text style={styles.priceLabel}>Unit Price</Text>
+                <Text style={styles.priceLabel}>{t("reorder.unitPrice")}</Text>
                 <Text style={styles.priceValue}>
                   {formatMoney(newUnitPrice)}
                 </Text>
               </View>
               <View style={styles.priceRow}>
-                <Text style={styles.priceLabel}>Quantity</Text>
+                <Text style={styles.priceLabel}>{t("reorder.quantity")}</Text>
                 <Text style={styles.priceValue}>{"\u00D7"} {quantity}</Text>
               </View>
               <View style={styles.priceDivider} />
               <View style={styles.priceRow}>
-                <Text style={styles.totalLabel}>New Total</Text>
+                <Text style={styles.totalLabel}>{t("reorder.newTotal")}</Text>
                 <Text style={styles.totalValue}>
                   {formatMoney(newTotal)}
                 </Text>
@@ -377,7 +452,7 @@ export function EditReorderModal({
               {priceDifference !== 0 && (
                 <View style={styles.differenceRow}>
                   <Text style={styles.differenceLabel}>
-                    {priceDifference > 0 ? "Increase" : "Savings"}
+                    {priceDifference > 0 ? t("reorder.increase") : t("reorder.savings")}
                   </Text>
                   <Text
                     style={[
@@ -411,14 +486,18 @@ export function EditReorderModal({
         {/* Footer */}
         <View style={[styles.footer, { paddingBottom: insets.bottom + theme.spacing.md }]}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t("common.cancel")}
             style={styles.cancelButton}
             onPress={onClose}
             disabled={saving}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
           </Pressable>
 
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t("reorder.saveChanges")}
             style={[
               styles.saveButton,
               (!hasChanges || saving) && styles.saveButtonDisabled,
@@ -435,7 +514,7 @@ export function EditReorderModal({
                   size={18}
                   color={tc.textInverse}
                 />
-                <Text style={styles.saveButtonText}>Save Changes</Text>
+                <Text style={styles.saveButtonText}>{t("reorder.saveChanges")}</Text>
               </>
             )}
           </Pressable>
@@ -478,6 +557,20 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     },
     headerRight: {
       width: 40,
+    },
+    // STG-432: Supplier error banner at top of modal
+    supplierErrorBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.errorSoft,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      gap: theme.spacing.sm,
+    },
+    supplierErrorText: {
+      fontSize: 13,
+      color: colors.error,
+      flex: 1,
     },
     content: {
       flex: 1,
@@ -539,9 +632,26 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     quantityInfo: {
       flex: 1,
     },
+    // STG-431: Original qty reference row
+    originalQtyRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
     quantityInfoLabel: {
       fontSize: 13,
       color: colors.textTertiary,
+    },
+    quantityDiff: {
+      fontSize: 12,
+      fontWeight: "600",
+      marginTop: 2,
+    },
+    quantityDiffUp: {
+      color: colors.warning,
+    },
+    quantityDiffDown: {
+      color: colors.success,
     },
     loadingSuppliers: {
       flexDirection: "row",
@@ -565,10 +675,19 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       color: colors.textTertiary,
       marginTop: theme.spacing.sm,
     },
+    // STG-425: Fallback supplier row
+    fallbackSupplierRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      marginTop: theme.spacing.sm,
+      paddingTop: theme.spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
     currentSupplierText: {
       fontSize: 13,
       color: colors.textSecondary,
-      marginTop: theme.spacing.xs,
     },
     supplierList: {
       gap: theme.spacing.sm,
@@ -655,6 +774,17 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     },
     supplierMoq: {
       fontSize: 12,
+      color: colors.textTertiary,
+    },
+    // STG-424: Pack variant info row
+    packVariantRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      marginTop: 4,
+    },
+    packVariantText: {
+      fontSize: 11,
       color: colors.textTertiary,
     },
     priceImpactCard: {

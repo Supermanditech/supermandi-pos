@@ -196,14 +196,14 @@ export function EditPolicyModal({
       <View style={[styles.container, { paddingTop: insets.top }]}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable style={styles.closeButton} onPress={onClose}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close policy editor" style={styles.closeButton} onPress={onClose}>
             <MaterialCommunityIcons
               name="close"
               size={24}
               color={tc.textPrimary}
             />
           </Pressable>
-          <Text style={styles.headerTitle}>Edit Policy</Text>
+          <Text accessibilityRole="header" style={styles.headerTitle}>Edit Policy</Text>
           <View style={styles.headerRight} />
         </View>
 
@@ -245,6 +245,7 @@ export function EditPolicyModal({
               </Text>
               <View style={styles.inputRow}>
                 <TextInput
+                  accessibilityLabel="Minimum stock level"
                   style={styles.input}
                   value={minThreshold}
                   onChangeText={setMinThreshold}
@@ -264,6 +265,7 @@ export function EditPolicyModal({
               </Text>
               <View style={styles.inputRow}>
                 <TextInput
+                  accessibilityLabel="Target stock level"
                   style={styles.input}
                   value={targetStock}
                   onChangeText={setTargetStock}
@@ -283,6 +285,7 @@ export function EditPolicyModal({
               </Text>
               <View style={styles.inputRow}>
                 <TextInput
+                  accessibilityLabel="Maximum reorder quantity"
                   style={styles.input}
                   value={maxReorderQty}
                   onChangeText={setMaxReorderQty}
@@ -294,34 +297,21 @@ export function EditPolicyModal({
               </View>
             </View>
 
-            {/* Visual Guide */}
+            {/* STG-434: Visual Guide fix — proportional bar using actual values */}
             <View style={styles.thresholdGuide}>
-              <View style={styles.guideBar}>
-                <View
-                  style={[
-                    styles.guideSection,
-                    styles.guideCritical,
-                    { flex: 1 },
-                  ]}
-                />
-                <View
-                  style={[
-                    styles.guideSection,
-                    styles.guideLow,
-                    { flex: 2 },
-                  ]}
-                />
-                <View
-                  style={[
-                    styles.guideSection,
-                    styles.guideTarget,
-                    { flex: 3 },
-                  ]}
-                />
-              </View>
+              <ThresholdVisualGuide
+                currentStock={policy.currentStock}
+                minThreshold={parseInt(minThreshold, 10) || 0}
+                targetStock={parseInt(targetStock, 10) || 0}
+              />
               <View style={styles.guideLabels}>
                 <Text style={styles.guideLabel}>0</Text>
                 <Text style={styles.guideLabel}>Min: {minThreshold || "?"}</Text>
+                {policy.currentStock > 0 && (
+                  <Text style={[styles.guideLabel, styles.guideLabelCurrent]}>
+                    Now: {policy.currentStock}
+                  </Text>
+                )}
                 <Text style={styles.guideLabel}>Target: {targetStock || "?"}</Text>
               </View>
             </View>
@@ -343,6 +333,9 @@ export function EditPolicyModal({
               <View style={styles.supplierList}>
                 {/* No Preference Option */}
                 <Pressable
+                  accessibilityRole="radio"
+                  accessibilityLabel="No preference, auto-select best price"
+                  accessibilityState={{ selected: !selectedSupplierId }}
                   style={[
                     styles.supplierOption,
                     !selectedSupplierId && styles.supplierOptionSelected,
@@ -378,6 +371,9 @@ export function EditPolicyModal({
                   return (
                     <Pressable
                       key={supplier.supplierId}
+                      accessibilityRole="radio"
+                      accessibilityLabel={supplier.supplierName}
+                      accessibilityState={{ selected: isSelected }}
                       style={[
                         styles.supplierOption,
                         isSelected && styles.supplierOptionSelected,
@@ -461,6 +457,8 @@ export function EditPolicyModal({
         {/* Footer */}
         <View style={[styles.footer, { paddingBottom: insets.bottom + theme.spacing.md }]}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
             style={styles.cancelButton}
             onPress={onClose}
             disabled={saving}
@@ -469,6 +467,8 @@ export function EditPolicyModal({
           </Pressable>
 
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Save policy changes"
             style={[
               styles.saveButton,
               (!hasChanges || !isValid || saving) && styles.saveButtonDisabled,
@@ -492,6 +492,60 @@ export function EditPolicyModal({
         </View>
       </View>
     </Modal>
+  );
+}
+
+// =============================================================================
+// STG-434: Threshold Visual Guide Component — proportional bar
+// =============================================================================
+
+function ThresholdVisualGuide({
+  currentStock,
+  minThreshold,
+  targetStock,
+}: {
+  currentStock: number;
+  minThreshold: number;
+  targetStock: number;
+}) {
+  const tc = useThemeColors();
+
+  // Calculate proportional widths based on actual values
+  const maxVal = Math.max(targetStock, currentStock, minThreshold, 1);
+  const criticalFlex = Math.max(minThreshold, 1);
+  const lowFlex = Math.max(targetStock - minThreshold, 1);
+  const overFlex = Math.max(maxVal - targetStock, 1);
+
+  // Current stock position as percentage
+  const currentPercent = Math.min((currentStock / maxVal) * 100, 100);
+
+  return (
+    <View>
+      <View style={{
+        flexDirection: "row",
+        height: 12,
+        borderRadius: 6,
+        overflow: "hidden",
+        marginBottom: 4,
+        position: "relative",
+      }}>
+        <View style={{ flex: criticalFlex, backgroundColor: tc.errorSoft, height: "100%" }} />
+        <View style={{ flex: lowFlex, backgroundColor: tc.warningSoft, height: "100%" }} />
+        <View style={{ flex: overFlex, backgroundColor: tc.successSoft, height: "100%" }} />
+        {/* Current stock indicator */}
+        {currentStock > 0 && (
+          <View style={{
+            position: "absolute",
+            left: `${currentPercent}%`,
+            top: 0,
+            bottom: 0,
+            width: 3,
+            backgroundColor: tc.textPrimary,
+            borderRadius: 1.5,
+          }} />
+        )}
+      </View>
+    </View>
   );
 }
 
@@ -648,6 +702,10 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     guideLabel: {
       fontSize: 10,
       color: colors.textTertiary,
+    },
+    guideLabelCurrent: {
+      fontWeight: "600",
+      color: colors.textPrimary,
     },
     loadingSuppliers: {
       flexDirection: "row",

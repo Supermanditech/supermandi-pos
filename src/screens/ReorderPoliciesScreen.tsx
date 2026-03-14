@@ -21,7 +21,7 @@ import { theme, useThemeColors } from "../theme";
 import { PolicyRow } from "../components/reorder/PolicyRow";
 import { EditPolicyModal } from "../components/reorder/EditPolicyModal";
 import * as reorderApi from "../services/api/reorderApi";
-import type { ReorderPolicy, UpdatePolicyRequest } from "../services/api/reorderApi";
+import type { ReorderPolicy, UpdatePolicyRequest, BulkUpdatePoliciesRequest } from "../services/api/reorderApi";
 import { getDeviceStoreId } from "../services/deviceSession";
 
 // =============================================================================
@@ -57,6 +57,11 @@ export default function ReorderPoliciesScreen({
   // Edit modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState<ReorderPolicy | null>(null);
+
+  // STG-440: Bulk selection state
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedPolicyIds, setSelectedPolicyIds] = useState<Set<string>>(new Set());
+  const [bulkUpdating, setBulkUpdating] = useState(false);
 
   // Load store ID on mount
   useEffect(() => {
@@ -190,16 +195,83 @@ export default function ReorderPoliciesScreen({
     [storeId]
   );
 
+  // STG-440: Bulk selection handlers
+  const handleToggleBulkMode = useCallback(() => {
+    setBulkMode((prev) => {
+      if (prev) setSelectedPolicyIds(new Set());
+      return !prev;
+    });
+  }, []);
+
+  const handleTogglePolicySelect = useCallback((policyId: string) => {
+    setSelectedPolicyIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(policyId)) {
+        next.delete(policyId);
+      } else {
+        next.add(policyId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAllFiltered = useCallback(() => {
+    setSelectedPolicyIds(new Set(filteredPolicies.map((p) => p.id)));
+  }, [filteredPolicies]);
+
+  const handleDeselectAllBulk = useCallback(() => {
+    setSelectedPolicyIds(new Set());
+  }, []);
+
+  // STG-440: Bulk enable/disable
+  const handleBulkToggleEnabled = useCallback(
+    async (enabled: boolean) => {
+      if (!storeId || selectedPolicyIds.size === 0) return;
+
+      setBulkUpdating(true);
+      try {
+        const selectedPolicies = policies.filter((p) => selectedPolicyIds.has(p.id));
+        const request: BulkUpdatePoliciesRequest = {
+          policies: selectedPolicies.map((p) => ({
+            productId: p.productId,
+            isEnabled: enabled,
+          })),
+        };
+        const result = await reorderApi.bulkUpdatePolicies(storeId, request);
+        // Update local state
+        const updatedMap = new Map(result.data.policies.map((p) => [p.productId, p]));
+        setPolicies((prev) =>
+          prev.map((p) => updatedMap.get(p.productId) ?? p)
+        );
+        setSelectedPolicyIds(new Set());
+        setBulkMode(false);
+        Alert.alert(
+          t("reorderPolicy.bulkUpdateSuccess"),
+          t("reorderPolicy.bulkUpdateMessage", { count: result.data.updatedCount })
+        );
+      } catch (err) {
+        if (__DEV__) console.error("[ReorderPoliciesScreen] Bulk update failed:", err);
+        Alert.alert(t("common.error"), t("reorderPolicy.bulkUpdateFailed"));
+      } finally {
+        setBulkUpdating(false);
+      }
+    },
+    [storeId, selectedPolicyIds, policies, t]
+  );
+
   // Render item
   const renderItem = useCallback(
     ({ item }: { item: ReorderPolicy }) => (
       <PolicyRow
         policy={item}
-        onEdit={handleEdit}
+        onEdit={bulkMode ? undefined as any : handleEdit}
         onToggleEnabled={handleToggleEnabled}
+        disabled={bulkMode}
+        selected={bulkMode ? selectedPolicyIds.has(item.id) : undefined}
+        onToggleSelect={bulkMode ? () => handleTogglePolicySelect(item.id) : undefined}
       />
     ),
-    [handleEdit, handleToggleEnabled]
+    [handleEdit, handleToggleEnabled, bulkMode, selectedPolicyIds, handleTogglePolicySelect]
   );
 
   // Key extractor
@@ -312,6 +384,74 @@ export default function ReorderPoliciesScreen({
       fontWeight: "600",
       color: colors.textInverse,
     },
+    bulkModeButton: {
+      padding: theme.spacing.xs,
+      borderRadius: theme.borderRadius.md,
+      marginLeft: theme.spacing.sm,
+    },
+    bulkModeButtonActive: {
+      backgroundColor: colors.primary,
+      borderRadius: theme.borderRadius.full,
+    },
+    bulkActionBar: {
+      backgroundColor: colors.surfaceAlt,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    bulkSelectRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: theme.spacing.sm,
+    },
+    bulkSelectAllBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.xs,
+    },
+    bulkSelectAllText: {
+      fontSize: 13,
+      color: colors.primary,
+      fontWeight: "500",
+    },
+    bulkSelectedCount: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    bulkActions: {
+      flexDirection: "row",
+      gap: theme.spacing.sm,
+    },
+    bulkActionBtn: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.borderRadius.md,
+    },
+    bulkEnableBtn: {
+      backgroundColor: colors.success,
+    },
+    bulkDisableBtn: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    bulkActionBtnDisabled: {
+      opacity: 0.5,
+    },
+    bulkActionBtnText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textInverse,
+    },
+    bulkDisableBtnText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textSecondary,
+    },
   }), [colors]);
 
   // Empty state
@@ -384,6 +524,19 @@ export default function ReorderPoliciesScreen({
             {t("reorderPolicy.statsSubtitle", { total: stats.total, enabled: stats.enabled, lowStock: stats.lowStock })}
           </Text>
         </View>
+        {/* STG-440: Bulk mode toggle */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={bulkMode ? t("reorderPolicy.exitBulkMode") : t("reorderPolicy.bulkEdit")}
+          style={[styles.bulkModeButton, bulkMode && styles.bulkModeButtonActive]}
+          onPress={handleToggleBulkMode}
+        >
+          <MaterialCommunityIcons
+            name={bulkMode ? "close" : "checkbox-multiple-marked-outline"}
+            size={20}
+            color={bulkMode ? colors.textInverse : colors.primary}
+          />
+        </Pressable>
       </View>
 
       {/* Search Bar */}
@@ -440,6 +593,57 @@ export default function ReorderPoliciesScreen({
           warning={stats.lowStock > 0}
         />
       </View>
+
+      {/* STG-440: Bulk Action Bar */}
+      {bulkMode && (
+        <View style={styles.bulkActionBar}>
+          <View style={styles.bulkSelectRow}>
+            <Pressable
+              accessibilityRole="button"
+              style={styles.bulkSelectAllBtn}
+              onPress={selectedPolicyIds.size === filteredPolicies.length ? handleDeselectAllBulk : handleSelectAllFiltered}
+            >
+              <MaterialCommunityIcons
+                name={selectedPolicyIds.size === filteredPolicies.length ? "checkbox-marked" : "checkbox-blank-outline"}
+                size={18}
+                color={colors.primary}
+              />
+              <Text style={styles.bulkSelectAllText}>
+                {selectedPolicyIds.size === filteredPolicies.length
+                  ? t("reorderPolicy.deselectAll")
+                  : t("reorderPolicy.selectAll")}
+              </Text>
+            </Pressable>
+            <Text style={styles.bulkSelectedCount}>
+              {t("reorderPolicy.selectedCount", { count: selectedPolicyIds.size })}
+            </Text>
+          </View>
+          <View style={styles.bulkActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("reorderPolicy.bulkEnable")}
+              style={[styles.bulkActionBtn, styles.bulkEnableBtn, (selectedPolicyIds.size === 0 || bulkUpdating) && styles.bulkActionBtnDisabled]}
+              onPress={() => handleBulkToggleEnabled(true)}
+              disabled={selectedPolicyIds.size === 0 || bulkUpdating}
+            >
+              {bulkUpdating ? (
+                <ActivityIndicator size="small" color={colors.textInverse} />
+              ) : (
+                <Text style={styles.bulkActionBtnText}>{t("reorderPolicy.bulkEnable")}</Text>
+              )}
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("reorderPolicy.bulkDisable")}
+              style={[styles.bulkActionBtn, styles.bulkDisableBtn, (selectedPolicyIds.size === 0 || bulkUpdating) && styles.bulkActionBtnDisabled]}
+              onPress={() => handleBulkToggleEnabled(false)}
+              disabled={selectedPolicyIds.size === 0 || bulkUpdating}
+            >
+              <Text style={styles.bulkDisableBtnText}>{t("reorderPolicy.bulkDisable")}</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
 
       {/* Content */}
       {loading ? (

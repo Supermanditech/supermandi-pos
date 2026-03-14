@@ -43,6 +43,7 @@ export function PendingReorderCard({
 
   return (
     <Pressable
+      accessibilityLabel={`${item.productName}, ${t("reorder.suggestedQty")} ${item.suggestedQuantity}`}
       style={[
         styles.container,
         selected && styles.containerSelected,
@@ -52,6 +53,9 @@ export function PendingReorderCard({
     >
       {/* Checkbox */}
       <Pressable
+        accessibilityRole="checkbox"
+        accessibilityLabel={`${t("reorder.selectItem")} ${item.productName}`}
+        accessibilityState={{ checked: selected }}
         style={styles.checkboxContainer}
         onPress={() => onToggleSelect(item.id)}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -179,6 +183,8 @@ export function PendingReorderCard({
           <View style={styles.actionsSection}>
             {onEdit && (
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${t("reorder.editItem")} ${item.productName}`}
                 style={styles.actionButton}
                 onPress={() => onEdit(item)}
                 hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
@@ -191,6 +197,8 @@ export function PendingReorderCard({
               </Pressable>
             )}
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${t("reorder.dismissItem")} ${item.productName}`}
               style={styles.actionButton}
               onPress={() => onDismiss(item)}
               hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}

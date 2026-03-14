@@ -19,7 +19,7 @@ import { useTranslation } from "react-i18next";
 import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
 import * as reorderApi from "../services/api/reorderApi";
-import type { ReorderSettings } from "../services/api/reorderApi";
+import type { ReorderSettings, ReorderRunInfo } from "../services/api/reorderApi";
 import { getDeviceStoreId } from "../services/deviceSession";
 
 // =============================================================================
@@ -50,6 +50,10 @@ export default function ReorderSettingsScreen({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // STG-439: Last run info and manual trigger
+  const [lastRunInfo, setLastRunInfo] = useState<ReorderRunInfo | null>(null);
+  const [triggering, setTriggering] = useState(false);
+
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Load store ID on mount
@@ -67,6 +71,8 @@ export default function ReorderSettingsScreen({
     try {
       const data = await reorderApi.getReorderSettings(storeId);
       setSettings(data);
+      // STG-439: Also load last run info (best-effort, don't block on failure)
+      reorderApi.getLastReorderRun(storeId).then(setLastRunInfo).catch(() => {});
     } catch (err) {
       if (__DEV__) console.error("[ReorderSettingsScreen] Failed to load settings:", err);
       setError("Failed to load reorder settings");
@@ -139,6 +145,45 @@ export default function ReorderSettingsScreen({
     },
     [storeId, settings, saving]
   );
+
+  // STG-439: Manual trigger handler
+  const handleTriggerReorderCheck = useCallback(async () => {
+    if (!storeId || triggering) return;
+
+    setTriggering(true);
+    try {
+      const result = await reorderApi.triggerReorderCheck(storeId);
+      // Refresh last run info
+      reorderApi.getLastReorderRun(storeId).then(setLastRunInfo).catch(() => {});
+      Alert.alert(
+        t("reorderSettings.runCompleteTitle"),
+        t("reorderSettings.runCompleteMessage", {
+          checked: result.data.checkedCount,
+          created: result.data.pendingCreated,
+        })
+      );
+    } catch (err) {
+      if (__DEV__) console.error("[ReorderSettingsScreen] Trigger failed:", err);
+      Alert.alert(t("common.error"), t("reorderSettings.runFailed"));
+    } finally {
+      setTriggering(false);
+    }
+  }, [storeId, triggering, t]);
+
+  // STG-439: Format last run time
+  const lastRunDisplay = useMemo(() => {
+    if (!lastRunInfo?.lastRunAt) return t("reorderSettings.neverRun");
+    const date = new Date(lastRunInfo.lastRunAt);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return t("reorderSettings.justNow");
+    if (diffMins < 60) return t("reorderSettings.minutesAgo", { count: diffMins });
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return t("reorderSettings.hoursAgo", { count: diffHours });
+    const diffDays = Math.floor(diffHours / 24);
+    return t("reorderSettings.daysAgo", { count: diffDays });
+  }, [lastRunInfo, t]);
 
   // Render loading state
   if (loading) {
@@ -389,6 +434,65 @@ export default function ReorderSettingsScreen({
           )}
         </View>
 
+        {/* STG-439: Stock Check Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t("reorderSettings.stockCheckTitle")}</Text>
+
+          {/* Last Run Info */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <View style={styles.settingIconContainer}>
+                <MaterialCommunityIcons
+                  name="clock-outline"
+                  size={22}
+                  color={colors.textSecondary}
+                />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={styles.settingLabel}>{t("reorderSettings.lastRunLabel")}</Text>
+                <Text style={styles.settingDescription}>
+                  {lastRunDisplay}
+                  {lastRunInfo?.itemsChecked != null
+                    ? ` — ${t("reorderSettings.itemsCheckedInfo", { checked: lastRunInfo.itemsChecked, created: lastRunInfo.pendingCreated })}`
+                    : ""}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Manual Trigger Button */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <View style={styles.settingIconContainer}>
+                <MaterialCommunityIcons
+                  name="play-circle-outline"
+                  size={22}
+                  color={colors.primary}
+                />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={styles.settingLabel}>{t("reorderSettings.runNowLabel")}</Text>
+                <Text style={styles.settingDescription}>
+                  {t("reorderSettings.runNowDescription")}
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("reorderSettings.runNowLabel")}
+              style={[styles.runNowButton, triggering && styles.runNowButtonDisabled]}
+              onPress={handleTriggerReorderCheck}
+              disabled={triggering || !settings?.reorderEnabled}
+            >
+              {triggering ? (
+                <ActivityIndicator size="small" color={colors.textInverse} />
+              ) : (
+                <Text style={styles.runNowButtonText}>{t("reorderSettings.runNow")}</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+
         {/* Status Footer */}
         {settings && (
           <View style={styles.statusFooter}>
@@ -580,6 +684,22 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     fontSize: 12,
     color: colors.warning,
     lineHeight: 16,
+  },
+  runNowButton: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: theme.borderRadius.md,
+    minWidth: 80,
+    alignItems: "center",
+  },
+  runNowButtonDisabled: {
+    opacity: 0.5,
+  },
+  runNowButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.textInverse,
   },
   statusFooter: {
     alignItems: "center",
