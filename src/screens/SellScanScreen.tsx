@@ -5976,7 +5976,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   addRowStock: {
     marginTop: 2,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     color: colors.textSecondary,
   },
@@ -6053,7 +6053,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     color: colors.textPrimary,
   },
   onboardingHelper: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textTertiary,
     marginTop: 2,
   },
@@ -6245,7 +6245,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   // STG-138: Weight/unit label next to name
   cartItemUnitLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textTertiary,
   },
   cartItemActions: {
@@ -6263,7 +6263,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     backgroundColor: colors.warning,
   },
   discountBadgeText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "700",
     color: colors.primary,
   },
@@ -6296,7 +6296,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     color: colors.primaryDark,
   },
   cartItemOriginalPrice: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "500",
     color: colors.textTertiary,
     textDecorationLine: "line-through",
@@ -6342,7 +6342,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     opacity: 0.6,
   },
   editHintLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textTertiary,
   },
   cartItemMeta: {
@@ -6364,7 +6364,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     minWidth: 120,
   },
   cartPriceLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     color: colors.textSecondary,
     marginBottom: 4,
@@ -6461,7 +6461,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     gap: 8,
   },
   stockLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textSecondary,
   },
   // STG-137: Color-coded stock levels
@@ -6478,20 +6478,20 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   // STG-127: Remaining after sale hint
   stockRemainingHint: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textTertiary,
     fontStyle: "italic",
   },
   // STG-385: Stock adjust button
   stockAdjustButton: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     color: colors.primary,
     textDecorationLine: "underline",
   },
   // STG-100: Calculation hint (₹145 × 3)
   cartItemCalcHint: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textTertiary,
     textAlign: "right",
   },
@@ -6511,7 +6511,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     flex: 1,
   },
   cartItemTotalLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     color: colors.textSecondary,
   },
@@ -6882,7 +6882,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     paddingHorizontal: 4,
   },
   cartBarBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "800",
     color: colors.surface,
   },
@@ -6904,7 +6904,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderRadius: 999,
   },
   cartBarLockedText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     color: colors.warning,
   },
@@ -7304,7 +7304,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     marginTop: 2,
   },
   substituteCardStock: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.success,
     marginTop: 1,
   },
@@ -7386,7 +7386,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     color: colors.textPrimary,
   },
   autocompleteStock: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.success,
   },
   // STG-075: Skeleton loading placeholders

@@ -459,7 +459,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       backgroundColor: colors.accentLight,
     },
     modeBadgeText: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: "700",
     },
     modeBadgeTextPackaged: {
@@ -501,7 +501,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       paddingVertical: 1,
     },
     discountBadgeText: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: "700",
       color: colors.success,
     },
@@ -516,11 +516,11 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       marginTop: 2,
     },
     stockBadgeText: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: "700",
     },
     stockDetail: {
-      fontSize: 10,
+      fontSize: 11,
       color: colors.textTertiary,
     },
     bottomRow: {
@@ -542,7 +542,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     },
     // STG-357: Combined stock + expiry compact single line
     bottomCompact: {
-      fontSize: 10,
+      fontSize: 11,
       color: colors.textSecondary,
     },
     gst: {
@@ -550,7 +550,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       color: colors.textTertiary,
     },
     barcode: {
-      fontSize: 10,
+      fontSize: 11,
       color: colors.textTertiary,
       maxWidth: 120,
     },

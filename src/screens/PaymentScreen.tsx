@@ -1495,7 +1495,7 @@ const PaymentScreen = () => {
     },
     // STG-088: GST note
     summaryGstNote: {
-      fontSize: 10,
+      fontSize: 11,
       color: colors.textTertiary,
       textAlign: "right",
       marginTop: 4,

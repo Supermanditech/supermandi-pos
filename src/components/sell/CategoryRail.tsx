@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   categoryLabelCollapsed: {
-    fontSize: 10,
+    fontSize: 11,
     textAlign: "center",
     marginTop: 6,
     fontWeight: "700",
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   },
   categoryLabelCollapsedCompact: {
     marginTop: 4,
-    fontSize: 9,
+    fontSize: 11,
   },
   categoryLabelSelected: {
     fontWeight: "800",
