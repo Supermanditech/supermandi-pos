@@ -17,6 +17,38 @@ interface PosRequest extends Request {
   posDevice: PosDeviceContext;
 }
 
+// =============================================================================
+// STG-462: Daily prorated interest calculation
+// CRITICAL: Uses principal * rate / 100 * (days / 365) — NOT flat formula
+// =============================================================================
+function calculateDailyProratedInterest(principalMinor: number, annualRatePercent: number, createdAt: Date | string): number {
+  if (annualRatePercent <= 0) return 0;
+  const start = new Date(createdAt);
+  const now = new Date();
+  const diffMs = now.getTime() - start.getTime();
+  const days = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  // Daily prorated: principal * rate / 100 * (days / 365)
+  return Math.round(principalMinor * annualRatePercent / 100 * (days / 365));
+}
+
+// =============================================================================
+// STG-468: Configurable max days per store type
+// =============================================================================
+const BNPL_MAX_DAYS_BY_STORE_TYPE: Record<string, number> = {
+  kirana: 7,
+  supermarket: 14,
+  wholesale: 21,
+  chain: 30,
+  default: 7,
+};
+
+function getMaxDaysForStoreType(storeType: string | null | undefined, storeMaxDays: number | null): number {
+  // Store-level override takes precedence
+  if (storeMaxDays && storeMaxDays > 0) return storeMaxDays;
+  // Fall back to store type default
+  return BNPL_MAX_DAYS_BY_STORE_TYPE[storeType || 'default'] || BNPL_MAX_DAYS_BY_STORE_TYPE.default;
+}
+
 /**
  * GET /api/v1/pos/bnpl/active
  * SM-019: Get active BNPL drawdowns for the store
@@ -31,6 +63,7 @@ posBnplRouter.get("/bnpl/active", requireDeviceToken, async (req: Request, res: 
   try {
     // Get active drawdowns with supplier info
     // T-153: Include paid_amount_minor and also show 'partial' status drawdowns
+    // STG-465: Include per-supplier drawdown limit
     const drawdownsResult = await pool.query(`
       SELECT
         bd.id,
@@ -44,7 +77,8 @@ posBnplRouter.get("/bnpl/active", requireDeviceToken, async (req: Request, res: 
         bd.status,
         bd.created_at as "createdAt",
         (bd.due_date - CURRENT_DATE) as "daysRemaining",
-        COALESCE(ssl.bnpl_interest_rate, 0) as "interestRatePercent"
+        COALESCE(ssl.bnpl_interest_rate, 0) as "interestRatePercent",
+        COALESCE(ssl.bnpl_credit_limit, 0) as "supplierDrawdownLimit"
       FROM payments.bnpl_drawdowns bd
       LEFT JOIN supplier.suppliers s ON s.id = bd.supplier_id
       LEFT JOIN orders.purchase_orders po ON po.id = bd.purchase_order_id
@@ -54,13 +88,16 @@ posBnplRouter.get("/bnpl/active", requireDeviceToken, async (req: Request, res: 
     `, [storeId]);
 
     // Get store's BNPL credit info
+    // STG-468: Include store_type for configurable max days
     const storeResult = await pool.query(`
-      SELECT bnpl_enabled, bnpl_credit_limit, bnpl_max_days
+      SELECT bnpl_enabled, bnpl_credit_limit, bnpl_max_days, store_type
       FROM platform.stores WHERE id = $1
     `, [storeId]);
 
     const store = storeResult.rows[0] || {};
     const creditLimit = store.bnpl_credit_limit || 5000000;
+    // STG-468: Max days configurable per store type
+    const maxDays = getMaxDaysForStoreType(store.store_type, store.bnpl_max_days);
 
     // Calculate totals
     const totalOutstanding = drawdownsResult.rows.reduce(
@@ -70,12 +107,13 @@ posBnplRouter.get("/bnpl/active", requireDeviceToken, async (req: Request, res: 
 
     // Format drawdowns with days remaining
     // T-153: Include paidAmountMinor in response for partial payment tracking
-    // T-158: Calculate interest for each drawdown
+    // STG-462: Daily prorated interest — principal * rate / 100 * (days / 365)
+    // STG-465: Per-supplier drawdown limit
     const drawdowns = drawdownsResult.rows.map(d => {
       const interestRate = parseFloat(d.interestRatePercent || '0');
       const principal = d.principalMinor;
-      // Simple interest: principal * rate/100
-      const interestMinor = Math.round(principal * interestRate / 100);
+      // STG-462: CRITICAL — daily prorated interest, NOT flat
+      const interestMinor = calculateDailyProratedInterest(principal, interestRate, d.createdAt);
       const totalWithInterestMinor = principal + interestMinor;
 
       return {
@@ -88,12 +126,15 @@ posBnplRouter.get("/bnpl/active", requireDeviceToken, async (req: Request, res: 
       paidAmountMinor: parseInt(d.paidAmountMinor || '0', 10),
       dueDate: d.dueDate,
       status: d.status,
+      createdAt: d.createdAt,
       daysRemaining: Math.max(0, parseInt(d.daysRemaining || '0', 10)),
       isOverdue: parseInt(d.daysRemaining || '0', 10) < 0,
-      // T-158: Interest rate fields
+      // STG-462: Daily prorated interest fields
       interestRatePercent: interestRate,
       interestMinor,
       totalWithInterestMinor,
+      // STG-465: Per-supplier drawdown limit
+      supplierDrawdownLimit: parseInt(d.supplierDrawdownLimit || '0', 10),
     };
     });
 
@@ -106,7 +147,8 @@ posBnplRouter.get("/bnpl/active", requireDeviceToken, async (req: Request, res: 
       creditLimit,
       availableCredit,
       bnplEnabled: store.bnpl_enabled === true,
-      maxDays: store.bnpl_max_days || 7
+      // STG-468: Configurable max days per store type
+      maxDays,
     });
 
   } catch (_error: unknown) {
@@ -502,9 +544,14 @@ posBnplRouter.get("/bnpl/:drawdownId/pay/:repaymentId/status", requireDeviceToke
     });
   }
 
+  // STG-466: Use transaction with SELECT FOR UPDATE to prevent race conditions
+  // when multiple polling requests hit simultaneously
+  const client = await pool.connect();
   try {
-    // Get repayment record with status
-    const repaymentResult = await pool.query(`
+    await client.query("BEGIN");
+
+    // STG-466: SELECT FOR UPDATE prevents concurrent reads from getting stale data
+    const repaymentResult = await client.query(`
       SELECT
         bp.id,
         bp.bnpl_drawdown_id as "drawdownId",
@@ -517,9 +564,11 @@ posBnplRouter.get("/bnpl/:drawdownId/pay/:repaymentId/status", requireDeviceToke
       WHERE bp.id = $1
         AND bp.store_id = $2
         AND bp.bnpl_drawdown_id = $3
+      FOR UPDATE SKIP LOCKED
     `, [repaymentId, storeId, drawdownId]);
 
     if (repaymentResult.rows.length === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({
         success: false,
         repaymentId,
@@ -550,6 +599,8 @@ posBnplRouter.get("/bnpl/:drawdownId/pay/:repaymentId/status", requireDeviceToke
         apiStatus = "pending";
     }
 
+    await client.query("COMMIT");
+
     log.info(`[GL-RJ-008] BNPL status poll: repaymentId=${repaymentId}, status=${apiStatus}`);
 
     return res.json({
@@ -565,6 +616,7 @@ posBnplRouter.get("/bnpl/:drawdownId/pay/:repaymentId/status", requireDeviceToke
 
   } catch (_error: unknown) {
     const error = asError(_error);
+    await client.query("ROLLBACK").catch(() => {});
     log.error("[GL-RJ-008] BNPL status poll error:", error.message);
     return res.status(500).json({
       success: false,
@@ -573,6 +625,8 @@ posBnplRouter.get("/bnpl/:drawdownId/pay/:repaymentId/status", requireDeviceToke
       status: "failed",
       errorMessage: "Failed to get payment status"
     });
+  } finally {
+    client.release();
   }
 });
 
@@ -675,6 +729,169 @@ posBnplRouter.post("/bnpl/:drawdownId/dispute", requireDeviceToken, requireActiv
     });
   } finally {
     client.release();
+  }
+});
+
+// =============================================================================
+// STG-467: Overdue Maturation Cron Endpoint
+// CRITICAL: Wired as a callable endpoint, not just a function definition
+// Call via POST /api/v1/pos/bnpl/cron/mature-overdue (internal/cron use)
+// =============================================================================
+
+/**
+ * POST /api/v1/pos/bnpl/cron/mature-overdue
+ * STG-467: Mature overdue BNPL drawdowns
+ * Marks active drawdowns past due_date as 'overdue', and overdue > 30 days as 'defaulted'
+ * Designed to be called by Cloud Scheduler or internal cron
+ */
+posBnplRouter.post("/bnpl/cron/mature-overdue", async (_req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Mark active drawdowns past due_date as 'overdue'
+    const overdueResult = await client.query(`
+      UPDATE payments.bnpl_drawdowns
+      SET status = 'overdue'
+      WHERE status IN ('active', 'partial')
+        AND due_date < CURRENT_DATE
+      RETURNING id, store_id, supplier_id, principal_minor
+    `);
+
+    // Mark overdue drawdowns past 30 days as 'defaulted'
+    const defaultedResult = await client.query(`
+      UPDATE payments.bnpl_drawdowns
+      SET status = 'defaulted'
+      WHERE status = 'overdue'
+        AND due_date < (CURRENT_DATE - INTERVAL '30 days')
+      RETURNING id, store_id, supplier_id, principal_minor
+    `);
+
+    await client.query("COMMIT");
+
+    const matured = overdueResult.rowCount || 0;
+    const defaulted = defaultedResult.rowCount || 0;
+
+    log.info(`[STG-467] BNPL maturation cron: matured=${matured} overdue, ${defaulted} defaulted`);
+
+    return res.json({
+      success: true,
+      maturedToOverdue: matured,
+      maturedToDefaulted: defaulted,
+      overdueDrawdowns: overdueResult.rows,
+      defaultedDrawdowns: defaultedResult.rows,
+      processedAt: new Date().toISOString(),
+    });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    await client.query("ROLLBACK").catch(() => {});
+    log.error("[STG-467] BNPL maturation cron error:", error.message);
+    return res.status(500).json({ success: false, error: "Failed to process overdue maturation" });
+  } finally {
+    client.release();
+  }
+});
+
+// =============================================================================
+// STG-465: Per-Supplier Drawdown Limit Check
+// =============================================================================
+
+/**
+ * GET /api/v1/pos/bnpl/supplier/:supplierId/limit
+ * STG-465: Check per-supplier drawdown limit for a store
+ */
+posBnplRouter.get("/bnpl/supplier/:supplierId/limit", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as unknown as PosRequest).posDevice;
+  const { supplierId } = req.params;
+
+  try {
+    // Get per-supplier limit from supplier_store_links
+    const linkResult = await pool.query(`
+      SELECT
+        COALESCE(ssl.bnpl_credit_limit, 0) as supplier_limit,
+        COALESCE(ssl.bnpl_interest_rate, 0) as interest_rate
+      FROM supplier.supplier_store_links ssl
+      WHERE ssl.supplier_id = $1 AND ssl.store_id = $2
+    `, [supplierId, storeId]);
+
+    const supplierLimit = parseInt(linkResult.rows[0]?.supplier_limit || '0', 10);
+
+    // Get current outstanding for this supplier
+    const outstandingResult = await pool.query(`
+      SELECT COALESCE(SUM(principal_minor - COALESCE(paid_amount_minor, 0)), 0) as outstanding
+      FROM payments.bnpl_drawdowns
+      WHERE store_id = $1 AND supplier_id = $2 AND status IN ('active', 'partial')
+    `, [storeId, supplierId]);
+
+    const outstanding = parseInt(outstandingResult.rows[0]?.outstanding || '0', 10);
+    const available = Math.max(0, supplierLimit - outstanding);
+
+    return res.json({
+      success: true,
+      supplierId,
+      supplierLimit,
+      outstanding,
+      available,
+      interestRate: parseFloat(linkResult.rows[0]?.interest_rate || '0'),
+    });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[STG-465] Supplier limit check error:", error.message);
+    return res.status(500).json({ success: false, error: "Failed to check supplier limit" });
+  }
+});
+
+// =============================================================================
+// STG-464: Dispute Audit Trail — Get dispute history for a drawdown
+// =============================================================================
+
+/**
+ * GET /api/v1/pos/bnpl/:drawdownId/disputes
+ * STG-464: Get dispute history for a drawdown
+ */
+posBnplRouter.get("/bnpl/:drawdownId/disputes", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as unknown as PosRequest).posDevice;
+  const { drawdownId } = req.params;
+
+  try {
+    const result = await pool.query(`
+      SELECT
+        id,
+        drawdown_id as "drawdownId",
+        reason,
+        description,
+        status,
+        created_at as "createdAt",
+        resolved_at as "resolvedAt",
+        resolution_note as "resolutionNote"
+      FROM payments.bnpl_disputes
+      WHERE drawdown_id = $1 AND store_id = $2
+      ORDER BY created_at DESC
+    `, [drawdownId, storeId]);
+
+    return res.json({
+      success: true,
+      disputes: result.rows,
+    });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[STG-464] Dispute history error:", error.message);
+
+    // Handle missing table gracefully
+    if (error.code === "42P01") {
+      return res.json({ success: true, disputes: [] });
+    }
+
+    return res.status(500).json({ success: false, error: "Failed to load dispute history" });
   }
 });
 

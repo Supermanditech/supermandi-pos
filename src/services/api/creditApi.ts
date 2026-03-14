@@ -40,6 +40,8 @@ export interface CreditOffersResponse {
   eligibleAmount: number;
   scoringFactors: ScoringFactors;
   activeApplication: ActiveApplication | null;
+  // STG-457: DPDP consent check
+  consentRequired?: boolean;
 }
 
 export interface CreditApplication {
@@ -212,6 +214,96 @@ export async function createProviderDrawdown(params: {
   purchaseOrderId?: string;
 }): Promise<{ success: boolean; drawdownId: string; status: string; message?: string }> {
   return apiClient.post("/api/v1/credit/drawdown", params);
+}
+
+// =============================================================================
+// STG-448: Feature Gate — Single source of truth from backend config
+// =============================================================================
+
+export interface CreditFeatureConfig {
+  success: boolean;
+  creditEnabled: boolean;
+  bnplEnabled: boolean;
+  kycRequired: boolean;
+  maxApplications: number;
+}
+
+/**
+ * STG-448: Get credit/BNPL feature gate config from backend
+ * This is the SINGLE SOURCE OF TRUTH — frontend must not hardcode feature flags
+ */
+export async function getCreditFeatureConfig(): Promise<CreditFeatureConfig> {
+  return apiClient.get<CreditFeatureConfig>(`${CREDIT_BASE}/config/features`);
+}
+
+// =============================================================================
+// STG-455: Credit Disbursement
+// =============================================================================
+
+export interface CreditDisburseResponse {
+  success: boolean;
+  applicationId: string;
+  disbursedAmountMinor: number;
+  disbursedAt: string;
+  message: string;
+}
+
+/**
+ * STG-455: Request disbursement for an approved credit application
+ */
+export async function disburseCreditApplication(
+  applicationId: string
+): Promise<CreditDisburseResponse> {
+  return apiClient.post<CreditDisburseResponse>(`${CREDIT_BASE}/disburse`, {
+    applicationId,
+  });
+}
+
+// =============================================================================
+// STG-456: Document Upload for Credit Application
+// =============================================================================
+
+export interface CreditDocumentUploadResponse {
+  success: boolean;
+  documentId: string;
+  status: string;
+}
+
+/**
+ * STG-456: Upload documents for a credit application
+ */
+export async function uploadCreditDocument(
+  applicationId: string,
+  documentType: string,
+  documentData: string // base64 encoded
+): Promise<CreditDocumentUploadResponse> {
+  return apiClient.post<CreditDocumentUploadResponse>(
+    `${CREDIT_BASE}/${applicationId}/documents`,
+    { documentType, documentData }
+  );
+}
+
+// =============================================================================
+// STG-458: Score Tiers
+// =============================================================================
+
+export interface ScoreTier {
+  min: number;
+  max: number;
+  label: string;
+  color: string;
+}
+
+export interface ScoreTiersResponse {
+  success: boolean;
+  tiers: ScoreTier[];
+}
+
+/**
+ * STG-458: Get credit score tier definitions
+ */
+export async function getCreditScoreTiers(): Promise<ScoreTiersResponse> {
+  return apiClient.get<ScoreTiersResponse>(`${CREDIT_BASE}/score-tiers`);
 }
 
 // =============================================================================

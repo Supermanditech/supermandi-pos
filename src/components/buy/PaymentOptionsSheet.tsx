@@ -23,6 +23,8 @@ import { verifyUtr } from "../../services/api/posApi";
 // T-127: Modal back handler for Android hardware back button
 import { useModalBackHandler } from "../../hooks/useModalBackHandler";
 import { asError } from "../../utils/errorUtils";
+// STG-448: Feature gate from backend config (single source of truth)
+import { getCreditFeatureConfig } from "../../services/api/creditApi";
 
 // =============================================================================
 // TYPES
@@ -95,9 +97,21 @@ export function PaymentOptionsSheet({
     return date.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
   })();
 
-  // POS-CREDIT-002: Credit feature is disabled for MVP (mock KYC only).
-  // Override creditEligible to false regardless of what the caller passes.
-  const creditFeatureEnabled = false; // Hardcoded off until real KYC integration
+  // STG-448: Credit feature gate from backend config (single source of truth)
+  // Replaces hardcoded false — now reads from backend config endpoint
+  const [creditFeatureEnabled, setCreditFeatureEnabled] = useState(false);
+
+  React.useEffect(() => {
+    if (!visible) return;
+    getCreditFeatureConfig()
+      .then((config) => {
+        setCreditFeatureEnabled(config.creditEnabled);
+      })
+      .catch(() => {
+        setCreditFeatureEnabled(false); // Fail closed
+      });
+  }, [visible]);
+
   const canUseCredit = creditFeatureEnabled && creditEligible && availableCredit >= amount * 100;
 
   // Handle payment selection
@@ -312,7 +326,7 @@ export function PaymentOptionsSheet({
                 )}
               </Pressable>
 
-              {/* BNPL Option */}
+              {/* BNPL Option — STG-460: Show cost details inline */}
               {bnplEligible && (
                 <Pressable
                   style={[
@@ -331,6 +345,10 @@ export function PaymentOptionsSheet({
                     </Text>
                     <Text style={styles.optionDescription}>
                       {t("payment.bnplDescription", "Pay later within {{days}} days", { days: bnplMaxDays })}
+                    </Text>
+                    {/* STG-460: BNPL cost breakdown */}
+                    <Text style={[styles.optionDescription, { marginTop: 2, fontSize: 12, color: theme.colors.textTertiary }]}>
+                      {t("payment.bnplCostNote", "Principal: {{amount}} + Interest calculated daily", { amount: formatMoney(amount) })}
                     </Text>
                   </View>
                   {processing && selectedMode === "BNPL" ? (

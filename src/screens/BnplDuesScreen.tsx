@@ -112,6 +112,10 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
     submitting: false,
   });
 
+  // STG-464: Dispute audit trail state
+  const [disputeHistory, setDisputeHistory] = useState<bnplApi.BnplDisputeRecord[]>([]);
+  const [disputeHistoryLoading, setDisputeHistoryLoading] = useState(false);
+
   // GO-LIVE-192: AbortController ref for cancelling polling on modal close
   const pollingAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -385,6 +389,12 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       description: "",
       submitting: false,
     });
+    // STG-464: Load dispute history for audit trail
+    setDisputeHistoryLoading(true);
+    bnplApi.getBnplDisputeHistory(drawdown.id)
+      .then((res) => setDisputeHistory(res.disputes))
+      .catch(() => setDisputeHistory([]))
+      .finally(() => setDisputeHistoryLoading(false));
   }, []);
 
   // GO-LIVE-240: Submit dispute
@@ -445,8 +455,32 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       const statusColor = bnplApi.getBnplStatusColor(drawdown.status, drawdown.isOverdue);
       const statusLabel = bnplApi.getBnplStatusLabel(drawdown.status, drawdown.daysRemaining);
 
+      // STG-463: Overdue visual hierarchy — escalating urgency indicators
+      const daysOverdue = drawdown.isOverdue ? Math.abs(drawdown.daysRemaining) : 0;
+      const isUrgent = drawdown.isOverdue && daysOverdue > 7;
+      const isCritical = drawdown.isOverdue && daysOverdue > 21;
+
       return (
-        <View key={drawdown.id} style={styles.drawdownCard}>
+        <View key={drawdown.id} style={[
+          styles.drawdownCard,
+          // STG-463: Escalating border colors for overdue items
+          drawdown.isOverdue && { borderColor: colors.error, borderWidth: 2 },
+          isUrgent && { borderColor: colors.error, borderWidth: 2, backgroundColor: colors.errorSoft || '#FEF2F2' },
+          isCritical && { borderColor: '#991B1B', borderWidth: 3, backgroundColor: '#FEE2E2' },
+        ]}>
+          {/* STG-463: Overdue warning banner */}
+          {drawdown.isOverdue && (
+            <View style={[styles.overdueBanner, isCritical && { backgroundColor: '#991B1B' }]}>
+              <MaterialCommunityIcons name="alert" size={14} color="#FFF" />
+              <Text style={styles.overdueBannerText}>
+                {isCritical
+                  ? t("bnpl.criticalOverdue", "CRITICAL: {{days}} days overdue — risk of default", { days: daysOverdue })
+                  : isUrgent
+                    ? t("bnpl.urgentOverdue", "URGENT: {{days}} days overdue", { days: daysOverdue })
+                    : t("bnpl.overdueWarning", "Overdue by {{days}} days", { days: daysOverdue })}
+              </Text>
+            </View>
+          )}
           <View style={styles.drawdownHeader}>
             <View style={styles.drawdownSupplier}>
               <MaterialCommunityIcons
@@ -946,6 +980,40 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
               <Text style={styles.disputeNote}>
                 {t("bnpl.disputeReviewNote")}
               </Text>
+
+              {/* STG-464: Dispute Audit Trail */}
+              {disputeHistoryLoading ? (
+                <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: theme.spacing.md }} />
+              ) : disputeHistory.length > 0 ? (
+                <View style={styles.disputeAuditTrail}>
+                  <Text style={styles.disputeAuditTitle}>
+                    {t("bnpl.previousDisputes", "Previous Disputes")}
+                  </Text>
+                  {disputeHistory.map((d) => (
+                    <View key={d.id} style={styles.disputeAuditItem}>
+                      <View style={styles.disputeAuditHeader}>
+                        <Text style={styles.disputeAuditReason}>{d.reason}</Text>
+                        <Text style={[styles.disputeAuditStatus, {
+                          color: d.status === 'resolved' ? colors.success : d.status === 'rejected' ? colors.error : colors.warning,
+                        }]}>
+                          {d.status.toUpperCase()}
+                        </Text>
+                      </View>
+                      {d.description && (
+                        <Text style={styles.disputeAuditDescription} numberOfLines={2}>{d.description}</Text>
+                      )}
+                      <Text style={styles.disputeAuditDate}>
+                        {new Date(d.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      </Text>
+                      {d.resolutionNote && (
+                        <Text style={styles.disputeAuditResolution}>
+                          {t("bnpl.resolution", "Resolution")}: {d.resolutionNote}
+                        </Text>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              ) : null}
             </ScrollView>
           )}
         </View>
@@ -1462,6 +1530,75 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     paddingHorizontal: theme.spacing.sm,
     fontSize: 12,
     color: colors.textTertiary,
+  },
+  // STG-463: Overdue visual hierarchy styles
+  overdueBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.error,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 6,
+    borderTopLeftRadius: theme.borderRadius.lg,
+    borderTopRightRadius: theme.borderRadius.lg,
+    marginHorizontal: -theme.spacing.md,
+    marginTop: -theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  overdueBannerText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFF",
+  },
+  // STG-464: Dispute audit trail styles
+  disputeAuditTrail: {
+    marginTop: theme.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: theme.spacing.md,
+  },
+  disputeAuditTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    marginBottom: theme.spacing.sm,
+  },
+  disputeAuditItem: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+  },
+  disputeAuditHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  disputeAuditReason: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  disputeAuditStatus: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  disputeAuditDescription: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  disputeAuditDate: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    marginTop: 4,
+  },
+  disputeAuditResolution: {
+    fontSize: 12,
+    color: colors.success,
+    fontWeight: "500",
+    marginTop: 4,
+    fontStyle: "italic",
   },
 }); }
 

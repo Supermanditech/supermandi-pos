@@ -18,7 +18,8 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-
+// STG-397: Safe area handling for notched phones
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
@@ -27,6 +28,8 @@ import { useKhataStore } from "../stores/khataStore";
 import type { KhataCustomer, KhataEntry } from "../services/khataService";
 import { BackHeader } from "../components/ui/BackHeader";
 import EmptyState from "../components/ui/EmptyState";
+// STG-472: Bulk actions API
+import { apiClient } from "../services/api/apiClient";
 
 // =============================================================================
 // HELPERS
@@ -53,6 +56,8 @@ interface KhataScreenProps {
 export default function KhataScreen({ onBack }: KhataScreenProps) {
   const { t } = useTranslation();
   const colors = useThemeColors();
+  // STG-397: Safe area insets for notched phones
+  const insets = useSafeAreaInsets();
   const {
     customers,
     entries,
@@ -91,6 +96,64 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "UPI">("CASH");
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+
+  // STG-472: Bulk actions state
+  const [bulkSelecting, setBulkSelecting] = useState(false);
+  const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+
+  // STG-472: Toggle bulk selection mode
+  const handleToggleBulkSelect = useCallback(() => {
+    setBulkSelecting((prev) => !prev);
+    setSelectedPhones(new Set());
+  }, []);
+
+  // STG-472: Toggle customer selection
+  const handleToggleCustomer = useCallback((phone: string) => {
+    setSelectedPhones((prev) => {
+      const next = new Set(prev);
+      if (next.has(phone)) next.delete(phone);
+      else next.add(phone);
+      return next;
+    });
+  }, []);
+
+  // STG-472: Bulk mark paid
+  const handleBulkMarkPaid = useCallback(async () => {
+    if (selectedPhones.size === 0) return;
+    setBulkProcessing(true);
+    try {
+      await apiClient.post("/api/v1/pos/khata/bulk/mark-paid", {
+        customerPhones: Array.from(selectedPhones),
+      });
+      Alert.alert(t("khata.successTitle"), t("khata.bulkMarkPaidSuccess", "{{count}} customers marked as paid.", { count: selectedPhones.size }));
+      setBulkSelecting(false);
+      setSelectedPhones(new Set());
+      void fetchCustomers(searchQuery || undefined);
+    } catch {
+      Alert.alert(t("khata.errorTitle"), t("khata.bulkActionFailed", "Bulk action failed. Please try again."));
+    } finally {
+      setBulkProcessing(false);
+    }
+  }, [selectedPhones, fetchCustomers, searchQuery, t]);
+
+  // STG-472: Bulk send reminders
+  const handleBulkSendReminders = useCallback(async () => {
+    if (selectedPhones.size === 0) return;
+    setBulkProcessing(true);
+    try {
+      await apiClient.post("/api/v1/pos/khata/bulk/send-reminders", {
+        customerPhones: Array.from(selectedPhones),
+      });
+      Alert.alert(t("khata.successTitle"), t("khata.bulkRemindersQueued", "Reminders queued for {{count}} customers.", { count: selectedPhones.size }));
+      setBulkSelecting(false);
+      setSelectedPhones(new Set());
+    } catch {
+      Alert.alert(t("khata.errorTitle"), t("khata.bulkActionFailed", "Bulk action failed. Please try again."));
+    } finally {
+      setBulkProcessing(false);
+    }
+  }, [selectedPhones, t]);
 
   // ISSUE-112: Android hardware back button support
   useEffect(() => {
@@ -583,9 +646,26 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
           : colors.textSecondary;
       const balanceLabel = isOwes ? t("khata.owes") : isCredit ? t("khata.advance") : t("khata.settled");
 
+      const isSelected = bulkSelecting && selectedPhones.has(item.phone);
+
       return (
-        <Pressable accessibilityRole="button" style={styles.customerCard} onPress={() => handleCustomerTap(item)}>
+        <Pressable
+          accessibilityRole="button"
+          style={[styles.customerCard, isSelected && { borderColor: colors.primary, borderWidth: 2 }]}
+          onPress={() => bulkSelecting ? handleToggleCustomer(item.phone) : handleCustomerTap(item)}
+          onLongPress={() => { if (!bulkSelecting) { setBulkSelecting(true); handleToggleCustomer(item.phone); } }}
+        >
           <View style={styles.customerInfo}>
+            {/* STG-472: Show checkbox in bulk selection mode */}
+            {bulkSelecting && (
+              <View style={{ marginRight: 8 }}>
+                <MaterialCommunityIcons
+                  name={isSelected ? "checkbox-marked" : "checkbox-blank-outline"}
+                  size={22}
+                  color={isSelected ? colors.primary : colors.textTertiary}
+                />
+              </View>
+            )}
             <View style={styles.customerAvatar}>
               <Text style={styles.customerAvatarText}>
                 {(item.name || "?").charAt(0).toUpperCase()}
@@ -613,7 +693,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
         </Pressable>
       );
     },
-    [handleCustomerTap, colors, styles]
+    [handleCustomerTap, handleToggleCustomer, bulkSelecting, selectedPhones, colors, styles]
   );
 
   // STG-471: Handle voiding a khata entry
@@ -699,7 +779,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
     : [];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <BackHeader title={t("khata.title")} onBack={onBack} />
 
       {/* Search bar */}
@@ -733,6 +813,43 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
           <Text style={[styles.actionButtonText, { color: colors.success }]}>{t("khata.recordPayment")}</Text>
         </Pressable>
       </View>
+
+      {/* STG-472: Bulk actions bar */}
+      {bulkSelecting && (
+        <View style={[styles.actionRow, { backgroundColor: colors.primaryLight, paddingVertical: theme.spacing.sm, borderRadius: theme.borderRadius.md, marginHorizontal: theme.spacing.md, marginBottom: theme.spacing.sm }]}>
+          <Pressable
+            accessibilityRole="button"
+            style={[styles.actionButton, { borderColor: colors.success }]}
+            onPress={handleBulkMarkPaid}
+            disabled={bulkProcessing || selectedPhones.size === 0}
+          >
+            {bulkProcessing ? (
+              <ActivityIndicator size="small" color={colors.success} />
+            ) : (
+              <>
+                <MaterialCommunityIcons name="check-all" size={18} color={colors.success} />
+                <Text style={[styles.actionButtonText, { color: colors.success }]}>
+                  {t("khata.bulkMarkPaid", "Mark Paid")} ({selectedPhones.size})
+                </Text>
+              </>
+            )}
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            style={[styles.actionButton, { borderColor: colors.warning }]}
+            onPress={handleBulkSendReminders}
+            disabled={bulkProcessing || selectedPhones.size === 0}
+          >
+            <MaterialCommunityIcons name="bell-ring-outline" size={18} color={colors.warning} />
+            <Text style={[styles.actionButtonText, { color: colors.warning }]}>
+              {t("khata.bulkRemind", "Remind")} ({selectedPhones.size})
+            </Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={handleToggleBulkSelect} hitSlop={8}>
+            <MaterialCommunityIcons name="close" size={20} color={colors.textSecondary} />
+          </Pressable>
+        </View>
+      )}
 
       {/* Customer list */}
       {loading && customers.length === 0 ? (

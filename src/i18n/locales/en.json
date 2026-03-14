@@ -940,7 +940,12 @@
     "jargonHelpTitle": "What do these terms mean?",
     "jargonHelpBody": "BNPL = Buy Now Pay Later — purchase goods now and pay within the due date.\n\nUTR = Unique Transaction Reference — the 12-digit code from your UPI payment app.\n\nUPI = Unified Payments Interface — digital payment system (GPay, PhonePe, Paytm, etc.).",
     "jargonHelpLabel": "What is BNPL, UTR, UPI?",
-    "jargonHelpAccessibility": "Tap to learn what BNPL, UTR, and UPI mean"
+    "jargonHelpAccessibility": "Tap to learn what BNPL, UTR, and UPI mean",
+    "criticalOverdue": "CRITICAL: {{days}} days overdue — risk of default",
+    "urgentOverdue": "URGENT: {{days}} days overdue",
+    "overdueWarning": "Overdue by {{days}} days",
+    "previousDisputes": "Previous Disputes",
+    "resolution": "Resolution"
   },
   "credit": {
     "title": "Credit",
@@ -1001,7 +1006,14 @@
     "jargonHelpTitle": "What do these terms mean?",
     "jargonHelpBody": "KYC = Know Your Customer — identity verification required for loans.\n\nPAN = Permanent Account Number — your tax ID (e.g., ABCDE1234F).\n\nAadhaar = Government-issued 12-digit identity number.\n\nEMI = Equated Monthly Installment — fixed monthly payment for your loan.",
     "jargonHelpLabel": "What is KYC, PAN, EMI?",
-    "jargonHelpAccessibility": "Tap to learn what KYC, PAN, Aadhaar, and EMI mean"
+    "jargonHelpAccessibility": "Tap to learn what KYC, PAN, Aadhaar, and EMI mean",
+    "featureDisabled": "Credit feature is not available for your store at this time.",
+    "timelineSubmitted": "Submitted",
+    "timelineKyc": "KYC Verification",
+    "timelineProcessing": "Processing",
+    "timelineApproved": "Approved",
+    "timelineDisbursed": "Disbursed",
+    "timelineRejected": "Rejected"
   },
   "chat": {
     "noConversationsTitle": "No conversations yet",
@@ -1328,7 +1340,12 @@
     "voidEntryTitle": "Void Entry",
     "voidEntryConfirm": "Mark this entry as void? This is a display-only change.",
     "voidButton": "Void",
-    "voided": "VOIDED"
+    "voided": "VOIDED",
+    "bulkMarkPaid": "Mark Paid",
+    "bulkRemind": "Remind",
+    "bulkMarkPaidSuccess": "{{count}} customers marked as paid.",
+    "bulkRemindersQueued": "Reminders queued for {{count}} customers.",
+    "bulkActionFailed": "Bulk action failed. Please try again."
   },
   "shift": {
     "title": "Shift Management",
@@ -1507,6 +1524,43 @@
     "couldNotUnderstand": "Couldn't understand",
     "tryAgain": "Please try again",
     "retry": "Retry"
+  },
+  "sync": {
+    "syncNowButton": "Sync Now",
+    "syncing": "Syncing...",
+    "lastSync": "Last sync: {{time}}",
+    "stockConflictTitle": "Stock Updated on Another Device",
+    "stockConflictMessage": "Stock for \"{{name}}\" differs. Keep local ({{local}}) or use server ({{server}})?",
+    "keepLocal": "Keep Local ({{qty}})",
+    "useServer": "Use Server ({{qty}})",
+    "queueExpiryWarning": "{{count}} items waiting to sync. Items older than 24h may be lost.",
+    "offlineCheckoutSaved": "Sale saved locally. Will sync when connected.",
+    "offlineQueueIndicator": "{{count}} pending",
+    "dbHealthy": "Database OK",
+    "dbRecovered": "Database recovered",
+    "dbCorrupt": "Database issue detected. Clear and re-sync?",
+    "dbCleared": "Database cleared. Data will re-sync.",
+    "dbClearButton": "Clear & Re-sync",
+    "dbCheckFailed": "Database check failed",
+    "priceRefreshing": "Refreshing prices...",
+    "priceRefreshComplete": "Prices updated",
+    "priceRefreshFailed": "Could not refresh prices. Using cached values."
+  },
+  "cart": {
+    "undoRemove": "Undo",
+    "itemRemoved": "\"{{name}}\" removed",
+    "undoCountdown": "Undo ({{seconds}}s)",
+    "parkCart": "Park Cart",
+    "resumeCart": "Resume",
+    "parkedCarts": "Parked Carts ({{count}})",
+    "maxParkedCarts": "Maximum 3 parked carts. Resume or clear one first.",
+    "parkedCartItems": "{{count}} items",
+    "noParkedCarts": "No parked carts"
+  },
+  "device": {
+    "typePhone": "Phone",
+    "typeTablet": "Tablet",
+    "typePOS": "POS Terminal"
   },
   "posPayment": {
     "previousUpiPendingTitle": "Previous UPI Payment Pending",

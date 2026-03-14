@@ -940,7 +940,12 @@
     "jargonHelpTitle": "इन शब्दों का क्या मतलब है?",
     "jargonHelpBody": "BNPL = अभी खरीदें बाद में भुगतान करें — सामान अभी खरीदें और नियत तारीख तक भुगतान करें।\n\nUTR = यूनिक ट्रांजैक्शन रेफरेंस — आपके UPI पेमेंट ऐप से 12 अंकों का कोड।\n\nUPI = यूनिफाइड पेमेंट्स इंटरफेस — डिजिटल भुगतान प्रणाली (GPay, PhonePe, Paytm, आदि)।",
     "jargonHelpLabel": "BNPL, UTR, UPI क्या है?",
-    "jargonHelpAccessibility": "BNPL, UTR और UPI का मतलब जानने के लिए टैप करें"
+    "jargonHelpAccessibility": "BNPL, UTR और UPI का मतलब जानने के लिए टैप करें",
+    "criticalOverdue": "गंभीर: {{days}} दिन अतिदेय — चूक का खतरा",
+    "urgentOverdue": "तत्काल: {{days}} दिन अतिदेय",
+    "overdueWarning": "{{days}} दिन से अतिदेय",
+    "previousDisputes": "पिछले विवाद",
+    "resolution": "समाधान"
   },
   "credit": {
     "title": "क्रेडिट",
@@ -1001,7 +1006,14 @@
     "jargonHelpTitle": "इन शब्दों का क्या मतलब है?",
     "jargonHelpBody": "KYC = नो योर कस्टमर — ऋण के लिए पहचान सत्यापन।\n\nPAN = परमानेंट अकाउंट नंबर — आपकी टैक्स आईडी (जैसे, ABCDE1234F)।\n\nआधार = सरकार द्वारा जारी 12 अंकों का पहचान नंबर।\n\nEMI = समान मासिक किस्त — आपके ऋण का निश्चित मासिक भुगतान।",
     "jargonHelpLabel": "KYC, PAN, EMI क्या है?",
-    "jargonHelpAccessibility": "KYC, PAN, आधार और EMI का मतलब जानने के लिए टैप करें"
+    "jargonHelpAccessibility": "KYC, PAN, आधार और EMI का मतलब जानने के लिए टैप करें",
+    "featureDisabled": "आपकी दुकान के लिए क्रेडिट सुविधा अभी उपलब्ध नहीं है।",
+    "timelineSubmitted": "जमा किया",
+    "timelineKyc": "KYC सत्यापन",
+    "timelineProcessing": "प्रक्रिया में",
+    "timelineApproved": "स्वीकृत",
+    "timelineDisbursed": "वितरित",
+    "timelineRejected": "अस्वीकृत"
   },
   "chat": {
     "noConversationsTitle": "अभी तक कोई बातचीत नहीं",
@@ -1328,7 +1340,12 @@
     "voidEntryTitle": "एंट्री रद्द करें",
     "voidEntryConfirm": "इस एंट्री को रद्द करें? यह केवल प्रदर्शन परिवर्तन है।",
     "voidButton": "रद्द करें",
-    "voided": "रद्द"
+    "voided": "रद्द",
+    "bulkMarkPaid": "भुगतान चिह्नित करें",
+    "bulkRemind": "याद दिलाएं",
+    "bulkMarkPaidSuccess": "{{count}} ग्राहकों को भुगतान के रूप में चिह्नित किया गया।",
+    "bulkRemindersQueued": "{{count}} ग्राहकों के लिए रिमाइंडर कतार में हैं।",
+    "bulkActionFailed": "बल्क कार्रवाई विफल। कृपया पुनः प्रयास करें।"
   },
   "shift": {
     "title": "शिफ्ट प्रबंधन",
@@ -1507,6 +1524,43 @@
     "couldNotUnderstand": "समझ नहीं आया",
     "tryAgain": "कृपया पुनः प्रयास करें",
     "retry": "पुनः प्रयास"
+  },
+  "sync": {
+    "syncNowButton": "अभी सिंक करें",
+    "syncing": "सिंक हो रहा है...",
+    "lastSync": "अंतिम सिंक: {{time}}",
+    "stockConflictTitle": "स्टॉक दूसरे डिवाइस पर अपडेट हुआ",
+    "stockConflictMessage": "\"{{name}}\" का स्टॉक अलग है। स्थानीय ({{local}}) रखें या सर्वर ({{server}}) का उपयोग करें?",
+    "keepLocal": "स्थानीय रखें ({{qty}})",
+    "useServer": "सर्वर का उपयोग करें ({{qty}})",
+    "queueExpiryWarning": "{{count}} आइटम सिंक होने की प्रतीक्षा में हैं। 24 घंटे से पुराने आइटम खो सकते हैं।",
+    "offlineCheckoutSaved": "बिक्री स्थानीय रूप से सहेजी गई। कनेक्ट होने पर सिंक होगी।",
+    "offlineQueueIndicator": "{{count}} लंबित",
+    "dbHealthy": "डेटाबेस ठीक है",
+    "dbRecovered": "डेटाबेस पुनर्प्राप्त",
+    "dbCorrupt": "डेटाबेस समस्या पाई गई। साफ़ करें और पुनः सिंक करें?",
+    "dbCleared": "डेटाबेस साफ़ किया गया। डेटा पुनः सिंक होगा।",
+    "dbClearButton": "साफ़ करें और पुनः सिंक करें",
+    "dbCheckFailed": "डेटाबेस जांच विफल",
+    "priceRefreshing": "कीमतें ताज़ा हो रही हैं...",
+    "priceRefreshComplete": "कीमतें अपडेट हुईं",
+    "priceRefreshFailed": "कीमतें ताज़ा नहीं हो सकीं। कैश्ड मूल्यों का उपयोग हो रहा है।"
+  },
+  "cart": {
+    "undoRemove": "पूर्ववत करें",
+    "itemRemoved": "\"{{name}}\" हटाया गया",
+    "undoCountdown": "पूर्ववत ({{seconds}}s)",
+    "parkCart": "कार्ट पार्क करें",
+    "resumeCart": "फिर से शुरू करें",
+    "parkedCarts": "पार्क किए गए कार्ट ({{count}})",
+    "maxParkedCarts": "अधिकतम 3 पार्क किए गए कार्ट। पहले एक को फिर से शुरू करें या साफ़ करें।",
+    "parkedCartItems": "{{count}} आइटम",
+    "noParkedCarts": "कोई पार्क किया गया कार्ट नहीं"
+  },
+  "device": {
+    "typePhone": "फ़ोन",
+    "typeTablet": "टैबलेट",
+    "typePOS": "POS टर्मिनल"
   },
   "posPayment": {
     "previousUpiPendingTitle": "पिछला UPI भुगतान लंबित",

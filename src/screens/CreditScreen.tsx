@@ -83,6 +83,9 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
   const [consentRequired, setConsentRequired] = useState(false);
   const [consentLoading, setConsentLoading] = useState(false);
 
+  // STG-448: Feature gate from backend config (single source of truth)
+  const [creditEnabled, setCreditEnabled] = useState(true);
+
   // Apply modal state
   const [applyModal, setApplyModal] = useState<{
     visible: boolean;
@@ -116,10 +119,22 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
   // Load data
   const loadData = useCallback(async () => {
     try {
-      const [offersRes, applicationsRes] = await Promise.all([
+      // STG-448: Check feature gate first (single source of truth)
+      const configPromise = creditApi.getCreditFeatureConfig().catch(() => null);
+      const [offersRes, applicationsRes, featureConfig] = await Promise.all([
         creditApi.getCreditOffers(),
         creditApi.getCreditApplications(),
+        configPromise,
       ]);
+
+      // STG-448: If backend says credit is disabled, show disabled state
+      if (featureConfig && !featureConfig.creditEnabled) {
+        setCreditEnabled(false);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+      setCreditEnabled(true);
 
       // STG-457: Check if consent is required before showing credit data
       if (offersRes.consentRequired) {
@@ -526,11 +541,30 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
     [t]
   );
 
-  // Render application history item
+  // STG-459: Application status timeline steps
+  const getTimelineSteps = useCallback((app: CreditApplication) => {
+    const steps = [
+      { key: "submitted", label: t("credit.timelineSubmitted", "Submitted"), done: true },
+      { key: "kyc", label: t("credit.timelineKyc", "KYC Verification"), done: app.kycStatus === "verified" || app.kycStatus === "submitted" },
+      { key: "processing", label: t("credit.timelineProcessing", "Processing"), done: app.status === "processing" || app.status === "approved" || app.status === "disbursed" },
+      { key: "approved", label: t("credit.timelineApproved", "Approved"), done: app.status === "approved" || app.status === "disbursed" },
+      { key: "disbursed", label: t("credit.timelineDisbursed", "Disbursed"), done: app.status === "disbursed" },
+    ];
+    if (app.status === "rejected") {
+      return [
+        ...steps.slice(0, 2),
+        { key: "rejected", label: t("credit.timelineRejected", "Rejected"), done: true, isError: true },
+      ];
+    }
+    return steps;
+  }, [t]);
+
+  // Render application history item — STG-459: With status timeline
   const renderHistoryItem = useCallback(
     (app: CreditApplication) => {
       const statusColor = creditApi.getApplicationStatusColor(app.status);
       const statusLabel = creditApi.getApplicationStatusLabel(app.status, app.kycStatus);
+      const timeline = getTimelineSteps(app);
 
       return (
         <View key={app.id} style={styles.historyItem}>
@@ -552,11 +586,56 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
               {formatDate(new Date(app.createdAt))}
             </Text>
           </View>
+          {/* STG-459: Application status timeline */}
+          <View style={styles.timeline}>
+            {timeline.map((step, idx) => {
+              const isLast = idx === timeline.length - 1;
+              const stepColor = (step as { isError?: boolean }).isError
+                ? colors.error
+                : step.done
+                  ? colors.success
+                  : colors.textTertiary;
+              return (
+                <View key={step.key} style={styles.timelineStep}>
+                  <View style={styles.timelineIndicator}>
+                    <View style={[styles.timelineDot, { backgroundColor: stepColor }]} />
+                    {!isLast && (
+                      <View style={[styles.timelineLine, { backgroundColor: step.done ? colors.success : colors.border }]} />
+                    )}
+                  </View>
+                  <Text style={[styles.timelineLabel, { color: stepColor }]}>{step.label}</Text>
+                </View>
+              );
+            })}
+          </View>
         </View>
       );
     },
-    []
+    [getTimelineSteps, colors]
   );
+
+  // STG-448: Show disabled state when credit feature is off
+  if (!creditEnabled && !loading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          {onBack && (
+            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
+            </Pressable>
+          )}
+          <Text style={styles.headerTitle}>{t("credit.title", "Credit")}</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={styles.centerContent}>
+          <MaterialCommunityIcons name="credit-card-off-outline" size={48} color={colors.textTertiary} />
+          <Text style={[styles.loadingText, { marginTop: 12 }]}>
+            {t("credit.featureDisabled", "Credit feature is not available for your store at this time.")}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   // UIUX-POS-021: Show header with back button during loading (don't trap user)
   if (loading) {
@@ -1381,6 +1460,40 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   historyDate: {
     fontSize: 12,
     color: colors.textTertiary,
+  },
+  // STG-459: Application status timeline styles
+  timeline: {
+    flexDirection: "row",
+    marginTop: theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  timelineStep: {
+    flex: 1,
+    alignItems: "center",
+  },
+  timelineIndicator: {
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  timelineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  timelineLine: {
+    position: "absolute",
+    top: 4,
+    left: 10,
+    right: -10,
+    height: 2,
+    width: 30,
+  },
+  timelineLabel: {
+    fontSize: 9,
+    fontWeight: "500",
+    textAlign: "center",
   },
   emptyContainer: {
     alignItems: "center",

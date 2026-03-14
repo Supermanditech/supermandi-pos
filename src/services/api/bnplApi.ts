@@ -344,6 +344,33 @@ export interface BnplDisputeResponse {
   createdAt: string;
 }
 
+// STG-464: Dispute audit trail types
+export interface BnplDisputeRecord {
+  id: string;
+  drawdownId: string;
+  reason: string;
+  description: string | null;
+  status: "submitted" | "under_review" | "resolved" | "rejected";
+  createdAt: string;
+  resolvedAt: string | null;
+  resolutionNote: string | null;
+}
+
+export interface BnplDisputeHistoryResponse {
+  success: boolean;
+  disputes: BnplDisputeRecord[];
+}
+
+// STG-465: Per-supplier limit types
+export interface BnplSupplierLimitResponse {
+  success: boolean;
+  supplierId: string;
+  supplierLimit: number;
+  outstanding: number;
+  available: number;
+  interestRate: number;
+}
+
 /**
  * GO-LIVE-240: Submit a dispute for a BNPL drawdown
  * @param drawdownId The drawdown to dispute
@@ -359,4 +386,22 @@ export async function submitBnplDispute(
     reason,
     description,
   });
+}
+
+/**
+ * STG-464: Get dispute history for a drawdown (audit trail)
+ */
+export async function getBnplDisputeHistory(
+  drawdownId: string
+): Promise<BnplDisputeHistoryResponse> {
+  return apiClient.get<BnplDisputeHistoryResponse>(`${BNPL_BASE}/${drawdownId}/disputes`);
+}
+
+/**
+ * STG-465: Get per-supplier drawdown limit
+ */
+export async function getBnplSupplierLimit(
+  supplierId: string
+): Promise<BnplSupplierLimitResponse> {
+  return apiClient.get<BnplSupplierLimitResponse>(`${BNPL_BASE}/supplier/${supplierId}/limit`);
 }
