@@ -584,7 +584,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           {onBack && (
-            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityLabel="Go back" accessibilityRole="button" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
             </Pressable>
           )}
@@ -607,7 +607,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       {/* Header */}
       <View style={styles.header}>
         {onBack && (
-          <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
+          <Pressable accessibilityLabel="Go back" accessibilityRole="button" style={styles.backButton} onPress={onBack}>
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
@@ -711,7 +711,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       >
         <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
           <View style={styles.modalHeader}>
-            <Pressable accessibilityRole="button" style={styles.closeButton} onPress={handleClosePaymentModal}>
+            <Pressable accessibilityLabel="Close" accessibilityRole="button" style={styles.closeButton} onPress={handleClosePaymentModal}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>{t("bnpl.payBnplDue")}</Text>
@@ -903,7 +903,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       >
         <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
           <View style={styles.modalHeader}>
-            <Pressable accessibilityRole="button" style={styles.closeButton} onPress={handleCloseDisputeModal}>
+            <Pressable accessibilityLabel="Close" accessibilityRole="button" style={styles.closeButton} onPress={handleCloseDisputeModal}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>{t("bnpl.disputeCharge")}</Text>

@@ -254,7 +254,7 @@ export default function OrderDetailScreen({
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           {onBack && (
-            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
@@ -278,7 +278,7 @@ export default function OrderDetailScreen({
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           {onBack && (
-            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={24}
@@ -314,7 +314,7 @@ export default function OrderDetailScreen({
       {/* Header */}
       <View style={styles.header}>
         {onBack && (
-          <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={styles.backButton} onPress={onBack}>
             <MaterialCommunityIcons
               name="arrow-left"
               size={24}
@@ -402,6 +402,7 @@ export default function OrderDetailScreen({
                   />
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel="Save tracking number"
                     style={styles.trackingSaveButton}
                     onPress={handleSaveTracking}
                     disabled={trackingSaving}
@@ -414,6 +415,7 @@ export default function OrderDetailScreen({
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
+                    accessibilityLabel="Cancel edit"
                     style={styles.trackingCancelButton}
                     onPress={() => {
                       setTrackingEditing(false);
@@ -516,7 +518,7 @@ export default function OrderDetailScreen({
           </Pressable>
         )}
 
-        <Pressable accessibilityRole="button" style={styles.whatsappButton} onPress={handleWhatsAppSupplier}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Contact supplier on WhatsApp" style={styles.whatsappButton} onPress={handleWhatsAppSupplier}>
           <MaterialCommunityIcons
             name="whatsapp"
             size={18}

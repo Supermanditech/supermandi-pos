@@ -674,6 +674,7 @@ export default function OpeningStockScreen({
                 maxLength={6}
               />
               <Pressable
+                accessibilityLabel="Remove entry"
                 accessibilityRole="button"
                 style={styles.removeButton}
                 onPress={() => handleRemoveEntry(item.productId)}

@@ -738,6 +738,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                 </View>
                 <View style={styles.qtyPicker}>
                   <Pressable
+                    accessibilityLabel="Decrease quantity"
                     accessibilityRole="button"
                     style={[
                       styles.qtyButton,
@@ -765,6 +766,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
                     {returnQty}
                   </Text>
                   <Pressable
+                    accessibilityLabel="Increase quantity"
                     accessibilityRole="button"
                     style={[
                       styles.qtyButton,

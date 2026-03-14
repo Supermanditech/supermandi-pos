@@ -845,7 +845,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               {t("khata.bulkRemind", "Remind")} ({selectedPhones.size})
             </Text>
           </Pressable>
-          <Pressable accessibilityRole="button" onPress={handleToggleBulkSelect} hitSlop={8}>
+          <Pressable accessibilityLabel="Cancel bulk selection" accessibilityRole="button" onPress={handleToggleBulkSelect} hitSlop={8}>
             <MaterialCommunityIcons name="close" size={20} color={colors.textSecondary} />
           </Pressable>
         </View>
@@ -889,7 +889,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={handleCloseLedger}>
+            <Pressable accessibilityLabel="Close ledger" accessibilityRole="button" style={styles.modalCloseButton} onPress={handleCloseLedger}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>
@@ -956,7 +956,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={() => setShowCreditModal(false)}>
+            <Pressable accessibilityLabel="Close" accessibilityRole="button" style={styles.modalCloseButton} onPress={() => setShowCreditModal(false)}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>{t("khata.addCredit")}</Text>
@@ -1036,7 +1036,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={() => setShowPaymentModal(false)}>
+            <Pressable accessibilityLabel="Close" accessibilityRole="button" style={styles.modalCloseButton} onPress={() => setShowPaymentModal(false)}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>{t("khata.recordPayment")}</Text>

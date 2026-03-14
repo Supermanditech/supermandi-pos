@@ -678,11 +678,11 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={handleCloseDetail}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" style={styles.modalCloseButton} onPress={handleCloseDetail}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>{t("customerList.customerProfile")}</Text>
-            <Pressable accessibilityRole="button" style={styles.modalEditButton} onPress={handleOpenEditModal}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Edit customer" style={styles.modalEditButton} onPress={handleOpenEditModal}>
               <MaterialCommunityIcons name="pencil-outline" size={20} color={colors.primary} />
             </Pressable>
           </View>
@@ -705,7 +705,8 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
                   <Text style={styles.profilePhone}>{selectedCustomer.phone}</Text>
                   {selectedCustomer.phone && selectedCustomer.phone.replace(/\D/g, "").length >= 10 && (
                   <Pressable
-                    accessibilityRole="link"
+                    accessibilityRole="button"
+                    accessibilityLabel="Contact on WhatsApp"
                     style={styles.whatsappIconButton}
                     onPress={() => {
                       const name = selectedCustomer.name || t("customerList.defaultCustomerName");
@@ -776,7 +777,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={() => setShowAddModal(false)}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" style={styles.modalCloseButton} onPress={() => setShowAddModal(false)}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>{t("customerList.addCustomer")}</Text>
@@ -855,7 +856,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={() => setShowEditModal(false)}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" style={styles.modalCloseButton} onPress={() => setShowEditModal(false)}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>{t("customerList.editCustomer")}</Text>

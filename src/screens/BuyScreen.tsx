@@ -844,6 +844,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
       {/* Floating Cart Button */}
       {cartItems.length > 0 && (
         <Pressable
+          accessibilityLabel="Open cart"
           accessibilityRole="button"
           style={[styles.cartFab, { bottom: insets.bottom + 16 }]}
           onPress={() => setCartModalVisible(true)}

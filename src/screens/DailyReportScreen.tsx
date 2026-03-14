@@ -571,7 +571,7 @@ export default function DailyReportScreen({
 
       {/* Date picker row */}
       <View style={styles.datePicker}>
-        <Pressable testID="daily-report-prev-day" accessibilityRole="button" style={styles.dateArrow} onPress={handlePrevDay}>
+        <Pressable testID="daily-report-prev-day" accessibilityLabel="Previous day" accessibilityRole="button" style={styles.dateArrow} onPress={handlePrevDay}>
           <MaterialCommunityIcons
             name="chevron-left"
             size={28}
@@ -583,6 +583,7 @@ export default function DailyReportScreen({
           {isToday && <Text style={styles.dateBadge}>{t("dailyReport.today")}</Text>}
         </View>
         <Pressable
+          accessibilityLabel="Next day"
           accessibilityRole="button"
           style={[styles.dateArrow, isToday && styles.dateArrowDisabled]}
           onPress={handleNextDay}
