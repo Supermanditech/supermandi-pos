@@ -10,6 +10,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { query, queryOne, ApiError, ERROR_CODES } from '@supermandi/common';
 import { log } from '../../lib/logger';
+import { requireDeviceToken } from '../../middleware/deviceToken';
 
 export const consentRouter = Router();
 
@@ -40,6 +41,7 @@ function validatePhone(phone: string): boolean {
 
 consentRouter.post(
   '/consent/record',
+  requireDeviceToken,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { customerPhone, consentType } = req.body as RecordConsentBody;
@@ -56,13 +58,10 @@ consentRouter.post(
         throw new ApiError(400, ERROR_CODES.VALIDATION_ERROR, `Invalid consent type. Valid: ${VALID_CONSENT_TYPES.join(', ')}`);
       }
 
-      // R7: Derive store_id from JWT
-      const storeId = (req as any).auth?.storeId || (req as any).user?.storeId;
-      if (!storeId) {
-        throw new ApiError(401, ERROR_CODES.UNAUTHORIZED, 'Store context required');
-      }
+      // R7: Derive store_id from device token (NOT from req.body)
+      const { storeId } = (req as any).posDevice as { storeId: string };
 
-      const staffId = (req as any).auth?.staffId || (req as any).user?.id || null;
+      const staffId = (req as any).posDevice?.staffId || null;
 
       // Check if active consent already exists
       const existing = await queryOne<{ id: string }>(
@@ -98,6 +97,7 @@ consentRouter.post(
 
 consentRouter.get(
   '/consent/check',
+  requireDeviceToken,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { customerPhone, consentType } = req.query as unknown as CheckConsentQuery;
@@ -106,10 +106,8 @@ consentRouter.get(
         throw new ApiError(400, ERROR_CODES.VALIDATION_ERROR, 'customerPhone and consentType query params required');
       }
 
-      const storeId = (req as any).auth?.storeId || (req as any).user?.storeId;
-      if (!storeId) {
-        throw new ApiError(401, ERROR_CODES.UNAUTHORIZED, 'Store context required');
-      }
+      // R7: Derive store_id from device token (NOT from req.body/query)
+      const { storeId } = (req as any).posDevice as { storeId: string };
 
       const consent = await queryOne<{ id: string; given_at: string }>(
         `SELECT id, given_at FROM platform.consent_records
@@ -136,6 +134,7 @@ consentRouter.get(
 
 consentRouter.post(
   '/consent/revoke',
+  requireDeviceToken,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { customerPhone, consentType } = req.body as RecordConsentBody;
@@ -144,10 +143,8 @@ consentRouter.post(
         throw new ApiError(400, ERROR_CODES.VALIDATION_ERROR, 'customerPhone and consentType are required');
       }
 
-      const storeId = (req as any).auth?.storeId || (req as any).user?.storeId;
-      if (!storeId) {
-        throw new ApiError(401, ERROR_CODES.UNAUTHORIZED, 'Store context required');
-      }
+      // R7: Derive store_id from device token (NOT from req.body)
+      const { storeId } = (req as any).posDevice as { storeId: string };
 
       const result = await query(
         `UPDATE platform.consent_records SET revoked_at = NOW()

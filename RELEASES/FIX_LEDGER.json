@@ -564,7 +564,7 @@
       "file": "backend/src/routes/v1/consent.ts",
       "start_line": 1,
       "end_line": 167,
-      "checksum": "679165be3e457622",
+      "checksum": "c16b77a4c162ed31",
       "description": "DPDP consent records API: POST /consent/record, GET /consent/check, POST /consent/revoke. Migration 188 creates platform.consent_records table.",
       "test_file": "backend/tests/consent.stg-485.consent-records.unit.test.ts",
       "depends_on": null,
@@ -1687,7 +1687,7 @@
       "file": "src/screens/PaymentSetupScreen.tsx",
       "start_line": 1,
       "end_line": 410,
-      "checksum": "32c0ec9e23e7aaa0",
+      "checksum": "14a1596222168228",
       "description": "PaymentSetupScreen i18n: all hardcoded strings replaced with t() calls under paymentSetup.* namespace (checksum updated: STG-280,314 VPA label + save toast)",
       "test_file": "src/__tests__/screens/PaymentSetupScreen.stg-257.i18n.unit.test.ts",
       "depends_on": null,
@@ -1967,7 +1967,7 @@
       "end_line": 1030,
       "description": "GRNScreen i18n — replace 30 hardcoded strings with t() calls",
       "test_file": "src/__tests__/screens/GRNScreen.stg-264.i18n.unit.test.ts",
-      "checksum": "01e549ce6120dad1",
+      "checksum": "4c032d6b20b4fff3",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2119,7 +2119,7 @@
       "test_file": "src/__tests__/screens/BnplDuesScreen.stg-268.i18n.unit.test.ts",
       "start_line": 1,
       "end_line": 1606,
-      "checksum": "7c2ad0dbb8f7a578",
+      "checksum": "e3890285019d9df2",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2157,7 +2157,7 @@
       "test_file": "src/__tests__/screens/KhataScreen.stg-269.i18n.unit.test.ts",
       "start_line": 1,
       "end_line": 1138,
-      "checksum": "2d23d9edfe6c70ec",
+      "checksum": "f0c7376814a7fc87",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2309,7 +2309,7 @@
       "test_file": "src/__tests__/screens/OrderDetailScreen.stg-273.i18n.unit.test.ts",
       "start_line": 1,
       "end_line": 970,
-      "checksum": "cbabfc78ae4f3d7f",
+      "checksum": "966044ef15b0e964",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2385,7 +2385,7 @@
       "test_file": "src/__tests__/screens/BuyScreen.stg-275.i18n.unit.test.ts",
       "start_line": 1,
       "end_line": 1174,
-      "checksum": "d13822676e9521ae",
+      "checksum": "c332b7bd99559409",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2461,7 +2461,7 @@
       "test_file": "src/__tests__/screens/ReorderScreen.stg-277.i18n.unit.test.ts",
       "start_line": 1,
       "end_line": 1158,
-      "checksum": "c6ccf40e05c0cc9f",
+      "checksum": "23f532beaa994b11",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2537,7 +2537,7 @@
       "test_file": "src/__tests__/screens/MenuScreen.stg-172.i18n.unit.test.ts",
       "start_line": 1,
       "end_line": 2029,
-      "checksum": "9a1cb3838dfa5ed7",
+      "checksum": "6aada0072c4a79f5",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2575,7 +2575,7 @@
       "test_file": "src/__tests__/i18n/locale-completion.stg-054.unit.test.ts",
       "start_line": 1,
       "end_line": 1646,
-      "checksum": "118f8e4fcfa68aa6",
+      "checksum": "ae1a6cecb300edda",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": "N/A",
@@ -3924,7 +3924,12 @@
       "action": "fontSize minimum 11px enforcement + accessibility labels + checkbox state + required field asterisks",
       "files_affected": 44,
       "checksums_updated": 22
+    },
+    {
+      "date": "2026-03-14",
+      "action": "10-layer full verification audit fixes: consent auth, khata void, BackHandler, .catch(), theme tokens",
+      "checksums_updated": 10
     }
   ],
-  "last_commit_ticket": "STG-298"
+  "last_commit_ticket": "audit-v10"
 }

@@ -696,7 +696,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
     [handleCustomerTap, handleToggleCustomer, bulkSelecting, selectedPhones, colors, styles]
   );
 
-  // STG-471: Handle voiding a khata entry
+  // STG-471: Handle voiding a khata entry — calls backend API to persist void
   const handleVoidEntry = useCallback((entry: KhataEntry) => {
     Alert.alert(
       t("khata.voidEntryTitle", "Void Entry"),
@@ -709,8 +709,16 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
         {
           text: t("khata.voidButton", "Void"),
           style: "destructive",
-          onPress: () => {
-            setVoidedEntries((prev) => new Set(prev).add(entry.id));
+          onPress: async () => {
+            try {
+              await apiClient.post(`/api/v1/pos/khata/entries/${entry.id}/void`);
+              setVoidedEntries((prev) => new Set(prev).add(entry.id));
+            } catch (err) {
+              Alert.alert(
+                t("common.error", "Error"),
+                t("khata.voidFailed", "Failed to void entry. Please try again.")
+              );
+            }
           },
         },
       ]

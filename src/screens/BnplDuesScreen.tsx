@@ -466,12 +466,12 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
           // STG-463: Escalating border colors for overdue items
           drawdown.isOverdue && { borderColor: colors.error, borderWidth: 2 },
           isUrgent && { borderColor: colors.error, borderWidth: 2, backgroundColor: colors.errorSoft || '#FEF2F2' },
-          isCritical && { borderColor: '#991B1B', borderWidth: 3, backgroundColor: '#FEE2E2' },
+          isCritical && { borderColor: colors.errorDark, borderWidth: 3, backgroundColor: colors.errorSoft },
         ]}>
           {/* STG-463: Overdue warning banner */}
           {drawdown.isOverdue && (
-            <View style={[styles.overdueBanner, isCritical && { backgroundColor: '#991B1B' }]}>
-              <MaterialCommunityIcons name="alert" size={14} color="#FFF" />
+            <View style={[styles.overdueBanner, isCritical && { backgroundColor: colors.errorDark }]}>
+              <MaterialCommunityIcons name="alert" size={14} color={colors.textInverse} />
               <Text style={styles.overdueBannerText}>
                 {isCritical
                   ? t("bnpl.criticalOverdue", "CRITICAL: {{days}} days overdue — risk of default", { days: daysOverdue })
@@ -1548,7 +1548,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   overdueBannerText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#FFF",
+    color: colors.textInverse,
   },
   // STG-464: Dispute audit trail styles
   disputeAuditTrail: {

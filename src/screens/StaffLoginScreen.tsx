@@ -1,10 +1,11 @@
 // SA-P1-001: Staff PIN login screen
 // BLK-POS-UX1: Added back/switch-store button
 // BLK-POS-UX2: Added pull-to-refresh
-import React, { useState, useRef, useMemo, useCallback } from "react";
+import React, { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -46,6 +47,12 @@ export default function StaffLoginScreen({ storeName, onSwitchStore }: Props) {
   const failCountRef = useRef(0);
   // ISSUE-127: Ref-based guard to prevent double submission via keyboard onSubmitEditing
   const loginInFlightRef = useRef(false);
+
+  // Trap Android back button on login gate — prevent bypass
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
+    return () => sub.remove();
+  }, []);
 
   // BLK-POS-UX2: Pull-to-refresh — resets error state and cooldown
   const handleRefresh = useCallback(() => {

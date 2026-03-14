@@ -312,6 +312,85 @@ posKhataRouter.post("/khata/entries", requireDeviceToken, requireActiveStore, as
 });
 
 // =============================================================================
+// Void Entry
+// =============================================================================
+
+/**
+ * POST /api/v1/pos/khata/entries/:entryId/void
+ * Void (soft-delete) a khata entry. Sets voided_at timestamp and recalculates running balance.
+ * Store-isolated: only entries belonging to the device's store can be voided.
+ */
+posKhataRouter.post("/khata/entries/:entryId/void", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as PosRequest).posDevice;
+  const { entryId } = req.params;
+
+  if (!entryId) {
+    return res.status(400).json({ success: false, error: "entryId is required" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Verify entry exists and belongs to this store
+    const entry = await client.query(
+      `SELECT id, customer_phone, amount_minor, entry_type, voided_at
+       FROM orders.khata_entries
+       WHERE id = $1 AND store_id = $2`,
+      [entryId, storeId]
+    );
+
+    if (entry.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ success: false, error: "Entry not found" });
+    }
+
+    if (entry.rows[0].voided_at) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ success: false, error: "Entry already voided" });
+    }
+
+    // Void the entry
+    await client.query(
+      `UPDATE orders.khata_entries SET voided_at = NOW(), voided_by = $1 WHERE id = $2 AND store_id = $3`,
+      [(req as PosRequest).posDevice.deviceId, entryId, storeId]
+    );
+
+    // Recalculate running balance for this customer (exclude voided entries)
+    const customerPhone = entry.rows[0].customer_phone;
+    const balanceResult = await client.query(
+      `SELECT COALESCE(SUM(
+        CASE
+          WHEN entry_type = 'credit' THEN amount_minor
+          WHEN entry_type = 'payment' THEN -amount_minor
+          ELSE 0
+        END
+      ), 0)::bigint AS new_balance
+      FROM orders.khata_entries
+      WHERE store_id = $1 AND customer_phone = $2 AND voided_at IS NULL`,
+      [storeId, customerPhone]
+    );
+
+    const newBalance = Number(balanceResult.rows[0].new_balance);
+
+    await client.query("COMMIT");
+
+    log.info(`[Khata] Entry voided: entryId=${entryId}, storeId=${storeId}, newBalance=${newBalance}`);
+    return res.json({ success: true, entryId, newBalanceMinor: newBalance });
+  } catch (_error: unknown) {
+    await client.query("ROLLBACK");
+    const error = asError(_error);
+    log.error("[Khata] Void entry error:", error.message);
+    return res.status(500).json({ success: false, error: "Failed to void entry" });
+  } finally {
+    client.release();
+  }
+});
+
+// =============================================================================
 // STG-472: Bulk Actions — Mark Paid / Send Reminders
 // =============================================================================
 

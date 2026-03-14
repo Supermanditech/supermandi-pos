@@ -7,7 +7,7 @@
  * If skipped, SellScan shows a banner prompting setup.
  */
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import NetInfo from "@react-native-community/netinfo";
 import {
   View,
@@ -18,6 +18,7 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
+  BackHandler,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -65,6 +66,15 @@ export default function PaymentSetupScreen() {
     NetInfo.fetch().then((state) => setIsOffline(!state.isConnected));
     const unsubscribe = NetInfo.addEventListener((state) => setIsOffline(!state.isConnected));
     return () => unsubscribe();
+  }, []);
+
+  // Trap Android back button — skip setup rather than going to a dead-end
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      handleSkip();
+      return true;
+    });
+    return () => sub.remove();
   }, []);
 
   function validate(): Record<string, string> {
@@ -146,8 +156,12 @@ export default function PaymentSetupScreen() {
   }
 
   async function handleSkip() {
-    const storeId = await getDeviceStoreId();
-    if (storeId) await AsyncStorage.setItem(getPaymentPromptedKey(storeId), "1");
+    try {
+      const storeId = await getDeviceStoreId();
+      if (storeId) await AsyncStorage.setItem(getPaymentPromptedKey(storeId), "1");
+    } catch {
+      // Best-effort — skip flag not critical, continue to SellScan
+    }
     navigation.replace("SellScan");
   }
 

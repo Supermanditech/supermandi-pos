@@ -72,7 +72,7 @@ export default function SuccessPrintScreenV2() {
   const [showPhoneModal, setShowPhoneModal] = useState(false);
 
   useEffect(() => {
-    getDeviceStoreId().then(setOperatorStoreId);
+    getDeviceStoreId().then(setOperatorStoreId).catch(() => {});
     // WA-001: Check if WhatsApp Cloud API is configured
     checkWhatsAppStatus()
       .then((res) => setWaConfigured(res.configured))
@@ -441,7 +441,7 @@ export default function SuccessPrintScreenV2() {
       </View>
 
       {/* WA-001: Phone number input modal */}
-      <Modal visible={showPhoneModal} transparent animationType="fade">
+      <Modal visible={showPhoneModal} transparent animationType="fade" onRequestClose={() => { setShowPhoneModal(false); setWaStatus("idle"); }}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Send Bill via WhatsApp</Text>
