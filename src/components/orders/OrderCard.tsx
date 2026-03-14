@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   reorderText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "500",
     color: theme.colors.accent,
   },
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   amountLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: theme.colors.textTertiary,
   },
   amountValue: {

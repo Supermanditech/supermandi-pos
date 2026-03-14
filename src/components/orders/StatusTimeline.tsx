@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   actorText: {
-    fontSize: 10,
+    fontSize: 11,
     color: theme.colors.textTertiary,
   },
 });

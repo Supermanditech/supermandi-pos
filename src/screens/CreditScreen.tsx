@@ -1491,7 +1491,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     width: 30,
   },
   timelineLabel: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "500",
     textAlign: "center",
   },
