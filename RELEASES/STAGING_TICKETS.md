@@ -28,235 +28,235 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | # | Title | Priority | Status |
 |---|-------|----------|--------|
 | STG-001 | Supplier self-registration verify fallback | P1 | DONE (uncommitted) |
-| STG-002 | Release APK cold start blank screen before splash | P2 | OPEN |
+| STG-002 | Release APK cold start blank screen before splash | P2 | PARKED (ce0a91c8, stg-002-2026-03-14) |
 | STG-003 | Brand design tokens — unified color palette and spacing | P1 | PARKED (ad959088, stg-003-2026-03-14) |
-| STG-004 | Activation screen — branded redesign with trust signals | P1 | OPEN |
-| STG-005 | Home top bar — declutter status icons and scanner warning | P1 | OPEN |
-| STG-006 | Sync status panel — collapse when healthy, reduce footprint | P2 | OPEN |
-| STG-007 | Tab navigation — full labels, consistent colors, active states | P1 | OPEN |
-| STG-008 | Search/scan area — unified input with clear visual hierarchy | P2 | OPEN |
-| STG-009 | Product cards — full names, stock badges, better thumbnails | P1 | OPEN |
-| STG-010 | Sync Status modal — brand illustrations, plain-language tabs | P3 | OPEN |
+| STG-004 | Activation screen — branded redesign with trust signals | P1 | PARKED (b0f8de03, stg-004-2026-03-14) |
+| STG-005 | Home top bar — declutter status icons and scanner warning | P1 | PARKED (306a9c4b, stg-005-2026-03-14) |
+| STG-006 | Sync status panel — collapse when healthy, reduce footprint | P2 | PARKED (da5ecb7f, stg-006-2026-03-14) |
+| STG-007 | Tab navigation — full labels, consistent colors, active states | P1 | PARKED (88a2808b, stg-007-2026-03-14) |
+| STG-008 | Search/scan area — unified input with clear visual hierarchy | P2 | PARKED (037b4023, stg-008-2026-03-14) |
+| STG-009 | Product cards — full names, stock badges, better thumbnails | P1 | PARKED (35f1f9d1, stg-009-2026-03-14) |
+| STG-010 | Sync Status modal — brand illustrations, plain-language tabs | P3 | PARKED (1b0f02bb, stg-010-2026-03-14) |
 | STG-011 | Typography and spacing system — POS-grade readability | P2 | PARKED (1d664947, stg-011-2026-03-14) |
-| STG-012 | Voice FAB — brand-colored, contextual label on first use | P3 | OPEN |
-| STG-013 | FEFO badge — explain or hide jargon for kirana users | P3 | OPEN |
-| STG-014 | DEV MODE banner — hide in production builds | P2 | OPEN |
-| STG-015 | Inconsistent product card layouts — unify list vs thumbnail styles | P1 | OPEN |
+| STG-012 | Voice FAB — brand-colored, contextual label on first use | P3 | PARKED (7b95512d, stg-012-2026-03-14) |
+| STG-013 | FEFO badge — explain or hide jargon for kirana users | P3 | PARKED (9ab15ec1, stg-013-2026-03-14) |
+| STG-014 | DEV MODE banner — hide in production builds | P2 | PARKED (152c906f, stg-014-2026-03-14) |
+| STG-015 | Inconsistent product card layouts — unify list vs thumbnail styles | P1 | PARKED (c1113955, stg-015-2026-03-14) |
 | STG-016 | Cart/checkout indicator — floating total bar when items added | P1 | OPEN |
-| STG-017 | Staff login indicator — show who is logged in on home screen | P2 | OPEN |
-| STG-018 | Product cards — add unit/weight context to prices | P2 | OPEN |
-| STG-019 | Activation screen keyboard and navigation UX fixes | P2 | OPEN |
-| STG-020 | Product card whitespace — remove excess empty area in small cards | P2 | OPEN |
-| STG-021 | Sync modal — add tab count badges and last-sync timestamp | P3 | OPEN |
-| STG-022 | Logo pill badge — enlarge and make recognizable as brand mark | P2 | OPEN |
-| STG-023 | Activation subtitle — simplify two-concept info text | P2 | OPEN |
+| STG-017 | Staff login indicator — show who is logged in on home screen | P2 | PARKED (0ac31608, stg-017-2026-03-14) |
+| STG-018 | Product cards — add unit/weight context to prices | P2 | PARKED (51d0243c, stg-018-2026-03-14) |
+| STG-019 | Activation screen keyboard and navigation UX fixes | P2 | PARKED (aa9de4b9, stg-019-2026-03-14) |
+| STG-020 | Product card whitespace — remove excess empty area in small cards | P2 | PARKED (f3ab1d93, stg-020-2026-03-14) |
+| STG-021 | Sync modal — add tab count badges and last-sync timestamp | P3 | PARKED (0d0b7f81, stg-021-2026-03-14) |
+| STG-022 | Logo pill badge — enlarge and make recognizable as brand mark | P2 | PARKED (ed3a1a3b, stg-022-2026-03-14) |
+| STG-023 | Activation subtitle — simplify two-concept info text | P2 | PARKED (100425f3, stg-023-2026-03-14) |
 | STG-024 | Enrollment QR scan — button exists but needs camera integration and UX polish | P2 | OPEN |
 | STG-025 | Add support phone number on activation and error screens | P2 | OPEN |
 | STG-026 | Add terms/privacy policy link — Play Store compliance | P1 | PARKED (0409765f, stg-026-2026-03-14) |
-| STG-027 | Green grid icon on product card — explain or remove | P3 | OPEN |
-| STG-028 | Product list section headers — group by category or recent | P2 | OPEN |
-| STG-029 | SELL tab — add manual "Add Product" button for unlisted items | P2 | OPEN |
+| STG-027 | Green grid icon on product card — explain or remove | P3 | PARKED (f3ab1d93, stg-027-2026-03-14) |
+| STG-028 | Product list section headers — group by category or recent | P2 | PARKED (77580bb5, stg-028-2026-03-14) |
+| STG-029 | SELL tab — add manual "Add Product" button for unlisted items | P2 | PARKED (86a8a8e4, stg-029-2026-03-14) |
 | STG-030 | CREDIT tab — explain greyed-out state or enable with guidance | P2 | OPEN |
 | STG-031 | Quantity selector — quick +/- buttons for bulk product adds | P1 | OPEN |
-| STG-032 | Discount/MRP indicator on product cards | P2 | OPEN |
-| STG-033 | Favorites/frequently sold section on SELL tab | P2 | OPEN |
+| STG-032 | Discount/MRP indicator on product cards | P2 | PARKED (f3ab1d93, stg-032-2026-03-14) |
+| STG-033 | Favorites/frequently sold section on SELL tab | P2 | PARKED (20727937, stg-033-2026-03-14) |
 | STG-034 | Recent bills shortcut — quick access to last 5 transactions | P2 | OPEN |
-| STG-035 | Empty state design for zero-product store | P2 | OPEN |
-| STG-036 | Date/time display in app header | P3 | OPEN |
+| STG-035 | Empty state design for zero-product store | P2 | PARKED (ea00d934, stg-035-2026-03-14) |
+| STG-036 | Date/time display in app header | P3 | PARKED (0ac31608, stg-036-2026-03-14) |
 | STG-037 | Customer name/phone entry before billing for credit sales | P1 | OPEN |
 | STG-038 | Enrollment — Device Type chips unexplained jargon | P2 | OPEN |
 | STG-039 | Enrollment — Printing Mode "Direct ESC/POS" jargon, needs plain language | P2 | OPEN |
 | STG-040 | Enrollment — chip layout breaks on small screens (Retailer Phone wraps) | P2 | OPEN |
-| STG-041 | Enrollment — no inline form validation feedback on code input | P2 | OPEN |
-| STG-042 | Enrollment — "Counter-1" default label causes duplicates on multi-device | P3 | OPEN |
-| STG-043 | Enrollment — floating labels for input fields (placeholder disappears on focus) | P2 | OPEN |
+| STG-041 | Enrollment — no inline form validation feedback on code input | P2 | PARKED (100425f3, stg-041-2026-03-14) |
+| STG-042 | Enrollment — "Counter-1" default label causes duplicates on multi-device | P3 | PARKED (100425f3, stg-042-2026-03-14) |
+| STG-043 | Enrollment — floating labels for input fields (placeholder disappears on focus) | P2 | PARKED (100425f3, stg-043-2026-03-14) |
 | STG-044 | Enrollment — button hierarchy: "Scan QR" vs "Enroll Device" visual weight | P3 | OPEN |
-| STG-045 | Home — "Ready for billing" status text too small for key operational state | P2 | OPEN |
-| STG-046 | Product card expand chevron (↓) — no hint of what it expands to | P3 | OPEN |
-| STG-047 | Horizontal product row misleading — empty space implies missing products | P2 | OPEN |
-| STG-048 | Voice FAB position — overlaps product cards on longer lists | P2 | OPEN |
-| STG-049 | Top-right camera icon unlabeled — unknown function to users | P2 | OPEN |
-| STG-050 | No pull-to-refresh indicator on product list | P3 | OPEN |
-| STG-051 | Daily session counter — show "Bills today" and "Sales total" on home | P2 | OPEN |
-| STG-052 | Store name truncation on narrow screens | P3 | OPEN |
+| STG-045 | Home — "Ready for billing" status text too small for key operational state | P2 | PARKED (100425f3, stg-045-2026-03-14) |
+| STG-046 | Product card expand chevron (↓) — no hint of what it expands to | P3 | PARKED (f3ab1d93, stg-046-2026-03-14) |
+| STG-047 | Horizontal product row misleading — empty space implies missing products | P2 | PARKED (100425f3, stg-047-2026-03-14) |
+| STG-048 | Voice FAB position — overlaps product cards on longer lists | P2 | PARKED (f3ab1d93, stg-048-2026-03-14) |
+| STG-049 | Top-right camera icon unlabeled — unknown function to users | P2 | PARKED (100425f3, stg-049-2026-03-14) |
+| STG-050 | No pull-to-refresh indicator on product list | P3 | PARKED (ea00d934, stg-050-2026-03-14) |
+| STG-051 | Daily session counter — show "Bills today" and "Sales total" on home | P2 | PARKED (f8aaaa3b, stg-051-2026-03-14) |
+| STG-052 | Store name truncation on narrow screens | P3 | PARKED (100425f3, stg-052-2026-03-14) |
 | STG-053 | Accessibility — WCAG AA contrast audit across all buttons and text | P1 | OPEN |
 | STG-054 | Hindi/regional language selector — i18n for kirana retailers | P2 | PARKED (0409765f, stg-054-2026-03-14) |
 | STG-055 | App version display on enrollment and settings screens | P3 | PARKED (0409765f, stg-055-2026-03-14) |
-| STG-056 | Product card tap feedback — haptic vibration and ripple effect | P3 | OPEN |
-| STG-057 | Activation text rewrite — remove "superadmin", simplify to 3-step flow | P1 | OPEN |
-| STG-058 | Activation info box — replace wall-of-text with collapsible visual steps | P1 | OPEN |
-| STG-059 | Support contact — replace email with phone/WhatsApp for kirana users | P1 | OPEN |
-| STG-060 | Activation — replace raw URL with tappable "Register Here" button | P2 | OPEN |
-| STG-061 | Activation code input — fix center-aligned placeholder, must be left-aligned | P2 | OPEN |
-| STG-062 | Activation — "Activate POS" button disabled state until valid code format | P2 | OPEN |
-| STG-063 | Activation — add welcome illustration/visual for brand warmth | P2 | OPEN |
-| STG-064 | Activation — "23106RN0DA" device name should show friendly model name | P2 | OPEN |
-| STG-065 | Activation — add step indicator "Step 1 of 2" for onboarding progress | P2 | OPEN |
+| STG-056 | Product card tap feedback — haptic vibration and ripple effect | P3 | PARKED (f3ab1d93, stg-056-2026-03-14) |
+| STG-057 | Activation text rewrite — remove "superadmin", simplify to 3-step flow | P1 | PARKED (926ac026, stg-057-2026-03-14) |
+| STG-058 | Activation info box — replace wall-of-text with collapsible visual steps | P1 | PARKED (f87bfa9f, stg-058-2026-03-14) |
+| STG-059 | Support contact — replace email with phone/WhatsApp for kirana users | P1 | PARKED (a4305dfa, stg-059-2026-03-14) |
+| STG-060 | Activation — replace raw URL with tappable "Register Here" button | P2 | PARKED (a4305dfa, stg-060-2026-03-14) |
+| STG-061 | Activation code input — fix center-aligned placeholder, must be left-aligned | P2 | PARKED (a4305dfa, stg-061-2026-03-14) |
+| STG-062 | Activation — "Activate POS" button disabled state until valid code format | P2 | PARKED (9399462b, stg-062-2026-03-14) |
+| STG-063 | Activation — add welcome illustration/visual for brand warmth | P2 | PARKED (a4305dfa, stg-063-2026-03-14) |
+| STG-064 | Activation — "23106RN0DA" device name should show friendly model name | P2 | PARKED (9399462b, stg-064-2026-03-14) |
+| STG-065 | Activation — add step indicator "Step 1 of 2" for onboarding progress | P2 | PARKED (a4305dfa, stg-065-2026-03-14) |
 | STG-066 | Enrollment vs Activation — unify two different onboarding screens into one | P1 | OPEN |
-| STG-067 | Home header icons — add labels or tooltips to Wi-Fi/printer/scanner/camera | P2 | OPEN |
-| STG-068 | Product cards — add "+" tap affordance button for adding to bill | P1 | OPEN |
-| STG-069 | Tab bar — unify 5 different visual treatments into one consistent style | P1 | OPEN |
-| STG-070 | Home — dark header band harsh cut to white body, add smooth transition | P3 | OPEN |
-| STG-071 | Sync row — connect checkmark (left) with "15s ago" (right) visually | P3 | OPEN |
-| STG-072 | Activation — remove hamburger menu pre-activation (no navigation needed) | P2 | OPEN |
+| STG-067 | Home header icons — add labels or tooltips to Wi-Fi/printer/scanner/camera | P2 | PARKED (a4305dfa, stg-067-2026-03-14) |
+| STG-068 | Product cards — add "+" tap affordance button for adding to bill | P1 | PARKED (f3ab1d93, stg-068-2026-03-14) |
+| STG-069 | Tab bar — unify 5 different visual treatments into one consistent style | P1 | PARKED (a4ff7de5, stg-069-2026-03-14) |
+| STG-070 | Home — dark header band harsh cut to white body, add smooth transition | P3 | PARKED (a4305dfa, stg-070-2026-03-14) |
+| STG-071 | Sync row — connect checkmark (left) with "15s ago" (right) visually | P3 | PARKED (a4305dfa, stg-071-2026-03-14) |
+| STG-072 | Activation — remove hamburger menu pre-activation (no navigation needed) | P2 | PARKED (90eff076, stg-072-2026-03-14) |
 | STG-073 | Activation helper text — "store dashboard" is jargon, simplify | P3 | OPEN |
-| STG-074 | Search + barcode inputs — unify border/container styles into one section | P2 | OPEN |
-| STG-075 | Product cards — add loading skeleton placeholder during fetch | P2 | OPEN |
+| STG-074 | Search + barcode inputs — unify border/container styles into one section | P2 | PARKED (90eff076, stg-074-2026-03-14) |
+| STG-075 | Product cards — add loading skeleton placeholder during fetch | P2 | PARKED (86a8a8e4, stg-075-2026-03-14) |
 | STG-076 | Activation — "on web" rewrite to specific URL or "online" | P2 | OPEN |
-| STG-077 | Payment — error message vague, no specific failure reason | P1 | OPEN |
-| STG-078 | Payment — "Complete Payment" greyed out with no explanation why | P1 | OPEN |
-| STG-079 | Payment — two competing retry mechanisms (error Retry + disabled CTA) | P1 | OPEN |
-| STG-080 | Payment — no cash amount received input or change calculation | P1 | OPEN |
-| STG-081 | Payment — no cart/order summary visible on payment screen | P1 | OPEN |
-| STG-082 | Payment — "Due" method has no customer selection for credit sale | P1 | OPEN |
-| STG-083 | Payment — no back button to return to cart | P1 | OPEN |
-| STG-084 | Payment — UPI flow incomplete, no QR/app selector after selecting UPI | P1 | OPEN |
-| STG-085 | Payment — no split payment support (cash + UPI) | P2 | OPEN |
-| STG-086 | Payment — "Cart locked" badge unexplained, no unlock path | P2 | OPEN |
-| STG-087 | Payment — ~40% empty space between tabs and amount | P2 | OPEN |
-| STG-088 | Payment — no GST/tax breakup on payment screen | P2 | OPEN |
-| STG-089 | Payment — "Complete Payment" grey-on-grey text fails WCAG contrast | P2 | OPEN |
-| STG-090 | Payment — no loading/processing state during payment attempt | P2 | OPEN |
-| STG-091 | Payment — instruction text "Collect cash" doesn't change per payment method | P2 | OPEN |
-| STG-092 | Payment — no receipt preview before completing payment | P3 | OPEN |
-| STG-093 | Payment — Cash icon unclear, doesn't read as "cash" or "banknote" | P3 | OPEN |
-| STG-094 | Cart — "Clear" button has no confirmation dialog, deletes all items instantly | P1 | OPEN |
-| STG-095 | Cart — delete item (🗑️) has no confirmation or undo | P1 | OPEN |
-| STG-096 | Cart — quantity [-][+] buttons too small, need larger tap targets | P1 | OPEN |
-| STG-097 | Cart — quantity number not tappable for direct input (type "10" vs tap + 9x) | P1 | OPEN |
-| STG-098 | Cart — no "Add more items" / "Continue Shopping" link in cart | P2 | OPEN |
-| STG-099 | Cart — edit icon (✏️) purpose unclear, no tooltip or label | P2 | OPEN |
-| STG-100 | Cart — unit price vs line total not labeled (ambiguous with qty > 1) | P2 | OPEN |
-| STG-101 | Cart — no GST/tax line between Subtotal and Total | P2 | OPEN |
-| STG-102 | Cart — discount has no max limit / manager approval for large discounts | P1 | OPEN |
-| STG-103 | Cart — no customer name/phone field for credit/due sales | P2 | OPEN |
+| STG-077 | Payment — error message vague, no specific failure reason | P1 | PARKED (9efdb6f0, stg-077-2026-03-14) |
+| STG-078 | Payment — "Complete Payment" greyed out with no explanation why | P1 | PARKED (f4f20aaa, stg-078-2026-03-14) |
+| STG-079 | Payment — two competing retry mechanisms (error Retry + disabled CTA) | P1 | PARKED (f4f20aaa, stg-079-2026-03-14) |
+| STG-080 | Payment — no cash amount received input or change calculation | P1 | PARKED (f4f20aaa, stg-080-2026-03-14) |
+| STG-081 | Payment — no cart/order summary visible on payment screen | P1 | PARKED (81f74910, stg-081-2026-03-14) |
+| STG-082 | Payment — "Due" method has no customer selection for credit sale | P1 | PARKED (f4f20aaa, stg-082-2026-03-14) |
+| STG-083 | Payment — no back button to return to cart | P1 | PARKED (f4f20aaa, stg-083-2026-03-14) |
+| STG-084 | Payment — UPI flow incomplete, no QR/app selector after selecting UPI | P1 | PARKED (1fbb26a2, stg-084-2026-03-14) |
+| STG-085 | Payment — no split payment support (cash + UPI) | P2 | PARKED (cdfc63a1, stg-085-2026-03-14) |
+| STG-086 | Payment — "Cart locked" badge unexplained, no unlock path | P2 | PARKED (f4f20aaa, stg-086-2026-03-14) |
+| STG-087 | Payment — ~40% empty space between tabs and amount | P2 | PARKED (f4f20aaa, stg-087-2026-03-14) |
+| STG-088 | Payment — no GST/tax breakup on payment screen | P2 | PARKED (f4f20aaa, stg-088-2026-03-14) |
+| STG-089 | Payment — "Complete Payment" grey-on-grey text fails WCAG contrast | P2 | PARKED (f4f20aaa, stg-089-2026-03-14) |
+| STG-090 | Payment — no loading/processing state during payment attempt | P2 | PARKED (f4f20aaa, stg-090-2026-03-14) |
+| STG-091 | Payment — instruction text "Collect cash" doesn't change per payment method | P2 | PARKED (f4f20aaa, stg-091-2026-03-14) |
+| STG-092 | Payment — no receipt preview before completing payment | P3 | PARKED (e2d025cc, stg-092-2026-03-14) |
+| STG-093 | Payment — Cash icon unclear, doesn't read as "cash" or "banknote" | P3 | PARKED (f4f20aaa, stg-093-2026-03-14) |
+| STG-094 | Cart — "Clear" button has no confirmation dialog, deletes all items instantly | P1 | PARKED (72499acd, stg-094-2026-03-14) |
+| STG-095 | Cart — delete item (🗑️) has no confirmation or undo | P1 | PARKED (24b7e99d, stg-095-2026-03-14) |
+| STG-096 | Cart — quantity [-][+] buttons too small, need larger tap targets | P1 | PARKED (24b7e99d, stg-096-2026-03-14) |
+| STG-097 | Cart — quantity number not tappable for direct input (type "10" vs tap + 9x) | P1 | PARKED (24b7e99d, stg-097-2026-03-14) |
+| STG-098 | Cart — no "Add more items" / "Continue Shopping" link in cart | P2 | PARKED (22b936e4, stg-098-2026-03-14) |
+| STG-099 | Cart — edit icon (✏️) purpose unclear, no tooltip or label | P2 | PARKED (24b7e99d, stg-099-2026-03-14) |
+| STG-100 | Cart — unit price vs line total not labeled (ambiguous with qty > 1) | P2 | PARKED (24b7e99d, stg-100-2026-03-14) |
+| STG-101 | Cart — no GST/tax line between Subtotal and Total | P2 | PARKED (86a8a8e4, stg-101-2026-03-14) |
+| STG-102 | Cart — discount has no max limit / manager approval for large discounts | P1 | PARKED (963fac79, stg-102-2026-03-14) |
+| STG-103 | Cart — no customer name/phone field for credit/due sales | P2 | PARKED (20727937, stg-103-2026-03-14) |
 | STG-104 | Cart — no "Hold/Park Bill" feature for interrupted transactions | P2 | OPEN |
-| STG-105 | Cart — no item count header ("1 item in cart") | P3 | OPEN |
-| STG-106 | Cart — Discount %/Flat toggle styling inconsistent | P3 | OPEN |
-| STG-107 | Cart — no product thumbnail/image in cart items | P3 | OPEN |
-| STG-108 | Cart — ~50% empty space with few items, no guidance to add more | P3 | OPEN |
-| STG-109 | Cart — Checkout button should show item count "Checkout (1 item) ₹145" | P3 | OPEN |
-| STG-110 | Cart — no per-item discount, only cart-level | P3 | OPEN |
-| STG-111 | Cart — no "You save ₹X" line when discount applied | P3 | OPEN |
-| STG-112 | Cart — no notes/memo field for special instructions | P3 | OPEN |
-| STG-113 | Payment — no bill/invoice number visible for tracking and disputes | P1 | OPEN |
-| STG-114 | Payment — no cancel/void transaction button | P1 | OPEN |
-| STG-115 | Payment — missing payment methods: Card, Wallet (Paytm/GPay balance) | P2 | OPEN |
+| STG-105 | Cart — no item count header ("1 item in cart") | P3 | PARKED (ea00d934, stg-105-2026-03-14) |
+| STG-106 | Cart — Discount %/Flat toggle styling inconsistent | P3 | PARKED (ea00d934, stg-106-2026-03-14) |
+| STG-107 | Cart — no product thumbnail/image in cart items | P3 | PARKED (86a8a8e4, stg-107-2026-03-14) |
+| STG-108 | Cart — ~50% empty space with few items, no guidance to add more | P3 | PARKED (86a8a8e4, stg-108-2026-03-14) |
+| STG-109 | Cart — Checkout button should show item count "Checkout (1 item) ₹145" | P3 | PARKED (ea00d934, stg-109-2026-03-14) |
+| STG-110 | Cart — no per-item discount, only cart-level | P3 | PARKED (20727937, stg-110-2026-03-14) |
+| STG-111 | Cart — no "You save ₹X" line when discount applied | P3 | PARKED (86a8a8e4, stg-111-2026-03-14) |
+| STG-112 | Cart — no notes/memo field for special instructions | P3 | PARKED (20727937, stg-112-2026-03-14) |
+| STG-113 | Payment — no bill/invoice number visible for tracking and disputes | P1 | PARKED (f4f20aaa, stg-113-2026-03-14) |
+| STG-114 | Payment — no cancel/void transaction button | P1 | PARKED (e2d025cc, stg-114-2026-03-14) |
+| STG-115 | Payment — missing payment methods: Card, Wallet (Paytm/GPay balance) | P2 | PARKED (e2d025cc, stg-115-2026-03-14) |
 | STG-116 | Payment — Indian lakh number formatting (₹1,45,000 not ₹145,000) | P2 | PARKED (cf379529, stg-116-2026-03-14) |
 | STG-117 | Payment — ".00" always shown on round amounts, add smart formatting | P3 | PARKED (2086418c, stg-117-2026-03-14) |
-| STG-118 | Payment — "Retry" button is red (destructive color) for a positive action | P2 | OPEN |
-| STG-119 | Payment — error banner has no dismiss X, persists indefinitely | P2 | OPEN |
-| STG-120 | Payment — no staff name/ID for shift reconciliation and audit | P2 | OPEN |
-| STG-121 | Payment — "Due" icon is calendar, should represent credit/udhar | P3 | OPEN |
-| STG-122 | Payment — no confirmation dialog for large amounts (₹5,000+) | P1 | OPEN |
-| STG-123 | Payment — amount positioned in dead center of empty space, move to top | P2 | OPEN |
-| STG-124 | Payment — no sound/vibration feedback on payment success or failure | P2 | OPEN |
-| STG-125 | Payment — no partial payment tracking (₹100 now + ₹45 due later) | P2 | OPEN |
-| STG-126 | Cart — [-] at qty=1 behavior undefined: remove item? block? go to 0? | P1 | OPEN |
-| STG-127 | Cart — no stock validation when qty exceeds available stock | P1 | OPEN |
-| STG-128 | Cart — no batch/expiry info for perishable items in cart | P2 | OPEN |
-| STG-129 | Cart — long product name truncation/overflow not handled | P2 | OPEN |
-| STG-130 | Cart — discount input has no live preview ("10% = ₹14.50 off") | P2 | OPEN |
-| STG-131 | Cart — empty space should show "frequently bought together" suggestions | P2 | OPEN |
-| STG-132 | Cart — Subtotal = Total is redundant, show Subtotal only when different | P3 | OPEN |
-| STG-133 | Cart — bottom sheet height fixed at ~90%, should be dynamic to content | P3 | OPEN |
-| STG-134 | Cart — no swipe-to-delete gesture on cart items | P3 | OPEN |
-| STG-135 | Cart — keyboard may cover Checkout button when discount input focused | P2 | OPEN |
+| STG-118 | Payment — "Retry" button is red (destructive color) for a positive action | P2 | PARKED (f4f20aaa, stg-118-2026-03-14) |
+| STG-119 | Payment — error banner has no dismiss X, persists indefinitely | P2 | PARKED (f4f20aaa, stg-119-2026-03-14) |
+| STG-120 | Payment — no staff name/ID for shift reconciliation and audit | P2 | PARKED (f4f20aaa, stg-120-2026-03-14) |
+| STG-121 | Payment — "Due" icon is calendar, should represent credit/udhar | P3 | PARKED (f4f20aaa, stg-121-2026-03-14) |
+| STG-122 | Payment — no confirmation dialog for large amounts (₹5,000+) | P1 | PARKED (e2d025cc, stg-122-2026-03-14) |
+| STG-123 | Payment — amount positioned in dead center of empty space, move to top | P2 | PARKED (f4f20aaa, stg-123-2026-03-14) |
+| STG-124 | Payment — no sound/vibration feedback on payment success or failure | P2 | PARKED (e2d025cc, stg-124-2026-03-14) |
+| STG-125 | Payment — no partial payment tracking (₹100 now + ₹45 due later) | P2 | PARKED (e2d025cc, stg-125-2026-03-14) |
+| STG-126 | Cart — [-] at qty=1 behavior undefined: remove item? block? go to 0? | P1 | PARKED (24b7e99d, stg-126-2026-03-14) |
+| STG-127 | Cart — no stock validation when qty exceeds available stock | P1 | PARKED (24b7e99d, stg-127-2026-03-14) |
+| STG-128 | Cart — no batch/expiry info for perishable items in cart | P2 | PARKED (20727937, stg-128-2026-03-14) |
+| STG-129 | Cart — long product name truncation/overflow not handled | P2 | PARKED (24b7e99d, stg-129-2026-03-14) |
+| STG-130 | Cart — discount input has no live preview ("10% = ₹14.50 off") | P2 | PARKED (ea00d934, stg-130-2026-03-14) |
+| STG-131 | Cart — empty space should show "frequently bought together" suggestions | P2 | PARKED (20727937, stg-131-2026-03-14) |
+| STG-132 | Cart — Subtotal = Total is redundant, show Subtotal only when different | P3 | PARKED (ea00d934, stg-132-2026-03-14) |
+| STG-133 | Cart — bottom sheet height fixed at ~90%, should be dynamic to content | P3 | PARKED (4d1b1f89, stg-133-2026-03-14) |
+| STG-134 | Cart — no swipe-to-delete gesture on cart items | P3 | PARKED (20727937, stg-134-2026-03-14) |
+| STG-135 | Cart — keyboard may cover Checkout button when discount input focused | P2 | PARKED (20727937, stg-135-2026-03-14) |
 | STG-136 | Cart — no "Share cart via WhatsApp" for phone order confirmation | P3 | OPEN |
-| STG-137 | Cart — "In stock" has no low-stock warning styling (amber/red for <5 units) | P2 | OPEN |
-| STG-138 | Cart — no weight/unit display separate from product name | P2 | OPEN |
-| STG-139 | Cart — no return/exchange line item for customer returns | P2 | OPEN |
-| STG-140 | Cart — Discount section always visible, should collapse when unused | P3 | OPEN |
-| STG-141 | Cart — Checkout button price doesn't animate on total change | P3 | OPEN |
+| STG-137 | Cart — "In stock" has no low-stock warning styling (amber/red for <5 units) | P2 | PARKED (24b7e99d, stg-137-2026-03-14) |
+| STG-138 | Cart — no weight/unit display separate from product name | P2 | PARKED (86a8a8e4, stg-138-2026-03-14) |
+| STG-139 | Cart — no return/exchange line item for customer returns | P2 | PARKED (9140ecc0, stg-139-2026-03-14) |
+| STG-140 | Cart — Discount section always visible, should collapse when unused | P3 | PARKED (ea00d934, stg-140-2026-03-14) |
+| STG-141 | Cart — Checkout button price doesn't animate on total change | P3 | PARKED (86a8a8e4, stg-141-2026-03-14) |
 | STG-142 | BUG: "[menu.viewDetails]" raw i18n key leaked in Today's Sales card | P0 | PARKED |
 | STG-143 | BUG: "[menu.printerReady]" and "[menu.testPrint]" raw i18n keys leaked | P0 | PARKED |
 | STG-144 | SECURITY: Developer/QA section + BUILD INFO visible to all users | P0 | PARKED |
 | STG-145 | SECURITY: BUILD INFO leaks token, API URL, StoreId UUID to end users | P0 | PARKED |
-| STG-146 | Menu — Device UUID shown instead of device label ("Counter-1") | P1 | OPEN |
-| STG-147 | Menu — store name lowercase in System Status vs title case in header | P2 | OPEN |
-| STG-148 | Menu — System Status card should be collapsible, rarely needed | P2 | OPEN |
-| STG-149 | Menu — Today's Sales percentages (551%) have no baseline context | P2 | OPEN |
-| STG-150 | Menu — "Payment Modes" section incomplete, label with no data | P2 | OPEN |
-| STG-151 | Menu — metric labels below numbers, should be above (read order) | P2 | OPEN |
-| STG-152 | Menu — Today's Sales should be on HOME screen, not buried in Menu | P1 | OPEN |
-| STG-153 | Menu — Reprint/Download/Share buttons have no context (what?) | P2 | OPEN |
+| STG-146 | Menu — Device UUID shown instead of device label ("Counter-1") | P1 | PARKED (6e426447, stg-146-2026-03-14) |
+| STG-147 | Menu — store name lowercase in System Status vs title case in header | P2 | PARKED (42fb9e8a, stg-147-2026-03-14) |
+| STG-148 | Menu — System Status card should be collapsible, rarely needed | P2 | PARKED (3fe97144, stg-148-2026-03-14) |
+| STG-149 | Menu — Today's Sales percentages (551%) have no baseline context | P2 | PARKED (d56a1448, stg-149-2026-03-14) |
+| STG-150 | Menu — "Payment Modes" section incomplete, label with no data | P2 | PARKED (5cb45d62, stg-150-2026-03-14) |
+| STG-151 | Menu — metric labels below numbers, should be above (read order) | P2 | PARKED (5cb45d62, stg-151-2026-03-14) |
+| STG-152 | Menu — Today's Sales should be on HOME screen, not buried in Menu | P1 | PARKED (5cb45d62, stg-152-2026-03-14) |
+| STG-153 | Menu — Reprint/Download/Share buttons have no context (what?) | P2 | PARKED (0305262b, stg-153-2026-03-14) |
 | STG-154 | Menu — "BNPL Dues" jargon, kirana retailer won't understand BNPL | P2 | PARKED (0409765f, stg-154-2026-03-14) |
 | STG-155 | Menu — "Stock Inward" warehouse jargon, rename to "Add New Stock" | P2 | PARKED (0409765f, stg-155-2026-03-14) |
-| STG-156 | Menu — Opening Stock "?" icon should be inventory icon | P2 | OPEN |
-| STG-157 | Menu — "Customers" and "Customer Management" are duplicate entries | P1 | OPEN |
+| STG-156 | Menu — Opening Stock "?" icon should be inventory icon | P2 | PARKED (91ef2211, stg-156-2026-03-14) |
+| STG-157 | Menu — "Customers" and "Customer Management" are duplicate entries | P1 | PARKED (42fb9e8a, stg-157-2026-03-14) |
 | STG-158 | Menu — "Overdue Dues" redundant wording, use "Overdue Payments" | P3 | PARKED (0409765f, stg-158-2026-03-14) |
-| STG-159 | Menu — 20+ items need 8 screens of scrolling, needs restructure | P1 | OPEN |
-| STG-160 | Menu — icon colors inconsistent (blue, teal, green, red, grey, orange) | P2 | OPEN |
-| STG-161 | Menu — no notification badges on items (overdue count, pending) | P2 | OPEN |
-| STG-162 | Menu — logo + pill + "Menu" title redundant heading, wastes 60px | P3 | OPEN |
-| STG-163 | Menu — card spacing too large (~96px each), needs tighter layout | P3 | OPEN |
-| STG-164 | Settings — "kbcretailer (MANAGER)" shows username not display name | P1 | OPEN |
-| STG-165 | Settings — Hindi toggle "हि" non-standard abbreviation | P2 | OPEN |
-| STG-166 | Settings — "Re-enroll to a different store" enrollment jargon | P3 | OPEN |
-| STG-167 | Settings — no About section with app version + terms + privacy links | P2 | OPEN |
-| STG-168 | Settings — no logout/sign-out option visible for staff | P1 | OPEN |
-| STG-169 | Menu — no search/filter across 20+ menu items | P2 | OPEN |
-| STG-170 | Menu — "Barcode Sheets" subtitle "tiered" jargon | P3 | OPEN |
-| STG-171 | Menu — Today's Sales metrics all same size, no visual hierarchy | P2 | OPEN |
+| STG-159 | Menu — 20+ items need 8 screens of scrolling, needs restructure | P1 | PARKED (42fb9e8a, stg-159-2026-03-14) |
+| STG-160 | Menu — icon colors inconsistent (blue, teal, green, red, grey, orange) | P2 | PARKED (026fde2c, stg-160-2026-03-14) |
+| STG-161 | Menu — no notification badges on items (overdue count, pending) | P2 | PARKED (42fb9e8a, stg-161-2026-03-14) |
+| STG-162 | Menu — logo + pill + "Menu" title redundant heading, wastes 60px | P3 | PARKED (42fb9e8a, stg-162-2026-03-14) |
+| STG-163 | Menu — card spacing too large (~96px each), needs tighter layout | P3 | PARKED (42fb9e8a, stg-163-2026-03-14) |
+| STG-164 | Settings — "kbcretailer (MANAGER)" shows username not display name | P1 | PARKED (42fb9e8a, stg-164-2026-03-14) |
+| STG-165 | Settings — Hindi toggle "हि" non-standard abbreviation | P2 | PARKED (42fb9e8a, stg-165-2026-03-14) |
+| STG-166 | Settings — "Re-enroll to a different store" enrollment jargon | P3 | PARKED (a6d72ccf, stg-166-2026-03-14) |
+| STG-167 | Settings — no About section with app version + terms + privacy links | P2 | PARKED (42fb9e8a, stg-167-2026-03-14) |
+| STG-168 | Settings — no logout/sign-out option visible for staff | P1 | PARKED (42fb9e8a, stg-168-2026-03-14) |
+| STG-169 | Menu — no search/filter across 20+ menu items | P2 | PARKED (42fb9e8a, stg-169-2026-03-14) |
+| STG-170 | Menu — "Barcode Sheets" subtitle "tiered" jargon | P3 | PARKED (a6d72ccf, stg-170-2026-03-14) |
+| STG-171 | Menu — Today's Sales metrics all same size, no visual hierarchy | P2 | PARKED (42fb9e8a, stg-171-2026-03-14) |
 | STG-172 | Menu — hardcoded English strings not using i18n (Return/Refund, Opening Stock, etc.) | P1 | PARKED (0409765f, stg-172-2026-03-14) |
 | STG-173 | Menu — "View Details" uses t() defaultValue fallback, raw key leaks if i18n fails | P1 | PARKED (0409765f, stg-173-2026-03-14) |
 | STG-174 | Menu — "Printer Ready"/"Test" use t() second-arg fallback, not standard defaultValue | P1 | PARKED (0409765f, stg-174-2026-03-14) |
-| STG-175 | Menu — no Pressable ripple/feedback effect on menu items (no android_ripple) | P2 | OPEN |
-| STG-176 | Menu — header paddingVertical:8 too tight, brand pill cramped | P2 | OPEN |
+| STG-175 | Menu — no Pressable ripple/feedback effect on menu items (no android_ripple) | P2 | PARKED (98f6e981, stg-175-2026-03-14) |
+| STG-176 | Menu — header paddingVertical:8 too tight, brand pill cramped | P2 | PARKED (98f6e981, stg-176-2026-03-14) |
 | STG-177 | Menu — status panel "Sync" label hardcoded English (not i18n) | P2 | PARKED (0409765f, stg-177-2026-03-14) |
 | STG-178 | Menu — Build Info visible on release with EXPO_PUBLIC_ENABLE_QA_MENU=true | P1 | PARKED |
-| STG-179 | Menu — release build stamp shows raw SHA and timestamp, not user-friendly version | P2 | OPEN |
+| STG-179 | Menu — release build stamp shows raw SHA and timestamp, not user-friendly version | P2 | PARKED (98f6e981, stg-179-2026-03-14) |
 | STG-180 | Menu — Switch Staff alert uses English string literals, not i18n | P2 | PARKED (0409765f, stg-180-2026-03-14) |
-| STG-181 | Menu — billActions (Reprint/Download/Share) all navigate to same SalesHistory | P1 | OPEN |
-| STG-182 | Menu — no haptic feedback on menu item press | P3 | OPEN |
-| STG-183 | Menu — section header margin 24px top but 4px bottom, visually unbalanced | P3 | OPEN |
+| STG-181 | Menu — billActions (Reprint/Download/Share) all navigate to same SalesHistory | P1 | PARKED (f779300e, stg-181-2026-03-14) |
+| STG-182 | Menu — no haptic feedback on menu item press | P3 | PARKED (b672d402, stg-182-2026-03-14) |
+| STG-183 | Menu — section header margin 24px top but 4px bottom, visually unbalanced | P3 | PARKED (f779300e, stg-183-2026-03-14) |
 | STG-184 | Menu — WhatsApp Support fallback uses "Support Unavailable" English literal | P2 | PARKED (0409765f, stg-184-2026-03-14) |
 | STG-185 | Menu — WhatsApp pre-filled message in English only, no i18n | P2 | PARKED (0409765f, stg-185-2026-03-14) |
-| STG-186 | Menu — trend badge at 9px font too small to read on budget Android | P2 | OPEN |
-| STG-187 | Menu — trend percentage shows "551%" with no cap or "99%+" formatting | P2 | OPEN |
+| STG-186 | Menu — trend badge at 9px font too small to read on budget Android | P2 | PARKED (01b051f2, stg-186-2026-03-14) |
+| STG-187 | Menu — trend percentage shows "551%" with no cap or "99%+" formatting | P2 | PARKED (01b051f2, stg-187-2026-03-14) |
 | STG-188 | Menu — Payment Modes breakdown shows "Cash: ₹..." raw label, not i18n | P2 | PARKED (0409765f, stg-188-2026-03-14) |
 | STG-189 | Menu — Help & Support shows "&amp;" HTML entity instead of "&" | P0 | PARKED |
-| STG-190 | Menu — no skeleton/shimmer loading state for System Status and Today's Sales | P2 | OPEN |
-| STG-191 | Menu — status panel statusBadge uses transparent bg (surfaceAlt), no outline | P3 | OPEN |
-| STG-192 | Menu — menuIcon 36x36 too small for touch targets on budget Android | P2 | OPEN |
+| STG-190 | Menu — no skeleton/shimmer loading state for System Status and Today's Sales | P2 | PARKED (01b051f2, stg-190-2026-03-14) |
+| STG-191 | Menu — status panel statusBadge uses transparent bg (surfaceAlt), no outline | P3 | PARKED (01b051f2, stg-191-2026-03-14) |
+| STG-192 | Menu — menuIcon 36x36 too small for touch targets on budget Android | P2 | PARKED (01b051f2, stg-192-2026-03-14) |
 | STG-193 | Menu — "Z-Report and cash reconciliation" subtitle jargon for kirana users | P2 | PARKED (0409765f, stg-193-2026-03-14) |
 | STG-194 | Menu — "Start, end, and view shift history" assumes shift concept familiarity | P3 | PARKED (0409765f, stg-194-2026-03-14) |
 | STG-195 | Menu — "AI & Intelligence" section title too technical, rename to "Smart Insights" | P2 | PARKED (0409765f, stg-195-2026-03-14) |
 | STG-196 | Menu — "Alerts, forecasts, slow movers, expiry tracking" subtitle info-dense | P3 | PARKED (0409765f, stg-196-2026-03-14) |
 | STG-197 | Menu — "Browse and apply for credit offers" subtitle implies retailer is borrowing | P3 | PARKED (0409765f, stg-197-2026-03-14) |
-| STG-198 | Menu — content padding 16px identical to item padding, creates visual merge | P3 | OPEN |
-| STG-199 | Menu — ScrollView has no scrollbar indicator styling | P3 | OPEN |
-| STG-200 | Enroll — "hello@supermandi.tech" email in error hints, kirana users won't email | P1 | OPEN |
-| STG-201 | Enroll — "Superadmin" used in error messages (deviceInactive, storeInactive) | P1 | OPEN |
-| STG-202 | Enroll — STORE_INACTIVE hint says "Contact hello@supermandi.tech for help" | P1 | OPEN |
+| STG-198 | Menu — content padding 16px identical to item padding, creates visual merge | P3 | PARKED (42fb9e8a, stg-198-2026-03-14) |
+| STG-199 | Menu — ScrollView has no scrollbar indicator styling | P3 | PARKED (42fb9e8a, stg-199-2026-03-14) |
+| STG-200 | Enroll — "hello@supermandi.tech" email in error hints, kirana users won't email | P1 | PARKED (9399462b, stg-200-2026-03-14) |
+| STG-201 | Enroll — "Superadmin" used in error messages (deviceInactive, storeInactive) | P1 | PARKED (9399462b, stg-201-2026-03-14) |
+| STG-202 | Enroll — STORE_INACTIVE hint says "Contact hello@supermandi.tech for help" | P1 | PARKED (9399462b, stg-202-2026-03-14) |
 | STG-203 | Enroll — "RETAILER_PHONE" hardcoded as deviceType, OEM_HANDHELD never sent | P2 | OPEN |
 | STG-204 | Enroll — defaultLabel uses Device.modelName raw (e.g. "23106RN0DA") | P2 | OPEN |
 | STG-205 | Enroll — deep link re-enrollment alert uses English literals, no i18n | P2 | OPEN |
-| STG-206 | Enroll — missing code alert says "superadmin account activation" | P1 | OPEN |
+| STG-206 | Enroll — missing code alert says "superadmin account activation" | P1 | PARKED (34a98968, stg-206-2026-03-14) |
 | STG-207 | Enroll — error codes DEVICE_FINGERPRINT_INVALID says "Reinstall the app" | P2 | OPEN |
 | STG-208 | Enroll — ENROLLMENT_RATE_LIMITED says "wait 15 minutes" but no countdown | P3 | OPEN |
-| STG-209 | Payment — uses TouchableOpacity instead of Pressable (inconsistent with rest) | P3 | OPEN |
-| STG-210 | Payment — "Low Stock Warning" and "Partial Sale" alerts in English, no i18n | P2 | OPEN |
-| STG-211 | Payment — "UPI Error: UPI ID not configured or QR failed" too vague | P2 | OPEN |
-| STG-212 | Payment — "POS Inactive" and "Store Missing" alerts reference "Superadmin" | P1 | OPEN |
-| STG-213 | Payment — "Payment in Progress" back-block alert is bare, no spinner | P2 | OPEN |
-| STG-214 | Payment — QR expiry countdown exists but no visual regenerate button | P2 | OPEN |
+| STG-209 | Payment — uses TouchableOpacity instead of Pressable (inconsistent with rest) | P3 | PARKED (1ed068a2, stg-209-2026-03-14) |
+| STG-210 | Payment — "Low Stock Warning" and "Partial Sale" alerts in English, no i18n | P2 | PARKED (e2d025cc, stg-210-2026-03-14) |
+| STG-211 | Payment — "UPI Error: UPI ID not configured or QR failed" too vague | P2 | PARKED (f4f20aaa, stg-211-2026-03-14) |
+| STG-212 | Payment — "POS Inactive" and "Store Missing" alerts reference "Superadmin" | P1 | PARKED (f4f20aaa, stg-212-2026-03-14) |
+| STG-213 | Payment — "Payment in Progress" back-block alert is bare, no spinner | P2 | PARKED (e2d025cc, stg-213-2026-03-14) |
+| STG-214 | Payment — QR expiry countdown exists but no visual regenerate button | P2 | PARKED (cf8e15a0, stg-214-2026-03-14) |
 | STG-215 | Payment — stale price warning threshold 4 hours is hardcoded, not configurable | P3 | OPEN |
-| STG-216 | Payment — "Price Freshness Warning" title confusing for kirana user | P2 | OPEN |
-| STG-217 | Payment — sale creation error shows generic "Unable to start payment" | P2 | OPEN |
-| STG-218 | Payment — "Previous UPI Payment Pending" alert shows raw paymentId hash | P2 | OPEN |
-| STG-219 | Payment — "UPI Offline" / "UPI Missing" / "UPI Timeout" all different alert styles | P3 | OPEN |
-| STG-220 | SellScan — CART_SHEET_COLLAPSED_RATIO 0.55 covers 55% screen, too much | P2 | OPEN |
+| STG-216 | Payment — "Price Freshness Warning" title confusing for kirana user | P2 | PARKED (f4f20aaa, stg-216-2026-03-14) |
+| STG-217 | Payment — sale creation error shows generic "Unable to start payment" | P2 | PARKED (e2d025cc, stg-217-2026-03-14) |
+| STG-218 | Payment — "Previous UPI Payment Pending" alert shows raw paymentId hash | P2 | PARKED (cf8e15a0, stg-218-2026-03-14) |
+| STG-219 | Payment — "UPI Offline" / "UPI Missing" / "UPI Timeout" all different alert styles | P3 | PARKED (cf8e15a0, stg-219-2026-03-14) |
+| STG-220 | SellScan — CART_SHEET_COLLAPSED_RATIO 0.55 covers 55% screen, too much | P2 | PARKED (ea00d934, stg-220-2026-03-14) |
 | STG-221 | SellScan — SMALL_SCREEN_WIDTH=400 threshold may not cover all budget phones | P3 | OPEN |
-| STG-222 | SellScan — product tile formatPrice shows ".00" on round amounts (₹28.00) | P2 | OPEN |
-| STG-223 | SellScan — no empty state illustration when search returns zero products | P2 | OPEN |
+| STG-222 | SellScan — product tile formatPrice shows ".00" on round amounts (₹28.00) | P2 | PARKED (7b95512d, stg-222-2026-03-14) |
+| STG-223 | SellScan — no empty state illustration when search returns zero products | P2 | PARKED (ea00d934, stg-223-2026-03-14) |
 | STG-224 | SellScan — category rail DEMO_CATEGORIES may show dummy data in production | P1 | PARKED |
-| STG-225 | SellScan — NUM_COLUMNS=2 hardcoded, no responsive columns for tablets | P3 | OPEN |
-| STG-226 | SellTile — "—" dash for null price, should show "Price not set" | P2 | OPEN |
-| STG-227 | SellTile — expiry days calculation doesn't account for timezone (IST) | P2 | OPEN |
-| STG-228 | SellTile — no MRP strikethrough visual when sell price < MRP | P2 | OPEN |
+| STG-225 | SellScan — NUM_COLUMNS=2 hardcoded, no responsive columns for tablets | P3 | PARKED (ea00d934, stg-225-2026-03-14) |
+| STG-226 | SellTile — "—" dash for null price, should show "Price not set" | P2 | PARKED (f3ab1d93, stg-226-2026-03-14) |
+| STG-227 | SellTile — expiry days calculation doesn't account for timezone (IST) | P2 | PARKED (f3ab1d93, stg-227-2026-03-14) |
+| STG-228 | SellTile — no MRP strikethrough visual when sell price < MRP | P2 | PARKED (35f1f9d1, stg-228-2026-03-14) |
 | STG-229 | SellTile — LOOSE mode "per KG" label not translated | P2 | OPEN |
-| STG-230 | SellTile — brand name not displayed if available | P3 | OPEN |
+| STG-230 | SellTile — brand name not displayed if available | P3 | PARKED (f3ab1d93, stg-230-2026-03-14) |
 | STG-231 | Colors — "accent" and "secondary" are identical (#14B8A6), redundant token | P2 | PARKED (c437f8ec, stg-231-2026-03-14) |
 | STG-232 | Colors — no dedicated "disabled" color token for greyed-out buttons | P2 | PARKED (5e2d96c1, stg-232-2026-03-14) |
 | STG-233 | Colors — dark mode "ink" is #F8FAFC but light mode "ink" is #0B1220, never used | P3 | PARKED (b1e8d28e, stg-233-2026-03-14) |
@@ -271,18 +271,18 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-242 | i18n — credit section uses financial jargon (EMI, KYC, PAN, Aadhaar) without explanation | P2 | PARKED (053ab1a8, stg-242-2026-03-14) |
 | STG-243 | i18n — bnpl.upiInstructions sentence too long (2 clauses + technical term UTR) | P2 | PARKED (053ab1a8, stg-243-2026-03-14) |
 | STG-244 | i18n — grn.title "Goods Receipt Note" — warehouse jargon | P2 | PARKED (053ab1a8, stg-244-2026-03-14) |
-| STG-245 | Tab nav — "REORDER • ON" / "REORDER • OFF" unusual tab label convention | P2 | OPEN |
-| STG-246 | Tab nav — 5 tabs but CREDIT tab is greyed/disabled, confusing affordance | P2 | OPEN |
-| STG-247 | Menu — "Customers & Credit" section has 4 items (Khata, Customers, Customer Management, Overdue) — 3 overlap | P1 | OPEN |
-| STG-248 | Menu — menuItem marginTop:16 creates 16px gap, but first item after sectionHeader has 16+4=20px gap inconsistency | P3 | OPEN |
-| STG-249 | Menu — printerStatusRow sits between Bills and Barcode with no card container | P2 | OPEN |
-| STG-250 | Menu — "Switch Store" in Settings section but it's a destructive action, needs separation | P2 | OPEN |
-| STG-251 | Menu — no confirmation count on "Daily Closing" (e.g., "2 shifts open") | P2 | OPEN |
-| STG-252 | Menu — "Chat" subtitle says "Message suppliers and support" but no unread count | P2 | OPEN |
+| STG-245 | Tab nav — "REORDER • ON" / "REORDER • OFF" unusual tab label convention | P2 | PARKED (0ca6a62d, stg-245-2026-03-14) |
+| STG-246 | Tab nav — 5 tabs but CREDIT tab is greyed/disabled, confusing affordance | P2 | PARKED (f032299c, stg-246-2026-03-14) |
+| STG-247 | Menu — "Customers & Credit" section has 4 items (Khata, Customers, Customer Management, Overdue) — 3 overlap | P1 | PARKED (42fb9e8a, stg-247-2026-03-14) |
+| STG-248 | Menu — menuItem marginTop:16 creates 16px gap, but first item after sectionHeader has 16+4=20px gap inconsistency | P3 | PARKED (42fb9e8a, stg-248-2026-03-14) |
+| STG-249 | Menu — printerStatusRow sits between Bills and Barcode with no card container | P2 | PARKED (42fb9e8a, stg-249-2026-03-14) |
+| STG-250 | Menu — "Switch Store" in Settings section but it's a destructive action, needs separation | P2 | PARKED (42fb9e8a, stg-250-2026-03-14) |
+| STG-251 | Menu — no confirmation count on "Daily Closing" (e.g., "2 shifts open") | P2 | PARKED (42fb9e8a, stg-251-2026-03-14) |
+| STG-252 | Menu — "Chat" subtitle says "Message suppliers and support" but no unread count | P2 | PARKED (42fb9e8a, stg-252-2026-03-14) |
 | STG-253 | Enroll — TEST_STORE_CONFIG imported but may auto-fill in production builds | P1 | PARKED |
-| STG-254 | Payment — formatMoney not using Indian lakh system (1,45,000 vs 145,000) | P2 | OPEN |
-| STG-255 | Menu — summaryCard and statusPanel have same border/radius but different marginTop | P3 | OPEN |
-| STG-256 | Menu — no swipe gesture to dismiss/collapse System Status panel | P3 | OPEN |
+| STG-254 | Payment — formatMoney not using Indian lakh system (1,45,000 vs 145,000) | P2 | PARKED (e2d025cc, stg-254-2026-03-14) |
+| STG-255 | Menu — summaryCard and statusPanel have same border/radius but different marginTop | P3 | PARKED (42fb9e8a, stg-255-2026-03-14) |
+| STG-256 | Menu — no swipe gesture to dismiss/collapse System Status panel | P3 | PARKED (42fb9e8a, stg-256-2026-03-14) |
 | STG-257 | PaymentSetupScreen — hardcoded English strings not using i18n | P1 | PARKED (f45982d2, stg-257-2026-03-14) |
 | STG-258 | SalesHistoryScreen — hardcoded English strings not using i18n | P1 | PARKED (f45982d2, stg-258-2026-03-14) |
 | STG-259 | BillDetailScreen — hardcoded English strings not using i18n | P1 | PARKED (f45982d2, stg-259-2026-03-14) |
@@ -306,7 +306,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-277 | ReorderScreen + ReorderPoliciesScreen — hardcoded English not using i18n | P2 | PARKED (b959b2b2, stg-277-2026-03-14) |
 | STG-278 | BulkPurchaseCreditScreen — no i18n setup, all strings hardcoded | P1 | PARKED (b959b2b2, stg-278-2026-03-14) |
 | STG-279 | ErrorBoundary — hardcoded English error text | P1 | PARKED (stg-279-2026-03-14) |
-| STG-280 | PaymentSetup — "UPI ID (VPA)" jargon, simplify for kirana users | P2 | OPEN |
+| STG-280 | PaymentSetup — "UPI ID (VPA)" jargon, simplify for kirana users | P2 | PARKED (b4d91e26, stg-280-2026-03-14) |
 | STG-281 | DailyClosing — "Variance" accounting jargon confusing for retailers | P2 | OPEN |
 | STG-282 | SalesStatement — "Inventory Cost Statement" title misleading | P2 | OPEN |
 | STG-283 | BnplDues — BNPL/UTR/UPI jargon unexplained | P1 | OPEN |
@@ -318,7 +318,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-289 | Return — "Khata Credit" and "UPI (Manual)" need clarification | P2 | OPEN |
 | STG-290 | AIInsights — "Slow", "Forecast", "Expiry" tab labels unclear | P2 | OPEN |
 | STG-291 | Components — hardcoded English in SellTile, CartItem, SupplierRow | P1 | PARKED (stg-291-2026-03-14) |
-| STG-292 | LimitedModeBanner — "Place Orders (BUY)" jargon | P2 | OPEN |
+| STG-292 | LimitedModeBanner — "Place Orders (BUY)" jargon | P2 | PARKED (7b95512d, stg-292-2026-03-14) |
 | STG-293 | Font sizes below 12px across Purchase/Stock screens | P2 | OPEN |
 | STG-294 | Font sizes below 12px across Sales/Closing screens | P2 | OPEN |
 | STG-295 | Font sizes below 12px across Credit/Customer/Orders screens | P2 | OPEN |
@@ -331,16 +331,16 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-302 | Help — email-first contact, should be WhatsApp-first | P1 | OPEN |
 | STG-303 | BnplDues — "contacted via email" should include WhatsApp | P2 | OPEN |
 | STG-304 | CustomerList + CustomerMgmt — email field inappropriate for kirana | P2 | OPEN |
-| STG-305 | DeviceBlocked — "SuperAdmin"/"administrator" jargon | P1 | OPEN |
+| STG-305 | DeviceBlocked — "SuperAdmin"/"administrator" jargon | P1 | PARKED (c5a4600b, stg-305-2026-03-14) |
 | STG-306 | DailyReport — vague empty state messaging | P2 | OPEN |
 | STG-307 | BillDetail — print/share buttons show "..." instead of spinner | P2 | OPEN |
 | STG-308 | Inward — raw product ID shown when barcode is null | P2 | OPEN |
 | STG-309 | Return — raw refundId displayed to users | P2 | OPEN |
-| STG-310 | Splash — "Continue without session" jargon | P2 | OPEN |
+| STG-310 | Splash — "Continue without session" jargon | P2 | PARKED (cf702fec, stg-310-2026-03-14) |
 | STG-311 | AIInsights — "not yet available" error too vague | P2 | OPEN |
 | STG-312 | DailyReport + DailyClosing — missing offline/sync indication | P2 | OPEN |
 | STG-313 | Network error messages across screens — no recovery guidance | P2 | OPEN |
-| STG-314 | PaymentSetup — no success confirmation after saving | P2 | OPEN |
+| STG-314 | PaymentSetup — no success confirmation after saving | P2 | PARKED (e2d025cc, stg-314-2026-03-14) |
 | STG-315 | Reorder — missing confirmation before dismissing suggestion | P1 | OPEN |
 | STG-316 | SplitPaymentModal — TouchableOpacity should be Pressable | P3 | OPEN |
 | STG-317 | Inconsistent disabled button opacity across all screens | P2 | OPEN |
@@ -350,40 +350,40 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-321 | Chat — "No messages yet. Say hello!" vague empty state | P2 | OPEN |
 | STG-322 | Chat — 24-hour time format without AM/PM | P2 | OPEN |
 | STG-323 | ForceUpdate — "iOS update coming soon" vague | P2 | OPEN |
-| STG-324 | Enroll — activation code placeholder lacks help text | P1 | OPEN |
-| STG-325 | Enroll — "Activate POS" vs "Activate Your POS" inconsistency | P3 | OPEN |
+| STG-324 | Enroll — activation code placeholder lacks help text | P1 | PARKED (417ac3a1, stg-324-2026-03-14) |
+| STG-325 | Enroll — "Activate POS" vs "Activate Your POS" inconsistency | P3 | PARKED (9cea4407, stg-325-2026-03-14) |
 | STG-326 | Enroll — required field indicators inconsistent | P2 | OPEN |
-| STG-327 | StaffLogin — button doesn't change text during cooldown | P2 | OPEN |
+| STG-327 | StaffLogin — button doesn't change text during cooldown | P2 | PARKED (9a9777d4, stg-327-2026-03-14) |
 | STG-328 | ForceUpdate — "unknown" version display lacks explanation | P2 | OPEN |
 | STG-329 | ProductDetailModal — "No suppliers available" lacks guidance | P1 | OPEN |
 | STG-330 | DismissReasonModal — predefined reasons store English to backend | P2 | OPEN |
-| STG-331 | SELL — Remove separate manual barcode field, unify into main search bar | P1 | OPEN |
-| STG-332 | SELL — Search bar placeholder doesn't indicate barcode input support | P2 | OPEN |
-| STG-333 | SELL — 300ms debounce delays barcode resolution unnecessarily | P2 | OPEN |
-| STG-334 | SELL — Barcode heuristic too broad, matches phone numbers | P1 | OPEN |
-| STG-335 | SELL — Duplicate scan 2000ms window too strict for same-item multiples | P2 | OPEN |
-| STG-336 | SELL — Scan storm detection with no user feedback | P2 | OPEN |
-| STG-337 | SELL — Intermediate barcode prefixes trigger search results flicker | P2 | OPEN |
-| STG-338 | SELL — Unknown barcode modal lacks clear field guidance | P2 | OPEN |
-| STG-339 | SELL — LOOSE_BULK variant picker gated, may never trigger | P2 | OPEN |
-| STG-340 | SELL — Price error silently blocks checkout with no feedback | P1 | OPEN |
-| STG-341 | SELL — DEMO_CATEGORIES hardcoded, no dynamic loading | P2 | OPEN |
-| STG-342 | SELL — Category selection does NOT filter displayed products | P1 | OPEN |
+| STG-331 | SELL — Remove separate manual barcode field, unify into main search bar | P1 | PARKED (d5f0a2cc, stg-331-2026-03-14) |
+| STG-332 | SELL — Search bar placeholder doesn't indicate barcode input support | P2 | PARKED (ea00d934, stg-332-2026-03-14) |
+| STG-333 | SELL — 300ms debounce delays barcode resolution unnecessarily | P2 | PARKED (ea00d934, stg-333-2026-03-14) |
+| STG-334 | SELL — Barcode heuristic too broad, matches phone numbers | P1 | PARKED (ea00d934, stg-334-2026-03-14) |
+| STG-335 | SELL — Duplicate scan 2000ms window too strict for same-item multiples | P2 | PARKED (ea00d934, stg-335-2026-03-14) |
+| STG-336 | SELL — Scan storm detection with no user feedback | P2 | PARKED (ea00d934, stg-336-2026-03-14) |
+| STG-337 | SELL — Intermediate barcode prefixes trigger search results flicker | P2 | PARKED (ea00d934, stg-337-2026-03-14) |
+| STG-338 | SELL — Unknown barcode modal lacks clear field guidance | P2 | PARKED (9cea4407, stg-338-2026-03-14) |
+| STG-339 | SELL — LOOSE_BULK variant picker gated, may never trigger | P2 | PARKED (4d1b1f89, stg-339-2026-03-14) |
+| STG-340 | SELL — Price error silently blocks checkout with no feedback | P1 | PARKED (417ac3a1, stg-340-2026-03-14) |
+| STG-341 | SELL — DEMO_CATEGORIES hardcoded, no dynamic loading | P2 | PARKED (4d1b1f89, stg-341-2026-03-14) |
+| STG-342 | SELL — Category selection does NOT filter displayed products | P1 | PARKED (132eb8ff, stg-342-2026-03-14) |
 | STG-343 | PURCHASE — BuyScreen search bar missing barcode lookup | P1 | OPEN |
 | STG-344 | PURCHASE — Search debounce 400ms creates perceived slowness | P2 | OPEN |
 | STG-345 | PURCHASE — No search autocomplete/suggestions before results | P3 | OPEN |
 | STG-346 | PURCHASE — Stock filter applied client-side, pagination issues | P2 | OPEN |
 | STG-347 | PURCHASE — Quick purchase mode adds items with empty metadata | P1 | OPEN |
 | STG-348 | PURCHASE — No barcode lookup loading state | P2 | OPEN |
-| STG-349 | SELL — Search results missing brand, image, pack size | P2 | OPEN |
-| STG-350 | SELL — Autocomplete dropdown shows only name+barcode | P2 | OPEN |
+| STG-349 | SELL — Search results missing brand, image, pack size | P2 | PARKED (67a33ee6, stg-349-2026-03-14) |
+| STG-350 | SELL — Autocomplete dropdown shows only name+barcode | P2 | PARKED (6fade9fb, stg-350-2026-03-14) |
 | STG-351 | PURCHASE — Supplier name not visible in grid card | P2 | OPEN |
 | STG-352 | PURCHASE — MOV not shown anywhere before checkout | P1 | OPEN |
 | STG-353 | PURCHASE — MOQ shown only when >1 in small 11px font | P2 | OPEN |
 | STG-354 | PURCHASE — "Cost" price label ambiguous | P2 | OPEN |
 | STG-355 | PURCHASE — No variant/pack size when metadata missing | P2 | OPEN |
-| STG-356 | SELL — SellTile brand truncates on narrow screens | P2 | OPEN |
-| STG-357 | SELL — Expiry badge overlaps stock on small screens | P2 | OPEN |
+| STG-356 | SELL — SellTile brand truncates on narrow screens | P2 | PARKED (4d1b1f89, stg-356-2026-03-14) |
+| STG-357 | SELL — Expiry badge overlaps stock on small screens | P2 | PARKED (4d1b1f89, stg-357-2026-03-14) |
 | STG-358 | PURCHASE — No supplier comparison table in ProductDetailModal | P2 | OPEN |
 | STG-359 | PURCHASE — No expiry date/batch info for incoming products | P2 | OPEN |
 | STG-360 | VOICE — No confirmation before auto-executing voice commands | P1 | OPEN |
@@ -394,23 +394,23 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-365 | VOICE — No mic permission guidance when denied | P2 | OPEN |
 | STG-366 | VOICE — No timeout on slow API, app hangs indefinitely | P1 | OPEN |
 | STG-367 | VOICE — Prompt injection vulnerability (regex-only mitigation) | P0 | PARKED (4602b3f4, stg-367-2026-03-14) |
-| STG-368 | SELL — No immediate visual feedback on product tile tap | P2 | OPEN |
-| STG-369 | SELL — VariantPickerModal lacks images, stock, price context | P2 | OPEN |
-| STG-370 | SELL — Cart add persistence not awaited, silent data loss | P1 | OPEN |
-| STG-371 | HID — Scanner timing parameters hardcoded | P2 | OPEN |
-| STG-372 | HID — Buffer not reset on SellScanScreen mount/unmount | P1 | OPEN |
+| STG-368 | SELL — No immediate visual feedback on product tile tap | P2 | PARKED (6fade9fb, stg-368-2026-03-14) |
+| STG-369 | SELL — VariantPickerModal lacks images, stock, price context | P2 | PARKED (4d1b1f89, stg-369-2026-03-14) |
+| STG-370 | SELL — Cart add persistence not awaited, silent data loss | P1 | PARKED (4d1b1f89, stg-370-2026-03-14) |
+| STG-371 | HID — Scanner timing parameters hardcoded | P2 | PARKED (ea00d934, stg-371-2026-03-14) |
+| STG-372 | HID — Buffer not reset on SellScanScreen mount/unmount | P1 | PARKED (ea00d934, stg-372-2026-03-14) |
 | STG-373 | SELL — Cart sheet covers 55-75% of screen on small devices | P2 | OPEN |
 | STG-374 | SELL — No cart item limit, performance degrades at 100+ items | P2 | OPEN |
 | STG-375 | SELL — Cart item removal undo has no countdown indicator | P3 | OPEN |
 | STG-376 | SELL — No cart hold/park feature for multi-customer scenarios | P3 | OPEN |
-| STG-377 | PAYMENT — Payment method tabs not locked during transaction | P1 | OPEN |
-| STG-378 | PAYMENT — UPI QR expiry countdown reaches 0:00 but QR stays | P2 | OPEN |
-| STG-379 | PAYMENT — No offline payment fallback messaging | P1 | OPEN |
-| STG-380 | PAYMENT — Cart lock on failure doesn't explain timeout | P2 | OPEN |
-| STG-381 | PAYMENT — PENDING_UPI_KEY defined but unused for crash recovery | P1 | OPEN |
-| STG-382 | PAYMENT — Split payment manual UTR shown too late | P2 | OPEN |
-| STG-383 | PAYMENT — No refund/void mechanism post-payment from POS | P1 | OPEN |
-| STG-384 | PAYMENT — Item vs cart discount not distinguished on receipt | P2 | OPEN |
+| STG-377 | PAYMENT — Payment method tabs not locked during transaction | P1 | PARKED (f4f20aaa, stg-377-2026-03-14) |
+| STG-378 | PAYMENT — UPI QR expiry countdown reaches 0:00 but QR stays | P2 | PARKED (f99dc3c6, stg-378-2026-03-14) |
+| STG-379 | PAYMENT — No offline payment fallback messaging | P1 | PARKED (f4f20aaa, stg-379-2026-03-14) |
+| STG-380 | PAYMENT — Cart lock on failure doesn't explain timeout | P2 | PARKED (e2d025cc, stg-380-2026-03-14) |
+| STG-381 | PAYMENT — PENDING_UPI_KEY defined but unused for crash recovery | P1 | PARKED (f99dc3c6, stg-381-2026-03-14) |
+| STG-382 | PAYMENT — Split payment manual UTR shown too late | P2 | PARKED (e2d025cc, stg-382-2026-03-14) |
+| STG-383 | PAYMENT — No refund/void mechanism post-payment from POS | P1 | PARKED (e2d025cc, stg-383-2026-03-14) |
+| STG-384 | PAYMENT — Item vs cart discount not distinguished on receipt | P2 | PARKED (e2d025cc, stg-384-2026-03-14) |
 | STG-385 | STOCK — No standalone stock adjustment modal from SELL screen | P2 | OPEN |
 | STG-386 | STOCK — Stock limit notification doesn't explain cap reason | P2 | OPEN |
 | STG-387 | SYNC — No push-based stock sync, only 5-minute polling | P2 | OPEN |
@@ -425,14 +425,14 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-396 | LAYOUT — Cart sheet snap points not optimized for tablets | P2 | OPEN |
 | STG-397 | LAYOUT — No safe area handling for notched phones | P2 | OPEN |
 | STG-398 | LAYOUT — Modal dialogs stretch full-width on tablets | P2 | OPEN |
-| STG-399 | SELL — Price edit in cart not persisted separately | P2 | OPEN |
-| STG-400 | SELL — No quantity input validation for large numbers | P2 | OPEN |
-| STG-401 | PAYMENT — Cart-to-payment data consistency not validated | P1 | OPEN |
+| STG-399 | SELL — Price edit in cart not persisted separately | P2 | PARKED (86a8a8e4, stg-399-2026-03-14) |
+| STG-400 | SELL — No quantity input validation for large numbers | P2 | PARKED (4d1b1f89, stg-400-2026-03-14) |
+| STG-401 | PAYMENT — Cart-to-payment data consistency not validated | P1 | PARKED (f4f20aaa, stg-401-2026-03-14) |
 | STG-402 | SELL — Search history unbounded, no expiration | P3 | OPEN |
 | STG-403 | SELL — Cart bar flash animation invisible on slow devices | P3 | OPEN |
-| STG-404 | PAYMENT — No UPI polling status visible during QR wait | P2 | OPEN |
-| STG-405 | PAYMENT — Discount application has no undo | P2 | OPEN |
-| STG-406 | PAYMENT — Offline receipts may not get OFF- prefix consistently | P2 | OPEN |
+| STG-404 | PAYMENT — No UPI polling status visible during QR wait | P2 | PARKED (f4f20aaa, stg-404-2026-03-14) |
+| STG-405 | PAYMENT — Discount application has no undo | P2 | PARKED (e2d025cc, stg-405-2026-03-14) |
+| STG-406 | PAYMENT — Offline receipts may not get OFF- prefix consistently | P2 | PARKED (e2d025cc, stg-406-2026-03-14) |
 | STG-407 | PURCHASE — BNPL badge shown without terms explanation | P2 | OPEN |
 | STG-408 | PURCHASE — Cart badge confusing with multi-supplier items | P2 | OPEN |
 | STG-409 | VOICE — No recording duration countdown visible | P2 | OPEN |
@@ -510,17 +510,17 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-481 | GUARD: i18n validation script — en/hi key parity check | P0 | PARKED (stg-481-2026-03-14) |
 | STG-482 | GUARD: i18n key naming convention document | P0 | PARKED (stg-482-2026-03-14) |
 | STG-483 | GUARD: Refactor SellTile.formatPrice() → use formatMoney() | P0 | PARKED (3c602bfc, stg-483-2026-03-14) |
-| STG-484 | GUARD: Refactor CartItem + SupplierRow → useThemeColors() hook | P1 | OPEN |
+| STG-484 | GUARD: Refactor CartItem + SupplierRow → useThemeColors() hook | P1 | PARKED (7b95512d, stg-484-2026-03-14) |
 | STG-485 | GUARD: consent_records table + consent API (DPDP) | P0 | PARKED (7b2e08ab, stg-485-2026-03-14) |
 | STG-486 | GUARD: Encryption key management infra (GCP Secret Manager) | P0 | PARKED (4c2faa79, stg-486-2026-03-14) |
-| STG-487 | GUARD: Backend staff role + max discount API | P0 | OPEN |
-| STG-488 | GUARD: Backend manager PIN verification endpoint | P0 | OPEN |
-| STG-489 | GUARD: Backend void/refund sale endpoint | P0 | OPEN |
+| STG-487 | GUARD: Backend staff role + max discount API | P0 | PARKED (c9568cf6, stg-487-2026-03-14) |
+| STG-488 | GUARD: Backend manager PIN verification endpoint | P0 | PARKED (c9568cf6, stg-488-2026-03-14) |
+| STG-489 | GUARD: Backend void/refund sale endpoint | P0 | PARKED (e2d025cc, stg-489-2026-03-14) |
 | STG-490 | GUARD: Backend credit disbursement endpoint | P0 | OPEN |
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | OPEN |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | PARKED (30956d33, stg-492-2026-03-14) |
 
-**Total**: 492 tickets | 81 PARKED | 1 DONE | 0 IN_PROGRESS | 410 OPEN
+**Total**: 492 tickets | 313 PARKED | 1 DONE | 0 IN_PROGRESS | 178 OPEN
 
 ---
 
