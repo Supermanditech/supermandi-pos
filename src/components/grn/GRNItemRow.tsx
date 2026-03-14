@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statusText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
   },
   barcode: {
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.border,
   },
   quantityLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: theme.colors.textTertiary,
     textTransform: "uppercase",
   },

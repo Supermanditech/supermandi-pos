@@ -1929,7 +1929,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     gap: 4,
   },
   trendPeriodLabel: {
-    fontSize: 8,
+    fontSize: 11,
     color: colors.textTertiary,
     fontWeight: '500',
   },
@@ -1991,7 +1991,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   // STG-153: Bill action subtitle styles
   billActionSubtitle: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textTertiary,
     marginTop: 2,
   },
@@ -2009,7 +2009,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     paddingHorizontal: 4,
   },
   notificationBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     color: colors.textInverse, // STG-053: use theme token instead of hardcoded #FFFFFF
   },

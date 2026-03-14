@@ -745,7 +745,7 @@ function FilterChip({ label, selected, onPress, count, warning }: FilterChipProp
       backgroundColor: colors.warningSoft,
     },
     filterChipBadgeText: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: "600",
       color: colors.textTertiary,
     },

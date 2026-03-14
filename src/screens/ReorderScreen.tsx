@@ -343,7 +343,7 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
       marginTop: 4,
     },
     staleBadgeText: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: "600",
       color: colors.warning,
     },

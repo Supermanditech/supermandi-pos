@@ -751,7 +751,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       borderRadius: theme.borderRadius.sm,
     },
     originalBadgeText: {
-      fontSize: 10,
+      fontSize: 11,
       color: colors.textTertiary,
     },
     preferredBadge: {

@@ -474,7 +474,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       paddingHorizontal: 4,
     },
     cartBadgeText: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: "700",
       color: colors.textInverse,
     },
@@ -675,7 +675,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       alignSelf: "flex-start",
     },
     bnplBadgeInlineText: {
-      fontSize: 9,
+      fontSize: 11,
       fontWeight: "700",
       color: colors.success,
     },

@@ -283,7 +283,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       gap: 2,
     },
     criticalText: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: "600",
       color: colors.error,
     },
@@ -309,7 +309,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       paddingHorizontal: 4,
     },
     stockLabel: {
-      fontSize: 10,
+      fontSize: 11,
       color: colors.textTertiary,
     },
     stockValue: {
@@ -339,7 +339,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       flex: 1,
     },
     suggestionLabel: {
-      fontSize: 10,
+      fontSize: 11,
       color: colors.textTertiary,
     },
     suggestionValue: {
@@ -361,7 +361,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       flex: 1,
     },
     totalLabel: {
-      fontSize: 10,
+      fontSize: 11,
       color: colors.textTertiary,
     },
     totalValue: {

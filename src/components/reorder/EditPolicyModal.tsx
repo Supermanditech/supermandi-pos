@@ -700,7 +700,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       justifyContent: "space-between",
     },
     guideLabel: {
-      fontSize: 10,
+      fontSize: 11,
       color: colors.textTertiary,
     },
     guideLabelCurrent: {

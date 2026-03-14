@@ -177,7 +177,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       gap: 2,
     },
     moqWarningText: {
-      fontSize: 10,
+      fontSize: 11,
       color: colors.warning,
       fontWeight: "500",
     },

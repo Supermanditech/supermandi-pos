@@ -390,16 +390,16 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       borderRadius: theme.borderRadius.sm,
     },
     bnplBadgeText: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: "700",
       color: colors.success,
     },
     gstText: {
-      fontSize: 10,
+      fontSize: 11,
       color: colors.textTertiary,
     },
     hsnText: {
-      fontSize: 10,
+      fontSize: 11,
       color: colors.textTertiary,
       flexShrink: 1,
     },

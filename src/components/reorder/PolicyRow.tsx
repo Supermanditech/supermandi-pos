@@ -263,7 +263,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       marginHorizontal: theme.spacing.xs,
     },
     stockLabel: {
-      fontSize: 9,
+      fontSize: 11,
       color: colors.textTertiary,
       textTransform: "uppercase",
     },
