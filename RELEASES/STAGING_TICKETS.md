@@ -265,12 +265,12 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-236 | i18n — errors.deviceAlreadyEnrolled says "Ask Superadmin to reset the token" | P1 | PARKED (053ab1a8, stg-236-2026-03-14) |
 | STG-237 | i18n — errors.sessionExpired says "Please login again" but POS has no login | P2 | PARKED (053ab1a8, stg-237-2026-03-14) |
 | STG-238 | i18n — sell.digitiseMode says "Digitise mode on" — jargon for kirana user | P2 | PARKED (053ab1a8, stg-238-2026-03-14) |
-| STG-239 | i18n — purchase.moq "MOQ" acronym not spelled out for kirana users | P2 | OPEN |
-| STG-240 | i18n — tabs use ALL CAPS ("SELL", "PURCHASE", "REORDER") — shouty | P2 | OPEN |
-| STG-241 | i18n — reorder.dismissSuggestedFrom template too complex for Hindi translation | P3 | OPEN |
-| STG-242 | i18n — credit section uses financial jargon (EMI, KYC, PAN, Aadhaar) without explanation | P2 | OPEN |
-| STG-243 | i18n — bnpl.upiInstructions sentence too long (2 clauses + technical term UTR) | P2 | OPEN |
-| STG-244 | i18n — grn.title "Goods Receipt Note" — warehouse jargon | P2 | OPEN |
+| STG-239 | i18n — purchase.moq "MOQ" acronym not spelled out for kirana users | P2 | PARKED (053ab1a8, stg-239-2026-03-14) |
+| STG-240 | i18n — tabs use ALL CAPS ("SELL", "PURCHASE", "REORDER") — shouty | P2 | PARKED (053ab1a8, stg-240-2026-03-14) |
+| STG-241 | i18n — reorder.dismissSuggestedFrom template too complex for Hindi translation | P3 | PARKED (053ab1a8, stg-241-2026-03-14) |
+| STG-242 | i18n — credit section uses financial jargon (EMI, KYC, PAN, Aadhaar) without explanation | P2 | PARKED (053ab1a8, stg-242-2026-03-14) |
+| STG-243 | i18n — bnpl.upiInstructions sentence too long (2 clauses + technical term UTR) | P2 | PARKED (053ab1a8, stg-243-2026-03-14) |
+| STG-244 | i18n — grn.title "Goods Receipt Note" — warehouse jargon | P2 | PARKED (053ab1a8, stg-244-2026-03-14) |
 | STG-245 | Tab nav — "REORDER • ON" / "REORDER • OFF" unusual tab label convention | P2 | OPEN |
 | STG-246 | Tab nav — 5 tabs but CREDIT tab is greyed/disabled, confusing affordance | P2 | OPEN |
 | STG-247 | Menu — "Customers & Credit" section has 4 items (Khata, Customers, Customer Management, Overdue) — 3 overlap | P1 | OPEN |
@@ -283,29 +283,29 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-254 | Payment — formatMoney not using Indian lakh system (1,45,000 vs 145,000) | P2 | OPEN |
 | STG-255 | Menu — summaryCard and statusPanel have same border/radius but different marginTop | P3 | OPEN |
 | STG-256 | Menu — no swipe gesture to dismiss/collapse System Status panel | P3 | OPEN |
-| STG-257 | PaymentSetupScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-258 | SalesHistoryScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-259 | BillDetailScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-260 | SalesStatementScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-261 | DailyReportScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-262 | DailyClosingScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-263 | InwardScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-264 | GRNScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-265 | OpeningStockScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-266 | PurchaseScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-267 | BarcodeSheetScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-268 | BnplDuesScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-269 | KhataScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-270 | CustomerListScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-271 | OverdueDuesScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-272 | ShiftScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-273 | OrderDetailScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-274 | ReturnScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-275 | BuyScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-276 | CreditScreen — hardcoded English strings not using i18n | P1 | OPEN |
-| STG-277 | ReorderScreen + ReorderPoliciesScreen — hardcoded English not using i18n | P2 | OPEN |
-| STG-278 | BulkPurchaseCreditScreen — no i18n setup, all strings hardcoded | P1 | OPEN |
-| STG-279 | ErrorBoundary — hardcoded English error text | P1 | OPEN |
+| STG-257 | PaymentSetupScreen — hardcoded English strings not using i18n | P1 | PARKED (f45982d2, stg-257-2026-03-14) |
+| STG-258 | SalesHistoryScreen — hardcoded English strings not using i18n | P1 | PARKED (f45982d2, stg-258-2026-03-14) |
+| STG-259 | BillDetailScreen — hardcoded English strings not using i18n | P1 | PARKED (f45982d2, stg-259-2026-03-14) |
+| STG-260 | SalesStatementScreen — hardcoded English strings not using i18n | P1 | PARKED (f45982d2, stg-260-2026-03-14) |
+| STG-261 | DailyReportScreen — hardcoded English strings not using i18n | P1 | PARKED (49e7b53d, stg-261-2026-03-14) |
+| STG-262 | DailyClosingScreen — hardcoded English strings not using i18n | P1 | PARKED (49e7b53d, stg-262-2026-03-14) |
+| STG-263 | InwardScreen — hardcoded English strings not using i18n | P1 | PARKED (49e7b53d, stg-263-2026-03-14) |
+| STG-264 | GRNScreen — hardcoded English strings not using i18n | P1 | PARKED (49e7b53d, stg-264-2026-03-14) |
+| STG-265 | OpeningStockScreen — hardcoded English strings not using i18n | P1 | PARKED (68826349, stg-265-2026-03-14) |
+| STG-266 | PurchaseScreen — hardcoded English strings not using i18n | P1 | PARKED (68826349, stg-266-2026-03-14) |
+| STG-267 | BarcodeSheetScreen — hardcoded English strings not using i18n | P1 | PARKED (68826349, stg-267-2026-03-14) |
+| STG-268 | BnplDuesScreen — hardcoded English strings not using i18n | P1 | PARKED (68826349, stg-268-2026-03-14) |
+| STG-269 | KhataScreen — hardcoded English strings not using i18n | P1 | PARKED (201f4bd2, stg-269-2026-03-14) |
+| STG-270 | CustomerListScreen — hardcoded English strings not using i18n | P1 | PARKED (201f4bd2, stg-270-2026-03-14) |
+| STG-271 | OverdueDuesScreen — hardcoded English strings not using i18n | P1 | PARKED (201f4bd2, stg-271-2026-03-14) |
+| STG-272 | ShiftScreen — hardcoded English strings not using i18n | P1 | PARKED (201f4bd2, stg-272-2026-03-14) |
+| STG-273 | OrderDetailScreen — hardcoded English strings not using i18n | P1 | PARKED (b959b2b2, stg-273-2026-03-14) |
+| STG-274 | ReturnScreen — hardcoded English strings not using i18n | P1 | PARKED (b959b2b2, stg-274-2026-03-14) |
+| STG-275 | BuyScreen — hardcoded English strings not using i18n | P1 | PARKED (b959b2b2, stg-275-2026-03-14) |
+| STG-276 | CreditScreen — hardcoded English strings not using i18n | P1 | PARKED (b959b2b2, stg-276-2026-03-14) |
+| STG-277 | ReorderScreen + ReorderPoliciesScreen — hardcoded English not using i18n | P2 | PARKED (b959b2b2, stg-277-2026-03-14) |
+| STG-278 | BulkPurchaseCreditScreen — no i18n setup, all strings hardcoded | P1 | PARKED (b959b2b2, stg-278-2026-03-14) |
+| STG-279 | ErrorBoundary — hardcoded English error text | P1 | PARKED (stg-279-2026-03-14) |
 | STG-280 | PaymentSetup — "UPI ID (VPA)" jargon, simplify for kirana users | P2 | OPEN |
 | STG-281 | DailyClosing — "Variance" accounting jargon confusing for retailers | P2 | OPEN |
 | STG-282 | SalesStatement — "Inventory Cost Statement" title misleading | P2 | OPEN |
@@ -317,7 +317,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-288 | Shift — "Variance" terminology same as DailyClosing | P2 | OPEN |
 | STG-289 | Return — "Khata Credit" and "UPI (Manual)" need clarification | P2 | OPEN |
 | STG-290 | AIInsights — "Slow", "Forecast", "Expiry" tab labels unclear | P2 | OPEN |
-| STG-291 | Components — hardcoded English in SellTile, CartItem, SupplierRow | P1 | OPEN |
+| STG-291 | Components — hardcoded English in SellTile, CartItem, SupplierRow | P1 | PARKED (stg-291-2026-03-14) |
 | STG-292 | LimitedModeBanner — "Place Orders (BUY)" jargon | P2 | OPEN |
 | STG-293 | Font sizes below 12px across Purchase/Stock screens | P2 | OPEN |
 | STG-294 | Font sizes below 12px across Sales/Closing screens | P2 | OPEN |
@@ -507,8 +507,8 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-478 | CREDIT — BnplDuesScreen 55KB needs component extraction | P3 | OPEN |
 | STG-479 | REORDER/CREDIT — No E2E test for full lifecycle | P1 | OPEN |
 | STG-480 | BNPL — No early repayment incentive or standing instructions | P3 | OPEN |
-| STG-481 | GUARD: i18n validation script — en/hi key parity check | P0 | OPEN |
-| STG-482 | GUARD: i18n key naming convention document | P0 | OPEN |
+| STG-481 | GUARD: i18n validation script — en/hi key parity check | P0 | PARKED (stg-481-2026-03-14) |
+| STG-482 | GUARD: i18n key naming convention document | P0 | PARKED (stg-482-2026-03-14) |
 | STG-483 | GUARD: Refactor SellTile.formatPrice() → use formatMoney() | P0 | PARKED (3c602bfc, stg-483-2026-03-14) |
 | STG-484 | GUARD: Refactor CartItem + SupplierRow → useThemeColors() hook | P1 | OPEN |
 | STG-485 | GUARD: consent_records table + consent API (DPDP) | P0 | PARKED (7b2e08ab, stg-485-2026-03-14) |
@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | OPEN |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | PARKED (30956d33, stg-492-2026-03-14) |
 
-**Total**: 492 tickets | 30 PARKED | 1 DONE | 0 IN_PROGRESS | 461 OPEN
+**Total**: 492 tickets | 62 PARKED | 1 DONE | 0 IN_PROGRESS | 429 OPEN
 
 ---
 
