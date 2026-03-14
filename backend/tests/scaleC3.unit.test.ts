@@ -225,8 +225,8 @@ describe('SCALE-C3: SellScanScreen — FEFO toggle', () => {
     expect(fileContent).toContain('prevFefoSortRef');
   });
 
-  it('renders FEFO ON label when fefoSort is active', () => {
-    expect(fileContent).toContain('FEFO ON');
+  it('renders FEFO ON label when fefoSort is active via i18n', () => {
+    expect(fileContent).toContain('t("sell.expiringFirstOn")');
   });
 
   it('renders catalogToolbar with fefoToggle style', () => {

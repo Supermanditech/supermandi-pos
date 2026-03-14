@@ -89,7 +89,7 @@ describe('Reorder Policy Service', () => {
           minStock: -1,
           targetStock: 10,
         })
-      ).rejects.toThrow('min_stock must be >= 0');
+      ).rejects.toThrow('min_stock must be a number between 0 and 999999');
     });
 
     it('rejects target_stock < min_stock', async () => {

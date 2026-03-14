@@ -27,14 +27,16 @@ describe('STG-474: PAN/Aadhaar encryption at rest', () => {
   });
 
   it('should encrypt PAN before storing', () => {
-    expect(creditSource).toContain('encrypt(panNumber)');
+    // panNumber is uppercased before encryption: encrypt(panNumber.toUpperCase())
+    expect(creditSource).toContain('encrypt(panNumber');
     // Encrypted value should be used in SQL, not raw panNumber
     const storeSection = creditSource.substring(creditSource.indexOf('STG-474: Encrypt PAN'));
     expect(storeSection).toContain('encryptedPan');
   });
 
   it('should encrypt Aadhaar before storing', () => {
-    expect(creditSource).toContain('encrypt(aadhaarLast4)');
+    // effectiveAadhaarLast4 is the validated variable name used
+    expect(creditSource).toContain('encrypt(effectiveAadhaarLast4)');
     const storeSection = creditSource.substring(creditSource.indexOf('STG-474: Encrypt PAN'));
     expect(storeSection).toContain('encryptedAadhaar');
   });

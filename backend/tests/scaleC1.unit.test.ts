@@ -254,12 +254,12 @@ describe('SCALE-C1: Stock-in batch_number + expiry_date', () => {
       expect(fileContent).toContain('testID="expiry-date-input"');
     });
 
-    it('Batch No. (optional) label present', () => {
-      expect(fileContent).toContain('Batch No. (optional)');
+    it('Batch number label uses i18n key', () => {
+      expect(fileContent).toContain('t("inward.batchNumber")');
     });
 
-    it('Expiry Date (optional) label present', () => {
-      expect(fileContent).toContain('Expiry Date (optional)');
+    it('Expiry date label uses i18n key', () => {
+      expect(fileContent).toContain('t("inward.expiryDate")');
     });
 
     it('DD-MM-YYYY placeholder present for expiry input', () => {
