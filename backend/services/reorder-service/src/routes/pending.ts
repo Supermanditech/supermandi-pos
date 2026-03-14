@@ -171,6 +171,11 @@ router.post(
         throw new ApiError(400, 'INVALID_INPUT', 'reason is required');
       }
 
+      // STG-443: Max length validation for dismissal reasons
+      if (reason.trim().length > 500) {
+        throw new ApiError(400, 'INVALID_INPUT', 'Dismissal reason must not exceed 500 characters');
+      }
+
       const dismissed = await dismissPendingReorder(storeId, pendingId, reason);
 
       res.json({

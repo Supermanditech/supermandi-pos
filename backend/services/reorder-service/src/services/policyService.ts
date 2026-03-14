@@ -45,12 +45,17 @@ export interface ListPoliciesOptions {
 // =============================================================================
 
 /**
- * Validate policy bounds constraints.
+ * STG-438: Validate policy bounds constraints.
  * Enforces: min_stock >= 0 AND target_stock >= min_stock
+ * Also validates max bounds for all numeric policy fields.
  */
 function validateBounds(minStock: number, targetStock: number): void {
-  if (minStock < 0) {
-    throw new ApiError(400, 'INVALID_MIN_STOCK', 'min_stock must be >= 0');
+  if (!Number.isFinite(minStock) || minStock < 0 || minStock > 999999) {
+    throw new ApiError(400, 'INVALID_MIN_STOCK', 'min_stock must be a number between 0 and 999999');
+  }
+
+  if (!Number.isFinite(targetStock) || targetStock < 0 || targetStock > 999999) {
+    throw new ApiError(400, 'INVALID_TARGET_STOCK', 'target_stock must be a number between 0 and 999999');
   }
 
   if (targetStock < minStock) {

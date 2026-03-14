@@ -3,7 +3,7 @@
 // Creates pending reorders for low stock items
 
 import cron from 'node-cron';
-import { getClient, queryOne, createLogger } from '@supermandi/common';
+import { getClient, query, queryOne, createLogger } from '@supermandi/common';
 
 const logger = createLogger({ service: 'reorder-service', level: process.env.LOG_LEVEL || 'info' });
 import {
@@ -26,6 +26,8 @@ interface SupplierOption {
   supplierProductId: string;
   purchasePrice: number;
   priority: number;
+  moq: number;
+  packSize: number;
 }
 
 interface StoreRunStats {
@@ -163,11 +165,13 @@ async function processStore(storeId: string): Promise<void> {
         continue;
       }
 
-      // Find best supplier
+      // STG-423: Find best supplier with MOQ-aware selection
+      const baseQty = Math.max(1, product.targetStock - product.currentStock);
       const supplier = await findBestSupplier(
         storeId,
         product.productId,
-        product.preferredSupplierId
+        product.preferredSupplierId,
+        baseQty
       );
 
       if (!supplier) {
@@ -175,8 +179,27 @@ async function processStore(storeId: string): Promise<void> {
         continue;
       }
 
-      // Calculate suggested quantity (T-239: cap at max_reorder_qty if set)
+      // STG-420: Quantity optimization with EOQ/MOQ
+      // Calculate base quantity needed
       let suggestedQuantity = Math.max(1, product.targetStock - product.currentStock);
+
+      // STG-420: Apply EOQ calculation if we have enough data
+      const eoqQty = calculateEOQ(suggestedQuantity, supplier.purchasePrice);
+      if (eoqQty > 0) {
+        suggestedQuantity = eoqQty;
+      }
+
+      // STG-420: Clamp to >= MOQ
+      if (supplier.moq > 0 && suggestedQuantity < supplier.moq) {
+        suggestedQuantity = supplier.moq;
+      }
+
+      // STG-420: Round up to nearest pack size
+      if (supplier.packSize > 1) {
+        suggestedQuantity = Math.ceil(suggestedQuantity / supplier.packSize) * supplier.packSize;
+      }
+
+      // T-239: cap at max_reorder_qty if set
       if (product.maxReorderQty && suggestedQuantity > product.maxReorderQty) {
         suggestedQuantity = product.maxReorderQty;
       }
@@ -256,88 +279,111 @@ async function processStore(storeId: string): Promise<void> {
 }
 
 /**
+ * STG-420: Calculate Economic Order Quantity (EOQ).
+ * Formula: EOQ = sqrt(2 * annual_demand * ordering_cost / holding_cost)
+ * Uses sensible defaults for ordering_cost and holding_cost when not available.
+ *
+ * @param baseQuantity - The simple deficit-based quantity (target - current)
+ * @param unitPrice - Unit purchase price for holding cost estimation
+ * @returns EOQ quantity, or 0 if calculation is not applicable
+ */
+function calculateEOQ(baseQuantity: number, unitPrice: number): number {
+  if (baseQuantity <= 0 || unitPrice <= 0) return 0;
+
+  // Estimate annual demand: assume the base quantity represents ~1 month of deficit
+  // so annual demand ~ baseQuantity * 12
+  const annualDemand = baseQuantity * 12;
+
+  // Default ordering cost (per order): ₹50 — covers admin time, communication
+  const ORDERING_COST = parseFloat(process.env.REORDER_ORDERING_COST || '50');
+
+  // Holding cost per unit per year: typically 20-25% of unit price
+  const HOLDING_COST_RATE = parseFloat(process.env.REORDER_HOLDING_COST_RATE || '0.25');
+  const holdingCost = unitPrice * HOLDING_COST_RATE;
+
+  if (holdingCost <= 0) return 0;
+
+  // EOQ formula: sqrt(2 * D * S / H)
+  const eoq = Math.sqrt((2 * annualDemand * ORDERING_COST) / holdingCost);
+
+  // Return at least the base quantity — EOQ is a suggestion, not a reduction
+  return Math.max(Math.ceil(eoq), baseQuantity);
+}
+
+/**
+ * STG-423: Dynamic supplier mapping algorithm with MOQ filtering.
  * Find the best supplier for a product.
  * Priority:
- * 1. Preferred supplier (if set in policy and linked)
- * 2. Highest priority supplier linked to store
- * 3. Lowest price supplier linked to store
+ * 1. Filter suppliers by MOQ (exclude where reorder qty < their MOQ)
+ * 2. Sort remaining by price (lowest first)
+ * 3. Fall back to preferred supplier if no MOQ-eligible supplier found
  */
 async function findBestSupplier(
   storeId: string,
   productId: string,
-  preferredSupplierId: string | null
+  preferredSupplierId: string | null,
+  reorderQty?: number
 ): Promise<SupplierOption | null> {
-  // Try preferred supplier first
-  if (preferredSupplierId) {
-    const preferred = await queryOne<{
-      supplier_id: string;
-      supplier_name: string;
-      supplier_product_id: string;
-      purchase_price: number;
-      priority: number;
-    }>(
-      `SELECT
-        s.id as supplier_id,
-        s.name as supplier_name,
-        sp.id as supplier_product_id,
-        sp.purchase_price,
-        COALESCE(ssl.priority, 999) as priority
-       FROM supplier.suppliers s
-       JOIN catalog.supplier_products sp ON sp.supplier_id = s.id
-       JOIN catalog.supplier_product_map spm ON spm.supplier_product_id = sp.id
-       JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id AND ssl.store_id = $1
-       WHERE spm.product_id = $2
-         AND s.id = $3
-         AND ssl.status = 'active'
-       LIMIT 1`,
-      [storeId, productId, preferredSupplierId]
-    );
-
-    if (preferred) {
-      return {
-        supplierId: preferred.supplier_id,
-        supplierName: preferred.supplier_name,
-        supplierProductId: preferred.supplier_product_id,
-        purchasePrice: preferred.purchase_price,
-        priority: preferred.priority,
-      };
-    }
-  }
-
-  // Find best by priority, then price
-  const best = await queryOne<{
+  // Get ALL eligible suppliers for this product in this store
+  const allSuppliers = await query<{
     supplier_id: string;
     supplier_name: string;
     supplier_product_id: string;
     purchase_price: number;
     priority: number;
+    moq: number;
+    pack_size: number;
   }>(
     `SELECT
       s.id as supplier_id,
-      s.name as supplier_name,
+      COALESCE(s.business_name, s.trade_name, s.name) as supplier_name,
       sp.id as supplier_product_id,
       sp.purchase_price,
-      COALESCE(ssl.priority, 999) as priority
+      COALESCE(ssl.priority, 999) as priority,
+      COALESCE(sp.moq, 1) as moq,
+      COALESCE(sp.pack_size, 1) as pack_size
      FROM supplier.suppliers s
      JOIN catalog.supplier_products sp ON sp.supplier_id = s.id
      JOIN catalog.supplier_product_map spm ON spm.supplier_product_id = sp.id
      JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id AND ssl.store_id = $1
      WHERE spm.product_id = $2
        AND ssl.status = 'active'
-     ORDER BY ssl.priority ASC NULLS LAST, sp.purchase_price ASC
-     LIMIT 1`,
+     ORDER BY sp.purchase_price ASC, ssl.priority ASC NULLS LAST`,
     [storeId, productId]
   );
 
-  if (!best) return null;
+  if (allSuppliers.length === 0) return null;
 
-  return {
-    supplierId: best.supplier_id,
-    supplierName: best.supplier_name,
-    supplierProductId: best.supplier_product_id,
-    purchasePrice: best.purchase_price,
-    priority: best.priority,
-  };
+  const toOption = (row: typeof allSuppliers[0]): SupplierOption => ({
+    supplierId: row.supplier_id,
+    supplierName: row.supplier_name,
+    supplierProductId: row.supplier_product_id,
+    purchasePrice: row.purchase_price,
+    priority: row.priority,
+    moq: row.moq,
+    packSize: row.pack_size,
+  });
+
+  // STG-423 Step 1: Filter by MOQ if we know the reorder quantity
+  if (reorderQty && reorderQty > 0) {
+    const moqEligible = allSuppliers.filter((s) => reorderQty >= s.moq);
+
+    if (moqEligible.length > 0) {
+      // STG-423 Step 2: Already sorted by price ASC — pick the cheapest MOQ-eligible
+      return toOption(moqEligible[0]);
+    }
+  }
+
+  // STG-423 Step 3: Fall back to preferred supplier if set
+  if (preferredSupplierId) {
+    const preferred = allSuppliers.find((s) => s.supplier_id === preferredSupplierId);
+    if (preferred) {
+      return toOption(preferred);
+    }
+  }
+
+  // Final fallback: cheapest supplier regardless of MOQ
+  return toOption(allSuppliers[0]);
 }
 
 // =============================================================================
