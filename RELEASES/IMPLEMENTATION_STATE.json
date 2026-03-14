@@ -1,11 +1,11 @@
 {
-  "version": 5,
+  "version": 8,
   "last_updated": "2026-03-14",
-  "last_commit_sha": "20727937",
+  "last_commit_sha": "8a7adc0e",
   "total_tickets": 501,
-  "tickets_done": 214,
-  "tickets_remaining": 287,
-  "current_layer": 7,
+  "tickets_done": 260,
+  "tickets_remaining": 241,
+  "current_layer": 9,
   "current_ticket": null,
   "status": "READY_FOR_NEXT_LAYER",
   "layers": [
@@ -17,7 +17,7 @@
     { "layer": 5, "name": "Enrollment & Onboarding Screens", "tickets": 26, "done": 26, "status": "COMPLETE" },
     { "layer": 6, "name": "Home, Header, Tabs", "tickets": 19, "done": 19, "status": "COMPLETE" },
     { "layer": 7, "name": "SELL Flow", "tickets": 70, "done": 70, "status": "COMPLETE" },
-    { "layer": 8, "name": "Payment Flow", "tickets": 46, "done": 0, "status": "PENDING" },
+    { "layer": 8, "name": "Payment Flow", "tickets": 46, "done": 46, "status": "COMPLETE" },
     { "layer": 9, "name": "MenuScreen Redesign", "tickets": 38, "done": 0, "status": "PENDING" },
     { "layer": 10, "name": "Secondary Screens", "tickets": 32, "done": 0, "status": "PENDING" },
     { "layer": 11, "name": "Cross-Cutting Audits", "tickets": 19, "done": 0, "status": "PENDING" },
@@ -29,5 +29,5 @@
     { "layer": 17, "name": "Nice-to-Have & P3 Polish", "tickets": 14, "done": 0, "status": "PENDING" },
     { "layer": 18, "name": "E2E Tests & Regression Guards", "tickets": 3, "done": 0, "status": "PENDING" }
   ],
-  "notes": "Machine-readable state for auto-continuation. Updated after each commit batch. Layer 7 count corrected from 61 to 70 (actual ticket count from STAGING_TICKETS.md)."
+  "notes": "Machine-readable state for auto-continuation. Updated after each commit batch. Layer 8 complete — 46 tickets (45 + 1 GUARD STG-489). STG-125 deferred to Layer 15 per LH-021."
 }

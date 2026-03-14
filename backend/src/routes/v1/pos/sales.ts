@@ -1737,6 +1737,142 @@ posSalesRouter.post("/sales/:saleId/return", requireDeviceToken, requireActiveSt
   }
 });
 
+// =============================================================================
+// STG-489: Void/refund a completed sale
+// Sets status to 'voided', records who voided it and when.
+// Only completed sales (PAID_CASH, PAID_UPI, DUE) can be voided.
+// =============================================================================
+// SEC-001: POST /sales/:saleId/void requires ACTIVE store status
+posSalesRouter.post("/sales/:saleId/void", requireDeviceToken, requireActiveStore, financialOperationsRateLimiter, async (req, res) => {
+  const saleId = typeof req.params.saleId === "string" ? req.params.saleId.trim() : "";
+  if (!saleId) {
+    return res.status(400).json({ error: "saleId is required" });
+  }
+
+  const { reason } = req.body as { reason?: string };
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
+  // STG-489: Staff ID from header (set by POS app on staff login)
+  const staffId = req.header("x-staff-id")?.trim() || null;
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+
+    // 1. Get sale with row lock — store isolation via JWT storeId
+    const saleRes = await client.query(
+      `SELECT id, store_id, status, payment_status, total_minor, bill_ref,
+              customer_name, customer_phone, staff_id, device_id, created_at, updated_at
+       FROM sales
+       WHERE id = $1 AND store_id = $2
+       FOR UPDATE`,
+      [saleId, storeId]
+    );
+
+    const sale = saleRes.rows[0];
+    if (!sale) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "sale_not_found" });
+    }
+
+    // 2. Only completed sales can be voided (PAID_CASH, PAID_UPI, DUE)
+    const voidableStatuses = ["PAID_CASH", "PAID_UPI", "DUE"];
+    if (!voidableStatuses.includes(sale.status)) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        error: "cannot_void",
+        message: `Cannot void sale in ${sale.status} status. Only completed sales (${voidableStatuses.join(", ")}) can be voided.`
+      });
+    }
+
+    // 3. Get sale items for stock reversal
+    // T-060: Include stock_quantity for retail variant stock reversal
+    const itemsRes = await client.query(
+      `SELECT si.variant_id, si.quantity, si.stock_quantity, si.price_minor, v.product_id
+       FROM sale_items si
+       LEFT JOIN variants v ON v.id = si.variant_id
+       WHERE si.sale_id = $1`,
+      [saleId]
+    );
+
+    const items = itemsRes.rows.map((row) => {
+      const billingQty = Number(row.quantity ?? 0);
+      // T-060: Use stock_quantity if present (retail variant), otherwise billing quantity
+      const stockQty = row.stock_quantity != null ? Number(row.stock_quantity) : billingQty;
+      return {
+        variantId: String(row.variant_id),
+        quantity: Number.isFinite(stockQty) && stockQty > 0 ? stockQty : billingQty,
+        unitSellMinor: Number(row.price_minor ?? 0),
+        globalProductId: row.product_id ? String(row.product_id) : null,
+        name: null
+      };
+    });
+
+    // 4. Reverse stock via inventory ledger (add stock back)
+    const voidId = randomUUID();
+    await recordSaleReturnMovements({
+      client,
+      storeId,
+      saleId,
+      returnId: voidId,
+      items,
+      reason: reason ?? "Sale voided"
+    });
+
+    // 5. Invalidate stock cache for all voided products
+    for (const item of items) {
+      if (item.globalProductId) {
+        invalidateStockCache(storeId, item.globalProductId);
+      }
+    }
+
+    // 6. Update sale status to 'voided' (lowercase per DB constraint chk_sale_status)
+    // Record who voided it and when via updated_at
+    await client.query(
+      `UPDATE sales
+       SET status = 'voided',
+           payment_status = 'refunded',
+           updated_at = NOW()
+       WHERE id = $1 AND store_id = $2`,
+      [saleId, storeId]
+    );
+
+    // 7. Write off AR record if sale was DUE
+    if (sale.status === "DUE") {
+      await client.query(
+        `UPDATE accounts_receivable
+         SET status = 'written_off', notes = $2, updated_at = NOW()
+         WHERE sale_id = $1 AND store_id = $3`,
+        [saleId, reason ?? "Sale voided", storeId]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    log.info(`[STG-489] Sale voided: saleId=${saleId}, storeId=${storeId}, staffId=${staffId}, deviceId=${deviceId}, reason=${reason ?? "none"}`);
+
+    return res.json({
+      saleId,
+      voidId,
+      status: "voided",
+      message: "Sale voided successfully. Stock has been restored.",
+      voidedBy: staffId,
+      voidedAt: new Date().toISOString(),
+      itemsReturned: items.length
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    log.error("[STG-489] Sale void error:", error);
+    return res.status(500).json({ error: "failed to void sale" });
+  } finally {
+    client.release();
+  }
+});
+
 // IMPORTANT:
 // UPI intent / QR must NEVER be generated on backend.
 // POS generates intent locally using upiVpa.

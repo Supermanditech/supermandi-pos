@@ -150,6 +150,16 @@ export async function cancelSale(input: {
   return { status: "CANCELLED", message: "Offline sale not persisted" };
 }
 
+// STG-383: Void a completed sale (reverses stock, marks as voided)
+export async function voidSale(input: {
+  saleId: string;
+  reason?: string;
+}): Promise<{ saleId: string; voidId: string; status: string; message: string }> {
+  return apiClient.post(`/api/v1/pos/sales/${input.saleId}/void`, {
+    reason: input.reason,
+  });
+}
+
 export async function initCollectionUpi(input: {
   amountMinor: number;
   reference?: string | null;

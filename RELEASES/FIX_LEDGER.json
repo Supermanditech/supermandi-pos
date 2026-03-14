@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 62,
+  "version": 63,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -441,8 +441,8 @@
       "file": "src/screens/PaymentScreen.tsx",
       "start_line": 875,
       "end_line": 893,
-      "checksum": "7f9892d25e261eb8",
-      "description": "Write PENDING_UPI_KEY to AsyncStorage BEFORE completeCheckout, clear after success — crash recovery for UPI double-charge prevention",
+      "checksum": "c9020c7a9dd4fb45",
+      "description": "Write PENDING_UPI_KEY to AsyncStorage BEFORE completeCheckout, clear after success — crash recovery for UPI double-charge prevention (checksum updated: STG-210 i18n Alert.alert strings)",
       "test_file": "src/__tests__/screens/PaymentScreen.stg-492.upi-crash-recovery.unit.test.tsx",
       "depends_on": null,
       "migration": null,
@@ -1685,8 +1685,8 @@
       "file": "src/screens/PaymentSetupScreen.tsx",
       "start_line": 1,
       "end_line": 50,
-      "checksum": "9d342ab843f612e8",
-      "description": "PaymentSetupScreen i18n: all hardcoded strings replaced with t() calls under paymentSetup.* namespace",
+      "checksum": "8d25d958bd5e715a",
+      "description": "PaymentSetupScreen i18n: all hardcoded strings replaced with t() calls under paymentSetup.* namespace (checksum updated: STG-280,314 VPA label + save toast)",
       "test_file": "src/__tests__/screens/PaymentSetupScreen.stg-257.i18n.unit.test.ts",
       "depends_on": null,
       "migration": null,
@@ -2572,8 +2572,8 @@
       "description": "Hindi translation completion — 100% en/hi key parity (updated Layer 7: sell + cart i18n keys)",
       "test_file": "src/__tests__/i18n/locale-completion.stg-054.unit.test.ts",
       "start_line": 1,
-      "end_line": 1339,
-      "checksum": "f38bc0196d4eee64",
+      "end_line": 1384,
+      "checksum": "32569b238168e8b3",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": "N/A",

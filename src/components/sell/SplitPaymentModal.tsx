@@ -200,8 +200,8 @@ export function SplitPaymentModal({
         const delay = Math.min(Math.pow(2, currentAttempt) * baseDelay, maxDelay);
         currentAttempt++;
         setPollCount(currentAttempt);
-        // POS-PAY-001: Show manual UTR fallback after 10 failed polls
-        if (currentAttempt >= 10) {
+        // POS-PAY-001 + STG-382: Show manual UTR fallback earlier (after 5 polls)
+        if (currentAttempt >= 5) {
           setManualUtrVisible(true);
         }
 

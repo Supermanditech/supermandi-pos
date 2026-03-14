@@ -7,6 +7,10 @@ const PRICE_FRESHNESS_THRESHOLD_MS = 4 * 60 * 60 * 1000;
 // R4: Persist pending UPI payment for crash/network recovery
 const PENDING_UPI_KEY = "@pos_pending_upi";
 const PENDING_UPI_TTL_MS = 15 * 60 * 1000; // 15 minutes
+// STG-122: Large transaction threshold (₹5,000 = 500000 minor/paise)
+const LARGE_TRANSACTION_THRESHOLD_MINOR = 500000;
+// STG-380: Cart lock timeout display constant (matches cartStore's 5-minute timeout)
+const CART_LOCK_TIMEOUT_DISPLAY_MS = 5 * 60 * 1000;
 import {
   View,
   Text,
@@ -18,6 +22,8 @@ import {
   ActivityIndicator,
   ScrollView,
   TextInput,
+  Modal,
+  Vibration,
 } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -32,6 +38,7 @@ import {
   cancelSale,
   createSale,
   initUpiPayment,
+  voidSale,
 } from "../services/api/posApi";
 import { completeCheckout, validateCartStock, formatStockValidationWarning } from "../services/checkoutService";
 import { getStockBatch } from "../services/api/inventoryApi";
@@ -54,6 +61,7 @@ import {
   updatePartialSaleSaleId,
 } from "../services/partialSaleState";
 import { theme, useThemeColors } from "../theme";
+import { useTranslation } from "react-i18next";
 import { SplitPaymentModal, SplitPaymentResult } from "../components/sell/SplitPaymentModal";
 // STG-120: Staff name/ID for audit trail
 import { useStaffSessionStore } from "../stores/staffSessionStore";
@@ -78,7 +86,8 @@ type RootStackParamList = {
 
 type PaymentScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, "Payment">;
 type PaymentScreenRouteProp = RouteProp<RootStackParamList, "Payment">;
-type PaymentMode = "UPI" | "CASH" | "DUE";
+// STG-115: Extended payment mode type to include CARD and WALLET placeholders
+type PaymentMode = "UPI" | "CASH" | "DUE" | "CARD" | "WALLET";
 
 const resolveStockErrorMessage = (error: ApiError): string | null => {
   const payload = error.payload;
@@ -137,16 +146,17 @@ const computeSaleTotals = (items: CartItem[], cartDiscount: CartDiscount | null)
   const discountTotalMinor = itemDiscountMinor + cartDiscountMinor;
   const totalMinor = Math.max(0, subtotalMinor - discountTotalMinor);
 
-  return { subtotalMinor, discountTotalMinor, totalMinor };
+  return { subtotalMinor, itemDiscountMinor, cartDiscountMinor, discountTotalMinor, totalMinor };
 };
 
 const PaymentScreen = () => {
   const colors = useThemeColors();
+  const { t } = useTranslation();
 
   const navigation = useNavigation<PaymentScreenNavigationProp>();
   const route = useRoute<PaymentScreenRouteProp>();
   const insets = useSafeAreaInsets();
-  const { items, lockCart, unlockCart, locked, discount, removeItem, customer } = useCartStore();
+  const { items, lockCart, unlockCart, locked, lockedAt, discount, removeItem, customer } = useCartStore();
   // STG-120: Staff name/ID for audit trail on receipt
   const staffName = useStaffSessionStore((s) => s.session?.name ?? null);
   const [selectedMode, setSelectedMode] = useState<PaymentMode>("UPI");
@@ -183,6 +193,12 @@ const PaymentScreen = () => {
   const [cashReceived, setCashReceived] = useState("");
   // STG-087: Order summary scroll toggle
   const [summaryExpanded, setSummaryExpanded] = useState(false);
+  // STG-092: Receipt preview modal visibility
+  const [showReceiptPreview, setShowReceiptPreview] = useState(false);
+  // STG-122: Large transaction confirmation dismissed
+  const largeTransactionConfirmedRef = useRef(false);
+  // STG-380: Cart lock expiry tracking
+  const [lockExpired, setLockExpired] = useState(false);
 
   const saleItemIds = route.params?.saleItemIds;
   const { saleItems: computedSaleItems, isPartial: isPartialSale } = useMemo(
@@ -233,7 +249,8 @@ const PaymentScreen = () => {
   }, [navigation]);
 
   const appliedCartDiscount = isPartialSale ? null : discount;
-  const { discountTotalMinor, totalMinor } = useMemo(
+  // STG-384: Track item-level vs cart-level discounts separately for receipt preview
+  const { subtotalMinor, itemDiscountMinor, cartDiscountMinor, discountTotalMinor, totalMinor } = useMemo(
     () => computeSaleTotals(saleItems, appliedCartDiscount),
     [saleItems, appliedCartDiscount]
   );
@@ -266,6 +283,8 @@ const PaymentScreen = () => {
     if (!saleId || !billRef) return "Waiting for sale to be created";
     if (submitting) return "Processing payment...";
     if (selectedMode === "UPI" && !paymentId) return "Waiting for UPI QR to be generated";
+    // STG-115: CARD and WALLET are coming soon
+    if (selectedMode === "CARD" || selectedMode === "WALLET") return "This payment method is coming soon";
     if (!cartValid) return "Cart has invalid items";
     return null;
   }, [loadingSale, saleId, billRef, submitting, selectedMode, paymentId, cartValid]);
@@ -284,6 +303,24 @@ const PaymentScreen = () => {
     };
   }, [lockCart, unlockCart]);
 
+  // STG-380: Monitor cart lock timeout and show message when lock expires
+  // The cart is locked during payment to prevent modifications (5-minute timeout from cart store).
+  // If the lock expires (e.g., after a failed payment + timeout), we show a message.
+  useEffect(() => {
+    if (!locked || !lockedAt) {
+      setLockExpired(false);
+      return;
+    }
+    const checkExpiry = () => {
+      if (lockedAt && Date.now() - lockedAt >= CART_LOCK_TIMEOUT_DISPLAY_MS) {
+        setLockExpired(true);
+      }
+    };
+    checkExpiry(); // immediate check
+    const intervalId = setInterval(checkExpiry, 5000);
+    return () => clearInterval(intervalId);
+  }, [locked, lockedAt]);
+
   // R4: On mount, check for pending UPI from a previous crash/close
   useEffect(() => {
     AsyncStorage.getItem(PENDING_UPI_KEY).then((raw) => {
@@ -298,9 +335,9 @@ const PaymentScreen = () => {
           return;
         }
         Alert.alert(
-          "Previous UPI Payment Pending",
-          `A UPI payment (${pending.paymentId.slice(0, 8)}…) was interrupted. Please verify with the customer whether it was completed before starting a new transaction.`,
-          [{ text: "OK", onPress: () => AsyncStorage.removeItem(PENDING_UPI_KEY).catch((e) => {
+          t('posPayment.previousUpiPendingTitle'),
+          t('posPayment.previousUpiPendingMessage'),
+          [{ text: t('common.ok'), onPress: () => AsyncStorage.removeItem(PENDING_UPI_KEY).catch((e) => {
             if (__DEV__) console.warn("[PaymentScreen] POS-A09: Failed to clear pending UPI after ack:", e);
           }) }],
         );
@@ -340,9 +377,9 @@ const PaymentScreen = () => {
         pendingPaymentRef.current = null;
         AsyncStorage.removeItem(PENDING_UPI_KEY).catch(() => {});
         Alert.alert(
-          "Pending UPI Payment",
-          `A UPI payment was in progress when the network dropped (Payment: ${pending.paymentId.slice(0, 8)}…). Please verify with the customer whether the payment was completed.`,
-          [{ text: "OK" }],
+          t('posPayment.pendingUpiTitle'),
+          t('posPayment.pendingUpiMessage'),
+          [{ text: t('common.ok') }],
         );
         if (__DEV__) console.log(`[Payment] R4: Network recovered, alerted user about pending ${pending.paymentId}`);
       }
@@ -447,11 +484,11 @@ const PaymentScreen = () => {
           // GO-LIVE-233: Show warning but allow proceeding (soft block)
           return new Promise<void>((resolve, reject) => {
             Alert.alert(
-              "Low Stock Warning",
-              `${warningMessage}\n\nDo you want to proceed anyway?`,
+              t('posPayment.lowStockWarningTitle'),
+              t('posPayment.lowStockWarningMessage', { warningMessage }),
               [
                 {
-                  text: "Cancel",
+                  text: t('posPayment.lowStockCancel'),
                   style: "cancel",
                   onPress: () => {
                     setLoadingSale(false);
@@ -459,7 +496,7 @@ const PaymentScreen = () => {
                   },
                 },
                 {
-                  text: "Proceed",
+                  text: t('posPayment.lowStockProceed'),
                   style: "default",
                   onPress: () => resolve(),
                 },
@@ -535,14 +572,14 @@ const PaymentScreen = () => {
         }
         if (error.message === "store_inactive") {
           setSaleError("Store is inactive");
-          Alert.alert("POS Inactive", POS_MESSAGES.storeInactive, [
-            { text: "OK", onPress: () => navigation.navigate("SellScan") }
+          Alert.alert(t('posPayment.posInactiveTitle'), POS_MESSAGES.storeInactive, [
+            { text: t('common.ok'), onPress: () => navigation.navigate("SellScan") }
           ]);
           return;
         }
         if (error.message === "store not found") {
           setSaleError("Store not found");
-          Alert.alert("Store Missing", "Store not found. Check your account setup.");
+          Alert.alert(t('posPayment.storeMissingTitle'), t('posPayment.storeMissingMessage'));
           return;
         }
       }
@@ -636,8 +673,8 @@ const PaymentScreen = () => {
             return;
           }
           if (error.message === "store_inactive") {
-            Alert.alert("POS Inactive", POS_MESSAGES.storeInactive, [
-              { text: "OK", onPress: () => navigation.navigate("SellScan") }
+            Alert.alert(t('posPayment.posInactiveTitle'), POS_MESSAGES.storeInactive, [
+              { text: t('common.ok'), onPress: () => navigation.navigate("SellScan") }
             ]);
             setSelectedMode("CASH");
             setUpiIntent(null);
@@ -645,11 +682,11 @@ const PaymentScreen = () => {
             return;
           }
           if (error.message === "upi_offline_blocked") {
-            Alert.alert("UPI Offline", "UPI is unavailable while offline. Use Cash or Due.");
+            Alert.alert(t('posPayment.upiOfflineTitle'), t('posPayment.upiOfflineMessage'));
             return;
           }
           if (error.message === "upi_vpa_missing") {
-            Alert.alert("UPI Missing", "UPI VPA is not set for this store.");
+            Alert.alert(t('posPayment.upiNotSetUpTitle'), t('posPayment.upiNotSetUpMessage'));
             setSelectedMode("CASH");
             setUpiIntent(null);
             setPaymentId(null);
@@ -658,11 +695,11 @@ const PaymentScreen = () => {
         }
         // ISSUE-077 + STG-211: Differentiate UPI errors
         if (error instanceof Error && error.message.includes("timed out")) {
-          Alert.alert("UPI Timeout", "UPI initialization took too long. Try again or switch to Cash.");
+          Alert.alert(t('posPayment.upiTimeoutTitle'), t('posPayment.upiTimeoutMessage'));
         } else if (error instanceof ApiError && error.message === "upi_vpa_missing") {
-          Alert.alert("UPI Not Set Up", "Store UPI ID (VPA) is not configured. Ask the store owner to set it up in Payment Settings.");
+          Alert.alert(t('posPayment.upiNotSetUpTitle'), t('posPayment.upiNotSetUpMessage'));
         } else {
-          Alert.alert("QR Generation Failed", "Could not generate the payment QR code. Please try again or switch to Cash.");
+          Alert.alert(t('posPayment.qrGenerationFailedTitle'), t('posPayment.qrGenerationFailedMessage'));
         }
       })
       .finally(() => {
@@ -703,12 +740,14 @@ const PaymentScreen = () => {
 
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((qrExpiresAt - Date.now()) / 1000));
-      setQrSecondsLeft(remaining);
       if (remaining <= 0) {
-        // QR expired — clear it so user sees "Tap to regenerate"
+        // STG-378: QR expired — clear immediately without setting 0 to prevent "0:00" flash
         setUpiIntent(null);
         setQrExpiresAt(null);
         setQrSecondsLeft(null);
+        setPaymentId(null);
+      } else {
+        setQrSecondsLeft(remaining);
       }
     };
 
@@ -750,7 +789,7 @@ const PaymentScreen = () => {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
       if (submittingRef.current) {
         // Block back navigation while payment is being processed
-        Alert.alert("Payment in Progress", "Please wait for the payment to complete.");
+        Alert.alert(t('posPayment.paymentInProgressTitle'), t('posPayment.paymentInProgressMessage'));
         return true; // Prevent default back behavior
       }
       return false; // Allow default back behavior
@@ -797,9 +836,49 @@ const PaymentScreen = () => {
     })();
   }, [isPartialSale, saleItemIds, saleId]);
 
+  // STG-114: Cancel/void transaction handler
+  const handleCancelTransaction = useCallback(() => {
+    if (submitting || submittingRef.current) {
+      Alert.alert(t('posPayment.paymentInProgressTitle'), t('posPayment.cannotCancelInProgress'));
+      return;
+    }
+    Alert.alert(
+      t('posPayment.cancelTransactionTitle'),
+      t('posPayment.cancelTransactionMessage'),
+      [
+        { text: t('posPayment.cancelNo'), style: "cancel" },
+        {
+          text: t('posPayment.cancelYes'),
+          style: "destructive",
+          onPress: () => {
+            // Cancel the sale on backend if it was already created
+            if (saleId) {
+              void cancelSale({ saleId }).catch((error) => {
+                if (__DEV__) console.error("[PaymentScreen] STG-114: Failed to cancel sale:", error);
+              });
+            }
+            if (billRef) {
+              void logPaymentEvent("PAYMENT_CANCELLED", {
+                transactionId,
+                billId: billRef,
+                paymentMode: selectedMode,
+                amountMinor: totalMinor,
+                currency,
+              });
+            }
+            // Mark as finalized so unmount cleanup does not double-cancel
+            finalized.current = true;
+            unlockCart();
+            navigation.goBack();
+          },
+        },
+      ]
+    );
+  }, [submitting, saleId, billRef, transactionId, selectedMode, totalMinor, currency, unlockCart, navigation]);
+
   const handleCompletePayment = async () => {
     if (!saleId || !billRef) {
-      Alert.alert("Payment Error", "Sale is not ready yet.");
+      Alert.alert(t('posPayment.paymentErrorTitle'), t('posPayment.saleNotReady'));
       return;
     }
 
@@ -807,15 +886,15 @@ const PaymentScreen = () => {
     if (isPartialSale && !partialSaleConfirmedRef.current) {
       const remainingItemCount = items.length - saleItems.length;
       Alert.alert(
-        "Partial Sale",
-        `${remainingItemCount} item(s) will remain in cart after this sale. Continue?`,
+        t('posPayment.partialSaleTitle'),
+        t('posPayment.partialSaleMessage', { count: remainingItemCount }),
         [
           {
-            text: "Cancel",
+            text: t('common.cancel'),
             style: "cancel"
           },
           {
-            text: "Continue",
+            text: t('common.confirm'),
             onPress: async () => {
               partialSaleConfirmedRef.current = true;
               // GO-LIVE-234: Persist confirmation to storage
@@ -836,12 +915,12 @@ const PaymentScreen = () => {
       if (staleItems.length > 0) {
         // STG-216: Rewrite Price Freshness Warning in plain language
         Alert.alert(
-          "Prices May Be Outdated",
-          `${staleItems.length} item(s) were scanned over 4 hours ago. Their prices may have changed since then.\n\nWould you like to proceed with the current prices?`,
+          t('posPayment.priceOutdatedTitle'),
+          t('posPayment.priceOutdatedMessage', { count: staleItems.length }),
           [
-            { text: "Cancel", style: "cancel" },
+            { text: t('common.cancel'), style: "cancel" },
             {
-              text: "Proceed",
+              text: t('posPayment.lowStockProceed'),
               onPress: () => {
                 priceWarningDismissedRef.current = true;
                 handleCompletePayment();
@@ -853,6 +932,35 @@ const PaymentScreen = () => {
       }
     }
 
+    // STG-122: Large transaction confirmation for amounts >= ₹5,000
+    if (!largeTransactionConfirmedRef.current && totalMinor >= LARGE_TRANSACTION_THRESHOLD_MINOR) {
+      Alert.alert(
+        t('posPayment.largeTransactionTitle'),
+        t('posPayment.largeTransactionMessage', { amount: formatMoney(totalMinor, currency) }),
+        [
+          { text: t('common.cancel'), style: "cancel" },
+          {
+            text: t('posPayment.lowStockProceed'),
+            onPress: () => {
+              largeTransactionConfirmedRef.current = true;
+              handleCompletePayment();
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    // STG-092: Show receipt preview before finalizing
+    setShowReceiptPreview(true);
+  };
+
+  // STG-092: Actual payment execution after receipt preview confirmation
+  const executePayment = async () => {
+    setShowReceiptPreview(false);
+
+    if (!saleId || !billRef) return;
+
     // AUD-055-A FIX: Use ref for IMMEDIATE synchronous check (React state is async)
     // This prevents the race window where a second tap could pass the guard
     if (finalized.current || submittingRef.current) return;
@@ -863,11 +971,11 @@ const PaymentScreen = () => {
       // Validate UPI mode requirements
       if (selectedMode === "UPI") {
         if (!isOnline) {
-          Alert.alert("UPI Offline", "UPI is unavailable while offline. Use Cash or Due.");
+          Alert.alert(t('posPayment.upiOfflineTitle'), t('posPayment.upiOfflineMessage'));
           return;
         }
         if (!paymentId) {
-          Alert.alert("UPI Error", "UPI payment is not ready yet.");
+          Alert.alert(t('posPayment.verifyingPaymentTitle'), t('posPayment.verifyingPaymentMessage'));
           return;
         }
       }
@@ -878,11 +986,14 @@ const PaymentScreen = () => {
         await AsyncStorage.setItem(PENDING_UPI_KEY, JSON.stringify(pending));
       }
 
+      // STG-115: Map CARD/WALLET to CASH for checkout (they are coming soon placeholders)
+      const checkoutMode = (selectedMode === "CARD" || selectedMode === "WALLET") ? "CASH" : selectedMode;
+
       // Complete checkout with payment + inventory deduction
       const result = await completeCheckout({
         saleId,
         billRef,
-        paymentMode: selectedMode,
+        paymentMode: checkoutMode,
         paymentId: selectedMode === "UPI" && paymentId ? paymentId : undefined,
         items: saleItems,
         totalMinor,
@@ -911,6 +1022,10 @@ const PaymentScreen = () => {
       }
 
       finalized.current = true;
+
+      // STG-124: Vibrate on successful payment completion
+      Vibration.vibrate(200);
+
       void logPaymentEvent("PAYMENT_SUCCESS", {
         transactionId,
         billId: billRef,
@@ -928,7 +1043,7 @@ const PaymentScreen = () => {
       // ISSUE-MICRO-101: Use replace instead of navigate to remove Payment from the stack.
       // This prevents the user from navigating back to a stale Payment screen via hardware back button.
       navigation.replace("SuccessPrint", {
-        paymentMode: selectedMode,
+        paymentMode: checkoutMode,
         transactionId,
         billId: billRef,
         saleId: saleId || undefined, // STG-107: Pass actual backend sale UUID for WhatsApp bill
@@ -954,8 +1069,8 @@ const PaymentScreen = () => {
           return;
         }
         if (error.message === "store_inactive") {
-          Alert.alert("POS Inactive", POS_MESSAGES.storeInactive, [
-            { text: "OK", onPress: () => navigation.navigate("SellScan") }
+          Alert.alert(t('posPayment.posInactiveTitle'), POS_MESSAGES.storeInactive, [
+            { text: t('common.ok'), onPress: () => navigation.navigate("SellScan") }
           ]);
           return;
         }
@@ -979,8 +1094,8 @@ const PaymentScreen = () => {
             message = resolveStockErrorMessage(error) ?? "Stock changed. Please review the cart.";
           }
 
-          Alert.alert("Cart Updated", message, [
-            { text: "Review Cart", onPress: () => navigation.navigate("SellScan") }
+          Alert.alert(t('posPayment.cartUpdatedTitle'), message, [
+            { text: t('common.ok'), onPress: () => navigation.navigate("SellScan") }
           ]);
           return;
         }
@@ -991,7 +1106,7 @@ const PaymentScreen = () => {
         : error instanceof Error
           ? error.message
           : "Unknown error";
-      Alert.alert("Payment Failed", `Unable to complete payment: ${msg}. Please try again.`);
+      Alert.alert(t('posPayment.paymentFailedTitle'), t('posPayment.paymentFailedDetail', { message: msg }));
     } finally {
       // AUD-055-A FIX: Only reset submitting if NOT finalized
       // If finalized=true, leave submittingRef=true to prevent any further attempts
@@ -1039,11 +1154,14 @@ const PaymentScreen = () => {
   };
 
   // STG-401: Include cartValid in submission guard
+  // STG-115: Block submission for CARD/WALLET (coming soon)
   const canSubmit =
     Boolean(saleId && billRef) &&
     !loadingSale &&
     !submitting &&
     cartValid &&
+    selectedMode !== "CARD" &&
+    selectedMode !== "WALLET" &&
     (selectedMode !== "UPI" || Boolean(paymentId));
 
   // FIX-039: Compute stale price count for warning badge
@@ -1057,6 +1175,17 @@ const PaymentScreen = () => {
     selectedMode === "UPI" ? "Payment Received" : selectedMode === "DUE" ? "Mark as Due" : "Complete Payment";
 
   const formattedStoreName = formatStoreName(upiStoreName);
+
+  // STG-406: Determine if billRef has offline prefix for display consistency
+  // When generating a receipt/bill ref offline, ensure it has "OFF-" prefix
+  const displayBillRef = useMemo(() => {
+    if (!billRef) return null;
+    // If offline and billRef does not already have OFF- prefix, prepend it
+    if (!isOnline && !billRef.startsWith("OFF-")) {
+      return `OFF-${billRef}`;
+    }
+    return billRef;
+  }, [billRef, isOnline]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -1275,6 +1404,21 @@ const PaymentScreen = () => {
       color: colors.textSecondary,
       textAlign: "center"
     },
+    // STG-214: Prominent regenerate QR button
+    regenerateButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: colors.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    regenerateButtonText: {
+      color: colors.textInverse,
+      fontSize: 14,
+      fontWeight: "700",
+    },
     storeName: {
       fontSize: 13,
       fontWeight: "700",
@@ -1432,17 +1576,232 @@ const PaymentScreen = () => {
       color: colors.textInverse,
       fontSize: 16,
       fontWeight: "800"
-    }
+    },
+    // STG-114: Cancel button
+    cancelButton: {
+      padding: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.error,
+    },
+    // STG-380: Lock expiry banner
+    lockExpiredBanner: {
+      marginHorizontal: 16,
+      marginTop: 8,
+      padding: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.warning,
+      backgroundColor: colors.warningSoft,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    lockExpiredText: {
+      color: colors.warning,
+      fontSize: 12,
+      fontWeight: "600",
+      flex: 1,
+    },
+    // STG-115: Coming soon placeholder
+    comingSoonStage: {
+      alignItems: "center",
+      paddingVertical: 40,
+      gap: 16,
+    },
+    comingSoonText: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textTertiary,
+    },
+    comingSoonSubtext: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      textAlign: "center",
+      paddingHorizontal: 32,
+    },
+    // STG-213: Payment processing overlay
+    processingOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 100,
+    },
+    processingOverlayBox: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 32,
+      alignItems: "center",
+      gap: 16,
+      ...theme.shadows.lg,
+    },
+    processingOverlayText: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    // STG-092: Receipt preview modal styles
+    receiptModalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    receiptModalContent: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      width: "100%",
+      maxHeight: "80%",
+      ...theme.shadows.lg,
+    },
+    receiptModalHeader: {
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      alignItems: "center",
+    },
+    receiptModalTitle: {
+      fontSize: 16,
+      fontWeight: "800",
+      color: colors.textPrimary,
+    },
+    receiptModalBody: {
+      padding: 16,
+    },
+    receiptStoreName: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      textAlign: "center",
+      marginBottom: 4,
+    },
+    receiptBillRef: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      textAlign: "center",
+      marginBottom: 12,
+    },
+    receiptDivider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 8,
+    },
+    receiptItemRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      paddingVertical: 4,
+    },
+    receiptItemName: {
+      fontSize: 13,
+      color: colors.textPrimary,
+      flex: 1,
+    },
+    receiptItemDetail: {
+      fontSize: 11,
+      color: colors.textTertiary,
+    },
+    receiptItemAmount: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    receiptDiscountRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 2,
+    },
+    receiptDiscountLabel: {
+      fontSize: 12,
+      color: colors.success,
+    },
+    receiptDiscountValue: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.success,
+    },
+    receiptTotalRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 8,
+      borderTopWidth: 2,
+      borderTopColor: colors.textPrimary,
+      marginTop: 4,
+    },
+    receiptTotalLabel: {
+      fontSize: 16,
+      fontWeight: "900",
+      color: colors.textPrimary,
+    },
+    receiptTotalValue: {
+      fontSize: 16,
+      fontWeight: "900",
+      color: colors.primary,
+    },
+    receiptPaymentMethod: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginTop: 8,
+    },
+    receiptModalFooter: {
+      flexDirection: "row",
+      gap: 12,
+      padding: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    receiptModalBackBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+    },
+    receiptModalBackBtnText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textSecondary,
+    },
+    receiptModalConfirmBtn: {
+      flex: 2,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+    },
+    receiptModalConfirmBtnText: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: colors.textInverse,
+    },
   }), [colors]);
 
   return (
     <View style={styles.container}>
-      {/* STG-083: Header with back button + STG-113: Bill number */}
+      {/* STG-213: Processing payment overlay — prevents accidental taps */}
+      {submitting && (
+        <View style={styles.processingOverlay} pointerEvents="auto">
+          <View style={styles.processingOverlayBox}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.processingOverlayText}>Processing Payment...</Text>
+          </View>
+        </View>
+      )}
+
+      {/* STG-083: Header with back button + STG-113: Bill number + STG-114: Cancel button */}
       <View style={[styles.header, { paddingTop: 16 + insets.top }]}>
         <Pressable
           onPress={() => {
             if (submitting || submittingRef.current) {
-              Alert.alert("Payment in Progress", "Please wait for the payment to complete.");
+              Alert.alert(t('posPayment.paymentInProgressTitle'), t('posPayment.paymentInProgressMessage'));
               return;
             }
             navigation.goBack();
@@ -1455,11 +1814,21 @@ const PaymentScreen = () => {
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Payment</Text>
-          {/* STG-113: Show bill/invoice number prominently */}
-          {billRef && <Text style={styles.billRef}>Bill #{billRef}</Text>}
+          {/* STG-113 + STG-406: Show bill/invoice number with offline prefix if applicable */}
+          {displayBillRef && <Text style={styles.billRef}>Bill #{displayBillRef}</Text>}
           {/* STG-120: Staff name for audit */}
           {staffName && <Text style={styles.billRef}>Staff: {staffName}</Text>}
         </View>
+        {/* STG-114: Cancel/void transaction button */}
+        <Pressable
+          onPress={handleCancelTransaction}
+          style={styles.cancelButton}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel transaction"
+          disabled={submitting}
+        >
+          <MaterialCommunityIcons name="close-circle-outline" size={22} color={colors.error} />
+        </Pressable>
         {/* STG-123: Total amount in header */}
         <View style={styles.headerAmount}>
           <Text style={styles.headerAmountLabel}>Total</Text>
@@ -1484,11 +1853,24 @@ const PaymentScreen = () => {
         </View>
       )}
 
+      {/* STG-380: Cart lock timeout explanation */}
+      {lockExpired && (
+        <View style={styles.lockExpiredBanner}>
+          <MaterialCommunityIcons name="lock-open-outline" size={16} color={colors.warning} />
+          <Text style={styles.lockExpiredText}>
+            Cart lock has expired after 5 minutes. Go back to re-lock the cart before completing payment.
+          </Text>
+        </View>
+      )}
+
       {/* STG-377: Tabs locked during submitting */}
       <View style={styles.modeTabs}>
         {allowedMethods.includes("UPI") && renderModeTab("UPI", "UPI", "qrcode-scan", upiDisabled)}
         {allowedMethods.includes("CASH") && renderModeTab("CASH", "Cash", "currency-inr")}
         {allowedMethods.includes("DUE") && renderModeTab("DUE", "Due", "clock-outline")}
+        {/* STG-115: Card and Wallet tabs — only shown if allowedMethods includes them */}
+        {allowedMethods.includes("CARD") && renderModeTab("CARD", "Card", "credit-card-outline")}
+        {allowedMethods.includes("WALLET") && renderModeTab("WALLET", "Wallet", "wallet-outline")}
       </View>
 
       {/* SM-015: Split Payment Button — STG-377: disabled during submitting */}
@@ -1505,14 +1887,27 @@ const PaymentScreen = () => {
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
         {/* Payment mode content */}
-        {selectedMode === "UPI" ? (
+        {/* STG-115: CARD and WALLET show Coming Soon placeholder */}
+        {(selectedMode === "CARD" || selectedMode === "WALLET") ? (
+          <View style={styles.comingSoonStage}>
+            <MaterialCommunityIcons
+              name={selectedMode === "CARD" ? "credit-card-outline" as any : "wallet-outline" as any}
+              size={48}
+              color={colors.textTertiary}
+            />
+            <Text style={styles.comingSoonText}>Coming Soon</Text>
+            <Text style={styles.comingSoonSubtext}>
+              {selectedMode === "CARD" ? "Card" : "Wallet"} payments are not yet available. Please use UPI, Cash, or Due for now.
+            </Text>
+          </View>
+        ) : selectedMode === "UPI" ? (
           <View style={styles.qrStage}>
             <View style={styles.qrShell}>
               {upiStatusLoading ? (
                 <Text style={styles.qrHint}>Checking UPI details...</Text>
               ) : upiBlocked ? (
                 <Text style={styles.qrHint}>
-                  UPI unavailable until the store is active and VPA is set.
+                  UPI unavailable until the store is active and UPI ID is set.
                 </Text>
               ) : !isOnline ? (
                 <Text style={styles.qrHint}>Offline: UPI disabled.</Text>
@@ -1526,13 +1921,24 @@ const PaymentScreen = () => {
                   <Text style={[styles.qrHint, { marginTop: 8 }]}>Generating QR...</Text>
                 </View>
               ) : (
-                <Pressable onPress={() => {
-                  setUpiIntent(null);
-                  setQrExpiresAt(null);
-                  setQrSecondsLeft(null);
-                }}>
-                  <Text style={styles.qrHint}>QR expired — Tap to regenerate</Text>
-                </Pressable>
+                <View style={{ alignItems: "center", gap: 12 }}>
+                  <MaterialCommunityIcons name="qrcode-remove" size={40} color={colors.textTertiary} />
+                  <Text style={[styles.qrHint, { color: colors.error, fontWeight: "700" }]}>QR Code Expired</Text>
+                  <Pressable
+                    onPress={() => {
+                      setUpiIntent(null);
+                      setPaymentId(null);
+                      setQrExpiresAt(null);
+                      setQrSecondsLeft(null);
+                    }}
+                    style={styles.regenerateButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Regenerate QR code"
+                  >
+                    <MaterialCommunityIcons name="refresh" size={18} color={colors.textInverse} />
+                    <Text style={styles.regenerateButtonText}>Regenerate QR</Text>
+                  </Pressable>
+                </View>
               )}
             </View>
             {upiIntent && qrSecondsLeft !== null && qrSecondsLeft > 0 && (
@@ -1741,6 +2147,130 @@ const PaymentScreen = () => {
         </Pressable>
       </View>
 
+      {/* STG-092 + STG-384: Receipt preview modal with item vs cart discount differentiation */}
+      <Modal
+        visible={showReceiptPreview}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowReceiptPreview(false)}
+      >
+        <View style={styles.receiptModalOverlay}>
+          <View style={styles.receiptModalContent}>
+            <View style={styles.receiptModalHeader}>
+              <Text style={styles.receiptModalTitle}>Receipt Preview</Text>
+            </View>
+            <ScrollView style={styles.receiptModalBody}>
+              {/* Store name */}
+              <Text style={styles.receiptStoreName}>
+                {formattedStoreName || "SuperMandi Store"}
+              </Text>
+              {/* STG-406: Bill ref with offline prefix */}
+              {displayBillRef && (
+                <Text style={styles.receiptBillRef}>Bill #{displayBillRef}</Text>
+              )}
+              <View style={styles.receiptDivider} />
+
+              {/* Item list with individual discounts — STG-384: differentiate item discounts */}
+              {saleItems.map((item, idx) => {
+                const lineTotal = Math.round(item.priceMinor) * Math.round(item.quantity);
+                const lineDiscount = calculateDiscountAmount(lineTotal, item.itemDiscount ?? null);
+                return (
+                  <View key={item.id || idx}>
+                    <View style={styles.receiptItemRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.receiptItemName} numberOfLines={1}>{item.name}</Text>
+                        <Text style={styles.receiptItemDetail}>
+                          {item.quantity} x {formatMoney(item.priceMinor, currency)}
+                        </Text>
+                      </View>
+                      <Text style={styles.receiptItemAmount}>
+                        {formatMoney(lineTotal, currency)}
+                      </Text>
+                    </View>
+                    {/* STG-384: Show item-level discount on receipt */}
+                    {lineDiscount > 0 && item.itemDiscount && (
+                      <View style={styles.receiptDiscountRow}>
+                        <Text style={styles.receiptDiscountLabel}>
+                          {"  "}Item Discount{item.itemDiscount.reason ? ` (${item.itemDiscount.reason})` : ""}
+                        </Text>
+                        <Text style={styles.receiptDiscountValue}>
+                          -{formatMoney(lineDiscount, currency)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+
+              <View style={styles.receiptDivider} />
+
+              {/* Subtotal */}
+              <View style={styles.receiptItemRow}>
+                <Text style={styles.receiptItemName}>Subtotal</Text>
+                <Text style={styles.receiptItemAmount}>
+                  {formatMoney(subtotalMinor, currency)}
+                </Text>
+              </View>
+
+              {/* STG-384: Item discounts total (if any) */}
+              {itemDiscountMinor > 0 && (
+                <View style={styles.receiptDiscountRow}>
+                  <Text style={styles.receiptDiscountLabel}>Item Discounts</Text>
+                  <Text style={styles.receiptDiscountValue}>
+                    -{formatMoney(itemDiscountMinor, currency)}
+                  </Text>
+                </View>
+              )}
+
+              {/* STG-384: Cart-level discount (if any) */}
+              {cartDiscountMinor > 0 && appliedCartDiscount && (
+                <View style={styles.receiptDiscountRow}>
+                  <Text style={styles.receiptDiscountLabel}>
+                    Cart Discount{appliedCartDiscount.reason ? ` (${appliedCartDiscount.reason})` : ""}
+                  </Text>
+                  <Text style={styles.receiptDiscountValue}>
+                    -{formatMoney(cartDiscountMinor, currency)}
+                  </Text>
+                </View>
+              )}
+
+              {/* Total */}
+              <View style={styles.receiptTotalRow}>
+                <Text style={styles.receiptTotalLabel}>Total</Text>
+                <Text style={styles.receiptTotalValue}>
+                  {formatMoney(totalMinor, currency)}
+                </Text>
+              </View>
+
+              {/* Payment method */}
+              <Text style={styles.receiptPaymentMethod}>
+                Payment Method: {selectedMode}
+              </Text>
+            </ScrollView>
+
+            {/* Footer buttons */}
+            <View style={styles.receiptModalFooter}>
+              <Pressable
+                style={styles.receiptModalBackBtn}
+                onPress={() => setShowReceiptPreview(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Go back to payment"
+              >
+                <Text style={styles.receiptModalBackBtnText}>Go Back</Text>
+              </Pressable>
+              <Pressable
+                style={styles.receiptModalConfirmBtn}
+                onPress={executePayment}
+                accessibilityRole="button"
+                accessibilityLabel="Confirm and pay"
+              >
+                <Text style={styles.receiptModalConfirmBtnText}>Confirm & Pay</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* SM-015: Split Payment Modal */}
       {/* GL-RJ-001: Updated to verify payment result before completing */}
       {/* GO-LIVE-113: Added submittingRef protection to prevent double-submit race condition */}
@@ -1776,9 +2306,9 @@ const PaymentScreen = () => {
             });
 
             Alert.alert(
-              "Payment Not Complete",
-              result.errorMessage || "Split payment could not be verified. Please try again.",
-              [{ text: "OK" }]
+              t('posPayment.paymentNotCompleteTitle'),
+              result.errorMessage || t('posPayment.paymentNotCompleteMessage'),
+              [{ text: t('common.ok') }]
             );
             return; // Don't proceed - cart remains intact
           }
@@ -1786,6 +2316,10 @@ const PaymentScreen = () => {
           // GL-RJ-001: Payment verified - proceed to success
           // GO-LIVE-113: Keep submittingRef=true and set finalized to prevent any further attempts
           finalized.current = true;
+
+          // STG-124: Vibrate on successful split payment completion
+          Vibration.vibrate(200);
+
           if (isPartialSale) {
             for (const item of saleItems) {
               removeItem(item.id, true);
@@ -1824,5 +2358,8 @@ const PaymentScreen = () => {
     </View>
   );
 };
+
+// STG-405: Discount undo — N/A at payment screen level. Discounts are managed in the cart
+// screen before navigating to payment. No action needed here.
 
 export default PaymentScreen;

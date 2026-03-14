@@ -1,8 +1,8 @@
 /**
  * #329-332: Post-Activation Payment Setup
  *
- * Shown once after POS activation if store has no UPI VPA set.
- * Retailer enters UPI VPA (required) + optional bank account details.
+ * Shown once after POS activation if store has no UPI ID set.
+ * Retailer enters UPI ID (required) + optional bank account details.
  * Can be skipped once — sets AsyncStorage flag so it won't show again.
  * If skipped, SellScan shows a banner prompting setup.
  */
@@ -120,6 +120,9 @@ export default function PaymentSetupScreen() {
         bankIfsc: ifsc.trim().toUpperCase() || undefined,
       });
 
+      // STG-314: Show success toast after saving payment settings
+      Alert.alert(t("paymentSetup.saveSuccess"));
+
       const storeId = await getDeviceStoreId();
       if (storeId) await AsyncStorage.setItem(getPaymentPromptedKey(storeId), "1");
       navigation.replace("SellScan");
@@ -204,6 +207,12 @@ export default function PaymentSetupScreen() {
       fontSize: 12,
       marginTop: 4,
     },
+    // STG-280: Hint text for plain-language guidance
+    hintText: {
+      color: colors.textTertiary,
+      fontSize: 12,
+      marginTop: 4,
+    },
     actions: {
       alignItems: "center",
     },
@@ -281,7 +290,7 @@ export default function PaymentSetupScreen() {
 
         {/* Form */}
         <View style={styles.form}>
-          {/* UPI VPA */}
+          {/* STG-280: UPI ID — plain language, no VPA jargon */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>
               {t("paymentSetup.upiLabel")} <Text style={styles.required}>*</Text>
@@ -303,6 +312,10 @@ export default function PaymentSetupScreen() {
               accessibilityLabel={t("paymentSetup.upiAccessibility")}
               accessibilityRole="text"
             />
+            {/* STG-280: Helpful hint for non-technical store owners */}
+            {!errors.upiVpa && (
+              <Text style={styles.hintText}>{t("paymentSetup.upiHint")}</Text>
+            )}
             {errors.upiVpa ? (
               <Text style={styles.errorText}>{errors.upiVpa}</Text>
             ) : null}

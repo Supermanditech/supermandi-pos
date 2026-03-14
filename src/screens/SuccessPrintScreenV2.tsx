@@ -15,7 +15,7 @@ import { syncOutbox } from "../services/offline/sync";
 import { formatMoney } from "../utils/money";
 import { formatDateTime } from "../i18n/formatters";
 import { getDeviceStoreId } from "../services/deviceSession";
-import { checkWhatsAppStatus, sendBillWhatsApp } from "../services/api/posApi";
+import { checkWhatsAppStatus, sendBillWhatsApp, voidSale } from "../services/api/posApi";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -62,6 +62,8 @@ export default function SuccessPrintScreenV2() {
 
   const [printStatus, setPrintStatus] = useState<"idle" | "printing" | "success" | "failed">("idle");
   const [operatorStoreId, setOperatorStoreId] = useState<string | null>(null);
+  // STG-383: Post-payment void state
+  const [voidStatus, setVoidStatus] = useState<"idle" | "voiding" | "voided" | "failed">("idle");
 
   // WA-001: WhatsApp state
   const [waConfigured, setWaConfigured] = useState(false);
@@ -241,6 +243,37 @@ export default function SuccessPrintScreenV2() {
     });
   };
 
+  // STG-383: Post-payment void/refund handler
+  const handleVoidSale = () => {
+    if (voidStatus === "voiding" || voidStatus === "voided") return;
+    Alert.alert(
+      "Void This Sale?",
+      "This will reverse the sale, refund stock, and mark it as voided. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Void Sale",
+          style: "destructive",
+          onPress: async () => {
+            setVoidStatus("voiding");
+            try {
+              await voidSale({ saleId: actualSaleId, reason: "Voided from receipt screen" });
+              setVoidStatus("voided");
+              void logPosEvent("SALE_VOIDED", { saleId: actualSaleId, billId: billNumber, transactionId });
+              Alert.alert("Sale Voided", "The sale has been voided and stock has been restored.", [
+                { text: "OK", onPress: handleSkip },
+              ]);
+            } catch (error) {
+              setVoidStatus("failed");
+              const msg = error instanceof Error ? error.message : "Unknown error";
+              Alert.alert("Void Failed", `Could not void the sale: ${msg}. Please try again or contact support.`);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
@@ -268,6 +301,13 @@ export default function SuccessPrintScreenV2() {
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border
+    },
+    // STG-383: Void button style
+    btnVoid: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.error,
+      marginTop: 8,
     },
     btnWhatsApp: {
       backgroundColor: colors.whatsapp,
@@ -382,6 +422,22 @@ export default function SuccessPrintScreenV2() {
         <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={handleSkip}>
           <Text style={[styles.btnText, styles.btnTextSecondary]}>No Print</Text>
         </TouchableOpacity>
+
+        {/* STG-383: Void sale button — only shown when sale is not already voided */}
+        {voidStatus !== "voided" && (
+          <TouchableOpacity
+            style={[styles.btn, styles.btnVoid, voidStatus === "voiding" && styles.btnDisabled]}
+            onPress={handleVoidSale}
+            disabled={voidStatus === "voiding"}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <MaterialCommunityIcons name="cancel" size={20} color={colors.error} />
+              <Text style={[styles.btnText, { color: colors.error }]}>
+                {voidStatus === "voiding" ? "Voiding..." : voidStatus === "failed" ? "Retry Void" : "Void Sale"}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* WA-001: Phone number input modal */}

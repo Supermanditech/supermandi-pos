@@ -35,7 +35,9 @@ export type PosEventType =
   // WhatsApp (WA-001)
   | "WHATSAPP_BILL_SENT"
   | "WHATSAPP_BILL_FAILED"
-  | "WHATSAPP_BILL_ERROR";
+  | "WHATSAPP_BILL_ERROR"
+  // STG-383: Void/refund
+  | "SALE_VOIDED";
 
 type QueuedPosEvent = {
   id: string; // local event id (not stored in DB, included inside payload for reconciliation)
