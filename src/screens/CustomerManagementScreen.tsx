@@ -586,6 +586,7 @@ export default function CustomerManagementScreen({
           color={colors.textTertiary}
         />
         <TextInput
+          accessibilityLabel="Search by name or phone"
           style={styles.searchInput}
           placeholder="Search by name or phone..."
           placeholderTextColor={colors.textTertiary}
@@ -595,7 +596,7 @@ export default function CustomerManagementScreen({
           returnKeyType="search"
         />
         {searchQuery.length > 0 && (
-          <Pressable accessibilityRole="button" onPress={() => setSearchQuery("")}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setSearchQuery("")}>
             <MaterialCommunityIcons
               name="close-circle"
               size={18}
@@ -641,6 +642,7 @@ export default function CustomerManagementScreen({
       {/* FAB: Add Customer */}
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel="Add customer"
         style={styles.fab}
         onPress={() => setAddVisible(true)}
       >
@@ -662,7 +664,7 @@ export default function CustomerManagementScreen({
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Pressable accessibilityRole="button" style={styles.modalCloseButton} onPress={handleCloseDetail}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" style={styles.modalCloseButton} onPress={handleCloseDetail}>
               <MaterialCommunityIcons
                 name="close"
                 size={24}
@@ -671,7 +673,7 @@ export default function CustomerManagementScreen({
             </Pressable>
             <Text style={styles.modalTitle}>Customer Detail</Text>
             {selectedCustomer && !editMode && (
-              <Pressable accessibilityRole="button" style={styles.editButton} onPress={handleEditMode}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Edit customer" style={styles.editButton} onPress={handleEditMode}>
                 <MaterialCommunityIcons
                   name="pencil-outline"
                   size={20}
@@ -717,6 +719,7 @@ export default function CustomerManagementScreen({
                   <View style={styles.editFields}>
                     <Text style={styles.editFieldLabel}>Name</Text>
                     <TextInput
+                      accessibilityLabel="Customer name"
                       style={styles.editFieldInput}
                       value={editName}
                       onChangeText={setEditName}
@@ -725,6 +728,7 @@ export default function CustomerManagementScreen({
                     />
                     <Text style={styles.editFieldLabel}>Email</Text>
                     <TextInput
+                      accessibilityLabel="Customer email"
                       style={styles.editFieldInput}
                       value={editEmail}
                       onChangeText={setEditEmail}
@@ -735,6 +739,7 @@ export default function CustomerManagementScreen({
                     />
                     <Text style={styles.editFieldLabel}>Address</Text>
                     <TextInput
+                      accessibilityLabel="Customer address"
                       style={[styles.editFieldInput, styles.editFieldMultiline]}
                       value={editAddress}
                       onChangeText={setEditAddress}
@@ -754,7 +759,8 @@ export default function CustomerManagementScreen({
                       </Text>
                       {selectedCustomer.phone && selectedCustomer.phone.replace(/\D/g, "").length >= 10 && (
                         <Pressable
-                          accessibilityRole="link"
+                          accessibilityRole="button"
+                          accessibilityLabel="Contact on WhatsApp"
                           hitSlop={8}
                           onPress={() => {
                             let phone = selectedCustomer.phone.replace(/\D/g, "");
@@ -880,6 +886,7 @@ export default function CustomerManagementScreen({
           >
             <Text style={styles.editFieldLabel}>Name *</Text>
             <TextInput
+              accessibilityLabel="Customer name"
               style={styles.editFieldInput}
               value={addName}
               onChangeText={setAddName}
@@ -890,6 +897,7 @@ export default function CustomerManagementScreen({
 
             <Text style={styles.editFieldLabel}>Phone *</Text>
             <TextInput
+              accessibilityLabel="Phone number"
               style={styles.editFieldInput}
               value={addPhone}
               onChangeText={setAddPhone}
@@ -901,6 +909,7 @@ export default function CustomerManagementScreen({
 
             <Text style={styles.editFieldLabel}>Email</Text>
             <TextInput
+              accessibilityLabel="Customer email"
               style={styles.editFieldInput}
               value={addEmail}
               onChangeText={setAddEmail}
@@ -912,6 +921,7 @@ export default function CustomerManagementScreen({
 
             <Text style={styles.editFieldLabel}>Address</Text>
             <TextInput
+              accessibilityLabel="Customer address"
               style={[styles.editFieldInput, styles.editFieldMultiline]}
               value={addAddress}
               onChangeText={setAddAddress}

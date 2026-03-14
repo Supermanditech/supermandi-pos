@@ -273,7 +273,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
         >
           {/* Date picker */}
           <View style={styles.datePicker}>
-            <Pressable accessibilityRole="button" style={styles.dateArrow} onPress={() => handleDateChange("prev")}>
+            <Pressable accessibilityLabel="Previous day" accessibilityRole="button" style={styles.dateArrow} onPress={() => handleDateChange("prev")}>
               <MaterialCommunityIcons name="chevron-left" size={24} color={colors.primary} />
             </Pressable>
             <View style={styles.dateDisplay}>
@@ -281,6 +281,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
               {isToday && <Text style={styles.dateTodayBadge}>{t("dailyClosing.today")}</Text>}
             </View>
             <Pressable
+              accessibilityLabel="Next day"
               accessibilityRole="button"
               style={[styles.dateArrow, isToday && styles.dateArrowDisabled]}
               onPress={() => handleDateChange("next")}
@@ -388,6 +389,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                   <Text style={styles.cashInputPrefix}>₹</Text>
                   <TextInput
                     testID="daily-closing-cash-input"
+                    accessibilityLabel="Actual cash amount"
                     style={styles.cashInput}
                     placeholder="0.00"
                     placeholderTextColor={colors.textTertiary}

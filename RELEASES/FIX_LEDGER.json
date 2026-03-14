@@ -3925,5 +3925,6 @@
       "files_affected": 44,
       "checksums_updated": 22
     }
-  ]
+  ],
+  "last_commit_ticket": "STG-299"
 }
