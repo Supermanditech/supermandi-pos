@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * FIX GUARD v4 — Zero-Drift + Completion Enforcement + Multi-Gate Pre-Commit
+ * FIX GUARD v5 — Zero-Drift + Completion Enforcement + 14-Gate Pre-Commit
  *
  * Commands:
  *   session-start  — full session startup check (Claude runs this FIRST)
  *   check          — verify all registered fixes are intact (handles line shifts)
- *   pre-commit     — FULL pre-commit gate: 12 gates (drift + secrets + staging + tickets + migrations + URLs + hygiene + ledger-co-commit + no-amend + msg-format + single-ticket + checklist)
+ *   pre-commit     — FULL pre-commit gate: 14 gates (drift + secrets + staging + tickets + migrations + URLs + hygiene + ledger-co-commit + no-amend + msg-format + single-ticket + max-files + typecheck + checklist)
  *   register       — register a new fix with checksum + auto-scoped checklist
  *   checklist      — mark checklist items complete with evidence
  *   reindex        — re-scan files and update line numbers after line shifts
@@ -665,13 +665,13 @@ if (command === 'check') {
 
 } else if (command === 'pre-commit') {
   // ===== FULL MULTI-GATE PRE-COMMIT =====
-  console.log('\n=== FIX GUARD PRE-COMMIT — 12 GATES ===\n');
+  console.log('\n=== FIX GUARD PRE-COMMIT — 14 GATES ===\n');
 
   let blocked = false;
   let warnings = 0;
 
   // Gate 1: Fix drift
-  console.log('[Gate 1/12] Fix Drift Check...');
+  console.log('[Gate 1/14] Fix Drift Check...');
   const driftResults = checkAll();
   if (!driftResults.ok) {
     console.log('  ❌ BLOCKED: Fix drift detected');
@@ -690,7 +690,7 @@ if (command === 'check') {
   }
 
   // Gate 2: Secret scanner
-  console.log('[Gate 2/12] Secret Scanner...');
+  console.log('[Gate 2/14] Secret Scanner...');
   const secretFailures = checkStagedSecrets();
   if (secretFailures.length > 0) {
     console.log('  ❌ BLOCKED: Secrets detected in staged files');
@@ -703,7 +703,7 @@ if (command === 'check') {
   }
 
   // Gate 3: Staged files validation
-  console.log('[Gate 3/12] Staged Files Validation...');
+  console.log('[Gate 3/14] Staged Files Validation...');
   const stagedFailures = checkStagedFiles();
   const stagedErrors = stagedFailures.filter(f => f.severity !== 'WARNING');
   const stagedWarnings = stagedFailures.filter(f => f.severity === 'WARNING');
@@ -722,7 +722,7 @@ if (command === 'check') {
   }
 
   // Gate 4: Ticket consistency
-  console.log('[Gate 4/12] Ticket Consistency...');
+  console.log('[Gate 4/14] Ticket Consistency...');
   const ticketFailures = checkTicketConsistency();
   const ticketErrors = ticketFailures.filter(f => f.severity !== 'WARNING');
   const ticketWarnings = ticketFailures.filter(f => f.severity === 'WARNING');
@@ -741,7 +741,7 @@ if (command === 'check') {
   }
 
   // Gate 5: Migration sequence
-  console.log('[Gate 5/12] Migration Sequence...');
+  console.log('[Gate 5/14] Migration Sequence...');
   const migFailures = checkMigrationSequence();
   if (migFailures.length > 0) {
     for (const f of migFailures) {
@@ -753,7 +753,7 @@ if (command === 'check') {
   }
 
   // Gate 6: Localhost/dev URL check
-  console.log('[Gate 6/12] Dev URL Scanner...');
+  console.log('[Gate 6/14] Dev URL Scanner...');
   const urlFailures = checkLocalhostUrls();
   if (urlFailures.length > 0) {
     for (const f of urlFailures) {
@@ -765,7 +765,7 @@ if (command === 'check') {
   }
 
   // Gate 7: Commit hygiene — check git status for signs of broad staging
-  console.log('[Gate 7/12] Commit Hygiene...');
+  console.log('[Gate 7/14] Commit Hygiene...');
   const stagedFiles7 = exec('git diff --cached --name-only').split('\n').filter(Boolean);
   const stagedCount = stagedFiles7.length;
   if (stagedCount > 20) {
@@ -779,7 +779,7 @@ if (command === 'check') {
   }
 
   // Gate 8: Ledger co-commit — if source files staged, FIX_LEDGER.json MUST also be staged
-  console.log('[Gate 8/12] Ledger Co-Commit...');
+  console.log('[Gate 8/14] Ledger Co-Commit...');
   const sourceFilesStaged = stagedFiles7.filter(f =>
     !f.startsWith('RELEASES/') && !f.startsWith('.') && !f.startsWith('scripts/fix-guard') &&
     (f.endsWith('.ts') || f.endsWith('.tsx') || f.endsWith('.js') || f.endsWith('.jsx') || f.endsWith('.sql'))
@@ -794,7 +794,7 @@ if (command === 'check') {
   }
 
   // Gate 9: No amend — detect if this is an amend of a tagged commit
-  console.log('[Gate 9/12] No Amend on Tagged Commits...');
+  console.log('[Gate 9/14] No Amend on Tagged Commits...');
   const isAmend = process.env.GIT_REFLOG_ACTION && process.env.GIT_REFLOG_ACTION.includes('amend');
   // Also check if HEAD has a tag (amending a tagged commit is dangerous)
   const headTags = exec('git tag --points-at HEAD 2>/dev/null');
@@ -811,58 +811,57 @@ if (command === 'check') {
     console.log('  ✅ No amend conflict');
   }
 
-  // Gate 10: Commit message ticket format
-  // In pre-commit, COMMIT_EDITMSG is stale (previous commit). Accept path via argv[3] for commit-msg hook.
-  console.log('[Gate 10/12] Commit Message Format...');
-  const commitMsgPath = process.argv[3] || path.join(ROOT, '.git', 'COMMIT_EDITMSG');
-  if (fs.existsSync(commitMsgPath)) {
-    const commitMsg = fs.readFileSync(commitMsgPath, 'utf8').trim();
-    const firstLine = commitMsg.split('\n')[0];
-    // Must match: type(SCOPE): description — where type is fix|feat|chore|test|docs|refactor
-    const validFormat = /^(fix|feat|chore|test|docs|refactor|revert)\([^)]+\):\s.+/.test(firstLine);
-    if (!validFormat) {
-      console.log(`  ⚠️  Commit message doesn't match format "type(SCOPE): description" — got: "${firstLine.substring(0, 60)}"`);
-      warnings++;
-    } else {
-      console.log('  ✅ Commit message format OK');
-    }
-    // Check for Co-Authored-By
-    if (!commitMsg.includes('Co-Authored-By:')) {
-      console.log('  ⚠️  Missing Co-Authored-By line');
-      warnings++;
-    }
+  // Gates 10+11 run in commit-msg hook (not pre-commit) because COMMIT_EDITMSG
+  // is stale during pre-commit. See 'commit-msg' command below.
+  console.log('[Gate 10/14] Commit Message Format... (deferred to commit-msg hook)');
+  console.log('[Gate 11/14] Single Ticket Per Commit... (deferred to commit-msg hook)');
+
+  // Gate 12: Max staged files — BLOCKS if >15 source files staged (prevents bulk commits)
+  // HL-003: Upgraded from Gate 7 "warn on >20" to hard BLOCK on >15.
+  // Legitimate single-ticket changes rarely touch >15 files. If they do, the ticket scope is wrong.
+  console.log('[Gate 12/14] Max Staged Files...');
+  const stagedFilesForMax = exec('git diff --cached --name-only').split('\n').filter(Boolean);
+  const stagedSourceFiles = stagedFilesForMax.filter(f =>
+    !f.startsWith('RELEASES/') && !f.endsWith('.md') && !f.endsWith('.json') && f !== 'package.json'
+  );
+  if (stagedSourceFiles.length > 15) {
+    console.log(`  ❌ BLOCKED: ${stagedSourceFiles.length} source files staged (max 15) — ticket scope too broad`);
+    console.log('    Split into multiple tickets or verify this is a legitimate cross-cutting change.');
+    console.log('    Affected files:', stagedSourceFiles.slice(0, 10).join(', '), stagedSourceFiles.length > 10 ? `... +${stagedSourceFiles.length - 10} more` : '');
+    blocked = true;
   } else {
-    console.log('  ⚠️  Cannot read commit message (COMMIT_EDITMSG not found)');
-    warnings++;
+    console.log(`  ✅ ${stagedSourceFiles.length} source files staged (≤15 limit)`);
   }
 
-  // Gate 11: Single ticket per commit — commit message should reference only ONE STG-XXX
-  // In pre-commit hook, COMMIT_EDITMSG is stale (previous commit). Only the first line (subject)
-  // is checked to avoid false positives from body text mentioning other tickets.
-  console.log('[Gate 11/12] Single Ticket Per Commit...');
-  if (fs.existsSync(commitMsgPath)) {
-    const commitMsg11 = fs.readFileSync(commitMsgPath, 'utf8').trim();
-    // Only check the subject line (first line) for ticket references
-    const subjectLine = commitMsg11.split('\n')[0];
-    const stgMatches = subjectLine.match(/STG-\d+/g);
-    if (stgMatches) {
-      const uniqueTickets = [...new Set(stgMatches)];
-      if (uniqueTickets.length > 1) {
-        console.log(`  ❌ BLOCKED: Multiple tickets in subject line: ${uniqueTickets.join(', ')} — one ticket = one commit`);
-        blocked = true;
-      } else {
-        console.log(`  ✅ Single ticket: ${uniqueTickets[0]}`);
-      }
+  // Gate 13: Typecheck gate — BLOCKS if TypeScript has errors
+  // HL-003: Previously typecheck was only advisory. Now machine-enforced.
+  console.log('[Gate 13/14] TypeScript Typecheck...');
+  try {
+    const tscResult = execSync('npx tsc --noEmit 2>&1', { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
+    // tsc outputs nothing on success (except maybe npm warnings)
+    const tscErrors = tscResult.split('\n').filter(l => l.includes('error TS'));
+    if (tscErrors.length > 0) {
+      console.log(`  ❌ BLOCKED: ${tscErrors.length} TypeScript errors — fix before committing`);
+      tscErrors.slice(0, 5).forEach(e => console.log(`    ${e.substring(0, 120)}`));
+      if (tscErrors.length > 5) console.log(`    ... +${tscErrors.length - 5} more errors`);
+      blocked = true;
     } else {
-      // No STG- reference — might be a tooling/chore commit, that's OK
-      console.log('  ✅ Non-ticket commit (chore/infra)');
+      console.log('  ✅ TypeScript typecheck passed');
     }
-  } else {
-    console.log('  ✅ Skipped (no commit message)');
+  } catch (tscErr) {
+    const tscOutput = (tscErr.stdout || '') + (tscErr.stderr || '');
+    const tscErrors = tscOutput.split('\n').filter(l => l.includes('error TS'));
+    if (tscErrors.length > 0) {
+      console.log(`  ❌ BLOCKED: ${tscErrors.length} TypeScript errors — fix before committing`);
+      tscErrors.slice(0, 5).forEach(e => console.log(`    ${e.substring(0, 120)}`));
+      blocked = true;
+    } else {
+      console.log('  ✅ TypeScript typecheck passed');
+    }
   }
 
-  // Gate 12: Completion checklist — every applicable layer must be checked off
-  console.log('[Gate 12/12] Completion Checklist...');
+  // Gate 14: Completion checklist — every applicable layer must be checked off
+  console.log('[Gate 14/14] Completion Checklist...');
   const ledgerForChecklist = loadLedger();
   const activeFixesForChecklist = ledgerForChecklist.fixes.filter(f => f.status === 'ACTIVE' && f.checklist);
   const activeFixesNoChecklist = ledgerForChecklist.fixes.filter(f => f.status === 'ACTIVE' && !f.checklist);
@@ -905,8 +904,77 @@ if (command === 'check') {
     if (warnings > 0) {
       console.log(`\n✅ COMMIT ALLOWED — ${warnings} warning(s) (review above)`);
     } else {
-      console.log('\n✅ ALL 12 GATES PASSED — commit allowed');
+      console.log('\n✅ ALL 14 GATES PASSED — commit allowed');
     }
+    process.exit(0);
+  }
+
+} else if (command === 'commit-msg') {
+  // ===== COMMIT-MSG HOOK — Gates 10+11 (message-dependent gates) =====
+  // These gates run in the commit-msg hook where the message file path is $1
+  const msgPath = process.argv[3];
+  if (!msgPath || !fs.existsSync(msgPath)) {
+    console.log('Usage: fix-guard.js commit-msg <message-file>');
+    process.exit(1);
+  }
+
+  console.log('\n=== FIX GUARD COMMIT-MSG — Gates 10+11 ===\n');
+  let msgBlocked = false;
+
+  const commitMsg = fs.readFileSync(msgPath, 'utf8').trim();
+  const firstLine = commitMsg.split('\n')[0];
+
+  // Gate 10: Commit message format — BLOCKS on wrong format
+  console.log('[Gate 10/14] Commit Message Format...');
+  const validFormat = /^(fix|feat|chore|test|docs|refactor|revert)\([^)]+\):\s.+/.test(firstLine);
+  if (!validFormat) {
+    console.log(`  ❌ BLOCKED: Commit message doesn't match format "type(SCOPE): description" — got: "${firstLine.substring(0, 60)}"`);
+    console.log('    Required: fix(STG-XXX): description or chore(scope): description');
+    msgBlocked = true;
+  } else {
+    console.log('  ✅ Commit message format OK');
+  }
+  if (!commitMsg.includes('Co-Authored-By:')) {
+    console.log('  ⚠️  Missing Co-Authored-By line');
+  }
+
+  // Gate 11: Single ticket per commit — BLOCKS on multiple tickets
+  console.log('[Gate 11/14] Single Ticket Per Commit...');
+  const subjectLine = firstLine;
+
+  const stgMatches = subjectLine.match(/STG-\d+/g);
+  const commaPattern = /STG-\d+(?:\s*,\s*\d+)+/;
+  const hasCommaSeparated = commaPattern.test(subjectLine);
+  const bulkPatterns = /Layer \d+|batch \d+|\d+ tickets/i;
+  const hasBulkPattern = bulkPatterns.test(subjectLine);
+
+  if (hasCommaSeparated) {
+    const fullMatch = subjectLine.match(/STG-(\d+(?:\s*,\s*\d+)+)/);
+    if (fullMatch) {
+      const allNums = fullMatch[1].split(',').map(n => `STG-${n.trim()}`);
+      console.log(`  ❌ BLOCKED: Comma-separated tickets detected: ${allNums.join(', ')} — one ticket = one commit`);
+      msgBlocked = true;
+    }
+  } else if (stgMatches) {
+    const uniqueTickets = [...new Set(stgMatches)];
+    if (uniqueTickets.length > 1) {
+      console.log(`  ❌ BLOCKED: Multiple tickets in subject line: ${uniqueTickets.join(', ')} — one ticket = one commit`);
+      msgBlocked = true;
+    } else {
+      console.log(`  ✅ Single ticket: ${uniqueTickets[0]}`);
+    }
+  } else if (hasBulkPattern && !subjectLine.startsWith('chore')) {
+    console.log(`  ❌ BLOCKED: Bulk commit pattern detected ("${subjectLine.substring(0, 50)}") — one ticket = one commit`);
+    msgBlocked = true;
+  } else {
+    console.log('  ✅ Non-ticket commit (chore/infra)');
+  }
+
+  if (msgBlocked) {
+    console.log('\n❌ COMMIT BLOCKED by commit-msg gates');
+    process.exit(1);
+  } else {
+    console.log('\n✅ Gates 10+11 PASSED');
     process.exit(0);
   }
 
