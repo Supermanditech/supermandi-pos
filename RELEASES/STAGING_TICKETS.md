@@ -52,7 +52,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-023 | Activation subtitle — simplify two-concept info text | P2 | OPEN |
 | STG-024 | Enrollment QR scan — button exists but needs camera integration and UX polish | P2 | OPEN |
 | STG-025 | Add support phone number on activation and error screens | P2 | OPEN |
-| STG-026 | Add terms/privacy policy link — Play Store compliance | P1 | OPEN |
+| STG-026 | Add terms/privacy policy link — Play Store compliance | P1 | PARKED (0409765f, stg-026-2026-03-14) |
 | STG-027 | Green grid icon on product card — explain or remove | P3 | OPEN |
 | STG-028 | Product list section headers — group by category or recent | P2 | OPEN |
 | STG-029 | SELL tab — add manual "Add Product" button for unlisted items | P2 | OPEN |
@@ -80,8 +80,8 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-051 | Daily session counter — show "Bills today" and "Sales total" on home | P2 | OPEN |
 | STG-052 | Store name truncation on narrow screens | P3 | OPEN |
 | STG-053 | Accessibility — WCAG AA contrast audit across all buttons and text | P1 | OPEN |
-| STG-054 | Hindi/regional language selector — i18n for kirana retailers | P2 | OPEN |
-| STG-055 | App version display on enrollment and settings screens | P3 | OPEN |
+| STG-054 | Hindi/regional language selector — i18n for kirana retailers | P2 | PARKED (0409765f, stg-054-2026-03-14) |
+| STG-055 | App version display on enrollment and settings screens | P3 | PARKED (0409765f, stg-055-2026-03-14) |
 | STG-056 | Product card tap feedback — haptic vibration and ripple effect | P3 | OPEN |
 | STG-057 | Activation text rewrite — remove "superadmin", simplify to 3-step flow | P1 | OPEN |
 | STG-058 | Activation info box — replace wall-of-text with collapsible visual steps | P1 | OPEN |
@@ -180,11 +180,11 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-151 | Menu — metric labels below numbers, should be above (read order) | P2 | OPEN |
 | STG-152 | Menu — Today's Sales should be on HOME screen, not buried in Menu | P1 | OPEN |
 | STG-153 | Menu — Reprint/Download/Share buttons have no context (what?) | P2 | OPEN |
-| STG-154 | Menu — "BNPL Dues" jargon, kirana retailer won't understand BNPL | P2 | OPEN |
-| STG-155 | Menu — "Stock Inward" warehouse jargon, rename to "Add New Stock" | P2 | OPEN |
+| STG-154 | Menu — "BNPL Dues" jargon, kirana retailer won't understand BNPL | P2 | PARKED (0409765f, stg-154-2026-03-14) |
+| STG-155 | Menu — "Stock Inward" warehouse jargon, rename to "Add New Stock" | P2 | PARKED (0409765f, stg-155-2026-03-14) |
 | STG-156 | Menu — Opening Stock "?" icon should be inventory icon | P2 | OPEN |
 | STG-157 | Menu — "Customers" and "Customer Management" are duplicate entries | P1 | OPEN |
-| STG-158 | Menu — "Overdue Dues" redundant wording, use "Overdue Payments" | P3 | OPEN |
+| STG-158 | Menu — "Overdue Dues" redundant wording, use "Overdue Payments" | P3 | PARKED (0409765f, stg-158-2026-03-14) |
 | STG-159 | Menu — 20+ items need 8 screens of scrolling, needs restructure | P1 | OPEN |
 | STG-160 | Menu — icon colors inconsistent (blue, teal, green, red, grey, orange) | P2 | OPEN |
 | STG-161 | Menu — no notification badges on items (overdue count, pending) | P2 | OPEN |
@@ -198,32 +198,32 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-169 | Menu — no search/filter across 20+ menu items | P2 | OPEN |
 | STG-170 | Menu — "Barcode Sheets" subtitle "tiered" jargon | P3 | OPEN |
 | STG-171 | Menu — Today's Sales metrics all same size, no visual hierarchy | P2 | OPEN |
-| STG-172 | Menu — hardcoded English strings not using i18n (Return/Refund, Opening Stock, etc.) | P1 | OPEN |
-| STG-173 | Menu — "View Details" uses t() defaultValue fallback, raw key leaks if i18n fails | P1 | OPEN |
-| STG-174 | Menu — "Printer Ready"/"Test" use t() second-arg fallback, not standard defaultValue | P1 | OPEN |
+| STG-172 | Menu — hardcoded English strings not using i18n (Return/Refund, Opening Stock, etc.) | P1 | PARKED (0409765f, stg-172-2026-03-14) |
+| STG-173 | Menu — "View Details" uses t() defaultValue fallback, raw key leaks if i18n fails | P1 | PARKED (0409765f, stg-173-2026-03-14) |
+| STG-174 | Menu — "Printer Ready"/"Test" use t() second-arg fallback, not standard defaultValue | P1 | PARKED (0409765f, stg-174-2026-03-14) |
 | STG-175 | Menu — no Pressable ripple/feedback effect on menu items (no android_ripple) | P2 | OPEN |
 | STG-176 | Menu — header paddingVertical:8 too tight, brand pill cramped | P2 | OPEN |
-| STG-177 | Menu — status panel "Sync" label hardcoded English (not i18n) | P2 | OPEN |
+| STG-177 | Menu — status panel "Sync" label hardcoded English (not i18n) | P2 | PARKED (0409765f, stg-177-2026-03-14) |
 | STG-178 | Menu — Build Info visible on release with EXPO_PUBLIC_ENABLE_QA_MENU=true | P1 | PARKED |
 | STG-179 | Menu — release build stamp shows raw SHA and timestamp, not user-friendly version | P2 | OPEN |
-| STG-180 | Menu — Switch Staff alert uses English string literals, not i18n | P2 | OPEN |
+| STG-180 | Menu — Switch Staff alert uses English string literals, not i18n | P2 | PARKED (0409765f, stg-180-2026-03-14) |
 | STG-181 | Menu — billActions (Reprint/Download/Share) all navigate to same SalesHistory | P1 | OPEN |
 | STG-182 | Menu — no haptic feedback on menu item press | P3 | OPEN |
 | STG-183 | Menu — section header margin 24px top but 4px bottom, visually unbalanced | P3 | OPEN |
-| STG-184 | Menu — WhatsApp Support fallback uses "Support Unavailable" English literal | P2 | OPEN |
-| STG-185 | Menu — WhatsApp pre-filled message in English only, no i18n | P2 | OPEN |
+| STG-184 | Menu — WhatsApp Support fallback uses "Support Unavailable" English literal | P2 | PARKED (0409765f, stg-184-2026-03-14) |
+| STG-185 | Menu — WhatsApp pre-filled message in English only, no i18n | P2 | PARKED (0409765f, stg-185-2026-03-14) |
 | STG-186 | Menu — trend badge at 9px font too small to read on budget Android | P2 | OPEN |
 | STG-187 | Menu — trend percentage shows "551%" with no cap or "99%+" formatting | P2 | OPEN |
-| STG-188 | Menu — Payment Modes breakdown shows "Cash: ₹..." raw label, not i18n | P2 | OPEN |
+| STG-188 | Menu — Payment Modes breakdown shows "Cash: ₹..." raw label, not i18n | P2 | PARKED (0409765f, stg-188-2026-03-14) |
 | STG-189 | Menu — Help & Support shows "&amp;" HTML entity instead of "&" | P0 | PARKED |
 | STG-190 | Menu — no skeleton/shimmer loading state for System Status and Today's Sales | P2 | OPEN |
 | STG-191 | Menu — status panel statusBadge uses transparent bg (surfaceAlt), no outline | P3 | OPEN |
 | STG-192 | Menu — menuIcon 36x36 too small for touch targets on budget Android | P2 | OPEN |
-| STG-193 | Menu — "Z-Report and cash reconciliation" subtitle jargon for kirana users | P2 | OPEN |
-| STG-194 | Menu — "Start, end, and view shift history" assumes shift concept familiarity | P3 | OPEN |
-| STG-195 | Menu — "AI & Intelligence" section title too technical, rename to "Smart Insights" | P2 | OPEN |
-| STG-196 | Menu — "Alerts, forecasts, slow movers, expiry tracking" subtitle info-dense | P3 | OPEN |
-| STG-197 | Menu — "Browse and apply for credit offers" subtitle implies retailer is borrowing | P3 | OPEN |
+| STG-193 | Menu — "Z-Report and cash reconciliation" subtitle jargon for kirana users | P2 | PARKED (0409765f, stg-193-2026-03-14) |
+| STG-194 | Menu — "Start, end, and view shift history" assumes shift concept familiarity | P3 | PARKED (0409765f, stg-194-2026-03-14) |
+| STG-195 | Menu — "AI & Intelligence" section title too technical, rename to "Smart Insights" | P2 | PARKED (0409765f, stg-195-2026-03-14) |
+| STG-196 | Menu — "Alerts, forecasts, slow movers, expiry tracking" subtitle info-dense | P3 | PARKED (0409765f, stg-196-2026-03-14) |
+| STG-197 | Menu — "Browse and apply for credit offers" subtitle implies retailer is borrowing | P3 | PARKED (0409765f, stg-197-2026-03-14) |
 | STG-198 | Menu — content padding 16px identical to item padding, creates visual merge | P3 | OPEN |
 | STG-199 | Menu — ScrollView has no scrollbar indicator styling | P3 | OPEN |
 | STG-200 | Enroll — "hello@supermandi.tech" email in error hints, kirana users won't email | P1 | OPEN |
@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | OPEN |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | PARKED (30956d33, stg-492-2026-03-14) |
 
-**Total**: 492 tickets | 62 PARKED | 1 DONE | 0 IN_PROGRESS | 429 OPEN
+**Total**: 492 tickets | 81 PARKED | 1 DONE | 0 IN_PROGRESS | 410 OPEN
 
 ---
 
