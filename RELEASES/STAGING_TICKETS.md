@@ -29,7 +29,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 |---|-------|----------|--------|
 | STG-001 | Supplier self-registration verify fallback | P1 | DONE (uncommitted) |
 | STG-002 | Release APK cold start blank screen before splash | P2 | OPEN |
-| STG-003 | Brand design tokens — unified color palette and spacing | P1 | OPEN |
+| STG-003 | Brand design tokens — unified color palette and spacing | P1 | PARKED (ad959088, stg-003-2026-03-14) |
 | STG-004 | Activation screen — branded redesign with trust signals | P1 | OPEN |
 | STG-005 | Home top bar — declutter status icons and scanner warning | P1 | OPEN |
 | STG-006 | Sync status panel — collapse when healthy, reduce footprint | P2 | OPEN |
@@ -37,7 +37,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-008 | Search/scan area — unified input with clear visual hierarchy | P2 | OPEN |
 | STG-009 | Product cards — full names, stock badges, better thumbnails | P1 | OPEN |
 | STG-010 | Sync Status modal — brand illustrations, plain-language tabs | P3 | OPEN |
-| STG-011 | Typography and spacing system — POS-grade readability | P2 | OPEN |
+| STG-011 | Typography and spacing system — POS-grade readability | P2 | PARKED (1d664947, stg-011-2026-03-14) |
 | STG-012 | Voice FAB — brand-colored, contextual label on first use | P3 | OPEN |
 | STG-013 | FEFO badge — explain or hide jargon for kirana users | P3 | OPEN |
 | STG-014 | DEV MODE banner — hide in production builds | P2 | OPEN |
@@ -142,8 +142,8 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-113 | Payment — no bill/invoice number visible for tracking and disputes | P1 | OPEN |
 | STG-114 | Payment — no cancel/void transaction button | P1 | OPEN |
 | STG-115 | Payment — missing payment methods: Card, Wallet (Paytm/GPay balance) | P2 | OPEN |
-| STG-116 | Payment — Indian lakh number formatting (₹1,45,000 not ₹145,000) | P2 | OPEN |
-| STG-117 | Payment — ".00" always shown on round amounts, add smart formatting | P3 | OPEN |
+| STG-116 | Payment — Indian lakh number formatting (₹1,45,000 not ₹145,000) | P2 | PARKED (cf379529, stg-116-2026-03-14) |
+| STG-117 | Payment — ".00" always shown on round amounts, add smart formatting | P3 | PARKED (2086418c, stg-117-2026-03-14) |
 | STG-118 | Payment — "Retry" button is red (destructive color) for a positive action | P2 | OPEN |
 | STG-119 | Payment — error banner has no dismiss X, persists indefinitely | P2 | OPEN |
 | STG-120 | Payment — no staff name/ID for shift reconciliation and audit | P2 | OPEN |
@@ -257,14 +257,14 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-228 | SellTile — no MRP strikethrough visual when sell price < MRP | P2 | OPEN |
 | STG-229 | SellTile — LOOSE mode "per KG" label not translated | P2 | OPEN |
 | STG-230 | SellTile — brand name not displayed if available | P3 | OPEN |
-| STG-231 | Colors — "accent" and "secondary" are identical (#14B8A6), redundant token | P2 | OPEN |
-| STG-232 | Colors — no dedicated "disabled" color token for greyed-out buttons | P2 | OPEN |
-| STG-233 | Colors — dark mode "ink" is #F8FAFC but light mode "ink" is #0B1220, never used | P3 | OPEN |
-| STG-234 | i18n — status.storeInactive says "Add UPI ID in Superadmin to start billing" | P1 | OPEN |
-| STG-235 | i18n — status.deviceInactive says "Contact Superadmin to enable it" | P1 | OPEN |
-| STG-236 | i18n — errors.deviceAlreadyEnrolled says "Ask Superadmin to reset the token" | P1 | OPEN |
-| STG-237 | i18n — errors.sessionExpired says "Please login again" but POS has no login | P2 | OPEN |
-| STG-238 | i18n — sell.digitiseMode says "Digitise mode on" — jargon for kirana user | P2 | OPEN |
+| STG-231 | Colors — "accent" and "secondary" are identical (#14B8A6), redundant token | P2 | PARKED (c437f8ec, stg-231-2026-03-14) |
+| STG-232 | Colors — no dedicated "disabled" color token for greyed-out buttons | P2 | PARKED (5e2d96c1, stg-232-2026-03-14) |
+| STG-233 | Colors — dark mode "ink" is #F8FAFC but light mode "ink" is #0B1220, never used | P3 | PARKED (b1e8d28e, stg-233-2026-03-14) |
+| STG-234 | i18n — status.storeInactive says "Add UPI ID in Superadmin to start billing" | P1 | PARKED (053ab1a8, stg-234-2026-03-14) |
+| STG-235 | i18n — status.deviceInactive says "Contact Superadmin to enable it" | P1 | PARKED (053ab1a8, stg-235-2026-03-14) |
+| STG-236 | i18n — errors.deviceAlreadyEnrolled says "Ask Superadmin to reset the token" | P1 | PARKED (053ab1a8, stg-236-2026-03-14) |
+| STG-237 | i18n — errors.sessionExpired says "Please login again" but POS has no login | P2 | PARKED (053ab1a8, stg-237-2026-03-14) |
+| STG-238 | i18n — sell.digitiseMode says "Digitise mode on" — jargon for kirana user | P2 | PARKED (053ab1a8, stg-238-2026-03-14) |
 | STG-239 | i18n — purchase.moq "MOQ" acronym not spelled out for kirana users | P2 | OPEN |
 | STG-240 | i18n — tabs use ALL CAPS ("SELL", "PURCHASE", "REORDER") — shouty | P2 | OPEN |
 | STG-241 | i18n — reorder.dismissSuggestedFrom template too complex for Hindi translation | P3 | OPEN |
@@ -509,7 +509,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-480 | BNPL — No early repayment incentive or standing instructions | P3 | OPEN |
 | STG-481 | GUARD: i18n validation script — en/hi key parity check | P0 | OPEN |
 | STG-482 | GUARD: i18n key naming convention document | P0 | OPEN |
-| STG-483 | GUARD: Refactor SellTile.formatPrice() → use formatMoney() | P0 | OPEN |
+| STG-483 | GUARD: Refactor SellTile.formatPrice() → use formatMoney() | P0 | PARKED (3c602bfc, stg-483-2026-03-14) |
 | STG-484 | GUARD: Refactor CartItem + SupplierRow → useThemeColors() hook | P1 | OPEN |
 | STG-485 | GUARD: consent_records table + consent API (DPDP) | P0 | PARKED (7b2e08ab, stg-485-2026-03-14) |
 | STG-486 | GUARD: Encryption key management infra (GCP Secret Manager) | P0 | PARKED (4c2faa79, stg-486-2026-03-14) |
@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | OPEN |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | PARKED (30956d33, stg-492-2026-03-14) |
 
-**Total**: 492 tickets | 17 PARKED | 1 DONE | 0 IN_PROGRESS | 474 OPEN
+**Total**: 492 tickets | 30 PARKED | 1 DONE | 0 IN_PROGRESS | 461 OPEN
 
 ---
 
