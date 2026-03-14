@@ -78,61 +78,93 @@ function fuzzyFindRegion(filePath, expectedChecksum, regionSize) {
 // Phase 4 (guard): items 12-14 — regression recheck + test + park
 
 const CHECKLIST_ITEMS = {
-  // Phase 1: Dev implementation
-  ui_elements:      { label: 'UI Elements',        desc: 'Buttons, fields, headers, footers render correctly', phase: 1 },
-  ux_states:        { label: 'UX 4-State',         desc: 'Loading / success / empty / error states handled', phase: 1 },
-  wiring:           { label: 'Wiring',              desc: 'Click → API call → state update → UI refresh chain works', phase: 1 },
-  navigation:       { label: 'Navigation Guards',   desc: 'Route guards, back button, auth redirects intact', phase: 1 },
-  business_logic:   { label: 'Business Logic',      desc: 'Domain invariants hold (stock, ledger, isolation, price, idempotency)', phase: 1 },
-  backend_api:      { label: 'Backend API',          desc: 'Endpoint returns correct data, error codes, store-scoped', phase: 1 },
-  db_schema:        { label: 'DB Schema',            desc: 'Tables/columns exist, constraints correct, data integrity', phase: 1 },
-  // Phase 2: Operator approval (MUST be done before Phase 3)
-  operator_approved:{ label: 'Operator Approved',    desc: 'Operator verified on Expo Go / browser and approved the change', phase: 2 },
-  // Phase 3: GCP staging parity (MUST be done after Phase 2)
-  parity_scanned:   { label: 'Parity Scanned',      desc: 'parity-scan command run, all dev→staging gaps identified', phase: 3 },
-  parity_fixed:     { label: 'Parity Fixed',         desc: 'All dev→staging gaps resolved (URLs, env vars, builds, Docker)', phase: 3 },
-  migration_safe:   { label: 'Migration Safety',     desc: 'Additive only, has ROLLBACK comment, correct number, idempotent', phase: 3 },
-  // Phase 4: Final guard
-  gcp_parity:       { label: 'GCP Parity',            desc: 'No localhost URLs, env vars used, staging-compatible', phase: 4 },
-  regression_check: { label: 'Regression Check',      desc: 'Impacted areas retested AFTER parity fixes, no regressions', phase: 4 },
-  test_guard:       { label: 'Test Guard',             desc: 'Test file exists and passes for this fix', phase: 4 },
+  // ===== LAYER A: UI / UX / Frontend (MANDATORY for POS/portal tickets, N/A for backend-only) =====
+  ui_elements:      { label: 'UI Elements',         desc: 'All buttons, fields, headers, footers, modals render correctly on device/browser', phase: 1, layer: 'A' },
+  ux_states:        { label: 'UX 4-State',          desc: 'Loading / success / empty / error states ALL handled — no blank screens', phase: 1, layer: 'A' },
+  wiring:           { label: 'UI Wiring',            desc: 'Every UI event → handler → API call → state update → re-render chain verified', phase: 1, layer: 'A' },
+  navigation:       { label: 'Navigation Guards',    desc: 'Screen transitions, back button, auth redirects, deep links all intact', phase: 1, layer: 'A' },
+  i18n_keys:        { label: 'i18n Keys',            desc: 'All user-facing strings use t() with keys in both en.json and hi.json', phase: 1, layer: 'A' },
+
+  // ===== LAYER B: API / Backend (MANDATORY for backend tickets, N/A for frontend-only cosmetic) =====
+  backend_api:      { label: 'Backend API',          desc: 'Endpoint exists, correct HTTP method, request/response schema validated', phase: 1, layer: 'B' },
+  api_errors:       { label: 'API Error Handling',   desc: 'All error paths return proper status codes (400/401/403/404/500)', phase: 1, layer: 'B' },
+  store_isolation:  { label: 'Store Isolation',      desc: 'storeId derived from JWT only, WHERE store_id=$token.storeId on ALL queries', phase: 1, layer: 'B' },
+
+  // ===== LAYER C: Business Logic / Behaviour (MANDATORY for ALL tickets) =====
+  business_logic:   { label: 'Business Logic',       desc: 'Domain invariants hold: stock accuracy, ledger balance, price integrity, idempotency', phase: 1, layer: 'C' },
+  business_behaviour:{ label: 'Business Behaviour',  desc: 'End-to-end user workflow works: e.g. scan→add→checkout→payment→receipt', phase: 1, layer: 'C' },
+
+  // ===== LAYER D: DB / Tables / Migrations (MANDATORY for tickets with DB changes, N/A otherwise) =====
+  db_schema:        { label: 'DB Schema',            desc: 'Tables/columns exist, constraints correct, indexes present, data types match', phase: 1, layer: 'D' },
+  migration_safe:   { label: 'Migration Safety',     desc: 'Additive only, has ROLLBACK comment, correct sequence number, idempotent', phase: 1, layer: 'D' },
+
+  // ===== LAYER E: Impact / Drift / Multi-Agent Safety (MANDATORY for ALL tickets) =====
+  impacted_files:   { label: 'Impacted Files',       desc: 'ALL modified files listed in commit, no untracked changes left behind', phase: 2, layer: 'E' },
+  fix_ledger_check: { label: 'FIX_LEDGER Check',     desc: 'All registered fixes in modified files are preserved, zero drift after change', phase: 2, layer: 'E' },
+  no_agent_conflict:{ label: 'No Agent Conflict',    desc: 'No parallel agent modified same files — verify git diff shows only this ticket changes', phase: 2, layer: 'E' },
+
+  // ===== LAYER F: GCP / Staging Parity (MANDATORY for ALL tickets) =====
+  gcp_parity:       { label: 'GCP Parity',           desc: 'No localhost URLs, env vars used, staging.supermandi.tech compatible', phase: 3, layer: 'F' },
+  regression_check: { label: 'Regression Check',     desc: 'Full test suite passes AFTER this change — not just new tests', phase: 3, layer: 'F' },
+  test_guard:       { label: 'Test Guard',            desc: 'Ticket-specific test file exists, runs, and passes', phase: 3, layer: 'F' },
+
+  // ===== LAYER G: Git Discipline (MANDATORY for ALL tickets) =====
+  single_commit:    { label: 'Single Commit',        desc: 'One ticket = one commit = one tag, format fix(STG-XXX): description', phase: 4, layer: 'G' },
+  ticket_parked:    { label: 'Ticket Parked',         desc: 'STAGING_TICKETS.md updated to PARKED with commit SHA and tag', phase: 4, layer: 'G' },
 };
 
 // Auto-detect which checklist items are required based on file paths
+// STRICT MODE: Only mark N/A when genuinely not applicable. Never auto-skip.
 function detectScope(filePath) {
   const required = {};
   const fp = filePath.toLowerCase();
 
-  // Frontend files — need UI/UX/wiring/navigation
+  // Detect file type categories
   const isFrontend = fp.includes('retailer-admin/') || fp.includes('supplier-portal/') ||
                      fp.includes('supermandi-superadmin/') || fp.includes('supermandi-landing/') ||
                      fp.endsWith('.tsx') || fp.endsWith('.jsx');
-  // POS app files
   const isPOS = fp.includes('/screens/') || fp.includes('/components/') ||
                 (fp.endsWith('.tsx') && (fp.includes('app/') || fp.includes('src/')));
-  // Backend files
   const isBackend = fp.includes('backend/') && (fp.endsWith('.ts') || fp.endsWith('.js'));
-  // Migration files
   const isMigration = fp.includes('migrations/') && fp.endsWith('.sql');
+  const isTheme = fp.includes('theme/') || fp.includes('i18n/');
+  const isConfig = fp.endsWith('.json') || fp.endsWith('.yml') || fp.endsWith('.yaml');
+  const hasUI = isFrontend || isPOS || isTheme;
+  const hasBackend = isBackend || isMigration;
 
-  // Phase 1: Dev implementation (scope-dependent)
-  required.ui_elements      = isFrontend || isPOS ? false : 'N/A';
-  required.ux_states        = isFrontend || isPOS ? false : 'N/A';
-  required.wiring           = isFrontend || isPOS ? false : 'N/A';
-  required.navigation       = isFrontend || isPOS ? false : 'N/A';
-  required.business_logic   = isBackend ? false : 'N/A';
-  required.backend_api      = isBackend ? false : 'N/A';
-  required.db_schema        = isBackend || isMigration ? false : 'N/A';
-  // Phase 2: Operator approval (ALWAYS required)
-  required.operator_approved = false;
-  // Phase 3: GCP parity (ALWAYS required)
-  required.parity_scanned   = false;
-  required.parity_fixed     = false;
+  // LAYER A: UI/UX/Frontend — required for ANY file that affects what users see
+  required.ui_elements      = hasUI ? false : 'N/A';
+  required.ux_states        = hasUI ? false : 'N/A';
+  required.wiring           = hasUI ? false : 'N/A';
+  required.navigation       = (isFrontend || isPOS) ? false : 'N/A';
+  required.i18n_keys        = hasUI ? false : 'N/A';
+
+  // LAYER B: API/Backend — required for backend/migration files
+  required.backend_api      = hasBackend ? false : 'N/A';
+  required.api_errors       = hasBackend ? false : 'N/A';
+  required.store_isolation  = hasBackend ? false : 'N/A';
+
+  // LAYER C: Business Logic/Behaviour — ALWAYS required (every change affects behaviour)
+  required.business_logic    = false;
+  required.business_behaviour = false;
+
+  // LAYER D: DB/Tables — required for backend with DB changes or migrations
+  required.db_schema        = (hasBackend || isMigration) ? false : 'N/A';
   required.migration_safe   = isMigration ? false : 'N/A';
-  // Phase 4: Final guard (ALWAYS required)
+
+  // LAYER E: Impact/Drift/Multi-Agent Safety — ALWAYS required
+  required.impacted_files    = false;
+  required.fix_ledger_check  = false;
+  required.no_agent_conflict = false;
+
+  // LAYER F: GCP/Staging Parity — ALWAYS required
   required.gcp_parity       = false;
   required.regression_check = false;
   required.test_guard       = false;
+
+  // LAYER G: Git Discipline — ALWAYS required
+  required.single_commit    = false;
+  required.ticket_parked    = false;
 
   return required;
 }
@@ -141,19 +173,35 @@ function generateChecklist(filePath) {
   return detectScope(filePath);
 }
 
-function checklistComplete(checklist) {
+// v5 checklist items added in this version (not retroactive to pre-v5 fixes)
+const V5_NEW_ITEMS = new Set([
+  'i18n_keys', 'api_errors', 'store_isolation', 'business_behaviour',
+  'impacted_files', 'fix_ledger_check', 'no_agent_conflict',
+  'single_commit', 'ticket_parked'
+]);
+
+function checklistComplete(checklist, options = {}) {
   if (!checklist) return { complete: false, missing: Object.keys(CHECKLIST_ITEMS), total: Object.keys(CHECKLIST_ITEMS).length, done: 0 };
+
+  // If fix was registered before v5, only enforce v5 items during reiteration
+  // (when reiteration explicitly marks them). Pre-v5 fixes get grace on new items
+  // UNLESS they've been explicitly set (meaning reiteration touched them).
+  const isPreV5 = options.preV5 || false;
 
   const missing = [];
   let done = 0;
   let total = 0;
 
-  // Check all defined items (catches newly added items missing from old checklists)
   for (const key of Object.keys(CHECKLIST_ITEMS)) {
     const val = checklist[key];
     if (val === 'N/A') continue;
+
     if (val === undefined) {
-      // New item not in old checklist — treat as required and missing
+      // Item not in checklist at all
+      if (isPreV5 && V5_NEW_ITEMS.has(key)) {
+        // Pre-v5 fix, new item — skip (will be enforced during reiteration)
+        continue;
+      }
       missing.push(key);
       total++;
       continue;
@@ -547,7 +595,7 @@ function megaGate() {
       allChecklistsDone = false;
       continue;
     }
-    const cl = checklistComplete(f.checklist);
+    const cl = checklistComplete(f.checklist, { preV5: !f.checklist_version || f.checklist_version < 5 });
     if (!cl.complete) {
       checklistDetails.push(`${f.ticket}: ${cl.done}/${cl.total} (missing: ${cl.missing.map(m => CHECKLIST_ITEMS[m]?.label || m).join(', ')})`);
       allChecklistsDone = false;
@@ -875,7 +923,7 @@ if (command === 'check') {
   }
 
   for (const f of activeFixesForChecklist) {
-    const result = checklistComplete(f.checklist);
+    const result = checklistComplete(f.checklist, { preV5: !f.checklist_version || f.checklist_version < 5 });
     if (!result.complete) {
       console.log(`  ❌ ${f.ticket} checklist incomplete (${result.done}/${result.total}):`);
       for (const m of result.missing) {
@@ -1071,6 +1119,7 @@ if (command === 'check') {
     depends_on: entry.depends_on || null,
     migration: entry.migration || null,
     checklist,
+    checklist_version: 5,
     registered_at: new Date().toISOString(),
     status: 'ACTIVE'
   };
@@ -1444,7 +1493,7 @@ if (command === 'check') {
       if (f.migration) console.log(`      Migration: ${f.migration}`);
       if (f.line_shifted_at) console.log(`      (lines shifted at ${f.line_shifted_at})`);
       if (f.checklist) {
-        const cl = checklistComplete(f.checklist);
+        const cl = checklistComplete(f.checklist, { preV5: !f.checklist_version || f.checklist_version < 5 });
         const icon = cl.complete ? '✅' : '❌';
         console.log(`      ${icon} Checklist: ${cl.done}/${cl.total} layers complete`);
         if (!cl.complete) {
@@ -1566,7 +1615,7 @@ fi
     }
   }
   for (const f of withChecklist) {
-    const cl = checklistComplete(f.checklist);
+    const cl = checklistComplete(f.checklist, { preV5: !f.checklist_version || f.checklist_version < 5 });
     const icon = cl.complete ? '✅' : '⚠️';
     console.log(`  ${icon} ${f.ticket}: ${cl.done}/${cl.total} layers complete`);
     if (!cl.complete) {

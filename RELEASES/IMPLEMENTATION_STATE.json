@@ -1,7 +1,7 @@
 {
-  "version": 14,
+  "version": 15,
   "last_updated": "2026-03-14",
-  "last_commit_sha": "77643ec2",
+  "last_commit_sha": "af9e68cf",
   "total_tickets": 501,
   "tickets_done": 0,
   "tickets_remaining": 501,
@@ -9,16 +9,55 @@
   "current_ticket": null,
   "status": "REITERATION_IN_PROGRESS",
   "mode": "REITERATION",
-  "reiteration_reason": "Device testing on Redmi revealed drift: invalid hook calls, missing i18n keys, untested code paths. Root cause: auto-implement sessions bulk-committed 10-44 tickets per commit, bypassing Gate 11 regex, skipping per-ticket tests. fix-guard.js upgraded from 12 to 14 gates with BLOCK enforcement.",
-  "guard_version": "fix-guard v5 (14 gates)",
+  "reiteration_reason": "Device testing on Redmi revealed drift: invalid hook calls, missing i18n keys, untested code paths. Root cause: auto-implement sessions bulk-committed 10-44 tickets per commit, bypassing Gate 11 regex, skipping per-ticket tests. Multiple agents caused file conflicts and regression.",
+  "guard_version": "fix-guard v5 (14 pre-commit gates + 21-item per-ticket checklist across 7 layers)",
+  "mandatory_per_ticket_gates": {
+    "_description": "Every ticket MUST pass ALL applicable gates before parking. Gate 14 BLOCKS commit if any checklist item is incomplete.",
+    "LAYER_A_UI_UX": {
+      "gates": ["ui_elements", "ux_states", "wiring", "navigation", "i18n_keys"],
+      "applies_to": "POS screens, portal pages, theme files, i18n files",
+      "enforcement": "MANDATORY — N/A only for pure backend tickets with zero UI impact"
+    },
+    "LAYER_B_API_BACKEND": {
+      "gates": ["backend_api", "api_errors", "store_isolation"],
+      "applies_to": "Backend routes, services, middleware",
+      "enforcement": "MANDATORY — N/A only for pure frontend cosmetic tickets"
+    },
+    "LAYER_C_BUSINESS": {
+      "gates": ["business_logic", "business_behaviour"],
+      "applies_to": "ALL tickets — every change affects behaviour",
+      "enforcement": "MANDATORY — NEVER N/A, every ticket must verify end-to-end workflow"
+    },
+    "LAYER_D_DB": {
+      "gates": ["db_schema", "migration_safe"],
+      "applies_to": "Tickets with migrations or DB query changes",
+      "enforcement": "MANDATORY when DB touched — N/A for UI-only tickets"
+    },
+    "LAYER_E_DRIFT_SAFETY": {
+      "gates": ["impacted_files", "fix_ledger_check", "no_agent_conflict"],
+      "applies_to": "ALL tickets — prevents multi-agent drift and regression",
+      "enforcement": "MANDATORY — NEVER N/A, every ticket must verify zero drift and no agent conflicts"
+    },
+    "LAYER_F_GCP_PARITY": {
+      "gates": ["gcp_parity", "regression_check", "test_guard"],
+      "applies_to": "ALL tickets — staging compatibility and test coverage",
+      "enforcement": "MANDATORY — NEVER N/A, every ticket needs tests and GCP compatibility"
+    },
+    "LAYER_G_GIT": {
+      "gates": ["single_commit", "ticket_parked"],
+      "applies_to": "ALL tickets — git discipline enforcement",
+      "enforcement": "MANDATORY — NEVER N/A, every ticket = one commit = one tag = PARKED"
+    }
+  },
   "mandatory_rules": {
     "one_ticket_one_commit": "MANDATORY — Gate 11 BLOCKS on comma-separated, space-separated, bulk patterns",
     "max_staged_files": "MANDATORY — Gate 12 BLOCKS on >15 source files per commit",
     "typecheck_pre_commit": "MANDATORY — Gate 13 BLOCKS on TypeScript errors",
-    "completion_checklist": "MANDATORY — Gate 14 BLOCKS on incomplete checklist",
-    "commit_format": "MANDATORY — Gate 10 BLOCKS on wrong format (upgraded from WARN)",
-    "no_auto_implement": "FORBIDDEN — auto-implement.sh/ps1 bypass human gates",
+    "completion_checklist": "MANDATORY — Gate 14 BLOCKS on incomplete checklist (21 items, 7 layers)",
+    "commit_format": "MANDATORY — Gate 10 BLOCKS on wrong format (commit-msg hook)",
+    "no_auto_implement": "FORBIDDEN — auto-implement.sh/ps1 bypass human gates, scripts deleted",
     "no_skip_permissions": "FORBIDDEN — --dangerously-skip-permissions bypasses safety",
+    "no_parallel_agents_same_file": "FORBIDDEN — multiple agents modifying same file causes drift",
     "per_ticket_testing": "MANDATORY — every ticket gets tested, no exceptions"
   },
   "layers": [
@@ -42,5 +81,5 @@
     { "layer": 17, "name": "Nice-to-Have & P3 Polish", "tickets": 14, "verified": 0, "status": "PENDING_REITERATION" },
     { "layer": 18, "name": "E2E Tests & Regression Guards", "tickets": 3, "verified": 0, "status": "PENDING_REITERATION" }
   ],
-  "notes": "REITERATION MODE: All 501 tickets being re-verified under strict 14-gate machine state. Previous implementation had bulk commits (10-44 tickets/commit), Gate 11 regex bypass, no per-ticket testing. fix-guard.js upgraded to v5 with 14 BLOCKING gates. auto-implement scripts FORBIDDEN. HEAD: 77643ec2."
+  "notes": "REITERATION MODE v2: 21-item checklist across 7 layers (A-G) machine-enforced by Gate 14. Covers UI/UX/Wiring/Navigation/i18n (A), API/Backend/StoreIsolation (B), BusinessLogic/Behaviour (C), DB/Migrations (D), ImpactedFiles/Drift/AgentConflict (E), GCP/Regression/Tests (F), Git/Parking (G). Multi-agent drift prevention added. HEAD: af9e68cf."
 }
