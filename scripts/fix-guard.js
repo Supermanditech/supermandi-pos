@@ -325,7 +325,8 @@ function checkStagedFiles() {
   // FM-22: Check FIX_LEDGER.json is included when source files are staged
   const hasSourceChanges = stagedFiles.some(f =>
     (f.endsWith('.ts') || f.endsWith('.tsx') || f.endsWith('.js') || f.endsWith('.jsx') || f.endsWith('.sql')) &&
-    !f.includes('RELEASES/') && !f.includes('scripts/fix-guard')
+    !f.includes('RELEASES/') && !f.includes('scripts/fix-guard') &&
+    !f.includes('.test.') && !f.includes('__tests__') && !f.includes('.spec.')
   );
   const hasLedger = stagedFiles.includes('RELEASES/FIX_LEDGER.json');
 
