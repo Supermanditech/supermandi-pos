@@ -65,14 +65,14 @@ export default function ChatListScreen({ onSelectConversation, onContactSupport,
     conversationContent: { flex: 1 },
     conversationHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
     conversationName: { fontSize: 15, fontWeight: '600', color: colors.textPrimary, flex: 1, marginRight: 8 },
-    timestamp: { fontSize: 11, color: colors.textTertiary },
+    timestamp: { fontSize: 12, color: colors.textTertiary },
     conversationFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     preview: { fontSize: 13, color: colors.textTertiary, flex: 1, marginRight: 8 },
     badge: {
       minWidth: 20, height: 20, borderRadius: 10, backgroundColor: colors.primary,
       alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6,
     },
-    badgeText: { color: colors.textInverse, fontSize: 11, fontWeight: '700' },
+    badgeText: { color: colors.textInverse, fontSize: 12, fontWeight: '700' },
   }), [colors]);
 
   const insets = useSafeAreaInsets();

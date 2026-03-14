@@ -143,8 +143,8 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
     } catch (error) {
       if (__DEV__) console.error("[CreditScreen] Failed to load data:", error);
       Alert.alert(
-        t("credit.errorTitle", "Error"),
-        t("credit.loadError", "Failed to load credit information. Please try again.")
+        t("credit.errorTitle", "Connection Error"),
+        t("credit.loadError", "Failed to load credit information. Check your connection and try again.")
       );
     } finally {
       setLoading(false);
@@ -233,7 +233,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
       } else {
         setApplyModal((prev) => ({
           ...prev,
-          error: response.error || t("credit.applyError", "Failed to submit application"),
+          error: response.error || t("credit.applyError", "Failed to submit application. Check your connection and try again."),
           loading: false,
         }));
       }
@@ -241,7 +241,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
     const error = asError(_error);
       setApplyModal((prev) => ({
         ...prev,
-        error: error.message || t("credit.applyError", "Failed to submit application"),
+        error: error.message || t("credit.applyError", "Failed to submit application. Check your connection and try again."),
         loading: false,
       }));
     }
@@ -1119,7 +1119,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     color: colors.textPrimary,
   },
   factorLabel: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textTertiary,
     marginTop: 2,
     textAlign: "center",
@@ -1187,7 +1187,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderRadius: theme.borderRadius.full,
   },
   interestFreeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
     color: colors.success,
   },
@@ -1212,7 +1212,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     backgroundColor: colors.border,
   },
   offerDetailLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textTertiary,
     marginBottom: 2,
   },
@@ -1222,7 +1222,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     color: colors.textPrimary,
   },
   offerValidity: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textTertiary,
     textAlign: "center",
     marginBottom: theme.spacing.md,
@@ -1274,7 +1274,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderRadius: theme.borderRadius.full,
   },
   loanStatusText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
     color: colors.success,
   },
@@ -1284,7 +1284,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     marginBottom: theme.spacing.md,
   },
   loanAmountLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textTertiary,
     marginBottom: 2,
   },
@@ -1314,7 +1314,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     alignItems: "center",
   },
   loanDetailLabel: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textTertiary,
     marginBottom: 2,
   },
@@ -1338,7 +1338,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderRadius: 3,
   },
   loanProgressText: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textTertiary,
     textAlign: "center",
   },
@@ -1365,7 +1365,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderRadius: theme.borderRadius.full,
   },
   historyStatusText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   historyDetails: {

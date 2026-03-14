@@ -379,7 +379,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       color: colors.border,
     },
     customerLastVisit: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
       marginTop: 2,
     },
@@ -502,7 +502,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       color: colors.textPrimary,
     },
     statLabel: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
       marginTop: 4,
       textAlign: "center",
@@ -551,11 +551,11 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       marginTop: 4,
     },
     purchaseMetaText: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
     },
     purchaseMetaDivider: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.border,
     },
     purchaseAmount: {
@@ -618,13 +618,14 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
           style={styles.searchInput}
           placeholder={t("customerList.searchPlaceholder")}
           placeholderTextColor={colors.textTertiary}
+          accessibilityLabel="Search customers"
           value={searchQuery}
           onChangeText={handleSearch}
           autoCapitalize="none"
           returnKeyType="search"
         />
         {searchQuery.length > 0 && (
-          <Pressable accessibilityRole="button" onPress={() => handleSearch("")} hitSlop={8}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => handleSearch("")} hitSlop={8}>
             <MaterialCommunityIcons name="close-circle" size={18} color={colors.textTertiary} />
           </Pressable>
         )}
@@ -785,6 +786,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               style={styles.formInput}
               placeholder={t("customerList.namePlaceholder")}
               placeholderTextColor={colors.textTertiary}
+              accessibilityLabel="Customer name"
               value={formName}
               onChangeText={setFormName}
             />
@@ -794,6 +796,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               style={styles.formInput}
               placeholder={t("customerList.phonePlaceholder")}
               placeholderTextColor={colors.textTertiary}
+              accessibilityLabel="Customer phone number"
               value={formPhone}
               onChangeText={setFormPhone}
               keyboardType="phone-pad"
@@ -805,6 +808,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               style={styles.formInput}
               placeholder={t("customerList.emailPlaceholder")}
               placeholderTextColor={colors.textTertiary}
+              accessibilityLabel="Customer email"
               value={formEmail}
               onChangeText={setFormEmail}
               keyboardType="email-address"
@@ -816,6 +820,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               style={[styles.formInput, styles.formTextArea]}
               placeholder={t("customerList.addressPlaceholder")}
               placeholderTextColor={colors.textTertiary}
+              accessibilityLabel="Customer address"
               value={formAddress}
               onChangeText={setFormAddress}
               multiline
@@ -860,6 +865,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               style={styles.formInput}
               placeholder={t("customerList.namePlaceholder")}
               placeholderTextColor={colors.textTertiary}
+              accessibilityLabel="Customer name"
               value={formName}
               onChangeText={setFormName}
             />
@@ -867,6 +873,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
             <Text style={styles.formLabel}>{t("customerList.phoneReadOnly")}</Text>
             <TextInput
               style={[styles.formInput, styles.formInputDisabled]}
+              accessibilityLabel="Customer phone number, read only"
               value={formPhone}
               editable={false}
             />
@@ -876,6 +883,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               style={styles.formInput}
               placeholder={t("customerList.emailPlaceholder")}
               placeholderTextColor={colors.textTertiary}
+              accessibilityLabel="Customer email"
               value={formEmail}
               onChangeText={setFormEmail}
               keyboardType="email-address"
@@ -887,6 +895,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               style={[styles.formInput, styles.formTextArea]}
               placeholder={t("customerList.addressPlaceholder")}
               placeholderTextColor={colors.textTertiary}
+              accessibilityLabel="Customer address"
               value={formAddress}
               onChangeText={setFormAddress}
               multiline

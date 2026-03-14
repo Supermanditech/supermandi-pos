@@ -173,7 +173,7 @@ export default function SalesHistoryScreen() {
       borderColor: colors.border
     },
     badgeText: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: "700",
       color: colors.textSecondary
     },

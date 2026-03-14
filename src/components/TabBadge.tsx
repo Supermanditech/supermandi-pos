@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
   badgeTextMedium: {
-    fontSize: 11,
+    fontSize: 12,
   },
 });
 

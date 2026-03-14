@@ -2011,7 +2011,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   notificationBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.textInverse, // STG-053: use theme token instead of hardcoded #FFFFFF
   },
   // STG-251: Pending dot indicator for daily closing
   pendingDot: {

@@ -1085,7 +1085,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     justifyContent: "center",
   },
   halfSegmentText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     color: colors.textSecondary,
   },
@@ -1154,7 +1154,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     gap: 4,
   },
   barcodeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "monospace",
     color: colors.textTertiary,
   },
@@ -1196,7 +1196,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     flex: 1,
   },
   priceLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "600",
     color: colors.textSecondary,
     marginBottom: 2,
@@ -1232,7 +1232,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     paddingHorizontal: 4,
   },
   cartBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
     color: colors.textInverse,
   },
@@ -1298,7 +1298,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   // UI-006: Demo mode indicator
   demoModeIndicator: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "600",
     color: colors.warning,
     marginTop: 2,
@@ -1336,7 +1336,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderColor: colors.warning,
   },
   emptyStateBlockerLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     color: colors.warning,
     textTransform: "uppercase",
@@ -1396,7 +1396,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     paddingVertical: 2,
   },
   supplierBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "600",
     color: colors.primary,
   },

@@ -234,7 +234,7 @@ export default function BillDetailScreen() {
       color: colors.primaryDark,
     },
     itemUnit: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textSecondary,
     },
     footer: {

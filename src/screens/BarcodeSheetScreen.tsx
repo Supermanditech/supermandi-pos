@@ -1317,7 +1317,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     backgroundColor: colors.surface,
   },
   paginationBtnDisabled: {
-    opacity: 0.4,
+    opacity: 0.5,
   },
   paginationText: {
     fontSize: 12,

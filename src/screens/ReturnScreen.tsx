@@ -416,7 +416,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
       backgroundColor: colors.surfaceAlt,
     },
     qtyButtonDisabled: {
-      opacity: 0.4,
+      opacity: 0.5,
     },
     qtyValue: {
       fontSize: 16,

@@ -291,11 +291,11 @@ export default function CustomerManagementScreen({
       marginTop: 4,
     },
     customerMetaText: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
     },
     customerMetaDot: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
     },
     // FAB
@@ -450,7 +450,7 @@ export default function CustomerManagementScreen({
       textAlign: "center",
     },
     statLabel: {
-      fontSize: 10,
+      fontSize: 12,
       color: colors.textTertiary,
       textAlign: "center",
     },
@@ -484,7 +484,7 @@ export default function CustomerManagementScreen({
       color: colors.textPrimary,
     },
     purchaseDate: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
       marginTop: 2,
     },

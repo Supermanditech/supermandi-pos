@@ -928,7 +928,7 @@ function CartItemRow({
   // STG-134: Swipe-to-delete wrapper
   const renderSwipeDeleteAction = () => (
     <View style={styles.swipeDeletePanel}>
-      <MaterialCommunityIcons name="trash-can-outline" size={22} color="#fff" />
+      <MaterialCommunityIcons name="trash-can-outline" size={22} color={colors.textInverse} />
       <Text style={styles.swipeDeleteText}>Delete</Text>
     </View>
   );
@@ -4993,7 +4993,7 @@ export default function SellScanScreen({
                 disabled={managerApprovalBusy || !managerPhone.trim() || !managerPin.trim()}
               >
                 {managerApprovalBusy ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color={colors.textInverse} />
                 ) : (
                   <Text style={styles.onboardingButtonTextInverse}>
                     {t("sell.approveDiscount", "Approve")}
@@ -5838,7 +5838,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     justifyContent: "center",
   },
   qtyButtonDisabled: {
-    opacity: 0.3,
+    opacity: 0.5,
     borderColor: colors.border,
   },
   qtyValue: {
@@ -5930,7 +5930,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     padding: 8,
   },
   removeItemButtonDisabled: {
-    opacity: 0.4,
+    opacity: 0.5,
     backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
   },
@@ -6885,7 +6885,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     marginVertical: 2,
   },
   swipeDeleteText: {
-    color: "#fff",
+    color: colors.textInverse, // STG-053: use theme token instead of hardcoded #fff
     fontSize: 12,
     fontWeight: "600",
     marginTop: 2,

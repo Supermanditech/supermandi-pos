@@ -1027,7 +1027,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     backgroundColor: colors.border,
   },
   summaryLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textTertiary,
     marginBottom: 4,
   },
@@ -1054,7 +1054,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderRadius: 3,
   },
   creditHint: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textTertiary,
     textAlign: "center",
     marginTop: theme.spacing.xs,
@@ -1103,7 +1103,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderRadius: theme.borderRadius.full,
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   drawdownDetails: {

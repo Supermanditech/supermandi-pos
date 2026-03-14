@@ -1502,7 +1502,7 @@ export default function PosRootLayout() {
                   <MaterialCommunityIcons
                     name={torchEnabled ? "flashlight" : "flashlight-off"}
                     size={22}
-                    color="#fff"
+                    color={tc.textInverse}
                   />
                 </Pressable>
                 <Pressable

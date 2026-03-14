@@ -7,7 +7,7 @@ import {
   Text,
   StyleSheet,
   Modal,
-  TouchableOpacity,
+  Pressable,
   TextInput,
   Alert,
   ActivityIndicator,
@@ -528,10 +528,12 @@ export function SplitPaymentModal({
           const active = selectedMethods.has(method);
           const icon = method === "UPI" ? "qrcode-scan" : method === "CASH" ? "cash" : "calendar-clock";
           return (
-            <TouchableOpacity
+            <Pressable
               key={method}
               style={[styles.methodToggle, active && styles.methodToggleActive]}
               onPress={() => toggleMethod(method)}
+              android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
+              accessibilityLabel={`Toggle ${method} payment method`}
             >
               <MaterialCommunityIcons
                 name={icon as any}
@@ -543,7 +545,7 @@ export function SplitPaymentModal({
               >
                 {method}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </View>
@@ -616,20 +618,22 @@ export function SplitPaymentModal({
       </View>
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
+        <Pressable style={styles.cancelBtn} onPress={onClose} android_ripple={{ color: 'rgba(0,0,0,0.1)' }} accessibilityLabel="Cancel split payment">
           <Text style={styles.cancelBtnText}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </Pressable>
+        <Pressable
           style={[styles.proceedBtn, !isValid && styles.btnDisabled]}
           onPress={handleProceed}
           disabled={!isValid || loading}
+          android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
+          accessibilityLabel="Proceed with split payment"
         >
           {loading ? (
             <ActivityIndicator color={theme.colors.textInverse} size="small" />
           ) : (
             <Text style={styles.proceedBtnText}>Proceed</Text>
           )}
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </>
   );
@@ -691,39 +695,45 @@ export function SplitPaymentModal({
             onChangeText={setManualUtr}
             autoCapitalize="characters"
           />
-          <TouchableOpacity
+          <Pressable
             style={[styles.proceedBtn, (manualUtr.trim().length < 6 || verifyingManualUtr) && styles.btnDisabled]}
             onPress={handleManualUtrSubmit}
             disabled={manualUtr.trim().length < 6 || verifyingManualUtr}
+            android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
+            accessibilityLabel="Verify UTR and proceed"
           >
             {verifyingManualUtr ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={theme.colors.textInverse} />
             ) : (
               <Text style={styles.proceedBtnText}>Verify UTR & Proceed</Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
 
       <View style={styles.actions}>
-        <TouchableOpacity
+        <Pressable
           style={styles.cancelBtn}
           onPress={onClose}
           disabled={verifyingUpi}
+          android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
+          accessibilityLabel="Cancel UPI payment"
         >
           <Text style={styles.cancelBtnText}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </Pressable>
+        <Pressable
           style={[styles.proceedBtn, verifyingUpi && styles.btnDisabled]}
           onPress={handleUpiReceived}
           disabled={verifyingUpi}
+          android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
+          accessibilityLabel="Verify UPI and proceed"
         >
           {verifyingUpi ? (
             <ActivityIndicator color={theme.colors.textInverse} size="small" />
           ) : (
             <Text style={styles.proceedBtnText}>Verify & Proceed</Text>
           )}
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </>
   );
@@ -755,17 +765,19 @@ export function SplitPaymentModal({
       </View>
 
       <View style={styles.actions}>
-        <TouchableOpacity
+        <Pressable
           style={styles.proceedBtn}
           onPress={handleCashReceived}
           disabled={loading}
+          android_ripple={{ color: 'rgba(0,0,0,0.1)' }}
+          accessibilityLabel="Confirm cash received"
         >
           {loading ? (
             <ActivityIndicator color={theme.colors.textInverse} size="small" />
           ) : (
             <Text style={styles.proceedBtnText}>Cash Received</Text>
           )}
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </>
   );
@@ -800,13 +812,13 @@ export function SplitPaymentModal({
     >
       <View style={styles.overlay}>
         <View style={styles.container}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+          <Pressable style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close split payment modal">
             <MaterialCommunityIcons
               name="close"
               size={24}
               color={theme.colors.textSecondary}
             />
-          </TouchableOpacity>
+          </Pressable>
 
           {/* GO-LIVE-247: Step progress indicator for clearer UX */}
           <View style={styles.stepIndicator}>
@@ -905,7 +917,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   stepLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "600",
     color: theme.colors.textTertiary,
     textTransform: "uppercase",

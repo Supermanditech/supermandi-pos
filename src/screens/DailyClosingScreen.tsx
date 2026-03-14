@@ -226,9 +226,9 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
 
       {/* STG-312: Offline banner */}
       {isOffline && (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs, backgroundColor: "#FEF3C7", paddingVertical: theme.spacing.xs, paddingHorizontal: theme.spacing.md }}>
-          <MaterialCommunityIcons name="wifi-off" size={16} color="#92400E" />
-          <Text style={{ fontSize: 12, color: "#92400E", flex: 1 }}>{t("dailyClosing.offlineBanner")}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs, backgroundColor: colors.warningSoft, paddingVertical: theme.spacing.xs, paddingHorizontal: theme.spacing.md }}>
+          <MaterialCommunityIcons name="wifi-off" size={16} color={colors.warningDark} />
+          <Text style={{ fontSize: 12, color: colors.warningDark, flex: 1 }}>{t("dailyClosing.offlineBanner")}</Text>
         </View>
       )}
 
@@ -567,7 +567,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderRadius: 20,
   },
   dateArrowDisabled: {
-    opacity: 0.4,
+    opacity: 0.5,
   },
   dateDisplay: {
     flexDirection: "row",
@@ -580,7 +580,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     color: colors.textPrimary,
   },
   dateTodayBadge: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
     color: colors.primary,
     backgroundColor: colors.primaryLight,
@@ -732,7 +732,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderRadius: theme.borderRadius.full,
   },
   historyBadgeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
   },
   historyDetails: {
@@ -754,7 +754,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     color: colors.textPrimary,
   },
   historyClosedBy: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textTertiary,
     marginTop: theme.spacing.sm,
     paddingTop: theme.spacing.sm,

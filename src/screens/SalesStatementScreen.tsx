@@ -145,7 +145,7 @@ function createStyles(colors: ColorPalette) {
       color: colors.primaryDark,
     },
     summaryLabel: {
-      fontSize: 10,
+      fontSize: 12,
       color: colors.textSecondary,
       marginTop: 2,
     },
@@ -234,7 +234,7 @@ function createStyles(colors: ColorPalette) {
       color: colors.textPrimary,
     },
     cardDate: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textSecondary,
     },
     cardBody: {
@@ -251,7 +251,7 @@ function createStyles(colors: ColorPalette) {
       alignItems: "flex-end",
     },
     cardStatLabel: {
-      fontSize: 10,
+      fontSize: 12,
       fontWeight: "600",
       color: colors.textSecondary,
     },

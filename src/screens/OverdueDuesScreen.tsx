@@ -159,7 +159,7 @@ export default function OverdueDuesScreen({
       backgroundColor: colors.border,
     },
     summaryLabel: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
       marginBottom: 4,
     },
@@ -203,7 +203,7 @@ export default function OverdueDuesScreen({
       borderRadius: theme.borderRadius.full,
     },
     severityText: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: "600",
     },
     cardDetails: {
@@ -239,7 +239,7 @@ export default function OverdueDuesScreen({
       borderRadius: theme.borderRadius.sm,
     },
     reminderSentText: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.success,
       fontWeight: "500",
     },

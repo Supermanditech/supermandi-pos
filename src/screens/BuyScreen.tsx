@@ -494,7 +494,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <Pressable accessibilityRole="button" onPress={handleClearSearch} style={styles.clearIcon}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={handleClearSearch} style={styles.clearIcon}>
               <MaterialCommunityIcons
                 name="close-circle"
                 size={18}
@@ -505,7 +505,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
         </View>
 
         {onOpenScanner && (
-          <Pressable accessibilityRole="button" style={styles.scanButton} onPress={onOpenScanner}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Scan barcode" style={styles.scanButton} onPress={onOpenScanner}>
             <MaterialCommunityIcons
               name="barcode-scan"
               size={24}
@@ -649,7 +649,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           {debouncedQuery && (
             <View style={styles.activeFilterChip}>
               <Text style={styles.activeFilterText}>"{debouncedQuery}"</Text>
-              <Pressable accessibilityRole="button" onPress={handleClearSearch}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Remove search filter" onPress={handleClearSearch}>
                 <MaterialCommunityIcons name="close" size={14} color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -657,7 +657,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           {selectedCategory && (
             <View style={styles.activeFilterChip}>
               <Text style={styles.activeFilterText}>{selectedCategory}</Text>
-              <Pressable accessibilityRole="button" onPress={() => setSelectedCategory(null)}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Remove category filter" onPress={() => setSelectedCategory(null)}>
                 <MaterialCommunityIcons name="close" size={14} color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -665,7 +665,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           {selectedStockStatus !== "all" && (
             <View style={styles.activeFilterChip}>
               <Text style={styles.activeFilterText}>{selectedStockStatus.replace("_", " ")}</Text>
-              <Pressable accessibilityRole="button" onPress={() => setSelectedStockStatus("all")}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Remove stock filter" onPress={() => setSelectedStockStatus("all")}>
                 <MaterialCommunityIcons name="close" size={14} color={colors.textSecondary} />
               </Pressable>
             </View>

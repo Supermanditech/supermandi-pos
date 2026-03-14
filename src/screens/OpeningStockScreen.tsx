@@ -383,7 +383,7 @@ export default function OpeningStockScreen({
       color: colors.textPrimary,
     },
     searchResultBarcode: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
       marginTop: 2,
     },
@@ -394,7 +394,7 @@ export default function OpeningStockScreen({
       borderRadius: theme.borderRadius.sm,
     },
     hasStockText: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: "600",
       color: colors.warning,
     },
@@ -423,7 +423,7 @@ export default function OpeningStockScreen({
       color: colors.textPrimary,
     },
     entryBarcode: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
       marginTop: 2,
     },
@@ -587,6 +587,7 @@ export default function OpeningStockScreen({
             style={styles.searchInput}
             placeholder={t("openingStock.searchPlaceholder")}
             placeholderTextColor={colors.textTertiary}
+            accessibilityLabel="Search products"
             value={searchQuery}
             onChangeText={handleSearchQueryChange}
             returnKeyType="search"
@@ -665,6 +666,7 @@ export default function OpeningStockScreen({
                 }
                 placeholder={t("openingStock.qty")}
                 placeholderTextColor={colors.textTertiary}
+                accessibilityLabel={`Quantity for ${item.productName}`}
                 keyboardType="numeric"
                 maxLength={6}
               />

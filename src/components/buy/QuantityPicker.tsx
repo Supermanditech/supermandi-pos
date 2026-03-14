@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     height: 32,
   },
   buttonDisabled: {
-    opacity: 0.4,
+    opacity: 0.5,
   },
   input: {
     minWidth: 50,

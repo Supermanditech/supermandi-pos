@@ -758,6 +758,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                     style={styles.cashInput}
                     placeholder="0.00"
                     placeholderTextColor={colors.textTertiary}
+                    accessibilityLabel="Closing cash amount"
                     value={closingCash}
                     onChangeText={setClosingCash}
                     keyboardType="decimal-pad"
@@ -803,6 +804,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                   style={[styles.formInput, styles.formTextArea]}
                   placeholder={t("shift.notesPlaceholder")}
                   placeholderTextColor={colors.textTertiary}
+                  accessibilityLabel="Shift end notes"
                   value={endNotes}
                   onChangeText={setEndNotes}
                   multiline
@@ -843,6 +845,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                     style={styles.cashInput}
                     placeholder="0.00"
                     placeholderTextColor={colors.textTertiary}
+                    accessibilityLabel="Opening cash amount"
                     value={openingCash}
                     onChangeText={setOpeningCash}
                     keyboardType="decimal-pad"

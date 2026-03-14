@@ -267,7 +267,7 @@ export default function DailyReportScreen({
         setReport(null);
       } else {
         if (__DEV__) console.error("[DailyReportScreen] Failed to load report:", e);
-        setError(e?.message || "Failed to load daily report");
+        setError(e?.message || "Failed to load daily report. Check your connection and try again.");
       }
     } finally {
       setLoading(false);
@@ -395,7 +395,7 @@ export default function DailyReportScreen({
       justifyContent: "center",
     },
     dateArrowDisabled: {
-      opacity: 0.3,
+      opacity: 0.5,
     },
     dateCenter: {
       alignItems: "center",
@@ -406,7 +406,7 @@ export default function DailyReportScreen({
       color: colors.textPrimary,
     },
     dateBadge: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: "600",
       color: colors.primary,
       marginTop: 2,
@@ -439,7 +439,7 @@ export default function DailyReportScreen({
       marginBottom: 4,
     },
     summaryLabel: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
     },
     sectionTitle: {
@@ -559,9 +559,9 @@ export default function DailyReportScreen({
 
       {/* STG-312: Offline banner */}
       {isOffline && (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs, backgroundColor: "#FEF3C7", paddingVertical: theme.spacing.xs, paddingHorizontal: theme.spacing.md }}>
-          <MaterialCommunityIcons name="wifi-off" size={16} color="#92400E" />
-          <Text style={{ fontSize: 12, color: "#92400E", flex: 1 }}>{t("dailyReport.offlineBanner")}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs, backgroundColor: colors.warningSoft, paddingVertical: theme.spacing.xs, paddingHorizontal: theme.spacing.md }}>
+          <MaterialCommunityIcons name="wifi-off" size={16} color={colors.warningDark} />
+          <Text style={{ fontSize: 12, color: colors.warningDark, flex: 1 }}>{t("dailyReport.offlineBanner")}</Text>
         </View>
       )}
 

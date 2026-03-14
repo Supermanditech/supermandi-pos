@@ -330,7 +330,8 @@
     "adjustStockTitle": "स्टॉक एडजस्ट करें",
     "adjustStockMessage": "{{name}} के लिए सही स्टॉक मात्रा दर्ज करें:",
     "adjust": "एडजस्ट",
-    "stockAdjusted": "{{name}} का स्टॉक {{count}} पर अपडेट किया गया"
+    "stockAdjusted": "{{name}} का स्टॉक {{count}} पर अपडेट किया गया",
+    "perKg": "प्रति KG"
   },
   "limitedMode": {
     "badge": "सीमित मोड",
@@ -394,8 +395,8 @@
     "supplierCount_plural": "{{count}} सप्लायर",
     "selectSupplier": "सप्लायर चुनें",
     "productDetails": "उत्पाद विवरण",
-    "failedToLoad": "उत्पाद लोड करने में विफल। रिफ्रेश करने के लिए खींचें।",
-    "failedToRefresh": "रिफ्रेश विफल। पुनः प्रयास करें।",
+    "failedToLoad": "उत्पाद लोड करने में विफल। अपना कनेक्शन जांचें और रिफ्रेश करने के लिए खींचें।",
+    "failedToRefresh": "रिफ्रेश विफल। अपना कनेक्शन जांचें और पुनः प्रयास करें।",
     "offlineCachedCatalog": "आप ऑफ़लाइन हैं — कैश्ड कैटलॉग दिखा रहे हैं",
     "showingCachedData": "कैश्ड डेटा दिखा रहे हैं{{age}}",
     "bnplAvailable": "BNPL",

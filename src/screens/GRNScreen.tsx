@@ -416,6 +416,8 @@ export default function GRNScreen({
         {bulkMode && (
           <Pressable
             accessibilityRole="checkbox"
+            accessibilityState={{ checked: selectedItems.has(item.id) }}
+            accessibilityLabel={`Select ${item.productName || "item"}`}
             style={styles.bulkCheckbox}
             onPress={() => handleToggleItemSelection(item.id)}
           >
@@ -541,13 +543,14 @@ export default function GRNScreen({
             style={styles.searchInput}
             placeholder={t("grn.searchPlaceholder")}
             placeholderTextColor={colors.textTertiary}
+            accessibilityLabel="Search purchase orders"
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
           />
           {searchQuery.length > 0 && (
-            <Pressable accessibilityRole="button" onPress={() => setSearchQuery("")}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setSearchQuery("")}>
               <MaterialCommunityIcons
                 name="close-circle"
                 size={18}
@@ -630,6 +633,7 @@ export default function GRNScreen({
           style={styles.notesInput}
           placeholder={t("grn.notesPlaceholder")}
           placeholderTextColor={colors.textTertiary}
+          accessibilityLabel="GRN notes"
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -774,7 +778,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     alignSelf: "flex-start",
   },
   reorderBadgeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
     color: colors.primary,
   },
@@ -889,7 +893,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     alignItems: "center",
   },
   summaryLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textTertiary,
     textTransform: "uppercase",
   },
@@ -941,7 +945,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     borderRadius: theme.borderRadius.sm,
   },
   bulkSelectButtonText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "500",
     color: colors.primary,
   },

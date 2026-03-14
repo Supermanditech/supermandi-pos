@@ -79,7 +79,8 @@ function packSizeLabel(
   rateUnit: string | null | undefined
 ): string | null {
   if (mode === "LOOSE") {
-    return rateUnit ? `per ${rateUnit}` : null;
+    // STG-229: i18n applied by caller — this returns null as fallback
+    return null;
   }
   if (value != null && unit) {
     return `${value} ${unit}`;
@@ -175,7 +176,10 @@ export function SellTile({ product, onPress, testID }: SellTileProps) {
 
   // --- Pack size ---
   const packSizeRaw = packSizeLabel(mode, net_content_value, net_content_unit, rate_unit);
-  const packSize = mode === "LOOSE" && rate_unit ? t("components.sellTile.perUnit", { unit: rate_unit }) : packSizeRaw;
+  // STG-229: Use sell.perKg for KG units; generic perUnit for others — no hardcoded English
+  const packSize = mode === "LOOSE" && rate_unit
+    ? (rate_unit.toUpperCase() === "KG" ? t("sell.perKg") : t("components.sellTile.perUnit", { unit: rate_unit }))
+    : packSizeRaw;
 
   // --- Stock badge ---
   const stockCount =

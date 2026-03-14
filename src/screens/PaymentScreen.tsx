@@ -15,7 +15,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Pressable,
   Alert,
   BackHandler,
@@ -1537,7 +1536,7 @@ const PaymentScreen = () => {
       marginLeft: 8,
     },
     retryButtonText: {
-      color: "#fff",
+      color: colors.textInverse, // STG-053: use theme token instead of hardcoded #fff
       fontSize: 13,
       fontWeight: "600",
     },

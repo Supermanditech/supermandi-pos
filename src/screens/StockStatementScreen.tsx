@@ -100,7 +100,7 @@ function createStyles(colors: ColorPalette) {
       color: colors.primaryDark,
     },
     summaryLabel: {
-      fontSize: 10,
+      fontSize: 12,
       color: colors.textSecondary,
       marginTop: 2,
     },
@@ -186,11 +186,11 @@ function createStyles(colors: ColorPalette) {
       borderRadius: 3,
     },
     statusText: {
-      fontSize: 10,
+      fontSize: 12,
       fontWeight: "700",
     },
     cardBarcode: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textSecondary,
       marginTop: 4,
     },
@@ -207,7 +207,7 @@ function createStyles(colors: ColorPalette) {
       alignItems: "flex-end",
     },
     cardStatLabel: {
-      fontSize: 10,
+      fontSize: 12,
       fontWeight: "600",
       color: colors.textSecondary,
     },

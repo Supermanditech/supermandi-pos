@@ -330,7 +330,8 @@
     "adjustStockTitle": "Adjust Stock",
     "adjustStockMessage": "Enter corrected stock quantity for {{name}}:",
     "adjust": "Adjust",
-    "stockAdjusted": "Stock updated to {{count}} for {{name}}"
+    "stockAdjusted": "Stock updated to {{count}} for {{name}}",
+    "perKg": "per KG"
   },
   "limitedMode": {
     "badge": "LIMITED MODE",
@@ -394,8 +395,8 @@
     "supplierCount_plural": "{{count}} suppliers",
     "selectSupplier": "Select Supplier",
     "productDetails": "Product Details",
-    "failedToLoad": "Failed to load products. Pull to refresh.",
-    "failedToRefresh": "Failed to refresh. Try again.",
+    "failedToLoad": "Failed to load products. Check your connection and pull to refresh.",
+    "failedToRefresh": "Failed to refresh. Check your connection and try again.",
     "offlineCachedCatalog": "You're offline — showing cached catalog",
     "showingCachedData": "Showing cached data{{age}}",
     "bnplAvailable": "BNPL",

@@ -576,7 +576,7 @@ function OrderItemRow({ item, isLast }: OrderItemRowProps) {
       marginBottom: 2,
     },
     itemBarcode: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
       marginBottom: 4,
     },
@@ -596,7 +596,7 @@ function OrderItemRow({ item, isLast }: OrderItemRowProps) {
       alignItems: "flex-end",
     },
     itemUnitPrice: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
       marginBottom: 2,
     },
@@ -735,7 +735,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     borderRadius: 3,
   },
   progressText: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textTertiary,
     marginTop: 4,
     textAlign: "right",
@@ -776,7 +776,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     minWidth: 100,
   },
   infoLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textTertiary,
     marginBottom: 2,
   },
@@ -792,7 +792,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     borderTopColor: colors.border,
   },
   notesLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textTertiary,
     marginBottom: 4,
   },
@@ -820,7 +820,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     marginBottom: 2,
   },
   itemBarcode: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textTertiary,
     marginBottom: 4,
   },
@@ -840,7 +840,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     alignItems: "flex-end",
   },
   itemUnitPrice: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textTertiary,
     marginBottom: 2,
   },

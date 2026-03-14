@@ -948,7 +948,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     gap: 4,
   },
   itemFieldLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "600",
     color: colors.textSecondary,
   },
@@ -997,7 +997,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     gap: 4,
   },
   itemTotalLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "600",
     color: colors.textSecondary,
   },

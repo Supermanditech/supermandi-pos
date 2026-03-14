@@ -114,7 +114,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
 
   useEffect(() => {
     if (error) {
-      Alert.alert(t("khata.errorTitle"), error);
+      Alert.alert(t("khata.errorTitle", "Connection Error"), error + "\n\n" + t("khata.retryGuidance", "Check your connection and try again."));
       clearError();
     }
   }, [error]);
@@ -335,7 +335,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       marginTop: 2,
     },
     customerLastEntry: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
       marginTop: 2,
     },
@@ -348,7 +348,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       fontWeight: "700",
     },
     balanceLabel: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: "500",
       marginTop: 2,
     },
@@ -465,7 +465,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       color: colors.textTertiary,
     },
     voidButton: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: "600",
       color: colors.error,
     },
@@ -475,12 +475,12 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       marginTop: 2,
     },
     ledgerDate: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
       marginTop: 2,
     },
     ledgerPaymentMethod: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.primary,
       fontWeight: "500",
       marginTop: 2,
@@ -493,7 +493,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       fontWeight: "700",
     },
     ledgerRunningBalance: {
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textTertiary,
       marginTop: 2,
     },
@@ -562,7 +562,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       backgroundColor: colors.success,
     },
     submitButtonDisabled: {
-      opacity: 0.6,
+      opacity: 0.5,
     },
     submitButtonText: {
       fontSize: 15,
@@ -709,13 +709,14 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
           style={styles.searchInput}
           placeholder={t("khata.searchPlaceholder")}
           placeholderTextColor={colors.textTertiary}
+          accessibilityLabel="Search customers"
           value={searchQuery}
           onChangeText={handleSearch}
           autoCapitalize="none"
           returnKeyType="search"
         />
         {searchQuery.length > 0 && (
-          <Pressable accessibilityRole="button" onPress={() => handleSearch("")} hitSlop={8}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => handleSearch("")} hitSlop={8}>
             <MaterialCommunityIcons name="close-circle" size={18} color={colors.textTertiary} />
           </Pressable>
         )}
@@ -851,6 +852,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               style={styles.formInput}
               placeholder={t("khata.phonePlaceholder")}
               placeholderTextColor={colors.textTertiary}
+              accessibilityLabel="Customer phone number"
               value={creditPhone}
               onChangeText={setCreditPhone}
               keyboardType="phone-pad"
@@ -862,6 +864,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               style={styles.formInput}
               placeholder={t("khata.namePlaceholder")}
               placeholderTextColor={colors.textTertiary}
+              accessibilityLabel="Customer name"
               value={creditName}
               onChangeText={setCreditName}
             />
@@ -871,6 +874,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               style={styles.formInput}
               placeholder="0.00"
               placeholderTextColor={colors.textTertiary}
+              accessibilityLabel="Credit amount"
               value={creditAmount}
               onChangeText={setCreditAmount}
               keyboardType="decimal-pad"
@@ -881,6 +885,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               style={[styles.formInput, styles.formTextArea]}
               placeholder={t("khata.descriptionPlaceholder")}
               placeholderTextColor={colors.textTertiary}
+              accessibilityLabel="Credit description"
               value={creditDescription}
               onChangeText={setCreditDescription}
               multiline
@@ -927,6 +932,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               style={styles.formInput}
               placeholder={t("khata.phonePlaceholder")}
               placeholderTextColor={colors.textTertiary}
+              accessibilityLabel="Customer phone number"
               value={paymentPhone}
               onChangeText={setPaymentPhone}
               keyboardType="phone-pad"
@@ -938,6 +944,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
               style={styles.formInput}
               placeholder="0.00"
               placeholderTextColor={colors.textTertiary}
+              accessibilityLabel="Payment amount"
               value={paymentAmount}
               onChangeText={setPaymentAmount}
               keyboardType="decimal-pad"

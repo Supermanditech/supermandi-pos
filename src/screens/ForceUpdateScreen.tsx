@@ -215,7 +215,7 @@ export default function ForceUpdateScreen() {
     },
     versionLabel: {
       ...typography.caption,
-      fontSize: 11,
+      fontSize: 12,
       color: colors.textSecondary,
       fontWeight: "600",
       textTransform: "uppercase",
@@ -261,7 +261,7 @@ export default function ForceUpdateScreen() {
       color: colors.textSecondary,
       textAlign: "center",
       marginTop: spacing.xs,
-      fontSize: 11,
+      fontSize: 12,
     },
   }), [colors]);
 
