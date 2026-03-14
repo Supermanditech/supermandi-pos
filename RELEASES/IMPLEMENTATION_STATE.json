@@ -1,11 +1,11 @@
 {
-  "version": 15,
+  "version": 16,
   "last_updated": "2026-03-14",
-  "last_commit_sha": "af9e68cf",
+  "last_commit_sha": "c363bc2a",
   "total_tickets": 501,
-  "tickets_done": 0,
-  "tickets_remaining": 501,
-  "current_layer": 0,
+  "tickets_done": 17,
+  "tickets_remaining": 484,
+  "current_layer": 1,
   "current_ticket": null,
   "status": "REITERATION_IN_PROGRESS",
   "mode": "REITERATION",
@@ -61,7 +61,7 @@
     "per_ticket_testing": "MANDATORY — every ticket gets tested, no exceptions"
   },
   "layers": [
-    { "layer": 0, "name": "Security & P0 Critical Bugs", "tickets": 17, "verified": 0, "status": "PENDING_REITERATION" },
+    { "layer": 0, "name": "Security & P0 Critical Bugs", "tickets": 17, "verified": 17, "status": "VERIFIED" },
     { "layer": 1, "name": "Foundation: Theme, Utils, i18n Keys", "tickets": 14, "verified": 0, "status": "PENDING_REITERATION" },
     { "layer": 2, "name": "i18n Hardcoded String Replacement", "tickets": 30, "verified": 0, "status": "PENDING_REITERATION" },
     { "layer": 3, "name": "i18n MenuScreen + Hindi Completion", "tickets": 19, "verified": 0, "status": "PENDING_REITERATION" },

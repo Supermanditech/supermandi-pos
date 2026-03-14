@@ -387,13 +387,13 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-358 | PURCHASE — No supplier comparison table in ProductDetailModal | P2 | OPEN |
 | STG-359 | PURCHASE — No expiry date/batch info for incoming products | P2 | OPEN |
 | STG-360 | VOICE — No confirmation before auto-executing voice commands | P1 | OPEN |
-| STG-361 | VOICE — Product search stub not implemented, lookups fail | P0 | OPEN |
+| STG-361 | VOICE — Product search stub not implemented, lookups fail | P0 | PARKED (6a9c4494, stg-361-2026-03-14) |
 | STG-362 | VOICE — Locale toggle not wired to backend STT | P1 | OPEN |
 | STG-363 | VOICE — NEEDS_CLARIFICATION flag never shown as picker | P2 | OPEN |
 | STG-364 | VOICE — No visual confidence score or match feedback | P2 | OPEN |
 | STG-365 | VOICE — No mic permission guidance when denied | P2 | OPEN |
 | STG-366 | VOICE — No timeout on slow API, app hangs indefinitely | P1 | OPEN |
-| STG-367 | VOICE — Prompt injection vulnerability (regex-only mitigation) | P0 | OPEN |
+| STG-367 | VOICE — Prompt injection vulnerability (regex-only mitigation) | P0 | PARKED (4602b3f4, stg-367-2026-03-14) |
 | STG-368 | SELL — No immediate visual feedback on product tile tap | P2 | OPEN |
 | STG-369 | SELL — VariantPickerModal lacks images, stock, price context | P2 | OPEN |
 | STG-370 | SELL — Cart add persistence not awaited, silent data loss | P1 | OPEN |
@@ -444,7 +444,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-415 | REORDER — Pending reorders are snapshots, no staleness detection | P2 | OPEN |
 | STG-416 | REORDER — Expired reorders silently disappear, no re-trigger | P2 | OPEN |
 | STG-417 | REORDER — No expiry cleanup job marks pending reorders as expired | P1 | OPEN |
-| STG-418 | REORDER — No scheduler generates reorder suggestions (CRITICAL) | P0 | OPEN |
+| STG-418 | REORDER — No scheduler generates reorder suggestions (CRITICAL) | P0 | PARKED (42fe8f83, stg-418-2026-03-14) |
 | STG-419 | REORDER — Auto-approve threshold setting has no effect | P2 | OPEN |
 | STG-420 | REORDER — No quantity optimization algorithm (EOQ/MOQ) | P2 | OPEN |
 | STG-421 | REORDER — Approved reorders create draft POs but no submission | P1 | OPEN |
@@ -483,7 +483,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-454 | CREDIT — Credit offers have no expiry cleanup job | P2 | OPEN |
 | STG-455 | CREDIT — No external credit providers integrated | P1 | OPEN |
 | STG-456 | CREDIT — Provider failure silently hides offers | P2 | OPEN |
-| STG-457 | CREDIT — No consent management before credit scoring (DPDP) | P0 | OPEN |
+| STG-457 | CREDIT — No consent management before credit scoring (DPDP) | P0 | PARKED (b6774002, stg-457-2026-03-14) |
 | STG-458 | CREDIT — No re-eligibility check at application time | P2 | OPEN |
 | STG-459 | CREDIT — No application status timeline or tracking UI | P2 | OPEN |
 | STG-460 | CREDIT — PaymentOptionsSheet credit option shows no cost details | P2 | OPEN |
@@ -499,8 +499,8 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-470 | KHATA — Transaction type semantics unclear (DEBIT vs PAYMENT) | P2 | OPEN |
 | STG-471 | KHATA — No entry correction or void mechanism | P2 | OPEN |
 | STG-472 | KHATA — No bulk actions (settle, export, multi-payment) | P2 | OPEN |
-| STG-473 | KHATA — Customer phone numbers stored without consent (DPDP) | P1 | OPEN |
-| STG-474 | CREDIT — PAN number stored in plaintext (DPDP violation) | P0 | OPEN |
+| STG-473 | KHATA — Customer phone numbers stored without consent (DPDP) | P1 | PARKED (e7150c87, stg-473-2026-03-14) |
+| STG-474 | CREDIT — PAN number stored in plaintext (DPDP violation) | P0 | PARKED (723de909, stg-474-2026-03-14) |
 | STG-475 | CREDIT — No rate limiting on credit offer generation | P2 | OPEN |
 | STG-476 | CREDIT — Missing composite index on bnpl_drawdowns | P2 | OPEN |
 | STG-477 | CREDIT — Hardcoded ₹ currency symbol in multiple screens | P3 | OPEN |
@@ -511,16 +511,16 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-482 | GUARD: i18n key naming convention document | P0 | OPEN |
 | STG-483 | GUARD: Refactor SellTile.formatPrice() → use formatMoney() | P0 | OPEN |
 | STG-484 | GUARD: Refactor CartItem + SupplierRow → useThemeColors() hook | P1 | OPEN |
-| STG-485 | GUARD: consent_records table + consent API (DPDP) | P0 | OPEN |
-| STG-486 | GUARD: Encryption key management infra (GCP Secret Manager) | P0 | OPEN |
+| STG-485 | GUARD: consent_records table + consent API (DPDP) | P0 | PARKED (7b2e08ab, stg-485-2026-03-14) |
+| STG-486 | GUARD: Encryption key management infra (GCP Secret Manager) | P0 | PARKED (4c2faa79, stg-486-2026-03-14) |
 | STG-487 | GUARD: Backend staff role + max discount API | P0 | OPEN |
 | STG-488 | GUARD: Backend manager PIN verification endpoint | P0 | OPEN |
 | STG-489 | GUARD: Backend void/refund sale endpoint | P0 | OPEN |
 | STG-490 | GUARD: Backend credit disbursement endpoint | P0 | OPEN |
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | OPEN |
-| STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | OPEN |
+| STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | PARKED (30956d33, stg-492-2026-03-14) |
 
-**Total**: 492 tickets | 8 PARKED | 1 DONE | 0 IN_PROGRESS | 483 OPEN
+**Total**: 492 tickets | 17 PARKED | 1 DONE | 0 IN_PROGRESS | 474 OPEN
 
 ---
 
