@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 59,
+  "version": 61,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -3770,6 +3770,86 @@
         "gcp_parity": "POS-only UI change",
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
+      }
+    },
+    {
+      "ticket": "STG-487",
+      "file": "backend/src/routes/v1/pos/staff.ts",
+      "start_line": 80,
+      "end_line": 120,
+      "checksum": "e86300522beee3aa",
+      "description": "GET /api/v1/pos/staff/me — returns staff role, name, and store max_discount_percent",
+      "test_file": "backend/tests/posStaffMe.stg-487.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-14T01:21:28.225Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "DONE",
+        "backend_api": "DONE",
+        "db_schema": "DONE",
+        "operator_approved": "DONE",
+        "parity_scanned": "DONE",
+        "parity_fixed": "DONE",
+        "gcp_parity": "DONE",
+        "regression_check": "DONE",
+        "test_guard": "DONE"
+      }
+    },
+    {
+      "ticket": "STG-488",
+      "file": "backend/src/routes/v1/pos/staff.ts",
+      "start_line": 123,
+      "end_line": 197,
+      "checksum": "4875bb67c0f71482",
+      "description": "POST /api/v1/pos/staff/verify-pin — manager PIN verification with rate limiting",
+      "test_file": "backend/tests/posStaffVerifyPin.stg-488.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-14T01:21:34.919Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "DONE",
+        "backend_api": "DONE",
+        "db_schema": "DONE",
+        "operator_approved": "DONE",
+        "parity_scanned": "DONE",
+        "parity_fixed": "DONE",
+        "gcp_parity": "DONE",
+        "regression_check": "DONE",
+        "test_guard": "DONE"
       }
     }
   ],
