@@ -98,7 +98,7 @@ export default function ChatListScreen({ onSelectConversation, onContactSupport,
       const result = await chatApi.getConversations();
       setConversations(result.conversations || []);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load conversations');
+      setError(err instanceof Error ? err.message : t('chat.failedToLoad'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -122,7 +122,7 @@ export default function ChatListScreen({ onSelectConversation, onContactSupport,
     if (diffDays === 0) {
       return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
     }
-    if (diffDays === 1) return 'Yesterday';
+    if (diffDays === 1) return t('chat.yesterday');
     if (diffDays < 7) return d.toLocaleDateString('en-IN', { weekday: 'short' });
     return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' });
   }
@@ -139,7 +139,7 @@ export default function ChatListScreen({ onSelectConversation, onContactSupport,
     <Pressable
       style={styles.conversationItem}
       onPress={() => onSelectConversation(item)}
-      accessibilityLabel={`${item.title || item.otherParticipantName || 'Conversation'}${item.unreadCount > 0 ? `, ${item.unreadCount} unread` : ''}`}
+      accessibilityLabel={`${item.title || item.otherParticipantName || t('chat.conversation')}${item.unreadCount > 0 ? `, ${item.unreadCount} unread` : ''}`}
       accessibilityRole="button"
     >
       <View style={[styles.avatar, item.type === 'support' ? styles.avatarSupport : null]}>
@@ -153,13 +153,13 @@ export default function ChatListScreen({ onSelectConversation, onContactSupport,
       <View style={styles.conversationContent}>
         <View style={styles.conversationHeader}>
           <Text style={styles.conversationName} numberOfLines={1}>
-            {item.title || item.otherParticipantName || 'Conversation'}
+            {item.title || item.otherParticipantName || t('chat.conversation')}
           </Text>
           <Text style={styles.timestamp}>{formatTime(item.lastMessageAt)}</Text>
         </View>
         <View style={styles.conversationFooter}>
           <Text style={styles.preview} numberOfLines={1}>
-            {item.lastMessagePreview || 'No messages yet'}
+            {item.lastMessagePreview || t('chat.noMessages')}
           </Text>
           {item.unreadCount > 0 && (
             <View style={styles.badge}>
@@ -180,7 +180,7 @@ export default function ChatListScreen({ onSelectConversation, onContactSupport,
         <Pressable onPress={onBack} style={styles.backBtn} accessibilityLabel="Go back" accessibilityRole="button">
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Messages</Text>
+        <Text style={styles.headerTitle}>{t('chat.title')}</Text>
         <Pressable onPress={onContactSupport} style={styles.supportBtn} accessibilityLabel="Contact support" accessibilityRole="button">
           <MaterialCommunityIcons name="headset" size={22} color={colors.primary} />
         </Pressable>
@@ -191,7 +191,7 @@ export default function ChatListScreen({ onSelectConversation, onContactSupport,
         <View style={styles.errorBar}>
           <Text style={styles.errorText}>{error}</Text>
           <Pressable onPress={fetchConversations} accessibilityLabel="Retry" accessibilityRole="button">
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t('chat.retry')}</Text>
           </Pressable>
         </View>
       )}
@@ -200,7 +200,7 @@ export default function ChatListScreen({ onSelectConversation, onContactSupport,
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading conversations...</Text>
+          <Text style={styles.loadingText}>{t('chat.loadingConversations')}</Text>
         </View>
       ) : conversations.length === 0 ? (
         <View style={styles.center}>

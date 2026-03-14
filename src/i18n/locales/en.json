@@ -1047,9 +1047,16 @@
     "timelineRejected": "Rejected"
   },
   "chat": {
+    "title": "Messages",
     "noConversationsTitle": "No conversations yet",
     "noConversationsDescription": "Contact support or start a chat with your suppliers to see messages here.",
-    "contactSupport": "Contact Support"
+    "contactSupport": "Contact Support",
+    "loadingConversations": "Loading conversations...",
+    "failedToLoad": "Failed to load conversations",
+    "retry": "Retry",
+    "yesterday": "Yesterday",
+    "conversation": "Conversation",
+    "noMessages": "No messages yet"
   },
   "errorBoundary": {
     "title": "Something went wrong",

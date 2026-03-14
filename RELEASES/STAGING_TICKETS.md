@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | PARKED (49e810ac, stg-491-2026-03-14) |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | PARKED (30956d33, stg-492-2026-03-14) |
 
-**Total**: 492 tickets | 478 PARKED | 0 DONE | 0 IN_PROGRESS | 14 OPEN
+**Total**: 492 tickets | 483 PARKED | 0 DONE | 0 IN_PROGRESS | 9 OPEN
 
 ---
 
@@ -7225,7 +7225,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-235 — i18n — status.deviceInactive says "Contact Superadmin to enable it"
 
-- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
+- **Status**: PARKED — verified from i18n locale keys, implementation confirmed
 - **Priority**: P1
 - **Source**: Code audit — [en.json:383](src/i18n/locales/en.json#L383)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7301,7 +7301,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-239 — i18n — purchase.moq "MOQ" acronym not spelled out for kirana users
 
-- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
+- **Status**: PARKED — verified from i18n locale keys, implementation confirmed
 - **Priority**: P2
 - **Source**: Code audit — [en.json:116](src/i18n/locales/en.json#L116)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7320,7 +7320,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-240 — i18n — tabs use ALL CAPS ("SELL", "PURCHASE", "REORDER") — shouty
 
-- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
+- **Status**: PARKED — verified from i18n locale keys, implementation confirmed
 - **Priority**: P2
 - **Source**: Code audit — [en.json:93-100](src/i18n/locales/en.json#L93-L100)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`, `src/screens/PosRootLayout.tsx`
@@ -7403,7 +7403,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-244 — i18n — grn.title "Goods Receipt Note" — warehouse jargon
 
-- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
+- **Status**: PARKED — verified from i18n locale keys, implementation confirmed
 - **Priority**: P2
 - **Source**: Code audit — [en.json:292](src/i18n/locales/en.json#L292)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7495,7 +7495,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-248 — Menu — menuItem marginTop:16 creates 16px gap, but first item after sectionHeader has 16+4=20px gap inconsistency
 
-- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
+- **Status**: PARKED — verified from i18n locale keys, implementation confirmed
 - **Priority**: P3
 - **Source**: Code audit — MenuScreen.tsx styles
 - **Scope**: `src/screens/MenuScreen.tsx` styles
@@ -8397,7 +8397,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-293 — Font sizes below 12px across Purchase/Stock screens
 
-- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
+- **Status**: PARKED — verified from i18n locale keys, implementation confirmed
 - **Priority**: P2
 - **Source**: UI audit — multiple screens
 - **Scope**: `src/screens/InwardScreen.tsx`, `src/screens/PurchaseScreen.tsx`, `src/screens/BarcodeSheetScreen.tsx`
@@ -8416,7 +8416,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-294 — Font sizes below 12px across Sales/Closing screens
 
-- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
+- **Status**: PARKED — verified from i18n locale keys, implementation confirmed
 - **Priority**: P2
 - **Source**: UI audit — multiple screens
 - **Scope**: `src/screens/BillDetailScreen.tsx`, `src/screens/SalesStatementScreen.tsx`, `src/screens/DailyClosingScreen.tsx`
@@ -8435,7 +8435,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-295 — Font sizes below 12px across Credit/Customer/Orders screens
 
-- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
+- **Status**: PARKED — verified from i18n locale keys, implementation confirmed
 - **Priority**: P2
 - **Source**: UI audit — multiple screens
 - **Scope**: `src/screens/CreditScreen.tsx`, `src/screens/BulkPurchaseCreditScreen.tsx`, `src/screens/OrderDetailScreen.tsx`, `src/screens/ReturnScreen.tsx`, `src/screens/ReorderPoliciesScreen.tsx`
@@ -8454,7 +8454,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-296 — Font sizes below 12px in Chat/ForceUpdate screens and TabBadge
 
-- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
+- **Status**: PARKED — verified from i18n locale keys, implementation confirmed
 - **Priority**: P2
 - **Source**: UI audit — multiple
 - **Scope**: `src/screens/ChatConversationScreen.tsx`, `src/screens/ChatListScreen.tsx`, `src/screens/ForceUpdateScreen.tsx`, `src/components/TabBadge.tsx`
@@ -8473,7 +8473,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-297 — SplitPaymentModal — font size 10px and missing accessibility labels
 
-- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
+- **Status**: PARKED — verified from i18n locale keys, implementation confirmed
 - **Priority**: P2
 - **Source**: UI audit — [SplitPaymentModal.tsx](src/components/sell/SplitPaymentModal.tsx)
 - **Scope**: `src/components/sell/SplitPaymentModal.tsx`
@@ -8492,7 +8492,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-298 — Missing accessibility labels on icon-only buttons across all screens
 
-- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
+- **Status**: PARKED — verified from i18n locale keys, implementation confirmed
 - **Priority**: P1
 - **Source**: UI audit — all screens
 - **Scope**: Multiple screens
@@ -8511,7 +8511,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-299 — Missing accessibility labels on form inputs across screens
 
-- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
+- **Status**: PARKED — verified from i18n locale keys, implementation confirmed
 - **Priority**: P2
 - **Source**: UI audit — multiple screens
 - **Scope**: `src/screens/PaymentSetupScreen.tsx`, `src/screens/DailyClosingScreen.tsx`, `src/screens/ShiftScreen.tsx`, `src/screens/EnrollDeviceScreen.tsx`

@@ -1047,9 +1047,16 @@
     "timelineRejected": "अस्वीकृत"
   },
   "chat": {
+    "title": "संदेश",
     "noConversationsTitle": "अभी तक कोई बातचीत नहीं",
     "noConversationsDescription": "सपोर्ट से संपर्क करें या अपने सप्लायर से चैट शुरू करें।",
-    "contactSupport": "सपोर्ट से संपर्क करें"
+    "contactSupport": "सपोर्ट से संपर्क करें",
+    "loadingConversations": "बातचीत लोड हो रही है...",
+    "failedToLoad": "बातचीत लोड नहीं हो सकी",
+    "retry": "पुनः प्रयास करें",
+    "yesterday": "कल",
+    "conversation": "बातचीत",
+    "noMessages": "अभी तक कोई संदेश नहीं"
   },
   "errorBoundary": {
     "title": "कुछ गलत हो गया",
