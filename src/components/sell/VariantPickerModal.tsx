@@ -58,8 +58,14 @@ export function VariantPickerModal({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (visible && request?.product.store_product_id) {
-      loadVariants(request.product.store_product_id);
+    if (visible && request) {
+      if (request.product.store_product_id) {
+        loadVariants(request.product.store_product_id);
+      } else {
+        // STG-339: No store_product_id — fallback to parent product direct add
+        onFallback(request.product, request.barcode);
+        onClose();
+      }
     }
   }, [visible, request?.product.store_product_id]);
 
@@ -100,22 +106,34 @@ export function VariantPickerModal({
     return `\u20B9${rupees.toFixed(rupees % 1 === 0 ? 0 : 2)}`;
   }
 
-  const renderVariant = ({ item }: { item: RetailVariant }) => (
-    <Pressable
-      style={styles.variantCard}
-      onPress={() => handleSelect(item)}
-    >
-      <View style={styles.variantInfo}>
-        <Text style={styles.variantLabel}>{item.variantLabel}</Text>
-        <Text style={styles.variantDetail}>
-          {item.variantQty} {item.baseUnit}
-        </Text>
-      </View>
-      <View style={styles.variantPrice}>
-        <Text style={styles.priceText}>{formatPrice(item.sellPriceMinor)}</Text>
-      </View>
-    </Pressable>
-  );
+  const renderVariant = ({ item }: { item: RetailVariant }) => {
+    // STG-369: Calculate unit price for comparison
+    const unitPrice = item.variantQty > 0
+      ? Math.round(item.sellPriceMinor / item.variantQty)
+      : null;
+    return (
+      <Pressable
+        style={styles.variantCard}
+        onPress={() => handleSelect(item)}
+      >
+        <View style={styles.variantInfo}>
+          <Text style={styles.variantLabel}>{item.variantLabel}</Text>
+          <Text style={styles.variantDetail}>
+            {item.variantQty} {item.baseUnit}
+          </Text>
+          {/* STG-369: Unit price for comparison */}
+          {unitPrice !== null ? (
+            <Text style={styles.variantUnitPrice}>
+              {formatPrice(unitPrice)}/{item.baseUnit}
+            </Text>
+          ) : null}
+        </View>
+        <View style={styles.variantPrice}>
+          <Text style={styles.priceText}>{formatPrice(item.sellPriceMinor)}</Text>
+        </View>
+      </Pressable>
+    );
+  };
 
   return (
     <Modal
@@ -267,6 +285,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textTertiary,
     marginTop: 2,
+  },
+  // STG-369: Unit price for variant comparison
+  variantUnitPrice: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 1,
   },
   variantPrice: {
     paddingLeft: 12,

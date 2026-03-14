@@ -474,13 +474,13 @@ async function handleScan(
         }
 
         // T-059: If LOOSE_BULK product has variants, show variant picker instead of direct cart add
+        // STG-339: Removed store_product_id gate — variant picker mandatory for all LOOSE_BULK
         if (
           storeProduct.product_mode === 'LOOSE_BULK' &&
-          storeProduct.store_product_id &&
           runtime.onVariantPicker &&
           !runtime.variantPickerActive
         ) {
-          console.log(`scan_variant_picker:${trimmed},mode=LOOSE_BULK,spId=${storeProduct.store_product_id}`);
+          console.log(`scan_variant_picker:${trimmed},mode=LOOSE_BULK,spId=${storeProduct.store_product_id ?? "none"}`);
           runtime.onVariantPicker({ barcode: trimmed, format, product: storeProduct });
           return;
         }

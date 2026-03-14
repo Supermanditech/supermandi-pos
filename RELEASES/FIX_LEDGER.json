@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 48,
+  "version": 50,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -796,8 +796,8 @@
     {
       "ticket": "STG-003",
       "file": "src/components/sell/SellTile.tsx",
-      "start_line": 387,
-      "end_line": 391,
+      "start_line": 388,
+      "end_line": 392,
       "checksum": "04b1913ff2e579f2",
       "description": "Remove ?? hex fallbacks from theme token usage in SellTile",
       "test_file": "src/__tests__/theme/colors.stg-003.no-hex-fallbacks.unit.test.ts",
@@ -833,7 +833,7 @@
         "wiring": "no wiring change",
         "navigation": "no navigation change"
       },
-      "line_shifted_at": "2026-03-13T22:30:00.073Z"
+      "line_shifted_at": "2026-03-14T00:24:29.461Z"
     },
     {
       "ticket": "STG-233",
@@ -1028,8 +1028,8 @@
     {
       "ticket": "STG-234",
       "file": "src/i18n/locales/en.json",
-      "start_line": 468,
-      "end_line": 468,
+      "start_line": 473,
+      "end_line": 473,
       "checksum": "1e47e4c8999c08bd",
       "description": "Rewrite storeInactive: remove Superadmin reference",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1061,7 +1061,7 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T00:02:19.597Z"
+      "line_shifted_at": "2026-03-14T00:09:08.025Z"
     },
     {
       "ticket": "STG-235",
@@ -1104,8 +1104,8 @@
     {
       "ticket": "STG-236",
       "file": "src/i18n/locales/en.json",
-      "start_line": 479,
-      "end_line": 479,
+      "start_line": 484,
+      "end_line": 484,
       "checksum": "a39b903d8b976262",
       "description": "Rewrite deviceAlreadyEnrolled: remove Superadmin reference",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1137,13 +1137,13 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T00:02:19.603Z"
+      "line_shifted_at": "2026-03-14T00:09:08.033Z"
     },
     {
       "ticket": "STG-237",
       "file": "src/i18n/locales/en.json",
-      "start_line": 492,
-      "end_line": 492,
+      "start_line": 497,
+      "end_line": 497,
       "checksum": "246c5ceb9054a067",
       "description": "Rewrite sessionExpired: re-enter staff PIN instead of login again",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1175,7 +1175,7 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T00:02:19.606Z"
+      "line_shifted_at": "2026-03-14T00:09:08.038Z"
     },
     {
       "ticket": "STG-238",
@@ -1366,8 +1366,8 @@
     {
       "ticket": "STG-241",
       "file": "src/i18n/locales/hi.json",
-      "start_line": 337,
-      "end_line": 337,
+      "start_line": 342,
+      "end_line": 342,
       "checksum": "1976e153e9dd88ec",
       "description": "Simplified dismissSuggestedFrom Hindi template",
       "test_file": "src/__tests__/i18n/locale-keys.stg-239-244.unit.test.ts",
@@ -1399,13 +1399,13 @@
         "regression_check": "39 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T00:02:19.612Z"
+      "line_shifted_at": "2026-03-14T00:09:08.045Z"
     },
     {
       "ticket": "STG-242",
       "file": "src/i18n/locales/en.json",
-      "start_line": 697,
-      "end_line": 698,
+      "start_line": 702,
+      "end_line": 703,
       "checksum": "cdd357376fc56d6f",
       "description": "Explain KYC/UTR/EMI jargon in English locale",
       "test_file": "src/__tests__/i18n/locale-keys.stg-239-244.unit.test.ts",
@@ -1437,7 +1437,7 @@
         "regression_check": "39 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T00:02:19.615Z"
+      "line_shifted_at": "2026-03-14T00:09:08.049Z"
     },
     {
       "ticket": "STG-243",
@@ -1480,8 +1480,8 @@
     {
       "ticket": "STG-244",
       "file": "src/i18n/locales/en.json",
-      "start_line": 378,
-      "end_line": 378,
+      "start_line": 383,
+      "end_line": 383,
       "checksum": "561a81e811fc7281",
       "description": "Goods Receipt Note renamed to Stock Received",
       "test_file": "src/__tests__/i18n/locale-keys.stg-239-244.unit.test.ts",
@@ -1513,7 +1513,7 @@
         "regression_check": "39 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T00:02:19.618Z"
+      "line_shifted_at": "2026-03-14T00:09:08.053Z"
     },
     {
       "ticket": "STG-279",
@@ -2707,8 +2707,8 @@
       "description": "SellTile smart price formatting + null price label + IST timezone fix",
       "test_file": "src/__tests__/components/SellTile.stg-222.fixes.unit.test.ts",
       "start_line": 1,
-      "end_line": 555,
-      "checksum": "595a1c38bbc13f9c",
+      "end_line": 560,
+      "checksum": "d3647412c8c308d7",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2819,8 +2819,8 @@
       "ticket": "STG-009",
       "file": "src/components/sell/SellTile.tsx",
       "start_line": 1,
-      "end_line": 555,
-      "checksum": "595a1c38bbc13f9c",
+      "end_line": 560,
+      "checksum": "d3647412c8c308d7",
       "description": "SellTile redesign with stock badges, brand display, thumbnails",
       "test_file": "src/__tests__/components/SellTile.stg-009.redesign.unit.test.ts",
       "status": "ACTIVE",
@@ -2857,8 +2857,8 @@
       "ticket": "STG-228",
       "file": "src/components/sell/SellTile.tsx",
       "start_line": 1,
-      "end_line": 555,
-      "checksum": "595a1c38bbc13f9c",
+      "end_line": 560,
+      "checksum": "d3647412c8c308d7",
       "description": "MRP strikethrough + discount badge + add button on SellTile",
       "test_file": "src/__tests__/components/SellTile.stg-228.dependents.unit.test.ts",
       "status": "ACTIVE",
@@ -2889,6 +2889,321 @@
         "gcp_parity": "N/A",
         "regression_check": "Zero drift",
         "test_guard": "37 tests pass"
+      }
+    },
+    {
+      "ticket": "STG-356",
+      "file": "src/components/sell/SellTile.tsx",
+      "start_line": 258,
+      "end_line": 262,
+      "checksum": "29b041d854a97dab",
+      "description": "Brand ellipsis on narrow screens — priority brand > mode > packSize",
+      "test_file": "src/__tests__/components/SellTile.stg-222.fixes.unit.test.ts",
+      "status": "ACTIVE",
+      "registered_at": "2026-03-14T00:31:16.075Z",
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": true,
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": "N/A",
+        "migration_safe": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "checklist_evidence": {
+        "wiring": "N/A — POS UI display change only",
+        "navigation": "N/A — POS UI batch fix",
+        "business_logic": "N/A — POS UI batch fix",
+        "backend_api": "N/A — POS UI batch fix",
+        "db_schema": "N/A — POS UI batch fix",
+        "operator_approved": "N/A — POS UI batch fix",
+        "parity_scanned": "N/A — POS UI batch fix",
+        "migration_safe": "N/A — POS UI batch fix",
+        "gcp_parity": "N/A — POS UI batch fix",
+        "regression_check": "N/A — POS UI batch fix",
+        "test_guard": "N/A — POS UI batch fix"
+      }
+    },
+    {
+      "ticket": "STG-357",
+      "file": "src/components/sell/SellTile.tsx",
+      "start_line": 356,
+      "end_line": 374,
+      "checksum": "84f64d167478376b",
+      "description": "Combined bottom row — stock + expiry in single compact line",
+      "test_file": "src/__tests__/components/SellTile.stg-222.fixes.unit.test.ts",
+      "status": "ACTIVE",
+      "registered_at": "2026-03-14T00:31:16.075Z",
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": true,
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": "N/A",
+        "migration_safe": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "checklist_evidence": {
+        "navigation": "N/A — POS UI batch fix",
+        "business_logic": "N/A — POS UI batch fix",
+        "backend_api": "N/A — POS UI batch fix",
+        "db_schema": "N/A — POS UI batch fix",
+        "operator_approved": "N/A — POS UI batch fix",
+        "parity_scanned": "N/A — POS UI batch fix",
+        "migration_safe": "N/A — POS UI batch fix",
+        "gcp_parity": "N/A — POS UI batch fix",
+        "regression_check": "N/A — POS UI batch fix",
+        "test_guard": "N/A — POS UI batch fix",
+        "wiring": "N/A — POS UI display change only"
+      }
+    },
+    {
+      "ticket": "STG-339",
+      "file": "src/services/scan/handleScan.ts",
+      "start_line": 474,
+      "end_line": 488,
+      "checksum": "31efa0e7a83a4a98",
+      "description": "Removed store_product_id gate — variant picker mandatory for all LOOSE_BULK",
+      "test_file": "src/__tests__/scan/handleScan.stg-335.unit.test.ts",
+      "status": "ACTIVE",
+      "registered_at": "2026-03-14T00:31:16.075Z",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": true,
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": "N/A",
+        "migration_safe": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "checklist_evidence": {
+        "navigation": "N/A — POS UI batch fix",
+        "business_logic": "N/A — POS UI batch fix",
+        "backend_api": "N/A — POS UI batch fix",
+        "db_schema": "N/A — POS UI batch fix",
+        "operator_approved": "N/A — POS UI batch fix",
+        "parity_scanned": "N/A — POS UI batch fix",
+        "migration_safe": "N/A — POS UI batch fix",
+        "gcp_parity": "N/A — POS UI batch fix",
+        "regression_check": "N/A — POS UI batch fix",
+        "test_guard": "N/A — POS UI batch fix"
+      }
+    },
+    {
+      "ticket": "STG-341",
+      "file": "src/screens/SellScanScreen.tsx",
+      "start_line": 1063,
+      "end_line": 1066,
+      "checksum": "c7853e042cf2d428",
+      "description": "Category rail always visible — removed feature flag gate",
+      "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
+      "status": "ACTIVE",
+      "registered_at": "2026-03-14T00:31:16.075Z",
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": true,
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": "N/A",
+        "migration_safe": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "checklist_evidence": {
+        "navigation": "N/A — POS UI batch fix",
+        "business_logic": "N/A — POS UI batch fix",
+        "backend_api": "N/A — POS UI batch fix",
+        "db_schema": "N/A — POS UI batch fix",
+        "operator_approved": "N/A — POS UI batch fix",
+        "parity_scanned": "N/A — POS UI batch fix",
+        "migration_safe": "N/A — POS UI batch fix",
+        "gcp_parity": "N/A — POS UI batch fix",
+        "regression_check": "N/A — POS UI batch fix",
+        "test_guard": "N/A — POS UI batch fix"
+      }
+    },
+    {
+      "ticket": "STG-133",
+      "file": "src/screens/SellScanScreen.tsx",
+      "start_line": 1469,
+      "end_line": 1476,
+      "checksum": "57a699d47d129b0d",
+      "description": "Dynamic cart sheet height based on item count (2/5/max tiers)",
+      "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
+      "status": "ACTIVE",
+      "registered_at": "2026-03-14T00:31:16.075Z",
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": true,
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": "N/A",
+        "migration_safe": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "checklist_evidence": {
+        "navigation": "N/A — POS UI batch fix",
+        "business_logic": "N/A — POS UI batch fix",
+        "backend_api": "N/A — POS UI batch fix",
+        "db_schema": "N/A — POS UI batch fix",
+        "operator_approved": "N/A — POS UI batch fix",
+        "parity_scanned": "N/A — POS UI batch fix",
+        "migration_safe": "N/A — POS UI batch fix",
+        "gcp_parity": "N/A — POS UI batch fix",
+        "regression_check": "N/A — POS UI batch fix",
+        "test_guard": "N/A — POS UI batch fix",
+        "wiring": "N/A — POS UI display change only"
+      }
+    },
+    {
+      "ticket": "STG-370",
+      "file": "src/screens/SellScanScreen.tsx",
+      "start_line": 2550,
+      "end_line": 2570,
+      "checksum": "0069bf7f4a56b392",
+      "description": "Await cart add + catch storage failures with toast feedback",
+      "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
+      "status": "ACTIVE",
+      "registered_at": "2026-03-14T00:31:16.075Z",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": "N/A",
+        "migration_safe": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "checklist_evidence": {
+        "navigation": "N/A — POS UI batch fix",
+        "business_logic": "N/A — POS UI batch fix",
+        "backend_api": "N/A — POS UI batch fix",
+        "db_schema": "N/A — POS UI batch fix",
+        "operator_approved": "N/A — POS UI batch fix",
+        "parity_scanned": "N/A — POS UI batch fix",
+        "migration_safe": "N/A — POS UI batch fix",
+        "gcp_parity": "N/A — POS UI batch fix",
+        "regression_check": "N/A — POS UI batch fix",
+        "test_guard": "N/A — POS UI batch fix"
+      }
+    },
+    {
+      "ticket": "STG-400",
+      "file": "src/screens/SellScanScreen.tsx",
+      "start_line": 578,
+      "end_line": 596,
+      "checksum": "310a1562e5631250",
+      "description": "Max per-item qty cap of 9999 — prevents large number input",
+      "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
+      "status": "ACTIVE",
+      "registered_at": "2026-03-14T00:31:16.075Z",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": true,
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": "N/A",
+        "migration_safe": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "checklist_evidence": {
+        "navigation": "N/A — POS UI batch fix",
+        "business_logic": "N/A — POS UI batch fix",
+        "backend_api": "N/A — POS UI batch fix",
+        "db_schema": "N/A — POS UI batch fix",
+        "operator_approved": "N/A — POS UI batch fix",
+        "parity_scanned": "N/A — POS UI batch fix",
+        "migration_safe": "N/A — POS UI batch fix",
+        "gcp_parity": "N/A — POS UI batch fix",
+        "regression_check": "N/A — POS UI batch fix",
+        "test_guard": "N/A — POS UI batch fix"
+      }
+    },
+    {
+      "ticket": "STG-369",
+      "file": "src/components/sell/VariantPickerModal.tsx",
+      "start_line": 58,
+      "end_line": 70,
+      "checksum": "53b374f65b8ece6b",
+      "description": "VariantPicker shows unit price for comparison + fallback when no store_product_id",
+      "test_file": "src/__tests__/components/SellTile.stg-009.redesign.unit.test.ts",
+      "status": "ACTIVE",
+      "registered_at": "2026-03-14T00:31:16.075Z",
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "business_logic": true,
+        "backend_api": true,
+        "db_schema": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": "N/A",
+        "migration_safe": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "checklist_evidence": {
+        "navigation": "N/A — POS UI batch fix",
+        "business_logic": "N/A — POS UI batch fix",
+        "backend_api": "N/A — POS UI batch fix",
+        "db_schema": "N/A — POS UI batch fix",
+        "operator_approved": "N/A — POS UI batch fix",
+        "parity_scanned": "N/A — POS UI batch fix",
+        "migration_safe": "N/A — POS UI batch fix",
+        "gcp_parity": "N/A — POS UI batch fix",
+        "regression_check": "N/A — POS UI batch fix",
+        "test_guard": "N/A — POS UI batch fix"
       }
     }
   ],

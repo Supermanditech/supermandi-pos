@@ -257,7 +257,8 @@ export function SellTile({ product, onPress, testID }: SellTileProps) {
         {/* Center: Brand + Name + mode/pack */}
         <View style={styles.centerBlock}>
           {brand ? (
-            <Text style={styles.brand} numberOfLines={1} testID="sell-tile-brand">
+            /* STG-356: ellipsis on brand, priority: brand > mode > packSize */
+            <Text style={styles.brand} numberOfLines={1} ellipsizeMode="tail" testID="sell-tile-brand">
               {brand}
             </Text>
           ) : null}
@@ -280,13 +281,14 @@ export function SellTile({ product, onPress, testID }: SellTileProps) {
                       ? styles.modeBadgeTextPackaged
                       : styles.modeBadgeTextLoose,
                   ]}
+                  numberOfLines={1}
                 >
                   {modeBadge === "PACKAGED" ? t("components.sellTile.packaged") : t("components.sellTile.loose")}
                 </Text>
               </View>
             ) : null}
             {packSize ? (
-              <Text style={styles.packSize} testID="sell-tile-pack-size">
+              <Text style={styles.packSize} numberOfLines={1} testID="sell-tile-pack-size">
                 {packSize}
               </Text>
             ) : null}
@@ -354,20 +356,19 @@ export function SellTile({ product, onPress, testID }: SellTileProps) {
         </View>
       </View>
 
-      {/* Bottom row: Expiry + GST + Barcode */}
-      {(expiryText || gst_rate != null || barcode) ? (
+      {/* STG-357: Combined bottom row — stock + expiry in single line for consistent tile height */}
+      {(stockDetailLabel || expiryText || gst_rate != null || barcode) ? (
         <>
           <View style={styles.divider} />
           <View style={styles.bottomRow}>
             <View style={styles.bottomLeft}>
-              {expiryText ? (
-                <Text
-                  style={[styles.expiry, { color: expiryColor! }]}
-                  testID="sell-tile-expiry"
-                >
-                  {expiryText}
-                </Text>
-              ) : null}
+              {/* STG-357: Combined stock count + expiry as single line */}
+              <Text style={styles.bottomCompact} numberOfLines={1} testID="sell-tile-bottom-compact">
+                {[
+                  stockDetailLabel,
+                  expiryText,
+                ].filter(Boolean).join(" | ")}
+              </Text>
             </View>
             <View style={styles.bottomRight}>
               {gst_rate != null ? (
@@ -524,6 +525,11 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     expiry: {
       fontSize: 11,
       fontWeight: "600",
+    },
+    // STG-357: Combined stock + expiry compact single line
+    bottomCompact: {
+      fontSize: 10,
+      color: colors.textSecondary,
     },
     gst: {
       fontSize: 11,

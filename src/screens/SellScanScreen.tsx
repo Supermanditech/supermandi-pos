@@ -9,8 +9,10 @@ import {
   FlatList,
   GestureResponderEvent,
   Image,
+  KeyboardAvoidingView,
   Modal,
   PanResponder,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -576,6 +578,9 @@ function CartItemRow({
   // STG-127: Stock validation cap on qty — disable [+] at stock limit
   const qtyAtMax = stockValue !== null && item.quantity >= stockValue;
 
+  // STG-400: Max per-item qty cap
+  const MAX_ITEM_QTY = 9999;
+
   const handleIncrement = () => {
     if (controlsDisabled) return;
     // STG-127: Hard cap at available stock
@@ -583,6 +588,8 @@ function CartItemRow({
       triggerStockHighlight();
       return;
     }
+    // STG-400: Hard cap at 9999
+    if (item.quantity >= MAX_ITEM_QTY) return;
     onUpdateQuantity(item.id, item.quantity + 1);
   };
 
@@ -1054,9 +1061,9 @@ export default function SellScanScreen({
   // AUDIT-POS-FEATURES-001 §1.1: Removed DEMO001-only gate — category rail is now
   // available to ALL stores when the feature flag is enabled.
   const storeCode = useSettingsStore((s) => s.storeCode);
-  const categoryBrowsingEnabled = useFeatureEnabled("category_browsing"); // CAT-005
+  // STG-341: Category rail always visible (feature flag removed)
   const voiceEnabled = useFeatureEnabled("voice"); // VOICE-009
-  const showCategoryRail = categoryBrowsingEnabled;
+  const showCategoryRail = true;
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [categoryRailExpanded, setCategoryRailExpanded] = useState(false);
   const categoryAutoCollapseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1462,7 +1469,11 @@ export default function SellScanScreen({
 
   const collapsedRatio = isSmallScreen ? CART_SHEET_COLLAPSED_RATIO_SMALL : CART_SHEET_COLLAPSED_RATIO;
   const collapsedHeight = Math.round(screenHeight * collapsedRatio);
-  const expandedHeight = Math.round(screenHeight * CART_SHEET_EXPANDED_RATIO);
+  // STG-133: Dynamic cart sheet height based on item count
+  const dynamicExpandedRatio = items.length <= 2 ? 0.55
+    : items.length <= 5 ? 0.75
+    : CART_SHEET_EXPANDED_RATIO;
+  const expandedHeight = Math.round(screenHeight * dynamicExpandedRatio);
   const collapsedOffset = Math.max(0, expandedHeight - collapsedHeight);
 
   const snapSheetTo = useCallback(
@@ -2539,22 +2550,29 @@ export default function SellScanScreen({
       // GL-RJ-007: Detect price resolution failures
       const priceResolutionFailed = resolved.priceMinor === 0 ||
         (resolved.inventoryPrice === null && resolved.variantPrice === null && resolved.mrp === null);
-      cartState.addItem({
-        id: item.barcode,
-        name: item.name,
-        priceMinor: resolved.priceMinor,
-        currency: item.currency ?? "INR",
-        barcode: item.barcode,
-        metadata: {
-          storeProductId: item.storeProductId || undefined,
-          productId: item.productId || undefined,
-        },
-        // AUD-016: SCALE-A3 batch traceability
-        batchNumber: item.batch_number ?? undefined,
-        // GL-RJ-007: Set price resolution error flag if no price found
-        priceResolutionError: priceResolutionFailed,
-        priceResolutionMessage: priceResolutionFailed ? "Price not found - enter manually" : undefined,
-      });
+      // STG-370: Await cart add + catch storage failures
+      try {
+        cartState.addItem({
+          id: item.barcode,
+          name: item.name,
+          priceMinor: resolved.priceMinor,
+          currency: item.currency ?? "INR",
+          barcode: item.barcode,
+          metadata: {
+            storeProductId: item.storeProductId || undefined,
+            productId: item.productId || undefined,
+          },
+          // AUD-016: SCALE-A3 batch traceability
+          batchNumber: item.batch_number ?? undefined,
+          // GL-RJ-007: Set price resolution error flag if no price found
+          priceResolutionError: priceResolutionFailed,
+          priceResolutionMessage: priceResolutionFailed ? "Price not found - enter manually" : undefined,
+        });
+      } catch (err) {
+        showToast(`Failed to add "${item.name}". Please try again.`);
+        logger.debug("AddSku", `add_item_failed:${item.barcode}:${String(err)}`);
+        return;
+      }
 
       // GL-WF-020: Show alert when price resolution fails
       if (priceResolutionFailed) {
@@ -2587,8 +2605,12 @@ export default function SellScanScreen({
     logPriceDebug(item, resolved);
     const stockValue = resolveStockForSku(item) ?? ((item.currentStock != null && !isNaN(Number(item.currentStock))) ? Number(item.currentStock) : null);
 
+    // STG-368: Scale animation ref for tap feedback
+    const tileScaleRef = useRef(new Animated.Value(1)).current;
+
     return (
       // SCALE-B1: Wrap SellTile in Pressable for tap/long-press gestures
+      <Animated.View style={{ transform: [{ scale: tileScaleRef }] }}>
       <Pressable
         accessibilityRole="button"
         accessibilityHint={t("sell.tapForDetails")}
@@ -2596,6 +2618,12 @@ export default function SellScanScreen({
         android_ripple={{ color: colors.primary + "20" }}
         onPressIn={() => {
           detailPressRef.current = false;
+          // STG-368: Scale down on press
+          Animated.spring(tileScaleRef, { toValue: 0.96, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
+        }}
+        onPressOut={() => {
+          // STG-368: Scale back up
+          Animated.spring(tileScaleRef, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }).start();
         }}
         onLongPress={() => {
           detailPressRef.current = true;
@@ -2631,6 +2659,7 @@ export default function SellScanScreen({
           }}
         />
       </Pressable>
+      </Animated.View>
     );
   };
 
@@ -2724,7 +2753,7 @@ export default function SellScanScreen({
           }}
           accessibilityLabel={`Add ${item.name}`}
         >
-          {/* T-134: Product image in search results */}
+          {/* STG-349: Enhanced search results with image, brand, pack size */}
           {item.imageUrl ? (
             <Image source={{ uri: item.imageUrl }} style={styles.addRowImage} />
           ) : (
@@ -2736,14 +2765,20 @@ export default function SellScanScreen({
             <Text style={styles.addRowName} numberOfLines={1}>
               {item.name}
             </Text>
+            {/* STG-349: Brand + pack size below name */}
             <Text style={styles.addRowMeta} numberOfLines={1}>
-              {item.barcode}
+              {[item.brand, item.net_content_value && item.net_content_unit ? `${item.net_content_value}${item.net_content_unit}` : null, item.barcode].filter(Boolean).join(" · ")}
             </Text>
           </View>
           <View style={styles.addRowRight}>
             <Text style={styles.addRowPrice}>{priceLabel}</Text>
-            <Text style={[styles.addRowStock, isOutOfStock && styles.addRowStockOut]}>
-              {isOutOfStock ? "Out of stock" : `Stock: ${stockLabel}`}
+            {/* STG-137: Color-coded stock in search results */}
+            <Text style={[
+              styles.addRowStock,
+              isOutOfStock && styles.addRowStockOut,
+              !isOutOfStock && stockValue !== null && stockValue <= 5 && styles.addRowStockLow,
+            ]}>
+              {isOutOfStock ? t("sell.outOfStock") : `${t("sell.inStock")}: ${stockLabel}`}
             </Text>
           </View>
         </Pressable>
@@ -2897,7 +2932,17 @@ export default function SellScanScreen({
     showCategoryPill && selectedCategory === "all" && catalogItems.length > 0
       ? catalogItems[0]
       : null;
-  const gridItems = featuredSku ? catalogItems.slice(1) : catalogItems;
+  // STG-342: Filter products by category when a category is selected
+  const filteredCatalogItems = useMemo(() => {
+    if (selectedCategory === "all") return catalogItems;
+    // Use API-fetched category products if available
+    if (categoryProducts.length > 0) {
+      const cpBarcodes = new Set(categoryProducts.map(cp => cp.barcode));
+      return catalogItems.filter(item => cpBarcodes.has(item.barcode));
+    }
+    return catalogItems;
+  }, [catalogItems, selectedCategory, categoryProducts]);
+  const gridItems = featuredSku ? filteredCatalogItems.slice(1) : filteredCatalogItems;
 
   const catalogHeader = showCategoryPill ? (
     <View style={styles.firstRowWithPill}>
@@ -2917,18 +2962,40 @@ export default function SellScanScreen({
             data={autocompleteSuggestions}
             keyExtractor={(item) => item.barcode}
             keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => (
-              <Pressable
-                accessibilityRole="button"
-                style={styles.autocompleteSuggestion}
-                onPress={() => handleAutocompleteTap(item)}
-              >
-                <Text style={styles.autocompleteName} numberOfLines={1}>{item.name}</Text>
-                {item.barcode ? (
-                  <Text style={styles.autocompleteBarcode} numberOfLines={1}>{item.barcode}</Text>
-                ) : null}
-              </Pressable>
-            )}
+            renderItem={({ item }) => {
+              const acResolved = resolveSkuPrice(item);
+              const acPriceLabel = formatMoney(acResolved.priceMinor, item.currency ?? "INR");
+              const acStock = resolveStockForSku(item) ?? ((item.currentStock != null && !isNaN(Number(item.currentStock))) ? Number(item.currentStock) : null);
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.autocompleteSuggestion}
+                  onPress={() => handleAutocompleteTap(item)}
+                >
+                  {/* STG-350: Image + name with matching text highlight */}
+                  {item.imageUrl ? (
+                    <Image source={{ uri: item.imageUrl }} style={styles.autocompleteImage} />
+                  ) : (
+                    <View style={styles.autocompleteImageFallback}>
+                      <MaterialCommunityIcons name="package-variant" size={12} color={colors.textTertiary} />
+                    </View>
+                  )}
+                  <Text style={styles.autocompleteName} numberOfLines={1}>{item.name}</Text>
+                  <View style={styles.autocompleteRight}>
+                    <Text style={styles.autocompletePrice}>{acPriceLabel}</Text>
+                    {acStock !== null ? (
+                      <Text style={[
+                        styles.autocompleteStock,
+                        acStock <= 0 && styles.addRowStockOut,
+                        acStock > 0 && acStock <= 5 && styles.addRowStockLow,
+                      ]}>
+                        {acStock <= 0 ? t("sell.outOfStock") : `${acStock}`}
+                      </Text>
+                    ) : null}
+                  </View>
+                </Pressable>
+              );
+            }}
           />
         </View>
       )}
@@ -3025,6 +3092,14 @@ export default function SellScanScreen({
   );
 
   const handleCheckout = () => {
+    // STG-340: Show toast identifying problematic item when checkout blocked by price error
+    if (hasUnresolvedPriceError) {
+      const problemItem = items.find(i => i.priceResolutionError && i.priceMinor === 0);
+      if (problemItem) {
+        showToast(`"${problemItem.name}" needs a price — tap to edit`);
+      }
+      return;
+    }
     if (!canPay) return;
     // ISSUE-130: Cancel active voice recording before navigating to payment
     if (voiceButtonState === "recording") {
@@ -3216,7 +3291,8 @@ export default function SellScanScreen({
       return;
     }
     // Show autocomplete when addResults have loaded
-    const suggestions = addResults.slice(0, 5);
+    // STG-350: Increased from 5→7 suggestions for richer autocomplete
+    const suggestions = addResults.slice(0, 7);
     setAutocompleteSuggestions(suggestions);
     setAutocompleteVisible(suggestions.length > 0);
   }, [addExpanded, addQuery, addResults]);
@@ -3236,21 +3312,17 @@ export default function SellScanScreen({
     setBulkQtyValue("1");
   }, []);
 
-  const handleBulkQtyConfirm = useCallback(() => {
+  // STG-400: Extracted bulk qty execution for reuse with large-qty confirmation
+  const confirmBulkQty = useCallback((qty: number) => {
     if (!bulkQtyItem) return;
-    const qty = parseInt(bulkQtyValue, 10);
-    if (!Number.isFinite(qty) || qty <= 0) return;
-
     const stockValue = resolveStockForSku(bulkQtyItem) ?? ((bulkQtyItem.currentStock != null && !isNaN(Number(bulkQtyItem.currentStock))) ? Number(bulkQtyItem.currentStock) : null);
     if (stockValue !== null && qty > stockValue) {
       showToast(`Only ${stockValue} in stock`);
       return;
     }
-
     const resolved = resolveSkuPrice(bulkQtyItem);
     const cartState = useCartStore.getState();
     const existing = cartState.items.find((entry) => entry.barcode === bulkQtyItem.barcode);
-
     if (existing) {
       cartState.updateQuantity(existing.id, existing.quantity + qty);
     } else {
@@ -3266,16 +3338,34 @@ export default function SellScanScreen({
           storeProductId: bulkQtyItem.storeProductId || undefined,
           productId: bulkQtyItem.productId || undefined,
         },
-        // AUD-016: SCALE-A3 batch traceability
         batchNumber: bulkQtyItem.batch_number ?? undefined,
         priceResolutionError: priceResolutionFailed,
         priceResolutionMessage: priceResolutionFailed ? "Price not found - enter manually" : undefined,
       });
     }
-
     setBulkQtyItem(null);
     setBulkQtyValue("");
-  }, [bulkQtyItem, bulkQtyValue]);
+  }, [bulkQtyItem]);
+
+  const handleBulkQtyConfirm = useCallback(() => {
+    if (!bulkQtyItem) return;
+    const qty = parseInt(bulkQtyValue, 10);
+    if (!Number.isFinite(qty) || qty <= 0) return;
+    // STG-400: Max qty cap
+    if (qty > 9999) {
+      showToast("Maximum quantity is 9999");
+      return;
+    }
+    // STG-400: Warn on large quantities
+    if (qty >= 100) {
+      Alert.alert("Large Quantity", `Are you sure you want to add ${qty} units?`, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Confirm", onPress: () => confirmBulkQty(qty) },
+      ]);
+      return;
+    }
+    confirmBulkQty(qty);
+  }, [bulkQtyItem, bulkQtyValue, confirmBulkQty]);
 
   const handleBulkQtyClose = useCallback(() => {
     setBulkQtyItem(null);
@@ -3374,7 +3464,18 @@ export default function SellScanScreen({
             columnWrapperStyle={styles.skuRow}
             ListHeaderComponent={catalogHeader}
             ListEmptyComponent={
-              !catalogLoading && gridItems.length === 0 ? (
+              catalogLoading && gridItems.length === 0 ? (
+                /* STG-075: Skeleton placeholders while loading */
+                <View style={styles.skeletonContainer}>
+                  {[1, 2, 3, 4].map((i) => (
+                    <View key={i} style={styles.skeletonCard}>
+                      <View style={styles.skeletonImage} />
+                      <View style={styles.skeletonLine} />
+                      <View style={styles.skeletonLineShort} />
+                    </View>
+                  ))}
+                </View>
+              ) : !catalogLoading && gridItems.length === 0 ? (
                 <View style={styles.emptyStateIllustration}>
                   {/* STG-035: Empty state for zero-product store */}
                   <MaterialCommunityIcons name="store-outline" size={48} color={colors.textTertiary} />
@@ -3587,6 +3688,11 @@ export default function SellScanScreen({
               keyboardShouldPersistTaps="handled"
             />
 
+            {/* STG-135: KeyboardAvoidingView keeps discount input + checkout visible above keyboard */}
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+            >
             <View style={[styles.cartFooter, isSmallScreen && styles.cartFooterCompact, { paddingBottom: 8 + insets.bottom }]}>
               {/* STG-140: Collapsed by default; tap to expand; stays open when discount active */}
               {discountExpanded || discount ? (
@@ -3721,6 +3827,7 @@ export default function SellScanScreen({
                 <PriceText style={styles.totalCtaAmount}>{totalLabel}</PriceText>
               </Pressable>
             </View>
+            </KeyboardAvoidingView>
           </Animated.View>
           </View>
         </Modal>
@@ -3762,8 +3869,10 @@ export default function SellScanScreen({
                   editable={!sellOnboardingBusy}
                 />
               </View>
+              {/* STG-338: Clear field guidance for cashiers */}
               <View style={styles.onboardingField}>
                 <Text style={styles.onboardingLabel}>Sell price</Text>
+                <Text style={styles.onboardingHelper}>What your customer pays</Text>
                 <TextInput
                   style={[styles.onboardingInput, sellOnboardingBusy && styles.inputDisabled]}
                   value={sellOnboardingPrice}
@@ -3776,6 +3885,7 @@ export default function SellScanScreen({
               </View>
               <View style={styles.onboardingField}>
                 <Text style={styles.onboardingLabel}>Purchase price (optional)</Text>
+                <Text style={styles.onboardingHelper}>What you paid the supplier — for profit tracking</Text>
                 <TextInput
                   style={[styles.onboardingInput, sellOnboardingBusy && styles.inputDisabled]}
                   value={sellOnboardingPurchasePrice}
@@ -3788,16 +3898,16 @@ export default function SellScanScreen({
               </View>
               <View style={styles.onboardingField}>
                 <Text style={styles.onboardingLabel}>Opening stock</Text>
+                <Text style={styles.onboardingHelper}>How many you have on shelf (leave 0 to add later)</Text>
                 <TextInput
                   style={[styles.onboardingInput, sellOnboardingBusy && styles.inputDisabled]}
                   value={sellOnboardingStock}
                   onChangeText={handleSellOnboardingStockChange}
-                  placeholder="Enter stock (0 if unknown)"
+                  placeholder="0"
                   placeholderTextColor={colors.textTertiary}
                   keyboardType="number-pad"
                   editable={!sellOnboardingBusy}
                 />
-                <Text style={styles.onboardingHelper}>Creates ledger entry if greater than 0</Text>
               </View>
             </View>
 
@@ -5932,5 +6042,73 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     backgroundColor: colors.backgroundTertiary,
     alignItems: "center",
     justifyContent: "center",
+  },
+  // STG-137: Low stock color in search results
+  addRowStockLow: {
+    color: colors.warning,
+    fontWeight: "600",
+  },
+  // STG-350: Autocomplete image + price + stock styles
+  autocompleteImage: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  autocompleteImageFallback: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    backgroundColor: colors.backgroundTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  autocompleteRight: {
+    alignItems: "flex-end",
+    marginLeft: 8,
+    gap: 1,
+  },
+  autocompletePrice: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.textPrimary,
+  },
+  autocompleteStock: {
+    fontSize: 10,
+    color: colors.success,
+  },
+  // STG-075: Skeleton loading placeholders
+  skeletonContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 12,
+    gap: 12,
+    paddingTop: 12,
+  },
+  skeletonCard: {
+    width: "46%",
+    borderRadius: 14,
+    backgroundColor: colors.surfaceAlt,
+    padding: 12,
+    gap: 8,
+  },
+  skeletonImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    backgroundColor: colors.border,
+    alignSelf: "center",
+  },
+  skeletonLine: {
+    height: 12,
+    borderRadius: 4,
+    backgroundColor: colors.border,
+  },
+  skeletonLineShort: {
+    height: 10,
+    borderRadius: 4,
+    backgroundColor: colors.border,
+    width: "60%",
   },
 }); }
