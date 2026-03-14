@@ -303,7 +303,12 @@
     "clearCartTitle": "Clear Cart",
     "clearCartConfirm": "Are you sure you want to remove all items?",
     "cartCleared": "Cart Cleared",
-    "cartClearedUndo": "All items have been removed."
+    "cartClearedUndo": "All items have been removed.",
+    "removeItemTitle": "Remove item?",
+    "removeItemConfirm": "Remove \"{{name}}\" from cart?",
+    "editPrice": "Edit",
+    "lastN": "Last {{n}}!",
+    "remainingAfterSale": "After sale: {{n}}"
   },
   "limitedMode": {
     "badge": "LIMITED MODE",

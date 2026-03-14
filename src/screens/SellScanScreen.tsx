@@ -378,6 +378,7 @@ function CartItemRow({
   onSaveDefaultPrice,
   onRemoveItem
 }: CartItemRowProps) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -572,8 +573,16 @@ function CartItemRow({
     triggerStockHighlight();
   }, [stockLimitPulse, triggerStockHighlight]);
 
+  // STG-127: Stock validation cap on qty — disable [+] at stock limit
+  const qtyAtMax = stockValue !== null && item.quantity >= stockValue;
+
   const handleIncrement = () => {
     if (controlsDisabled) return;
+    // STG-127: Hard cap at available stock
+    if (qtyAtMax) {
+      triggerStockHighlight();
+      return;
+    }
     onUpdateQuantity(item.id, item.quantity + 1);
   };
 
@@ -592,8 +601,12 @@ function CartItemRow({
   const rowMinWidth = screenWidth;
   const enableRowPress = mode === "SELL" && typeof onPressRow === "function";
 
+  // STG-126: Disable [-] at qty=1 — user must use trash to remove
+  const qtyAtMin = item.quantity <= 1;
+
   const handleQtyDecrease = (event?: GestureResponderEvent) => {
     event?.stopPropagation?.();
+    if (qtyAtMin) return; // STG-126: Block below 1
     onUpdateQuantity(item.id, item.quantity - 1);
   };
 
@@ -602,9 +615,17 @@ function CartItemRow({
     handleIncrement();
   };
 
+  // STG-095: Remove item confirmation dialog
   const handleRemove = (event?: GestureResponderEvent) => {
     event?.stopPropagation?.();
-    onRemoveItem(item.id);
+    Alert.alert(
+      t("sell.removeItemTitle", "Remove item?"),
+      t("sell.removeItemConfirm", `Remove "${item.name}" from cart?`),
+      [
+        { text: t("common.cancel", "Cancel"), style: "cancel" },
+        { text: t("sell.removeFromCart", "Remove"), style: "destructive", onPress: () => onRemoveItem(item.id) },
+      ]
+    );
   };
 
   // Determine discount badge
@@ -635,16 +656,27 @@ function CartItemRow({
       {/* Row 1: Product name + badges + delete button */}
       <View style={styles.cartItemNameRow}>
         <View style={styles.cartItemNameSection}>
-          <Text style={[styles.cartItemName, isCompactRow && styles.cartItemNameCompact]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={1.3}>
+          {/* STG-129: Allow 2 lines for long product names */}
+          <Text style={[styles.cartItemName, isCompactRow && styles.cartItemNameCompact]} numberOfLines={2} ellipsizeMode="tail" maxFontSizeMultiplier={1.3}>
             {item.name}
           </Text>
+          {/* STG-099: Clarify edit icon — label "Edit price" */}
           {enableRowPress ? (
-            <MaterialCommunityIcons
-              name="pencil-outline"
-              size={12}
-              color={colors.textTertiary}
-              style={styles.editHintIcon}
-            />
+            <Pressable
+              accessibilityRole="button"
+              onPress={onPressRow}
+              hitSlop={8}
+              style={styles.editHintButton}
+              accessibilityLabel={t("sell.editPrice", "Edit price")}
+            >
+              <MaterialCommunityIcons
+                name="pencil-outline"
+                size={12}
+                color={colors.textTertiary}
+                style={styles.editHintIcon}
+              />
+              <Text style={styles.editHintLabel}>{t("sell.editPrice", "Edit")}</Text>
+            </Pressable>
           ) : null}
           {discountBadgeText ? (
             <View style={[styles.discountBadge, isFreeItem && styles.discountBadgeFree]}>
@@ -699,32 +731,39 @@ function CartItemRow({
             { backgroundColor: qtyHighlightBg }
           ]}
         >
+          {/* STG-096: 48px tap targets for quantity buttons */}
           <Pressable
             accessibilityRole="button"
-            style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
+            style={[
+              styles.qtyButton,
+              (controlsDisabled || qtyAtMin) && styles.qtyButtonDisabled,
+            ]}
             onPress={handleQtyDecrease}
-            disabled={controlsDisabled}
-            hitSlop={8}
+            disabled={controlsDisabled || qtyAtMin}
+            hitSlop={4}
             accessibilityLabel={`Decrease ${item.name}`}
           >
-            <MaterialCommunityIcons name="minus" size={18} color={controlsDisabled ? colors.textTertiary : colors.primary} />
+            <MaterialCommunityIcons name="minus" size={18} color={(controlsDisabled || qtyAtMin) ? colors.textTertiary : colors.primary} />
           </Pressable>
           <Animated.Text style={[styles.qtyValue, { transform: [{ scale: qtyScale }] }]} maxFontSizeMultiplier={1.2}>
             {item.quantity}
           </Animated.Text>
           <Pressable
             accessibilityRole="button"
-            style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
+            style={[
+              styles.qtyButton,
+              (controlsDisabled || qtyAtMax) && styles.qtyButtonDisabled,
+            ]}
             onPress={handleQtyIncrease}
-            disabled={controlsDisabled}
-            hitSlop={8}
+            disabled={controlsDisabled || qtyAtMax}
+            hitSlop={4}
             accessibilityLabel={`Increase ${item.name}`}
           >
-            <MaterialCommunityIcons name="plus" size={18} color={controlsDisabled ? colors.textTertiary : colors.primary} />
+            <MaterialCommunityIcons name="plus" size={18} color={(controlsDisabled || qtyAtMax) ? colors.textTertiary : colors.primary} />
           </Pressable>
         </Animated.View>
 
-        {/* Line total - always visible */}
+        {/* STG-100: Line total with unit price × qty calculation */}
         <View style={styles.cartItemTotalBox}>
           {hasItemDiscount ? (
             <>
@@ -736,22 +775,41 @@ function CartItemRow({
               </Text>
             </>
           ) : (
-            <Text style={styles.cartItemTotalText} maxFontSizeMultiplier={1.2}>{lineTotalLabel}</Text>
+            <>
+              <Text style={styles.cartItemTotalText} maxFontSizeMultiplier={1.2}>{lineTotalLabel}</Text>
+              {/* STG-100: Show calculation when qty > 1 */}
+              {item.quantity > 1 && hasUnitPrice ? (
+                <Text style={styles.cartItemCalcHint} maxFontSizeMultiplier={1.2}>
+                  {unitPriceLabel} × {item.quantity}
+                </Text>
+              ) : null}
+            </>
           )}
         </View>
       </View>
 
-      {/* Row 3: Stock info with warning colors */}
+      {/* Row 3: Stock info with warning colors — STG-137 color-coded */}
       {showStock ? (
         <View style={styles.stockRow}>
           <Text style={[
             styles.stockLabel,
             stockWarningLevel === "low" && styles.stockLabelWarning,
             stockWarningLevel === "critical" && styles.stockLabelCritical,
+            stockWarningLevel === "none" && stockValue !== null && styles.stockLabelOk,
           ]}>
-            {stockWarningLevel === "critical" ? "⚠ " : stockWarningLevel === "low" ? "● " : ""}
-            In stock: {stockLabel}
+            {stockWarningLevel === "critical"
+              ? `🔴 ${t("sell.lastN", "Last {{n}}!", { n: stockLabel })}`
+              : stockWarningLevel === "low"
+                ? `⚠️ ${t("sell.lowStock")}: ${stockLabel}`
+                : `${t("sell.inStock")}: ${stockLabel}`
+            }
           </Text>
+          {/* STG-127: Show remaining after sale */}
+          {stockValue !== null && item.quantity > 0 ? (
+            <Text style={styles.stockRemainingHint}>
+              {t("sell.remainingAfterSale", "After sale: {{n}}", { n: Math.max(0, stockValue - item.quantity) })}
+            </Text>
+          ) : null}
         </View>
       ) : null}
       {/* CART-STOCK-ERROR-NOT-SHOWN: Show error badge when stock data failed to resolve */}
@@ -4899,9 +4957,21 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   cartItemNameCompact: {
     fontSize: 12,
   },
+  // STG-099: Edit hint button with label
+  editHintButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    marginLeft: 6,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+  },
   editHintIcon: {
-    marginLeft: 4,
     opacity: 0.6,
+  },
+  editHintLabel: {
+    fontSize: 10,
+    color: colors.textTertiary,
   },
   cartItemMeta: {
     fontSize: 11,
@@ -4991,10 +5061,11 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     flexShrink: 1,
     gap: 4,
   },
+  // STG-096: 48px minimum tap targets for quantity buttons
   qtyButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     borderWidth: 2,
     borderColor: colors.primary,
     backgroundColor: colors.surface,
@@ -5002,23 +5073,28 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     justifyContent: "center",
   },
   qtyButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.3,
     borderColor: colors.border,
   },
   qtyValue: {
-    minWidth: 24,
+    minWidth: 28,
     textAlign: "center",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "700",
     color: colors.textPrimary,
   },
   stockRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
   },
   stockLabel: {
     fontSize: 10,
     color: colors.textSecondary,
+  },
+  // STG-137: Color-coded stock levels
+  stockLabelOk: {
+    color: colors.success ?? colors.primary,
   },
   stockLabelWarning: {
     color: colors.warning,
@@ -5027,6 +5103,18 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   stockLabelCritical: {
     color: colors.error,
     fontWeight: "700",
+  },
+  // STG-127: Remaining after sale hint
+  stockRemainingHint: {
+    fontSize: 10,
+    color: colors.textTertiary,
+    fontStyle: "italic",
+  },
+  // STG-100: Calculation hint (₹145 × 3)
+  cartItemCalcHint: {
+    fontSize: 10,
+    color: colors.textTertiary,
+    textAlign: "right",
   },
   // GL-RJ-007: Price resolution error styles
   priceErrorRow: {

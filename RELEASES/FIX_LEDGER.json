@@ -2568,11 +2568,11 @@
     {
       "ticket": "STG-054",
       "file": "src/i18n/locales/hi.json",
-      "description": "Hindi translation completion — 100% en/hi key parity (updated Layer 7: sell i18n keys)",
+      "description": "Hindi translation completion — 100% en/hi key parity (updated Layer 7: sell + cart i18n keys)",
       "test_file": "src/__tests__/i18n/locale-completion.stg-054.unit.test.ts",
       "start_line": 1,
-      "end_line": 1334,
-      "checksum": "72e40e4513a3b60e",
+      "end_line": 1339,
+      "checksum": "f38bc0196d4eee64",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": "N/A",

@@ -303,7 +303,12 @@
     "clearCartTitle": "कार्ट साफ़ करें",
     "clearCartConfirm": "क्या आप सभी आइटम हटाना चाहते हैं?",
     "cartCleared": "कार्ट साफ़",
-    "cartClearedUndo": "सभी आइटम हटा दिए गए।"
+    "cartClearedUndo": "सभी आइटम हटा दिए गए।",
+    "removeItemTitle": "आइटम हटाएं?",
+    "removeItemConfirm": "\"{{name}}\" को कार्ट से हटाएं?",
+    "editPrice": "बदलें",
+    "lastN": "आखिरी {{n}}!",
+    "remainingAfterSale": "बिक्री के बाद: {{n}}"
   },
   "limitedMode": {
     "badge": "सीमित मोड",
