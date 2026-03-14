@@ -9,6 +9,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, colors as staticColors, useThemeColors } from '../theme';
+import { useTranslation } from 'react-i18next';
 import * as chatApi from '../services/api/chatApi';
 
 // Support-type conversation uses primary brand color (module-level, uses static colors)
@@ -23,6 +24,7 @@ interface Props {
 
 export default function ChatListScreen({ onSelectConversation, onContactSupport, onBack }: Props) {
   const colors = useThemeColors();
+  const { t } = useTranslation();
 
   const styles = useMemo(() => StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
@@ -118,7 +120,7 @@ export default function ChatListScreen({ onSelectConversation, onContactSupport,
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays === 0) {
-      return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
     }
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return d.toLocaleDateString('en-IN', { weekday: 'short' });
@@ -203,13 +205,13 @@ export default function ChatListScreen({ onSelectConversation, onContactSupport,
       ) : conversations.length === 0 ? (
         <View style={styles.center}>
           <MaterialCommunityIcons name="chat-outline" size={48} color={colors.textTertiary} />
-          <Text style={styles.emptyTitle}>No conversations yet</Text>
+          <Text style={styles.emptyTitle}>{t('chat.noConversationsTitle', 'No conversations yet')}</Text>
           <Text style={styles.emptyText}>
-            Start a chat with your supplier or contact support
+            {t('chat.noConversationsDescription', 'Contact support or start a chat with your suppliers to see messages here.')}
           </Text>
-          <Pressable style={styles.supportCta} onPress={onContactSupport} accessibilityLabel="Contact Support" accessibilityRole="button">
+          <Pressable style={styles.supportCta} onPress={onContactSupport} accessibilityLabel={t('chat.contactSupport', 'Contact Support')} accessibilityRole="button">
             <MaterialCommunityIcons name="headset" size={18} color={colors.textInverse} />
-            <Text style={styles.supportCtaText}>Contact Support</Text>
+            <Text style={styles.supportCtaText}>{t('chat.contactSupport', 'Contact Support')}</Text>
           </Pressable>
         </View>
       ) : (

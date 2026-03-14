@@ -898,7 +898,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
               {formatMoney(refundResult.refundAmountMinor)}
             </Text>
             <Text style={styles.successSubtitle}>
-              {t("returnScreen.refundIdLabel")}: {refundResult.refundId}
+              {t("returnScreen.returnRef", { ref: refundResult.refundId })}
             </Text>
             <Text style={styles.successNote}>
               {t("returnScreen.stockReversedNote")}

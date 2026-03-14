@@ -374,6 +374,8 @@ type CartItemRowProps = {
   onUpdatePrice: (itemId: string, priceMinor: number) => void;
   onSaveDefaultPrice: (item: CartItem, priceMinor: number) => Promise<boolean>;
   onRemoveItem: (itemId: string) => void;
+  // STG-385: Stock adjustment callback
+  onAdjustStock?: (item: CartItem, newStock: number) => void;
   // STG-134: Swipe-to-delete
   onSwipeDelete?: (itemId: string, itemName: string) => void;
   swipeableRef?: (ref: Swipeable | null) => void;
@@ -398,6 +400,7 @@ function CartItemRow({
   onUpdatePrice,
   onSaveDefaultPrice,
   onRemoveItem,
+  onAdjustStock,
   onSwipeDelete,
   swipeableRef,
 }: CartItemRowProps) {
@@ -845,6 +848,36 @@ function CartItemRow({
             <Text style={styles.stockRemainingHint}>
               {t("sell.remainingAfterSale", "After sale: {{n}}", { n: Math.max(0, stockValue - item.quantity) })}
             </Text>
+          ) : null}
+          {/* STG-385: Quick stock adjust button */}
+          {onAdjustStock ? (
+            <Pressable
+              accessibilityRole="button"
+              hitSlop={6}
+              onPress={() => {
+                Alert.prompt(
+                  t("sell.adjustStockTitle", "Adjust Stock"),
+                  t("sell.adjustStockMessage", "Enter corrected stock quantity for {{name}}:", { name: item.name }),
+                  [
+                    { text: t("common.cancel"), style: "cancel" },
+                    {
+                      text: t("common.save"),
+                      onPress: (value) => {
+                        const parsed = parseInt(value ?? "", 10);
+                        if (!isNaN(parsed) && parsed >= 0) {
+                          onAdjustStock(item, parsed);
+                        }
+                      },
+                    },
+                  ],
+                  "plain-text",
+                  stockLabel !== "Unknown" ? stockLabel : "",
+                  "numeric"
+                );
+              }}
+            >
+              <Text style={styles.stockAdjustButton}>{t("sell.adjust", "Adjust")}</Text>
+            </Pressable>
           ) : null}
         </View>
       ) : null}
@@ -2223,10 +2256,10 @@ export default function SellScanScreen({
     if (!stockLimitEvent) return;
     const message =
       stockLimitEvent.reason === "out_of_stock"
-        ? "Out of stock"
+        ? t("sell.outOfStockExplanation", "Out of stock. Add stock via Stock Inward to continue selling.")
         : stockLimitEvent.reason === "unknown_stock"
           ? "Added — stock unknown. Sync recommended."
-          : `Only ${stockLimitEvent.availableStock} in stock`;
+          : t("sell.stockLimitExplanation", "Only {{count}} in stock. Quantity capped at available stock.", { count: stockLimitEvent.availableStock });
     showToast(message);
     if (stockLimitEvent.itemId) {
       setStockLimitItemId(stockLimitEvent.itemId);
@@ -3045,6 +3078,7 @@ export default function SellScanScreen({
         onUpdatePrice={updatePrice}
         onSaveDefaultPrice={handleSaveDefaultPrice}
         onRemoveItem={handleRemoveItem}
+        onAdjustStock={cartMode === "SELL" ? handleAdjustStock : undefined}
         onSwipeDelete={handleSwipeDelete}
         swipeableRef={(ref) => swipeableRefs.current.set(item.id, ref)}
       />
@@ -3325,6 +3359,15 @@ export default function SellScanScreen({
       undoDeleteTimerRef.current = null;
     }, 5000);
   }, [removeItem]);
+
+  // STG-385: Stock adjustment from cart row
+  const handleAdjustStock = useCallback((cartItem: CartItem, newStock: number) => {
+    const key = cartItem.barcode || cartItem.sku || cartItem.id;
+    if (!key) return;
+    pinStockEntries([{ key, stock: newStock }]);
+    upsertStockEntries([{ key, stock: newStock }]);
+    showToast(t("sell.stockAdjusted", "Stock updated to {{count}} for {{name}}", { count: newStock, name: cartItem.name }));
+  }, [t]);
 
   // STG-134: Undo delete
   const handleUndoDelete = useCallback(() => {
@@ -5831,6 +5874,13 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     fontSize: 10,
     color: colors.textTertiary,
     fontStyle: "italic",
+  },
+  // STG-385: Stock adjust button
+  stockAdjustButton: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: colors.primary,
+    textDecorationLine: "underline",
   },
   // STG-100: Calculation hint (₹145 × 3)
   cartItemCalcHint: {

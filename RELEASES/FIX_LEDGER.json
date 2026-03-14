@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 64,
+  "version": 67,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -523,8 +523,8 @@
       "ticket": "STG-486",
       "file": "backend/src/utils/encryption.ts",
       "start_line": 1,
-      "end_line": 112,
-      "checksum": "c80be5c925e274cd",
+      "end_line": 131,
+      "checksum": "b3a8d93244396c15",
       "description": "AES-256-GCM encryption utility with GCP Secret Manager key management, key caching, version-prefixed ciphertext for rotation",
       "test_file": "backend/tests/encryption.stg-486.key-management.unit.test.ts",
       "depends_on": null,
@@ -563,8 +563,8 @@
       "ticket": "STG-485",
       "file": "backend/src/routes/v1/consent.ts",
       "start_line": 1,
-      "end_line": 30,
-      "checksum": "5ebf9baaa41915ff",
+      "end_line": 167,
+      "checksum": "679165be3e457622",
       "description": "DPDP consent records API: POST /consent/record, GET /consent/check, POST /consent/revoke. Migration 188 creates platform.consent_records table.",
       "test_file": "backend/tests/consent.stg-485.consent-records.unit.test.ts",
       "depends_on": null,
@@ -683,8 +683,8 @@
     {
       "ticket": "STG-473",
       "file": "backend/src/routes/v1/pos/khata.ts",
-      "start_line": 191,
-      "end_line": 206,
+      "start_line": 199,
+      "end_line": 214,
       "checksum": "6e92c01057ed080a",
       "description": "Khata consent gate: check khata_phone consent before creating entry, return 403 with consentRequired",
       "test_file": "backend/tests/khata.stg-473.consent-gate.unit.test.ts",
@@ -718,7 +718,8 @@
         "gcp_parity": "no localhost URLs, env vars used, staging-compatible",
         "regression_check": "zero drift confirmed, 18 fixes intact",
         "test_guard": "6 tests pass in khata.stg-473.consent-gate.unit.test.ts"
-      }
+      },
+      "line_shifted_at": "2026-03-14T08:17:36.768Z"
     },
     {
       "ticket": "STG-232",
@@ -1030,8 +1031,8 @@
     {
       "ticket": "STG-234",
       "file": "src/i18n/locales/en.json",
-      "start_line": 489,
-      "end_line": 489,
+      "start_line": 501,
+      "end_line": 501,
       "checksum": "1e47e4c8999c08bd",
       "description": "Rewrite storeInactive: remove Superadmin reference",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1063,7 +1064,7 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T02:59:50.675Z"
+      "line_shifted_at": "2026-03-14T08:17:36.781Z"
     },
     {
       "ticket": "STG-235",
@@ -1106,8 +1107,8 @@
     {
       "ticket": "STG-236",
       "file": "src/i18n/locales/en.json",
-      "start_line": 500,
-      "end_line": 500,
+      "start_line": 512,
+      "end_line": 512,
       "checksum": "a39b903d8b976262",
       "description": "Rewrite deviceAlreadyEnrolled: remove Superadmin reference",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1139,13 +1140,13 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T02:59:50.680Z"
+      "line_shifted_at": "2026-03-14T08:17:36.785Z"
     },
     {
       "ticket": "STG-237",
       "file": "src/i18n/locales/en.json",
-      "start_line": 513,
-      "end_line": 513,
+      "start_line": 525,
+      "end_line": 525,
       "checksum": "246c5ceb9054a067",
       "description": "Rewrite sessionExpired: re-enter staff PIN instead of login again",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1177,7 +1178,7 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T02:59:50.687Z"
+      "line_shifted_at": "2026-03-14T08:17:36.789Z"
     },
     {
       "ticket": "STG-238",
@@ -1221,8 +1222,8 @@
       "ticket": "STG-481",
       "file": "scripts/i18n-validate.js",
       "start_line": 1,
-      "end_line": 5,
-      "checksum": "8ebf7d8d76784c23",
+      "end_line": 73,
+      "checksum": "e97fa19f7b46f76f",
       "description": "i18n key parity validator: en.json/hi.json key mismatch detection",
       "test_file": "src/__tests__/i18n/i18n-validate.stg-481.unit.test.ts",
       "depends_on": null,
@@ -1258,8 +1259,8 @@
       "ticket": "STG-482",
       "file": "src/i18n/NAMING.md",
       "start_line": 1,
-      "end_line": 3,
-      "checksum": "6eb16b86c8eaf5bf",
+      "end_line": 44,
+      "checksum": "f1b3fb6c798c296f",
       "description": "i18n key naming convention: prefixes, rules, screen mapping",
       "test_file": "src/__tests__/i18n/naming.stg-482.unit.test.ts",
       "depends_on": null,
@@ -1368,8 +1369,8 @@
     {
       "ticket": "STG-241",
       "file": "src/i18n/locales/hi.json",
-      "start_line": 358,
-      "end_line": 358,
+      "start_line": 364,
+      "end_line": 364,
       "checksum": "1976e153e9dd88ec",
       "description": "Simplified dismissSuggestedFrom Hindi template",
       "test_file": "src/__tests__/i18n/locale-keys.stg-239-244.unit.test.ts",
@@ -1401,13 +1402,13 @@
         "regression_check": "39 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T02:59:50.695Z"
+      "line_shifted_at": "2026-03-14T08:17:36.798Z"
     },
     {
       "ticket": "STG-242",
       "file": "src/i18n/locales/en.json",
-      "start_line": 718,
-      "end_line": 719,
+      "start_line": 731,
+      "end_line": 732,
       "checksum": "cdd357376fc56d6f",
       "description": "Explain KYC/UTR/EMI jargon in English locale",
       "test_file": "src/__tests__/i18n/locale-keys.stg-239-244.unit.test.ts",
@@ -1439,7 +1440,7 @@
         "regression_check": "39 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T02:59:50.700Z"
+      "line_shifted_at": "2026-03-14T08:17:36.802Z"
     },
     {
       "ticket": "STG-243",
@@ -1482,8 +1483,8 @@
     {
       "ticket": "STG-244",
       "file": "src/i18n/locales/en.json",
-      "start_line": 399,
-      "end_line": 399,
+      "start_line": 405,
+      "end_line": 405,
       "checksum": "561a81e811fc7281",
       "description": "Goods Receipt Note renamed to Stock Received",
       "test_file": "src/__tests__/i18n/locale-keys.stg-239-244.unit.test.ts",
@@ -1515,7 +1516,7 @@
         "regression_check": "39 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T02:59:50.703Z"
+      "line_shifted_at": "2026-03-14T08:17:36.805Z"
     },
     {
       "ticket": "STG-279",
@@ -1685,8 +1686,8 @@
       "ticket": "STG-257",
       "file": "src/screens/PaymentSetupScreen.tsx",
       "start_line": 1,
-      "end_line": 50,
-      "checksum": "8d25d958bd5e715a",
+      "end_line": 410,
+      "checksum": "32c0ec9e23e7aaa0",
       "description": "PaymentSetupScreen i18n: all hardcoded strings replaced with t() calls under paymentSetup.* namespace (checksum updated: STG-280,314 VPA label + save toast)",
       "test_file": "src/__tests__/screens/PaymentSetupScreen.stg-257.i18n.unit.test.ts",
       "depends_on": null,
@@ -1726,8 +1727,8 @@
       "ticket": "STG-258",
       "file": "src/screens/SalesHistoryScreen.tsx",
       "start_line": 1,
-      "end_line": 50,
-      "checksum": "7c7d5ab1967eb2a4",
+      "end_line": 311,
+      "checksum": "ed6f455552203583",
       "description": "SalesHistoryScreen i18n: hardcoded strings replaced with t() calls under salesHistory.* namespace",
       "test_file": "src/__tests__/screens/SalesHistoryScreen.stg-258.i18n.unit.test.ts",
       "depends_on": null,
@@ -1767,8 +1768,8 @@
       "ticket": "STG-259",
       "file": "src/screens/BillDetailScreen.tsx",
       "start_line": 1,
-      "end_line": 50,
-      "checksum": "b0b83237eb81f5f7",
+      "end_line": 447,
+      "checksum": "32bf7918cf9aa3bd",
       "description": "BillDetailScreen i18n: all hardcoded strings replaced with t() calls under billDetail.* namespace",
       "test_file": "src/__tests__/screens/BillDetailScreen.stg-259.i18n.unit.test.ts",
       "depends_on": null,
@@ -1808,8 +1809,8 @@
       "ticket": "STG-260",
       "file": "src/screens/SalesStatementScreen.tsx",
       "start_line": 1,
-      "end_line": 50,
-      "checksum": "1280a28b4f73dd8a",
+      "end_line": 428,
+      "checksum": "93b056d415349f1a",
       "description": "SalesStatementScreen i18n: all hardcoded strings replaced with t() calls under salesStatement.* namespace",
       "test_file": "src/__tests__/screens/SalesStatementScreen.stg-260.i18n.unit.test.ts",
       "depends_on": null,
@@ -1849,10 +1850,10 @@
       "ticket": "STG-261",
       "file": "src/screens/DailyReportScreen.tsx",
       "start_line": 1,
-      "end_line": 811,
+      "end_line": 830,
       "description": "DailyReportScreen i18n — replace 25 hardcoded strings with t() calls",
       "test_file": "src/__tests__/screens/DailyReportScreen.stg-261.i18n.unit.test.ts",
-      "checksum": "59447ebfd3e68465",
+      "checksum": "dff0be9d7ee41c0a",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -1887,10 +1888,10 @@
       "ticket": "STG-262",
       "file": "src/screens/DailyClosingScreen.tsx",
       "start_line": 1,
-      "end_line": 749,
+      "end_line": 765,
       "description": "DailyClosingScreen i18n — replace 28 hardcoded strings with t() calls",
       "test_file": "src/__tests__/screens/DailyClosingScreen.stg-262.i18n.unit.test.ts",
-      "checksum": "7f382b4352c6e42b",
+      "checksum": "c28bc5459e1edd21",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -1925,10 +1926,10 @@
       "ticket": "STG-263",
       "file": "src/screens/InwardScreen.tsx",
       "start_line": 1,
-      "end_line": 1147,
+      "end_line": 1148,
       "description": "InwardScreen i18n — replace 23 hardcoded strings with t() calls across 3 sub-components",
       "test_file": "src/__tests__/screens/InwardScreen.stg-263.i18n.unit.test.ts",
-      "checksum": "39dc3aa027a52f1e",
+      "checksum": "58e819c6f7a5a427",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -1963,10 +1964,10 @@
       "ticket": "STG-264",
       "file": "src/screens/GRNScreen.tsx",
       "start_line": 1,
-      "end_line": 1001,
+      "end_line": 1008,
       "description": "GRNScreen i18n — replace 30 hardcoded strings with t() calls",
       "test_file": "src/__tests__/screens/GRNScreen.stg-264.i18n.unit.test.ts",
-      "checksum": "5b0b9b884b6d60fb",
+      "checksum": "ec6a417c3fa28134",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2004,7 +2005,7 @@
       "test_file": "src/__tests__/screens/OpeningStockScreen.stg-265.i18n.unit.test.ts",
       "start_line": 1,
       "end_line": 736,
-      "checksum": "8cd5597bfe8a559e",
+      "checksum": "cb2523cb8186a7f6",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2117,8 +2118,8 @@
       "description": "BnplDuesScreen i18n — replace 43 hardcoded strings with t() calls",
       "test_file": "src/__tests__/screens/BnplDuesScreen.stg-268.i18n.unit.test.ts",
       "start_line": 1,
-      "end_line": 1439,
-      "checksum": "02290f31b4042b1e",
+      "end_line": 1469,
+      "checksum": "5771489b042e6396",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2155,8 +2156,8 @@
       "description": "KhataScreen i18n — replace 38 hardcoded strings with t() calls",
       "test_file": "src/__tests__/screens/KhataScreen.stg-269.i18n.unit.test.ts",
       "start_line": 1,
-      "end_line": 945,
-      "checksum": "90462c77d088f6c3",
+      "end_line": 1014,
+      "checksum": "f0c2f508b318cbd4",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2193,8 +2194,8 @@
       "description": "CustomerListScreen i18n — replace 40 hardcoded strings with t() calls",
       "test_file": "src/__tests__/screens/CustomerListScreen.stg-270.i18n.unit.test.ts",
       "start_line": 1,
-      "end_line": 906,
-      "checksum": "f9f3b0ef0aef59bf",
+      "end_line": 914,
+      "checksum": "a22bd021045dc033",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2232,7 +2233,7 @@
       "test_file": "src/__tests__/screens/OverdueDuesScreen.stg-271.i18n.unit.test.ts",
       "start_line": 1,
       "end_line": 576,
-      "checksum": "c80b89e2d724a08c",
+      "checksum": "a510610694ca3ccb",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2307,8 +2308,8 @@
       "description": "OrderDetailScreen i18n — replace 40 hardcoded strings with t() calls",
       "test_file": "src/__tests__/screens/OrderDetailScreen.stg-273.i18n.unit.test.ts",
       "start_line": 1,
-      "end_line": 955,
-      "checksum": "cd6d34ae80b356b1",
+      "end_line": 970,
+      "checksum": "5a1c3279b39e1a54",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2346,7 +2347,7 @@
       "test_file": "src/__tests__/screens/ReturnScreen.stg-274.i18n.unit.test.ts",
       "start_line": 1,
       "end_line": 917,
-      "checksum": "cdb246a327ef1e1f",
+      "checksum": "b548dd8a233a9c47",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2383,8 +2384,8 @@
       "description": "BuyScreen i18n — replace 11 hardcoded strings with t() calls",
       "test_file": "src/__tests__/screens/BuyScreen.stg-275.i18n.unit.test.ts",
       "start_line": 1,
-      "end_line": 996,
-      "checksum": "168030de79c1c8c7",
+      "end_line": 1004,
+      "checksum": "72784c9aecca70ec",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2421,8 +2422,8 @@
       "description": "CreditScreen i18n — replace remaining hardcoded strings with t() calls",
       "test_file": "src/__tests__/screens/CreditScreen.stg-276.i18n.unit.test.ts",
       "start_line": 1,
-      "end_line": 1516,
-      "checksum": "ef35300c90c47121",
+      "end_line": 1546,
+      "checksum": "0e36a15fdef7d4e7",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2535,8 +2536,8 @@
       "description": "MenuScreen i18n — replace 36+ hardcoded strings (updated Layer 6: summary font size)",
       "test_file": "src/__tests__/screens/MenuScreen.stg-172.i18n.unit.test.ts",
       "start_line": 1,
-      "end_line": 2028,
-      "checksum": "a2c1ca0236b17569",
+      "end_line": 2029,
+      "checksum": "73236a554f787dd5",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2573,8 +2574,8 @@
       "description": "Hindi translation completion — 100% en/hi key parity (updated Layer 7: sell + cart i18n keys)",
       "test_file": "src/__tests__/i18n/locale-completion.stg-054.unit.test.ts",
       "start_line": 1,
-      "end_line": 1400,
-      "checksum": "ddacf262d6e4e314",
+      "end_line": 1439,
+      "checksum": "103599e53bdcc16f",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": "N/A",
@@ -2607,8 +2608,8 @@
       "description": "App version display on enrollment screen (updated Layer 5: UX redesign + text fixes)",
       "test_file": "src/__tests__/i18n/locale-completion.stg-054.unit.test.ts",
       "start_line": 1,
-      "end_line": 1103,
-      "checksum": "3673e9b01d07d61f",
+      "end_line": 1104,
+      "checksum": "a90a8ccc6422ee19",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2709,8 +2710,8 @@
       "description": "SellTile smart price formatting + null price label + IST timezone fix",
       "test_file": "src/__tests__/components/SellTile.stg-222.fixes.unit.test.ts",
       "start_line": 1,
-      "end_line": 560,
-      "checksum": "d3647412c8c308d7",
+      "end_line": 561,
+      "checksum": "456c4645a936dc09",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2821,8 +2822,8 @@
       "ticket": "STG-009",
       "file": "src/components/sell/SellTile.tsx",
       "start_line": 1,
-      "end_line": 560,
-      "checksum": "d3647412c8c308d7",
+      "end_line": 561,
+      "checksum": "456c4645a936dc09",
       "description": "SellTile redesign with stock badges, brand display, thumbnails",
       "test_file": "src/__tests__/components/SellTile.stg-009.redesign.unit.test.ts",
       "status": "ACTIVE",
@@ -2859,8 +2860,8 @@
       "ticket": "STG-228",
       "file": "src/components/sell/SellTile.tsx",
       "start_line": 1,
-      "end_line": 560,
-      "checksum": "d3647412c8c308d7",
+      "end_line": 561,
+      "checksum": "456c4645a936dc09",
       "description": "MRP strikethrough + discount badge + add button on SellTile",
       "test_file": "src/__tests__/components/SellTile.stg-228.dependents.unit.test.ts",
       "status": "ACTIVE",
@@ -3015,8 +3016,8 @@
     {
       "ticket": "STG-341",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 1159,
-      "end_line": 1162,
+      "start_line": 1192,
+      "end_line": 1195,
       "checksum": "c7853e042cf2d428",
       "description": "Category rail always visible — removed feature flag gate",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3050,13 +3051,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:30:43.955Z"
+      "line_shifted_at": "2026-03-14T08:17:36.988Z"
     },
     {
       "ticket": "STG-133",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 1604,
-      "end_line": 1611,
+      "start_line": 1637,
+      "end_line": 1644,
       "checksum": "57a699d47d129b0d",
       "description": "Dynamic cart sheet height based on item count (2/5/max tiers)",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3091,13 +3092,13 @@
         "test_guard": "N/A — POS UI batch fix",
         "wiring": "N/A — POS UI display change only"
       },
-      "line_shifted_at": "2026-03-14T01:30:43.971Z"
+      "line_shifted_at": "2026-03-14T08:17:37.005Z"
     },
     {
       "ticket": "STG-370",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 2716,
-      "end_line": 2756,
+      "start_line": 2749,
+      "end_line": 2789,
       "checksum": "50932b627cbce26a",
       "description": "Await cart add + catch storage failures with toast + enhanced metadata",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3131,13 +3132,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.021Z"
+      "line_shifted_at": "2026-03-14T08:17:37.068Z"
     },
     {
       "ticket": "STG-400",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 599,
-      "end_line": 617,
+      "start_line": 602,
+      "end_line": 620,
       "checksum": "310a1562e5631250",
       "description": "Max per-item qty cap of 9999 — prevents large number input",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3171,7 +3172,7 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.034Z"
+      "line_shifted_at": "2026-03-14T08:17:37.080Z"
     },
     {
       "ticket": "STG-369",
@@ -3215,8 +3216,8 @@
     {
       "ticket": "STG-101",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 1536,
-      "end_line": 1547,
+      "start_line": 1569,
+      "end_line": 1580,
       "checksum": "15098102a629cefd",
       "description": "GST/tax line in cart totals — inclusive GST computed from catalog items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3250,13 +3251,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.050Z"
+      "line_shifted_at": "2026-03-14T08:17:37.101Z"
     },
     {
       "ticket": "STG-111",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4255,
-      "end_line": 4270,
+      "start_line": 4298,
+      "end_line": 4313,
       "checksum": "144b0fa97308c1d2",
       "description": "You save display when discount applied",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3290,13 +3291,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.091Z"
+      "line_shifted_at": "2026-03-14T08:17:37.167Z"
     },
     {
       "ticket": "STG-029",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3767,
-      "end_line": 3787,
+      "start_line": 3810,
+      "end_line": 3830,
       "checksum": "58246a072b99ba48",
       "description": "Add Product footer button for unlisted items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3330,13 +3331,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.137Z"
+      "line_shifted_at": "2026-03-14T08:17:37.215Z"
     },
     {
       "ticket": "STG-028",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3788,
-      "end_line": 3793,
+      "start_line": 3831,
+      "end_line": 3836,
       "checksum": "e92d22c8a851d762",
       "description": "Product count footer for section context",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3370,13 +3371,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.159Z"
+      "line_shifted_at": "2026-03-14T08:17:37.237Z"
     },
     {
       "ticket": "STG-108",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4015,
-      "end_line": 4022,
+      "start_line": 4058,
+      "end_line": 4065,
       "checksum": "b5fd8d1c5f74c809",
       "description": "Empty space guidance in cart when few items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3410,13 +3411,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.183Z"
+      "line_shifted_at": "2026-03-14T08:17:37.270Z"
     },
     {
       "ticket": "STG-107",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 685,
-      "end_line": 688,
+      "start_line": 688,
+      "end_line": 691,
       "checksum": "6caceaf398dbabc2",
       "description": "Product thumbnail image in cart items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3450,13 +3451,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.192Z"
+      "line_shifted_at": "2026-03-14T08:17:37.282Z"
     },
     {
       "ticket": "STG-138",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 695,
-      "end_line": 698,
+      "start_line": 698,
+      "end_line": 701,
       "checksum": "755afb745239018b",
       "description": "Weight/unit label in cart items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3490,13 +3491,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.198Z"
+      "line_shifted_at": "2026-03-14T08:17:37.289Z"
     },
     {
       "ticket": "STG-033",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3692,
-      "end_line": 3730,
+      "start_line": 3735,
+      "end_line": 3773,
       "checksum": "ee8a6d3e34a1786a",
       "description": "Quick-sell favorites horizontal strip above product grid",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3532,7 +3533,7 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.259Z"
+      "line_shifted_at": "2026-03-14T08:17:37.482Z"
     },
     {
       "ticket": "STG-103",
@@ -3574,8 +3575,8 @@
     {
       "ticket": "STG-103-UI",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4169,
-      "end_line": 4224,
+      "start_line": 4212,
+      "end_line": 4267,
       "checksum": "093e568b1644701e",
       "description": "Customer name/phone UI section in cart footer",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3611,13 +3612,13 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.351Z"
+      "line_shifted_at": "2026-03-14T08:17:37.596Z"
     },
     {
       "ticket": "STG-112",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4225,
-      "end_line": 4254,
+      "start_line": 4268,
+      "end_line": 4297,
       "checksum": "30e1aa68c17e84fe",
       "description": "Order note/memo expandable field in cart footer",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3653,13 +3654,13 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.407Z"
+      "line_shifted_at": "2026-03-14T08:17:37.669Z"
     },
     {
       "ticket": "STG-128",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 858,
-      "end_line": 881,
+      "start_line": 891,
+      "end_line": 914,
       "checksum": "08c805a341db5d34",
       "description": "Batch/expiry info display in cart items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3695,13 +3696,13 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.421Z"
+      "line_shifted_at": "2026-03-14T08:17:37.691Z"
     },
     {
       "ticket": "STG-134",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 900,
-      "end_line": 933,
+      "start_line": 933,
+      "end_line": 966,
       "checksum": "9606aa6dcdca6d26",
       "description": "Swipe-to-delete gesture on cart items with undo",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3737,13 +3738,13 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.439Z"
+      "line_shifted_at": "2026-03-14T08:17:37.717Z"
     },
     {
       "ticket": "STG-131",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3982,
-      "end_line": 4012,
+      "start_line": 4025,
+      "end_line": 4055,
       "checksum": "6c9fcab497b82b40",
       "description": "Frequently bought together suggestions in cart footer",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3779,7 +3780,7 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T01:30:44.516Z"
+      "line_shifted_at": "2026-03-14T08:17:37.863Z"
     },
     {
       "ticket": "STG-487",
@@ -3864,8 +3865,8 @@
     {
       "ticket": "STG-102",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 2617,
-      "end_line": 2689,
+      "start_line": 2650,
+      "end_line": 2722,
       "checksum": "5759ea81bda6bdec",
       "description": "Discount limit check + manager approval modal — blocks discounts over maxDiscountPct without manager PIN",
       "test_file": "src/__tests__/stores/staffSessionStore.test.ts",
@@ -3900,7 +3901,8 @@
         "ux_states": "DONE",
         "wiring": "DONE",
         "navigation": "DONE"
-      }
+      },
+      "line_shifted_at": "2026-03-14T08:17:37.975Z"
     }
   ],
   "machine_state_version": 265

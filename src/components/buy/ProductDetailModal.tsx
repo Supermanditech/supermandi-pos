@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { theme, useThemeColors } from "../../theme";
 import { formatMoney } from "../../utils/money";
+import { useTranslation } from "react-i18next";
 import { SupplierRow } from "./SupplierRow";
 import type { CatalogProduct, CatalogSupplier } from "../../services/api/catalogApi";
 import { usePurchaseCartStore } from "../../stores/purchaseCartStore";
@@ -46,6 +47,7 @@ export function ProductDetailModal({
   useModalBackHandler(visible, onClose);
 
   const tc = useThemeColors();
+  const { t } = useTranslation();
   const styles = useMemo(() => createStyles(tc), [tc]);
 
   const insets = useSafeAreaInsets();
@@ -269,7 +271,12 @@ export function ProductDetailModal({
                     size={32}
                     color={tc.textTertiary}
                   />
-                  <Text style={styles.noSuppliersText}>No suppliers available</Text>
+                  <Text style={styles.noSuppliersText}>
+                    {t('buy.noSuppliersFound', 'No suppliers found for this product.')}
+                  </Text>
+                  <Text style={[styles.noSuppliersText, { fontSize: 12, marginTop: 4 }]}>
+                    {t('buy.noSuppliersHint', 'Ask your admin to add suppliers for this product.')}
+                  </Text>
                 </View>
               ) : (
                 product.suppliers.map((supplier) => (

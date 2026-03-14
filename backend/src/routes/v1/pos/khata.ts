@@ -181,6 +181,14 @@ posKhataRouter.post("/khata/entries", requireDeviceToken, requireActiveStore, as
   if (!customerPhone || typeof customerPhone !== "string") {
     return res.status(400).json({ error: "customerPhone is required" });
   }
+  // STG-469: Phone format validation — strip +91, accept 10 digits
+  let normalizedPhone = customerPhone.trim().replace(/\s+/g, "");
+  if (normalizedPhone.startsWith("+91")) normalizedPhone = normalizedPhone.slice(3);
+  else if (normalizedPhone.startsWith("91") && normalizedPhone.length === 12) normalizedPhone = normalizedPhone.slice(2);
+  else if (normalizedPhone.startsWith("0")) normalizedPhone = normalizedPhone.slice(1);
+  if (!/^\d{10}$/.test(normalizedPhone)) {
+    return res.status(400).json({ error: "customerPhone must be a valid 10-digit Indian phone number" });
+  }
   if (!entryType || !["credit", "debit", "payment"].includes(entryType)) {
     return res.status(400).json({ error: "type must be 'CREDIT', 'DEBIT', or 'PAYMENT'" });
   }

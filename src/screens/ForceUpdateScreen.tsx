@@ -65,16 +65,16 @@ export default function ForceUpdateScreen() {
   // S2-5: Validate route params — fallback to "unknown" for missing/invalid values
   const rawCurrent = route.params?.currentVersion;
   const rawRequired = route.params?.requiredVersion;
-  const currentVersion = rawCurrent && rawCurrent.trim() ? rawCurrent.trim() : "unknown";
-  const requiredVersion = rawRequired && rawRequired.trim() ? rawRequired.trim() : "unknown";
+  const currentVersion = rawCurrent && rawCurrent.trim() ? rawCurrent.trim() : "check failed";
+  const requiredVersion = rawRequired && rawRequired.trim() ? rawRequired.trim() : "check failed";
 
   const handleUpdate = () => {
     // POS-APPSTORE-IOS-FALLBACK: On iOS before App Store listing is live,
     // show a clear message rather than silently trying the Play Store URL (which fails on iOS).
     if (IOS_MISSING_STORE_URL) {
       Alert.alert(
-        "iOS Update Coming Soon",
-        "The iOS App Store listing is being prepared. Please check back soon or contact support.",
+        "Update Coming Soon",
+        "A new version is available. The app store listing is being prepared. Please check back soon or contact support.",
         [{ text: "OK" }]
       );
       return;
@@ -302,8 +302,8 @@ export default function ForceUpdateScreen() {
           testID="force-update-subtitle"
           accessibilityLabel={`Your app version ${currentVersion} is below minimum required version ${requiredVersion}. Please update to continue.`}
         >
-          Your app version ({currentVersion}) is below the minimum required
-          version ({requiredVersion}). Please update to continue using the POS.
+          A new version is available. Please update to continue.
+          Your version ({currentVersion}) is below the minimum required ({requiredVersion}).
         </Text>
 
         <View style={styles.versionRow} accessibilityLabel={`Current version ${currentVersion}, required version ${requiredVersion}`}>
@@ -322,7 +322,7 @@ export default function ForceUpdateScreen() {
           style={styles.button}
           onPress={handleUpdate}
           testID="force-update-update-button"
-          accessibilityLabel={IOS_MISSING_STORE_URL ? "iOS App Store listing coming soon" : "Update now — opens app store"}
+          accessibilityLabel={IOS_MISSING_STORE_URL ? "App store listing coming soon" : "Update now — opens app store"}
           accessibilityRole="button"
         >
           <MaterialCommunityIcons name="download" size={18} color={colors.textInverse} style={{ marginRight: 6 }} accessibilityElementsHidden />
@@ -331,7 +331,7 @@ export default function ForceUpdateScreen() {
         {/* POS-APPSTORE-IOS-FALLBACK: Show informative note on iOS until App Store listing is live */}
         {IOS_MISSING_STORE_URL && (
           <Text style={styles.iosNote} testID="force-update-ios-note">
-            iOS App Store listing coming soon
+            App store listing coming soon
           </Text>
         )}
 

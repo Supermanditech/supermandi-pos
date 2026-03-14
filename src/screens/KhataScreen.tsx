@@ -83,6 +83,9 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
   const [creditDescription, setCreditDescription] = useState("");
   const [creditSubmitting, setCreditSubmitting] = useState(false);
 
+  // STG-471: Track voided entries locally
+  const [voidedEntries, setVoidedEntries] = useState<Set<string>>(new Set());
+
   // Payment modal state
   const [paymentPhone, setPaymentPhone] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -159,12 +162,16 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
   }, []);
 
   const handleSubmitCredit = useCallback(async () => {
-    const phone = creditPhone.trim();
-    const amountStr = creditAmount.trim();
-    if (!phone || phone.length < 10) {
-      Alert.alert(t("khata.invalidPhone"), t("khata.invalidPhoneMessage"));
+    // STG-469: Phone validation — strip +91 prefix, validate 10 digits
+    let phone = creditPhone.trim().replace(/\s+/g, "");
+    if (phone.startsWith("+91")) phone = phone.slice(3);
+    else if (phone.startsWith("91") && phone.length === 12) phone = phone.slice(2);
+    else if (phone.startsWith("0")) phone = phone.slice(1);
+    if (!/^\d{10}$/.test(phone)) {
+      Alert.alert(t("khata.invalidPhone"), t("khata.phoneValidationError", "Please enter a valid 10-digit Indian phone number. Remove +91 prefix if present."));
       return;
     }
+    const amountStr = creditAmount.trim();
     const amountMinor = Math.round(parseFloat(amountStr) * 100);
     if (!amountStr || isNaN(amountMinor) || amountMinor <= 0) {
       Alert.alert(t("khata.invalidAmount"), t("khata.invalidAmountMessage"));
@@ -195,12 +202,16 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
   }, []);
 
   const handleSubmitPayment = useCallback(async () => {
-    const phone = paymentPhone.trim();
-    const amountStr = paymentAmount.trim();
-    if (!phone || phone.length < 10) {
-      Alert.alert(t("khata.invalidPhone"), t("khata.invalidPhoneMessage"));
+    // STG-469: Phone validation — strip +91 prefix, validate 10 digits
+    let phone = paymentPhone.trim().replace(/\s+/g, "");
+    if (phone.startsWith("+91")) phone = phone.slice(3);
+    else if (phone.startsWith("91") && phone.length === 12) phone = phone.slice(2);
+    else if (phone.startsWith("0")) phone = phone.slice(1);
+    if (!/^\d{10}$/.test(phone)) {
+      Alert.alert(t("khata.invalidPhone"), t("khata.phoneValidationError", "Please enter a valid 10-digit Indian phone number. Remove +91 prefix if present."));
       return;
     }
+    const amountStr = paymentAmount.trim();
     const amountMinor = Math.round(parseFloat(amountStr) * 100);
     if (!amountStr || isNaN(amountMinor) || amountMinor <= 0) {
       Alert.alert(t("khata.invalidAmount"), t("khata.invalidAmountMessage"));
@@ -433,11 +444,30 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
     ledgerDetails: {
       flex: 1,
     },
+    ledgerTypeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
     ledgerType: {
       fontSize: 12,
       fontWeight: "700",
       color: colors.textSecondary,
       textTransform: "uppercase",
+    },
+    // STG-471: Voided entry styles
+    ledgerEntryVoided: {
+      opacity: 0.6,
+      borderStyle: "dashed",
+    },
+    ledgerTextVoided: {
+      textDecorationLine: "line-through",
+      color: colors.textTertiary,
+    },
+    voidButton: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: colors.error,
     },
     ledgerDescription: {
       fontSize: 13,
@@ -526,7 +556,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       marginTop: theme.spacing.lg,
     },
     submitButtonCredit: {
-      backgroundColor: colors.error,
+      backgroundColor: colors.primary,
     },
     submitButtonPayment: {
       backgroundColor: colors.success,
@@ -586,22 +616,59 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
     [handleCustomerTap, colors, styles]
   );
 
+  // STG-471: Handle voiding a khata entry
+  const handleVoidEntry = useCallback((entry: KhataEntry) => {
+    Alert.alert(
+      t("khata.voidEntryTitle", "Void Entry"),
+      t("khata.voidEntryConfirm", "Are you sure you want to void this {{type}} entry of {{amount}}? This will mark it as cancelled.", {
+        type: entry.type === "CREDIT" ? t("khata.creditGivenLabel", "Credit Given").toLowerCase() : t("khata.paymentReceivedLabel", "Payment Received").toLowerCase(),
+        amount: formatMoney(entry.amountMinor),
+      }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("khata.voidButton", "Void"),
+          style: "destructive",
+          onPress: () => {
+            setVoidedEntries((prev) => new Set(prev).add(entry.id));
+          },
+        },
+      ]
+    );
+  }, [t]);
+
   // Render ledger entry
   const renderLedgerEntry = useCallback((entry: KhataEntry) => {
+    const isVoided = voidedEntries.has(entry.id);
     const isCredit = entry.type === "CREDIT";
     const isPayment = entry.type === "PAYMENT";
-    const entryColor = isPayment ? colors.success : isCredit ? colors.error : colors.textPrimary;
-    const entryIcon = isPayment ? "cash-plus" : isCredit ? "cash-minus" : "swap-horizontal";
+    const entryColor = isVoided ? colors.textTertiary : isPayment ? colors.success : isCredit ? colors.error : colors.textPrimary;
+    const entryIcon = isVoided ? "cancel" : isPayment ? "cash-plus" : isCredit ? "cash-minus" : "swap-horizontal";
     const entrySign = isPayment ? "+" : isCredit ? "-" : "";
 
     return (
-      <View key={entry.id} style={styles.ledgerEntry}>
+      <View key={entry.id} style={[styles.ledgerEntry, isVoided && styles.ledgerEntryVoided]}>
         <View style={[styles.ledgerIcon, { backgroundColor: entryColor + "15" }]}>
           <MaterialCommunityIcons name={entryIcon as any} size={18} color={entryColor} />
         </View>
         <View style={styles.ledgerDetails}>
-          <Text style={styles.ledgerType}>{entry.type}</Text>
-          <Text style={styles.ledgerDescription} numberOfLines={1}>
+          <View style={styles.ledgerTypeRow}>
+            <Text style={[styles.ledgerType, isVoided && styles.ledgerTextVoided]}>
+              {isVoided
+                ? t("khata.voided", "VOIDED")
+                : entry.type === "CREDIT"
+                  ? t("khata.creditGivenLabel", "Credit Given")
+                  : entry.type === "PAYMENT"
+                    ? t("khata.paymentReceivedLabel", "Payment Received")
+                    : entry.type}
+            </Text>
+            {!isVoided && (
+              <Pressable accessibilityRole="button" hitSlop={8} onPress={() => handleVoidEntry(entry)}>
+                <Text style={styles.voidButton}>{t("khata.voidButton", "Void")}</Text>
+              </Pressable>
+            )}
+          </View>
+          <Text style={[styles.ledgerDescription, isVoided && styles.ledgerTextVoided]} numberOfLines={1}>
             {entry.description}
           </Text>
           <Text style={styles.ledgerDate}>
@@ -613,16 +680,18 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
           )}
         </View>
         <View style={styles.ledgerAmounts}>
-          <Text style={[styles.ledgerAmount, { color: entryColor }]}>
+          <Text style={[styles.ledgerAmount, { color: entryColor }, isVoided && styles.ledgerTextVoided]}>
             {entrySign}{formatMoney(entry.amountMinor)}
           </Text>
-          <Text style={styles.ledgerRunningBalance}>
-            {t("khata.bal")}: {formatMoney(entry.runningBalanceMinor)}
-          </Text>
+          {!isVoided && (
+            <Text style={styles.ledgerRunningBalance}>
+              {t("khata.bal")}: {formatMoney(entry.runningBalanceMinor)}
+            </Text>
+          )}
         </View>
       </View>
     );
-  }, [colors, styles]);
+  }, [colors, styles, voidedEntries, handleVoidEntry]);
 
   // Get entries for the selected customer
   const customerEntries = selectedCustomer
@@ -655,8 +724,8 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
       {/* Action buttons */}
       <View style={styles.actionRow}>
         <Pressable accessibilityRole="button" style={styles.actionButton} onPress={handleOpenCreditModal}>
-          <MaterialCommunityIcons name="plus-circle-outline" size={18} color={colors.error} />
-          <Text style={[styles.actionButtonText, { color: colors.error }]}>{t("khata.addCredit")}</Text>
+          <MaterialCommunityIcons name="plus-circle-outline" size={18} color={colors.primary} />
+          <Text style={[styles.actionButtonText, { color: colors.primary }]}>{t("khata.addCredit")}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" style={styles.actionButton} onPress={handleOpenPaymentModal}>
           <MaterialCommunityIcons name="cash-check" size={18} color={colors.success} />

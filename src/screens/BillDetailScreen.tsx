@@ -342,8 +342,12 @@ export default function BillDetailScreen() {
           onPress={handlePrint}
           disabled={printing}
         >
-          <MaterialCommunityIcons name="printer-outline" size={18} color={colors.primary} />
-          <Text style={styles.actionText}>{printing ? "..." : t("billDetail.print")}</Text>
+          {printing ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <MaterialCommunityIcons name="printer-outline" size={18} color={colors.primary} />
+          )}
+          <Text style={styles.actionText}>{t("billDetail.print")}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -351,8 +355,12 @@ export default function BillDetailScreen() {
           onPress={handleWhatsApp}
           disabled={whatsapping}
         >
-          <MaterialCommunityIcons name="whatsapp" size={18} color={colors.textInverse} />
-          <Text style={styles.actionTextPrimary}>{whatsapping ? "..." : t("billDetail.whatsapp")}</Text>
+          {whatsapping ? (
+            <ActivityIndicator size="small" color={colors.textInverse} />
+          ) : (
+            <MaterialCommunityIcons name="whatsapp" size={18} color={colors.textInverse} />
+          )}
+          <Text style={styles.actionTextPrimary}>{t("billDetail.whatsapp")}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -360,8 +368,12 @@ export default function BillDetailScreen() {
           onPress={handleShare}
           disabled={sharing}
         >
-          <MaterialCommunityIcons name="share-variant" size={18} color={colors.textInverse} />
-          <Text style={styles.actionTextPrimary}>{sharing ? "..." : t("billDetail.share")}</Text>
+          {sharing ? (
+            <ActivityIndicator size="small" color={colors.textInverse} />
+          ) : (
+            <MaterialCommunityIcons name="share-variant" size={18} color={colors.textInverse} />
+          )}
+          <Text style={styles.actionTextPrimary}>{t("billDetail.share")}</Text>
         </Pressable>
       </View>
 

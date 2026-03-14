@@ -598,6 +598,22 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
         <View style={styles.headerRight} />
       </View>
 
+      {/* STG-284: Jargon help bar */}
+      <Pressable
+        style={styles.jargonHelpBar}
+        onPress={() => Alert.alert(
+          t("credit.jargonHelpTitle", "What do these terms mean?"),
+          t("credit.jargonHelpBody", "KYC = Know Your Customer — identity verification required for loans.\n\nPAN = Permanent Account Number — your tax ID (e.g., ABCDE1234F).\n\nAadhaar = Government-issued 12-digit identity number.\n\nEMI = Equated Monthly Installment — fixed monthly payment for your loan.")
+        )}
+        accessibilityRole="button"
+        accessibilityLabel={t("credit.jargonHelpAccessibility", "Tap to learn what KYC, PAN, Aadhaar, and EMI mean")}
+      >
+        <MaterialCommunityIcons name="information-outline" size={16} color={colors.primary} />
+        <Text style={styles.jargonHelpText}>
+          {t("credit.jargonHelpLabel", "What is KYC, PAN, EMI?")}
+        </Text>
+      </Pressable>
+
       {/* GO-LIVE-245: Credit Utilization Warning */}
       {showCreditWarning && (
         <View style={styles.creditWarning}>
@@ -1023,6 +1039,20 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   headerRight: {
     width: 40,
+  },
+  // STG-284: Jargon help bar styles
+  jargonHelpBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: colors.primarySoft,
+  },
+  jargonHelpText: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: "500",
   },
   scoreCard: {
     margin: theme.spacing.md,

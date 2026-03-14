@@ -391,10 +391,15 @@ export default function CustomerManagementScreen({
       color: colors.textPrimary,
       marginBottom: 4,
     },
+    profilePhoneRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 4,
+    },
     profilePhone: {
       fontSize: 15,
       color: colors.textSecondary,
-      marginBottom: 4,
     },
     profileEmail: {
       fontSize: 13,
@@ -739,9 +744,25 @@ export default function CustomerManagementScreen({
                 ) : (
                   <>
                     <Text style={styles.profileName}>{selectedCustomer.name}</Text>
-                    <Text style={styles.profilePhone}>
-                      +91 {selectedCustomer.phone}
-                    </Text>
+                    <View style={styles.profilePhoneRow}>
+                      <MaterialCommunityIcons name="phone-outline" size={16} color={colors.textSecondary} />
+                      <Text style={styles.profilePhone}>
+                        +91 {selectedCustomer.phone}
+                      </Text>
+                      {selectedCustomer.phone && selectedCustomer.phone.replace(/\D/g, "").length >= 10 && (
+                        <Pressable
+                          accessibilityRole="link"
+                          hitSlop={8}
+                          onPress={() => {
+                            let phone = selectedCustomer.phone.replace(/\D/g, "");
+                            if (phone.length === 10) phone = `91${phone}`;
+                            void Linking.openURL(`https://wa.me/${phone}`);
+                          }}
+                        >
+                          <MaterialCommunityIcons name="whatsapp" size={20} color="#25D366" />
+                        </Pressable>
+                      )}
+                    </View>
                     {selectedCustomer.email && (
                       <Text style={styles.profileEmail}>{selectedCustomer.email}</Text>
                     )}

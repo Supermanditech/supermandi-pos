@@ -225,7 +225,10 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
           <Text style={styles.customerName} numberOfLines={1}>
             {item.name}
           </Text>
-          <Text style={styles.customerPhone}>{item.phone}</Text>
+          <View style={styles.customerPhoneRow}>
+            <MaterialCommunityIcons name="phone-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.customerPhone}>{item.phone}</Text>
+          </View>
           <View style={styles.customerStats}>
             <Text style={styles.customerStat}>
               {t("customerList.spentAmount", { amount: formatMoney(item.totalPurchasesMinor) })}
@@ -350,10 +353,15 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       fontWeight: "600",
       color: colors.textPrimary,
     },
+    customerPhoneRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      marginTop: 2,
+    },
     customerPhone: {
       fontSize: 13,
       color: colors.textSecondary,
-      marginTop: 2,
     },
     customerStats: {
       flexDirection: "row",

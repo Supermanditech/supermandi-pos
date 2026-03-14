@@ -514,16 +514,24 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           </Pressable>
         )}
 
-        {/* GL-AUD-007: BNPL Badge */}
+        {/* GL-AUD-007: BNPL Badge — STG-287: Changed to "Pay Later" for clarity */}
         {bnplEnabled && (
-          <View style={styles.bnplBadge}>
+          <Pressable
+            accessibilityRole="button"
+            style={styles.bnplBadge}
+            onPress={() => Alert.alert(
+              t('buy.payLaterTitle', { defaultValue: 'Pay Later' }),
+              t('buy.payLaterDescription', { defaultValue: 'Buy Now Pay Later (BNPL) — purchase stock now and pay within the due date.' })
+            )}
+            accessibilityLabel={t('buy.payLaterAccessibility', { defaultValue: 'Pay Later available. Tap for details.' })}
+          >
             <MaterialCommunityIcons
               name="credit-card-clock"
               size={14}
               color={colors.success}
             />
-            <Text style={styles.bnplBadgeText}>{t('buy.bnplAvailable', { defaultValue: 'BNPL' })}</Text>
-          </View>
+            <Text style={styles.bnplBadgeText}>{t('buy.payLater', { defaultValue: 'Pay Later' })}</Text>
+          </Pressable>
         )}
       </View>
 

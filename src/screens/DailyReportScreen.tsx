@@ -23,6 +23,7 @@ import { BackHeader } from "../components/ui/BackHeader";
 import { apiClient } from "../services/api/apiClient";
 import { printerService } from "../services/printerService";
 import { asError } from "../utils/errorUtils";
+import { subscribeNetworkStatus } from "../services/networkStatus";
 
 // =============================================================================
 // TYPES
@@ -246,6 +247,12 @@ export default function DailyReportScreen({
   const [error, setError] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
   const [sharing, setSharing] = useState(false);
+
+  // STG-312: Offline banner state
+  const [isOffline, setIsOffline] = useState(false);
+  useEffect(() => {
+    return subscribeNetworkStatus((online) => setIsOffline(!online));
+  }, []);
 
   const loadReport = useCallback(async (date: string) => {
     setLoading(true);
@@ -550,6 +557,14 @@ export default function DailyReportScreen({
     <View style={styles.container}>
       <BackHeader title={t("dailyReport.title")} onBack={onBack} />
 
+      {/* STG-312: Offline banner */}
+      {isOffline && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs, backgroundColor: "#FEF3C7", paddingVertical: theme.spacing.xs, paddingHorizontal: theme.spacing.md }}>
+          <MaterialCommunityIcons name="wifi-off" size={16} color="#92400E" />
+          <Text style={{ fontSize: 12, color: "#92400E", flex: 1 }}>{t("dailyReport.offlineBanner")}</Text>
+        </View>
+      )}
+
       {/* Date picker row */}
       <View style={styles.datePicker}>
         <Pressable testID="daily-report-prev-day" accessibilityRole="button" style={styles.dateArrow} onPress={handlePrevDay}>
@@ -605,15 +620,18 @@ export default function DailyReportScreen({
       )}
 
       {/* STG-450: Empty state when no data for selected date (404 → report=null, error=null) */}
+      {/* STG-306: Actionable empty state with icon + descriptive text */}
       {!loading && !error && !report && (
         <View style={styles.centerContent}>
           <MaterialCommunityIcons
-            name="calendar-blank-outline"
-            size={48}
+            name="file-chart-outline"
+            size={56}
             color={colors.textTertiary}
           />
-          <Text style={styles.errorText}>{t("dailyReport.noData")}</Text>
-          <Text style={[styles.loadingText, { marginTop: 4 }]}>
+          <Text style={[styles.errorText, { color: colors.textPrimary, fontWeight: "700", fontSize: 16, marginTop: theme.spacing.md }]}>
+            {t("dailyReport.noData")}
+          </Text>
+          <Text style={[styles.loadingText, { marginTop: theme.spacing.xs, textAlign: "center", paddingHorizontal: theme.spacing.lg }]}>
             {t("dailyReport.noDataHint")}
           </Text>
         </View>

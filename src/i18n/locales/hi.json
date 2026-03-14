@@ -324,7 +324,13 @@
     "removeItemConfirm": "\"{{name}}\" को कार्ट से हटाएं?",
     "editPrice": "बदलें",
     "lastN": "आखिरी {{n}}!",
-    "remainingAfterSale": "बिक्री के बाद: {{n}}"
+    "remainingAfterSale": "बिक्री के बाद: {{n}}",
+    "outOfStockExplanation": "स्टॉक खत्म। बिक्री जारी रखने के लिए स्टॉक इनवर्ड से स्टॉक जोड़ें।",
+    "stockLimitExplanation": "केवल {{count}} स्टॉक में। मात्रा उपलब्ध स्टॉक तक सीमित।",
+    "adjustStockTitle": "स्टॉक एडजस्ट करें",
+    "adjustStockMessage": "{{name}} के लिए सही स्टॉक मात्रा दर्ज करें:",
+    "adjust": "एडजस्ट",
+    "stockAdjusted": "{{name}} का स्टॉक {{count}} पर अपडेट किया गया"
   },
   "limitedMode": {
     "badge": "सीमित मोड",
@@ -398,7 +404,13 @@
     "stockLow": "कम",
     "stockOut": "खत्म",
     "activeFilters": "फ़िल्टर:",
-    "clearAll": "सभी साफ़ करें"
+    "clearAll": "सभी साफ़ करें",
+    "noSuppliersFound": "इस उत्पाद के लिए कोई सप्लायर नहीं मिला।",
+    "noSuppliersHint": "अपने एडमिन से इस उत्पाद के लिए सप्लायर जोड़ने के लिए कहें।",
+    "payLater": "बाद में भुगतान करें",
+    "payLaterTitle": "बाद में भुगतान करें",
+    "payLaterDescription": "अभी खरीदें बाद में भुगतान करें (BNPL) — स्टॉक अभी खरीदें और नियत तारीख तक भुगतान करें।",
+    "payLaterAccessibility": "बाद में भुगतान उपलब्ध। विवरण के लिए टैप करें।"
   },
   "reorder": {
     "title": "रीऑर्डर",
@@ -522,6 +534,7 @@
   },
   "grn": {
     "title": "सामान प्राप्त करें",
+    "description": "सप्लायर से प्राप्त सामान दर्ज करें",
     "orderNumber": "ऑर्डर #",
     "supplier": "सप्लायर",
     "orderDate": "ऑर्डर तारीख",
@@ -805,9 +818,9 @@
     "additionalDetails": "अतिरिक्त विवरण (वैकल्पिक)",
     "describeIssue": "समस्या का वर्णन करें...",
     "submitDispute": "विवाद जमा करें",
-    "disputeReviewNote": "हमारी टीम 2-3 कार्य दिवसों के भीतर आपके विवाद की समीक्षा करेगी। आपसे फोन या ईमेल द्वारा संपर्क किया जाएगा।",
+    "disputeReviewNote": "हमारी टीम 2-3 कार्य दिवसों के भीतर आपके विवाद की समीक्षा करेगी। आपसे WhatsApp, फोन या ईमेल द्वारा संपर्क किया जाएगा।",
     "disputeSubmitted": "विवाद जमा किया गया",
-    "disputeSubmittedMessage": "आपका विवाद जमा कर दिया गया है। हमारी टीम इसकी समीक्षा करेगी और 2-3 कार्य दिवसों में संपर्क करेगी।",
+    "disputeSubmittedMessage": "आपका विवाद जमा कर दिया गया है। हमारी टीम इसकी समीक्षा करेगी और WhatsApp या फोन से 2-3 कार्य दिवसों में संपर्क करेगी।",
     "disputeFailed": "विवाद विफल",
     "disputeFailedMessage": "विवाद जमा नहीं हो सका। कृपया पुनः प्रयास करें।",
     "selectReason": "कारण चुनें",
@@ -826,7 +839,11 @@
     "upiUnavailable": "UPI उपलब्ध नहीं",
     "upiUnavailableMessage": "UPI ऐप नहीं खुल सका। कृपया UTR मैन्युअल रूप से दर्ज करें।",
     "fullBalance": "पूर्ण शेष: {{amount}}",
-    "activeDuesCount": "सक्रिय बकाया ({{count}})"
+    "activeDuesCount": "सक्रिय बकाया ({{count}})",
+    "jargonHelpTitle": "इन शब्दों का क्या मतलब है?",
+    "jargonHelpBody": "BNPL = अभी खरीदें बाद में भुगतान करें — सामान अभी खरीदें और नियत तारीख तक भुगतान करें।\n\nUTR = यूनिक ट्रांजैक्शन रेफरेंस — आपके UPI पेमेंट ऐप से 12 अंकों का कोड।\n\nUPI = यूनिफाइड पेमेंट्स इंटरफेस — डिजिटल भुगतान प्रणाली (GPay, PhonePe, Paytm, आदि)।",
+    "jargonHelpLabel": "BNPL, UTR, UPI क्या है?",
+    "jargonHelpAccessibility": "BNPL, UTR और UPI का मतलब जानने के लिए टैप करें"
   },
   "credit": {
     "title": "क्रेडिट",
@@ -883,7 +900,16 @@
     "kycProcessing": "KYC सत्यापन प्रक्रिया में है। स्वीकृत होने पर आपको सूचित किया जाएगा।",
     "utilizationWarning": "उच्च क्रेडिट उपयोग ({{percent}}%)। अपना स्कोर सुधारने के लिए भुगतान करने पर विचार करें।",
     "perMonth": "/माह",
-    "perAnnum": "% प्रति वर्ष"
+    "perAnnum": "% प्रति वर्ष",
+    "jargonHelpTitle": "इन शब्दों का क्या मतलब है?",
+    "jargonHelpBody": "KYC = नो योर कस्टमर — ऋण के लिए पहचान सत्यापन।\n\nPAN = परमानेंट अकाउंट नंबर — आपकी टैक्स आईडी (जैसे, ABCDE1234F)।\n\nआधार = सरकार द्वारा जारी 12 अंकों का पहचान नंबर।\n\nEMI = समान मासिक किस्त — आपके ऋण का निश्चित मासिक भुगतान।",
+    "jargonHelpLabel": "KYC, PAN, EMI क्या है?",
+    "jargonHelpAccessibility": "KYC, PAN, आधार और EMI का मतलब जानने के लिए टैप करें"
+  },
+  "chat": {
+    "noConversationsTitle": "अभी तक कोई बातचीत नहीं",
+    "noConversationsDescription": "सपोर्ट से संपर्क करें या अपने सप्लायर से चैट शुरू करें।",
+    "contactSupport": "सपोर्ट से संपर्क करें"
   },
   "errorBoundary": {
     "title": "कुछ गलत हो गया",
@@ -924,7 +950,7 @@
     "saveSuccess": "पेमेंट सेटिंग्स सफलतापूर्वक सेव हो गईं"
   },
   "salesStatement": {
-    "title": "इन्वेंटरी लागत विवरण",
+    "title": "स्टॉक मूल्य रिपोर्ट",
     "costValue": "लागत मूल्य",
     "sales": "बिक्री",
     "items": "आइटम",
@@ -984,8 +1010,9 @@
     "title": "दैनिक रिपोर्ट",
     "today": "आज",
     "loading": "रिपोर्ट लोड हो रही है...",
-    "noData": "इस तारीख के लिए कोई रिपोर्ट डेटा नहीं",
-    "noDataHint": "जब स्टोर खुला हो उस तारीख को चुनें।",
+    "noData": "आज के लिए कोई रिपोर्ट नहीं",
+    "noDataHint": "रिपोर्ट बनाने के लिए दैनिक क्लोजिंग पूरी करें।",
+    "goToDailyClosing": "दैनिक क्लोजिंग पर जाएं",
     "totalSales": "कुल बिक्री",
     "revenue": "राजस्व",
     "transactions": "लेनदेन",
@@ -1003,7 +1030,8 @@
     "printFailed": "प्रिंट विफल",
     "printFailedMessage": "रिपोर्ट प्रिंट नहीं हो सकी।",
     "shareFailed": "शेयर विफल",
-    "shareFailedMessage": "रिपोर्ट शेयर नहीं हो सकी।"
+    "shareFailedMessage": "रिपोर्ट शेयर नहीं हो सकी।",
+    "offlineBanner": "आप ऑफलाइन हैं। कुछ डेटा अपडेट नहीं हो सकता।"
   },
   "dailyClosing": {
     "title": "दैनिक क्लोजिंग",
@@ -1038,7 +1066,8 @@
     "match": "मैच",
     "mismatch": "बेमेल",
     "actualCash": "वास्तविक नकद",
-    "closedBy": "{{name}} द्वारा {{date}} को बंद किया गया"
+    "closedBy": "{{name}} द्वारा {{date}} को बंद किया गया",
+    "offlineBanner": "आप ऑफलाइन हैं। कुछ डेटा अपडेट नहीं हो सकता।"
   },
   "components": {
     "sellTile": {
@@ -1087,7 +1116,8 @@
     "emptyDescription": "ओपनिंग स्टॉक मात्रा सेट करने के लिए ऊपर उत्पाद खोजें और जोड़ें।",
     "qty": "मात्रा",
     "productsReady": "{{total}} में से {{valid}} उत्पाद तैयार",
-    "submitButton": "ओपनिंग स्टॉक जमा करें ({{count}})"
+    "submitButton": "ओपनिंग स्टॉक जमा करें ({{count}})",
+    "subtitle": "उत्पादों के लिए प्रारंभिक स्टॉक मात्रा सेट करें"
   },
   "overdueDues": {
     "title": "अतिदेय बकाया",
@@ -1194,7 +1224,14 @@
     "addCreditEntry": "उधार एंट्री जोड़ें",
     "paymentMethodLabel": "भुगतान विधि *",
     "cash": "नकद",
-    "upi": "UPI"
+    "upi": "UPI",
+    "phoneValidationError": "कृपया एक मान्य 10-अंकों का भारतीय फ़ोन नंबर दर्ज करें (जैसे 9876543210)।",
+    "creditGivenLabel": "उधार दिया",
+    "paymentReceivedLabel": "भुगतान प्राप्त",
+    "voidEntryTitle": "एंट्री रद्द करें",
+    "voidEntryConfirm": "इस एंट्री को रद्द करें? यह केवल प्रदर्शन परिवर्तन है।",
+    "voidButton": "रद्द करें",
+    "voided": "रद्द"
   },
   "shift": {
     "title": "शिफ्ट प्रबंधन",
@@ -1216,7 +1253,7 @@
     "endShiftTitle": "शिफ्ट समाप्त करें",
     "closingCashLabel": "क्लोजिंग नकद (₹)",
     "cashMatches": "नकद मेल खाता है",
-    "varianceAmount": "अंतर: {{amount}}",
+    "varianceAmount": "नकद अंतर: {{amount}}",
     "notesOptional": "नोट्स (वैकल्पिक)",
     "notesPlaceholder": "शिफ्ट के बारे में कोई नोट...",
     "endShiftButton": "शिफ्ट समाप्त करें",
@@ -1246,7 +1283,7 @@
     "duration": "अवधि",
     "sales": "बिक्री",
     "ordersWithTotal": "{{count}} ऑर्डर ({{total}})",
-    "variance": "अंतर",
+    "variance": "नकद अंतर",
     "notesLabel": "नोट्स",
     "active": "सक्रिय",
     "match": "मैच",
@@ -1338,7 +1375,7 @@
     "reasonOther": "अन्य",
     "refundMethod": "रिफंड विधि",
     "refundCash": "नकद",
-    "refundUpi": "UPI (मैनुअल)",
+    "refundUpi": "UPI ट्रांसफर",
     "refundKhataCredit": "खाता क्रेडिट",
     "refundSummary": "रिफंड सारांश",
     "totalRefund": "कुल रिफंड",
@@ -1348,6 +1385,7 @@
     "processReturnButton": "वापसी प्रक्रिया करें",
     "returnProcessed": "वापसी पूर्ण",
     "refundIdLabel": "रिफंड ID",
+    "returnRef": "वापसी #{{ref}}",
     "stockReversedNote": "स्टॉक सर्वर-साइड पर वापस कर दिया गया है।",
     "processAnotherReturn": "एक और वापसी करें"
   },

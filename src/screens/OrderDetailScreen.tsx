@@ -42,6 +42,20 @@ import { getDeviceStoreId } from "../services/deviceSession";
 // TYPES
 // =============================================================================
 
+// STG-301: Icon mapping for colorblind-accessible status indicators
+function getStatusIcon(status: OrderStatus): string {
+  const icons: Record<OrderStatus, string> = {
+    draft: "pencil-outline",
+    submitted: "clock-outline",
+    confirmed: "check-circle-outline",
+    shipped: "truck-delivery-outline",
+    partial_received: "package-variant",
+    delivered: "check-all",
+    cancelled: "close-circle-outline",
+  };
+  return icons[status] ?? "help-circle-outline";
+}
+
 export interface OrderDetailScreenProps {
   orderId: string;
   onBack?: () => void;
@@ -312,7 +326,8 @@ export default function OrderDetailScreen({
           <Text style={styles.headerTitle}>
             {formatOrderNumber(order.orderNumber)}
           </Text>
-          <View style={[styles.statusBadge, { backgroundColor: statusColor + "20" }]}>
+          <View style={[styles.statusBadge, { backgroundColor: statusColor + "20", flexDirection: "row", alignItems: "center", gap: 4 }]}>
+            <MaterialCommunityIcons name={getStatusIcon(order.status) as any} size={14} color={statusColor} />
             <Text style={[styles.statusText, { color: statusColor }]}>
               {statusLabel}
             </Text>

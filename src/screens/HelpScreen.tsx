@@ -179,7 +179,29 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
       </Text>
       <Text style={styles.subtitle}>Need help? We're here for you.</Text>
 
-      {/* Contact Card */}
+      {/* WhatsApp Card — STG-302: WhatsApp-first contact ordering */}
+      {SUPPORT_PHONE ? (
+        <Pressable
+          style={[styles.card, styles.whatsappCard]}
+          onPress={handleWhatsApp}
+          accessibilityRole="button"
+          accessibilityLabel="Contact us on WhatsApp"
+        >
+          <View style={styles.cardHeader}>
+            <MaterialCommunityIcons
+              name={"whatsapp" as any}
+              size={20}
+              color={colors.whatsapp}
+            />
+            <Text style={styles.cardTitle}>WhatsApp Support</Text>
+          </View>
+          <Text style={styles.cardDescription}>
+            Chat with our support team — fastest response
+          </Text>
+        </Pressable>
+      ) : null}
+
+      {/* Contact Card — Email */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <MaterialCommunityIcons
@@ -187,7 +209,7 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
             size={20}
             color={colors.primary}
           />
-          <Text style={styles.cardTitle}>Contact Us</Text>
+          <Text style={styles.cardTitle}>Email Support</Text>
         </View>
         <Pressable
           onPress={handleEmailPress}
@@ -206,28 +228,6 @@ export default function HelpScreen({ onBack }: HelpScreenProps) {
           We typically respond within 24 hours.
         </Text>
       </View>
-
-      {/* WhatsApp Card */}
-      {SUPPORT_PHONE ? (
-        <Pressable
-          style={[styles.card, styles.whatsappCard]}
-          onPress={handleWhatsApp}
-          accessibilityRole="button"
-          accessibilityLabel="Contact us on WhatsApp"
-        >
-          <View style={styles.cardHeader}>
-            <MaterialCommunityIcons
-              name={"whatsapp" as any}
-              size={20}
-              color={colors.whatsapp}
-            />
-            <Text style={styles.cardTitle}>WhatsApp Support</Text>
-          </View>
-          <Text style={styles.cardDescription}>
-            Chat with our support team
-          </Text>
-        </Pressable>
-      ) : null}
 
       {/* Quick Links Card */}
       <View style={styles.card}>

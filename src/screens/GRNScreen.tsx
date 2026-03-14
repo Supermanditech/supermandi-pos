@@ -512,6 +512,7 @@ export default function GRNScreen({
         )}
         <View style={styles.headerText}>
           <Text style={styles.headerTitle}>{t("grn.title")}</Text>
+          <Text style={styles.headerDescription}>{t("grn.description")}</Text>
           <Text style={styles.headerSubtitle}>
             {formatOrderNumber(order.orderNumber)} | {order.supplierName}
           </Text>
@@ -749,6 +750,11 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
     fontSize: 20,
     fontWeight: "700",
     color: colors.textPrimary,
+  },
+  headerDescription: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   headerSubtitle: {
     fontSize: 12,

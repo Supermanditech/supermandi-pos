@@ -324,7 +324,13 @@
     "removeItemConfirm": "Remove \"{{name}}\" from cart?",
     "editPrice": "Edit",
     "lastN": "Last {{n}}!",
-    "remainingAfterSale": "After sale: {{n}}"
+    "remainingAfterSale": "After sale: {{n}}",
+    "outOfStockExplanation": "Out of stock. Add stock via Stock Inward to continue selling.",
+    "stockLimitExplanation": "Only {{count}} in stock. Quantity capped at available stock.",
+    "adjustStockTitle": "Adjust Stock",
+    "adjustStockMessage": "Enter corrected stock quantity for {{name}}:",
+    "adjust": "Adjust",
+    "stockAdjusted": "Stock updated to {{count}} for {{name}}"
   },
   "limitedMode": {
     "badge": "LIMITED MODE",
@@ -398,7 +404,13 @@
     "stockLow": "Low",
     "stockOut": "Out",
     "activeFilters": "Filters:",
-    "clearAll": "Clear All"
+    "clearAll": "Clear All",
+    "noSuppliersFound": "No suppliers found for this product.",
+    "noSuppliersHint": "Ask your admin to add suppliers for this product.",
+    "payLater": "Pay Later",
+    "payLaterTitle": "Pay Later",
+    "payLaterDescription": "Buy Now Pay Later (BNPL) — purchase stock now and pay within the due date.",
+    "payLaterAccessibility": "Pay Later available. Tap for details."
   },
   "reorder": {
     "title": "Reorder",
@@ -567,7 +579,8 @@
     "receiveFailedOffline": "No internet connection. Your changes were not saved. Please check your network and try again.",
     "receiveFailed": "Failed to receive goods. Please try again.",
     "autoReorder": "Auto Reorder",
-    "loadingOrder": "Loading order..."
+    "loadingOrder": "Loading order...",
+    "description": "Record goods received from suppliers"
   },
   "orders": {
     "title": "Orders",
@@ -805,9 +818,9 @@
     "additionalDetails": "Additional Details (Optional)",
     "describeIssue": "Describe the issue...",
     "submitDispute": "Submit Dispute",
-    "disputeReviewNote": "Our team will review your dispute within 2-3 business days. You will be contacted via phone or email.",
+    "disputeReviewNote": "Our team will review your dispute within 2-3 business days. You will be contacted via WhatsApp, phone, or email.",
     "disputeSubmitted": "Dispute Submitted",
-    "disputeSubmittedMessage": "Your dispute has been submitted. Our team will review it and contact you within 2-3 business days.",
+    "disputeSubmittedMessage": "Your dispute has been submitted. Our team will review it and contact you via WhatsApp or phone within 2-3 business days.",
     "disputeFailed": "Dispute Failed",
     "disputeFailedMessage": "Could not submit your dispute. Please try again.",
     "selectReason": "Select Reason",
@@ -826,7 +839,11 @@
     "upiUnavailable": "UPI Unavailable",
     "upiUnavailableMessage": "Could not open UPI app. Please enter UTR manually.",
     "fullBalance": "Full balance: {{amount}}",
-    "activeDuesCount": "Active Dues ({{count}})"
+    "activeDuesCount": "Active Dues ({{count}})",
+    "jargonHelpTitle": "What do these terms mean?",
+    "jargonHelpBody": "BNPL = Buy Now Pay Later — purchase goods now and pay within the due date.\n\nUTR = Unique Transaction Reference — the 12-digit code from your UPI payment app.\n\nUPI = Unified Payments Interface — digital payment system (GPay, PhonePe, Paytm, etc.).",
+    "jargonHelpLabel": "What is BNPL, UTR, UPI?",
+    "jargonHelpAccessibility": "Tap to learn what BNPL, UTR, and UPI mean"
   },
   "credit": {
     "title": "Credit",
@@ -883,7 +900,16 @@
     "kycProcessing": "KYC verification is being processed. You will be notified once approved.",
     "utilizationWarning": "High credit utilization ({{percent}}%). Consider repaying to improve your score.",
     "perMonth": "/mo",
-    "perAnnum": "% p.a."
+    "perAnnum": "% p.a.",
+    "jargonHelpTitle": "What do these terms mean?",
+    "jargonHelpBody": "KYC = Know Your Customer — identity verification required for loans.\n\nPAN = Permanent Account Number — your tax ID (e.g., ABCDE1234F).\n\nAadhaar = Government-issued 12-digit identity number.\n\nEMI = Equated Monthly Installment — fixed monthly payment for your loan.",
+    "jargonHelpLabel": "What is KYC, PAN, EMI?",
+    "jargonHelpAccessibility": "Tap to learn what KYC, PAN, Aadhaar, and EMI mean"
+  },
+  "chat": {
+    "noConversationsTitle": "No conversations yet",
+    "noConversationsDescription": "Contact support or start a chat with your suppliers to see messages here.",
+    "contactSupport": "Contact Support"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -959,7 +985,7 @@
     "whatsappFailedMessage": "Unable to share via WhatsApp."
   },
   "salesStatement": {
-    "title": "Inventory Cost Statement",
+    "title": "Stock Value Report",
     "costValue": "Cost Value",
     "sales": "Sales",
     "items": "Items",
@@ -984,8 +1010,9 @@
     "title": "Daily Report",
     "today": "Today",
     "loading": "Loading report...",
-    "noData": "No report data for this date",
-    "noDataHint": "Try selecting a date when the store was open.",
+    "noData": "No report for today yet",
+    "noDataHint": "Complete a daily closing to generate your report.",
+    "goToDailyClosing": "Go to Daily Closing",
     "totalSales": "Total Sales",
     "revenue": "Revenue",
     "transactions": "Transactions",
@@ -1003,7 +1030,8 @@
     "printFailed": "Print Failed",
     "printFailedMessage": "Could not print the report.",
     "shareFailed": "Share Failed",
-    "shareFailedMessage": "Could not share the report."
+    "shareFailedMessage": "Could not share the report.",
+    "offlineBanner": "You are offline. Some data may not be up to date."
   },
   "dailyClosing": {
     "title": "Daily Closing",
@@ -1023,8 +1051,8 @@
     "expectedCash": "Expected Cash",
     "enterActualCash": "Enter Actual Cash",
     "cashMatches": "Cash matches expected amount",
-    "variance": "Variance: {{amount}}",
-    "varianceLabel": "Variance",
+    "variance": "Difference: {{amount}}",
+    "varianceLabel": "Difference",
     "excessCash": "Excess cash",
     "shortCash": "Short cash",
     "closeDay": "Close Day",
@@ -1038,7 +1066,8 @@
     "match": "MATCH",
     "mismatch": "MISMATCH",
     "actualCash": "Actual Cash",
-    "closedBy": "Closed by {{name}} at {{date}}"
+    "closedBy": "Closed by {{name}} at {{date}}",
+    "offlineBanner": "You are offline. Some data may not be up to date."
   },
   "components": {
     "sellTile": {
@@ -1087,7 +1116,8 @@
     "emptyDescription": "Search and add products above to set opening stock quantities.",
     "qty": "Qty",
     "productsReady": "{{valid}} of {{total}} product(s) ready",
-    "submitButton": "Submit Opening Stock ({{count}})"
+    "submitButton": "Submit Opening Stock ({{count}})",
+    "subtitle": "Set initial stock quantities for products"
   },
   "overdueDues": {
     "title": "Overdue Dues",
@@ -1194,7 +1224,14 @@
     "addCreditEntry": "Add Credit Entry",
     "paymentMethodLabel": "Payment Method *",
     "cash": "Cash",
-    "upi": "UPI"
+    "upi": "UPI",
+    "phoneValidationError": "Please enter a valid 10-digit Indian phone number (e.g. 9876543210).",
+    "creditGivenLabel": "Credit Given",
+    "paymentReceivedLabel": "Payment Received",
+    "voidEntryTitle": "Void Entry",
+    "voidEntryConfirm": "Mark this entry as void? This is a display-only change.",
+    "voidButton": "Void",
+    "voided": "VOIDED"
   },
   "shift": {
     "title": "Shift Management",
@@ -1216,7 +1253,7 @@
     "endShiftTitle": "End Shift",
     "closingCashLabel": "Closing Cash (\u20b9)",
     "cashMatches": "Cash matches",
-    "varianceAmount": "Variance: {{amount}}",
+    "varianceAmount": "Cash Difference: {{amount}}",
     "notesOptional": "Notes (Optional)",
     "notesPlaceholder": "Any notes about the shift...",
     "endShiftButton": "End Shift",
@@ -1246,7 +1283,7 @@
     "duration": "Duration",
     "sales": "Sales",
     "ordersWithTotal": "{{count}} orders ({{total}})",
-    "variance": "Variance",
+    "variance": "Cash Difference",
     "notesLabel": "Notes",
     "active": "ACTIVE",
     "match": "MATCH",
@@ -1297,7 +1334,7 @@
     "reasonOther": "Other",
     "refundMethod": "Refund Method",
     "refundCash": "Cash",
-    "refundUpi": "UPI (Manual)",
+    "refundUpi": "UPI Transfer",
     "refundKhataCredit": "Khata Credit",
     "refundSummary": "Refund Summary",
     "totalRefund": "Total Refund",
@@ -1307,6 +1344,7 @@
     "processReturnButton": "Process Return",
     "returnProcessed": "Return Processed",
     "refundIdLabel": "Refund ID",
+    "returnRef": "Return #{{ref}}",
     "stockReversedNote": "Stock has been reversed server-side.",
     "processAnotherReturn": "Process Another Return"
   },

@@ -22,6 +22,7 @@ import { useDailyClosingStore } from "../stores/dailyClosingStore";
 import type { DailyClosingRecord } from "../services/dailyClosingService";
 import { BackHeader } from "../components/ui/BackHeader";
 import EmptyState from "../components/ui/EmptyState";
+import { subscribeNetworkStatus } from "../services/networkStatus";
 
 // =============================================================================
 // HELPERS
@@ -77,6 +78,12 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
   const [selectedDate, setSelectedDate] = useState(getTodayString());
   const [actualCash, setActualCash] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+
+  // STG-312: Offline banner state
+  const [isOffline, setIsOffline] = useState(false);
+  useEffect(() => {
+    return subscribeNetworkStatus((online) => setIsOffline(!online));
+  }, []);
 
   // ISSUE-112: Android hardware back button support
   useEffect(() => {
@@ -216,6 +223,14 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
   return (
     <View style={styles.container}>
       <BackHeader title={t("dailyClosing.title")} onBack={onBack} />
+
+      {/* STG-312: Offline banner */}
+      {isOffline && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs, backgroundColor: "#FEF3C7", paddingVertical: theme.spacing.xs, paddingHorizontal: theme.spacing.md }}>
+          <MaterialCommunityIcons name="wifi-off" size={16} color="#92400E" />
+          <Text style={{ fontSize: 12, color: "#92400E", flex: 1 }}>{t("dailyClosing.offlineBanner")}</Text>
+        </View>
+      )}
 
       {/* Tab switcher */}
       <View style={styles.tabRow}>

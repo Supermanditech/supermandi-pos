@@ -585,6 +585,22 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         <View style={styles.headerRight} />
       </View>
 
+      {/* STG-283: Jargon help bar */}
+      <Pressable
+        style={styles.jargonHelpBar}
+        onPress={() => Alert.alert(
+          t("bnpl.jargonHelpTitle", "What do these terms mean?"),
+          t("bnpl.jargonHelpBody", "BNPL = Buy Now Pay Later — purchase goods now and pay within the due date.\n\nUTR = Unique Transaction Reference — the 12-digit code from your UPI payment app.\n\nUPI = Unified Payments Interface — digital payment system (GPay, PhonePe, Paytm, etc.).")
+        )}
+        accessibilityRole="button"
+        accessibilityLabel={t("bnpl.jargonHelpAccessibility", "Tap to learn what BNPL, UTR, and UPI mean")}
+      >
+        <MaterialCommunityIcons name="information-outline" size={16} color={colors.primary} />
+        <Text style={styles.jargonHelpText}>
+          {t("bnpl.jargonHelpLabel", "What is BNPL, UTR, UPI?")}
+        </Text>
+      </Pressable>
+
       {/* Summary Card */}
       {summary && (
         <View style={styles.summaryCard}>
@@ -975,6 +991,20 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   headerRight: {
     width: 40,
+  },
+  // STG-283: Jargon help bar styles
+  jargonHelpBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: colors.accentSoft,
+  },
+  jargonHelpText: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: "500",
   },
   summaryCard: {
     margin: theme.spacing.md,

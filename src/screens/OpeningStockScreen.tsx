@@ -561,7 +561,7 @@ export default function OpeningStockScreen({
 
   return (
     <View style={styles.container}>
-      <BackHeader title={t("openingStock.title")} onBack={onBack} />
+      <BackHeader title={t("openingStock.title")} onBack={onBack} subtitle={t("openingStock.subtitle")} />
 
       {/* Intro */}
       <View style={styles.introCard}>

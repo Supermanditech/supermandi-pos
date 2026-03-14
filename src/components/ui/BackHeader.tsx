@@ -9,10 +9,11 @@ import { theme } from "../../theme";
 
 interface BackHeaderProps {
   title: string;
+  subtitle?: string;
   onBack?: () => void;
 }
 
-export function BackHeader({ title, onBack }: BackHeaderProps) {
+export function BackHeader({ title, subtitle, onBack }: BackHeaderProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
@@ -47,9 +48,16 @@ export function BackHeader({ title, onBack }: BackHeaderProps) {
       >
         <MaterialCommunityIcons name="chevron-left" size={28} color={theme.colors.textPrimary} />
       </TouchableOpacity>
-      <Text style={styles.title} numberOfLines={1}>
-        {title}
-      </Text>
+      <View style={styles.titleContainer}>
+        <Text style={styles.title} numberOfLines={1}>
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text style={styles.subtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
       {/* Spacer for centering title */}
       <View style={styles.spacer} />
     </View>
@@ -74,11 +82,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 20,
   },
-  title: {
+  titleContainer: {
     flex: 1,
+  },
+  title: {
     fontSize: 18,
     fontWeight: "700",
     color: theme.colors.textPrimary,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   spacer: {
     width: 40,

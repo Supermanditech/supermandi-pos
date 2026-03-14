@@ -100,7 +100,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
   const tabs: Array<{ key: Tab; label: string; icon: string }> = [
     { key: 'alerts', label: 'Alerts', icon: 'bell-alert-outline' },
     { key: 'forecasts', label: 'Forecast', icon: 'chart-timeline-variant' },
-    { key: 'slow', label: 'Slow', icon: 'turtle' },
+    { key: 'slow', label: 'Slow Moving', icon: 'turtle' },
     { key: 'expiry', label: 'Expiry', icon: 'clock-alert-outline' },
     { key: 'prices', label: 'Prices', icon: 'tag-multiple-outline' },
   ];
@@ -309,7 +309,9 @@ export default function AIInsightsScreen({ onBack }: Props) {
           ListEmptyComponent={
             <View style={styles.center}>
               <MaterialCommunityIcons name="robot-happy-outline" size={48} color={colors.textTertiary} />
-              <Text style={styles.emptyText}>No {tab} data yet</Text>
+              <Text style={styles.emptyText}>
+                AI insights will be available once you have 7+ days of sales data. Keep selling to unlock these insights!
+              </Text>
             </View>
           }
         />

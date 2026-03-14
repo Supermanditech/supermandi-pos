@@ -58,7 +58,7 @@ interface OverdueDuesResponse {
 function getSeverityColor(daysOverdue: number, colors: ColorPalette): string {
   if (daysOverdue > 30) return colors.error;    // red — Critical
   if (daysOverdue > 7) return colors.warning;    // orange — Overdue
-  return colors.info;                            // STG-447: blue for Due Soon (was same as warning)
+  return colors.warning;                          // STG-320: warning/orange for Due Soon items approaching deadline
 }
 
 /** Get severity label key */

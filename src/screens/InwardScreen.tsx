@@ -542,7 +542,7 @@ export default function InwardScreen({
             {item.name}
           </Text>
           <Text style={styles.searchRowMeta} numberOfLines={1}>
-            {item.primaryBarcode ?? item.id}
+            {item.primaryBarcode ?? item.name ?? item.id}
           </Text>
         </View>
         <Text style={styles.searchRowPrice}>{price}</Text>
