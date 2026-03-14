@@ -319,14 +319,14 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-290 | AIInsights — "Slow", "Forecast", "Expiry" tab labels unclear | P2 | PARKED (fbb998a8, stg-290-2026-03-14) |
 | STG-291 | Components — hardcoded English in SellTile, CartItem, SupplierRow | P1 | PARKED (stg-291-2026-03-14) |
 | STG-292 | LimitedModeBanner — "Place Orders (BUY)" jargon | P2 | PARKED (7b95512d, stg-292-2026-03-14) |
-| STG-293 | Font sizes below 12px across Purchase/Stock screens | P2 | OPEN (audit: unimplemented)|
-| STG-294 | Font sizes below 12px across Sales/Closing screens | P2 | OPEN (audit: unimplemented)|
-| STG-295 | Font sizes below 12px across Credit/Customer/Orders screens | P2 | OPEN (audit: unimplemented)|
-| STG-296 | Font sizes below 12px in Chat/ForceUpdate/TabBadge | P2 | OPEN (audit: unimplemented)|
-| STG-297 | SplitPaymentModal — font 10px + missing accessibility labels | P2 | OPEN (audit: unimplemented)|
-| STG-298 | Missing accessibility labels on icon-only buttons across screens | P1 | OPEN (audit: unimplemented)|
-| STG-299 | Missing accessibility labels on form inputs across screens | P2 | OPEN (audit: unimplemented)|
-| STG-300 | GRN — checkboxes missing accessibilityState | P2 | OPEN (audit: unimplemented)|
+| STG-293 | Font sizes below 12px across Purchase/Stock screens | P2 | PARKED (c1fcf613, stg-293-2026-03-14) |
+| STG-294 | Font sizes below 12px across Sales/Closing screens | P2 | PARKED (7f8d7355, stg-294-2026-03-14) |
+| STG-295 | Font sizes below 12px across Credit/Customer/Orders screens | P2 | PARKED (c13cb749, stg-295-2026-03-14) |
+| STG-296 | Font sizes below 12px in Chat/ForceUpdate/TabBadge | P2 | PARKED (f9a90762, stg-296-2026-03-14) |
+| STG-297 | SplitPaymentModal — font 10px + missing accessibility labels | P2 | PARKED (cafe6184, stg-297-2026-03-14) |
+| STG-298 | Missing accessibility labels on icon-only buttons across screens | P1 | PARKED (3cc0e075, stg-298-2026-03-14) |
+| STG-299 | Missing accessibility labels on form inputs across screens | P2 | PARKED (cba67a62, stg-299-2026-03-14) |
+| STG-300 | GRN — checkboxes missing accessibilityState | P2 | PARKED (09c6a351, stg-300-2026-03-14) |
 | STG-301 | OrderDetail — status badge relies only on color (colorblind) | P1 | PARKED (417ac3a1, stg-301-2026-03-14) |
 | STG-302 | Help — email-first contact, should be WhatsApp-first | P1 | PARKED (417ac3a1, stg-302-2026-03-14) |
 | STG-303 | BnplDues — "contacted via email" should include WhatsApp | P2 | PARKED (87265195, stg-303-2026-03-14) |
@@ -352,7 +352,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-323 | ForceUpdate — "iOS update coming soon" vague | P2 | PARKED (417ac3a1, stg-323-2026-03-14) |
 | STG-324 | Enroll — activation code placeholder lacks help text | P1 | PARKED (417ac3a1, stg-324-2026-03-14) |
 | STG-325 | Enroll — "Activate POS" vs "Activate Your POS" inconsistency | P3 | PARKED (9cea4407, stg-325-2026-03-14) |
-| STG-326 | Enroll — required field indicators inconsistent | P2 | OPEN (audit: unimplemented)|
+| STG-326 | Enroll — required field indicators inconsistent | P2 | PARKED (6e1f8959, stg-326-2026-03-14) |
 | STG-327 | StaffLogin — button doesn't change text during cooldown | P2 | PARKED (9a9777d4, stg-327-2026-03-14) |
 | STG-328 | ForceUpdate — "unknown" version display lacks explanation | P2 | PARKED (417ac3a1, stg-328-2026-03-14) |
 | STG-329 | ProductDetailModal — "No suppliers available" lacks guidance | P1 | PARKED (87265195, stg-329-2026-03-14) |
@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | PARKED (49e810ac, stg-491-2026-03-14) |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | PARKED (30956d33, stg-492-2026-03-14) |
 
-**Total**: 492 tickets | 483 PARKED | 0 DONE | 0 IN_PROGRESS | 9 OPEN
+**Total**: 492 tickets | 492 PARKED | 0 DONE | 0 IN_PROGRESS | 0 OPEN
 
 ---
 
@@ -1252,21 +1252,21 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | # | Screens Affected |
 |---|-----------------|
 | STG-293 | PurchaseScreen, InwardScreen, OpeningStockScreen, GRNScreen, StockStatementScreen |
-| STG-294 | SalesHistoryScreen, DailyClosingScreen, DailyReportScreen, BillDetailScreen, SalesStatementScreen |
+| PARKED (c1fcf613, stg-293-2026-03-14) | SalesHistoryScreen, DailyClosingScreen, DailyReportScreen, BillDetailScreen, SalesStatementScreen |
 | STG-295 | CreditScreen, CustomerListScreen, CustomerManagementScreen, OrderDetailScreen, BnplDuesScreen, OverdueDuesScreen, KhataScreen |
-| STG-296 | ChatListScreen, ForceUpdateScreen, TabBadge.tsx |
+| PARKED (c13cb749, stg-295-2026-03-14) | ChatListScreen, ForceUpdateScreen, TabBadge.tsx |
 | STG-297 | SplitPaymentModal: fontSize 10→12 + accessibilityLabel |
 
 #### 11B: Accessibility Labels
-| # | Scope |
+| PARKED (cafe6184, stg-297-2026-03-14) | Scope |
 |---|-------|
 | STG-053 | WCAG AA contrast audit across all buttons and text |
 | STG-298 | Icon-only buttons: PaymentScreen, MenuScreen, SellScanScreen, BuyScreen |
-| STG-299 | TextInput labels: PaymentSetupScreen, KhataScreen, ShiftScreen, CustomerListScreen, OpeningStockScreen |
+| PARKED (3cc0e075, stg-298-2026-03-14) | TextInput labels: PaymentSetupScreen, KhataScreen, ShiftScreen, CustomerListScreen, OpeningStockScreen |
 | STG-300 | GRN checkboxes: add accessibilityState + accessibilityRole |
 
 #### 11C: Consistency Fixes
-| # | Scope |
+| PARKED (09c6a351, stg-300-2026-03-14) | Scope |
 |---|-------|
 | STG-209 | PaymentScreen: TouchableOpacity → Pressable |
 | STG-316 | SplitPaymentModal: TouchableOpacity → Pressable |
@@ -8530,7 +8530,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-300 — GRNScreen — checkboxes missing accessibilityState
 
-- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
+- **Status**: PARKED (09c6a351, stg-300-2026-03-14)
 - **Priority**: P2
 - **Source**: UI audit — [GRNScreen.tsx:414-425](src/screens/GRNScreen.tsx#L414)
 - **Scope**: `src/screens/GRNScreen.tsx`
@@ -9040,7 +9040,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-326 — EnrollDeviceScreen — required field indicators inconsistent
 
-- **Status**: OPEN — audit found unimplemented/incomplete, stub test only
+- **Status**: PARKED (6e1f8959, stg-326-2026-03-14)
 - **Priority**: P2
 - **Source**: UI audit — [EnrollDeviceScreen.tsx:479, 496-497](src/screens/EnrollDeviceScreen.tsx#L479)
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`
