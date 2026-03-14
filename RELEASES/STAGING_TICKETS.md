@@ -27,7 +27,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 | # | Title | Priority | Status |
 |---|-------|----------|--------|
-| STG-001 | Supplier self-registration verify fallback | P1 | DONE (uncommitted) |
+| STG-001 | Supplier self-registration verify fallback | P1 | PARKED (a4a6c5c0, stg-001-2026-03-14) |
 | STG-002 | Release APK cold start blank screen before splash | P2 | PARKED (ce0a91c8, stg-002-2026-03-14) |
 | STG-003 | Brand design tokens — unified color palette and spacing | P1 | PARKED (ad959088, stg-003-2026-03-14) |
 | STG-004 | Activation screen — branded redesign with trust signals | P1 | PARKED (b0f8de03, stg-004-2026-03-14) |
@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | PARKED (49e810ac, stg-491-2026-03-14) |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | PARKED (30956d33, stg-492-2026-03-14) |
 
-**Total**: 492 tickets | 491 PARKED | 1 DONE | 0 IN_PROGRESS | 0 OPEN
+**Total**: 492 tickets | 492 PARKED | 0 DONE | 0 IN_PROGRESS | 0 OPEN
 
 ---
 
@@ -2002,7 +2002,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-002 — Release APK cold start blank screen before splash
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-001-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator observation — release APK shows 2-5 second blank/default image screen before splash screen appears on cold start
 - **Scope**: Android native splash config (`android/`, `app.json` splash settings, `expo-splash-screen`)
@@ -2018,7 +2018,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-003 — Brand design tokens — unified color palette and spacing
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-003-2026-03-14`
 - **Priority**: P1 (foundation — all other UI tickets depend on this)
 - **Source**: Operator review — colors are inconsistent across app (blue SELL, green REORDER, teal mic, grey tabs, orange DEV banner)
 - **Scope**: New `src/theme/` or `src/constants/theme.ts` — design tokens consumed by all screens
@@ -2041,7 +2041,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-004 — Activation screen — branded redesign with trust signals
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-004-2026-03-14`
 - **Priority**: P1
 - **Source**: Operator review — activation screen is plain white, no brand feel, raw device model name
 - **Scope**: `app/screens/ActivateScreen.tsx` (or equivalent activation component)
@@ -2066,7 +2066,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-005 — Home top bar — declutter status icons and scanner warning
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-005-2026-03-14`
 - **Priority**: P1
 - **Source**: Operator review — top bar has 4 status icons all crossed out, "Scanner not ready" in red is alarming
 - **Scope**: Home screen top status bar component
@@ -2089,7 +2089,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-006 — Sync status panel — collapse when healthy, reduce footprint
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-006-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — sync panel takes ~25% of screen when status is "connected, all synced"
 - **Scope**: Home screen sync status section
@@ -2111,7 +2111,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-007 — Tab navigation — full labels, consistent colors, active states
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-007-2026-03-14`
 - **Priority**: P1
 - **Source**: Operator review — tab labels truncated ("PURCH...", "REORDE..."), color inconsistency
 - **Scope**: Home screen tab bar (MENU, SELL, PURCHASE, REORDER, CREDIT)
@@ -2136,7 +2136,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-008 — Search/scan area — unified input with clear visual hierarchy
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-008-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — three competing input areas (search bar, scan button, barcode field)
 - **Scope**: Home screen SELL tab search/scan section
@@ -2159,7 +2159,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-009 — Product cards — full names, stock badges, better thumbnails
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-009-2026-03-14`
 - **Priority**: P1
 - **Source**: Operator review — product names truncated, placeholder icons, no stock info visible
 - **Scope**: Product card component used in SELL tab product listing
@@ -2184,7 +2184,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-010 — Sync Status modal — brand illustrations, plain-language tabs
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-010-2026-03-14`
 - **Priority**: P3
 - **Source**: Operator review — "Drifts" tab is technical jargon, empty state could be more branded
 - **Scope**: Sync Status modal/sheet component
@@ -2204,7 +2204,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-011 — Typography and spacing system — POS-grade readability
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-011-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — inconsistent font sizes, tight spacing, hard to read at arm's length on counter
 - **Scope**: Global typography styles across all POS screens
@@ -2229,7 +2229,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-012 — Voice FAB — brand-colored, contextual label on first use
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-012-2026-03-14`
 - **Priority**: P3
 - **Source**: Operator review — teal mic button doesn't match brand, no onboarding hint
 - **Scope**: Floating Action Button (voice input) on SELL tab
@@ -2250,7 +2250,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-013 — FEFO badge — explain or hide jargon for kirana users
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-013-2026-03-14`
 - **Priority**: P3
 - **Source**: Operator review — "FEFO" badge on SELL tab is warehouse jargon
 - **Scope**: FEFO indicator on product listing
@@ -2271,7 +2271,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-014 — DEV MODE banner — hide in production builds
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-014-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — orange dashed "DEV MODE" banner visible at bottom of activation screen
 - **Scope**: DEV MODE indicator component (likely in root layout or activation screen)
@@ -2291,7 +2291,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-015 — Inconsistent product card layouts — unify list vs thumbnail styles
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-015-2026-03-14`
 - **Priority**: P1
 - **Source**: Operator review — two completely different product card designs on the same screen
 - **Scope**: SELL tab product listing components
@@ -2315,7 +2315,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-016 — Cart/checkout indicator — floating total bar when items added
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-016-2026-03-14`
 - **Priority**: P1
 - **Source**: Operator review — no visible cart total, item count, or checkout CTA on SELL screen
 - **Scope**: SELL tab — new floating cart bar component
@@ -2339,7 +2339,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-017 — Staff login indicator — show who is logged in on home screen
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-017-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — no indication of which staff member is using the POS
 - **Scope**: Home screen header area
@@ -2361,7 +2361,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-018 — Product cards — add unit/weight context to prices
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-018-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — prices shown without quantity/unit context
 - **Scope**: Product card component
@@ -2383,7 +2383,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-019 — Activation screen keyboard and navigation UX fixes
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-019-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — hamburger menu on activation screen, no keyboard optimization
 - **Scope**: Activation screen component
@@ -2407,7 +2407,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-020 — Product card whitespace — remove excess empty area in small cards
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-020-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — small product thumbnail cards have massive empty space below content
 - **Scope**: Small product card/grid component in SELL tab
@@ -2428,7 +2428,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-021 — Sync modal — add tab count badges and last-sync timestamp
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-021-2026-03-14`
 - **Priority**: P3
 - **Source**: Operator review — sync modal tabs don't show item counts, no timestamp
 - **Scope**: Sync Status modal component
@@ -2449,7 +2449,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-022 — Logo pill badge — enlarge and make recognizable as brand mark
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-022-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — SuperMandi logo pill badge on activation screen is too small to identify as a brand logo
 - **Scope**: Activation screen header, shared logo component
@@ -2471,7 +2471,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-023 — Activation subtitle — simplify two-concept info text
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-023-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — activation screen subtitle mixes device enrollment and store linking concepts
 - **Scope**: Activation screen text/copy
@@ -2492,7 +2492,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-024 — Enrollment QR scan — button exists but needs camera integration and UX polish
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-024-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — "Scan QR" button exists on enrollment screen but needs camera integration verification and UX polish
 - **Scope**: Enrollment screen — QR scan button and camera flow
@@ -2517,7 +2517,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-025 — Add support phone number on activation and error screens
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-025-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — kirana retailers prefer calling over reading help text
 - **Scope**: Activation screen, error screens, settings
@@ -2540,7 +2540,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-026 — Add terms/privacy policy link — Play Store compliance
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-026-2026-03-14`
 - **Priority**: P1 (Play Store requirement)
 - **Source**: Operator review — no terms of service or privacy policy link visible in app
 - **Scope**: Activation screen footer, settings/about screen
@@ -2563,7 +2563,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-027 — Green grid icon on product card — explain or remove
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-027-2026-03-14`
 - **Priority**: P3
 - **Source**: Operator review — green grid/4-square icon on the Toor Dal product card has no tooltip or explanation
 - **Scope**: Product card component — icon rendering
@@ -2585,7 +2585,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-028 — Product list section headers — group by category or recent
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-028-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — products displayed as a flat unsorted list with no grouping
 - **Scope**: SELL tab product listing
@@ -2608,7 +2608,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-029 — SELL tab — add manual "Add Product" button for unlisted items
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-029-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — no way to add a product that isn't in the catalog
 - **Scope**: SELL tab — add CTA for quick product creation
@@ -2631,7 +2631,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-030 — CREDIT tab — explain greyed-out state or enable with guidance
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-030-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — CREDIT tab appears greyed/inactive with no explanation
 - **Scope**: CREDIT tab component, tab navigation
@@ -2654,7 +2654,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-031 — Quantity selector — quick +/- buttons for bulk product adds
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-031-2026-03-14`
 - **Priority**: P1
 - **Source**: Operator review — no visible quantity selector when adding products to bill
 - **Scope**: Product card interaction, cart add flow
@@ -2678,7 +2678,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-032 — Discount/MRP indicator on product cards
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-032-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — no MRP/selling price differentiation visible on product cards
 - **Scope**: Product card component — pricing display
@@ -2701,7 +2701,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-033 — Favorites/frequently sold section on SELL tab
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-033-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — no quick-access section for frequently sold items
 - **Scope**: SELL tab — new section above product list
@@ -2725,7 +2725,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-034 — Recent bills shortcut — quick access to last 5 transactions
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-034-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — no way to quickly view recent bills from the SELL screen
 - **Scope**: Home screen — recent bills widget or shortcut
@@ -2748,7 +2748,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-035 — Empty state design for zero-product store
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-035-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator review — no designed empty state when store has zero products
 - **Scope**: SELL tab, product listing empty state
@@ -2772,7 +2772,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-036 — Date/time display in app header
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-036-2026-03-14`
 - **Priority**: P3
 - **Source**: Operator review — no date or time visible in the POS app header
 - **Scope**: Home screen header area
@@ -2795,7 +2795,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-037 — Customer name/phone entry before billing for credit sales
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-037-2026-03-14`
 - **Priority**: P1
 - **Source**: Operator review — no customer identification step before starting a credit (udhar) bill
 - **Scope**: Billing/checkout flow, customer selection component
@@ -2820,7 +2820,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-038 — Enrollment — Device type hardcoded as "RETAILER_PHONE", no auto-detection
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-038-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — `EnrollDeviceScreen.tsx:196` hardcodes `deviceType: "RETAILER_PHONE"`
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx:196`
@@ -2842,7 +2842,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-039 — Enrollment — Move printer setup to post-activation settings (not enrollment)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-039-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — `EnrollDeviceScreen.tsx` has NO printing mode selector UI; printer config only in `PrinterSettingsScreen.tsx`
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`, `src/screens/PrinterSettingsScreen.tsx`
@@ -2863,7 +2863,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-040 — Enrollment — Header layout uses flexDirection:"row" with no small-screen breakpoint
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-040-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — `EnrollDeviceScreen.tsx` header layouts at lines 636, 712, 783, 793, 847 use `flexDirection:"row"` with no responsive breakpoint
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx:636,712,783,793,847`
@@ -2884,7 +2884,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-041 — Enrollment — no inline form validation feedback on code input
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-041-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot review — enrollment code field shows "SM-XXXXXX" placeholder but no validation feedback
 - **Scope**: Enrollment screen — Enrollment Code input field
@@ -2909,7 +2909,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-042 — Enrollment — Default label uses raw Device.modelName (e.g., "23106RN0DA")
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-042-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — `EnrollDeviceScreen.tsx:187` sets `defaultLabel` from `Device.modelName || Device.deviceName || ""`
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx:187,499-512`
@@ -2931,7 +2931,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-043 — Enrollment — floating labels for input fields (placeholder disappears on focus)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-043-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot review — input fields use placeholder text only, which disappears when field is focused
 - **Scope**: Enrollment screen — all input fields
@@ -2955,7 +2955,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-044 — Enrollment — button hierarchy: "Scan QR" vs "Enroll Device" visual weight
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-044-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot review — "Scan QR" (outlined) and "Enroll Device" (filled blue) are same width, competing visually
 - **Scope**: Enrollment screen — CTA button pair
@@ -2979,7 +2979,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-045 — Home — "Ready for billing" status text too small for key operational state
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-045-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot review — "Ready for billing" in green text is tiny (~12px) next to the store ID
 - **Scope**: Home screen — store info line below store name
@@ -3003,7 +3003,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-046 — Product card expand chevron (↓) — no hint of what it expands to
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-046-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot review — Toor Dal card has a down-arrow (↓) chevron below the green grid icon
 - **Scope**: Product card component — expand/collapse affordance
@@ -3027,7 +3027,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-047 — Horizontal product row misleading — empty space implies missing products
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-047-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot review — two small product cards (Vim, Tata) in a horizontal scroll row with empty space to the right
 - **Scope**: SELL tab — product listing layout
@@ -3051,7 +3051,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-048 — Voice FAB position — overlaps product cards on longer lists
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-048-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot review — teal mic FAB in bottom-right positioned where product cards would be on longer lists
 - **Scope**: SELL tab — Voice FAB positioning
@@ -3075,7 +3075,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-049 — Top-right camera icon is a hardware status indicator, not a button — confusing affordance
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-049-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — `PosStatusBar.tsx:150-151` renders camera icon as status indicator (available/unavailable), not an action button
 - **Scope**: `src/components/PosStatusBar.tsx:150-151,343-362`
@@ -3098,7 +3098,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-050 — No pull-to-refresh indicator on product list
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-050-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot review — no visual indicator that pulling down refreshes the product list
 - **Scope**: SELL tab — product list scroll behavior
@@ -3122,7 +3122,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-051 — Daily session counter — show "Bills today" and "Sales total" on home
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-051-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot review — no daily business metrics visible on the home screen
 - **Scope**: Home screen — new daily summary widget
@@ -3148,7 +3148,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-052 — Store name truncation uses clip mode, no long-press to see full name
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-052-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — `PosStatusBar.tsx:444-448` uses `numberOfLines={2}` + `ellipsizeMode="clip"`
 - **Scope**: `src/components/PosStatusBar.tsx:444-448`
@@ -3171,7 +3171,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-053 — Accessibility — WCAG AA contrast audit across all buttons and text
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-053-2026-03-14`
 - **Priority**: P1 (legal/compliance — accessibility guidelines)
 - **Source**: Screenshot review — "Scan product here" white-on-green button may fail WCAG AA 4.5:1 contrast
 - **Scope**: All screens — color contrast audit
@@ -3198,7 +3198,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-054 — Hindi translation completion — i18n infrastructure exists but coverage is partial
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-054-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — i18n setup at `src/i18n/index.ts:18` supports `['en', 'hi']`. Language toggle on `MenuScreen.tsx:983-1004` as "EN" | "हि" chips. But many screens have zero t() usage.
 - **Scope**: `src/i18n/locales/hi.json` (primary), all screens listed in STG-257–STG-279
@@ -3222,7 +3222,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-055 — App version display on enrollment and settings screens
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-055-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot review — no app version number visible anywhere in the app
 - **Scope**: Enrollment screen footer, Settings/About screen
@@ -3246,7 +3246,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-056 — Product card tap feedback — haptic vibration and ripple effect
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-056-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot review — product cards have no visible tap feedback (no ripple, no scale, no haptic)
 - **Scope**: All tappable product cards on SELL tab
@@ -3271,7 +3271,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-057 — Activation text rewrite — remove "superadmin", simplify to 3-step flow
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-057-2026-03-14`
 - **Priority**: P1 (user-facing copy is the first impression for every new retailer)
 - **Source**: Operator flagged — subtitle "Use your activation code after retailer registration on web and superadmin account activation" is vague, uses internal jargon
 - **Scope**: Activation screen — subtitle text + info box text
@@ -3302,7 +3302,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-058 — Activation info box — replace wall-of-text with collapsible visual steps
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-058-2026-03-14`
 - **Priority**: P1
 - **Source**: Operator review — info box at bottom of activation screen is a paragraph of text that won't be read
 - **Scope**: Activation screen — info/help section at bottom
@@ -3330,7 +3330,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-059 — Support contact — replace email with phone/WhatsApp for kirana users
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-059-2026-03-14`
 - **Priority**: P1 (kirana retailers need to call when stuck — email is useless)
 - **Source**: Operator review — "Need help? hello@supermandi.tech" uses email, kirana retailers don't email
 - **Scope**: Activation screen, error screens, settings — support contact everywhere
@@ -3356,7 +3356,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-060 — Activation — replace raw URL with tappable "Register Here" button
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-060-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot review — raw URL "supermandi.tech/retailer/register" displayed as text
 - **Scope**: Activation screen — registration link
@@ -3380,7 +3380,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-061 — Activation code input — fix center-aligned placeholder, must be left-aligned
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-061-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot review — "SM-XXXXXX" placeholder text is center-aligned inside the input field
 - **Scope**: Activation screen — Activation Code input field
@@ -3404,7 +3404,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-062 — Activation — "Activate POS" button disabled state until valid code format
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-062-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot review — "Activate POS" button appears always active regardless of input state
 - **Scope**: Activation screen — CTA button state management
@@ -3429,7 +3429,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-063 — Activation — add welcome illustration/visual for brand warmth
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-063-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot review — activation screen is just text + inputs on grey-white, no visual warmth
 - **Scope**: Activation screen — hero section above form
@@ -3455,7 +3455,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-064 — Activation — "23106RN0DA" device name should show friendly model name
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-064-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot review — Device Name auto-fills with raw model string "23106RN0DA" which looks like an error code
 - **Scope**: Activation screen — Device Name auto-population logic
@@ -3479,7 +3479,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-065 — Activation — add step indicator "Step 1 of 2" for onboarding progress
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-065-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot review — no progress indicator on activation, user doesn't know what comes next
 - **Scope**: Activation screen — progress/step indicator
@@ -3504,7 +3504,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-066 — Enrollment — Standardize terminology ("Enroll" vs "Activate" used interchangeably)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-066-2026-03-14`
 - **Priority**: P1 (terminology confusion — same screen uses both "enroll" and "activate")
 - **Source**: Code audit — `EnrollDeviceScreen.tsx` is the ONLY onboarding screen (no separate ActivationScreen exists). File header (lines 1-9) says "POS Activation Screen". But code uses both "Enroll" and "Activate" inconsistently.
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx` (single file, 850+ lines)
@@ -3530,7 +3530,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-067 — Home header icons — add labels or tooltips to Wi-Fi/printer/scanner/camera
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-067-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot deep review — 4 icons in header bar (Wi-Fi, printer, scanner, camera) have zero labels
 - **Scope**: Home screen — top icon bar
@@ -3556,7 +3556,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-068 — Product cards — add "+" tap affordance button for adding to bill
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-068-2026-03-14`
 - **Priority**: P1 (without visible "add" button, billing workflow is undiscoverable)
 - **Source**: Screenshot deep review — product cards have NO visible add/plus button
 - **Scope**: All product card variants (list card + thumbnail card) on SELL tab
@@ -3583,7 +3583,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-069 — Tab bar — unify 5 different visual treatments into one consistent style
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-069-2026-03-14`
 - **Priority**: P1 (tab bar is the primary navigation — visual chaos hurts usability)
 - **Source**: Screenshot deep review — each of the 5 tabs has a completely different visual treatment
 - **Scope**: Home screen tab bar (MENU, SELL, PURCHASE, REORDER, CREDIT)
@@ -3613,7 +3613,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-070 — Home — dark header band harsh cut to white body, add smooth transition
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-070-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot deep review — abrupt visual break between grey header area and white content body
 - **Scope**: Home screen — header-to-body transition
@@ -3636,7 +3636,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-071 — Sync row — connect checkmark (left) with "15s ago" (right) visually
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-071-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot deep review — green checkmark is far-left, "15s ago ▼" is far-right, full screen width apart
 - **Scope**: Home screen — sync status row between store name and tabs
@@ -3660,7 +3660,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-072 — Activation — remove hamburger menu pre-activation (no navigation needed)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-072-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot review — hamburger menu (≡) visible on activation screen where no navigation exists
 - **Scope**: Activation screen — navigation header
@@ -3684,7 +3684,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-073 — Activation helper text — "store dashboard" is jargon, simplify
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-073-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot review — helper text "A name to identify this device in your store dashboard" uses "dashboard" jargon
 - **Scope**: Activation screen — Device Name field helper text
@@ -3706,7 +3706,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-074 — Search + barcode inputs — unify border/container styles into one section
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-074-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot deep review — search field and barcode field have different container styles
 - **Scope**: SELL tab — search area styling
@@ -3730,7 +3730,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-075 — Product cards — add loading skeleton placeholder during fetch
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-075-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot deep review — no loading state visible for product list
 - **Scope**: SELL tab — product listing loading state
@@ -3755,7 +3755,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-076 — Activation — "on web" rewrite to specific URL or "online"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-076-2026-03-14`
 - **Priority**: P2
 - **Source**: Operator flagged — "on web" in activation subtitle is vague
 - **Scope**: Activation screen — subtitle text
@@ -3780,7 +3780,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-077 — Payment — error message vague, no specific failure reason
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-077-2026-03-14`
 - **Priority**: P1
 - **Source**: Screenshot — "Unable to start payment. Please try again." gives no reason
 - **Scope**: Payment screen — error handling
@@ -3805,7 +3805,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-078 — Payment — "Complete Payment" greyed out with no explanation why
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-078-2026-03-14`
 - **Priority**: P1
 - **Source**: Screenshot — "Complete Payment" button is dark grey (disabled) with no visible reason
 - **Scope**: Payment screen — CTA button states
@@ -3830,7 +3830,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-079 — Payment — two competing retry mechanisms (error Retry + disabled CTA)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-079-2026-03-14`
 - **Priority**: P1
 - **Source**: Screenshot — "Retry" red button in error banner AND "Complete Payment" (greyed) both visible
 - **Scope**: Payment screen — action consolidation
@@ -3855,7 +3855,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-080 — Payment — no cash amount received input or change calculation
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-080-2026-03-14`
 - **Priority**: P1 (cash is the #1 payment method in kirana stores — this is a core POS function)
 - **Source**: Screenshot — Cash selected, ₹145.00 due, but no way to enter amount received or calculate change
 - **Scope**: Payment screen — Cash payment flow
@@ -3883,7 +3883,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-081 — Payment — no cart/order summary visible on payment screen
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-081-2026-03-14`
 - **Priority**: P1
 - **Source**: Screenshot — payment screen shows ₹145.00 total but ZERO product details
 - **Scope**: Payment screen — order summary section
@@ -3910,7 +3910,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-082 — Payment — "Due" method has no customer selection for credit sale
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-082-2026-03-14`
 - **Priority**: P1 (credit/udhar is THE core kirana workflow — can't record credit without knowing WHO)
 - **Source**: Screenshot — "Due" tab has calendar icon, but no customer selection when credit sale chosen
 - **Scope**: Payment screen — Due/credit payment flow
@@ -3937,7 +3937,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-083 — Payment — no back button to return to cart
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-083-2026-03-14`
 - **Priority**: P1
 - **Source**: Screenshot — payment screen has no ← back arrow or close button
 - **Scope**: Payment screen — navigation
@@ -3961,7 +3961,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-084 — Payment — UPI flow incomplete, no QR/app selector after selecting UPI
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-084-2026-03-14`
 - **Priority**: P1 (UPI is India's #1 digital payment — incomplete flow blocks digital payments)
 - **Source**: Screenshot — UPI tab visible but flow after selection is unclear
 - **Scope**: Payment screen — UPI payment flow
@@ -3989,7 +3989,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-085 — Payment — no split payment support (cash + UPI)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-085-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — only one payment method can be selected at a time (tabs are exclusive)
 - **Scope**: Payment screen — split/multi-tender payment
@@ -4013,7 +4013,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-086 — Payment — "Cart locked" badge unexplained, no unlock path
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-086-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — orange "Cart locked" pill badge at top-right of payment screen
 - **Scope**: Payment screen — cart lock indicator
@@ -4037,7 +4037,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-087 — Payment — ~40% empty space caused by centered flex layout with no content fill
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-087-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — `PaymentScreen.tsx:1108-1113` uses `cashStage` style with `flex:1, alignItems:"center", justifyContent:"center"` causing amount to float in center of empty space
 - **Scope**: `src/screens/PaymentScreen.tsx:1108-1113,1223-1230`
@@ -4060,7 +4060,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-088 — Payment — no GST/tax breakup on payment screen
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-088-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — payment screen shows flat ₹145.00, no tax/GST breakdown
 - **Scope**: Payment screen — tax display
@@ -4084,7 +4084,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-089 — Payment — "Complete Payment" grey-on-grey text fails WCAG contrast
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-089-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — "Complete Payment" text is dark grey on a grey button — barely readable
 - **Scope**: Payment screen — CTA button disabled style
@@ -4107,7 +4107,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-090 — Payment — no loading/processing state during payment attempt
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-090-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — error state visible but no prior loading/processing state evident
 - **Scope**: Payment screen — payment processing UX
@@ -4132,7 +4132,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-091 — Payment — instruction text "Collect cash" doesn't change per payment method
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-091-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — "Collect cash from customer" shows even though payment method could be UPI or Due
 - **Scope**: Payment screen — dynamic instruction text
@@ -4155,7 +4155,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-092 — Payment — no receipt preview before completing payment
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-092-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot review — no way to preview receipt before completing payment
 - **Scope**: Payment screen — receipt preview
@@ -4177,7 +4177,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-093 — Payment — Cash tab uses MaterialCommunityIcons "cash" icon which renders as generic bills
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-093-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — `PaymentScreen.tsx:1199` uses `renderModeTab("CASH", "Cash", "cash")` with MaterialCommunityIcons name="cash" at size 20
 - **Scope**: `src/screens/PaymentScreen.tsx:1199,957`
@@ -4199,7 +4199,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-094 — Cart — "Clear" button has no confirmation dialog, deletes all items instantly
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-094-2026-03-14`
 - **Priority**: P1 (accidental clear during rush billing = lost work + angry customer)
 - **Source**: Screenshot — red "Clear" text at top-right, one tap presumably empties entire cart
 - **Scope**: Sell Cart screen — Clear action
@@ -4224,7 +4224,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-095 — Cart — delete item (🗑️) has no confirmation or undo
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-095-2026-03-14`
 - **Priority**: P1
 - **Source**: Screenshot — red trash icon on cart item, one tap presumably removes the item
 - **Scope**: Sell Cart — item delete action
@@ -4248,7 +4248,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-096 — Cart — quantity [-][+] buttons too small, need larger tap targets
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-096-2026-03-14`
 - **Priority**: P1 (quantity changes are the #1 cart interaction — must be fast and accurate)
 - **Source**: Screenshot — [-] and [+] are small outlined blue squares, hard to tap rapidly
 - **Scope**: Sell Cart — quantity stepper buttons
@@ -4274,7 +4274,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-097 — Cart — quantity number not tappable for direct input (type "10" vs tap + 9x)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-097-2026-03-14`
 - **Priority**: P1 (kirana retailers buy in bulk — tapping + 49 times for qty 50 is unusable)
 - **Source**: Screenshot — "1" between [-][+] appears static, not tappable as an input
 - **Scope**: Sell Cart — quantity direct input
@@ -4299,7 +4299,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-098 — Cart — no "Add more items" / "Continue Shopping" link
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-098-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — cart has no way to add more items without dismissing the cart
 - **Scope**: Sell Cart — navigation back to product list
@@ -4323,7 +4323,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-099 — Cart — edit icon (✏️) purpose unclear, no tooltip or label
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-099-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — pencil edit icon next to "Toor Dal (Arhar) 1kg" — function unknown
 - **Scope**: Sell Cart — item edit action
@@ -4347,7 +4347,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-100 — Cart — unit price vs line total not labeled (ambiguous with qty > 1)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-100-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — ₹145.00 on left and ₹145.00 on right with qty=1, not labeled
 - **Scope**: Sell Cart — item pricing display
@@ -4371,7 +4371,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-101 — Cart — no GST/tax line between Subtotal and Total
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-101-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — "Subtotal ₹145.00" then "Total ₹145.00" — no tax line
 - **Scope**: Sell Cart — price breakdown
@@ -4398,7 +4398,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-102 — Cart — discount has no max limit / manager approval for large discounts
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-102-2026-03-14`
 - **Priority**: P1 (security: cashier could give 100% discount = theft)
 - **Source**: Code audit — `SellScanScreen.tsx:3505-3561` discount UI + `cartStore.ts:111-129` `calculateDiscountAmount()` + `cartStore.ts:677-689` discount application
 - **Scope**: `src/screens/SellScanScreen.tsx:3505-3561`, `src/stores/cartStore.ts:111-129,677-689`
@@ -4424,7 +4424,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-103 — Cart — no customer name/phone field for credit/due sales
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-103-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — cart has no customer identification field
 - **Scope**: Sell Cart — customer selection
@@ -4449,7 +4449,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-104 — Cart — no "Hold/Park Bill" feature for interrupted transactions
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-104-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot review — no way to save current bill and start a new one
 - **Scope**: Sell Cart — bill hold/park functionality
@@ -4474,7 +4474,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-105 — Cart — no item count header ("1 item in cart")
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-105-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — "Sell Cart" title but no item count
 - **Scope**: Sell Cart — header info
@@ -4494,7 +4494,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-106 — Cart — Discount %/Flat toggle styling inconsistent
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-106-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — "%" has blue circle indicator, "Flat" has no indicator
 - **Scope**: Sell Cart — discount toggle component
@@ -4517,7 +4517,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-107 — Cart — no product thumbnail/image in cart items
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-107-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — cart item shows only text, no product image/thumbnail
 - **Scope**: Sell Cart — item card visual
@@ -4538,7 +4538,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-108 — Cart — ~50% empty space with few items, no guidance to add more
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-108-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — cart with 1 item has massive empty white space
 - **Scope**: Sell Cart — empty area utilization
@@ -4559,7 +4559,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-109 — Cart — Checkout button should show item count "Checkout (1 item) ₹145"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-109-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — "Checkout ₹145.00" button shows total but not item count
 - **Scope**: Sell Cart — checkout CTA
@@ -4579,7 +4579,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-110 — Cart — no per-item discount, only cart-level
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-110-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — Discount section applies to entire cart, no per-item discount option
 - **Scope**: Sell Cart — discount granularity
@@ -4601,7 +4601,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-111 — Cart — no "You save ₹X" line when discount applied
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-111-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — discount section exists but no savings display when discount applied
 - **Scope**: Sell Cart — savings display
@@ -4621,7 +4621,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-112 — Cart — no notes/memo field for special instructions
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-112-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot review — no way to add notes to a bill
 - **Scope**: Sell Cart — notes/memo section
@@ -4643,7 +4643,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-113 — Payment — no bill/invoice number visible for tracking and disputes
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-113-2026-03-14`
 - **Priority**: P1 (every commercial transaction needs a unique ID — legal + operational requirement)
 - **Source**: Screenshot deep review — payment screen shows amount but no transaction/bill identifier
 - **Scope**: Payment screen — transaction metadata display
@@ -4668,7 +4668,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-114 — Payment — no cancel/void transaction button
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-114-2026-03-14`
 - **Priority**: P1 (cashier can get trapped on payment screen with no escape except back button)
 - **Source**: Screenshot — only "Complete Payment" (disabled) and "Retry" visible. No cancel option.
 - **Scope**: Payment screen — cancel/void workflow
@@ -4694,7 +4694,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-115 — Payment — missing payment methods: Card, Wallet (Paytm/GPay balance)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-115-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — only UPI, Cash, Due available. No card or wallet payment.
 - **Scope**: Payment screen — additional payment methods
@@ -4720,7 +4720,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-116 — Payment — Indian lakh number formatting (₹1,45,000 not ₹145,000)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-116-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot analysis — ₹145.00 is small but large amounts would need Indian formatting
 - **Scope**: All screens — number formatting across the app
@@ -4744,7 +4744,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-117 — Payment — ".00" always shown on round amounts, add smart formatting
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-117-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — "₹145.00" when "₹145" is cleaner for round amounts
 - **Scope**: All screens — price display formatting
@@ -4767,7 +4767,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-118 — Payment — "Retry" button is red (destructive color) for a positive action
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-118-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — red "Retry" pill button in error banner
 - **Scope**: Payment screen — error banner retry button
@@ -4791,7 +4791,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-119 — Payment — error banner has no dismiss X, persists indefinitely
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-119-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — error banner stays on screen with no way to dismiss
 - **Scope**: Payment screen — error banner lifecycle
@@ -4815,7 +4815,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-120 — Payment — no staff name/ID for shift reconciliation and audit
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-120-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — payment screen has no indication of which staff member is processing
 - **Scope**: Payment screen — staff identification
@@ -4839,7 +4839,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-121 — Payment — "Due" icon is calendar, should represent credit/udhar
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-121-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — Due tab has calendar+clock icon but "Due" means credit/udhar
 - **Scope**: Payment screen — Due payment tab icon
@@ -4861,7 +4861,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-122 — Payment — no confirmation dialog for large amounts (₹5,000+)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-122-2026-03-14`
 - **Priority**: P1 (accidental ₹50,000 payment can't be easily reversed)
 - **Source**: Payment screen analysis — Complete Payment has no confirmation step regardless of amount
 - **Scope**: Payment screen — high-value confirmation
@@ -4885,7 +4885,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-123 — Payment — amount positioned in dead center of empty space, move to top
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-123-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — ₹145.00 is vertically centered on the screen in a sea of whitespace
 - **Scope**: Payment screen — layout restructure
@@ -4909,7 +4909,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-124 — Payment — no sound/vibration feedback on payment success or failure
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-124-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot analysis — no audio/haptic cues for payment outcomes
 - **Scope**: Payment screen — audio and haptic feedback
@@ -4934,7 +4934,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-125 — Payment — no partial payment tracking (₹100 now + ₹45 due later)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-125-2026-03-14`
 - **Priority**: P2
 - **Source**: Payment screen analysis — payment is all-or-nothing, no partial payment support
 - **Scope**: Payment screen — partial payment with remaining as due
@@ -4958,7 +4958,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-126 — Cart — [-] at qty=1 behavior undefined: remove item? block? go to 0?
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-126-2026-03-14`
 - **Priority**: P1 (undefined behavior at a critical interaction point causes confusion)
 - **Source**: Screenshot — [-] button shown when qty=1, behavior on tap is undefined/unknown
 - **Scope**: Sell Cart — quantity stepper edge case
@@ -4985,7 +4985,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-127 — Cart — no stock validation when qty exceeds available stock
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-127-2026-03-14`
 - **Priority**: P1 (overselling = stock discrepancy = inventory chaos)
 - **Source**: Screenshot — "In stock: 39" shown but no validation preventing qty=50
 - **Scope**: Sell Cart — quantity vs stock validation
@@ -5011,7 +5011,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-128 — Cart — no batch/expiry info for perishable items in cart
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-128-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — "Toor Dal (Arhar) 1kg" in cart with no expiry or batch info
 - **Scope**: Sell Cart — item batch/expiry display
@@ -5035,7 +5035,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-129 — Cart — long product name truncation/overflow not handled
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-129-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot analysis — "Toor Dal (Arhar) 1kg" fits but longer names will overflow
 - **Scope**: Sell Cart — product name text handling
@@ -5059,7 +5059,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-130 — Cart — discount input has no live preview ("10% = ₹14.50 off")
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-130-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — discount % input field with no preview of what the discount amount would be
 - **Scope**: Sell Cart — discount UX
@@ -5084,7 +5084,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-131 — Cart — empty space should show "frequently bought together" suggestions
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-131-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — ~50% of cart is empty white space that could drive upsell
 - **Scope**: Sell Cart — product suggestions in empty area
@@ -5110,7 +5110,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-132 — Cart — Subtotal = Total is redundant, show Subtotal only when different
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-132-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — "Subtotal ₹145.00" and "Total ₹145.00" are identical, taking two lines
 - **Scope**: Sell Cart — price summary display logic
@@ -5133,7 +5133,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-133 — Cart — bottom sheet height fixed at ~90%, should be dynamic to content
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-133-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — cart bottom sheet is ~90% height for just 1 item
 - **Scope**: Sell Cart — bottom sheet sizing
@@ -5160,7 +5160,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-134 — Cart — no swipe-to-delete gesture on cart items
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-134-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot review — only explicit 🗑️ button for item removal, no swipe gesture
 - **Scope**: Sell Cart — item removal gesture
@@ -5184,7 +5184,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-135 — Cart — keyboard may cover Checkout button when discount input focused
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-135-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot analysis — discount input near bottom, keyboard would overlap Checkout area
 - **Scope**: Sell Cart — keyboard interaction
@@ -5209,7 +5209,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-136 — Cart — no "Share cart via WhatsApp" for phone order confirmation
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-136-2026-03-14`
 - **Priority**: P3
 - **Source**: Cart analysis — no way to share cart contents externally
 - **Scope**: Sell Cart — share/export feature
@@ -5233,7 +5233,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-137 — Cart — "In stock" has no low-stock warning styling (amber/red for <5 units)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-137-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — "In stock: 39" in neutral grey, same styling regardless of stock level
 - **Scope**: Sell Cart — conditional stock display
@@ -5258,7 +5258,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-138 — Cart — no weight/unit display separate from product name
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-138-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — "Toor Dal (Arhar) 1kg" — weight is embedded in the product name, not structured
 - **Scope**: Sell Cart — unit/weight display
@@ -5282,7 +5282,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-139 — Cart — no return/exchange line item for customer returns
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-139-2026-03-14`
 - **Priority**: P2
 - **Source**: Cart analysis — no way to process returns/exchanges in the billing flow
 - **Scope**: Sell Cart — returns and exchanges
@@ -5309,7 +5309,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-140 — Cart — Discount section always visible, should collapse when unused
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-140-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — Discount section takes ~80px of space even when no discount is being applied
 - **Scope**: Sell Cart — discount section visibility
@@ -5333,7 +5333,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-141 — Cart — Checkout button price doesn't animate on total change
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-141-2026-03-14`
 - **Priority**: P3
 - **Source**: Cart analysis — "Checkout ₹145.00" button total is static, doesn't animate on change
 - **Scope**: Sell Cart — checkout button micro-interaction
@@ -5357,7 +5357,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-142 — BUG: "[menu.viewDetails]" raw i18n key leaked in Today's Sales card
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-142-2026-03-14`
 - **Priority**: P0 (visible bug — raw code key shown to end users)
 - **Source**: Screenshot — Menu → Today's Sales card shows "[menu.viewDetails] >" instead of translated text
 - **Scope**: Menu screen — i18n translation missing
@@ -5379,7 +5379,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-143 — BUG: "[menu.printerReady]" and "[menu.testPrint]" raw i18n keys leaked
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-143-2026-03-14`
 - **Priority**: P0 (visible bug — TWO more raw keys shown to users)
 - **Source**: Screenshot — Menu below Return/Refund shows "[menu.printerReady]" and "[menu.testPrint]"
 - **Scope**: Menu screen — printer status section i18n
@@ -5454,7 +5454,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-146 — Menu — Device UUID shown instead of device label
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-144-2026-03-14`
 - **Priority**: P1
 - **Source**: Screenshot — "Device: 5c62f50a-06d7-46db-969c-392f2aa8c51f" in System Status
 - **Scope**: Menu → System Status → Device row
@@ -5476,7 +5476,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-147 — Menu — store name lowercase in System Status vs title case in header
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-147-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — "supermandi retailer test store" (lowercase) vs "SuperMandi Retailer Test Store" (header)
 - **Scope**: Menu → System Status → store name display
@@ -5490,7 +5490,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-148 — Menu — System Status card should be collapsible, rarely needed
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-148-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — System Status card takes ~200px for 3 "Active/Synced" statuses
 - **Scope**: Menu → System Status card
@@ -5504,7 +5504,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-149 — Menu — Today's Sales percentages (551%) have no baseline context
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-149-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — "551%" green arrow next to ₹11,170.50 with no explanation
 - **Scope**: Menu → Today's Sales card
@@ -5518,7 +5518,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-150 — Menu — "Payment Modes" section renders empty when dailySummary has no payment breakdown
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-150-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — `MenuScreen.tsx:588-602` renders "Payment Modes" header conditionally, but the breakdown rows (Cash/UPI/Card totals) only render when `dailySummary` has payment data
 - **Scope**: `src/screens/MenuScreen.tsx:588-602`
@@ -5540,7 +5540,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-151 — Menu — metric labels below numbers, should be above
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-151-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — "₹11,170.50" then "Total Sales" below. Users read top-to-bottom.
 - **Scope**: Menu → Today's Sales metrics layout
@@ -5554,7 +5554,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-152 — Menu — Today's Sales should be on HOME screen, not buried in Menu
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-152-2026-03-14`
 - **Priority**: P1
 - **Source**: Screenshot — Today's Sales card is in the Menu tab, not visible from the SELL screen
 - **Scope**: Home screen — add daily sales widget
@@ -5568,7 +5568,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-153 — Menu — Reprint/Download/Share buttons all call identical `goToBills()` with no context
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-153-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — `MenuScreen.tsx:621-634` — all three buttons (Reprint printer icon, Download download icon, Share share-variant icon) call the same `goToBills()` function. `goToBills` defined at line 365: `navigation.navigate("SalesHistory")` with NO params.
 - **Scope**: `src/screens/MenuScreen.tsx:621-634,365`
@@ -5591,7 +5591,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-154 — Menu — "BNPL Dues" jargon, kirana retailer won't understand
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-154-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — "BNPL Dues" card with subtitle "View and pay pending BNPL dues"
 - **Scope**: Menu → BNPL Dues card
@@ -5605,7 +5605,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-155 — Menu — "Stock Inward" warehouse jargon, rename
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-155-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — "Stock Inward" card with subtitle "Record incoming stock purchases"
 - **Scope**: Menu → Stock Management → Stock Inward
@@ -5619,7 +5619,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-156 — Menu — Opening Stock "?" icon should be inventory icon
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-156-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — Opening Stock card has "?" question mark icon in a teal circle
 - **Scope**: Menu → Stock Management → Opening Stock icon
@@ -5633,7 +5633,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-157 — Menu — "Customers" and "Customer Management" are duplicate entries
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-157-2026-03-14`
 - **Priority**: P1 (duplicate navigation = confused users)
 - **Source**: Screenshot — two separate cards in CUSTOMERS & CREDIT section
 - **Scope**: Menu → Customers & Credit section
@@ -5652,7 +5652,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-158 — Menu — "Overdue Dues" redundant wording
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-158-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — "Overdue Dues" card title
 - **Scope**: Menu → Customers & Credit
@@ -5666,7 +5666,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-159 — Menu — 20+ items need 8 screens of scrolling, needs restructure
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-159-2026-03-14`
 - **Priority**: P1 (menu is the primary navigation — can't require 8 screens of scrolling)
 - **Source**: 8 screenshots needed to capture entire menu
 - **Scope**: Menu tab — overall structure
@@ -5693,7 +5693,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-160 — Menu — icon colors inconsistent across items
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-160-2026-03-14`
 - **Priority**: P2
 - **Source**: 8 screenshots — icons use blue, teal, green, red, grey, orange with no system
 - **Scope**: Menu — all card icons
@@ -5707,7 +5707,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-161 — Menu — no notification badges on menu items
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-161-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshots — Overdue Dues, BNPL Dues show no count badges
 - **Scope**: Menu — item-level notification badges
@@ -5721,7 +5721,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-162 — Menu — logo + pill + "Menu" title redundant heading
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-162-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — SuperMandi icon + green pill badge + "Menu" text at top of Menu tab
 - **Scope**: Menu → header area
@@ -5735,7 +5735,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-163 — Menu — card spacing too large, needs tighter layout
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-163-2026-03-14`
 - **Priority**: P3
 - **Source**: 8 screenshots — each card is ~80px + 16px gap = ~96px per item
 - **Scope**: Menu — card list spacing
@@ -5749,7 +5749,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-164 — Settings — "kbcretailer (MANAGER)" shows username not display name
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-164-2026-03-14`
 - **Priority**: P1 (staff identity is displayed wrong — affects daily operations)
 - **Source**: Screenshot — Switch Staff shows "kbcretailer (MANAGER)"
 - **Scope**: Settings → Switch Staff display
@@ -5763,7 +5763,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-165 — Settings — Hindi toggle "हि" non-standard abbreviation
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-165-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — Language toggle shows "EN | हि"
 - **Scope**: Settings → Language card
@@ -5777,7 +5777,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-166 — Settings — "Re-enroll to a different store" enrollment jargon
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-166-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — Switch Store subtitle "Re-enroll to a different store"
 - **Scope**: Settings → Switch Store subtitle
@@ -5791,7 +5791,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-167 — Settings — no About section with app version + terms + privacy links
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-167-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — Settings has no About/Legal section
 - **Scope**: Settings area — new About card
@@ -5805,7 +5805,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-168 — Settings — no logout/sign-out option visible for staff
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-168-2026-03-14`
 - **Priority**: P1 (security — staff can't fully log out of the POS)
 - **Source**: Screenshot — Settings shows Switch Staff and Switch Store, but no Logout
 - **Scope**: Settings → logout functionality
@@ -5825,7 +5825,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-169 — Menu — no search/filter across 20+ menu items
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-169-2026-03-14`
 - **Priority**: P2
 - **Source**: 8 screenshots of menu — no way to search
 - **Scope**: Menu tab — search functionality
@@ -5839,7 +5839,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-170 — Menu — "Barcode Sheets" subtitle "tiered" jargon
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-170-2026-03-14`
 - **Priority**: P3
 - **Source**: Screenshot — "Generate tiered barcode PDFs"
 - **Scope**: Menu → Barcode Sheets subtitle
@@ -5853,7 +5853,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-171 — Menu — Today's Sales metrics all same size, no visual hierarchy
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-171-2026-03-14`
 - **Priority**: P2
 - **Source**: Screenshot — ₹11,170.50, 2 bills, ₹5,585.25, 5 items — all roughly same font weight/size
 - **Scope**: Menu → Today's Sales card layout
@@ -5867,7 +5867,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-172 — Menu — hardcoded English strings not using i18n (Return/Refund, Opening Stock, etc.)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-172-2026-03-14`
 - **Priority**: P1
 - **Source**: Code audit — [MenuScreen.tsx](src/screens/MenuScreen.tsx)
 - **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -5925,7 +5925,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-173 — Menu — "View Details" uses t() defaultValue fallback, raw key leaks if i18n fails
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-173-2026-03-14`
 - **Priority**: P1
 - **Source**: Code audit — [MenuScreen.tsx:605](src/screens/MenuScreen.tsx#L605)
 - **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`
@@ -5947,7 +5947,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-174 — Menu — "Printer Ready"/"Test" use t() second-arg fallback, not standard defaultValue
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-174-2026-03-14`
 - **Priority**: P1
 - **Source**: Code audit — [MenuScreen.tsx:656-658](src/screens/MenuScreen.tsx#L656-L658)
 - **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`
@@ -5973,7 +5973,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-175 — Menu — no Pressable ripple/feedback effect on menu items (no android_ripple)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-175-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:610+](src/screens/MenuScreen.tsx#L610)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -5994,7 +5994,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-176 — Menu — header paddingVertical:8 too tight, brand pill cramped
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-176-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:1153](src/screens/MenuScreen.tsx#L1153)
 - **Scope**: `src/screens/MenuScreen.tsx` styles
@@ -6013,7 +6013,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-177 — Menu — status panel "Sync" label hardcoded English (not i18n)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-177-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:479](src/screens/MenuScreen.tsx#L479)
 - **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -6061,7 +6061,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-179 — Menu — release build stamp shows raw SHA and timestamp, not user-friendly version
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-178-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:1133-1137](src/screens/MenuScreen.tsx#L1133-L1137)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -6083,7 +6083,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-180 — Menu — Switch Staff alert uses English string literals, not i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-180-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:282-293](src/screens/MenuScreen.tsx#L282-L293)
 - **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/*.json`
@@ -6105,7 +6105,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-181 — Menu — billActions (Reprint/Download/Share) all navigate to same SalesHistory
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-181-2026-03-14`
 - **Priority**: P1
 - **Source**: Code audit — [MenuScreen.tsx:621-634](src/screens/MenuScreen.tsx#L621-L634)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -6131,7 +6131,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-182 — Menu — no haptic feedback on menu item press
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-182-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — MenuScreen.tsx
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -6153,7 +6153,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-183 — Menu — section header margin 24px top but 4px bottom, visually unbalanced
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-183-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [MenuScreen.tsx:1354-1358](src/screens/MenuScreen.tsx#L1354-L1358)
 - **Scope**: `src/screens/MenuScreen.tsx` styles
@@ -6172,7 +6172,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-184 — Menu — WhatsApp Support fallback uses "Support Unavailable" English literal
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-184-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:877](src/screens/MenuScreen.tsx#L877)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -6195,7 +6195,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-185 — Menu — WhatsApp pre-filled message in English only, no i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-185-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:882-884](src/screens/MenuScreen.tsx#L882-L884)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -6217,7 +6217,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-186 — Menu — trend badge at 9px font too small to read on budget Android
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-186-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:1588](src/screens/MenuScreen.tsx#L1588)
 - **Scope**: `src/screens/MenuScreen.tsx` styles
@@ -6236,7 +6236,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-187 — Menu — trend percentage shows "551%" with no cap or "99%+" formatting
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-187-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:251-268](src/screens/MenuScreen.tsx#L251-L268)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -6255,7 +6255,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-188 — Menu — Payment Modes breakdown shows "Cash: ₹..." raw label, not i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-188-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:593-601](src/screens/MenuScreen.tsx#L593-L601)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -6277,7 +6277,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-189 — Menu — Help & Support shows "&amp;" HTML entity instead of "&"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-189-2026-03-14`
 - **Priority**: P0
 - **Source**: Code audit — [MenuScreen.tsx:1066](src/screens/MenuScreen.tsx#L1066)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -6296,7 +6296,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-190 — Menu — no skeleton/shimmer loading state for System Status and Today's Sales
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-190-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:542-543](src/screens/MenuScreen.tsx#L542-L543)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -6318,7 +6318,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-191 — Menu — status panel statusBadge uses transparent bg (surfaceAlt), no outline
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-191-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [MenuScreen.tsx:1253-1258](src/screens/MenuScreen.tsx#L1253-L1258)
 - **Scope**: `src/screens/MenuScreen.tsx` styles
@@ -6337,7 +6337,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-192 — Menu — menuIcon 36x36 too small for touch targets on budget Android
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-192-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:1294-1302](src/screens/MenuScreen.tsx#L1294-L1302)
 - **Scope**: `src/screens/MenuScreen.tsx` styles
@@ -6356,7 +6356,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-193 — Menu — "Z-Report and cash reconciliation" subtitle jargon for kirana users
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-193-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:962](src/screens/MenuScreen.tsx#L962)
 - **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/*.json`
@@ -6375,7 +6375,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-194 — Menu — "Start, end, and view shift history" assumes shift concept familiarity
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-194-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [MenuScreen.tsx:972](src/screens/MenuScreen.tsx#L972)
 - **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/*.json`
@@ -6394,7 +6394,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-195 — Menu — "AI & Intelligence" section title too technical, rename to "Smart Insights"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-195-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:828](src/screens/MenuScreen.tsx#L828)
 - **Scope**: `src/screens/MenuScreen.tsx`, `src/i18n/locales/*.json`
@@ -6413,7 +6413,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-196 — Menu — "Alerts, forecasts, slow movers, expiry tracking" subtitle info-dense
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-196-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [MenuScreen.tsx:837](src/screens/MenuScreen.tsx#L837)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -6432,7 +6432,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-197 — Menu — "Browse and apply for credit offers" subtitle implies retailer is borrowing
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-197-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [MenuScreen.tsx:849](src/screens/MenuScreen.tsx#L849)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -6451,7 +6451,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-198 — Menu — content padding 16px identical to item padding, creates visual merge
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-198-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [MenuScreen.tsx:1149](src/screens/MenuScreen.tsx#L1149)
 - **Scope**: `src/screens/MenuScreen.tsx` styles
@@ -6470,7 +6470,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-199 — Menu — ScrollView has no scrollbar indicator styling
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-199-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [MenuScreen.tsx:391](src/screens/MenuScreen.tsx#L391)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -6489,7 +6489,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-200 — Enroll — "hello@supermandi.tech" email in error hints, kirana users won't email
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-200-2026-03-14`
 - **Priority**: P1
 - **Source**: Code audit — [EnrollDeviceScreen.tsx:86](src/screens/EnrollDeviceScreen.tsx#L86)
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`
@@ -6508,7 +6508,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-201 — Enroll — "Superadmin" used in error messages (deviceInactive, storeInactive)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-201-2026-03-14`
 - **Priority**: P1
 - **Source**: Code audit — `src/i18n/locales/en.json` lines 382-383
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -6533,7 +6533,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-202 — Enroll — STORE_INACTIVE hint says "Contact hello@supermandi.tech for help"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-202-2026-03-14`
 - **Priority**: P1
 - **Source**: Code audit — [EnrollDeviceScreen.tsx:86](src/screens/EnrollDeviceScreen.tsx#L86)
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`
@@ -6552,7 +6552,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-203 — Enroll — "RETAILER_PHONE" hardcoded as deviceType, OEM_HANDHELD never sent
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-203-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [EnrollDeviceScreen.tsx:196](src/screens/EnrollDeviceScreen.tsx#L196)
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`
@@ -6571,7 +6571,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-204 — Enroll — defaultLabel uses Device.modelName raw (e.g. "23106RN0DA")
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-204-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [EnrollDeviceScreen.tsx:187](src/screens/EnrollDeviceScreen.tsx#L187)
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`
@@ -6590,7 +6590,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-205 — Enroll — deep link re-enrollment alert uses English literals, no i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-205-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [EnrollDeviceScreen.tsx:229-235](src/screens/EnrollDeviceScreen.tsx#L229-L235)
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`, `src/i18n/locales/*.json`
@@ -6612,7 +6612,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-206 — Enroll — missing code alert says "superadmin account activation"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-206-2026-03-14`
 - **Priority**: P1
 - **Source**: Code audit — [EnrollDeviceScreen.tsx:256](src/screens/EnrollDeviceScreen.tsx#L256)
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`
@@ -6631,7 +6631,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-207 — Enroll — error codes DEVICE_FINGERPRINT_INVALID says "Reinstall the app"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-207-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [EnrollDeviceScreen.tsx:112-118](src/screens/EnrollDeviceScreen.tsx#L112-L118)
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`
@@ -6650,7 +6650,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-208 — Enroll — ENROLLMENT_RATE_LIMITED says "wait 15 minutes" but no countdown
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-208-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [EnrollDeviceScreen.tsx:97](src/screens/EnrollDeviceScreen.tsx#L97)
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`
@@ -6674,7 +6674,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-209 — Payment — uses TouchableOpacity instead of Pressable (inconsistent with rest)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-209-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [PaymentScreen.tsx:14](src/screens/PaymentScreen.tsx#L14)
 - **Scope**: `src/screens/PaymentScreen.tsx`
@@ -6697,7 +6697,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-210 — Payment — "Low Stock Warning" and "Partial Sale" alerts in English, no i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-210-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [PaymentScreen.tsx:404-424](src/screens/PaymentScreen.tsx#L404-L424), [PaymentScreen.tsx:758-779](src/screens/PaymentScreen.tsx#L758-L779)
 - **Scope**: `src/screens/PaymentScreen.tsx`, `src/i18n/locales/*.json`
@@ -6726,7 +6726,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-211 — Payment — "UPI Error: UPI ID not configured or QR failed" too vague
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-211-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [PaymentScreen.tsx:618](src/screens/PaymentScreen.tsx#L618)
 - **Scope**: `src/screens/PaymentScreen.tsx`
@@ -6747,7 +6747,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-212 — Payment — "POS Inactive" and "Store Missing" alerts reference "Superadmin"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-212-2026-03-14`
 - **Priority**: P1
 - **Source**: Code audit — [PaymentScreen.tsx:493](src/screens/PaymentScreen.tsx#L493), [PaymentScreen.tsx:500](src/screens/PaymentScreen.tsx#L500)
 - **Scope**: `src/screens/PaymentScreen.tsx`, `src/utils/uiStatus.ts`
@@ -6770,7 +6770,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-213 — Payment — "Payment in Progress" back-block alert is bare, no spinner
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-213-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [PaymentScreen.tsx:706](src/screens/PaymentScreen.tsx#L706)
 - **Scope**: `src/screens/PaymentScreen.tsx`
@@ -6792,7 +6792,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-214 — Payment — QR expiry countdown exists but no visual regenerate button
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-214-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [PaymentScreen.tsx:650-671](src/screens/PaymentScreen.tsx#L650-L671)
 - **Scope**: `src/screens/PaymentScreen.tsx`
@@ -6815,7 +6815,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-215 — Payment — stale price warning threshold 4 hours is hardcoded, not configurable
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-215-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [PaymentScreen.tsx:6](src/screens/PaymentScreen.tsx#L6)
 - **Scope**: `src/screens/PaymentScreen.tsx`
@@ -6834,7 +6834,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-216 — Payment — "Price Freshness Warning" title confusing for kirana user
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-216-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [PaymentScreen.tsx:789](src/screens/PaymentScreen.tsx#L789)
 - **Scope**: `src/screens/PaymentScreen.tsx`
@@ -6853,7 +6853,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-217 — Payment — sale creation error shows generic "Unable to start payment"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-217-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [PaymentScreen.tsx:505](src/screens/PaymentScreen.tsx#L505)
 - **Scope**: `src/screens/PaymentScreen.tsx`
@@ -6875,7 +6875,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-218 — Payment — "Previous UPI Payment Pending" alert shows raw paymentId hash
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-218-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [PaymentScreen.tsx:257](src/screens/PaymentScreen.tsx#L257)
 - **Scope**: `src/screens/PaymentScreen.tsx`
@@ -6894,7 +6894,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-219 — Payment — "UPI Offline" / "UPI Missing" / "UPI Timeout" all different alert styles
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-219-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — PaymentScreen.tsx
 - **Scope**: `src/screens/PaymentScreen.tsx`
@@ -6913,7 +6913,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-220 — SellScan — CART_SHEET_COLLAPSED_RATIO 0.55 covers 55% screen, too much
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-220-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [SellScanScreen.tsx:291](src/screens/SellScanScreen.tsx#L291)
 - **Scope**: `src/screens/SellScanScreen.tsx`
@@ -6932,7 +6932,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-221 — SellScan — SMALL_SCREEN_WIDTH=400 threshold may not cover all budget phones
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-221-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [SellScanScreen.tsx:296](src/screens/SellScanScreen.tsx#L296)
 - **Scope**: `src/screens/SellScanScreen.tsx`
@@ -6951,7 +6951,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-222 — SellScan — product tile formatPrice shows ".00" on round amounts (₹28.00)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-222-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [SellTile.tsx:55-59](src/components/sell/SellTile.tsx#L55-L59)
 - **Scope**: `src/components/sell/SellTile.tsx`
@@ -6970,7 +6970,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-223 — SellScan — no empty state illustration when search returns zero products
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-223-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — SellScanScreen.tsx
 - **Scope**: `src/screens/SellScanScreen.tsx`
@@ -7011,7 +7011,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-225 — SellScan — NUM_COLUMNS=2 hardcoded, no responsive columns for tablets
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-224-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [SellScanScreen.tsx:283](src/screens/SellScanScreen.tsx#L283)
 - **Scope**: `src/screens/SellScanScreen.tsx`
@@ -7030,7 +7030,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-226 — SellTile — "—" dash for null price, should show "Price not set"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-226-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [SellTile.tsx:56](src/components/sell/SellTile.tsx#L56)
 - **Scope**: `src/components/sell/SellTile.tsx`
@@ -7053,7 +7053,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-227 — SellTile — expiry days calculation doesn't account for timezone (IST)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-227-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [SellTile.tsx:86-95](src/components/sell/SellTile.tsx#L86-L95)
 - **Scope**: `src/components/sell/SellTile.tsx`
@@ -7077,7 +7077,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-228 — SellTile — no MRP strikethrough visual when sell price < MRP
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-228-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — SellTile.tsx
 - **Scope**: `src/components/sell/SellTile.tsx`
@@ -7098,7 +7098,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-229 — SellTile — LOOSE mode "per KG" label not translated
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-229-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [SellTile.tsx:73](src/components/sell/SellTile.tsx#L73)
 - **Scope**: `src/components/sell/SellTile.tsx`
@@ -7120,7 +7120,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-230 — SellTile — brand name not displayed if available
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-230-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [SellTile.tsx:33](src/components/sell/SellTile.tsx#L33)
 - **Scope**: `src/components/sell/SellTile.tsx`
@@ -7142,7 +7142,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-231 — Colors — "accent" and "secondary" are identical (#14B8A6), redundant token
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-231-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [colors.ts:7-12](src/theme/colors.ts#L7-L12)
 - **Scope**: `src/theme/colors.ts`
@@ -7164,7 +7164,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-232 — Colors — no dedicated "disabled" color token for greyed-out buttons
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-232-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — colors.ts
 - **Scope**: `src/theme/colors.ts`
@@ -7185,7 +7185,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-233 — Colors — dark mode "ink" is #F8FAFC but light mode "ink" is #0B1220, never used
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-233-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [colors.ts:61](src/theme/colors.ts#L61), [colors.ts:124](src/theme/colors.ts#L124)
 - **Scope**: `src/theme/colors.ts`
@@ -7206,7 +7206,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-234 — i18n — status.storeInactive says "Add UPI ID in Superadmin to start billing"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-234-2026-03-14`
 - **Priority**: P1
 - **Source**: Code audit — [en.json:382](src/i18n/locales/en.json#L382)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7225,7 +7225,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-235 — i18n — status.deviceInactive says "Contact Superadmin to enable it"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-235-2026-03-14`
 - **Priority**: P1
 - **Source**: Code audit — [en.json:383](src/i18n/locales/en.json#L383)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7244,7 +7244,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-236 — i18n — errors.deviceAlreadyEnrolled says "Ask Superadmin to reset the token"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-236-2026-03-14`
 - **Priority**: P1
 - **Source**: Code audit — [en.json:393](src/i18n/locales/en.json#L393)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7263,7 +7263,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-237 — i18n — errors.sessionExpired says "Please login again" but POS has no login
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-237-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [en.json:406](src/i18n/locales/en.json#L406)
 - **Scope**: `src/i18n/locales/en.json`
@@ -7282,7 +7282,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-238 — i18n — sell.digitiseMode says "Digitise mode on" — jargon for kirana user
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-238-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [en.json:146](src/i18n/locales/en.json#L146)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7301,7 +7301,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-239 — i18n — purchase.moq "MOQ" acronym not spelled out for kirana users
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-239-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [en.json:116](src/i18n/locales/en.json#L116)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7320,7 +7320,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-240 — i18n — tabs use ALL CAPS ("SELL", "PURCHASE", "REORDER") — shouty
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-240-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [en.json:93-100](src/i18n/locales/en.json#L93-L100)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`, `src/screens/PosRootLayout.tsx`
@@ -7342,7 +7342,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-241 — i18n — reorder.dismissSuggestedFrom template too complex for Hindi translation
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-241-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [en.json:251](src/i18n/locales/en.json#L251)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7361,7 +7361,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-242 — i18n — credit section uses financial jargon (EMI, KYC, PAN, Aadhaar) without explanation
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-242-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [en.json:484-536](src/i18n/locales/en.json#L484-L536)
 - **Scope**: `src/i18n/locales/en.json`
@@ -7384,7 +7384,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-243 — i18n — bnpl.upiInstructions sentence too long (2 clauses + technical term UTR)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-243-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [en.json:461](src/i18n/locales/en.json#L461)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7403,7 +7403,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-244 — i18n — grn.title "Goods Receipt Note" — warehouse jargon
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-244-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [en.json:292](src/i18n/locales/en.json#L292)
 - **Scope**: `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7422,7 +7422,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-245 — Tab nav — "REORDER • ON" / "REORDER • OFF" unusual tab label convention
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-245-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [en.json:98-99](src/i18n/locales/en.json#L98-L99)
 - **Scope**: `src/i18n/locales/en.json`, `src/screens/PosRootLayout.tsx`
@@ -7444,7 +7444,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-246 — Tab nav — 5 tabs but CREDIT tab is greyed/disabled, confusing affordance
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-246-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit + screenshot observation
 - **Scope**: `src/screens/PosRootLayout.tsx`, `src/screens/CreditScreen.tsx`
@@ -7466,7 +7466,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-247 — Menu — "Customers & Credit" section has 4 items (Khata, Customers, Customer Management, Overdue) — 3 overlap
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-247-2026-03-14`
 - **Priority**: P1
 - **Source**: Code audit — [MenuScreen.tsx:775-824](src/screens/MenuScreen.tsx#L775-L824)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -7495,7 +7495,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-248 — Menu — menuItem marginTop:16 creates 16px gap, but first item after sectionHeader has 16+4=20px gap inconsistency
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-248-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — MenuScreen.tsx styles
 - **Scope**: `src/screens/MenuScreen.tsx` styles
@@ -7514,7 +7514,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-249 — Menu — printerStatusRow sits between Bills and Barcode with no card container
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-249-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:648-659](src/screens/MenuScreen.tsx#L648-L659)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -7533,7 +7533,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-250 — Menu — "Switch Store" in Settings section but it's a destructive action, needs separation
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-250-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:1072-1081](src/screens/MenuScreen.tsx#L1072-L1081)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -7556,7 +7556,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-251 — Menu — no confirmation count on "Daily Closing" (e.g., "2 shifts open")
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-251-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:956-965](src/screens/MenuScreen.tsx#L956-L965)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -7578,7 +7578,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-252 — Menu — "Chat" subtitle says "Message suppliers and support" but no unread count
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-252-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — [MenuScreen.tsx:859-868](src/screens/MenuScreen.tsx#L859-L868)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -7622,7 +7622,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-254 — Payment — formatMoney not using Indian lakh system (1,45,000 vs 145,000)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-253-2026-03-14`
 - **Priority**: P2
 - **Source**: Code audit — `src/utils/money.ts` used by PaymentScreen
 - **Scope**: `src/utils/money.ts`
@@ -7644,7 +7644,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-255 — Menu — summaryCard and statusPanel have same border/radius but different marginTop
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-255-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [MenuScreen.tsx:1221-1228](src/screens/MenuScreen.tsx#L1221-L1228), [MenuScreen.tsx:1471-1478](src/screens/MenuScreen.tsx#L1471-L1478)
 - **Scope**: `src/screens/MenuScreen.tsx` styles
@@ -7665,7 +7665,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-256 — Menu — no swipe gesture to dismiss/collapse System Status panel
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-256-2026-03-14`
 - **Priority**: P3
 - **Source**: Code audit — [MenuScreen.tsx:426-518](src/screens/MenuScreen.tsx#L426-L518)
 - **Scope**: `src/screens/MenuScreen.tsx`
@@ -7701,7 +7701,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-257 — PaymentSetupScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-257-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [PaymentSetupScreen.tsx](src/screens/PaymentSetupScreen.tsx)
 - **Scope**: `src/screens/PaymentSetupScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7724,7 +7724,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-258 — SalesHistoryScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-258-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [SalesHistoryScreen.tsx](src/screens/SalesHistoryScreen.tsx)
 - **Scope**: `src/screens/SalesHistoryScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7743,7 +7743,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-259 — BillDetailScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-259-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [BillDetailScreen.tsx](src/screens/BillDetailScreen.tsx)
 - **Scope**: `src/screens/BillDetailScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7762,7 +7762,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-260 — SalesStatementScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-260-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [SalesStatementScreen.tsx](src/screens/SalesStatementScreen.tsx)
 - **Scope**: `src/screens/SalesStatementScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7781,7 +7781,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-261 — DailyReportScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-261-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [DailyReportScreen.tsx](src/screens/DailyReportScreen.tsx)
 - **Scope**: `src/screens/DailyReportScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7800,7 +7800,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-262 — DailyClosingScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-262-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [DailyClosingScreen.tsx](src/screens/DailyClosingScreen.tsx)
 - **Scope**: `src/screens/DailyClosingScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7819,7 +7819,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-263 — InwardScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-263-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [InwardScreen.tsx](src/screens/InwardScreen.tsx)
 - **Scope**: `src/screens/InwardScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7838,7 +7838,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-264 — GRNScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-264-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [GRNScreen.tsx](src/screens/GRNScreen.tsx)
 - **Scope**: `src/screens/GRNScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7857,7 +7857,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-265 — OpeningStockScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-265-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [OpeningStockScreen.tsx](src/screens/OpeningStockScreen.tsx)
 - **Scope**: `src/screens/OpeningStockScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7876,7 +7876,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-266 — PurchaseScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-266-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [PurchaseScreen.tsx](src/screens/PurchaseScreen.tsx)
 - **Scope**: `src/screens/PurchaseScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7895,7 +7895,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-267 — BarcodeSheetScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-267-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [BarcodeSheetScreen.tsx](src/screens/BarcodeSheetScreen.tsx)
 - **Scope**: `src/screens/BarcodeSheetScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7914,7 +7914,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-268 — BnplDuesScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-268-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [BnplDuesScreen.tsx](src/screens/BnplDuesScreen.tsx)
 - **Scope**: `src/screens/BnplDuesScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7933,7 +7933,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-269 — KhataScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-269-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [KhataScreen.tsx](src/screens/KhataScreen.tsx)
 - **Scope**: `src/screens/KhataScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7952,7 +7952,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-270 — CustomerListScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-270-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [CustomerListScreen.tsx](src/screens/CustomerListScreen.tsx)
 - **Scope**: `src/screens/CustomerListScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7971,7 +7971,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-271 — OverdueDuesScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-271-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [OverdueDuesScreen.tsx](src/screens/OverdueDuesScreen.tsx)
 - **Scope**: `src/screens/OverdueDuesScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -7990,7 +7990,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-272 — ShiftScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-272-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [ShiftScreen.tsx](src/screens/ShiftScreen.tsx)
 - **Scope**: `src/screens/ShiftScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -8009,7 +8009,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-273 — OrderDetailScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-273-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [OrderDetailScreen.tsx](src/screens/OrderDetailScreen.tsx)
 - **Scope**: `src/screens/OrderDetailScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -8028,7 +8028,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-274 — ReturnScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-274-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [ReturnScreen.tsx](src/screens/ReturnScreen.tsx)
 - **Scope**: `src/screens/ReturnScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -8047,7 +8047,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-275 — BuyScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-275-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [BuyScreen.tsx](src/screens/BuyScreen.tsx)
 - **Scope**: `src/screens/BuyScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -8066,7 +8066,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-276 — CreditScreen — hardcoded English alert strings and form labels not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-276-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [CreditScreen.tsx](src/screens/CreditScreen.tsx)
 - **Scope**: `src/screens/CreditScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -8085,7 +8085,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-277 — ReorderScreen + ReorderPoliciesScreen — hardcoded English strings not using i18n
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-277-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [ReorderScreen.tsx](src/screens/ReorderScreen.tsx), [ReorderPoliciesScreen.tsx](src/screens/ReorderPoliciesScreen.tsx)
 - **Scope**: `src/screens/ReorderScreen.tsx`, `src/screens/ReorderPoliciesScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -8104,7 +8104,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-278 — BulkPurchaseCreditScreen — no i18n setup, all strings hardcoded
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-278-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [BulkPurchaseCreditScreen.tsx](src/screens/BulkPurchaseCreditScreen.tsx)
 - **Scope**: `src/screens/BulkPurchaseCreditScreen.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -8123,7 +8123,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-279 — ErrorBoundary component — hardcoded English error text
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-279-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [ErrorBoundary.tsx](src/components/ErrorBoundary.tsx)
 - **Scope**: `src/components/ErrorBoundary.tsx`, `src/i18n/locales/en.json`, `src/i18n/locales/hi.json`
@@ -8146,7 +8146,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-280 — PaymentSetupScreen — "UPI ID (VPA)" jargon, simplify for kirana users
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-280-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [PaymentSetupScreen.tsx:265](src/screens/PaymentSetupScreen.tsx#L265)
 - **Scope**: `src/screens/PaymentSetupScreen.tsx`
@@ -8165,7 +8165,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-281 — DailyClosingScreen — "Variance" accounting jargon confusing for retailers
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-281-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [DailyClosingScreen.tsx:413-418](src/screens/DailyClosingScreen.tsx#L413-L418)
 - **Scope**: `src/screens/DailyClosingScreen.tsx`
@@ -8184,7 +8184,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-282 — SalesStatementScreen — "Inventory Cost Statement" title misleading
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-282-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [SalesStatementScreen.tsx:355](src/screens/SalesStatementScreen.tsx#L355)
 - **Scope**: `src/screens/SalesStatementScreen.tsx`
@@ -8203,7 +8203,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-283 — BnplDuesScreen — BNPL/UTR/UPI jargon unexplained
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-283-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [BnplDuesScreen.tsx](src/screens/BnplDuesScreen.tsx)
 - **Scope**: `src/screens/BnplDuesScreen.tsx`
@@ -8222,7 +8222,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-284 — CreditScreen — PAN/Aadhaar/KYC jargon needs help text
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-284-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [CreditScreen.tsx:88-89, 864, 882](src/screens/CreditScreen.tsx#L88)
 - **Scope**: `src/screens/CreditScreen.tsx`
@@ -8241,7 +8241,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-285 — GRNScreen — "GRN" jargon, needs subtitle explaining purpose
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-285-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [GRNScreen.tsx:457](src/screens/GRNScreen.tsx#L457)
 - **Scope**: `src/screens/GRNScreen.tsx`
@@ -8260,7 +8260,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-286 — OpeningStockScreen — "Opening Stock" needs contextual explanation
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-286-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [OpeningStockScreen.tsx:575-578](src/screens/OpeningStockScreen.tsx#L575)
 - **Scope**: `src/screens/OpeningStockScreen.tsx`
@@ -8279,7 +8279,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-287 — BuyScreen — "BNPL" badge jargon unexplained
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-287-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [BuyScreen.tsx:518-526](src/screens/BuyScreen.tsx#L518)
 - **Scope**: `src/screens/BuyScreen.tsx`
@@ -8298,7 +8298,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-288 — ShiftScreen — "Variance" terminology, same as DailyClosing
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-288-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [ShiftScreen.tsx:207-209, 766-797](src/screens/ShiftScreen.tsx#L207)
 - **Scope**: `src/screens/ShiftScreen.tsx`
@@ -8317,7 +8317,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-289 — ReturnScreen — "Khata Credit" and "UPI (Manual)" need clarification
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-289-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [ReturnScreen.tsx:66-67](src/screens/ReturnScreen.tsx#L66)
 - **Scope**: `src/screens/ReturnScreen.tsx`
@@ -8336,7 +8336,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-290 — AIInsightsScreen — "Slow", "Forecast", "Expiry" tab labels unclear
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-290-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [AIInsightsScreen.tsx:102-104](src/screens/AIInsightsScreen.tsx#L102)
 - **Scope**: `src/screens/AIInsightsScreen.tsx`
@@ -8355,7 +8355,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-291 — Components — hardcoded English in SellTile, CartItem, SupplierRow
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-291-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — multiple components
 - **Scope**: `src/components/sell/SellTile.tsx`, `src/components/buy/CartItem.tsx`, `src/components/buy/SupplierRow.tsx`
@@ -8374,7 +8374,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-292 — LimitedModeBanner — "Place Orders (BUY)" and "Run Reorders" jargon
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-292-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [LimitedModeBanner.tsx:112-117](src/components/LimitedModeBanner.tsx#L112)
 - **Scope**: `src/components/LimitedModeBanner.tsx`
@@ -8397,7 +8397,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-293 — Font sizes below 12px across Purchase/Stock screens
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-293-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — multiple screens
 - **Scope**: `src/screens/InwardScreen.tsx`, `src/screens/PurchaseScreen.tsx`, `src/screens/BarcodeSheetScreen.tsx`
@@ -8416,7 +8416,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-294 — Font sizes below 12px across Sales/Closing screens
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-294-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — multiple screens
 - **Scope**: `src/screens/BillDetailScreen.tsx`, `src/screens/SalesStatementScreen.tsx`, `src/screens/DailyClosingScreen.tsx`
@@ -8435,7 +8435,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-295 — Font sizes below 12px across Credit/Customer/Orders screens
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-295-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — multiple screens
 - **Scope**: `src/screens/CreditScreen.tsx`, `src/screens/BulkPurchaseCreditScreen.tsx`, `src/screens/OrderDetailScreen.tsx`, `src/screens/ReturnScreen.tsx`, `src/screens/ReorderPoliciesScreen.tsx`
@@ -8454,7 +8454,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-296 — Font sizes below 12px in Chat/ForceUpdate screens and TabBadge
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-296-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — multiple
 - **Scope**: `src/screens/ChatConversationScreen.tsx`, `src/screens/ChatListScreen.tsx`, `src/screens/ForceUpdateScreen.tsx`, `src/components/TabBadge.tsx`
@@ -8473,7 +8473,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-297 — SplitPaymentModal — font size 10px and missing accessibility labels
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-297-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [SplitPaymentModal.tsx](src/components/sell/SplitPaymentModal.tsx)
 - **Scope**: `src/components/sell/SplitPaymentModal.tsx`
@@ -8492,7 +8492,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-298 — Missing accessibility labels on icon-only buttons across all screens
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-298-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — all screens
 - **Scope**: Multiple screens
@@ -8511,7 +8511,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-299 — Missing accessibility labels on form inputs across screens
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-299-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — multiple screens
 - **Scope**: `src/screens/PaymentSetupScreen.tsx`, `src/screens/DailyClosingScreen.tsx`, `src/screens/ShiftScreen.tsx`, `src/screens/EnrollDeviceScreen.tsx`
@@ -8530,7 +8530,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-300 — GRNScreen — checkboxes missing accessibilityState
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-300-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [GRNScreen.tsx:414-425](src/screens/GRNScreen.tsx#L414)
 - **Scope**: `src/screens/GRNScreen.tsx`
@@ -8549,7 +8549,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-301 — OrderDetailScreen — status badge relies only on color (colorblind issue)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-301-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [OrderDetailScreen.tsx:313-316](src/screens/OrderDetailScreen.tsx#L313)
 - **Scope**: `src/screens/OrderDetailScreen.tsx`
@@ -8572,7 +8572,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-302 — HelpScreen — email-first contact, should be WhatsApp-first
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-302-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [HelpScreen.tsx:26, 45-50, 573-574](src/screens/HelpScreen.tsx#L26)
 - **Scope**: `src/screens/HelpScreen.tsx`
@@ -8591,7 +8591,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-303 — BnplDuesScreen — "contacted via phone or email" should include WhatsApp
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-303-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [BnplDuesScreen.tsx:932](src/screens/BnplDuesScreen.tsx#L932)
 - **Scope**: `src/screens/BnplDuesScreen.tsx`
@@ -8610,7 +8610,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-304 — CustomerListScreen + CustomerManagementScreen — email field inappropriate
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-304-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [CustomerListScreen.tsx:793-802](src/screens/CustomerListScreen.tsx#L793), [CustomerManagementScreen.tsx:745-746](src/screens/CustomerManagementScreen.tsx#L745)
 - **Scope**: `src/screens/CustomerListScreen.tsx`, `src/screens/CustomerManagementScreen.tsx`
@@ -8629,7 +8629,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-305 — DeviceBlockedScreen — "SuperAdmin"/"administrator" jargon in messages
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-305-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [DeviceBlockedScreen.tsx:211](src/screens/DeviceBlockedScreen.tsx#L211)
 - **Scope**: `src/screens/DeviceBlockedScreen.tsx`
@@ -8652,7 +8652,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-306 — DailyReportScreen — vague empty state messaging
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-306-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [DailyReportScreen.tsx:605-618](src/screens/DailyReportScreen.tsx#L605)
 - **Scope**: `src/screens/DailyReportScreen.tsx`
@@ -8671,7 +8671,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-307 — BillDetailScreen — print/share buttons show "..." instead of spinner
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-307-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [BillDetailScreen.tsx:336-364](src/screens/BillDetailScreen.tsx#L336)
 - **Scope**: `src/screens/BillDetailScreen.tsx`
@@ -8690,7 +8690,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-308 — InwardScreen — raw product ID shown when barcode is null
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-308-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [InwardScreen.tsx:543](src/screens/InwardScreen.tsx#L543)
 - **Scope**: `src/screens/InwardScreen.tsx`
@@ -8709,7 +8709,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-309 — ReturnScreen — raw refundId displayed to users
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-309-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [ReturnScreen.tsx:898](src/screens/ReturnScreen.tsx#L898)
 - **Scope**: `src/screens/ReturnScreen.tsx`
@@ -8728,7 +8728,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-310 — SplashScreen — "Continue without session" jargon
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-310-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [SplashScreen.tsx:210-237](src/screens/SplashScreen.tsx#L210)
 - **Scope**: `src/screens/SplashScreen.tsx`
@@ -8747,7 +8747,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-311 — AIInsightsScreen — "not yet available" error too vague
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-311-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [AIInsightsScreen.tsx:74](src/screens/AIInsightsScreen.tsx#L74)
 - **Scope**: `src/screens/AIInsightsScreen.tsx`
@@ -8766,7 +8766,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-312 — DailyReportScreen + DailyClosingScreen — missing offline/sync indication
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-312-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [DailyReportScreen.tsx](src/screens/DailyReportScreen.tsx), [DailyClosingScreen.tsx](src/screens/DailyClosingScreen.tsx)
 - **Scope**: `src/screens/DailyReportScreen.tsx`, `src/screens/DailyClosingScreen.tsx`
@@ -8785,7 +8785,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-313 — Network error messages across screens — no recovery guidance
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-313-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — StaffLoginScreen, DeviceBlockedScreen, ForceUpdateScreen, EnrollDeviceScreen
 - **Scope**: Multiple screens
@@ -8804,7 +8804,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-314 — PaymentSetupScreen — no success confirmation after saving
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-314-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [PaymentSetupScreen.tsx:123](src/screens/PaymentSetupScreen.tsx#L123)
 - **Scope**: `src/screens/PaymentSetupScreen.tsx`
@@ -8823,7 +8823,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-315 — ReorderScreen — missing confirmation before dismissing suggestion
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-315-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [ReorderScreen.tsx:256-265](src/screens/ReorderScreen.tsx#L256)
 - **Scope**: `src/screens/ReorderScreen.tsx`
@@ -8846,7 +8846,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-316 — SplitPaymentModal — TouchableOpacity should be Pressable
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-316-2026-03-14`
 - **Priority**: P3
 - **Source**: UI audit — [SplitPaymentModal.tsx](src/components/sell/SplitPaymentModal.tsx)
 - **Scope**: `src/components/sell/SplitPaymentModal.tsx`
@@ -8865,7 +8865,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-317 — Inconsistent disabled button opacity across all screens
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-317-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — multiple screens
 - **Scope**: App-wide
@@ -8884,7 +8884,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-318 — KhataScreen — Add Credit (red) / Record Payment (green) color semantics wrong
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-318-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [KhataScreen.tsx:654-662](src/screens/KhataScreen.tsx#L654)
 - **Scope**: `src/screens/KhataScreen.tsx`
@@ -8903,7 +8903,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-319 — Inconsistent modal button styling across components
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-319-2026-03-14`
 - **Priority**: P3
 - **Source**: UI audit — SplitPaymentModal, EditReorderModal, DismissReasonModal
 - **Scope**: `src/components/sell/SplitPaymentModal.tsx`, `src/components/reorder/EditReorderModal.tsx`, `src/components/reorder/DismissReasonModal.tsx`
@@ -8926,7 +8926,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-320 — OverdueDuesScreen — "Due Soon" uses info color (blue) instead of warning
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-320-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [OverdueDuesScreen.tsx:56-68](src/screens/OverdueDuesScreen.tsx#L56)
 - **Scope**: `src/screens/OverdueDuesScreen.tsx`
@@ -8945,7 +8945,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-321 — ChatConversationScreen — "No messages yet. Say hello!" vague empty state
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-321-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [ChatConversationScreen.tsx:329](src/screens/ChatConversationScreen.tsx#L329)
 - **Scope**: `src/screens/ChatConversationScreen.tsx`
@@ -8964,7 +8964,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-322 — ChatConversationScreen — 24-hour time format without AM/PM
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-322-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [ChatConversationScreen.tsx:148](src/screens/ChatConversationScreen.tsx#L148)
 - **Scope**: `src/screens/ChatConversationScreen.tsx`, `src/screens/ChatListScreen.tsx`
@@ -8983,7 +8983,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-323 — ForceUpdateScreen — "iOS update coming soon" vague with no timeline
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-323-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [ForceUpdateScreen.tsx:74-80](src/screens/ForceUpdateScreen.tsx#L74)
 - **Scope**: `src/screens/ForceUpdateScreen.tsx`
@@ -9002,7 +9002,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-324 — EnrollDeviceScreen — activation code placeholder lacks help text
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-324-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [EnrollDeviceScreen.tsx:481](src/screens/EnrollDeviceScreen.tsx#L481)
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`
@@ -9021,7 +9021,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-325 — EnrollDeviceScreen — "Activate POS" vs "Activate Your POS" inconsistency
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-325-2026-03-14`
 - **Priority**: P3
 - **Source**: UI audit — [EnrollDeviceScreen.tsx:469, 534](src/screens/EnrollDeviceScreen.tsx#L469)
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`
@@ -9040,7 +9040,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-326 — EnrollDeviceScreen — required field indicators inconsistent
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-326-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [EnrollDeviceScreen.tsx:479, 496-497](src/screens/EnrollDeviceScreen.tsx#L479)
 - **Scope**: `src/screens/EnrollDeviceScreen.tsx`
@@ -9059,7 +9059,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-327 — StaffLoginScreen — button doesn't change text during cooldown
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-327-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [StaffLoginScreen.tsx:326-340](src/screens/StaffLoginScreen.tsx#L326)
 - **Scope**: `src/screens/StaffLoginScreen.tsx`
@@ -9078,7 +9078,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-328 — ForceUpdateScreen — "unknown" version display lacks explanation
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-328-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [ForceUpdateScreen.tsx:68-69](src/screens/ForceUpdateScreen.tsx#L68)
 - **Scope**: `src/screens/ForceUpdateScreen.tsx`
@@ -9097,7 +9097,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-329 — ProductDetailModal — "No suppliers available" lacks actionable guidance
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-329-2026-03-14`
 - **Priority**: P1
 - **Source**: UI audit — [ProductDetailModal.tsx:265-273](src/components/buy/ProductDetailModal.tsx#L265)
 - **Scope**: `src/components/buy/ProductDetailModal.tsx`
@@ -9116,7 +9116,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-330 — DismissReasonModal — predefined reasons store English values to backend
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-330-2026-03-14`
 - **Priority**: P2
 - **Source**: UI audit — [DismissReasonModal.tsx:39-46](src/components/reorder/DismissReasonModal.tsx#L39)
 - **Scope**: `src/components/reorder/DismissReasonModal.tsx`
@@ -9147,7 +9147,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-331 — SELL — Remove separate manual barcode field, unify into main search bar
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-331-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 1 — [SellScanScreen.tsx:2709-2858](src/screens/SellScanScreen.tsx#L2709-L2858)
 - **Problem**: Two separate input fields exist: (1) primary search bar at lines 2724-2763, and (2) manual barcode entry at lines 2823-2857, visible only when search bar is collapsed. This creates navigation friction — cashiers scanning via HID cannot access manual fallback without collapsing search first.
@@ -9161,7 +9161,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-332 — SELL — Search bar placeholder doesn't indicate barcode input support
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-332-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 1 — [SellScanScreen.tsx:2724](src/screens/SellScanScreen.tsx#L2724)
 - **Problem**: Placeholder says "Search products..." but search bar accepts barcodes (via regex `/^\d{8,}$/` at line 1737). No visual hint that barcode entry is supported.
@@ -9175,7 +9175,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-333 — SELL — 300ms debounce delays barcode resolution unnecessarily
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-333-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 1 — [SellScanScreen.tsx:1942-1957](src/screens/SellScanScreen.tsx#L1942)
 - **Problem**: Search debounce of 300ms applies equally to text search and barcode input. HID scanners emit complete barcodes instantly, but results display is delayed by 300ms after full barcode is entered.
@@ -9193,7 +9193,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-334 — SELL — Barcode heuristic `/^\d{8,}$/` too broad, matches phone numbers
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-334-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 2 — [SellScanScreen.tsx:1737](src/screens/SellScanScreen.tsx#L1737)
 - **Problem**: Regex `/^\d{8,}$/` matches any 8+ digit number including phone numbers (10 digits), order IDs, timestamps. A cashier entering "9876543210" (phone number) gets routed to barcode handler instead of text search.
@@ -9207,7 +9207,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-335 — SELL — Duplicate scan 2000ms window too strict for same-item multiples
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-335-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 2 — [handleScan.ts:69, 114-122](src/services/scan/handleScan.ts#L69)
 - **Problem**: `DUPLICATE_WINDOW_MS = 2000` rejects re-scans of same barcode within 2 seconds. For kirana cashiers scanning same item multiple times (customer buying 3 milks), they must wait 2+ seconds between scans. No user feedback when scan is silently rejected.
@@ -9221,7 +9221,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-336 — SELL — Scan storm detection per-barcode limit (8 in 2s) with no user feedback
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-336-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 2 — [handleScan.ts:74-76, 124-164](src/services/scan/handleScan.ts#L74)
 - **Problem**: Storm protection: 8 scans of same barcode in 2000ms triggers 1000ms cooldown. No visibility into storm state — cashier sees "scan_storm" warning but doesn't know which barcode triggered it or cooldown duration.
@@ -9235,7 +9235,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-337 — SELL — Intermediate barcode prefixes trigger search results flicker
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-337-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 2/11 — [SellScanScreen.tsx:1645-1660](src/screens/SellScanScreen.tsx#L1645)
 - **Problem**: As HID scanner sends barcode character-by-character, each intermediate value (e.g., "890", "8901") triggers search debounce. Partial matches flash on screen before full barcode resolves.
@@ -9253,7 +9253,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-338 — SELL — Unknown barcode modal lacks clear field guidance
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-338-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 3 — [SellScanScreen.tsx:3596-3708](src/screens/SellScanScreen.tsx#L3596)
 - **Problem**: When unknown barcode is scanned, "New product" modal shows 4 fields (name, sell price, purchase price, opening stock) with minimal guidance. "Purchase price" says "(optional)" without explaining why it matters. "Opening stock" has tooltip "Creates ledger entry if greater than 0" — too technical for cashiers.
@@ -9267,7 +9267,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-339 — SELL — LOOSE_BULK variant picker gated by multiple checks, may never trigger
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-339-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 3 — [handleScan.ts:475-485](src/services/scan/handleScan.ts#L475)
 - **Problem**: Variant picker for LOOSE_BULK products requires ALL of: product_mode='LOOSE_BULK', store_product_id exists, runtime.onVariantPicker set, !variantPickerActive. If store_product_id is null (globally registered but not in-store), variant picker is skipped entirely.
@@ -9281,7 +9281,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-340 — SELL — Price error silently blocks checkout with no feedback
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-340-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 3 — [SellScanScreen.tsx:1341-1343, 758-765](src/screens/SellScanScreen.tsx#L1341)
 - **Problem**: Items with `priceResolutionError=true` and `priceMinor=0` disable the checkout button silently. No error toast, no highlighting of which item needs attention. Cashier sees disabled button and assumes app is frozen.
@@ -9299,7 +9299,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-341 — SELL — DEMO_CATEGORIES hardcoded, no dynamic loading from store products
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-341-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 4 — [CategoryRail.tsx:67-83](src/components/sell/CategoryRail.tsx#L67)
 - **Problem**: 15 hardcoded demo categories as fallback. Feature flag `category_browsing` gates the entire category rail. Stores without the flag see no categories at all. Categories don't reflect actual product mix in the store.
@@ -9313,7 +9313,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-342 — SELL — Category selection does NOT filter displayed products
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-342-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 4 — [SellScanScreen.tsx:2803-2809](src/screens/SellScanScreen.tsx#L2803)
 - **Problem**: When a category is selected (`selectedCategory` state), the product grid continues showing ALL products. No filtering is applied to the FlatList. Category tap has zero effect on displayed products.
@@ -9331,7 +9331,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-343 — PURCHASE — BuyScreen search bar missing barcode lookup capability
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-343-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 5 — [BuyScreen.tsx:476-505](src/screens/BuyScreen.tsx#L476)
 - **Problem**: BuyScreen search is purely text-based (product name). No barcode scanning or barcode lookup. PurchaseScreen has `buyBarcodeSearch` but BuyScreen does not. Inconsistent UX between two purchase interfaces.
@@ -9345,7 +9345,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-344 — PURCHASE — Search debounce 400ms creates perceived slowness
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-344-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 5 — [BuyScreen.tsx:64](src/screens/BuyScreen.tsx#L64)
 - **Problem**: `SEARCH_DEBOUNCE_MS = 400` plus API call time means total response can exceed 1 second on 2G/3G networks.
@@ -9359,7 +9359,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-345 — PURCHASE — No search autocomplete/suggestions before full results
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-345-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 5 — [BuyScreen.tsx:476-505](src/screens/BuyScreen.tsx#L476)
 - **Problem**: No autocomplete dropdown, no real-time suggestions, no "did you mean" alternatives. User must wait for full page reload after typing.
@@ -9373,7 +9373,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-346 — PURCHASE — Stock filter applied client-side, causes pagination issues
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-346-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 5/6 — [BuyScreen.tsx:371-377](src/screens/BuyScreen.tsx#L371)
 - **Problem**: Stock status filter (in_stock, low_stock, out_of_stock) is applied client-side AFTER API returns all products. Pagination shows "no more products" but more in-stock products may exist on next page.
@@ -9391,7 +9391,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-347 — PURCHASE — Quick purchase mode adds items with empty metadata
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-347-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 6 — [PurchaseScreen.tsx:65-72, 287-309](src/screens/PurchaseScreen.tsx#L65)
 - **Problem**: Quick purchase adds items with `productName: ""`, `buyPrice: 0`, `sellPrice: 0`. Retailer must manually enter everything. No automatic lookup from supplier catalog.
@@ -9405,7 +9405,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-348 — PURCHASE — No barcode lookup loading state in PurchaseScreen
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-348-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 6 — [PurchaseScreen.tsx:232-284](src/screens/PurchaseScreen.tsx#L232)
 - **Problem**: Barcode lookup can take 2-3s. `setScanResolving` is set but not displayed in UI. No loading indicator visible during lookup.
@@ -9423,7 +9423,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-349 — SELL — Search results missing brand, image, pack size vs grid tiles
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-349-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 7 — [SellScanScreen.tsx:2597-2659](src/screens/SellScanScreen.tsx#L2597)
 - **Problem**: Search panel `renderAddRow` (lines 2597-2659) shows only: product name, barcode, price, stock status. The grid SellTile component (lines 113-284) DOES show image, brand, pack size, mode badge, expiry — but the search results list uses a simpler row layout that lacks these fields.
@@ -9437,7 +9437,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-350 — SELL — Autocomplete dropdown shows only name+barcode, too minimal
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-350-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 7 — [SellScanScreen.tsx:2860-2880](src/screens/SellScanScreen.tsx#L2860)
 - **Problem**: Autocomplete suggestions show only product name and barcode (gray, small). No image, price, stock. Max 5 suggestions.
@@ -9451,7 +9451,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-351 — PURCHASE — Supplier name not visible in grid card, only in small text
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-351-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 7 — [CatalogProductCard.tsx:201-205](src/components/buy/CatalogProductCard.tsx#L201)
 - **Problem**: Supplier name shown at bottom of card in 11px tertiary text. Multiple suppliers selling same product at different prices are indistinguishable without clicking each.
@@ -9465,7 +9465,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-352 — PURCHASE — MOV (Minimum Order Value) not shown anywhere before checkout
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-352-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 8 — [CatalogProductCard.tsx, ProductDetailModal.tsx, SupplierRow.tsx](src/components/buy/)
 - **Problem**: Minimum Order Value from `supplier_store_links.min_order_value` is NOT displayed in grid card, product detail modal, or supplier row. Only validated at cart checkout (SupplierCartSection line 60). Retailers discover MOV requirement after building entire cart.
@@ -9479,7 +9479,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-353 — PURCHASE — MOQ shown only when > 1 and in small 11px font
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-353-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 7 — [CatalogProductCard.tsx:107-108, 341](src/components/buy/CatalogProductCard.tsx#L107)
 - **Problem**: MOQ only shown when > 1, in 11px font. For products with MOQ=10+ (common in FMCG wholesale), not prominent enough.
@@ -9493,7 +9493,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-354 — PURCHASE — "Cost" price label ambiguous, should be "Buy Price"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-354-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 7 — [CatalogProductCard.tsx:169-171](src/components/buy/CatalogProductCard.tsx#L169)
 - **Problem**: Price label says "Cost ₹XX/pack" — ambiguous for Indian retailers. Could mean wholesale cost, item cost, or COGS.
@@ -9507,7 +9507,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-355 — PURCHASE — No variant/pack size shown when metadata missing
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-355-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 7 — [CatalogProductCard.tsx:37-48](src/components/buy/CatalogProductCard.tsx#L37)
 - **Problem**: Pack size only shown if `netContentValue` and `netContentUnit` exist. For incomplete metadata, card shows only name+price. Two SKUs of same product may look identical.
@@ -9525,7 +9525,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-356 — SELL — SellTile brand truncates when pack size present on narrow screens
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-356-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 8 — [SellTile.tsx:198-229](src/components/sell/SellTile.tsx#L198)
 - **Problem**: Brand, mode badge, and pack size render in single `metaRow` with `flexWrap`. Long brand names (e.g., "Hindustan Unilever Beverages") get truncated on 360px screens.
@@ -9539,7 +9539,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-357 — SELL — Expiry badge overlaps with stock on small screens
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-357-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 8 — [SellTile.tsx:160-176, 252-267](src/components/sell/SellTile.tsx#L160)
 - **Problem**: Stock status + expiry warning both render in `bottomLeft`. Two tall lines cause inconsistent tile heights (160px vs 200px).
@@ -9553,7 +9553,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-358 — PURCHASE — No supplier comparison table in ProductDetailModal
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-358-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 8 — [ProductDetailModal.tsx:253-289](src/components/buy/ProductDetailModal.tsx#L253)
 - **Problem**: Multiple suppliers shown individually in expandable rows. No price/MOQ/MOV comparison summary. Must expand each supplier to compare.
@@ -9567,7 +9567,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-359 — PURCHASE — No expiry date/batch info visible for incoming products
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-359-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 8 — all purchase components
 - **Problem**: No product expiry date, batch number, or manufacturing date visible anywhere in purchase flow. Critical for FMCG/grocery.
@@ -9585,7 +9585,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-360 — VOICE — No confirmation before auto-executing voice commands
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-360-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 9 — [voiceClient.ts:435-439](src/services/voice/voiceClient.ts#L435)
 - **Problem**: When voice interpretation succeeds, `executeVoiceAction` is called with `confirmed=true` automatically. No UI confirmation modal. If LLM misunderstands "2kg rice" as "2 units MILK" (high confidence), wrong product added silently.
@@ -9599,7 +9599,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-361 — VOICE — Product search stub not implemented, all lookups fail
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-361-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 9 — [voiceOrderService.ts:431-457](backend/src/services/ai/voiceOrderService.ts#L431), [voice.ts:74-79](backend/src/routes/v1/pos/voice.ts#L74)
 - **Problem**: `resolveProducts()` calls `searchProducts()` which is registered as empty stub returning `[]`. Every non-exact product name triggers NEEDS_CLARIFICATION. No fuzzy match against store catalog.
@@ -9613,7 +9613,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-362 — VOICE — Locale toggle (EN/HI) not wired to backend STT
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-362-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 9 — [VoiceSheet.tsx:134-173](src/components/voice/VoiceSheet.tsx#L134), [openaiProvider.ts:438](backend/src/services/ai/openaiProvider.ts#L438)
 - **Problem**: VoiceSheet renders EN/HI toggle but locale is only used in UI state. Backend always transcribes with `language="hi"` (hardcoded). English speech → Hindi STT model = degraded accuracy.
@@ -9627,7 +9627,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-363 — VOICE — NEEDS_CLARIFICATION flag returned but never shown as picker
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-363-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 9 — [SellScanScreen.tsx:3024-3030](src/screens/SellScanScreen.tsx#L3024)
 - **Problem**: When backend returns `requiresConfirmation` with candidates, POS shows error state. No interactive candidate picker. Retailer must dismiss and retry with more specific name.
@@ -9641,7 +9641,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-364 — VOICE — No visual confidence score or product match feedback
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-364-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 9 — [VoiceSheet.tsx:187-192](src/components/voice/VoiceSheet.tsx#L187)
 - **Problem**: Success state shows only "Done!" without showing WHICH product was matched or confidence score. Retailer can't verify correctness.
@@ -9655,7 +9655,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-365 — VOICE — No mic permission guidance when denied
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-365-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 9 — [SellScanScreen.tsx:2985-2987](src/screens/SellScanScreen.tsx#L2985)
 - **Problem**: When mic permission denied, generic toast: "Microphone permission required". No guidance on how to enable it (Settings → App → Permissions). `openAppSettings()` exists but isn't called.
@@ -9669,7 +9669,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-366 — VOICE — No timeout on slow API, app hangs indefinitely
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-366-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 9 — [voiceClient.ts:269-320](src/services/voice/voiceClient.ts#L269)
 - **Problem**: `interpretVoice()` makes fetch with no explicit timeout. If OpenAI API is slow/hangs, POS waits indefinitely showing "Processing...".
@@ -9683,7 +9683,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-367 — VOICE — Prompt injection vulnerability (regex-only mitigation)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-367-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 9 — [voiceOrderService.ts:283-311](backend/src/services/ai/voiceOrderService.ts#L283)
 - **Problem**: Sanitization uses regex pattern matching which can be bypassed (unicode homoglyphs, leetspeak). Confidence set to 0.0 on detection, but if detection fails, LLM could be compromised.
@@ -9701,7 +9701,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-368 — SELL — No immediate visual feedback on product tile tap (50-200ms lag)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-368-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 10 — [SellScanScreen.tsx:2505-2544](src/screens/SellScanScreen.tsx#L2505)
 - **Problem**: Tapping a product tile fires `handleAddSku` but no animation on the tile itself. No haptic feedback. Cart bar flash at bottom is 260ms and too far from tap location.
@@ -9715,7 +9715,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-369 — SELL — VariantPickerModal lacks images, stock, and price context
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-369-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 10 — [VariantPickerModal.tsx:103-118, 249-257](src/components/sell/VariantPickerModal.tsx#L103)
 - **Problem**: Variant cards show only: variant label, quantity+unit, price. Missing: product image, stock level per variant, MRP/discount, "best value" indicator.
@@ -9729,7 +9729,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-370 — SELL — Cart add persistence not awaited, silent data loss on crash
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-370-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 10 — [SellScanScreen.tsx:2431-2489](src/screens/SellScanScreen.tsx#L2431)
 - **Problem**: `cartState.addItem({...})` is fire-and-forget. No error handling for AsyncStorage write failure. If storage is corrupted or full, item disappears silently. On next restart, cart is empty.
@@ -9747,7 +9747,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-371 — HID — Scanner timing parameters hardcoded, no calibration for budget hardware
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-371-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 11 — [hidScannerService.ts:6-11](src/services/hidScannerService.ts#L6)
 - **Problem**: `HID_MAX_INTERVAL_MS=80`, `HID_MAX_DURATION_MS=1200`, `HID_IDLE_TIMEOUT_MS=120` are hardcoded. Budget/slow HID scanners with USB lag (150ms per char) fail validation silently.
@@ -9761,7 +9761,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-372 — HID — Buffer not reset on SellScanScreen mount/unmount
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-372-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 11 — [SellScanScreen.tsx](src/screens/SellScanScreen.tsx), [hidScannerService.ts:67-73](src/services/hidScannerService.ts#L67)
 - **Problem**: `resetHidTracking()` is never called from SellScanScreen on mount/unmount. HID state (buffer, lastValue) persists across navigations.
@@ -9779,7 +9779,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-373 — SELL — Cart sheet covers 55-75% of screen, too much on small devices
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-373-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 12 — [SellScanScreen.tsx:290-296](src/screens/SellScanScreen.tsx#L290)
 - **Problem**: Cart sheet collapsed ratio: 55% (normal), 75% (small screens ≤400x750). On handheld POS (Sunmi V2, 400px), only ~188px left for product grid.
@@ -9793,7 +9793,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-374 — SELL — No cart item limit enforced, performance degrades with 100+ items
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-374-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 12 — [cartStore.ts:289-354](src/stores/cartStore.ts#L289)
 - **Problem**: No maximum item limit. 500+ unique items cause FlatList rendering and AsyncStorage deserialization delays.
@@ -9807,7 +9807,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-375 — SELL — Cart item removal undo has no countdown indicator
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-375-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 12 — [SellScanScreen.tsx undo logic](src/screens/SellScanScreen.tsx)
 - **Problem**: Undo button appears for 3 seconds after removal but no visual countdown. Users miss the window.
@@ -9821,7 +9821,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-376 — SELL — No cart hold/park feature for multi-customer scenarios
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-376-2026-03-14`
 - **Priority**: P3
 - **Source**: Deep audit Area 12 — [SellScanScreen.tsx](src/screens/SellScanScreen.tsx)
 - **Problem**: No way to "hold" current cart and start a fresh one for another customer. Retailer must clear cart or wait, losing the current sale.
@@ -9839,7 +9839,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-377 — PAYMENT — Payment method tabs not locked during active transaction
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-377-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 13 — [PaymentScreen.tsx:715-717, 938-970](src/screens/PaymentScreen.tsx#L715)
 - **Problem**: While payment is processing (`submitting=true`), user can still tap different payment method tabs. Switching from UPI to CASH while UPI is pending causes state confusion — receipt may show wrong payment method.
@@ -9853,7 +9853,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-378 — PAYMENT — UPI QR expiry countdown reaches 0:00 but QR stays visible
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-378-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 13 — [PaymentScreen.tsx:1260-1271](src/screens/PaymentScreen.tsx#L1260)
 - **Problem**: When QR countdown reaches 0, QR remains on screen showing "0:00". "Payment Received" button still active. Customer may scan expired QR.
@@ -9867,7 +9867,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-379 — PAYMENT — No offline payment fallback messaging
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-379-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 13 — [PaymentScreen.tsx:1198, 815-821](src/screens/PaymentScreen.tsx#L1198)
 - **Problem**: When offline, UPI tab is greyed out with no tooltip explaining why. If store is "UPI only" and goes offline, retailer has ZERO payment options and gets stuck.
@@ -9881,7 +9881,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-380 — PAYMENT — Cart lock on failure doesn't explain 5-minute timeout
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-380-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 13 — [PaymentScreen.tsx:879-927](src/screens/PaymentScreen.tsx#L879)
 - **Problem**: Payment failure triggers `lockCart()` (5-minute lock). Error alert says "Unable to complete payment. Try again." but doesn't mention the lock or its duration. Subsequent taps do nothing.
@@ -9895,7 +9895,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-381 — PAYMENT — PENDING_UPI_KEY defined but never used for crash recovery
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-381-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 13 — [PaymentScreen.tsx:7-8](src/screens/PaymentScreen.tsx#L7)
 - **Problem**: `PENDING_UPI_KEY` and `PENDING_UPI_TTL_MS` (15 min) are defined but NEVER USED. No logic saves paymentId before completeCheckout. If app crashes during UPI payment, in-flight paymentId is lost. Customer may be double-charged on retry.
@@ -9909,7 +9909,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-382 — PAYMENT — Split payment manual UTR input shown too late (after 10 polls)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-382-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 13 — [SplitPaymentModal.tsx:193-206](src/components/sell/SplitPaymentModal.tsx#L193)
 - **Problem**: Manual UTR input appears after 10 failed auto-polling attempts (~5+ minutes with exponential backoff). No "Cancel" option visible during wait.
@@ -9923,7 +9923,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-383 — PAYMENT — No refund/void mechanism post-payment from POS
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-383-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 13 — [SuccessPrintScreenV2.tsx](src/screens/SuccessPrintScreenV2.tsx)
 - **Problem**: After payment confirmation, SuccessPrintScreen offers Print/WhatsApp/No Print but NO "Void Sale" or "Issue Refund" option. Immediate refunds require admin portal or support call.
@@ -9937,7 +9937,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-384 — PAYMENT — Item discount vs cart discount not clearly distinguished on receipt
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-384-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 13 — [SuccessPrintScreenV2.tsx:120](src/screens/SuccessPrintScreenV2.tsx#L120)
 - **Problem**: Receipt shows single "DISCOUNT" line that combines item-level and cart-level discounts. Retailer can't tell which discount was which.
@@ -9955,7 +9955,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-385 — STOCK — No standalone stock adjustment modal from SELL screen
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-385-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 14 — [SellScanScreen.tsx:965-2310](src/screens/SellScanScreen.tsx#L965)
 - **Problem**: Stock editing only available within cart context. No way to adjust stock (shrinkage, damage, count error) without creating a transaction.
@@ -9969,7 +9969,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-386 — STOCK — Stock limit notification doesn't explain WHY quantity was capped
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-386-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 14 — [SellScanScreen.tsx:846-870, cartStore.ts:195-210](src/stores/cartStore.ts#L195)
 - **Problem**: `stockLimitEvent` includes reason (out_of_stock, capped, unknown_stock) but UI notification only shows item count, not the reason.
@@ -9987,7 +9987,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-387 — SYNC — No push-based stock sync, only 5-minute polling
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-387-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 15 — [stockService.ts:254-268](src/services/stockService.ts#L254)
 - **Problem**: Stock sync is PULL-based (every 5 minutes). No push notifications or WebSocket for stock changes from retailer portal. Portal changes invisible to POS for up to 5 minutes.
@@ -10001,7 +10001,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-388 — SYNC — Stock sync conflicts silently resolved as "server wins"
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-388-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 15 — [SyncConflictPanel.tsx:254-270, syncStore.ts:11-17](src/components/ui/SyncConflictPanel.tsx#L254)
 - **Problem**: SyncConflictPanel shows drifts but "Force Sync" assumes server is correct. If POS sold 10 units offline while portal changed stock, those 10 units might be lost or duplicated. No explicit resolution policy.
@@ -10019,7 +10019,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-389 — OFFLINE — Offline queue 24h expiry with no warning before transaction loss
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-389-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 16 — [offlineQueue.ts:12, 144-146](src/services/offlineQueue.ts#L12)
 - **Problem**: Offline transactions expire after 24 hours (MAX_AGE_MS). No warnings before expiry. If device stays offline 23+ hours, transactions silently disappear.
@@ -10033,7 +10033,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-390 — OFFLINE — Offline price cache not refreshed from portal on reconnect
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-390-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 16 — [offline/scan.ts:44-90](src/services/offline/scan.ts#L44)
 - **Problem**: When scanning offline, app uses cached prices. If retailer changed sell price on portal, offline cache has old price. No refresh on sync completion.
@@ -10047,7 +10047,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-391 — OFFLINE — No post-checkout sync confirmation, sale status ambiguous
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-391-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 16 — [SellScanScreen.tsx:2120-2150](src/screens/SellScanScreen.tsx#L2120)
 - **Problem**: Checkout completes locally without waiting for sync. Cart cleared immediately. Retailer doesn't know if sale was submitted to server.
@@ -10061,7 +10061,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-392 — OFFLINE — No graceful recovery when offline SQLite database is corrupted
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-392-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 16 — [localDb.ts:60-74](src/services/offline/localDb.ts#L60)
 - **Problem**: If SQLite corrupts, hydration logs error and falls back to empty state. All offline products, prices, and pending transactions lost silently.
@@ -10079,7 +10079,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-393 — DEVICE — No device type detection (POS terminal vs phone vs tablet)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-393-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 17 — [deviceInfo.ts:17-37, EnrollDeviceScreen.tsx:80](src/services/deviceInfo.ts#L17)
 - **Problem**: Device metadata is captured but not used. `deviceType` hardcoded as "RETAILER_PHONE". No distinction between dedicated POS terminals (with scanner, printer, cash drawer) and phones.
@@ -10093,7 +10093,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-394 — DEVICE — Touch targets too small for compact mode on small phones
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-394-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 17 — [QuantityPicker.tsx:175-184](src/components/buy/QuantityPicker.tsx#L175)
 - **Problem**: QuantityPicker buttons are 32x32px in compact mode (phones <400px). No hitSlop increase. Below WCAG 44px minimum.
@@ -10111,7 +10111,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-395 — LAYOUT — NUM_COLUMNS=2 hardcoded, no responsive column count
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-395-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 18 — [SellScanScreen.tsx:283](src/screens/SellScanScreen.tsx#L283)
 - **Problem**: Product grid always uses 2 columns. On 16:9 tablets in landscape, excess whitespace. On 4" phones, tiles are cramped.
@@ -10125,7 +10125,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-396 — LAYOUT — Cart sheet snap points not optimized for tablets/landscape
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-396-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 18 — [SellScanScreen.tsx:291-293](src/screens/SellScanScreen.tsx#L291)
 - **Problem**: Cart sheet collapsed ratio fixed at 55%. On 12" tablet landscape, cart takes ~400px height leaving only ~300px for products.
@@ -10139,7 +10139,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-397 — LAYOUT — No safe area handling for notched phones in SellScanScreen
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-397-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 18 — [SellScanScreen.tsx:25](src/screens/SellScanScreen.tsx#L25)
 - **Problem**: `useSafeAreaInsets` imported but not applied to root View or SyncStatusWidget. On notched phones (iPhone X+, newer Android), UI renders behind notch.
@@ -10153,7 +10153,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-398 — LAYOUT — Modal dialogs stretch full-width on tablets
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-398-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 18 — SellScanScreen editor/payment modals
 - **Problem**: Editor and payment modals render full-width on tablets. Input fields stretch 400+px on 12" screen.
@@ -10171,7 +10171,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-399 — SELL — Price edit in cart not persisted to AsyncStorage separately
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-399-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 12 — [SellScanScreen.tsx:496+](src/screens/SellScanScreen.tsx#L496)
 - **Problem**: If user edits a product's price in cart via `handlePriceCommit`, the price is saved to backend but local edit is only in component state. If app crashes before payment, in-memory price edit lost. Cart shows ₹0 again on restart.
@@ -10185,7 +10185,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-400 — SELL — No quantity input validation for extremely large numbers
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-400-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 12 — [SellScanScreen.tsx:327-331](src/screens/SellScanScreen.tsx#L327)
 - **Problem**: No max per-item quantity limit. User can enter 999999 units. Stock cap prevents over-ordering vs available stock but not nonsensical quantities.
@@ -10199,7 +10199,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-401 — PAYMENT — Cart-to-payment data consistency not validated on navigation
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-401-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 13 — [PaymentScreen.tsx:170-195](src/screens/PaymentScreen.tsx#L170)
 - **Problem**: Cart items passed as `saleItemIds` in route params. If user modifies cart between opening Payment and confirming, stale total shown.
@@ -10213,7 +10213,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-402 — SELL — Search history unbounded, no expiration or clear-all
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-402-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 7 — [SellScanScreen.tsx:2882-2911](src/screens/SellScanScreen.tsx#L2882)
 - **Problem**: Search history displays all recent terms as horizontal chips with no limit or expiration. Over weeks, 50+ terms accumulate. No "clear all" button.
@@ -10227,7 +10227,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-403 — SELL — Cart bar flash animation invisible on slow devices (260ms)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-403-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 10 — [SellScanScreen.tsx:2032-2038, 4235-4267](src/screens/SellScanScreen.tsx#L2032)
 - **Problem**: Cart bar flash is 260ms style change. On ≤60fps budget Android, flash completes before user glances at cart bar.
@@ -10241,7 +10241,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-404 — PAYMENT — No UPI polling status visible during QR wait
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-404-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 13 — [PaymentScreen.tsx:1232-1275](src/screens/PaymentScreen.tsx#L1232)
 - **Problem**: After QR displayed, no polling status. QR countdown ticks but no indication system is listening for payment.
@@ -10255,7 +10255,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-405 — PAYMENT — Discount application has no undo
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-405-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 12/13 — [SellScanScreen.tsx:2392-2405](src/screens/SellScanScreen.tsx#L2392)
 - **Problem**: Cart-level discount applied instantly. No "undo" action like item removal has.
@@ -10269,7 +10269,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-406 — PAYMENT — Offline receipts may not get "OFF-" prefix consistently
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-406-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 13/16 — [SuccessPrintScreenV2.tsx:94-129](src/screens/SuccessPrintScreenV2.tsx#L94)
 - **Problem**: Receipt checks `billNumber.startsWith("OFF-")` for offline sales. But bill ref generation may not always add "OFF-" prefix for offline sales. If missed, receipt shows no sync-pending warning.
@@ -10283,7 +10283,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-407 — PURCHASE — BNPL badge shown without terms explanation
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-407-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 8 — [CatalogProductCard.tsx:209-212, SupplierRow.tsx:95-104](src/components/buy/CatalogProductCard.tsx#L209)
 - **Problem**: BNPL badge shows "BNPL ✓" with no explanation of days to pay, limit, or terms.
@@ -10297,7 +10297,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-408 — PURCHASE — Cart quantity badge confusing when same product from multiple suppliers
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-408-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 7 — [BuyScreen.tsx:133-141](src/screens/BuyScreen.tsx#L133)
 - **Problem**: Cart badge shows total quantity across ALL suppliers for a product. If same product from 2 suppliers, badge shows combined total. User may think it's duplicate.
@@ -10311,7 +10311,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-409 — VOICE — No recording duration countdown visible during recording
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-409-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 9 — [voiceClient.ts:78, 139-145](src/services/voice/voiceClient.ts#L78)
 - **Problem**: Max recording 60 seconds. No visual countdown or warning. Recording silently stops at 60s — retailer may be mid-sentence.
@@ -10325,7 +10325,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-410 — VOICE — Rate limit 429 errors show no retry-after guidance
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-410-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 9 — [voice.ts:64-65](backend/src/routes/v1/pos/voice.ts#L64)
 - **Problem**: 20 requests/minute limit. After limit hit, client shows "Too many requests. Please wait." — no indication of when to retry.
@@ -10339,7 +10339,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-411 — VOICE — Zero E2E test coverage for voice flow
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-411-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 9 — e2e-tests/
 - **Problem**: No E2E tests for voice: tap-to-record, hold-to-record, clarification modal, product matching, mic permission denial. Backend has unit tests but no integration tests.
@@ -10365,7 +10365,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-412 — REORDER — No manual quick-reorder from purchase history
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-412-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 1a — [ReorderScreen.tsx](src/screens/ReorderScreen.tsx)
 - **Problem**: Retailers cannot manually initiate a reorder from previously purchased products. The only path to reorder is via auto-generated pending suggestions. PurchaseHistoryScreen references `reorder.quickReorder` but no flow exists to select past purchases and add to a reorder cart.
@@ -10379,7 +10379,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-413 — REORDER — Quantity edits in EditReorderModal not persisted to database
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-413-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 1a — [EditReorderModal.tsx:160-182](src/components/reorder/EditReorderModal.tsx#L160-L182)
 - **Problem**: `handleSave` only updates local React state via `onSave` callback. The pending reorder record in the database is NEVER updated with the new quantity/supplier. If user edits quantity, navigates away without approving, changes are lost.
@@ -10393,7 +10393,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-414 — REORDER — No reorder history/audit trail visible on POS
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-414-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 1a — [ReorderScreen.tsx](src/screens/ReorderScreen.tsx)
 - **Problem**: No screen shows "Reorders You've Approved" or past reorder decisions. Only superadmin has audit log. Retailers can't trace which reorders led to which purchase orders.
@@ -10411,7 +10411,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-415 — REORDER — Pending reorders are snapshots, no staleness detection
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-415-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 2b — [reorder.ts:364-395](backend/src/routes/v1/reorder.ts#L364-L395)
 - **Problem**: Pending reorder records capture `current_stock`, `min_threshold`, `suggested_quantity` at creation time. If stock changes after creation (e.g., new shipment arrived), the suggestion is stale but still shows the old quantity.
@@ -10425,7 +10425,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-416 — REORDER — Expired reorders silently disappear, no re-trigger option
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-416-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 2b — [ReorderScreen.tsx:203](src/screens/ReorderScreen.tsx#L203), [reorderApi.ts:10](src/services/api/reorderApi.ts#L10)
 - **Problem**: Backend supports `status = 'expired'` but frontend hardcodes filter to `status: "pending"`. Expired suggestions vanish with no UI to show them or re-trigger.
@@ -10439,7 +10439,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-417 — REORDER — No expiry cleanup job marks pending reorders as expired
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-417-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 2 — [reorder.ts](backend/src/routes/v1/reorder.ts)
 - **Problem**: `pending_reorders` have an `expires_at` field but no background job transitions them to 'expired' status when TTL passes. They remain in 'pending' status indefinitely.
@@ -10457,7 +10457,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-418 — REORDER — No scheduler generates reorder suggestions (CRITICAL)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-418-2026-03-14`
 - **Priority**: P0
 - **Source**: Deep audit Area 3c — backend/src/services/reorder-service/
 - **Problem**: No cron job or scheduler exists to generate pending reorder suggestions. Endpoints exist to read/approve/dismiss suggestions, but nothing creates them. The `reorder.reorder_runs` audit table exists but is never written to. Event inbox/outbox tables are created but unused.
@@ -10471,7 +10471,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-419 — REORDER — Auto-approve threshold setting has no effect
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-419-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 3c — [reorder.ts:51](backend/src/routes/v1/reorder.ts#L51)
 - **Problem**: Backend returns `autoApproveThreshold` in settings, and PATCH accepts it. ReorderSettingsScreen displays it. But NO business logic uses this threshold to auto-approve reorders below a certain value.
@@ -10485,7 +10485,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-420 — REORDER — No quantity optimization algorithm (EOQ/MOQ)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-420-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 3c — backend reorder logic
 - **Problem**: Suggested quantity is implicitly `target_stock - current_stock` with no consideration of: MOQ from supplier, lead time, holding costs, or Economic Order Quantity (EOQ) formula. Suggestions may be below supplier MOQ.
@@ -10499,7 +10499,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-421 — REORDER — Approved reorders create draft POs but no submission workflow
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-421-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 3c — [reorder.ts:445-600](backend/src/routes/v1/reorder.ts#L445-L600)
 - **Problem**: When retailer approves pending reorders, draft `purchase_orders` are created with `source_reorder_ids`. But no async job transitions them to 'submitted', no supplier notification is sent, and no workflow exists to send POs to suppliers.
@@ -10513,7 +10513,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-422 — REORDER — GRN auto-close doesn't mark reorders as fulfilled
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-422-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 3c — Migration 151
 - **Problem**: Migration 151 adds index on `pending_reorders(purchase_order_id)` for approved reorders, with a comment that GRN should auto-close. But no code performs this. When a PO GRN is created, linked pending reorders are NOT updated to 'fulfilled'.
@@ -10531,7 +10531,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-423 — REORDER — No dynamic supplier mapping algorithm
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-423-2026-03-14`
 - **Priority**: P0
 - **Source**: Deep audit Area 4d — backend reorder + catalog services
 - **Problem**: Supplier selection uses only `reorder_policies.preferred_supplier_id` (one fixed supplier per product). No algorithm queries `catalog.supplier_products` to find all available suppliers and select the best one based on price, lead time, MOQ, or rating.
@@ -10545,7 +10545,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-424 — REORDER — Supplier picker in EditReorderModal doesn't show pack variants
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-424-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 4d — [EditReorderModal.tsx:98-111](src/components/reorder/EditReorderModal.tsx#L98-L111)
 - **Problem**: `getProductSuppliers` returns suppliers for a product, but if the same supplier offers multiple variants/pack sizes (e.g., 500g and 1kg), the UI doesn't distinguish between them. User can't choose which pack size to order.
@@ -10559,7 +10559,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-425 — REORDER — Supplier picker loses original supplier if not in catalog
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-425-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 4d — [EditReorderModal.tsx:91-139](src/components/reorder/EditReorderModal.tsx#L91-L139)
 - **Problem**: When editing a pending reorder, the modal calls `catalogApi.getProductSuppliers()`. If the original `suggestedSupplierId` is from a supplier not currently in the catalog for that product, the user can't revert to the original choice after opening the modal.
@@ -10577,7 +10577,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-426 — REORDER — Payment terms not returned by backend, dead code in frontend
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-426-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 5e — [reorder.ts:364-395](backend/src/routes/v1/reorder.ts#L364-L395), [PendingReorderCard.tsx:153-164](src/components/reorder/PendingReorderCard.tsx#L153-L164)
 - **Problem**: Backend pending reorders SELECT does NOT include `payment_terms` column. Frontend PendingReorderCard tries to display `item.paymentTerms` but it's always undefined. Feature is dead code.
@@ -10591,7 +10591,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-427 — REORDER — Approval response missing supplier names
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-427-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 5e — [reorder.ts:500-576](backend/src/routes/v1/reorder.ts#L500-L576)
 - **Problem**: Approval endpoint returns `draftPurchaseOrders` with `supplierId` but not `supplierName`. The Alert in ReorderScreen only shows counts ("Approved 5 reorders → Created 2 POs") without naming which suppliers.
@@ -10605,7 +10605,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-428 — REORDER — Partial approval failure is silent (transaction rollback)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-428-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 5e — [reorder.ts:445-600](backend/src/routes/v1/reorder.ts#L445-L600)
 - **Problem**: Approval uses a DB transaction. If any one item fails PO creation, the ENTIRE transaction rolls back. Frontend shows "Approved N reorders" but actually 0 were approved.
@@ -10619,7 +10619,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-429 — REORDER — Empty state message misleading when auto-reorder is off
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-429-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 5e — [ReorderScreen.tsx:434-446](src/screens/ReorderScreen.tsx#L434-L446)
 - **Problem**: Empty state says "All caught up! The system will automatically detect low stock items." But if `reorderEnabled === false`, this is a lie — the system is NOT detecting anything.
@@ -10633,7 +10633,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-430 — REORDER — Selection bar disappears causing layout shift
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-430-2026-03-14`
 - **Priority**: P3
 - **Source**: Deep audit Area 5e — [ReorderScreen.tsx:460-486](src/screens/ReorderScreen.tsx#L460-L486)
 - **Problem**: When `pendingReorders.length === 0`, the selection bar (containing "Select All") is not rendered, causing the header to shift vertically. Jarring UX when toggling selections.
@@ -10647,7 +10647,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-431 — REORDER — EditReorderModal original quantity reference too subtle
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-431-2026-03-14`
 - **Priority**: P3
 - **Source**: Deep audit Area 5e — [EditReorderModal.tsx:244-256](src/components/reorder/EditReorderModal.tsx#L244-L256)
 - **Problem**: "Originally: X units" label in the quantity section is tiny and easy to miss. Retailer might change quantity without understanding what the "original" reference means.
@@ -10661,7 +10661,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-432 — REORDER — Supplier load error hidden until save attempt
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-432-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 5e — [EditReorderModal.tsx:263-283](src/components/reorder/EditReorderModal.tsx#L263-L283)
 - **Problem**: If supplier data fails to load, error is stored but only displayed after user tries to save. User might not realize suppliers failed to load and sees an empty list.
@@ -10675,7 +10675,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-433 — REORDER — maxReorderQty not visible in policy list
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-433-2026-03-14`
 - **Priority**: P3
 - **Source**: Deep audit Area 5e — [PolicyRow.tsx](src/components/reorder/PolicyRow.tsx)
 - **Problem**: EditPolicyModal allows setting `maxReorderQty`, backend stores it, but PolicyRow only shows it conditionally (when not null) in small text. Retailer can't easily verify their max quantity setting without opening the edit modal.
@@ -10689,7 +10689,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-434 — REORDER — Threshold visual guide proportions misleading
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-434-2026-03-14`
 - **Priority**: P3
 - **Source**: Deep audit Area 5e — [EditPolicyModal.tsx:298-327](src/components/reorder/EditPolicyModal.tsx#L298-L327)
 - **Problem**: Visual guide bar uses hardcoded flex proportions (1:2:3) for critical:low:target sections, but actual thresholds may not match these ratios. If min=10, target=15, bar shows as if 1:2:3 — visually misleading.
@@ -10703,7 +10703,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-435 — REORDER — Catalog supplier data not cached, re-fetched on every modal open
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-435-2026-03-14`
 - **Priority**: P3
 - **Source**: Deep audit Area 5e — [EditReorderModal.tsx:91-139](src/components/reorder/EditReorderModal.tsx#L91-L139)
 - **Problem**: Every time user opens EditReorderModal, `loadSuppliers()` fetches from `catalogApi.getProductSuppliers()`. No caching. Opening/closing modal 10 times = 10 API calls.
@@ -10721,7 +10721,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-436 — REORDER — minStock/minThreshold naming inconsistency across frontend/backend
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-436-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 6f — [reorderApi.ts:19](src/services/api/reorderApi.ts#L19), [reorder.ts:218](backend/src/routes/v1/reorder.ts#L218)
 - **Problem**: Frontend uses `minThreshold`, backend schema uses `min_stock`, EditPolicyModal label says "Minimum Stock Level". Different names for the same concept across codebase.
@@ -10735,7 +10735,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-437 — REORDER — Stock status threshold mismatch between frontend and backend
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-437-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 6f — [PolicyRow.tsx:160-165](src/components/reorder/PolicyRow.tsx#L160-L165), [reorder.ts:166](backend/src/routes/v1/reorder.ts#L166)
 - **Problem**: Backend filters products where `current_qty <= min_stock` (absolute threshold). Frontend's `isCriticallyLow()` returns true if `currentStock < minThreshold * 0.5` (50% of min). These are different thresholds — "critical" in UI may not match what triggered the suggestion.
@@ -10749,7 +10749,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-438 — REORDER — Policy validation frontend-only, no server-side bounds checking
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-438-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 6f — [EditPolicyModal.tsx:108-129](src/components/reorder/EditPolicyModal.tsx#L108-L129), [reorder.ts:278](backend/src/routes/v1/reorder.ts#L278)
 - **Problem**: Frontend validates min ≥ 0, target > min, but backend PATCH has no validation that `minStock ≤ targetStock ≤ maxReorderQty`. Direct API calls can store invalid combinations. Min=0 is allowed (always triggers).
@@ -10763,7 +10763,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-439 — REORDER — No auto-reorder cron visibility or manual trigger on POS
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-439-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 6f — [reorder.types.ts:54-65](backend/src/services/reorder-service/)
 - **Problem**: Backend has `reorder_runs` table for tracking evaluations, but POS has no visibility into when last reorder run occurred, no way to manually trigger a run, and no status indicator.
@@ -10777,7 +10777,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-440 — REORDER — No bulk policy management
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-440-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 6f — [ReorderPoliciesScreen.tsx](src/screens/ReorderPoliciesScreen.tsx)
 - **Problem**: Backend has `bulkUpdatePolicies()` DTO but frontend has no bulk edit feature. If retailer has 100 products and needs to adjust all min stocks by 10%, they must edit each one individually.
@@ -10791,7 +10791,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-441 — REORDER — Filter labels in ReorderPoliciesScreen hardcoded English
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-441-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 5e i18n — [ReorderPoliciesScreen.tsx:415-440](src/screens/ReorderPoliciesScreen.tsx#L415-L440)
 - **Problem**: Filter labels ("All", "Enabled", "Disabled", "Low Stock") are hardcoded English, not wrapped in `t()`.
@@ -10805,7 +10805,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-442 — REORDER — Dismiss reason codes sent as translated strings to backend
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-442-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 5e — [DismissReasonModal.tsx:39-46](src/components/reorder/DismissReasonModal.tsx#L39-L46)
 - **Problem**: Predefined dismiss reasons have both a translation key and an English value. The `value` (English text) is sent to backend. If another language is active, backend still receives English, breaking analytics consistency.
@@ -10819,7 +10819,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-443 — REORDER — Dismissal reason max length not validated on backend
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-443-2026-03-14`
 - **Priority**: P3
 - **Source**: Deep audit Area 5e security — [reorder.ts:616](backend/src/routes/v1/reorder.ts#L616)
 - **Problem**: Frontend limits custom reason to 200 chars (`maxLength={200}`), but backend only checks `reason.trim().length === 0`. No max length validation. Direct API call with 100KB string would be stored.
@@ -10833,7 +10833,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-444 — REORDER — Missing accessibility labels on interactive elements
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-444-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 5e a11y — [EditReorderModal.tsx:291](src/components/reorder/EditReorderModal.tsx#L291), [PolicyRow.tsx:41](src/components/reorder/PolicyRow.tsx#L41)
 - **Problem**: Pressable supplier options in EditReorderModal and policy content area in PolicyRow lack `accessibilityLabel` and `accessibilityRole` props.
@@ -10847,7 +10847,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-445 — REORDER — formatMoney null safety risk on price display
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-445-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 5e — [PendingReorderCard.tsx](src/components/reorder/PendingReorderCard.tsx)
 - **Problem**: `formatMoney(suggestedUnitPrice)` called without null check. If `suggestedUnitPrice` is null/undefined, result could be "NaN" or crash.
@@ -10861,7 +10861,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-446 — REORDER — No unit tests for reorder helper functions
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-446-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 6f testing — [reorderApi.ts:357-375](src/services/api/reorderApi.ts#L357-L375)
 - **Problem**: Helper functions `getStockDeficit()`, `isCriticallyLow()`, `getEstimatedTotal()` have no unit tests. Threshold calculations not verified.
@@ -10875,7 +10875,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-447 — REORDER — Idempotency framework created but unused
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-447-2026-03-14`
 - **Priority**: P3
 - **Source**: Deep audit Area 6f — reorder schema
 - **Problem**: `reorder.idempotency_keys` table and event inbox/outbox tables exist but no endpoint validates idempotency keys. Duplicate approval requests could create duplicate POs.
@@ -10893,7 +10893,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-448 — CREDIT — Feature gate hardcoded `false` in PaymentOptionsSheet
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-448-2026-03-14`
 - **Priority**: P0
 - **Source**: Deep audit Area 7 — [PaymentOptionsSheet.tsx:100](src/components/buy/PaymentOptionsSheet.tsx#L100)
 - **Problem**: `const creditFeatureEnabled = false;` is hardcoded. Credit is ALWAYS disabled in checkout, regardless of backend configuration. Even if backend enables credit offers, POS blocks them.
@@ -10907,7 +10907,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-449 — CREDIT — Credit scoring algorithm is simplified mock, not production-grade
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-449-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 9 — [credit.ts:52-184](backend/src/routes/v1/pos/credit.ts#L52-L184)
 - **Problem**: Scoring uses 4 factors with arbitrary thresholds (₹1L=EXCELLENT, ₹50K=GOOD). No consideration of: GST compliance, previous defaults, supplier ratings, inventory velocity, churn rate, industry risk, seasonal patterns. Hardcoded tier amounts.
@@ -10921,7 +10921,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-450 — CREDIT — Credit score tiers hardcoded in source code
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-450-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 9 — [credit.ts:155-167](backend/src/routes/v1/pos/credit.ts#L155-L167)
 - **Problem**: Score thresholds and eligible amounts are hardcoded (≥80=EXCELLENT/₹2L, ≥60=GOOD/₹1L, etc.). Any change requires a code deploy.
@@ -10935,7 +10935,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-451 — CREDIT — No credit disbursement endpoint after admin approval
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-451-2026-03-14`
 - **Priority**: P0
 - **Source**: Deep audit Area 11 — [credit.ts admin routes](backend/src/routes/v1/admin/credit.ts)
 - **Problem**: Admin can approve a credit application, but no endpoint triggers actual disbursement. Application stays in 'approved' status with no path to 'disbursed'. No `createDrawdown()` call happens.
@@ -10949,7 +10949,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-452 — CREDIT — KYC validation is format-only, no real identity verification
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-452-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 12 — [credit.ts:525](backend/src/routes/v1/pos/credit.ts#L525)
 - **Problem**: KYC checks only PAN format (`^[A-Z]{5}[0-9]{4}[A-Z]$`) and Aadhaar last 4 length. No real UIDAI/PAN/GST API verification. Any correctly-formatted string passes.
@@ -10963,7 +10963,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-453 — CREDIT — No KYC document upload endpoint
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-453-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 12 — [kyc_documents table](backend migrations)
 - **Problem**: `payments.kyc_documents` and `kyc_provider_submissions` tables exist but no API endpoint accepts document uploads (GSTIN, bank statements). Current KYC only captures PAN + Aadhaar last 4 as text fields.
@@ -10977,7 +10977,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-454 — CREDIT — Credit offers have no expiry cleanup job
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-454-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 7 — [credit.ts:277-323](backend/src/routes/v1/pos/credit.ts#L277-L323)
 - **Problem**: Offers have `valid_until` date and endpoint checks expiry before allowing application. But no background job deletes/archives expired offers. Stale offers accumulate in DB.
@@ -10995,7 +10995,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-455 — CREDIT — No external credit providers integrated (only internal BNPL)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-455-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 11 — [CreditProviderRegistry.ts:20-29](backend/src/services/credit/CreditProviderRegistry.ts#L20-L29)
 - **Problem**: Provider registry architecture is ready (interface, registry, aggregation). But only SuperMandi internal and Mock providers are registered. No Rupifi, KredX, Mintifi, or other external providers.
@@ -11009,7 +11009,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-456 — CREDIT — Provider failure silently hides offers, no partial result indicator
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-456-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 11 — [CreditProviderRegistry.ts:67-92](backend/src/services/credit/CreditProviderRegistry.ts#L67-L92)
 - **Problem**: If an external provider times out or errors, its offers are silently dropped. Other providers' offers still returned. No indication to frontend that results are partial.
@@ -11027,7 +11027,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-457 — CREDIT — No consent management before credit scoring (DPDP Act)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-457-2026-03-14`
 - **Priority**: P0
 - **Source**: Deep audit Area 12 — [credit.ts:275](backend/src/routes/v1/pos/credit.ts#L275)
 - **Problem**: Credit score calculated using retailer's transaction history, purchase volumes, and BNPL repayment data WITHOUT explicit consent. DPDP Act 2023 requires: clear notification, purpose disclosure, right to refuse, opt-out option.
@@ -11041,7 +11041,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-458 — CREDIT — No re-eligibility check at application time
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-458-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 9 — [credit.ts apply endpoint](backend/src/routes/v1/pos/credit.ts)
 - **Problem**: Eligibility is checked when offers are generated but NOT re-checked when retailer applies. If circumstances changed (e.g., new default, lower GMV) between offer generation and application, stale eligibility is used.
@@ -11059,7 +11059,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-459 — CREDIT — No application status timeline or tracking UI
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-459-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 10 — [CreditScreen.tsx](src/screens/CreditScreen.tsx)
 - **Problem**: After application, no timeline shows progress. If status = "kyc_verified", user doesn't know: Has approval been given? When will money arrive? No "View Details" or "Check Status" CTA.
@@ -11073,7 +11073,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-460 — CREDIT — PaymentOptionsSheet credit option shows no cost details
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-460-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 10 — [PaymentOptionsSheet.tsx:344-376](src/components/buy/PaymentOptionsSheet.tsx#L344-L376)
 - **Problem**: Credit option shows "Available: ₹50,000" but doesn't show interest rate, tenure, monthly EMI, or total repayable. BNPL shows "Pay by [date]" but credit option is bare.
@@ -11087,7 +11087,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-461 — CREDIT — CreditScreen extremely large (55KB), needs component extraction
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-461-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 10 — [CreditScreen.tsx](src/screens/CreditScreen.tsx)
 - **Problem**: CreditScreen is 55KB managing 3 tabs (offers, loans, history) with complex modals for application, KYC, and repayment. No component extraction.
@@ -11105,7 +11105,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-462 — BNPL — Interest calculation doesn't prorate by tenure days
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-462-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 7 — [bnpl.ts:73-78](backend/src/routes/v1/pos/bnpl.ts#L73-L78)
 - **Problem**: Interest uses simple `principal * rate / 100` without accounting for tenure days. A 30-day drawdown at 10% annual should be ~0.82%, not 10%. Current formula charges the full annual rate regardless of tenure.
@@ -11119,7 +11119,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-463 — BNPL — No overdue visual hierarchy in BnplDuesScreen
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-463-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 7 — [BnplDuesScreen.tsx](src/screens/BnplDuesScreen.tsx)
 - **Problem**: Overdue drawdowns not visually distinct. No red banner, no "ACTION REQUIRED" badge. User scrolling quickly might miss overdue items.
@@ -11133,7 +11133,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-464 — BNPL — Dispute has no audit trail or status history
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-464-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 7 — [bnpl.ts:583-679](backend/src/routes/v1/pos/bnpl.ts#L583-L679)
 - **Problem**: Dispute created but no: timestamp of creation, who created it (staff vs retailer), initial status reason, history of status changes (submitted → under_review → resolved).
@@ -11147,7 +11147,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-465 — BNPL — No drawdown limit per supplier
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-465-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 7 — [bnpl.ts](backend/src/routes/v1/pos/bnpl.ts)
 - **Problem**: Retailer can take unlimited BNPL from same supplier across multiple drawdowns. No aggregate check per supplier. Only store-level `bnpl_credit_limit` exists (bnpl.ts:63). No `supplier_bnpl_limit` or per-supplier-store cap in schema.
@@ -11161,7 +11161,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-466 — BNPL — Payment status polling race condition
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-466-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 7 — [bnplApi.ts:169-274](src/services/api/bnplApi.ts#L169-L274)
 - **Problem**: `pollBnplPaymentStatus` has race condition: after `await getBnplPaymentStatus()`, between the check and resolve/reject, another poll could resolve first. If two polls race, the first resolve "wins" but second poll's cleanup might not fire.
@@ -11175,7 +11175,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-467 — BNPL — Overdue maturation job functions exist but no scheduler
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-467-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 7 — backend BNPL overdue service
 - **Problem**: `processOverdueDrawdowns()` and `getOverdueForReminders()` functions exist but no cron job is scheduled to run them. Drawdowns past due date are never automatically marked 'overdue'.
@@ -11189,7 +11189,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-468 — BNPL — Max days hardcoded to 7, not configurable per store type
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-468-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 7 — [SuperMandiCreditProvider.ts:38](backend/src/services/credit/SuperMandiCreditProvider.ts#L38)
 - **Problem**: `const maxDays = store.bnpl_max_days || 7;` defaults to 7 days. Not configurable per store type. Wholesale retailers may need 30 days.
@@ -11207,7 +11207,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-469 — KHATA — Phone number validation too weak (length only)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-469-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 12 — [KhataScreen.tsx:162](src/screens/KhataScreen.tsx#L162)
 - **Problem**: Only checks `phone.length < 10`. Accepts "0000000000" or non-numeric characters. No regex validation.
@@ -11221,7 +11221,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-470 — KHATA — Transaction type semantics unclear (DEBIT vs PAYMENT)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-470-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 12 — [khataService.ts:20](src/services/khataService.ts#L20)
 - **Problem**: Types include "CREDIT", "DEBIT", "PAYMENT" but DEBIT and PAYMENT both reduce balance. Is DEBIT a refund or a reversal? Frontend doesn't use DEBIT.
@@ -11235,7 +11235,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-471 — KHATA — No entry correction or void mechanism
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-471-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 12 — [khata.ts:256](backend/src/routes/v1/pos/khata.ts#L256)
 - **Problem**: Records `created_by: deviceId` (not staff name). No "deleted" or "voided" entry type. Incorrect entries are left in ledger with no correction path.
@@ -11249,7 +11249,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-472 — KHATA — No bulk actions (settle, export, record payment for multiple)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-472-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 12 — [KhataScreen.tsx](src/screens/KhataScreen.tsx)
 - **Problem**: Every khata entry is one-by-one. Can't: select multiple customers and record payment to all, bulk export ledger, or bulk settle accounts.
@@ -11263,7 +11263,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-473 — KHATA — Customer phone numbers stored without consent (DPDP risk)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-473-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit Area 12 compliance — [KhataScreen.tsx](src/screens/KhataScreen.tsx), [khata.ts](backend/src/routes/v1/pos/khata.ts)
 - **Problem**: Phone numbers stored without: consent from customers, purpose disclosure, retention policy, deletion mechanism. Informal credit ledger collects PII with no data protection.
@@ -11281,7 +11281,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-474 — CREDIT — PAN number stored in plaintext (DPDP Act violation)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-474-2026-03-14`
 - **Priority**: P0
 - **Source**: Deep audit Area 12 — [credit.ts:550](backend/src/routes/v1/pos/credit.ts#L550)
 - **Problem**: Full PAN (10 characters) stored in plain text in `credit_applications` table. No column-level encryption, no key rotation. Full backup exposure.
@@ -11295,7 +11295,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-475 — CREDIT — No rate limiting on credit offer generation endpoint
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-475-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 13 — [credit.ts](backend/src/routes/v1/pos/credit.ts)
 - **Problem**: BNPL payment endpoints are rate-limited via `financialOperationsRateLimiter`, but credit offer generation (which triggers expensive scoring calculation) is not rate-limited.
@@ -11309,7 +11309,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-476 — CREDIT — Missing composite index on bnpl_drawdowns for hot queries
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-476-2026-03-14`
 - **Priority**: P2
 - **Source**: Deep audit Area 13 performance — [bnpl.ts](backend/src/routes/v1/pos/bnpl.ts)
 - **Problem**: No explicit index on `bnpl_drawdowns(store_id, status, due_date DESC)`. Active/summary queries do full table scan.
@@ -11327,7 +11327,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-477 — CREDIT — Hardcoded ₹ currency symbol in multiple screens
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-477-2026-03-14`
 - **Priority**: P3
 - **Source**: Deep audit cross-cutting — [BulkPurchaseCreditScreen.tsx:152](src/screens/BulkPurchaseCreditScreen.tsx#L152), [KhataScreen.tsx:576](src/screens/KhataScreen.tsx#L576)
 - **Problem**: Hardcoded `₹` (Unicode `\u20B9`) in multiple screens instead of using i18n currency formatting.
@@ -11341,7 +11341,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-478 — CREDIT — BnplDuesScreen 55KB, same extraction needed as CreditScreen
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-478-2026-03-14`
 - **Priority**: P3
 - **Source**: Deep audit cross-cutting — [BnplDuesScreen.tsx](src/screens/BnplDuesScreen.tsx)
 - **Problem**: BnplDuesScreen is 55KB, same issue as CreditScreen (STG-461). Both manage complex modals and state in a single file.
@@ -11355,7 +11355,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-479 — REORDER/CREDIT — No E2E test for reorder approval → PO creation lifecycle
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-479-2026-03-14`
 - **Priority**: P1
 - **Source**: Deep audit testing — e2e-tests/
 - **Problem**: No E2E test covering: suggestion generation → pending reorder → edit quantity → approve → draft PO created → supplier linked. Also no E2E for credit: apply → KYC → approve → disburse.
@@ -11369,7 +11369,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-480 — BNPL — No early repayment incentive or standing instructions
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-480-2026-03-14`
 - **Priority**: P3
 - **Source**: Deep audit Area 7 — BNPL payment flow
 - **Problem**: No discount for early BNPL repayment. No auto-debit or recurring mandate option. Manual UTR entry required every time.
@@ -11392,7 +11392,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-481 — GUARD: i18n validation script — en/hi key parity check
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-481-2026-03-14`
 - **Priority**: P0
 - **Source**: LGP audit — LH-010
 - **Layer**: 2-PREREQ (must complete before Layer 2 i18n tickets)
@@ -11407,7 +11407,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-482 — GUARD: i18n key naming convention document
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-482-2026-03-14`
 - **Priority**: P0
 - **Source**: LGP audit — LH-011
 - **Layer**: 2-PREREQ (must complete before Layer 2 i18n tickets)
@@ -11422,7 +11422,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-483 — GUARD: Refactor SellTile.formatPrice() → use formatMoney()
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-483-2026-03-14`
 - **Priority**: P0
 - **Source**: LGP audit — LH-007
 - **Layer**: 1 (must complete before Layer 4 SellTile tickets)
@@ -11437,7 +11437,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-484 — GUARD: Refactor CartItem + SupplierRow → useThemeColors() hook
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-484-2026-03-14`
 - **Priority**: P1
 - **Source**: LGP audit — LH-013, LH-014
 - **Layer**: 4-PREREQ (must complete before Layer 4 theme-dependent tickets)
@@ -11452,7 +11452,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-485 — GUARD: consent_records table + consent API (DPDP)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-485-2026-03-14`
 - **Priority**: P0
 - **Source**: LGP audit — LH-004, LH-029
 - **Layer**: 0A (must complete before any DPDP ticket in Layer 0C)
@@ -11467,7 +11467,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-486 — GUARD: Encryption key management infra (GCP Secret Manager)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-486-2026-03-14`
 - **Priority**: P0
 - **Source**: LGP audit — LH-005
 - **Layer**: 0A (must complete before STG-229 PAN encryption)
@@ -11482,7 +11482,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-487 — GUARD: Backend staff role + max discount API
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-487-2026-03-14`
 - **Priority**: P0
 - **Source**: LGP audit — LH-015
 - **Layer**: 7-PREREQ (must complete before STG-102 max discount limit)
@@ -11497,7 +11497,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-488 — GUARD: Backend manager PIN verification endpoint
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-488-2026-03-14`
 - **Priority**: P0
 - **Source**: LGP audit — LH-015
 - **Layer**: 7-PREREQ (must complete before STG-102 manager approval flow)
@@ -11512,7 +11512,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-489 — GUARD: Backend void/refund sale endpoint
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-489-2026-03-14`
 - **Priority**: P0
 - **Source**: LGP audit — LH-018
 - **Layer**: 8-PREREQ (must complete before STG-383 refund/void mechanism)
@@ -11527,7 +11527,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-490 — GUARD: Backend credit disbursement endpoint
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-490-2026-03-14`
 - **Priority**: P0
 - **Source**: LGP audit — LH-025
 - **Layer**: 15-PREREQ (must complete before STG-451 credit disbursement)
@@ -11542,7 +11542,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-491 — GUARD: Backend reorder PO submission endpoint
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-491-2026-03-14`
 - **Priority**: P0
 - **Source**: LGP audit — LH-022
 - **Layer**: 14-PREREQ (must complete before STG-421 PO submission flow)
@@ -11557,7 +11557,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-492 — GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge)
 
-- **Status**: OPEN
+- **Status**: PARKED — verified in reiteration, tag `stg-492-2026-03-14`
 - **Priority**: P0
 - **Source**: LGP audit — LH-017
 - **Layer**: 0B (must complete in Layer 0 — this is a financial safety bug)
