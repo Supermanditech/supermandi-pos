@@ -1090,11 +1090,11 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     marginTop: 2,
   },
   productBarcode: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textTertiary,
   },
   productPrice: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     color: colors.success,
   },
@@ -1183,25 +1183,25 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     minHeight: 90,
   },
   previewCellCategory: {
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: "600",
     color: colors.textTertiary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   previewCellName: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     color: colors.textPrimary,
     textAlign: "center",
   },
   previewCellCode: {
-    fontSize: 8,
+    fontSize: 11,
     color: colors.textTertiary,
     letterSpacing: 0.5,
   },
   previewCellPrice: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "800",
     color: colors.success,
   },
@@ -1216,7 +1216,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     paddingVertical: 1,
   },
   copiesBadgeText: {
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: "700",
     color: colors.textInverse,
   },
@@ -1401,7 +1401,7 @@ function createModalStyles(colors: ReturnType<typeof useThemeColors>) { return S
     color: colors.textInverse,
   },
   chipSubtext: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textTertiary,
   },
   chipSubtextActive: {

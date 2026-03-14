@@ -1315,7 +1315,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     paddingVertical: 2,
   },
   outOfStockText: {
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: "700",
     color: colors.textInverse,
   },

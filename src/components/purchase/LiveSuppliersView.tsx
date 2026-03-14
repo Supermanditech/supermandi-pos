@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   moqText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     color: theme.colors.warning,
   },
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   supplierName: {
-    fontSize: 10,
+    fontSize: 11,
     color: theme.colors.textSecondary,
     marginBottom: 1,
   },

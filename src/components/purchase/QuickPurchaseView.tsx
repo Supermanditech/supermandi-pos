@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   newBadgeText: {
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: "700",
     color: theme.colors.textInverse,
   },
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   priceLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     color: theme.colors.textSecondary,
     marginBottom: 2,

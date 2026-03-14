@@ -265,7 +265,7 @@ function InwardItemRow({
           <Text style={styles.itemTotalValue}>{lineTotal}</Text>
         </View>
 
-        <Pressable accessibilityRole="button" style={styles.removeButton} onPress={onRemove}>
+        <Pressable accessibilityLabel="Remove item" accessibilityRole="button" style={styles.removeButton} onPress={onRemove}>
           <MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.error} />
         </Pressable>
       </View>
@@ -556,7 +556,7 @@ export default function InwardScreen({
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
         <View style={styles.headerRow}>
           {onBack && (
-            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
+            <Pressable accessibilityLabel="Go back" accessibilityRole="button" style={styles.backButton} onPress={onBack}>
               <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
             </Pressable>
           )}
@@ -589,13 +589,14 @@ export default function InwardScreen({
             returnKeyType="search"
           />
           {searchQuery ? (
-            <Pressable accessibilityRole="button" onPress={() => setSearchQuery("")} hitSlop={8}>
+            <Pressable accessibilityLabel="Clear search" accessibilityRole="button" onPress={() => setSearchQuery("")} hitSlop={8}>
               <MaterialCommunityIcons name="close-circle" size={18} color={colors.textSecondary} />
             </Pressable>
           ) : null}
         </View>
 
         <Pressable
+          accessibilityLabel="Scan barcode"
           accessibilityRole="button"
           style={[styles.scanButton, scanDisabled && styles.buttonDisabled]}
           onPress={onOpenScanner}
@@ -925,7 +926,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     backgroundColor: colors.errorSoft,
   },
   marketBadgeText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "600",
     color: colors.textSecondary,
   },
