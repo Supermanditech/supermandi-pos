@@ -629,6 +629,13 @@ export default function EnrollDeviceScreen() {
         <View style={styles.enrollErrorBanner} testID="enroll-error-banner" accessibilityRole="alert">
           <MaterialCommunityIcons name="alert-circle" size={16} color={tc.error} />
           <Text style={styles.enrollErrorText}>{enrollError}</Text>
+          {/* STG-025: Support link shown on error */}
+          <Pressable
+            onPress={() => Linking.openURL("https://wa.me/918600001234?text=Hi%20SuperMandi%2C%20I%20need%20help%20with%20POS%20activation")}
+            hitSlop={8}
+          >
+            <Text style={styles.errorSupportLink}>Contact Support</Text>
+          </Pressable>
         </View>
       ) : null}
 
@@ -654,6 +661,27 @@ export default function EnrollDeviceScreen() {
             WhatsApp us
           </Text>
         </Text>
+        {/* STG-025: Support contact info on activation screen */}
+        <View style={styles.supportContactRow}>
+          <Pressable
+            style={styles.supportWhatsAppButton}
+            onPress={() => Linking.openURL("https://wa.me/918600001234?text=Hi%20SuperMandi%2C%20I%20need%20help")}
+            accessibilityRole="link"
+            accessibilityLabel="Contact support via WhatsApp"
+          >
+            <MaterialCommunityIcons name="whatsapp" size={18} color="#25D366" />
+            <Text style={[styles.supportButtonText, { color: "#25D366" }]}>WhatsApp Support</Text>
+          </Pressable>
+          <Pressable
+            style={styles.supportPhoneButton}
+            onPress={() => Linking.openURL("tel:+918600001234")}
+            accessibilityRole="link"
+            accessibilityLabel="Call support"
+          >
+            <MaterialCommunityIcons name="phone" size={16} color={tc.primary} />
+            <Text style={[styles.supportButtonText, { color: tc.primary }]}>+91 8600001234</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* LIVE.POS.BUILDSTAMP.RUNTIME_GCP_PARITY.001: DEV-only section, theme-aware */}
@@ -1015,6 +1043,46 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     fontSize: 11,
     color: colors.textTertiary,
     lineHeight: 16,
+  },
+  // STG-025: Support contact styles
+  supportContactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  supportWhatsAppButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: "#25D36610",
+  },
+  supportPhoneButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: colors.primarySoft ?? colors.primary + "10",
+  },
+  supportButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  errorSupportLink: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.primary,
+    marginTop: 4,
+    textDecorationLine: "underline",
   },
   devSection: {
     marginTop: spacing.lg,

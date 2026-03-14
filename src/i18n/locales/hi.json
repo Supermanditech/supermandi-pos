@@ -184,7 +184,8 @@
     "reorder": "रीऑर्डर",
     "reorderOn": "रीऑर्डर • चालू",
     "reorderOff": "रीऑर्डर • बंद",
-    "credit": "क्रेडिट"
+    "credit": "क्रेडिट",
+    "creditComingSoon": "क्रेडिट सुविधा जल्द आ रही है"
   },
   "purchase": {
     "title": "खरीद",
@@ -354,7 +355,19 @@
     "cartItemWarning": "कार्ट में {{count}} आइटम हैं। प्रदर्शन प्रभावित हो सकता है।",
     "cartItemLimitTitle": "कार्ट आइटम सीमा",
     "cartItemLimitMessage": "कार्ट {{limit}} आइटम से अधिक नहीं हो सकता। कृपया पहले मौजूदा आइटम का चेकआउट करें।",
-    "cartItemLimitReached": "अधिकतम {{limit}} आइटम पहुँच गए"
+    "cartItemLimitReached": "अधिकतम {{limit}} आइटम पहुँच गए",
+    "recentBills": "हाल के बिल",
+    "noRecentBills": "अभी तक कोई हाल का बिल नहीं",
+    "shareCart": "कार्ट शेयर करें",
+    "shareCartViaWhatsApp": "WhatsApp से शेयर करें",
+    "floatingTotalItems": "{{count}} आइटम",
+    "floatingTotalAmount": "कुल: {{amount}}",
+    "addCustomerName": "ग्राहक का नाम",
+    "addCustomerPhone": "फ़ोन नंबर",
+    "customerNamePlaceholder": "ग्राहक का नाम दर्ज करें",
+    "customerPhonePlaceholder": "फ़ोन नंबर दर्ज करें",
+    "quickQtyPlus": "+",
+    "quickQtyMinus": "-"
   },
   "limitedMode": {
     "badge": "सीमित मोड",
@@ -747,7 +760,10 @@
     "enrollDevice": "डिवाइस एनरोल करें",
     "enrolling": "एनरोल हो रहा है",
     "enrollSuccess": "डिवाइस सफलतापूर्वक एनरोल हुआ!",
-    "enrollFailed": "एनरोलमेंट विफल"
+    "enrollFailed": "एनरोलमेंट विफल",
+    "supportContact": "मदद चाहिए? सहायता से संपर्क करें",
+    "supportPhone": "+91 8600001234",
+    "whatsAppSupport": "WhatsApp सहायता"
   },
   "status": {
     "storeInactive": "POS निष्क्रिय है। बिलिंग शुरू करने के लिए सेटिंग्स में UPI ID जोड़ें।",
@@ -1501,7 +1517,9 @@
     "refundIdLabel": "रिफंड ID",
     "returnRef": "वापसी #{{ref}}",
     "stockReversedNote": "स्टॉक सर्वर-साइड पर वापस कर दिया गया है।",
-    "processAnotherReturn": "एक और वापसी करें"
+    "processAnotherReturn": "एक और वापसी करें",
+    "returnQty": "-{{qty}}",
+    "returnAmount": "-{{amount}}"
   },
   "voice": {
     "tapToSpeak": "बोलने के लिए टैप करें",
@@ -1555,7 +1573,11 @@
     "parkedCarts": "पार्क किए गए कार्ट ({{count}})",
     "maxParkedCarts": "अधिकतम 3 पार्क किए गए कार्ट। पहले एक को फिर से शुरू करें या साफ़ करें।",
     "parkedCartItems": "{{count}} आइटम",
-    "noParkedCarts": "कोई पार्क किया गया कार्ट नहीं"
+    "noParkedCarts": "कोई पार्क किया गया कार्ट नहीं",
+    "shareCartTitle": "कार्ट सारांश",
+    "shareCartLine": "{{name}} x{{qty}} - {{price}}",
+    "shareCartTotal": "कुल: {{total}}",
+    "shareCartFooter": "SuperMandi POS से शेयर किया गया"
   },
   "device": {
     "typePhone": "फ़ोन",

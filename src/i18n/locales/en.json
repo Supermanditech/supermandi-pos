@@ -184,7 +184,8 @@
     "reorder": "Reorder",
     "reorderOn": "Reorder • On",
     "reorderOff": "Reorder • Off",
-    "credit": "Credit"
+    "credit": "Credit",
+    "creditComingSoon": "Credit feature is coming soon"
   },
   "purchase": {
     "title": "Purchase",
@@ -354,7 +355,19 @@
     "cartItemWarning": "Cart has {{count}} items. Performance may be affected.",
     "cartItemLimitTitle": "Cart Item Limit",
     "cartItemLimitMessage": "Cart cannot exceed {{limit}} items. Please checkout current items first.",
-    "cartItemLimitReached": "Maximum {{limit}} items reached"
+    "cartItemLimitReached": "Maximum {{limit}} items reached",
+    "recentBills": "Recent Bills",
+    "noRecentBills": "No recent bills yet",
+    "shareCart": "Share Cart",
+    "shareCartViaWhatsApp": "Share via WhatsApp",
+    "floatingTotalItems": "{{count}} items",
+    "floatingTotalAmount": "Total: {{amount}}",
+    "addCustomerName": "Customer Name",
+    "addCustomerPhone": "Phone Number",
+    "customerNamePlaceholder": "Enter customer name",
+    "customerPhonePlaceholder": "Enter phone number",
+    "quickQtyPlus": "+",
+    "quickQtyMinus": "-"
   },
   "limitedMode": {
     "badge": "LIMITED MODE",
@@ -747,7 +760,10 @@
     "enrollDevice": "Enroll Device",
     "enrolling": "Enrolling...",
     "enrollSuccess": "Device enrolled successfully!",
-    "enrollFailed": "Enrollment failed"
+    "enrollFailed": "Enrollment failed",
+    "supportContact": "Need help? Contact support",
+    "supportPhone": "+91 8600001234",
+    "whatsAppSupport": "WhatsApp Support"
   },
   "status": {
     "storeInactive": "POS is inactive. Add your UPI ID in settings to start billing.",
@@ -1460,7 +1476,9 @@
     "refundIdLabel": "Refund ID",
     "returnRef": "Return #{{ref}}",
     "stockReversedNote": "Stock has been reversed server-side.",
-    "processAnotherReturn": "Process Another Return"
+    "processAnotherReturn": "Process Another Return",
+    "returnQty": "-{{qty}}",
+    "returnAmount": "-{{amount}}"
   },
   "orderDetail": {
     "title": "Order Details",
@@ -1555,7 +1573,11 @@
     "parkedCarts": "Parked Carts ({{count}})",
     "maxParkedCarts": "Maximum 3 parked carts. Resume or clear one first.",
     "parkedCartItems": "{{count}} items",
-    "noParkedCarts": "No parked carts"
+    "noParkedCarts": "No parked carts",
+    "shareCartTitle": "Cart Summary",
+    "shareCartLine": "{{name}} x{{qty}} - {{price}}",
+    "shareCartTotal": "Total: {{total}}",
+    "shareCartFooter": "Shared from SuperMandi POS"
   },
   "device": {
     "typePhone": "Phone",

@@ -1293,9 +1293,13 @@ export default function PosRootLayout() {
                 }
                 // UI-REVEAL: Show toast for feature-disabled tabs instead of hiding them
                 if (isFeatureDisabled) {
-                  // STG-246: Show "Coming Soon" for Credit, specific messages for others
-                  const featureName = isCredit ? "Credit (Coming Soon)" : isPurchase ? "Purchase Orders" : "Reorder";
-                  showToast(`${featureName} is not enabled for this store`);
+                  // STG-030 + STG-246: Show "Coming Soon" for Credit, specific messages for others
+                  if (isCredit) {
+                    showToast(t("tabs.creditComingSoon", "Credit feature is coming soon"));
+                  } else {
+                    const featureName = isPurchase ? "Purchase Orders" : "Reorder";
+                    showToast(`${featureName} is not enabled for this store`);
+                  }
                   return;
                 }
                 setSelectedMode(tab.id);

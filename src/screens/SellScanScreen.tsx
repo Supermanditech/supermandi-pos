@@ -10,6 +10,7 @@ import {
   GestureResponderEvent,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   PanResponder,
   Platform,
@@ -79,6 +80,8 @@ import { PRODUCTS_PAGE_SIZE, MAX_PAGINATION_PAGE } from "../config/pagination";
 import { showToast } from "../utils/showToast";
 import * as searchHistory from "../services/searchHistory";
 import { asError } from "../utils/errorUtils";
+// STG-034: Recent bills stored in AsyncStorage
+import AsyncStorage from "@react-native-async-storage/async-storage";
 // STG-102: Staff session for discount limits + manager PIN verification
 import { useStaffSessionStore } from "../stores/staffSessionStore";
 import { verifyManagerPin } from "../services/api/staffApi";
@@ -1040,6 +1043,30 @@ export default function SellScanScreen({
   // STG-375: Undo removal countdown
   const [undoCountdown, setUndoCountdown] = useState<number>(0);
   const undoCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // STG-034: Recent bills state
+  const [recentBills, setRecentBills] = useState<Array<{ id: string; billRef: string; totalMinor: number; createdAt: string }>>([]);
+  const RECENT_BILLS_KEY = "recent_bills";
+
+  // STG-034: Load recent bills on mount
+  useEffect(() => {
+    AsyncStorage.getItem(RECENT_BILLS_KEY).then((data) => {
+      if (data) {
+        try { setRecentBills(JSON.parse(data)); } catch { /* ignore */ }
+      }
+    }).catch(() => {});
+  }, []);
+
+  // STG-016: Floating total bar animation
+  const floatingBarAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(floatingBarAnim, {
+      toValue: items.length > 0 ? 1 : 0,
+      duration: 250,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  }, [items.length > 0, floatingBarAnim]);
 
   // STG-392: DB health check on mount
   useEffect(() => {
@@ -3606,6 +3633,33 @@ export default function SellScanScreen({
     }
   }, [syncStore, t]);
 
+  // STG-136: Share cart via WhatsApp
+  const handleShareCart = useCallback(() => {
+    if (items.length === 0) return;
+    const lines = items.map((item) => {
+      const lineTotal = item.priceMinor * item.quantity;
+      return t("cart.shareCartLine", "{{name}} x{{qty}} - {{price}}", {
+        name: item.name,
+        qty: item.quantity,
+        price: formatMoney(lineTotal, currency),
+      });
+    });
+    const totalLine = t("cart.shareCartTotal", "Total: {{total}}", { total: totalLabel });
+    const footer = t("cart.shareCartFooter", "Shared from SuperMandi POS");
+    const message = [
+      t("cart.shareCartTitle", "Cart Summary"),
+      "",
+      ...lines,
+      "",
+      totalLine,
+      footer,
+    ].join("\n");
+    const encoded = encodeURIComponent(message);
+    Linking.openURL(`whatsapp://send?text=${encoded}`).catch(() => {
+      showToast("WhatsApp not installed");
+    });
+  }, [items, currency, totalLabel, t]);
+
   const handleCheckout = () => {
     // STG-340: Show toast identifying problematic item when checkout blocked by price error
     if (hasUnresolvedPriceError) {
@@ -5485,6 +5539,68 @@ export default function SellScanScreen({
             </View>
           </View>
         </Modal>
+      ) : null}
+
+      {/* STG-016: Floating total bar when items added */}
+      {items.length > 0 && !cartExpanded ? (
+        <Animated.View
+          style={[
+            styles.floatingTotalBar,
+            {
+              opacity: floatingBarAnim,
+              transform: [{ translateY: floatingBarAnim.interpolate({ inputRange: [0, 1], outputRange: [60, 0] }) }],
+            },
+          ]}
+          pointerEvents="box-none"
+        >
+          <Pressable
+            accessibilityRole="button"
+            style={styles.floatingTotalBarContent}
+            onPress={() => setCartExpanded(true)}
+            accessibilityLabel={`${itemCount} items, ${totalLabel}`}
+          >
+            <View style={styles.floatingTotalLeft}>
+              <MaterialCommunityIcons name="cart" size={18} color={colors.surface} />
+              <Text style={styles.floatingTotalItemCount}>
+                {t("sell.floatingTotalItems", "{{count}} items", { count: itemCount })}
+              </Text>
+            </View>
+            <Text style={styles.floatingTotalAmount}>{totalLabel}</Text>
+            {/* STG-136: Share cart via WhatsApp button */}
+            <Pressable
+              accessibilityRole="button"
+              onPress={(e) => { e.stopPropagation(); handleShareCart(); }}
+              hitSlop={8}
+              style={styles.floatingShareButton}
+              accessibilityLabel={t("sell.shareCartViaWhatsApp")}
+            >
+              <MaterialCommunityIcons name="whatsapp" size={20} color={colors.surface} />
+            </Pressable>
+          </Pressable>
+        </Animated.View>
+      ) : null}
+
+      {/* STG-034: Recent bills shortcut */}
+      {items.length === 0 && recentBills.length > 0 && !addExpanded ? (
+        <View style={styles.recentBillsSection}>
+          <Text style={styles.recentBillsTitle}>{t("sell.recentBills", "Recent Bills")}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recentBillsScroll} keyboardShouldPersistTaps="handled">
+            {recentBills.slice(0, 5).map((bill) => (
+              <Pressable
+                key={bill.id}
+                accessibilityRole="button"
+                style={styles.recentBillChip}
+                onPress={() => navigation.navigate("BillDetail" as any, { saleId: bill.id })}
+              >
+                <Text style={styles.recentBillRef} numberOfLines={1}>{bill.billRef}</Text>
+                <Text style={styles.recentBillAmount}>{formatMoney(bill.totalMinor, "INR")}</Text>
+                <Text style={styles.recentBillTime}>
+                  {new Date(bill.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
       ) : null}
 
       {/* STG-387: Floating Sync Now button */}
@@ -7797,5 +7913,87 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     fontSize: 13,
     fontWeight: "600",
     color: colors.surface,
+  },
+  // STG-016: Floating total bar styles
+  floatingTotalBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 5,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+  },
+  floatingTotalBarContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    ...theme.shadows.md,
+  },
+  floatingTotalLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  floatingTotalItemCount: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.surface,
+  },
+  floatingTotalAmount: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.surface,
+  },
+  // STG-136: Share button in floating bar
+  floatingShareButton: {
+    padding: 6,
+    marginLeft: 8,
+  },
+  // STG-034: Recent bills section
+  recentBillsSection: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  recentBillsTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.textSecondary,
+    marginBottom: 6,
+  },
+  recentBillsScroll: {
+    gap: 8,
+  },
+  recentBillChip: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 90,
+    alignItems: "center",
+  },
+  recentBillRef: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.primary,
+    maxWidth: 100,
+  },
+  recentBillAmount: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    marginTop: 2,
+  },
+  recentBillTime: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    marginTop: 2,
   },
 }); }

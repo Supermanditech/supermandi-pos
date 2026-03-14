@@ -1,11 +1,11 @@
 {
-  "version": 11,
+  "version": 12,
   "last_updated": "2026-03-14",
   "last_commit_sha": "pending",
   "total_tickets": 501,
-  "tickets_done": 340,
-  "tickets_remaining": 161,
-  "current_layer": 16,
+  "tickets_done": 350,
+  "tickets_remaining": 151,
+  "current_layer": 17,
   "current_ticket": null,
   "status": "READY_FOR_NEXT_LAYER",
   "layers": [
@@ -26,8 +26,8 @@
     { "layer": 14, "name": "REORDER System", "tickets": 29, "done": 0, "status": "PENDING" },
     { "layer": 15, "name": "CREDIT & BNPL System", "tickets": 25, "done": 25, "status": "COMPLETE" },
     { "layer": 16, "name": "Sync, Offline, Device, Layout", "tickets": 17, "done": 17, "status": "COMPLETE" },
-    { "layer": 17, "name": "Nice-to-Have & P3 Polish", "tickets": 14, "done": 0, "status": "PENDING" },
+    { "layer": 17, "name": "Nice-to-Have & P3 Polish", "tickets": 14, "done": 14, "status": "COMPLETE" },
     { "layer": 18, "name": "E2E Tests & Regression Guards", "tickets": 3, "done": 0, "status": "PENDING" }
   ],
-  "notes": "Layer 16 complete — 17 tickets (Sync, Offline, Device, Layout). STG-387/388 push-based stock sync + conflict dialog. STG-389-392 offline queue expiry, price refresh, checkout confirmation, SQLite health. STG-393/394 device type detection + touch targets. STG-395-398 responsive columns, cart snap points, safe area, modal max-width. STG-373/375/376/402/403 cart sheet sizing, undo countdown, parked carts, search expiry, animation throttle."
+  "notes": "Layer 17 complete — Nice-to-Have & P3 Polish (14 tickets). STG-034 recent bills shortcut with AsyncStorage. STG-016 floating total bar with animation. STG-136 share cart via WhatsApp. STG-139 return negative line items with red visual treatment. STG-030 credit tab coming-soon i18n toast. STG-025 support contact on EnrollDevice + ForceUpdate screens. STG-037/103 customer info (already done). STG-104/376 park/hold bill (already done). STG-031 quick +/- buttons (already done). STG-024 QR scan camera (already done). STG-038/039/040/066 skipped (invalid/covered)."
 }

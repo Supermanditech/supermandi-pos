@@ -256,6 +256,28 @@ export default function ForceUpdateScreen() {
       flexDirection: "row",
       alignItems: "center",
     },
+    // STG-025: Support contact row
+    supportRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.md,
+      marginTop: spacing.lg,
+      paddingTop: spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    supportLink: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+    },
+    supportLinkText: {
+      fontSize: 12,
+      fontWeight: "600",
+    },
     iosNote: {
       ...typography.caption,
       color: colors.textSecondary,
@@ -354,6 +376,28 @@ export default function ForceUpdateScreen() {
             <Text style={styles.secondaryButtonText}>Check Again</Text>
           )}
         </Pressable>
+
+        {/* STG-025: Support contact on error/blocked screens */}
+        <View style={styles.supportRow}>
+          <Pressable
+            style={styles.supportLink}
+            onPress={() => Linking.openURL("https://wa.me/918600001234?text=Hi%20SuperMandi%2C%20I%20need%20help%20updating%20my%20POS%20app")}
+            accessibilityRole="link"
+            accessibilityLabel="Contact support via WhatsApp"
+          >
+            <MaterialCommunityIcons name="whatsapp" size={16} color="#25D366" />
+            <Text style={[styles.supportLinkText, { color: "#25D366" }]}>WhatsApp Support</Text>
+          </Pressable>
+          <Pressable
+            style={styles.supportLink}
+            onPress={() => Linking.openURL("tel:+918600001234")}
+            accessibilityRole="link"
+            accessibilityLabel="Call support"
+          >
+            <MaterialCommunityIcons name="phone" size={14} color={colors.primary} />
+            <Text style={[styles.supportLinkText, { color: colors.primary }]}>+91 8600001234</Text>
+          </Pressable>
+        </View>
       </View>
     </ScrollView>
     </SafeAreaView>

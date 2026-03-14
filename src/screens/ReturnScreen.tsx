@@ -513,6 +513,28 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
       fontWeight: "600",
       color: colors.textPrimary,
     },
+    // STG-139: Negative visual treatment for return items
+    returnItemNegative: {
+      color: colors.error,
+    },
+    returnAmountNegative: {
+      color: colors.error,
+      fontWeight: "700",
+    },
+    // STG-139: Selected item card with return indication
+    itemCardSelected: {
+      borderColor: colors.error,
+      backgroundColor: colors.errorSoft,
+    },
+    itemNameSelected: {
+      color: colors.error,
+    },
+    returnLineNegative: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.error,
+      marginTop: 2,
+    },
     refundTotalRow: {
       flexDirection: "row",
       justifyContent: "space-between",
@@ -696,16 +718,23 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
           <Text style={styles.sectionTitle}>{t("returnScreen.selectItemsToReturn")}</Text>
           {sale.items.map((item) => {
             const returnQty = returnQuantities[item.id] || 0;
+            const isSelected = returnQty > 0;
             return (
-              <View key={item.id} style={styles.itemCard}>
+              <View key={item.id} style={[styles.itemCard, isSelected && styles.itemCardSelected]}>
                 <View style={styles.itemInfo}>
-                  <Text style={styles.itemName} numberOfLines={2}>
+                  <Text style={[styles.itemName, isSelected && styles.itemNameSelected]} numberOfLines={2}>
                     {item.productName}
                   </Text>
                   <Text style={styles.itemMeta}>
                     {t("returnScreen.qtyPrefix")}: {item.quantity} x {formatMoney(item.priceMinor)} ={" "}
                     {formatMoney(item.totalMinor)}
                   </Text>
+                  {/* STG-139: Show return amount as negative when selected */}
+                  {isSelected ? (
+                    <Text style={styles.returnLineNegative}>
+                      Return: -{returnQty} = -{formatMoney(item.priceMinor * returnQty)}
+                    </Text>
+                  ) : null}
                 </View>
                 <View style={styles.qtyPicker}>
                   <Pressable
@@ -820,26 +849,28 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
             ))}
           </View>
 
-          {/* Summary */}
+          {/* Summary — STG-139: Show return items as negative line items */}
           {selectedItems.length > 0 && (
             <View style={styles.refundSummary}>
               <Text style={styles.refundSummaryTitle}>{t("returnScreen.refundSummary")}</Text>
-              {selectedItems.map((item) => (
-                <View key={item.id} style={styles.refundSummaryRow}>
-                  <Text style={styles.refundSummaryItem} numberOfLines={1}>
-                    {item.productName} x {returnQuantities[item.id]}
-                  </Text>
-                  <Text style={styles.refundSummaryAmount}>
-                    {formatMoney(
-                      item.priceMinor * (returnQuantities[item.id] || 0)
-                    )}
-                  </Text>
-                </View>
-              ))}
+              {selectedItems.map((item) => {
+                const returnQty = returnQuantities[item.id] || 0;
+                const returnAmountMinor = item.priceMinor * returnQty;
+                return (
+                  <View key={item.id} style={styles.refundSummaryRow}>
+                    <Text style={[styles.refundSummaryItem, styles.returnItemNegative]} numberOfLines={1}>
+                      {item.productName} x {t("returnScreen.returnQty", "-{{qty}}", { qty: returnQty })}
+                    </Text>
+                    <Text style={[styles.refundSummaryAmount, styles.returnAmountNegative]}>
+                      {t("returnScreen.returnAmount", "-{{amount}}", { amount: formatMoney(returnAmountMinor) })}
+                    </Text>
+                  </View>
+                );
+              })}
               <View style={styles.refundTotalRow}>
                 <Text style={styles.refundTotalLabel}>{t("returnScreen.totalRefund")}</Text>
                 <Text style={styles.refundTotalAmount}>
-                  {formatMoney(refundTotal)}
+                  -{formatMoney(refundTotal)}
                 </Text>
               </View>
             </View>
