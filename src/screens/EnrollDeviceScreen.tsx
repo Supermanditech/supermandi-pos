@@ -538,7 +538,7 @@ export default function EnrollDeviceScreen() {
 
       {/* Manual Code Input */}
       <View style={styles.inputSection}>
-        <Text style={styles.label}>Activation Code</Text>
+        <Text style={styles.label}>Activation Code <Text style={styles.requiredMark}>*</Text></Text>
         <TextInput
           style={[
             styles.codeInput,
@@ -1131,10 +1131,10 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   devWarning: {
     marginTop: spacing.sm,
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textSecondary,
     fontStyle: "italic",
-    lineHeight: 14,
+    lineHeight: 15,
   },
   versionRow: {
     marginTop: spacing.lg,
