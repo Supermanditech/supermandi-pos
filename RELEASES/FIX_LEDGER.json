@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 61,
+  "version": 62,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -3013,8 +3013,8 @@
     {
       "ticket": "STG-341",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 1143,
-      "end_line": 1146,
+      "start_line": 1159,
+      "end_line": 1162,
       "checksum": "c7853e042cf2d428",
       "description": "Category rail always visible — removed feature flag gate",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3048,13 +3048,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:04:09.505Z"
+      "line_shifted_at": "2026-03-14T01:30:43.955Z"
     },
     {
       "ticket": "STG-133",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 1588,
-      "end_line": 1595,
+      "start_line": 1604,
+      "end_line": 1611,
       "checksum": "57a699d47d129b0d",
       "description": "Dynamic cart sheet height based on item count (2/5/max tiers)",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3089,13 +3089,13 @@
         "test_guard": "N/A — POS UI batch fix",
         "wiring": "N/A — POS UI display change only"
       },
-      "line_shifted_at": "2026-03-14T01:04:09.522Z"
+      "line_shifted_at": "2026-03-14T01:30:43.971Z"
     },
     {
       "ticket": "STG-370",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 2641,
-      "end_line": 2681,
+      "start_line": 2716,
+      "end_line": 2756,
       "checksum": "50932b627cbce26a",
       "description": "Await cart add + catch storage failures with toast + enhanced metadata",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3129,13 +3129,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:04:09.576Z"
+      "line_shifted_at": "2026-03-14T01:30:44.021Z"
     },
     {
       "ticket": "STG-400",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 596,
-      "end_line": 614,
+      "start_line": 599,
+      "end_line": 617,
       "checksum": "310a1562e5631250",
       "description": "Max per-item qty cap of 9999 — prevents large number input",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3169,7 +3169,7 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:04:09.587Z"
+      "line_shifted_at": "2026-03-14T01:30:44.034Z"
     },
     {
       "ticket": "STG-369",
@@ -3213,8 +3213,8 @@
     {
       "ticket": "STG-101",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 1520,
-      "end_line": 1531,
+      "start_line": 1536,
+      "end_line": 1547,
       "checksum": "15098102a629cefd",
       "description": "GST/tax line in cart totals — inclusive GST computed from catalog items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3248,13 +3248,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:04:09.602Z"
+      "line_shifted_at": "2026-03-14T01:30:44.050Z"
     },
     {
       "ticket": "STG-111",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4166,
-      "end_line": 4181,
+      "start_line": 4255,
+      "end_line": 4270,
       "checksum": "144b0fa97308c1d2",
       "description": "You save display when discount applied",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3288,13 +3288,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:04:09.645Z"
+      "line_shifted_at": "2026-03-14T01:30:44.091Z"
     },
     {
       "ticket": "STG-029",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3692,
-      "end_line": 3712,
+      "start_line": 3767,
+      "end_line": 3787,
       "checksum": "58246a072b99ba48",
       "description": "Add Product footer button for unlisted items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3328,13 +3328,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:04:09.689Z"
+      "line_shifted_at": "2026-03-14T01:30:44.137Z"
     },
     {
       "ticket": "STG-028",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3713,
-      "end_line": 3718,
+      "start_line": 3788,
+      "end_line": 3793,
       "checksum": "e92d22c8a851d762",
       "description": "Product count footer for section context",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3368,13 +3368,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:04:09.709Z"
+      "line_shifted_at": "2026-03-14T01:30:44.159Z"
     },
     {
       "ticket": "STG-108",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3940,
-      "end_line": 3947,
+      "start_line": 4015,
+      "end_line": 4022,
       "checksum": "b5fd8d1c5f74c809",
       "description": "Empty space guidance in cart when few items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3407,13 +3407,14 @@
         "gcp_parity": "N/A — POS UI batch fix",
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
-      }
+      },
+      "line_shifted_at": "2026-03-14T01:30:44.183Z"
     },
     {
       "ticket": "STG-107",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 682,
-      "end_line": 685,
+      "start_line": 685,
+      "end_line": 688,
       "checksum": "6caceaf398dbabc2",
       "description": "Product thumbnail image in cart items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3447,13 +3448,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:04:09.749Z"
+      "line_shifted_at": "2026-03-14T01:30:44.192Z"
     },
     {
       "ticket": "STG-138",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 692,
-      "end_line": 695,
+      "start_line": 695,
+      "end_line": 698,
       "checksum": "755afb745239018b",
       "description": "Weight/unit label in cart items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3487,13 +3488,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T01:04:09.756Z"
+      "line_shifted_at": "2026-03-14T01:30:44.198Z"
     },
     {
       "ticket": "STG-033",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3617,
-      "end_line": 3655,
+      "start_line": 3692,
+      "end_line": 3730,
       "checksum": "ee8a6d3e34a1786a",
       "description": "Quick-sell favorites horizontal strip above product grid",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3528,7 +3529,8 @@
         "gcp_parity": "POS-only UI change",
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
-      }
+      },
+      "line_shifted_at": "2026-03-14T01:30:44.259Z"
     },
     {
       "ticket": "STG-103",
@@ -3570,8 +3572,8 @@
     {
       "ticket": "STG-103-UI",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4080,
-      "end_line": 4135,
+      "start_line": 4169,
+      "end_line": 4224,
       "checksum": "093e568b1644701e",
       "description": "Customer name/phone UI section in cart footer",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3606,13 +3608,14 @@
         "gcp_parity": "POS-only UI change",
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
-      }
+      },
+      "line_shifted_at": "2026-03-14T01:30:44.351Z"
     },
     {
       "ticket": "STG-112",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4136,
-      "end_line": 4165,
+      "start_line": 4225,
+      "end_line": 4254,
       "checksum": "30e1aa68c17e84fe",
       "description": "Order note/memo expandable field in cart footer",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3647,13 +3650,14 @@
         "gcp_parity": "POS-only UI change",
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
-      }
+      },
+      "line_shifted_at": "2026-03-14T01:30:44.407Z"
     },
     {
       "ticket": "STG-128",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 855,
-      "end_line": 878,
+      "start_line": 858,
+      "end_line": 881,
       "checksum": "08c805a341db5d34",
       "description": "Batch/expiry info display in cart items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3688,13 +3692,14 @@
         "gcp_parity": "POS-only UI change",
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
-      }
+      },
+      "line_shifted_at": "2026-03-14T01:30:44.421Z"
     },
     {
       "ticket": "STG-134",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 897,
-      "end_line": 930,
+      "start_line": 900,
+      "end_line": 933,
       "checksum": "9606aa6dcdca6d26",
       "description": "Swipe-to-delete gesture on cart items with undo",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3729,13 +3734,14 @@
         "gcp_parity": "POS-only UI change",
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
-      }
+      },
+      "line_shifted_at": "2026-03-14T01:30:44.439Z"
     },
     {
       "ticket": "STG-131",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3907,
-      "end_line": 3937,
+      "start_line": 3982,
+      "end_line": 4012,
       "checksum": "6c9fcab497b82b40",
       "description": "Frequently bought together suggestions in cart footer",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3770,7 +3776,8 @@
         "gcp_parity": "POS-only UI change",
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
-      }
+      },
+      "line_shifted_at": "2026-03-14T01:30:44.516Z"
     },
     {
       "ticket": "STG-487",
@@ -3850,6 +3857,47 @@
         "gcp_parity": "DONE",
         "regression_check": "DONE",
         "test_guard": "DONE"
+      }
+    },
+    {
+      "ticket": "STG-102",
+      "file": "src/screens/SellScanScreen.tsx",
+      "start_line": 2617,
+      "end_line": 2689,
+      "checksum": "5759ea81bda6bdec",
+      "description": "Discount limit check + manager approval modal — blocks discounts over maxDiscountPct without manager PIN",
+      "test_file": "src/__tests__/stores/staffSessionStore.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "business_logic": "N/A",
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "registered_at": "2026-03-14T01:30:37.222Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "operator_approved": "DONE",
+        "parity_scanned": "DONE",
+        "parity_fixed": "DONE",
+        "gcp_parity": "DONE",
+        "regression_check": "DONE",
+        "test_guard": "DONE",
+        "ui_elements": "DONE",
+        "ux_states": "DONE",
+        "wiring": "DONE",
+        "navigation": "DONE"
       }
     }
   ],

@@ -9,6 +9,7 @@ type StaffSession = {
   staffId: string;
   name: string;
   role: StaffRole;
+  maxDiscountPct: number; // STG-102: Store's max discount % for this staff role
 };
 
 type StaffSessionState = {

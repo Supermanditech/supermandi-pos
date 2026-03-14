@@ -19,7 +19,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import NetInfo from "@react-native-community/netinfo";
 import { theme, useThemeColors } from "../theme";
-import { staffLogin } from "../services/api/staffApi";
+import { staffLogin, staffMe } from "../services/api/staffApi";
 import { useStaffSessionStore } from "../stores/staffSessionStore";
 import type { StaffRole } from "../stores/staffSessionStore";
 import { clearDeviceSession } from "../services/deviceSession";
@@ -111,10 +111,19 @@ export default function StaffLoginScreen({ storeName, onSwitchStore }: Props) {
       // STG-162: Send normalized 10-digit phone (strip +91/91 prefix) since DB stores 10-digit
       const result = await staffLogin({ phone: phone10, pin: trimmedPin });
       failCountRef.current = 0;
+      // STG-102: Fetch max discount limit from /staff/me after login
+      let maxDiscountPct = 100; // Default: no limit
+      try {
+        const meResult = await staffMe();
+        maxDiscountPct = meResult.maxDiscountPct;
+      } catch {
+        // Non-blocking: if /me fails, default to 100% (no limit)
+      }
       setSession({
         staffId: result.staffId,
         name: result.name,
         role: result.role as StaffRole,
+        maxDiscountPct,
       });
     } catch (err: any) {
       // ISSUE-081: Increase cooldown on repeated failures

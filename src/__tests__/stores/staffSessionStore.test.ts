@@ -31,7 +31,7 @@ describe('staffSessionStore', () => {
 
   describe('setSession', () => {
     it('sets CASHIER session', () => {
-      store.getState().setSession({ staffId: 's1', name: 'Raju', role: 'CASHIER' });
+      store.getState().setSession({ staffId: 's1', name: 'Raju', role: 'CASHIER', maxDiscountPct: 100 });
 
       const session = store.getState().session;
       expect(session).not.toBeNull();
@@ -41,18 +41,18 @@ describe('staffSessionStore', () => {
     });
 
     it('sets STOCK_MANAGER session', () => {
-      store.getState().setSession({ staffId: 's2', name: 'Priya', role: 'STOCK_MANAGER' });
+      store.getState().setSession({ staffId: 's2', name: 'Priya', role: 'STOCK_MANAGER', maxDiscountPct: 100 });
       expect(store.getState().session!.role).toBe('STOCK_MANAGER');
     });
 
     it('sets MANAGER session', () => {
-      store.getState().setSession({ staffId: 's3', name: 'Amit', role: 'MANAGER' });
+      store.getState().setSession({ staffId: 's3', name: 'Amit', role: 'MANAGER', maxDiscountPct: 100 });
       expect(store.getState().session!.role).toBe('MANAGER');
     });
 
     it('replaces existing session', () => {
-      store.getState().setSession({ staffId: 's1', name: 'Raju', role: 'CASHIER' });
-      store.getState().setSession({ staffId: 's2', name: 'Priya', role: 'MANAGER' });
+      store.getState().setSession({ staffId: 's1', name: 'Raju', role: 'CASHIER', maxDiscountPct: 100 });
+      store.getState().setSession({ staffId: 's2', name: 'Priya', role: 'MANAGER', maxDiscountPct: 100 });
 
       const session = store.getState().session;
       expect(session!.staffId).toBe('s2');
@@ -62,7 +62,7 @@ describe('staffSessionStore', () => {
 
   describe('clearSession', () => {
     it('sets session to null', () => {
-      store.getState().setSession({ staffId: 's1', name: 'Raju', role: 'CASHIER' });
+      store.getState().setSession({ staffId: 's1', name: 'Raju', role: 'CASHIER', maxDiscountPct: 100 });
       store.getState().clearSession();
       expect(store.getState().session).toBeNull();
     });

@@ -79,6 +79,9 @@ import { PRODUCTS_PAGE_SIZE, MAX_PAGINATION_PAGE } from "../config/pagination";
 import { showToast } from "../utils/showToast";
 import * as searchHistory from "../services/searchHistory";
 import { asError } from "../utils/errorUtils";
+// STG-102: Staff session for discount limits + manager PIN verification
+import { useStaffSessionStore } from "../stores/staffSessionStore";
+import { verifyManagerPin } from "../services/api/staffApi";
 
 type CartMode = "SELL" | "PURCHASE";
 
@@ -1136,6 +1139,19 @@ export default function SellScanScreen({
   const [editProductName, setEditProductName] = useState("");
   const [editProductBusy, setEditProductBusy] = useState(false);
   const [editProductError, setEditProductError] = useState<string | null>(null);
+
+  // STG-102: Discount limit + manager approval state
+  const staffSession = useStaffSessionStore((s) => s.session);
+  const maxDiscountPct = staffSession?.maxDiscountPct ?? 100;
+  const [managerApprovalVisible, setManagerApprovalVisible] = useState(false);
+  const [managerPhone, setManagerPhone] = useState("");
+  const [managerPin, setManagerPin] = useState("");
+  const [managerApprovalBusy, setManagerApprovalBusy] = useState(false);
+  const [managerApprovalError, setManagerApprovalError] = useState<string | null>(null);
+  // STG-102: Pending discount that needs manager approval
+  const [pendingDiscount, setPendingDiscount] = useState<{ type: DiscountType; value: number } | null>(null);
+  // STG-102: Manager-approved override flag (resets when discount is cleared)
+  const [discountApprovedBy, setDiscountApprovedBy] = useState<string | null>(null);
 
   // SD-CATEGORY: Category rail state
   // AUDIT-POS-FEATURES-001 §1.1: Removed DEMO001-only gate — category rail is now
@@ -2598,6 +2614,23 @@ export default function SellScanScreen({
     return parsed > 100;
   }, [editorDiscountType, editorDiscountValue]);
 
+  // STG-102: Check if a discount value exceeds the staff's max discount limit
+  const isDiscountOverLimit = useCallback(
+    (value: number, type: DiscountType): boolean => {
+      if (discountApprovedBy) return false; // Manager already approved
+      if (maxDiscountPct >= 100) return false; // No limit configured
+      if (type === "percentage") {
+        return value > maxDiscountPct;
+      }
+      // For fixed amount, calculate the effective percentage
+      const subtotal = items.reduce((sum, item) => sum + item.priceMinor * item.quantity, 0);
+      if (subtotal <= 0) return false;
+      const effectivePct = (value / subtotal) * 100;
+      return effectivePct > maxDiscountPct;
+    },
+    [discountApprovedBy, maxDiscountPct, items]
+  );
+
   const scheduleDiscountApply = useCallback(
     (value: string, type: DiscountType) => {
       if (!canEditCart) return;
@@ -2616,11 +2649,53 @@ export default function SellScanScreen({
           }
           return;
         }
+        // STG-102: Check discount limit — if over, require manager approval
+        if (isDiscountOverLimit(nextValue, type)) {
+          setPendingDiscount({ type, value: nextValue });
+          setManagerApprovalVisible(true);
+          return;
+        }
         applyDiscount({ type, value: nextValue });
       }, DISCOUNT_AUTO_APPLY_DELAY_MS);
     },
-    [applyDiscount, canEditCart, discount, removeDiscount]
+    [applyDiscount, canEditCart, discount, removeDiscount, isDiscountOverLimit]
   );
+
+  // STG-102: Manager approval handler
+  const handleManagerApproval = useCallback(async () => {
+    if (!pendingDiscount || !managerPhone.trim() || !managerPin.trim()) return;
+    setManagerApprovalBusy(true);
+    setManagerApprovalError(null);
+    try {
+      const result = await verifyManagerPin({
+        phone: managerPhone.trim(),
+        pin: managerPin.trim(),
+      });
+      if (result.verified) {
+        setDiscountApprovedBy(result.name);
+        applyDiscount({ type: pendingDiscount.type, value: pendingDiscount.value });
+        setManagerApprovalVisible(false);
+        setPendingDiscount(null);
+        setManagerPhone("");
+        setManagerPin("");
+        showToast(`Discount approved by ${result.name}`);
+      }
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.error?.message
+        || err?.message
+        || "PIN verification failed";
+      setManagerApprovalError(errMsg);
+    } finally {
+      setManagerApprovalBusy(false);
+    }
+  }, [pendingDiscount, managerPhone, managerPin, applyDiscount]);
+
+  // STG-102: Clear approval when discount is removed
+  useEffect(() => {
+    if (!discount) {
+      setDiscountApprovedBy(null);
+    }
+  }, [discount]);
 
   const handleDiscountValueChange = (value: string) => {
     setDiscountValue(value);
@@ -4063,6 +4138,20 @@ export default function SellScanScreen({
                       }
                     </Text>
                   ) : null}
+                  {/* STG-102: Show discount limit info */}
+                  {maxDiscountPct < 100 && !discountApprovedBy ? (
+                    <Text style={styles.discountLimitHint}>
+                      {t("sell.discountLimit", "Max {{pct}}% — manager approval needed for more", { pct: maxDiscountPct })}
+                    </Text>
+                  ) : null}
+                  {discountApprovedBy ? (
+                    <View style={styles.discountApprovedBadge}>
+                      <MaterialCommunityIcons name="check-circle-outline" size={14} color={colors.success} />
+                      <Text style={styles.discountApprovedText}>
+                        {t("sell.approvedBy", "Approved by {{name}}", { name: discountApprovedBy })}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               ) : (
                 <Pressable
@@ -4751,6 +4840,122 @@ export default function SellScanScreen({
                 disabled={!bulkQtyValue.trim() || parseInt(bulkQtyValue, 10) <= 0}
               >
                 <Text style={styles.onboardingButtonTextInverse}>Add to Cart</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* STG-102: Manager Approval Modal for high discounts */}
+      <Modal
+        visible={managerApprovalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setManagerApprovalVisible(false);
+          setPendingDiscount(null);
+          setManagerPhone("");
+          setManagerPin("");
+          setManagerApprovalError(null);
+        }}
+      >
+        <View style={styles.onboardingOverlay}>
+          <Pressable
+            accessibilityRole="button"
+            style={styles.onboardingOverlayTap}
+            onPress={() => {
+              setManagerApprovalVisible(false);
+              setPendingDiscount(null);
+            }}
+          />
+          <View style={styles.onboardingSheet}>
+            <View style={styles.onboardingHandle} />
+            <View style={styles.onboardingHeader}>
+              <Text style={styles.onboardingTitle}>
+                {t("sell.managerApproval", "Manager Approval Required")}
+              </Text>
+              <Text style={styles.onboardingBarcode}>
+                {t("sell.discountExceedsLimit", "Discount exceeds {{pct}}% limit. Manager PIN required.", { pct: maxDiscountPct })}
+              </Text>
+            </View>
+            {/* STG-102: High discount warning banner */}
+            {pendingDiscount ? (
+              <View style={styles.managerApprovalWarning}>
+                <MaterialCommunityIcons name="alert-outline" size={18} color={colors.warning} />
+                <Text style={styles.managerApprovalWarningText}>
+                  {pendingDiscount.type === "percentage"
+                    ? `${pendingDiscount.value}% discount requested (limit: ${maxDiscountPct}%)`
+                    : `₹${(pendingDiscount.value / 100).toFixed(0)} discount requested`
+                  }
+                </Text>
+              </View>
+            ) : null}
+            <View style={styles.onboardingFields}>
+              <View style={styles.onboardingField}>
+                <Text style={styles.onboardingLabel}>
+                  {t("sell.managerPhone", "Manager Phone")}
+                </Text>
+                <TextInput
+                  style={styles.onboardingInput}
+                  value={managerPhone}
+                  onChangeText={setManagerPhone}
+                  placeholder="10-digit phone"
+                  placeholderTextColor={colors.textTertiary}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  autoFocus
+                />
+              </View>
+              <View style={styles.onboardingField}>
+                <Text style={styles.onboardingLabel}>
+                  {t("sell.managerPin", "Manager PIN")}
+                </Text>
+                <TextInput
+                  style={styles.onboardingInput}
+                  value={managerPin}
+                  onChangeText={setManagerPin}
+                  placeholder="4-6 digit PIN"
+                  placeholderTextColor={colors.textTertiary}
+                  keyboardType="number-pad"
+                  secureTextEntry
+                  maxLength={6}
+                />
+              </View>
+            </View>
+            {managerApprovalError ? (
+              <Text style={styles.managerApprovalErrorText}>{managerApprovalError}</Text>
+            ) : null}
+            <View style={styles.onboardingActions}>
+              <Pressable
+                accessibilityRole="button"
+                style={[styles.onboardingButton, styles.onboardingButtonGhost]}
+                onPress={() => {
+                  setManagerApprovalVisible(false);
+                  setPendingDiscount(null);
+                  setManagerPhone("");
+                  setManagerPin("");
+                  setManagerApprovalError(null);
+                }}
+              >
+                <Text style={styles.onboardingButtonText}>{t("common.cancel", "Cancel")}</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                style={[
+                  styles.onboardingButton,
+                  styles.onboardingButtonPrimary,
+                  (managerApprovalBusy || !managerPhone.trim() || !managerPin.trim()) && styles.onboardingButtonDisabled,
+                ]}
+                onPress={handleManagerApproval}
+                disabled={managerApprovalBusy || !managerPhone.trim() || !managerPin.trim()}
+              >
+                {managerApprovalBusy ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.onboardingButtonTextInverse}>
+                    {t("sell.approveDiscount", "Approve")}
+                  </Text>
+                )}
               </Pressable>
             </View>
           </View>
@@ -6767,5 +6972,48 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     color: colors.primary,
     fontWeight: "500",
     maxWidth: 120,
+  },
+  // STG-102: Discount limit hint and approved badge
+  discountLimitHint: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    marginTop: 2,
+    fontStyle: "italic",
+  },
+  discountApprovedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+  },
+  discountApprovedText: {
+    fontSize: 11,
+    color: colors.success,
+    fontWeight: "600",
+  },
+  // STG-102: Manager approval modal styles
+  managerApprovalWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.warning + "15",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  managerApprovalWarningText: {
+    fontSize: 13,
+    color: colors.warning,
+    fontWeight: "600",
+    flex: 1,
+  },
+  managerApprovalErrorText: {
+    fontSize: 13,
+    color: colors.error,
+    fontWeight: "500",
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: 8,
   },
 }); }
