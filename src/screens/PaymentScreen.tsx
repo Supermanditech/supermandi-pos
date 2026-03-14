@@ -12,9 +12,12 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
   Alert,
   BackHandler,
   ActivityIndicator,
+  ScrollView,
+  TextInput,
 } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -52,6 +55,8 @@ import {
 } from "../services/partialSaleState";
 import { theme, useThemeColors } from "../theme";
 import { SplitPaymentModal, SplitPaymentResult } from "../components/sell/SplitPaymentModal";
+// STG-120: Staff name/ID for audit trail
+import { useStaffSessionStore } from "../stores/staffSessionStore";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -141,7 +146,9 @@ const PaymentScreen = () => {
   const navigation = useNavigation<PaymentScreenNavigationProp>();
   const route = useRoute<PaymentScreenRouteProp>();
   const insets = useSafeAreaInsets();
-  const { items, lockCart, unlockCart, locked, discount, removeItem } = useCartStore();
+  const { items, lockCart, unlockCart, locked, discount, removeItem, customer } = useCartStore();
+  // STG-120: Staff name/ID for audit trail on receipt
+  const staffName = useStaffSessionStore((s) => s.session?.name ?? null);
   const [selectedMode, setSelectedMode] = useState<PaymentMode>("UPI");
   const [saleId, setSaleId] = useState<string | null>(null);
   const [billRef, setBillRef] = useState<string | null>(null);
@@ -172,6 +179,10 @@ const PaymentScreen = () => {
   const [qrSecondsLeft, setQrSecondsLeft] = useState<number | null>(null);
   // SA-P1-006: Allowed payment methods from store settings
   const [allowedMethods, setAllowedMethods] = useState<string[]>(["CASH", "UPI", "DUE"]);
+  // STG-080: Cash amount input + change calculation
+  const [cashReceived, setCashReceived] = useState("");
+  // STG-087: Order summary scroll toggle
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
 
   const saleItemIds = route.params?.saleItemIds;
   const { saleItems: computedSaleItems, isPartial: isPartialSale } = useMemo(
@@ -231,6 +242,40 @@ const PaymentScreen = () => {
   const upiDisabled =
     !isOnline || upiStatusLoading || storeActive === false || !upiVpa || !allowedMethods.includes("UPI");
   const upiBlocked = storeActive === false || (!upiVpa && !upiStatusLoading);
+
+  // STG-080: Calculate change from cash received
+  const cashReceivedMinor = useMemo(() => {
+    const parsed = parseFloat(cashReceived);
+    return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) : 0;
+  }, [cashReceived]);
+  const changeMinor = useMemo(() => Math.max(0, cashReceivedMinor - totalMinor), [cashReceivedMinor, totalMinor]);
+
+  // STG-401: Cart-to-payment data consistency validation
+  const cartValid = useMemo(() => {
+    if (saleItems.length === 0) return false;
+    if (totalMinor <= 0) return false;
+    for (const item of saleItems) {
+      if (item.quantity <= 0 || item.priceMinor < 0) return false;
+    }
+    return true;
+  }, [saleItems, totalMinor]);
+
+  // STG-078: Explain why Complete Payment is disabled
+  const disabledReason = useMemo((): string | null => {
+    if (loadingSale) return "Creating sale...";
+    if (!saleId || !billRef) return "Waiting for sale to be created";
+    if (submitting) return "Processing payment...";
+    if (selectedMode === "UPI" && !paymentId) return "Waiting for UPI QR to be generated";
+    if (!cartValid) return "Cart has invalid items";
+    return null;
+  }, [loadingSale, saleId, billRef, submitting, selectedMode, paymentId, cartValid]);
+
+  // STG-119: Auto-dismiss sale error after 8 seconds
+  useEffect(() => {
+    if (!saleError) return;
+    const timer = setTimeout(() => setSaleError(null), 8000);
+    return () => clearTimeout(timer);
+  }, [saleError]);
 
   useEffect(() => {
     lockCart();
@@ -611,11 +656,13 @@ const PaymentScreen = () => {
             return;
           }
         }
-        // ISSUE-077: Differentiate timeout from other errors
+        // ISSUE-077 + STG-211: Differentiate UPI errors
         if (error instanceof Error && error.message.includes("timed out")) {
           Alert.alert("UPI Timeout", "UPI initialization took too long. Try again or switch to Cash.");
+        } else if (error instanceof ApiError && error.message === "upi_vpa_missing") {
+          Alert.alert("UPI Not Set Up", "Store UPI ID (VPA) is not configured. Ask the store owner to set it up in Payment Settings.");
         } else {
-          Alert.alert("UPI Error", "UPI ID not configured or QR failed.");
+          Alert.alert("QR Generation Failed", "Could not generate the payment QR code. Please try again or switch to Cash.");
         }
       })
       .finally(() => {
@@ -712,7 +759,9 @@ const PaymentScreen = () => {
     return () => backHandler.remove();
   }, []);
 
+  // STG-377: Lock payment method tabs during transaction
   const handlePaymentSelect = (mode: PaymentMode) => {
+    if (submitting || submittingRef.current) return;
     setSelectedMode(mode);
   };
 
@@ -785,9 +834,10 @@ const PaymentScreen = () => {
         (item) => item.priceFetchedAt && Date.now() - item.priceFetchedAt > PRICE_FRESHNESS_THRESHOLD_MS
       );
       if (staleItems.length > 0) {
+        // STG-216: Rewrite Price Freshness Warning in plain language
         Alert.alert(
-          "Price Freshness Warning",
-          `${staleItems.length} item(s) have prices loaded over 4 hours ago. Prices may have changed.\n\nProceed with current prices?`,
+          "Prices May Be Outdated",
+          `${staleItems.length} item(s) were scanned over 4 hours ago. Their prices may have changed since then.\n\nWould you like to proceed with the current prices?`,
           [
             { text: "Cancel", style: "cancel" },
             {
@@ -935,7 +985,13 @@ const PaymentScreen = () => {
           return;
         }
       }
-      Alert.alert("Payment Error", "Unable to complete payment. Try again.");
+      // STG-077: Show specific failure reason
+      const msg = error instanceof ApiError
+        ? (error.payload as any)?.message || error.message || "Unknown error"
+        : error instanceof Error
+          ? error.message
+          : "Unknown error";
+      Alert.alert("Payment Failed", `Unable to complete payment: ${msg}. Please try again.`);
     } finally {
       // AUD-055-A FIX: Only reset submitting if NOT finalized
       // If finalized=true, leave submittingRef=true to prevent any further attempts
@@ -946,21 +1002,23 @@ const PaymentScreen = () => {
     }
   };
 
+  // STG-377: Lock tabs during submitting state
   const renderModeTab = (mode: PaymentMode, title: string, icon: string, disabled = false) => {
     const selected = selectedMode === mode;
+    const isLocked = disabled || submitting;
 
     return (
-      <TouchableOpacity
+      <Pressable
         style={[
           styles.modeTab,
           selected && styles.modeTabActive,
-          disabled && styles.modeTabDisabled
+          isLocked && styles.modeTabDisabled
         ]}
         onPress={() => handlePaymentSelect(mode)}
-        disabled={disabled}
+        disabled={isLocked}
         accessibilityRole="tab"
-        accessibilityLabel={`${title} payment${selected ? ", selected" : ""}`}
-        accessibilityState={{ selected, disabled }}
+        accessibilityLabel={`${title} payment${selected ? ", selected" : ""}${isLocked ? ", locked" : ""}`}
+        accessibilityState={{ selected, disabled: isLocked }}
       >
         <MaterialCommunityIcons
           name={icon as any}
@@ -971,19 +1029,21 @@ const PaymentScreen = () => {
           style={[
             styles.modeTabText,
             selected && styles.modeTabTextActive,
-            disabled && styles.modeTabTextDisabled
+            isLocked && styles.modeTabTextDisabled
           ]}
         >
           {title}
         </Text>
-      </TouchableOpacity>
+      </Pressable>
     );
   };
 
+  // STG-401: Include cartValid in submission guard
   const canSubmit =
     Boolean(saleId && billRef) &&
     !loadingSale &&
     !submitting &&
+    cartValid &&
     (selectedMode !== "UPI" || Boolean(paymentId));
 
   // FIX-039: Compute stale price count for warning badge
@@ -1004,7 +1064,7 @@ const PaymentScreen = () => {
       backgroundColor: colors.background
     },
     header: {
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
       paddingTop: 16,
       paddingBottom: 12,
       backgroundColor: colors.surface,
@@ -1012,31 +1072,37 @@ const PaymentScreen = () => {
       borderBottomColor: colors.border,
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "space-between"
+      gap: 12,
+    },
+    // STG-083: Back button
+    backButton: {
+      padding: 4,
     },
     headerTitle: {
-      fontSize: 20,
+      fontSize: 18,
       fontWeight: "800",
       color: colors.textPrimary
     },
     billRef: {
-      marginTop: 4,
+      marginTop: 2,
       fontSize: 12,
       color: colors.textTertiary
     },
-    lockedBadge: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: colors.warning,
-      backgroundColor: colors.warningSoft
+    // STG-123: Amount in header
+    headerAmount: {
+      alignItems: "flex-end",
     },
-    lockedBadgeText: {
+    headerAmountLabel: {
       fontSize: 11,
-      fontWeight: "700",
-      color: colors.warning
+      fontWeight: "600",
+      color: colors.textSecondary,
     },
+    headerAmountValue: {
+      fontSize: 22,
+      fontWeight: "900",
+      color: colors.primary,
+    },
+    // STG-379: Offline banner
     banner: {
       marginHorizontal: 16,
       marginTop: 12,
@@ -1044,13 +1110,16 @@ const PaymentScreen = () => {
       borderRadius: 12,
       borderWidth: 1,
       borderColor: colors.warning,
-      backgroundColor: colors.warningSoft
+      backgroundColor: colors.warningSoft,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
     },
     bannerText: {
       color: colors.warning,
       fontSize: 12,
       fontWeight: "700",
-      textAlign: "center"
+      flex: 1,
     },
     modeTabs: {
       flexDirection: "row",
@@ -1107,34 +1176,90 @@ const PaymentScreen = () => {
     },
     content: {
       flex: 1,
+    },
+    contentInner: {
       paddingHorizontal: 16,
-      paddingBottom: 8
+      paddingBottom: 8,
     },
     qrStage: {
-      flex: 1,
       alignItems: "center",
-      justifyContent: "center",
-      gap: 16
+      paddingVertical: 16,
+      gap: 12,
     },
     cashStage: {
-      flex: 1,
       alignItems: "center",
-      justifyContent: "center",
-      gap: 16
+      paddingVertical: 24,
+      gap: 16,
     },
-    amountLabel: {
-      fontSize: 12,
+    // STG-082: Customer badge for due mode
+    customerBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    customerBadgeText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.primary,
+    },
+    // STG-080: Cash input styles
+    cashInputLabel: {
+      fontSize: 14,
       fontWeight: "700",
-      color: colors.textSecondary
+      color: colors.textSecondary,
+      alignSelf: "flex-start",
+      marginBottom: 4,
     },
-    amountValue: {
-      fontSize: 32,
-      fontWeight: "900",
-      color: colors.textPrimary
+    cashInputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      width: "100%",
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+    },
+    cashCurrencyPrefix: {
+      fontSize: 24,
+      fontWeight: "800",
+      color: colors.textSecondary,
+      marginRight: 4,
+    },
+    cashInput: {
+      flex: 1,
+      fontSize: 28,
+      fontWeight: "800",
+      color: colors.textPrimary,
+      paddingVertical: 12,
+    },
+    changeRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      width: "100%",
+      paddingHorizontal: 4,
+      marginTop: 8,
+    },
+    changeLabel: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textSecondary,
+    },
+    changeValue: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: colors.textPrimary,
     },
     qrShell: {
-      width: 240,
-      height: 240,
+      width: 230,
+      height: 230,
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
@@ -1162,6 +1287,128 @@ const PaymentScreen = () => {
       textAlign: "center",
       paddingHorizontal: 24
     },
+    // STG-087: Order summary styles
+    summaryHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 4,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      marginTop: 8,
+    },
+    summaryHeaderText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textSecondary,
+    },
+    summaryBody: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 12,
+      gap: 8,
+    },
+    summaryRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    summaryTotalRow: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingTop: 8,
+      marginTop: 4,
+    },
+    summaryItemName: {
+      fontSize: 13,
+      color: colors.textPrimary,
+      fontWeight: "500",
+    },
+    summaryItemQty: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    summaryItemTotal: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    summaryItemDiscount: {
+      fontSize: 11,
+      color: colors.success,
+      marginTop: 1,
+    },
+    summaryTotalLabel: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: colors.textPrimary,
+    },
+    summaryTotalValue: {
+      fontSize: 16,
+      fontWeight: "900",
+      color: colors.primary,
+    },
+    // STG-088: GST note
+    summaryGstNote: {
+      fontSize: 10,
+      color: colors.textTertiary,
+      textAlign: "right",
+      marginTop: 4,
+    },
+    // Warning/Error banners
+    warningBanner: {
+      backgroundColor: colors.warningSoft,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    warningBannerText: {
+      color: colors.warningDark,
+      fontSize: 13,
+      marginLeft: 8,
+      flex: 1,
+    },
+    errorBanner: {
+      backgroundColor: colors.errorSoft,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    errorBannerText: {
+      color: colors.error,
+      fontSize: 13,
+      marginLeft: 8,
+      flex: 1,
+    },
+    // STG-118: Retry button blue (primary) instead of red
+    retryButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 6,
+      marginLeft: 8,
+    },
+    retryButtonText: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    // STG-078: Disabled hint bar
+    disabledHintBar: {
+      paddingHorizontal: 16,
+      paddingVertical: 6,
+      backgroundColor: colors.surface,
+    },
+    disabledHintText: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      textAlign: "center",
+      fontStyle: "italic",
+    },
     footer: {
       padding: 16,
       backgroundColor: colors.surface,
@@ -1172,10 +1419,14 @@ const PaymentScreen = () => {
       backgroundColor: colors.primary,
       borderRadius: 14,
       paddingVertical: 14,
-      alignItems: "center"
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 52,
     },
+    // STG-089: Better WCAG contrast for disabled state
     primaryCtaDisabled: {
-      backgroundColor: colors.textTertiary
+      backgroundColor: colors.border,
+      opacity: 0.7,
     },
     primaryCtaText: {
       color: colors.textInverse,
@@ -1186,59 +1437,76 @@ const PaymentScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* STG-083: Header with back button + STG-113: Bill number */}
       <View style={[styles.header, { paddingTop: 16 + insets.top }]}>
-        <View>
+        <Pressable
+          onPress={() => {
+            if (submitting || submittingRef.current) {
+              Alert.alert("Payment in Progress", "Please wait for the payment to complete.");
+              return;
+            }
+            navigation.goBack();
+          }}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Back to cart"
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
+        </Pressable>
+        <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Payment</Text>
+          {/* STG-113: Show bill/invoice number prominently */}
           {billRef && <Text style={styles.billRef}>Bill #{billRef}</Text>}
+          {/* STG-120: Staff name for audit */}
+          {staffName && <Text style={styles.billRef}>Staff: {staffName}</Text>}
         </View>
-        {locked && (
-          <View style={styles.lockedBadge}>
-            <Text style={styles.lockedBadgeText}>Cart locked</Text>
-          </View>
-        )}
+        {/* STG-123: Total amount in header */}
+        <View style={styles.headerAmount}>
+          <Text style={styles.headerAmountLabel}>Total</Text>
+          <Text
+            style={styles.headerAmountValue}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+            numberOfLines={1}
+          >
+            {formatMoney(totalMinor, currency)}
+          </Text>
+        </View>
       </View>
 
+      {/* STG-379: Offline payment fallback messaging */}
       {!isOnline && (
         <View style={styles.banner}>
-          <Text style={styles.bannerText}>{POS_MESSAGES.offline}</Text>
+          <MaterialCommunityIcons name="wifi-off" size={16} color={colors.warning} />
+          <Text style={styles.bannerText}>
+            You are offline. UPI is disabled. Use Cash or Due to complete payment.
+          </Text>
         </View>
       )}
 
+      {/* STG-377: Tabs locked during submitting */}
       <View style={styles.modeTabs}>
-        {/* SA-P1-006: Only show payment methods allowed for this store */}
         {allowedMethods.includes("UPI") && renderModeTab("UPI", "UPI", "qrcode-scan", upiDisabled)}
-        {allowedMethods.includes("CASH") && renderModeTab("CASH", "Cash", "cash")}
-        {allowedMethods.includes("DUE") && renderModeTab("DUE", "Due", "calendar-clock")}
+        {allowedMethods.includes("CASH") && renderModeTab("CASH", "Cash", "currency-inr")}
+        {allowedMethods.includes("DUE") && renderModeTab("DUE", "Due", "clock-outline")}
       </View>
 
-      {/* SM-015: Split Payment Button */}
+      {/* SM-015: Split Payment Button — STG-377: disabled during submitting */}
       {isOnline && !upiDisabled && (
-        <TouchableOpacity
-          style={styles.splitButton}
+        <Pressable
+          style={[styles.splitButton, submitting && { opacity: 0.5 }]}
           onPress={() => setShowSplitModal(true)}
-          disabled={!saleId || loadingSale}
+          disabled={!saleId || loadingSale || submitting}
         >
-          <MaterialCommunityIcons
-            name="call-split"
-            size={18}
-            color={colors.primary}
-          />
+          <MaterialCommunityIcons name="call-split" size={18} color={colors.primary} />
           <Text style={styles.splitButtonText}>Split Payment (UPI + Cash)</Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
 
-      <View style={styles.content}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
+        {/* Payment mode content */}
         {selectedMode === "UPI" ? (
           <View style={styles.qrStage}>
-            <Text style={styles.amountLabel}>Amount</Text>
-            <Text
-              style={styles.amountValue}
-              adjustsFontSizeToFit
-              minimumFontScale={0.6}
-              numberOfLines={1}
-            >
-              {formatMoney(totalMinor, currency)}
-            </Text>
             <View style={styles.qrShell}>
               {upiStatusLoading ? (
                 <Text style={styles.qrHint}>Checking UPI details...</Text>
@@ -1250,7 +1518,7 @@ const PaymentScreen = () => {
                 <Text style={styles.qrHint}>Offline: UPI disabled.</Text>
               ) : upiIntent ? (
                 <View accessible accessibilityLabel="UPI payment QR code. Ask customer to scan with any UPI app." accessibilityRole="image">
-                  <QRCode value={upiIntent} size={220} />
+                  <QRCode value={upiIntent} size={200} />
                 </View>
               ) : loadingUpi ? (
                 <View style={{ alignItems: "center", padding: 16 }}>
@@ -1258,17 +1526,15 @@ const PaymentScreen = () => {
                   <Text style={[styles.qrHint, { marginTop: 8 }]}>Generating QR...</Text>
                 </View>
               ) : (
-                <TouchableOpacity onPress={() => {
-                  // T-261: Clear state to trigger re-generation via useEffect
+                <Pressable onPress={() => {
                   setUpiIntent(null);
                   setQrExpiresAt(null);
                   setQrSecondsLeft(null);
                 }}>
                   <Text style={styles.qrHint}>QR expired — Tap to regenerate</Text>
-                </TouchableOpacity>
+                </Pressable>
               )}
             </View>
-            {/* T-204: QR expiry countdown */}
             {upiIntent && qrSecondsLeft !== null && qrSecondsLeft > 0 && (
               <Text style={{
                 fontSize: 13,
@@ -1283,64 +1549,196 @@ const PaymentScreen = () => {
             {formattedStoreName && (
               <Text style={styles.storeName}>{formattedStoreName}</Text>
             )}
+            {/* STG-404: UPI polling status visible during wait */}
+            {upiIntent && paymentId && (
+              <Text style={styles.qrHint}>
+                Ask customer to scan QR with any UPI app
+              </Text>
+            )}
+            {/* STG-091: Dynamic instruction text for UPI */}
+            {!upiIntent && !loadingUpi && !upiBlocked && isOnline && saleId && (
+              <Text style={styles.qrHint}>Preparing payment QR...</Text>
+            )}
+          </View>
+        ) : selectedMode === "CASH" ? (
+          <View style={styles.cashStage}>
+            {/* STG-080: Cash amount input + change calculation */}
+            <Text style={styles.cashInputLabel}>Cash Received</Text>
+            <View style={styles.cashInputRow}>
+              <Text style={styles.cashCurrencyPrefix}>₹</Text>
+              <TextInput
+                style={styles.cashInput}
+                value={cashReceived}
+                onChangeText={setCashReceived}
+                placeholder="0.00"
+                placeholderTextColor={colors.textTertiary}
+                keyboardType="decimal-pad"
+                returnKeyType="done"
+                accessibilityLabel="Cash received amount"
+              />
+            </View>
+            {/* STG-091: Dynamic instruction text for Cash */}
+            <Text style={styles.qrHint}>
+              Enter the amount received and tap Complete Payment
+            </Text>
+            {cashReceivedMinor > 0 && (
+              <View style={styles.changeRow}>
+                <Text style={styles.changeLabel}>
+                  {changeMinor > 0 ? "Change to return" : cashReceivedMinor < totalMinor ? "Short by" : "Exact amount"}
+                </Text>
+                <Text style={[
+                  styles.changeValue,
+                  changeMinor > 0 && { color: colors.success },
+                  cashReceivedMinor < totalMinor && { color: colors.error },
+                ]}>
+                  {cashReceivedMinor < totalMinor
+                    ? formatMoney(totalMinor - cashReceivedMinor, currency)
+                    : formatMoney(changeMinor, currency)}
+                </Text>
+              </View>
+            )}
           </View>
         ) : (
           <View style={styles.cashStage}>
-            <Text style={styles.amountLabel}>Amount</Text>
-            <Text
-              style={styles.amountValue}
-              adjustsFontSizeToFit
-              minimumFontScale={0.6}
-              numberOfLines={1}
-            >
-              {formatMoney(totalMinor, currency)}
-            </Text>
+            <MaterialCommunityIcons name="clock-outline" size={40} color={colors.textTertiary} />
             <Text style={styles.cashHint}>
-              {selectedMode === "CASH"
-                ? "Collect cash from customer"
-                : "Record as due and collect later"}
+              Record as due and collect later
             </Text>
+            {/* STG-082: Show customer info for due/credit sales */}
+            {customer ? (
+              <View style={styles.customerBadge}>
+                <MaterialCommunityIcons name="account" size={16} color={colors.primary} />
+                <Text style={styles.customerBadgeText}>{customer.name}{customer.phone ? ` (${customer.phone})` : ""}</Text>
+              </View>
+            ) : (
+              <Text style={[styles.qrHint, { color: colors.warning }]}>
+                No customer selected. Add customer in cart to track this due.
+              </Text>
+            )}
           </View>
         )}
-      </View>
 
-      {/* FIX-039: Stale price warning banner */}
+        {/* STG-087: Order summary section */}
+        <Pressable
+          style={styles.summaryHeader}
+          onPress={() => setSummaryExpanded((prev) => !prev)}
+          accessibilityRole="button"
+          accessibilityLabel={`Order summary, ${itemCount} items. ${summaryExpanded ? "Collapse" : "Expand"}`}
+        >
+          <Text style={styles.summaryHeaderText}>
+            Order Summary ({saleItems.length} item{saleItems.length !== 1 ? "s" : ""})
+          </Text>
+          <MaterialCommunityIcons
+            name={summaryExpanded ? "chevron-up" : "chevron-down"}
+            size={20}
+            color={colors.textSecondary}
+          />
+        </Pressable>
+        {summaryExpanded && (
+          <View style={styles.summaryBody}>
+            {saleItems.map((item, idx) => {
+              const lineTotal = Math.round(item.priceMinor) * Math.round(item.quantity);
+              const lineDiscount = calculateDiscountAmount(lineTotal, item.itemDiscount ?? null);
+              return (
+                <View key={item.id || idx} style={styles.summaryRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.summaryItemName} numberOfLines={1}>{item.name}</Text>
+                    <Text style={styles.summaryItemQty}>
+                      {item.quantity} × {formatMoney(item.priceMinor, currency)}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={styles.summaryItemTotal}>{formatMoney(lineTotal - lineDiscount, currency)}</Text>
+                    {lineDiscount > 0 && (
+                      <Text style={styles.summaryItemDiscount}>-{formatMoney(lineDiscount, currency)}</Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+            {/* Cart-level discount */}
+            {discountMinor > 0 && (
+              <View style={[styles.summaryRow, styles.summaryTotalRow]}>
+                <Text style={[styles.summaryItemName, { color: colors.success }]}>Cart Discount</Text>
+                <Text style={[styles.summaryItemTotal, { color: colors.success }]}>
+                  -{formatMoney(discountMinor, currency)}
+                </Text>
+              </View>
+            )}
+            <View style={[styles.summaryRow, styles.summaryTotalRow]}>
+              <Text style={styles.summaryTotalLabel}>Total</Text>
+              <Text style={styles.summaryTotalValue}>{formatMoney(totalMinor, currency)}</Text>
+            </View>
+            {/* STG-088: GST/tax note */}
+            <Text style={styles.summaryGstNote}>* All prices inclusive of applicable taxes</Text>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* FIX-039 + STG-216: Stale price warning banner */}
       {stalePriceCount > 0 && (
-        <View style={{ backgroundColor: colors.warningSoft, paddingHorizontal: 16, paddingVertical: 8, flexDirection: "row", alignItems: "center" }}>
+        <View style={styles.warningBanner}>
           <MaterialCommunityIcons name="alert-outline" size={18} color={colors.warning} />
-          <Text style={{ color: colors.warningDark, fontSize: 13, marginLeft: 8, flex: 1 }}>
-            {stalePriceCount} item(s) have prices loaded over 4 hours ago. Prices may have changed.
+          <Text style={styles.warningBannerText}>
+            {stalePriceCount} item(s) were scanned over 4 hours ago. Prices may have changed.
           </Text>
         </View>
       )}
 
-      {/* ISSUE-076: Sale creation error with retry */}
+      {/* ISSUE-076: Sale creation error with retry — STG-077/STG-119: specific failure + dismiss */}
       {saleError && !loadingSale && (
-        <View style={{ backgroundColor: colors.errorSoft, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "center" }}>
+        <View style={styles.errorBanner}>
           <MaterialCommunityIcons name="alert-circle-outline" size={18} color={colors.error} />
-          <Text style={{ color: colors.error, fontSize: 13, marginLeft: 8, flex: 1 }}>
-            {saleError}
-          </Text>
-          <TouchableOpacity
+          <Text style={styles.errorBannerText}>{saleError}</Text>
+          {/* STG-118: Retry button blue (primary) instead of red */}
+          <Pressable
             onPress={() => setSaleError(null)}
-            style={{ backgroundColor: colors.error, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6, marginLeft: 8 }}
+            style={styles.retryButton}
           >
-            <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>Retry</Text>
-          </TouchableOpacity>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </Pressable>
+          {/* STG-119: Dismiss X button */}
+          <Pressable
+            onPress={() => setSaleError(null)}
+            style={{ padding: 4, marginLeft: 4 }}
+            accessibilityLabel="Dismiss error"
+          >
+            <MaterialCommunityIcons name="close" size={18} color={colors.error} />
+          </Pressable>
+        </View>
+      )}
+
+      {/* STG-078: Explain greyed-out button */}
+      {!canSubmit && disabledReason && !loadingSale && !saleError && (
+        <View style={styles.disabledHintBar}>
+          <Text style={styles.disabledHintText}>{disabledReason}</Text>
         </View>
       )}
 
       <View style={styles.footer}>
-        <TouchableOpacity
+        {/* STG-090: Loading state in button */}
+        <Pressable
           style={[styles.primaryCta, !canSubmit && styles.primaryCtaDisabled]}
           onPress={handleCompletePayment}
           disabled={!canSubmit}
           accessibilityRole="button"
-          accessibilityLabel={ctaLabel}
+          accessibilityLabel={submitting ? "Processing payment" : ctaLabel}
           accessibilityState={{ disabled: !canSubmit }}
         >
-          <Text style={styles.primaryCtaText}>{ctaLabel}</Text>
-        </TouchableOpacity>
+          {submitting ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <ActivityIndicator size="small" color={colors.textInverse} />
+              <Text style={styles.primaryCtaText}>Processing...</Text>
+            </View>
+          ) : loadingSale ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <ActivityIndicator size="small" color={colors.textInverse} />
+              <Text style={styles.primaryCtaText}>Creating Sale...</Text>
+            </View>
+          ) : (
+            <Text style={styles.primaryCtaText}>{ctaLabel}</Text>
+          )}
+        </Pressable>
       </View>
 
       {/* SM-015: Split Payment Modal */}
