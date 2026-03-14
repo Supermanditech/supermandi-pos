@@ -408,7 +408,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     paddingHorizontal: 4,
   },
   tabBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     color: colors.textInverse,
   },
@@ -457,12 +457,12 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     flex: 1,
   },
   itemId: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: "monospace",
     color: colors.textTertiary,
   },
   itemTime: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textTertiary,
   },
   driftValues: {

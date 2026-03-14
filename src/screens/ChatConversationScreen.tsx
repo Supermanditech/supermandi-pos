@@ -252,7 +252,7 @@ export default function ChatConversationScreen({
     messageText: { fontSize: 14, lineHeight: 20 },
     ownText: { color: colors.textInverse },
     otherText: { color: colors.textPrimary },
-    time: { fontSize: 10, marginTop: 2 },
+    time: { fontSize: 11, marginTop: 2 },
     ownTime: { color: 'rgba(255,255,255,0.7)', textAlign: 'right' }, // STG-281: ACCEPTED — semi-transparent white on primary bubble works in both light/dark mode
     otherTime: { color: colors.textTertiary },
     attachmentPreview: {

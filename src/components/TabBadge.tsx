@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   badgeTextSmall: {
-    fontSize: 9,
+    fontSize: 11,
   },
   badgeTextMedium: {
     fontSize: 12,

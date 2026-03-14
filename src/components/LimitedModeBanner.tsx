@@ -284,7 +284,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   badgeText: {
     color: colors.textInverse,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
@@ -294,7 +294,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderRadius: 4,
   },
   statusText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
   },
   message: {
@@ -348,7 +348,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderRadius: 999,
   },
   compactText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
@@ -359,7 +359,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     borderRadius: 4,
   },
   indicatorText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.5,
   },

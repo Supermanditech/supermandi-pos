@@ -461,13 +461,13 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
   },
   staffText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     color: theme.colors.primary,
     flex: 1,
   },
   storeCodeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     color: theme.colors.textTertiary,
   },
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
     overflow: "visible",
   },
   iconLabel: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "600",
   },
   statusPill: {
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statusMessage: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
   },
   popoverOverlay: {
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
     transform: [{ rotate: "45deg" }],
   },
   popoverLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     color: theme.colors.textSecondary,
   },

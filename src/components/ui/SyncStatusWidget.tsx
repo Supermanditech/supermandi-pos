@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   healthySyncText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "500",
     color: theme.colors.success,
   },
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   pendingText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
     color: theme.colors.warning,
   },
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   deadletterBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     color: theme.colors.error,
   },
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
   },
   lastSyncText: {
     flex: 1,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "500",
     color: theme.colors.textTertiary,
     textAlign: "right",
@@ -427,13 +427,13 @@ const styles = StyleSheet.create({
     color: theme.colors.warning,
   },
   driftItem: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "500",
     color: theme.colors.textSecondary,
     paddingLeft: 8,
   },
   driftMore: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "500",
     color: theme.colors.textTertiary,
     paddingLeft: 8,

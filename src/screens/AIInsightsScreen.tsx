@@ -249,7 +249,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
     confidenceBar: { height: 4, backgroundColor: colors.backgroundTertiary, borderRadius: 2, marginTop: 4 },
     confidenceFill: { height: 4, backgroundColor: colors.primary, borderRadius: 2 },
     badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-    badgeText: { fontSize: 10 },
+    badgeText: { fontSize: 11 },
     errorBar: { backgroundColor: colors.errorSoft, padding: 10 },
     errorText: { color: colors.errorDark, fontSize: 13 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
