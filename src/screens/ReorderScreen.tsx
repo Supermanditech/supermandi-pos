@@ -252,11 +252,24 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
     setSelectedIds(new Set());
   }, []);
 
-  // Open dismiss modal
+  // Open dismiss modal (STG-315: confirmation dialog before dismissing)
   const handleOpenDismiss = useCallback((item: PendingReorder) => {
-    setDismissingItem(item);
-    setDismissModalVisible(true);
-  }, []);
+    Alert.alert(
+      t("reorder.dismissConfirmTitle"),
+      t("reorder.dismissConfirmMessage"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("reorder.dismissButton"),
+          style: "destructive",
+          onPress: () => {
+            setDismissingItem(item);
+            setDismissModalVisible(true);
+          },
+        },
+      ]
+    );
+  }, [t]);
 
   // Close dismiss modal
   const handleCloseDismiss = useCallback(() => {

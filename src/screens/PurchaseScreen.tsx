@@ -70,6 +70,9 @@ interface QuickPurchaseItem {
   buyPrice: number;
   sellPrice: number;
   isNew: boolean;
+  // STG-359: Batch/expiry info for incoming stock
+  batchNumber?: string;
+  expiryDate?: string;
 }
 
 // POS-BUY-001: SKUItem and CartItem types replaced by CatalogProduct + PurchaseCartItem
@@ -249,6 +252,7 @@ export default function PurchaseScreen({
               // Found in supplier catalog — add to purchase cart (supplier flow)
               const supplier = getPreferredOrBestSupplier(product);
               if (supplier) {
+                // STG-347: Populate all required metadata fields for quick purchase
                 purchaseCart.addItem({
                   supplierProductId: supplier.supplierProductId,
                   productId: product.id,
@@ -259,6 +263,7 @@ export default function PurchaseScreen({
                   unitPrice: supplier.purchasePrice,
                   mrp: supplier.mrp,
                   moq: supplier.moq,
+                  minOrderValue: supplier.minOrderValue,
                 });
                 setExpandedSegment("suppliers");
                 setLastScanResult("supplier");
@@ -381,6 +386,7 @@ export default function PurchaseScreen({
       if (product && product.suppliers.length > 0) {
         const supplier = getPreferredOrBestSupplier(product);
         if (supplier) {
+          // STG-347: Populate all required metadata fields
           purchaseCart.addItem({
             supplierProductId: supplier.supplierProductId,
             productId: product.id,
@@ -391,6 +397,7 @@ export default function PurchaseScreen({
             unitPrice: supplier.purchasePrice,
             mrp: supplier.mrp,
             moq: supplier.moq,
+            minOrderValue: supplier.minOrderValue,
           });
         }
       }
@@ -411,6 +418,7 @@ export default function PurchaseScreen({
     const supplier = getPreferredOrBestSupplier(product);
     if (!supplier) return;
 
+    // STG-347: Populate all required metadata fields
     purchaseCart.addItem({
       supplierProductId: supplier.supplierProductId,
       productId: product.id,
@@ -421,6 +429,7 @@ export default function PurchaseScreen({
       unitPrice: supplier.purchasePrice,
       mrp: supplier.mrp,
       moq: supplier.moq,
+      minOrderValue: supplier.minOrderValue,
     });
   }, [purchaseCart]);
 
@@ -559,7 +568,7 @@ export default function PurchaseScreen({
           </Pressable>
         </View>
         <View style={styles.priceInputWrap}>
-          <Text style={styles.priceLabel}>{t("purchase.buyPrice")}</Text>
+          <Text style={styles.priceLabel}>{t("purchase.purchasePrice")}</Text>
           <TextInput
             style={styles.priceInput}
             keyboardType="decimal-pad"
@@ -578,6 +587,31 @@ export default function PurchaseScreen({
             placeholderTextColor={colors.textTertiary}
             value={item.sellPrice > 0 ? String(item.sellPrice) : ""}
             onChangeText={(val) => updateQuickItem(item.id, "sellPrice", parseFloat(val) || 0)}
+          />
+        </View>
+      </View>
+      {/* STG-359: Batch/expiry info fields */}
+      <View style={styles.batchExpiryRow}>
+        <View style={styles.batchInputWrap}>
+          <Text style={styles.priceLabel}>{t("purchase.batchNumber")}</Text>
+          <TextInput
+            style={styles.priceInput}
+            placeholder={t("purchase.batchNumberPlaceholder")}
+            placeholderTextColor={colors.textTertiary}
+            value={item.batchNumber || ""}
+            onChangeText={(val) => updateQuickItem(item.id, "batchNumber", val)}
+            autoCapitalize="characters"
+          />
+        </View>
+        <View style={styles.batchInputWrap}>
+          <Text style={styles.priceLabel}>{t("purchase.expiryDate")}</Text>
+          <TextInput
+            style={styles.priceInput}
+            placeholder={t("purchase.expiryDatePlaceholder")}
+            placeholderTextColor={colors.textTertiary}
+            value={item.expiryDate || ""}
+            onChangeText={(val) => updateQuickItem(item.id, "expiryDate", val)}
+            keyboardType="numbers-and-punctuation"
           />
         </View>
       </View>
@@ -936,6 +970,32 @@ export default function PurchaseScreen({
                 }
               />
 
+              {/* STG-352: MOV warning per supplier */}
+              {purchaseCartTotals.itemCount > 0 && (() => {
+                const groups = purchaseCart.getItemsBySupplier();
+                const movWarnings = groups.filter((g) => {
+                  const mov = g.items[0]?.minOrderValue;
+                  if (!mov || mov <= 0) return false;
+                  const groupTotal = g.items.reduce((sum, ci) => sum + ci.unitPrice * ci.quantity, 0);
+                  return groupTotal < mov;
+                });
+                if (movWarnings.length === 0) return null;
+                return (
+                  <View style={styles.movWarningBar}>
+                    <MaterialCommunityIcons name="alert" size={16} color={colors.warning} />
+                    {movWarnings.map((g) => {
+                      const mov = g.items[0]?.minOrderValue || 0;
+                      const groupTotal = g.items.reduce((sum, ci) => sum + ci.unitPrice * ci.quantity, 0);
+                      return (
+                        <Text key={g.supplierId} style={styles.movWarningText}>
+                          {t("purchase.movWarning", { supplier: g.supplierName, mov: formatMoney(mov), current: formatMoney(groupTotal) })}
+                        </Text>
+                      );
+                    })}
+                  </View>
+                );
+              })()}
+
               {/* POS-BUY-001: Purchase cart action bar */}
               {purchaseCartTotals.itemCount > 0 && (
                 <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
@@ -944,6 +1004,15 @@ export default function PurchaseScreen({
                       {t("purchase.cartSummary", { items: purchaseCartTotals.itemCount, suppliers: purchaseCartTotals.supplierCount })}
                     </Text>
                     <Text style={styles.actionTotal}>{formatMoney(purchaseCartTotals.grandTotal)}</Text>
+                    {/* STG-408: Multi-supplier cart badge */}
+                    {purchaseCartTotals.supplierCount > 1 && (
+                      <View style={styles.multiSupplierBadge}>
+                        <MaterialCommunityIcons name="store-outline" size={12} color={colors.accent} />
+                        <Text style={styles.multiSupplierText}>
+                          {t("purchase.multiSupplierCart", { count: purchaseCartTotals.supplierCount })}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                   {/* T-200: Wire Review Order → Place Order via orderApi */}
                   <Pressable
@@ -1435,5 +1504,39 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
   },
   scanFeedbackManual: {
     backgroundColor: colors.warningSoft,
+  },
+  // STG-359: Batch/expiry row styles
+  batchExpiryRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 8,
+  },
+  batchInputWrap: {
+    flex: 1,
+  },
+  // STG-352: MOV warning bar
+  movWarningBar: {
+    flexDirection: "column",
+    backgroundColor: colors.warningSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 4,
+  },
+  movWarningText: {
+    fontSize: 12,
+    color: colors.warning,
+    fontWeight: "500",
+  },
+  // STG-408: Multi-supplier cart badge
+  multiSupplierBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
+  multiSupplierText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.accent,
   },
 }); }

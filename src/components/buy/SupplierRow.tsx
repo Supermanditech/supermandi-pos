@@ -2,7 +2,7 @@
 // Individual supplier option in product detail modal
 
 import React, { useCallback, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -95,16 +95,26 @@ export function SupplierRow({
                 <Text style={styles.preferredText}>Preferred</Text>
               </View>
             )}
-            {/* SM-020: BNPL badge */}
+            {/* SM-020 + STG-407: BNPL badge with tap-to-see-terms */}
             {bnplEligible && (
-              <View style={styles.bnplBadge}>
+              <Pressable
+                style={styles.bnplBadge}
+                onPress={() => Alert.alert(
+                  t('purchase.bnplBadgeLabel', 'BNPL'),
+                  supplier.bnplMaxDays
+                    ? t('purchase.bnplTerms', { days: supplier.bnplMaxDays })
+                    : t('purchase.bnplTermsDefault', 'Buy Now Pay Later available')
+                )}
+                accessibilityLabel="BNPL terms"
+                accessibilityRole="button"
+              >
                 <MaterialCommunityIcons
                   name="clock-outline"
                   size={10}
                   color={colors.accent}
                 />
                 <Text style={styles.bnplText}>BNPL</Text>
-              </View>
+              </Pressable>
             )}
           </View>
 
@@ -276,7 +286,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       gap: 2,
     },
     preferredText: {
-      fontSize: 10,
+      fontSize: 12,
       fontWeight: "600",
       color: colors.warning,
     },
@@ -291,7 +301,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       gap: 2,
     },
     bnplText: {
-      fontSize: 10,
+      fontSize: 12,
       fontWeight: "600",
       color: colors.accent,
     },
@@ -347,7 +357,8 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       alignItems: "center",
     },
     metaLabel: {
-      fontSize: 11,
+      // STG-353: MOQ font size fix — minimum 12
+      fontSize: 12,
       color: colors.textTertiary,
       marginBottom: 2,
     },
@@ -382,7 +393,8 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       alignItems: "center",
     },
     totalLabel: {
-      fontSize: 11,
+      // STG-353: MOQ font size fix — minimum 12
+      fontSize: 12,
       color: colors.textTertiary,
     },
     totalValue: {

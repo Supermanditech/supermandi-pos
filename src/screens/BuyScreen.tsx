@@ -9,12 +9,14 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
   useWindowDimensions,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -61,7 +63,15 @@ type StockStatusFilter = "all" | "in_stock" | "low_stock" | "out_of_stock";
 const NUM_COLUMNS = 2;
 // GO-LIVE-170: Use centralized pagination config
 const PAGE_SIZE = LIST_PAGE_SIZE;
-const SEARCH_DEBOUNCE_MS = 400;
+// STG-344: Reduced from 400ms to 200ms for faster search response
+const SEARCH_DEBOUNCE_MS = 200;
+
+// STG-343: Detect barcode-like input (8-14 digit numeric string)
+const BARCODE_REGEX = /^\d{8,14}$/;
+
+// STG-345: Recent searches AsyncStorage key and max items
+const RECENT_SEARCHES_KEY = "buy_recent_searches";
+const MAX_RECENT_SEARCHES = 5;
 
 // =============================================================================
 // COMPONENT
@@ -92,6 +102,14 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
 
   // TICKET-003: Stock status filter
   const [selectedStockStatus, setSelectedStockStatus] = useState<StockStatusFilter>("all");
+
+  // STG-343/STG-348: Barcode detection state
+  const [isBarcodeQuery, setIsBarcodeQuery] = useState(false);
+  const [barcodeLookupLoading, setBarcodeLookupLoading] = useState(false);
+
+  // STG-345: Recent searches state
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [showRecentSearches, setShowRecentSearches] = useState(false);
 
   // Cart store for quantity badges and cart modal
   const cartItems = usePurchaseCartStore((state) => state.items);
@@ -150,6 +168,29 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
       // Ignore errors - badge just won't show
     });
   }, []);
+
+  // STG-345: Load recent searches on mount
+  useEffect(() => {
+    AsyncStorage.getItem(RECENT_SEARCHES_KEY).then((val) => {
+      if (val) {
+        try { setRecentSearches(JSON.parse(val)); } catch { /* ignore */ }
+      }
+    });
+  }, []);
+
+  // STG-345: Save a search term to recent searches
+  const saveRecentSearch = useCallback(async (term: string) => {
+    const trimmed = term.trim();
+    if (!trimmed || trimmed.length < 2) return;
+    const updated = [trimmed, ...recentSearches.filter((s) => s !== trimmed)].slice(0, MAX_RECENT_SEARCHES);
+    setRecentSearches(updated);
+    await AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+  }, [recentSearches]);
+
+  // STG-343: Detect barcode-like input
+  useEffect(() => {
+    setIsBarcodeQuery(BARCODE_REGEX.test(searchQuery.trim()));
+  }, [searchQuery]);
 
   // T-146: Subscribe to network status changes
   useEffect(() => {
@@ -222,12 +263,25 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
       setError(null);
 
       try {
+        // STG-343: If query looks like a barcode, do barcode-specific lookup
+        const isBarcode = BARCODE_REGEX.test((debouncedQuery || "").trim());
+        if (isBarcode && replace) {
+          setBarcodeLookupLoading(true);
+        }
+
         const response = await catalogApi.getBuyCatalog(storeId, {
           q: debouncedQuery || undefined,
           category: selectedCategory || undefined,
+          // STG-343: Pass barcode param when detected
+          barcode: isBarcode ? debouncedQuery.trim() : undefined,
+          // STG-346: Pass stock status filter to server for correct pagination
+          stockStatus: selectedStockStatus !== "all" ? selectedStockStatus : undefined,
           page: pageNum,
           limit: PAGE_SIZE,
         });
+
+        // STG-348: Clear barcode loading
+        setBarcodeLookupLoading(false);
 
         if (replace) {
           setProducts(response.data);
@@ -246,6 +300,8 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
         }
       } catch (err) {
         if (__DEV__) console.error("[BuyScreen] Failed to load products:", err);
+        // STG-348: Clear barcode loading on error
+        setBarcodeLookupLoading(false);
 
         // T-146: Fall back to cached data when offline or API fails
         if (replace && pageNum === 1) {
@@ -272,7 +328,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
         setLoadingMore(false);
       }
     },
-    [storeId, debouncedQuery, selectedCategory, t]
+    [storeId, debouncedQuery, selectedCategory, selectedStockStatus, t]
   );
 
   // Load products when filters change
@@ -283,7 +339,11 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
     setPage(1);
     setHasMore(true);
     loadProducts(1, true);
-  }, [storeId, debouncedQuery, selectedCategory, loadProducts]);
+    // STG-345: Save search term to recent searches on debounced query change
+    if (debouncedQuery && debouncedQuery.length >= 2) {
+      void saveRecentSearch(debouncedQuery);
+    }
+  }, [storeId, debouncedQuery, selectedCategory, loadProducts, saveRecentSearch]);
 
   // Pull to refresh
   const handleRefresh = useCallback(async () => {
@@ -300,6 +360,8 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
         catalogApi.getBuyCatalog(storeId, {
           q: debouncedQuery || undefined,
           category: selectedCategory || undefined,
+          // STG-346: Pass stock status filter on refresh too
+          stockStatus: selectedStockStatus !== "all" ? selectedStockStatus : undefined,
           page: 1,
           limit: PAGE_SIZE,
         }),
@@ -315,7 +377,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
     } finally {
       setRefreshing(false);
     }
-  }, [storeId, debouncedQuery, selectedCategory, t]);
+  }, [storeId, debouncedQuery, selectedCategory, selectedStockStatus, t]);
 
   // Load more on scroll
   // GO-LIVE-170: Added pagination safeguard to prevent infinite loops
@@ -368,19 +430,45 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
     searchInputRef.current?.clear();
   }, []);
 
-  // TICKET-003: Client-side filtering for stock status
+  // TICKET-003 + STG-346: Stock status filter is now sent to server for correct pagination.
+  // Keep client-side filter as fallback for cached/offline data.
   const filteredProducts = useMemo(() => {
-    if (selectedStockStatus === "all") {
+    if (selectedStockStatus === "all" || !usingCache) {
       return products;
     }
+    // Only apply client-side filter when using cached data (server already filters otherwise)
     return products.filter((p) => p.stockStatus === selectedStockStatus);
-  }, [products, selectedStockStatus]);
+  }, [products, selectedStockStatus, usingCache]);
 
   // Handle search clear
   const handleClearSearch = useCallback(() => {
     setSearchQuery("");
+    setShowRecentSearches(false);
     searchInputRef.current?.clear();
   }, []);
+
+  // STG-345: Handle tapping a recent search chip
+  const handleRecentSearchTap = useCallback((term: string) => {
+    setSearchQuery(term);
+    setShowRecentSearches(false);
+  }, []);
+
+  // STG-345: Handle search input focus — show recent searches
+  const handleSearchFocus = useCallback(() => {
+    if (recentSearches.length > 0 && searchQuery.length === 0) {
+      setShowRecentSearches(true);
+    }
+  }, [recentSearches.length, searchQuery.length]);
+
+  // STG-345: Handle search input change — show/hide suggestions
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+    if (text.length === 0 && recentSearches.length > 0) {
+      setShowRecentSearches(true);
+    } else {
+      setShowRecentSearches(false);
+    }
+  }, [recentSearches.length]);
 
   // Render product item
   const renderProduct = useCallback(
@@ -477,9 +565,9 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
       <View style={styles.header}>
         <View style={styles.searchContainer}>
           <MaterialCommunityIcons
-            name="magnify"
+            name={isBarcodeQuery ? "barcode" : "magnify"}
             size={20}
-            color={colors.textTertiary}
+            color={isBarcodeQuery ? colors.primary : colors.textTertiary}
             style={styles.searchIcon}
           />
           <TextInput
@@ -488,12 +576,24 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
             placeholder={t('buy.searchProducts')}
             placeholderTextColor={colors.textTertiary}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={handleSearchChange}
+            onFocus={handleSearchFocus}
+            onBlur={() => {
+              // Delay hiding so chip press registers
+              setTimeout(() => setShowRecentSearches(false), 200);
+            }}
             returnKeyType="search"
             autoCapitalize="none"
             autoCorrect={false}
           />
-          {searchQuery.length > 0 && (
+          {/* STG-348: Barcode lookup spinner */}
+          {barcodeLookupLoading && (
+            <View style={styles.barcodeLookupIndicator}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.barcodeLookupText}>{t('buy.lookingUpBarcode', 'Looking up barcode...')}</Text>
+            </View>
+          )}
+          {searchQuery.length > 0 && !barcodeLookupLoading && (
             <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={handleClearSearch} style={styles.clearIcon}>
               <MaterialCommunityIcons
                 name="close-circle"
@@ -534,6 +634,26 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           </Pressable>
         )}
       </View>
+
+      {/* STG-345: Recent searches suggestions */}
+      {showRecentSearches && recentSearches.length > 0 && (
+        <View style={styles.recentSearchesContainer}>
+          <Text style={styles.recentSearchesLabel}>{t('buy.recentSearches', 'Recent searches')}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recentSearchesScroll}>
+            {recentSearches.map((term) => (
+              <Pressable
+                key={term}
+                accessibilityRole="button"
+                style={styles.recentSearchChip}
+                onPress={() => handleRecentSearchTap(term)}
+              >
+                <MaterialCommunityIcons name="history" size={14} color={colors.textSecondary} />
+                <Text style={styles.recentSearchChipText}>{term}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Category Filter */}
       <CategoryFilter
@@ -997,6 +1117,49 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     fontSize: 12,
     fontWeight: "600",
     color: colors.warning,
+  },
+  // STG-348: Barcode lookup indicator styles
+  barcodeLookupIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingRight: theme.spacing.xs,
+  },
+  barcodeLookupText: {
+    fontSize: 11,
+    color: colors.primary,
+    fontWeight: "500",
+  },
+  // STG-345: Recent searches styles
+  recentSearchesContainer: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  recentSearchesLabel: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    marginBottom: theme.spacing.xs,
+    fontWeight: "500",
+  },
+  recentSearchesScroll: {
+    flexDirection: "row",
+  },
+  recentSearchChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 6,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: theme.borderRadius.full,
+    marginRight: theme.spacing.sm,
+    gap: 4,
+  },
+  recentSearchChipText: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
 }); }
 

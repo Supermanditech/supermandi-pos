@@ -80,6 +80,10 @@ export interface GetCatalogParams {
   q?: string;
   category?: string;
   inStockOnly?: boolean;
+  // STG-346: Stock status filter for server-side pagination
+  stockStatus?: "in_stock" | "low_stock" | "out_of_stock";
+  // STG-343: Barcode lookup
+  barcode?: string;
   page?: number;
   limit?: number;
 }
@@ -265,6 +269,14 @@ export async function getBuyCatalog(
   }
   if (params?.category) {
     query.set("category", params.category);
+  }
+  // STG-346: Pass stock status filter to server for correct pagination
+  if (params?.stockStatus) {
+    query.set("stockStatus", params.stockStatus);
+  }
+  // STG-343: Barcode lookup parameter
+  if (params?.barcode) {
+    query.set("barcode", params.barcode);
   }
   if (params?.page && params.page > 0) {
     query.set("page", String(params.page));

@@ -267,7 +267,26 @@
     "partialSuccessMessage": "{{succeeded}} ऑर्डर दिए गए:\n{{succeededDetails}}\n\n{{failed}} विफल:\n{{failedDetails}}\n\nविफल आइटम पुनः प्रयास के लिए कार्ट में हैं।",
     "orderFailed": "ऑर्डर विफल",
     "failedToPlaceOrder": "ऑर्डर देने में विफल",
-    "placingOrder": "ऑर्डर दिया जा रहा है..."
+    "placingOrder": "ऑर्डर दिया जा रहा है...",
+    "purchasePrice": "खरीद मूल्य",
+    "movWarning": "{{supplier}} के लिए न्यूनतम ऑर्डर मूल्य {{mov}} है। आपका वर्तमान कुल {{current}} है।",
+    "movLabel": "न्यूनतम ऑर्डर मूल्य",
+    "movBelowMinimum": "न्यूनतम से कम",
+    "supplierComparison": "सप्लायर तुलना",
+    "supplierComparisonPrice": "मूल्य",
+    "supplierComparisonMoq": "MOQ",
+    "supplierComparisonDelivery": "डिलीवरी",
+    "supplierComparisonDeliveryDefault": "मानक",
+    "batchNumber": "बैच नंबर",
+    "expiryDate": "समाप्ति तिथि",
+    "batchNumberPlaceholder": "जैसे B2026-001",
+    "expiryDatePlaceholder": "जैसे 2026-12-31",
+    "bnplBadgeLabel": "BNPL",
+    "bnplTerms": "अभी खरीदें बाद में भुगतान करें — {{days}} दिनों में भुगतान करें",
+    "bnplTermsDefault": "अभी खरीदें बाद में भुगतान करें उपलब्ध",
+    "multiSupplierCart": "कार्ट में {{count}} सप्लायर",
+    "variantFallback": "मानक",
+    "packSizeFallback": "1 यूनिट"
   },
   "sell": {
     "readyToBill": "बिलिंग के लिए तैयार। अगला उत्पाद स्कैन करें।",
@@ -411,7 +430,9 @@
     "payLater": "बाद में भुगतान करें",
     "payLaterTitle": "बाद में भुगतान करें",
     "payLaterDescription": "अभी खरीदें बाद में भुगतान करें (BNPL) — स्टॉक अभी खरीदें और नियत तारीख तक भुगतान करें।",
-    "payLaterAccessibility": "बाद में भुगतान उपलब्ध। विवरण के लिए टैप करें।"
+    "payLaterAccessibility": "बाद में भुगतान उपलब्ध। विवरण के लिए टैप करें।",
+    "lookingUpBarcode": "बारकोड खोज रहे हैं...",
+    "recentSearches": "हाल की खोजें"
   },
   "reorder": {
     "title": "रीऑर्डर",
@@ -477,6 +498,8 @@
     "loadingPending": "लंबित रीऑर्डर लोड हो रहे हैं...",
     "approveSelected": "चयनित स्वीकृत करें ({{count}})",
     "approveSelectedLabel": "{{count}} चयनित रीऑर्डर स्वीकृत करें",
+    "dismissConfirmTitle": "सुझाव खारिज करें?",
+    "dismissConfirmMessage": "यह रीऑर्डर सुझाव हटा दिया जाएगा। आप अभी भी मैन्युअल रूप से रीऑर्डर कर सकते हैं।",
     "dismissFailedTitle": "खारिज करना विफल",
     "dismissFailedMessage": "रीऑर्डर खारिज नहीं हो सका। कृपया पुनः प्रयास करें।"
   },

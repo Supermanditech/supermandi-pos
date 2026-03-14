@@ -152,12 +152,16 @@ export function CatalogProductCard({
                 {displayBrand}
               </Text>
             )}
-            {/* Pack config: "70g × 12 Pack" */}
-            {packConfig && (
-              <Text style={styles.packConfig} numberOfLines={1} testID="catalog-card-pack-config">
-                {packConfig}
+            {/* STG-351: Show supplier name below product name for visibility */}
+            {supplierLine && (
+              <Text style={styles.supplierInline} numberOfLines={1} testID="catalog-card-supplier-inline">
+                {supplierLine}
               </Text>
             )}
+            {/* Pack config: "70g × 12 Pack" — STG-355: fallback when missing */}
+            <Text style={styles.packConfig} numberOfLines={1} testID="catalog-card-pack-config">
+              {packConfig || "1 unit"}
+            </Text>
           </View>
         </View>
 
@@ -167,7 +171,7 @@ export function CatalogProductCard({
         {/* Row 2: Cost price + MRP */}
         <View style={styles.priceRow}>
           <Text style={styles.costPrice} testID="catalog-card-cost-price">
-            {`Cost ${formatRupees(product.bestPrice)}/pack`}
+            {`Purchase Price ${formatRupees(product.bestPrice)}/pack`}
           </Text>
           {product.suppliers[0]?.mrp != null && product.suppliers[0].mrp > 0 && (
             <Text style={styles.mrp} testID="catalog-card-mrp">
@@ -306,8 +310,15 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       color: colors.textTertiary,
       marginTop: 2,
     },
-    packConfig: {
+    // STG-351: Supplier name inline below product name
+    supplierInline: {
       fontSize: 11,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    packConfig: {
+      // STG-353: font size fix — minimum 12
+      fontSize: 12,
       color: colors.textSecondary,
       marginTop: 2,
     },
@@ -338,7 +349,8 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       justifyContent: "space-between",
     },
     moq: {
-      fontSize: 11,
+      // STG-353: MOQ font size fix — minimum 12
+      fontSize: 12,
       color: colors.textSecondary,
     },
     stockBadge: {

@@ -3,6 +3,7 @@
 
 import React, { useCallback, useMemo, useState } from "react";
 import {
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -210,22 +211,37 @@ export function ProductDetailModal({
                 </View>
               )}
 
-              {product.unit && (
-                <View style={styles.metaChip}>
-                  <MaterialCommunityIcons
-                    name="scale"
-                    size={12}
-                    color={tc.textTertiary}
-                  />
-                  <Text style={styles.metaChipText}>{product.unit}</Text>
-                </View>
-              )}
+              {/* STG-355: Variant/pack size fallback — show unit or fallback */}
+              <View style={styles.metaChip}>
+                <MaterialCommunityIcons
+                  name="scale"
+                  size={12}
+                  color={tc.textTertiary}
+                />
+                <Text style={styles.metaChipText}>
+                  {product.unit || t('purchase.variantFallback', 'Standard')}
+                </Text>
+              </View>
+
+              {/* STG-355: Pack size fallback */}
+              <View style={styles.metaChip}>
+                <MaterialCommunityIcons
+                  name="package-variant"
+                  size={12}
+                  color={tc.textTertiary}
+                />
+                <Text style={styles.metaChipText}>
+                  {product.packSize
+                    ? `${product.packSize} ${product.unit || 'units'}`
+                    : t('purchase.packSizeFallback', '1 unit')}
+                </Text>
+              </View>
             </View>
 
-            {/* Summary stats */}
+            {/* Summary stats — STG-354: "Purchase Price" label */}
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
-                <Text style={styles.statLabel}>Best Price</Text>
+                <Text style={styles.statLabel}>{t('purchase.purchasePrice', 'Purchase Price')}</Text>
                 <Text style={styles.statValue}>
                   {formatMoney(product.bestPrice)}
                 </Text>
@@ -251,6 +267,81 @@ export function ProductDetailModal({
               </View>
             </View>
           </View>
+
+          {/* STG-358: Supplier Comparison Table */}
+          {product.suppliers.length > 1 && (
+            <View style={styles.comparisonSection}>
+              <Text style={styles.comparisonTitle}>
+                {t('purchase.supplierComparison', 'Supplier Comparison')}
+              </Text>
+              {/* Table header */}
+              <View style={styles.comparisonHeaderRow}>
+                <Text style={[styles.comparisonHeaderCell, styles.comparisonNameCell]}>
+                  {t('purchase.supplierName', 'Supplier')}
+                </Text>
+                <Text style={styles.comparisonHeaderCell}>
+                  {t('purchase.supplierComparisonPrice', 'Price')}
+                </Text>
+                <Text style={styles.comparisonHeaderCell}>
+                  {t('purchase.supplierComparisonMoq', 'MOQ')}
+                </Text>
+                <Text style={styles.comparisonHeaderCell}>
+                  {t('purchase.supplierComparisonDelivery', 'Delivery')}
+                </Text>
+              </View>
+              {/* Table rows */}
+              {product.suppliers.map((s) => (
+                <View key={s.supplierProductId} style={styles.comparisonRow}>
+                  <View style={[styles.comparisonCell, styles.comparisonNameCell]}>
+                    <Text style={styles.comparisonCellText} numberOfLines={1}>
+                      {s.supplierName}
+                    </Text>
+                    {/* STG-407: BNPL badge with terms */}
+                    {s.bnplEligible && (
+                      <Pressable
+                        style={styles.bnplBadgeInline}
+                        onPress={() => Alert.alert(
+                          t('purchase.bnplBadgeLabel', 'BNPL'),
+                          s.bnplMaxDays
+                            ? t('purchase.bnplTerms', { days: s.bnplMaxDays })
+                            : t('purchase.bnplTermsDefault', 'Buy Now Pay Later available')
+                        )}
+                        accessibilityLabel="BNPL terms"
+                        accessibilityRole="button"
+                      >
+                        <Text style={styles.bnplBadgeInlineText}>BNPL</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                  <Text style={[styles.comparisonCell, styles.comparisonCellText]}>
+                    {formatMoney(s.purchasePrice)}
+                  </Text>
+                  <Text style={[styles.comparisonCell, styles.comparisonCellText]}>
+                    {s.moq}
+                  </Text>
+                  <Text style={[styles.comparisonCell, styles.comparisonCellText]}>
+                    {t('purchase.supplierComparisonDeliveryDefault', 'Standard')}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* STG-352: MOV display per supplier */}
+          {product.suppliers.some((s) => s.minOrderValue && s.minOrderValue > 0) && (
+            <View style={styles.movSection}>
+              {product.suppliers
+                .filter((s) => s.minOrderValue && s.minOrderValue > 0)
+                .map((s) => (
+                  <View key={`mov-${s.supplierProductId}`} style={styles.movRow}>
+                    <MaterialCommunityIcons name="information-outline" size={14} color={tc.textTertiary} />
+                    <Text style={styles.movText}>
+                      {s.supplierName}: {t('purchase.movLabel', 'Min Order Value')} {formatMoney(s.minOrderValue!)}
+                    </Text>
+                  </View>
+                ))}
+            </View>
+          )}
 
           {/* Suppliers Section */}
           <View style={styles.suppliersSection}>
@@ -441,7 +532,8 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       alignItems: "center",
     },
     statLabel: {
-      fontSize: 11,
+      // STG-353: MOQ font size fix — minimum 12
+      fontSize: 12,
       color: colors.textTertiary,
       marginBottom: 4,
     },
@@ -524,6 +616,81 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) {
       fontSize: 15,
       fontWeight: "600",
       color: colors.textInverse,
+    },
+    // STG-358: Supplier Comparison Table styles
+    comparisonSection: {
+      backgroundColor: colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.md,
+    },
+    comparisonTitle: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginBottom: theme.spacing.sm,
+    },
+    comparisonHeaderRow: {
+      flexDirection: "row",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      paddingBottom: theme.spacing.xs,
+      marginBottom: theme.spacing.xs,
+    },
+    comparisonHeaderCell: {
+      flex: 1,
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.textTertiary,
+    },
+    comparisonNameCell: {
+      flex: 1.5,
+    },
+    comparisonRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: theme.spacing.xs,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    comparisonCell: {
+      flex: 1,
+    },
+    comparisonCellText: {
+      fontSize: 13,
+      color: colors.textPrimary,
+    },
+    // STG-407: BNPL badge inline
+    bnplBadgeInline: {
+      backgroundColor: colors.successSoft,
+      paddingHorizontal: 4,
+      paddingVertical: 1,
+      borderRadius: theme.borderRadius.sm,
+      marginTop: 2,
+      alignSelf: "flex-start",
+    },
+    bnplBadgeInlineText: {
+      fontSize: 9,
+      fontWeight: "700",
+      color: colors.success,
+    },
+    // STG-352: MOV section
+    movSection: {
+      backgroundColor: colors.warningSoft,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.sm,
+      marginBottom: theme.spacing.md,
+      gap: 4,
+    },
+    movRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    movText: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      flex: 1,
     },
   });
 }

@@ -267,7 +267,26 @@
     "partialSuccessMessage": "{{succeeded}} order(s) placed:\n{{succeededDetails}}\n\n{{failed}} failed:\n{{failedDetails}}\n\nFailed items remain in cart for retry.",
     "orderFailed": "Order Failed",
     "failedToPlaceOrder": "Failed to place order",
-    "placingOrder": "Placing Order..."
+    "placingOrder": "Placing Order...",
+    "purchasePrice": "Purchase Price",
+    "movWarning": "Minimum order value for {{supplier}} is {{mov}}. Your current total is {{current}}.",
+    "movLabel": "Min Order Value",
+    "movBelowMinimum": "Below minimum",
+    "supplierComparison": "Supplier Comparison",
+    "supplierComparisonPrice": "Price",
+    "supplierComparisonMoq": "MOQ",
+    "supplierComparisonDelivery": "Delivery",
+    "supplierComparisonDeliveryDefault": "Standard",
+    "batchNumber": "Batch Number",
+    "expiryDate": "Expiry Date",
+    "batchNumberPlaceholder": "e.g. B2026-001",
+    "expiryDatePlaceholder": "e.g. 2026-12-31",
+    "bnplBadgeLabel": "BNPL",
+    "bnplTerms": "Buy Now Pay Later — pay within {{days}} days",
+    "bnplTermsDefault": "Buy Now Pay Later available",
+    "multiSupplierCart": "{{count}} suppliers in cart",
+    "variantFallback": "Standard",
+    "packSizeFallback": "1 unit"
   },
   "sell": {
     "readyToBill": "Ready to bill. Scan the next product.",
@@ -411,7 +430,9 @@
     "payLater": "Pay Later",
     "payLaterTitle": "Pay Later",
     "payLaterDescription": "Buy Now Pay Later (BNPL) — purchase stock now and pay within the due date.",
-    "payLaterAccessibility": "Pay Later available. Tap for details."
+    "payLaterAccessibility": "Pay Later available. Tap for details.",
+    "lookingUpBarcode": "Looking up barcode...",
+    "recentSearches": "Recent searches"
   },
   "reorder": {
     "title": "Reorder",
@@ -477,6 +498,8 @@
     "loadingPending": "Loading pending reorders...",
     "approveSelected": "Approve Selected ({{count}})",
     "approveSelectedLabel": "Approve {{count}} selected reorders",
+    "dismissConfirmTitle": "Dismiss Suggestion?",
+    "dismissConfirmMessage": "This reorder suggestion will be removed. You can still reorder manually.",
     "dismissFailedTitle": "Dismiss Failed",
     "dismissFailedMessage": "Could not dismiss reorder. Please try again."
   },
