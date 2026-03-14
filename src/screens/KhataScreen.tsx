@@ -231,7 +231,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
     else if (phone.startsWith("91") && phone.length === 12) phone = phone.slice(2);
     else if (phone.startsWith("0")) phone = phone.slice(1);
     if (!/^\d{10}$/.test(phone)) {
-      Alert.alert(t("khata.invalidPhone"), t("khata.phoneValidationError", "Please enter a valid 10-digit Indian phone number. Remove +91 prefix if present."));
+      Alert.alert(t("khata.invalidPhone"), t("khata.invalidPhoneMessage"));
       return;
     }
     const amountStr = creditAmount.trim();
@@ -271,7 +271,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
     else if (phone.startsWith("91") && phone.length === 12) phone = phone.slice(2);
     else if (phone.startsWith("0")) phone = phone.slice(1);
     if (!/^\d{10}$/.test(phone)) {
-      Alert.alert(t("khata.invalidPhone"), t("khata.phoneValidationError", "Please enter a valid 10-digit Indian phone number. Remove +91 prefix if present."));
+      Alert.alert(t("khata.invalidPhone"), t("khata.invalidPhoneMessage"));
       return;
     }
     const amountStr = paymentAmount.trim();

@@ -65,15 +65,15 @@ export default function ForceUpdateScreen() {
   // S2-5: Validate route params — fallback to "unknown" for missing/invalid values
   const rawCurrent = route.params?.currentVersion;
   const rawRequired = route.params?.requiredVersion;
-  const currentVersion = rawCurrent && rawCurrent.trim() ? rawCurrent.trim() : "check failed";
-  const requiredVersion = rawRequired && rawRequired.trim() ? rawRequired.trim() : "check failed";
+  const currentVersion = rawCurrent && rawCurrent.trim() ? rawCurrent.trim() : "unknown";
+  const requiredVersion = rawRequired && rawRequired.trim() ? rawRequired.trim() : "unknown";
 
   const handleUpdate = () => {
     // POS-APPSTORE-IOS-FALLBACK: On iOS before App Store listing is live,
     // show a clear message rather than silently trying the Play Store URL (which fails on iOS).
     if (IOS_MISSING_STORE_URL) {
       Alert.alert(
-        "Update Coming Soon",
+        "iOS Update Coming Soon",
         "A new version is available. The app store listing is being prepared. Please check back soon or contact support.",
         [{ text: "OK" }]
       );

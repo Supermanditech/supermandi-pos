@@ -43,7 +43,8 @@ describe('STG-492: PENDING_UPI_KEY crash recovery', () => {
   it('should check for stale pending UPI on mount', () => {
     // On mount useEffect, should read and handle pending UPI
     expect(source).toContain('AsyncStorage.getItem(PENDING_UPI_KEY)');
-    expect(source).toContain('Previous UPI Payment Pending');
+    // Title is shown via i18n key (translates to "Previous UPI Payment Pending")
+    expect(source).toContain('posPayment.previousUpiPendingTitle');
   });
 
   it('should gate the write behind UPI mode and valid paymentId/saleId', () => {

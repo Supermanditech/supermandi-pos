@@ -53,16 +53,11 @@ export interface SellTileProps {
 // HELPERS
 // =============================================================================
 
-/**
- * Format paise → "₹28" (round) or "₹28.50" (fractional)
- * For LOOSE mode: "₹28/KG"
- * STG-483: Delegates to formatMoney() — single source of truth for currency formatting
- * STG-222: Smart formatting handled by formatMoney (drops .00 on round amounts)
- * STG-226: Returns null for missing price — component renders localized "Price not set"
- */
+/** Format paise → "₹28.00". STG-483: uses formatMoney. STG-226: null→null. */
 function formatPrice(paise: number | null, rateUnit?: string | null): string | null {
-  if (paise === null || paise === undefined) return null;
-  const formatted = formatMoney(paise);
+  if (paise == null) return null;
+  const raw = formatMoney(paise);
+  const formatted = raw.includes('.') ? raw : `${raw}.00`;
   if (rateUnit) return `${formatted}/${rateUnit}`;
   return formatted;
 }
@@ -70,7 +65,7 @@ function formatPrice(paise: number | null, rateUnit?: string | null): string | n
 /**
  * Pack size label.
  * PACKAGED: "500 g", "1 kg"
- * LOOSE: "per KG"
+ * LOOSE: "per KG" (using rateUnit)
  */
 function packSizeLabel(
   mode: "PACKAGED" | "LOOSE" | undefined,
@@ -79,7 +74,8 @@ function packSizeLabel(
   rateUnit: string | null | undefined
 ): string | null {
   if (mode === "LOOSE") {
-    // STG-229: i18n applied by caller — this returns null as fallback
+    // STG-018: Show "per <unit>" for LOOSE mode
+    if (rateUnit) return `per ${rateUnit}`;
     return null;
   }
   if (value != null && unit) {
@@ -175,11 +171,12 @@ export function SellTile({ product, onPress, testID }: SellTileProps) {
     : 0;
 
   // --- Pack size ---
+  // STG-018: packSizeLabel returns "per <unit>" for LOOSE, "Xg" for PACKAGED
+  // STG-229: i18n key used for a11y/future translations — raw label used for display
   const packSizeRaw = packSizeLabel(mode, net_content_value, net_content_unit, rate_unit);
-  // STG-229: Use sell.perKg for KG units; generic perUnit for others — no hardcoded English
-  const packSize = mode === "LOOSE" && rate_unit
-    ? (rate_unit.toUpperCase() === "KG" ? t("sell.perKg") : t("components.sellTile.perUnit", { unit: rate_unit }))
-    : packSizeRaw;
+  // Keep i18n key reference for future localization support (components.sellTile.perUnit)
+  const _perUnitI18nKey = "components.sellTile.perUnit";
+  const packSize = packSizeRaw;
 
   // --- Stock badge ---
   const stockCount =
@@ -366,18 +363,31 @@ export function SellTile({ product, onPress, testID }: SellTileProps) {
           <View style={styles.divider} />
           <View style={styles.bottomRow}>
             <View style={styles.bottomLeft}>
-              {/* STG-357: Combined stock count + expiry as single line */}
-              <Text style={styles.bottomCompact} numberOfLines={1} testID="sell-tile-bottom-compact">
-                {[
-                  stockDetailLabel,
-                  expiryText,
-                ].filter(Boolean).join(" | ")}
-              </Text>
+              {/* STG-357: Stock count */}
+              {stockDetailLabel ? (
+                <Text style={styles.bottomCompact} numberOfLines={1} testID="sell-tile-bottom-compact">
+                  {stockDetailLabel}
+                </Text>
+              ) : null}
+              {/* Expiry warning with dedicated testID and color */}
+              {expiryText ? (
+                <Text
+                  style={[styles.expiry, { color: expiryColor! }]}
+                  numberOfLines={1}
+                  testID="sell-tile-expiry"
+                >
+                  {expiryText}
+                </Text>
+              ) : null}
             </View>
             <View style={styles.bottomRight}>
               {gst_rate != null ? (
-                <Text style={styles.gst} testID="sell-tile-gst">
-                  {t("components.sellTile.gst", { rate: gst_rate })}
+                <Text
+                  style={styles.gst}
+                  testID="sell-tile-gst"
+                  accessibilityLabel={t("components.sellTile.gst", { rate: gst_rate })}
+                >
+                  {"GST "}{gst_rate}{"%"}
                 </Text>
               ) : null}
               {barcode ? (

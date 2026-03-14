@@ -637,7 +637,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
               size={14}
               color={colors.success}
             />
-            <Text style={styles.bnplBadgeText}>{t('buy.payLater', { defaultValue: 'Pay Later' })}</Text>
+            <Text style={styles.bnplBadgeText}>{t('buy.bnplAvailable')}</Text>
           </Pressable>
         )}
       </View>

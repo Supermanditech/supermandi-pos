@@ -166,7 +166,7 @@
     "dangerZone": "खतरा क्षेत्र",
     "reprintSubtitle": "आखिरी बिल",
     "downloadSubtitle": "PDF कॉपी",
-    "shareSubtitle": "WhatsApp/SMS",
+    "shareSubtitle": "व्हाट्सएप/SMS",
     "about": "हमारे बारे में",
     "aboutSubtitle": "संस्करण {{version}}",
     "aboutVersion": "संस्करण: {{version}}",
@@ -282,7 +282,7 @@
     "expiryDate": "समाप्ति तिथि",
     "batchNumberPlaceholder": "जैसे B2026-001",
     "expiryDatePlaceholder": "जैसे 2026-12-31",
-    "bnplBadgeLabel": "BNPL",
+    "bnplBadgeLabel": "उधार",
     "bnplTerms": "अभी खरीदें बाद में भुगतान करें — {{days}} दिनों में भुगतान करें",
     "bnplTermsDefault": "अभी खरीदें बाद में भुगतान करें उपलब्ध",
     "multiSupplierCart": "कार्ट में {{count}} सप्लायर",
@@ -643,7 +643,7 @@
     "vsMarket": "{{pct}}% बाजार से ऊपर"
   },
   "grn": {
-    "title": "सामान प्राप्त करें",
+    "title": "स्टॉक प्राप्त",
     "description": "सप्लायर से प्राप्त सामान दर्ज करें",
     "orderNumber": "ऑर्डर #",
     "supplier": "सप्लायर",
@@ -762,7 +762,7 @@
     "enrollSuccess": "डिवाइस सफलतापूर्वक एनरोल हुआ!",
     "enrollFailed": "एनरोलमेंट विफल",
     "supportContact": "मदद चाहिए? सहायता से संपर्क करें",
-    "supportPhone": "+91 8600001234",
+    "supportPhone": "8600001234",
     "whatsAppSupport": "WhatsApp सहायता"
   },
   "status": {
@@ -1518,8 +1518,8 @@
     "returnRef": "वापसी #{{ref}}",
     "stockReversedNote": "स्टॉक सर्वर-साइड पर वापस कर दिया गया है।",
     "processAnotherReturn": "एक और वापसी करें",
-    "returnQty": "-{{qty}}",
-    "returnAmount": "-{{amount}}"
+    "returnQty": "−{{qty}}",
+    "returnAmount": "−{{amount}}"
   },
   "voice": {
     "tapToSpeak": "बोलने के लिए टैप करें",

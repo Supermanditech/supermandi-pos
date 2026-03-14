@@ -6,6 +6,7 @@
 const mockSyncOutbox = jest.fn();
 const mockPendingCount = jest.fn();
 const mockIsOnline = jest.fn();
+const mockSyncServiceNow = jest.fn();
 
 jest.mock('../../services/offline/sync', () => ({
   syncOutbox: (...args: any[]) => mockSyncOutbox(...args),
@@ -17,6 +18,12 @@ jest.mock('../../services/offline/outbox', () => ({
 
 jest.mock('../../services/networkStatus', () => ({
   isOnline: (...args: any[]) => mockIsOnline(...args),
+}));
+
+// syncStore.syncNow() delegates to syncService.syncNow — mock the entire module
+// to prevent the netinfo / api.ts import chain from running
+jest.mock('../../services/syncService', () => ({
+  syncNow: (...args: any[]) => mockSyncServiceNow(...args),
 }));
 
 import { useSyncStore } from '../../stores/syncStore';
@@ -88,7 +95,7 @@ describe('syncStore', () => {
   describe('syncNow', () => {
     it('syncs when online and updates state', async () => {
       mockIsOnline.mockResolvedValue(true);
-      mockSyncOutbox.mockResolvedValue(undefined);
+      mockSyncServiceNow.mockResolvedValue(undefined);
       mockPendingCount.mockResolvedValue(0);
 
       await store.getState().syncNow();
@@ -97,14 +104,14 @@ describe('syncStore', () => {
       expect(state.syncing).toBe(false);
       expect(state.outboxCount).toBe(0);
       expect(state.lastSyncAt).toBeInstanceOf(Date);
-      expect(mockSyncOutbox).toHaveBeenCalled();
+      expect(mockSyncServiceNow).toHaveBeenCalled();
     });
 
     it('skips sync when offline', async () => {
       mockIsOnline.mockResolvedValue(false);
       await store.getState().syncNow();
 
-      expect(mockSyncOutbox).not.toHaveBeenCalled();
+      expect(mockSyncServiceNow).not.toHaveBeenCalled();
       expect(store.getState().syncing).toBe(false);
     });
 
@@ -115,12 +122,12 @@ describe('syncStore', () => {
       await store.getState().syncNow();
 
       expect(mockIsOnline).not.toHaveBeenCalled();
-      expect(mockSyncOutbox).not.toHaveBeenCalled();
+      expect(mockSyncServiceNow).not.toHaveBeenCalled();
     });
 
     it('resets syncing on error', async () => {
       mockIsOnline.mockResolvedValue(true);
-      mockSyncOutbox.mockRejectedValue(new Error('sync failed'));
+      mockSyncServiceNow.mockRejectedValue(new Error('sync failed'));
 
       await store.getState().syncNow();
 

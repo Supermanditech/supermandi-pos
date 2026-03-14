@@ -1,6 +1,23 @@
 // T1: Global Jest setup for Expo/React Native screen tests
 // Mocks native modules that aren't available in Jest environment
 
+// Initialize i18n synchronously so components using useTranslation() get real translations
+// in render tests. Without this, t() returns the key name and string assertions fail.
+const i18next = require('i18next');
+const { initReactI18next } = require('react-i18next');
+const en = require('../i18n/locales/en.json');
+const hi = require('../i18n/locales/hi.json');
+if (!i18next.isInitialized) {
+  i18next.use(initReactI18next).init({
+    resources: { en: { translation: en }, hi: { translation: hi } },
+    lng: 'en',
+    fallbackLng: 'en',
+    interpolation: { escapeValue: false },
+    react: { useSuspense: false },
+    initImmediate: false,
+  });
+}
+
 // Mock expo-font to prevent native module errors
 jest.mock('expo-font', () => ({
   loadAsync: jest.fn().mockResolvedValue(undefined),
@@ -25,5 +42,41 @@ jest.mock('@expo/vector-icons', () => {
       return MockIcon;
     },
   });
+});
+
+// Mock @react-native-community/netinfo to prevent NativeModule.RNCNetInfo is null error
+jest.mock('@react-native-community/netinfo', () =>
+  require('@react-native-community/netinfo/jest/netinfo-mock')
+);
+
+// Mock react-native-gesture-handler to prevent TurboModuleRegistry.getEnforcing error
+// The package provides an official jest setup via jestSetup.js
+jest.mock('react-native-gesture-handler', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const Swipeable = ({ children }) => React.createElement(View, null, children);
+  const GestureHandlerRootView = ({ children, style }) =>
+    React.createElement(View, { style }, children);
+  const PanGestureHandler = ({ children }) => React.createElement(View, null, children);
+  const TapGestureHandler = ({ children }) => React.createElement(View, null, children);
+  const ScrollView = require('react-native').ScrollView;
+  const FlatList = require('react-native').FlatList;
+  return {
+    __esModule: true,
+    Swipeable,
+    GestureHandlerRootView,
+    PanGestureHandler,
+    TapGestureHandler,
+    ScrollView,
+    FlatList,
+    State: {},
+    Directions: {},
+    GestureDetector: ({ children }) => React.createElement(View, null, children),
+    Gesture: {
+      Pan: () => ({ onUpdate: () => ({}), onEnd: () => ({}) }),
+      Tap: () => ({ onEnd: () => ({}) }),
+      Simultaneous: () => ({}),
+    },
+  };
 });
 

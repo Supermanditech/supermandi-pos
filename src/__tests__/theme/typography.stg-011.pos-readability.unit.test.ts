@@ -25,16 +25,18 @@ describe('STG-011: POS-grade typography readability', () => {
 
   it('should have appropriate line height ratios (1.2x-1.6x)', () => {
     for (const [key, style] of Object.entries(typography)) {
-      const ratio = style.lineHeight / style.fontSize;
+      const lineHeight = style.lineHeight as number;
+      const fontSize = style.fontSize as number;
+      const ratio = lineHeight / fontSize;
       expect(ratio).toBeGreaterThanOrEqual(1.2);
       expect(ratio).toBeLessThanOrEqual(1.6);
     }
   });
 
   it('should have heading hierarchy (h1 > h2 > h3 > h4)', () => {
-    expect(typography.h1.fontSize).toBeGreaterThan(typography.h2.fontSize);
-    expect(typography.h2.fontSize).toBeGreaterThan(typography.h3.fontSize);
-    expect(typography.h3.fontSize).toBeGreaterThan(typography.h4.fontSize);
+    expect(typography.h1.fontSize).toBeGreaterThan(typography.h2.fontSize!);
+    expect(typography.h2.fontSize).toBeGreaterThan(typography.h3.fontSize!);
+    expect(typography.h3.fontSize).toBeGreaterThan(typography.h4.fontSize!);
   });
 
   it('should have all required text styles', () => {
