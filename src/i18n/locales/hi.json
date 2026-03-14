@@ -367,7 +367,22 @@
     "customerNamePlaceholder": "ग्राहक का नाम दर्ज करें",
     "customerPhonePlaceholder": "फ़ोन नंबर दर्ज करें",
     "quickQtyPlus": "+",
-    "quickQtyMinus": "-"
+    "quickQtyMinus": "-",
+    "cartGuidance": "और आइटम जोड़ने के लिए स्कैन या खोजें",
+    "addCustomer": "ग्राहक जोड़ें",
+    "addNote": "नोट जोड़ें",
+    "addNotePlaceholder": "ऑर्डर नोट्स जोड़ें...",
+    "managerApproval": "मैनेजर अनुमोदन आवश्यक",
+    "discountExceedsLimit": "छूट {{pct}}% सीमा से अधिक है। मैनेजर PIN आवश्यक।",
+    "managerPhone": "मैनेजर फोन",
+    "managerPin": "मैनेजर PIN",
+    "approveDiscount": "स्वीकृत करें",
+    "quickSell": "त्वरित बिक्री",
+    "addProduct": "गैर-सूचीबद्ध उत्पाद जोड़ें",
+    "productCount": "{{count}} उत्पाद",
+    "productCount_one": "{{count}} उत्पाद",
+    "productCount_other": "{{count}} उत्पाद",
+    "alsoAdd": "यह भी जोड़ें"
   },
   "limitedMode": {
     "badge": "सीमित मोड",

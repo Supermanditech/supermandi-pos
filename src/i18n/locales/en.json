@@ -367,7 +367,22 @@
     "customerNamePlaceholder": "Enter customer name",
     "customerPhonePlaceholder": "Enter phone number",
     "quickQtyPlus": "+",
-    "quickQtyMinus": "-"
+    "quickQtyMinus": "-",
+    "cartGuidance": "Scan or search to add more items",
+    "addCustomer": "Add Customer",
+    "addNote": "Add Note",
+    "addNotePlaceholder": "Add order notes...",
+    "managerApproval": "Manager Approval Required",
+    "discountExceedsLimit": "Discount exceeds {{pct}}% limit. Manager PIN required.",
+    "managerPhone": "Manager Phone",
+    "managerPin": "Manager PIN",
+    "approveDiscount": "Approve",
+    "quickSell": "Quick Sell",
+    "addProduct": "Add unlisted product",
+    "productCount": "{{count}} products",
+    "productCount_one": "{{count}} product",
+    "productCount_other": "{{count}} products",
+    "alsoAdd": "Also add"
   },
   "limitedMode": {
     "badge": "LIMITED MODE",

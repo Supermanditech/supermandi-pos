@@ -3005,7 +3005,12 @@ export default function SellScanScreen({
     focusAddInput();
   };
 
-  const renderSkuItem = ({ item }: { item: SkuItem }) => {
+  const renderSkuItem = useCallback(({ item }: { item: SkuItem }) => {
+    return <SkuTileWrapper item={item} />;
+  }, []);
+
+  // STG-368: Extracted as a proper component so hooks are valid
+  const SkuTileWrapper = React.memo(({ item }: { item: SkuItem }) => {
     const resolved = resolveSkuPrice(item);
     logPriceDebug(item, resolved);
     const stockValue = resolveStockForSku(item) ?? ((item.currentStock != null && !isNaN(Number(item.currentStock))) ? Number(item.currentStock) : null);
@@ -3066,7 +3071,7 @@ export default function SellScanScreen({
       </Pressable>
       </Animated.View>
     );
-  };
+  });
 
   const renderFeaturedSkuCard = (item: SkuItem) => {
     const resolved = resolveSkuPrice(item);

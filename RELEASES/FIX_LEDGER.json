@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 77,
+  "version": 78,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -1031,8 +1031,8 @@
     {
       "ticket": "STG-234",
       "file": "src/i18n/locales/en.json",
-      "start_line": 501,
-      "end_line": 501,
+      "start_line": 516,
+      "end_line": 516,
       "checksum": "545e178b8a9b9a3c",
       "description": "Rewrite storeInactive: remove Superadmin reference",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1064,7 +1064,7 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T08:17:36.781Z"
+      "line_shifted_at": "2026-03-14T11:44:39.869Z"
     },
     {
       "ticket": "STG-235",
@@ -1107,8 +1107,8 @@
     {
       "ticket": "STG-236",
       "file": "src/i18n/locales/en.json",
-      "start_line": 512,
-      "end_line": 512,
+      "start_line": 527,
+      "end_line": 527,
       "checksum": "26dc0dfc5031580e",
       "description": "Rewrite deviceAlreadyEnrolled: remove Superadmin reference",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1140,13 +1140,13 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T08:17:36.785Z"
+      "line_shifted_at": "2026-03-14T11:44:39.874Z"
     },
     {
       "ticket": "STG-237",
       "file": "src/i18n/locales/en.json",
-      "start_line": 525,
-      "end_line": 525,
+      "start_line": 540,
+      "end_line": 540,
       "checksum": "02eea21082f27f03",
       "description": "Rewrite sessionExpired: re-enter staff PIN instead of login again",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1178,7 +1178,7 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T08:17:36.789Z"
+      "line_shifted_at": "2026-03-14T11:44:39.879Z"
     },
     {
       "ticket": "STG-238",
@@ -1407,8 +1407,8 @@
     {
       "ticket": "STG-242",
       "file": "src/i18n/locales/en.json",
-      "start_line": 731,
-      "end_line": 732,
+      "start_line": 746,
+      "end_line": 747,
       "checksum": "af5ef383ce63e8e7",
       "description": "Explain KYC/UTR/EMI jargon in English locale",
       "test_file": "src/__tests__/i18n/locale-keys.stg-239-244.unit.test.ts",
@@ -1440,7 +1440,7 @@
         "regression_check": "39 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T08:17:36.802Z"
+      "line_shifted_at": "2026-03-14T11:44:39.894Z"
     },
     {
       "ticket": "STG-243",
@@ -1483,8 +1483,8 @@
     {
       "ticket": "STG-244",
       "file": "src/i18n/locales/en.json",
-      "start_line": 405,
-      "end_line": 405,
+      "start_line": 420,
+      "end_line": 420,
       "checksum": "a2c72e0534bf53eb",
       "description": "Goods Receipt Note renamed to Stock Received",
       "test_file": "src/__tests__/i18n/locale-keys.stg-239-244.unit.test.ts",
@@ -1516,7 +1516,7 @@
         "regression_check": "39 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T08:17:36.805Z"
+      "line_shifted_at": "2026-03-14T11:44:39.898Z"
     },
     {
       "ticket": "STG-279",
@@ -2574,8 +2574,8 @@
       "description": "Hindi translation completion — 100% en/hi key parity (updated Layer 7: sell + cart i18n keys)",
       "test_file": "src/__tests__/i18n/locale-completion.stg-054.unit.test.ts",
       "start_line": 1,
-      "end_line": 1631,
-      "checksum": "ac80b30da313cebb",
+      "end_line": 1646,
+      "checksum": "e6424fdd90346d52",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": "N/A",
@@ -3257,8 +3257,8 @@
     {
       "ticket": "STG-111",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4298,
-      "end_line": 4313,
+      "start_line": 4303,
+      "end_line": 4318,
       "checksum": "4b0a3116aa8decaa",
       "description": "You save display when discount applied",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3292,13 +3292,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.167Z"
+      "line_shifted_at": "2026-03-14T11:44:40.073Z"
     },
     {
       "ticket": "STG-029",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3810,
-      "end_line": 3830,
+      "start_line": 3815,
+      "end_line": 3835,
       "checksum": "c4b00aac0a59663d",
       "description": "Add Product footer button for unlisted items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3332,13 +3332,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.215Z"
+      "line_shifted_at": "2026-03-14T11:44:40.131Z"
     },
     {
       "ticket": "STG-028",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3831,
-      "end_line": 3836,
+      "start_line": 3836,
+      "end_line": 3841,
       "checksum": "946cc12fd4f16017",
       "description": "Product count footer for section context",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3372,13 +3372,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.237Z"
+      "line_shifted_at": "2026-03-14T11:44:40.156Z"
     },
     {
       "ticket": "STG-108",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4058,
-      "end_line": 4065,
+      "start_line": 4063,
+      "end_line": 4070,
       "checksum": "c51161a66b7a5ac2",
       "description": "Empty space guidance in cart when few items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3412,7 +3412,7 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.270Z"
+      "line_shifted_at": "2026-03-14T11:44:40.194Z"
     },
     {
       "ticket": "STG-107",
@@ -3497,8 +3497,8 @@
     {
       "ticket": "STG-033",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3735,
-      "end_line": 3773,
+      "start_line": 3740,
+      "end_line": 3778,
       "checksum": "859de86c4def559b",
       "description": "Quick-sell favorites horizontal strip above product grid",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3534,7 +3534,7 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.482Z"
+      "line_shifted_at": "2026-03-14T11:44:40.287Z"
     },
     {
       "ticket": "STG-103",
@@ -3576,8 +3576,8 @@
     {
       "ticket": "STG-103-UI",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4212,
-      "end_line": 4267,
+      "start_line": 4217,
+      "end_line": 4272,
       "checksum": "05dfecef25f8a231",
       "description": "Customer name/phone UI section in cart footer",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3613,13 +3613,13 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.596Z"
+      "line_shifted_at": "2026-03-14T11:44:40.399Z"
     },
     {
       "ticket": "STG-112",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4268,
-      "end_line": 4297,
+      "start_line": 4273,
+      "end_line": 4302,
       "checksum": "ec70d8342f04e1c9",
       "description": "Order note/memo expandable field in cart footer",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3655,7 +3655,7 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.669Z"
+      "line_shifted_at": "2026-03-14T11:44:40.469Z"
     },
     {
       "ticket": "STG-128",
@@ -3744,8 +3744,8 @@
     {
       "ticket": "STG-131",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4025,
-      "end_line": 4055,
+      "start_line": 4030,
+      "end_line": 4060,
       "checksum": "86aac570060cdc9e",
       "description": "Frequently bought together suggestions in cart footer",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3781,7 +3781,7 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.863Z"
+      "line_shifted_at": "2026-03-14T11:44:40.549Z"
     },
     {
       "ticket": "STG-487",
