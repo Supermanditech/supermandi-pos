@@ -10,13 +10,15 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { theme, useThemeColors } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import { useTranslation } from "react-i18next";
+// STG-398: Modal max-width on tablets
+import { getModalContainerStyle } from "../../utils/layout";
 import { SupplierRow } from "./SupplierRow";
 import type { CatalogProduct, CatalogSupplier } from "../../services/api/catalogApi";
 import { usePurchaseCartStore } from "../../stores/purchaseCartStore";
@@ -52,6 +54,9 @@ export function ProductDetailModal({
   const styles = useMemo(() => createStyles(tc), [tc]);
 
   const insets = useSafeAreaInsets();
+  // STG-398: Modal max-width on tablets
+  const { width: screenWidth } = useWindowDimensions();
+  const modalContainerStyle = useMemo(() => getModalContainerStyle(screenWidth), [screenWidth]);
   const [expandedSupplierId, setExpandedSupplierId] = useState<string | null>(null);
 
   // Cart store
@@ -139,7 +144,7 @@ export function ProductDetailModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.container, { paddingTop: insets.top }, modalContainerStyle]}>
         {/* Header */}
         <View style={styles.header}>
           <Pressable style={styles.closeButton} onPress={onClose} accessibilityLabel="Close product details" accessibilityRole="button">

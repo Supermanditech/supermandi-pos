@@ -14,6 +14,8 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+// STG-397: Safe area handling for notched phones
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { theme, useThemeColors } from "../theme";
@@ -120,6 +122,8 @@ type ScreenStep = "LOOKUP" | "SELECT" | "CONFIRM" | "SUCCESS";
 export default function ReturnScreen({ onBack }: ReturnScreenProps) {
   const colors = useThemeColors();
   const { t } = useTranslation();
+  // STG-397: Safe area insets for notched phones
+  const insets = useSafeAreaInsets();
   // Step state
   const [step, setStep] = useState<ScreenStep>("LOOKUP");
 
@@ -606,7 +610,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
   // ==========================================================================
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <BackHeader title={t("returnScreen.title")} onBack={onBack} />
 
       {/* STEP: LOOKUP */}

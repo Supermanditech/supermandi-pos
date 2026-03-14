@@ -106,6 +106,26 @@ export function getPendingTransactionCount(): number {
 }
 
 /**
+ * STG-389: Get the creation timestamp of the oldest pending transaction.
+ * Returns null if queue is empty.
+ */
+export function getOldestTransactionCreatedAt(): number | null {
+  if (queueState.transactions.length === 0) return null;
+  let oldest = Infinity;
+  for (const tx of queueState.transactions) {
+    if (tx.createdAt < oldest) oldest = tx.createdAt;
+  }
+  return oldest === Infinity ? null : oldest;
+}
+
+/**
+ * STG-389: Get pending transactions (read-only) for expiry checking.
+ */
+export function getPendingTransactions(): ReadonlyArray<QueuedTransaction> {
+  return queueState.transactions;
+}
+
+/**
  * Sync all pending transactions when back online
  */
 // LIVE.POS.OFFLINE_QUEUE_STORE_SCOPING.001: Accept currentStoreId to only sync matching transactions

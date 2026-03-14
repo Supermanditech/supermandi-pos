@@ -13,7 +13,8 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-
+// STG-397: Safe area handling for notched phones
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { theme, useThemeColors } from "../theme";
 import { BackHeader } from "../components/ui/BackHeader";
@@ -98,6 +99,8 @@ export default function OpeningStockScreen({
 }: OpeningStockScreenProps) {
   const colors = useThemeColors();
   const { t } = useTranslation();
+  // STG-397: Safe area insets for notched phones
+  const insets = useSafeAreaInsets();
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -560,7 +563,7 @@ export default function OpeningStockScreen({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <BackHeader title={t("openingStock.title")} onBack={onBack} subtitle={t("openingStock.subtitle")} />
 
       {/* Intro */}

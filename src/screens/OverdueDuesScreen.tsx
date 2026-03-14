@@ -15,6 +15,8 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+// STG-397: Safe area handling for notched phones
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { theme, useThemeColors, type ColorPalette } from "../theme";
@@ -105,6 +107,8 @@ export default function OverdueDuesScreen({
 }: OverdueDuesScreenProps) {
   const { t } = useTranslation();
   const colors = useThemeColors();
+  // STG-397: Safe area insets for notched phones
+  const insets = useSafeAreaInsets();
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -528,7 +532,7 @@ export default function OverdueDuesScreen({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <BackHeader title={t("overdueDues.title")} onBack={onBack} />
 
       {/* Summary bar */}

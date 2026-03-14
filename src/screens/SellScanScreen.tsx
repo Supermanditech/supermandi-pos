@@ -82,6 +82,19 @@ import { asError } from "../utils/errorUtils";
 // STG-102: Staff session for discount limits + manager PIN verification
 import { useStaffSessionStore } from "../stores/staffSessionStore";
 import { verifyManagerPin } from "../services/api/staffApi";
+// STG-387,388,389,391: Sync store for stock conflicts, queue warnings, offline checkout
+import { useSyncStore } from "../stores/syncStore";
+// STG-393,394,395,396,398,403: Device type and layout utilities
+import { getDeviceTypeFromDimensions, minTouchSize, type DeviceType } from "../utils/deviceType";
+import { getResponsiveColumns, getCartSheetSnapPoints, getModalContainerStyle, isLowEndDevice } from "../utils/layout";
+// STG-387: Manual sync
+import { syncNow } from "../services/syncService";
+// STG-390: Price refresh on reconnect
+import { onReconnect } from "../services/syncService";
+// STG-389: Queue expiry check
+import { getPendingTransactionCount, getOldestTransactionCreatedAt } from "../services/offlineQueue";
+// STG-392: DB health check
+import { checkDbHealth, clearAndResetDb, type DbHealthResult } from "../services/offline/dbHealthCheck";
 
 type CartMode = "SELL" | "PURCHASE";
 
@@ -291,19 +304,21 @@ async function syncProductsToOffline(query?: string, sort?: "fefo" | "default"):
 // GL-CRIT-0089: Use centralized pagination constant
 // GL-CRIT-0089: Use centralized pagination constant
 const PAGE_SIZE = PRODUCTS_PAGE_SIZE;
-// STG-225: Dynamic columns based on screen width (min 2, ~180dp per column)
-const getNumColumns = (screenWidth: number): number => Math.max(2, Math.floor(screenWidth / 180));
+// STG-225 + STG-395: Dynamic columns based on screen width and device type
+const getNumColumns = (screenWidth: number): number => getResponsiveColumns(screenWidth);
 // GL-CRIT-0090: Disabled auto-collapse as it was confusing to users.
 // Category rail stays expanded until user manually collapses (back button or tap outside).
 const CATEGORY_AUTO_COLLAPSE_MS = 0; // 0 = disabled
 const SCAN_SEGMENT_DOCKED_WIDTH = 64;
 const PRICE_AUTO_SAVE_DELAY_MS = 300;
 const DISCOUNT_AUTO_APPLY_DELAY_MS = 300;
-// DEV-061: Adjusted ratios for better visibility on handhelds
-// STG-220: Reduced from 0.55 to 0.42 — leaves ~58% for product grid
+// DEV-061 + STG-373 + STG-396: Cart sheet ratios now from layout utility
+// These are kept as defaults; actual ratios computed via getCartSheetSnapPoints()
 const CART_SHEET_COLLAPSED_RATIO = 0.42;
 const CART_SHEET_COLLAPSED_RATIO_SMALL = 0.60;
 const CART_SHEET_EXPANDED_RATIO = 0.95;
+// STG-376: Max parked carts
+const MAX_PARKED_CARTS = 3;
 const CART_SHEET_SNAP_DURATION_MS = 180;
 const CART_LIST_FOOTER_SPACER = 100;
 const SMALL_SCREEN_WIDTH = 400;
@@ -976,8 +991,17 @@ export default function SellScanScreen({
   const navigation = useNavigation<Nav>();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const isSmallScreen = screenWidth <= SMALL_SCREEN_WIDTH || screenHeight <= SMALL_SCREEN_HEIGHT;
-  // STG-225: Dynamic columns for responsive grid
-  const numColumns = useMemo(() => getNumColumns(screenWidth), [screenWidth]);
+  // STG-393: Device type detection
+  const deviceType: DeviceType = useMemo(() => getDeviceTypeFromDimensions(screenWidth, screenHeight), [screenWidth, screenHeight]);
+  // STG-395: Responsive columns based on device type
+  const numColumns = useMemo(() => getResponsiveColumns(screenWidth, deviceType), [screenWidth, deviceType]);
+  // STG-373 + STG-396: Responsive cart sheet snap points
+  const cartSnapPoints = useMemo(
+    () => getCartSheetSnapPoints(screenWidth, screenHeight, deviceType),
+    [screenWidth, screenHeight, deviceType]
+  );
+  // STG-403: Detect low-end device for reduced animation
+  const lowEndDevice = useMemo(() => isLowEndDevice(screenWidth, screenHeight), [screenWidth, screenHeight]);
   const insets = useSafeAreaInsets();
   const products = useProductsStore((state) => state.products);
   const loadProducts = useProductsStore((state) => state.loadProducts);
@@ -1004,6 +1028,67 @@ export default function SellScanScreen({
     removeDiscount,
     clearCart,
   } = useCartStore();
+
+  // STG-387,388,389,391: Sync store state
+  const syncStore = useSyncStore();
+  const { queueExpiryWarning, offlineCheckoutPending, pendingStockConflict } = syncStore;
+
+  // STG-376: Parked carts state
+  const [parkedCarts, setParkedCarts] = useState<Array<{ id: string; items: CartItem[]; parkedAt: number }>>([]);
+  const [showParkedCarts, setShowParkedCarts] = useState(false);
+
+  // STG-375: Undo removal countdown
+  const [undoCountdown, setUndoCountdown] = useState<number>(0);
+  const undoCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // STG-392: DB health check on mount
+  useEffect(() => {
+    checkDbHealth().then((result) => {
+      if (result.status === "corrupt") {
+        Alert.alert(
+          t("sync.dbCorrupt", "Database issue detected. Clear and re-sync?"),
+          result.message,
+          [
+            { text: t("common.cancel", "Cancel"), style: "cancel" },
+            {
+              text: t("sync.dbClearButton", "Clear & Re-sync"),
+              style: "destructive",
+              onPress: () => {
+                clearAndResetDb().then((clearResult) => {
+                  showToast(t("sync.dbCleared", "Database cleared. Data will re-sync."));
+                });
+              },
+            },
+          ]
+        );
+      } else if (result.status === "recovered") {
+        showToast(t("sync.dbRecovered", "Database recovered"));
+      }
+    }).catch((err) => {
+      console.warn("[SellScanScreen] DB health check error:", err);
+    });
+  }, [t]);
+
+  // STG-389: Periodically check queue expiry
+  useEffect(() => {
+    const checkExpiry = () => {
+      const count = getPendingTransactionCount();
+      const oldest = getOldestTransactionCreatedAt();
+      syncStore.updateQueueExpiryWarning(count, oldest);
+    };
+    checkExpiry();
+    const interval = setInterval(checkExpiry, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  // STG-390: Refresh prices on reconnect
+  useEffect(() => {
+    const unsubReconnect = onReconnect(() => {
+      console.log("[SellScanScreen] STG-390: Reconnected, refreshing stock/prices");
+      refreshStockSnapshot();
+    });
+    return unsubReconnect;
+  }, []);
 
   // GL-CRIT-0011: Auto-unlock cart if lock has expired (e.g., app crashed during payment)
   useEffect(() => {
@@ -1646,12 +1731,13 @@ export default function SellScanScreen({
         ? "Keep scanning"
         : "Tap to review cart";
 
-  const collapsedRatio = isSmallScreen ? CART_SHEET_COLLAPSED_RATIO_SMALL : CART_SHEET_COLLAPSED_RATIO;
+  // STG-373 + STG-396: Use responsive snap points from layout utility
+  const collapsedRatio = cartSnapPoints.collapsed;
   const collapsedHeight = Math.round(screenHeight * collapsedRatio);
-  // STG-133: Dynamic cart sheet height based on item count
-  const dynamicExpandedRatio = items.length <= 2 ? 0.55
-    : items.length <= 5 ? 0.75
-    : CART_SHEET_EXPANDED_RATIO;
+  // STG-133: Dynamic cart sheet height based on item count (respects device snap points)
+  const dynamicExpandedRatio = items.length <= 2 ? Math.min(0.55, cartSnapPoints.mid)
+    : items.length <= 5 ? cartSnapPoints.mid
+    : cartSnapPoints.expanded;
   const expandedHeight = Math.round(screenHeight * dynamicExpandedRatio);
   const collapsedOffset = Math.max(0, expandedHeight - collapsedHeight);
 
@@ -1659,14 +1745,15 @@ export default function SellScanScreen({
     (target: "collapsed" | "expanded") => {
       const toValue = target === "expanded" ? 0 : collapsedOffset;
       sheetSnapRef.current = target;
+      // STG-403: Use simpler animation on low-end devices
       Animated.timing(sheetTranslateY, {
         toValue,
-        duration: CART_SHEET_SNAP_DURATION_MS,
-        easing: Easing.out(Easing.ease),
+        duration: lowEndDevice ? CART_SHEET_SNAP_DURATION_MS * 0.5 : CART_SHEET_SNAP_DURATION_MS,
+        easing: lowEndDevice ? Easing.linear : Easing.out(Easing.ease),
         useNativeDriver: true,
       }).start();
     },
-    [collapsedOffset, sheetTranslateY]
+    [collapsedOffset, sheetTranslateY, lowEndDevice]
   );
 
   const handleSheetDragEnd = useCallback(
@@ -2308,9 +2395,11 @@ export default function SellScanScreen({
     clearTimers();
     setLastAddMessage(`Added ${currentItem.name}${variantSuffix}`);
     setUndoVisible(true);
-    setFlashActive(true);
-
-    flashTimerRef.current = setTimeout(() => setFlashActive(false), 260);
+    // STG-403: Skip flash animation on low-end devices
+    if (!lowEndDevice) {
+      setFlashActive(true);
+      flashTimerRef.current = setTimeout(() => setFlashActive(false), 260);
+    }
     addMessageTimerRef.current = setTimeout(() => setLastAddMessage(null), 2000);
     undoTimerRef.current = setTimeout(() => setUndoVisible(false), 3000);
   }, [cartMode, items, mutationHistory]);
@@ -2356,9 +2445,31 @@ export default function SellScanScreen({
     }
   };
 
+  // STG-375: Cart item removal with undo countdown snackbar
   const handleRemoveItem = (itemId: string) => {
     if (!canEditCart) return;
+    const removedItem = items.find((i) => i.id === itemId);
     removeItem(itemId);
+
+    if (removedItem) {
+      // Start 5-second undo countdown
+      if (undoCountdownRef.current) clearInterval(undoCountdownRef.current);
+      setUndoCountdown(5);
+      undoCountdownRef.current = setInterval(() => {
+        setUndoCountdown((prev) => {
+          if (prev <= 1) {
+            if (undoCountdownRef.current) clearInterval(undoCountdownRef.current);
+            undoCountdownRef.current = null;
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      showToast(
+        t("cart.itemRemoved", '"{{name}}" removed', { name: removedItem.name })
+      );
+    }
   };
 
   const openEditor = useCallback(
@@ -3432,6 +3543,69 @@ export default function SellScanScreen({
     setNoteExpanded(false);
   }, [noteInput, setCartNote]);
 
+  // STG-376: Park current cart for multi-customer support
+  const handleParkCart = useCallback(() => {
+    if (items.length === 0) return;
+    if (parkedCarts.length >= MAX_PARKED_CARTS) {
+      showToast(t("cart.maxParkedCarts", "Maximum 3 parked carts. Resume or clear one first."));
+      return;
+    }
+    const parked = {
+      id: `parked_${Date.now()}`,
+      items: [...items],
+      parkedAt: Date.now(),
+    };
+    setParkedCarts((prev) => [...prev, parked]);
+    clearCart(true);
+    showToast(t("cart.parkCart", "Park Cart") + " - " + t("cart.parkedCartItems", "{{count}} items", { count: parked.items.length }));
+  }, [items, parkedCarts.length, clearCart, t]);
+
+  // STG-376: Resume a parked cart
+  const handleResumeCart = useCallback((parkedId: string) => {
+    const parked = parkedCarts.find((p) => p.id === parkedId);
+    if (!parked) return;
+
+    // If current cart has items, park it first
+    if (items.length > 0) {
+      if (parkedCarts.length >= MAX_PARKED_CARTS) {
+        showToast(t("cart.maxParkedCarts", "Maximum 3 parked carts. Resume or clear one first."));
+        return;
+      }
+      setParkedCarts((prev) => [
+        ...prev.filter((p) => p.id !== parkedId),
+        { id: `parked_${Date.now()}`, items: [...items], parkedAt: Date.now() },
+      ]);
+    } else {
+      setParkedCarts((prev) => prev.filter((p) => p.id !== parkedId));
+    }
+
+    // Restore parked items
+    clearCart(true);
+    for (const item of parked.items) {
+      useCartStore.getState().addItem(item);
+    }
+    setShowParkedCarts(false);
+    showToast(t("cart.resumeCart", "Resume") + " - " + t("cart.parkedCartItems", "{{count}} items", { count: parked.items.length }));
+  }, [items, parkedCarts, clearCart, t]);
+
+  // STG-376: Remove a parked cart
+  const handleRemoveParkedCart = useCallback((parkedId: string) => {
+    setParkedCarts((prev) => prev.filter((p) => p.id !== parkedId));
+  }, []);
+
+  // STG-387: Manual sync handler
+  const handleSyncNow = useCallback(async () => {
+    try {
+      syncStore.setSyncing(true);
+      await syncNow();
+      syncStore.setSyncing(false);
+      showToast(t("sync.priceRefreshComplete", "Prices updated"));
+    } catch (error) {
+      syncStore.setSyncing(false);
+      showToast(t("sync.priceRefreshFailed", "Could not refresh prices. Using cached values."));
+    }
+  }, [syncStore, t]);
+
   const handleCheckout = () => {
     // STG-340: Show toast identifying problematic item when checkout blocked by price error
     if (hasUnresolvedPriceError) {
@@ -3816,6 +3990,75 @@ export default function SellScanScreen({
   return (
     <View style={styles.container}>
       {searchHeader}
+
+      {/* STG-389: Queue expiry warning banner */}
+      {queueExpiryWarning.showWarning ? (
+        <View style={styles.queueExpiryBanner}>
+          <MaterialCommunityIcons name="alert-circle" size={16} color={colors.warning} />
+          <Text style={styles.queueExpiryText}>
+            {t("sync.queueExpiryWarning", "{{count}} items waiting to sync. Items older than 24h may be lost.", {
+              count: queueExpiryWarning.totalPending,
+            })}
+          </Text>
+          <Pressable accessibilityRole="button" onPress={handleSyncNow} hitSlop={8}>
+            <Text style={styles.queueExpirySyncButton}>
+              {syncStore.syncing ? t("sync.syncing", "Syncing...") : t("sync.syncNowButton", "Sync Now")}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {/* STG-391: Offline checkout confirmation banner */}
+      {offlineCheckoutPending ? (
+        <View style={styles.offlineCheckoutBanner}>
+          <MaterialCommunityIcons name="cloud-off-outline" size={16} color={colors.textSecondary} />
+          <Text style={styles.offlineCheckoutText}>
+            {t("sync.offlineCheckoutSaved", "Sale saved locally. Will sync when connected.")}
+          </Text>
+          {syncStore.outboxCount > 0 ? (
+            <Text style={styles.offlineCheckoutCount}>
+              {t("sync.offlineQueueIndicator", "{{count}} pending", { count: syncStore.outboxCount })}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      {/* STG-376: Parked carts indicator */}
+      {parkedCarts.length > 0 ? (
+        <Pressable
+          accessibilityRole="button"
+          style={styles.parkedCartsBanner}
+          onPress={() => setShowParkedCarts(true)}
+        >
+          <MaterialCommunityIcons name="cart-arrow-down" size={16} color={colors.primary} />
+          <Text style={styles.parkedCartsText}>
+            {t("cart.parkedCarts", "Parked Carts ({{count}})", { count: parkedCarts.length })}
+          </Text>
+          <MaterialCommunityIcons name="chevron-right" size={16} color={colors.primary} />
+        </Pressable>
+      ) : null}
+
+      {/* STG-375: Undo countdown overlay */}
+      {undoCountdown > 0 ? (
+        <View style={styles.undoCountdownBanner}>
+          <Text style={styles.undoCountdownText}>
+            {t("cart.undoCountdown", "Undo ({{seconds}}s)", { seconds: undoCountdown })}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              undoLastAction();
+              if (undoCountdownRef.current) clearInterval(undoCountdownRef.current);
+              undoCountdownRef.current = null;
+              setUndoCountdown(0);
+            }}
+            style={styles.undoCountdownButton}
+          >
+            <Text style={styles.undoCountdownButtonText}>{t("cart.undoRemove", "Undo")}</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       {addExpanded ? (
         <Pressable
           accessibilityRole="button"
@@ -5138,6 +5381,126 @@ export default function SellScanScreen({
         retryAfterSeconds={voiceRetryAfterSeconds}
         testID="sell-voice-sheet"
       />
+
+      {/* STG-388: Stock conflict resolution dialog */}
+      {pendingStockConflict ? (
+        <Modal visible transparent animationType="fade" onRequestClose={() => syncStore.setPendingStockConflict(null)}>
+          <View style={styles.stockConflictOverlay}>
+            <View style={[styles.stockConflictSheet, getModalContainerStyle(screenWidth, deviceType)]}>
+              <Text style={styles.stockConflictTitle}>
+                {t("sync.stockConflictTitle", "Stock Updated on Another Device")}
+              </Text>
+              <Text style={styles.stockConflictMessage}>
+                {t("sync.stockConflictMessage", 'Stock for "{{name}}" differs. Keep local ({{local}}) or use server ({{server}})?', {
+                  name: pendingStockConflict.productName,
+                  local: pendingStockConflict.localQty,
+                  server: pendingStockConflict.serverQty,
+                })}
+              </Text>
+              <View style={styles.stockConflictButtons}>
+                <Pressable
+                  accessibilityRole="button"
+                  style={[styles.stockConflictButton, styles.stockConflictButtonLocal]}
+                  onPress={() => syncStore.resolveStockConflict(true)}
+                >
+                  <Text style={styles.stockConflictButtonText}>
+                    {t("sync.keepLocal", "Keep Local ({{qty}})", { qty: pendingStockConflict.localQty })}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  style={[styles.stockConflictButton, styles.stockConflictButtonServer]}
+                  onPress={() => syncStore.resolveStockConflict(false)}
+                >
+                  <Text style={[styles.stockConflictButtonText, { color: colors.surface }]}>
+                    {t("sync.useServer", "Use Server ({{qty}})", { qty: pendingStockConflict.serverQty })}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+
+      {/* STG-376: Parked carts modal */}
+      {showParkedCarts ? (
+        <Modal visible transparent animationType="slide" onRequestClose={() => setShowParkedCarts(false)}>
+          <View style={styles.parkedCartsOverlay}>
+            <Pressable accessibilityRole="button" style={styles.parkedCartsOverlayTap} onPress={() => setShowParkedCarts(false)} />
+            <View style={[styles.parkedCartsSheet, getModalContainerStyle(screenWidth, deviceType)]}>
+              <View style={styles.parkedCartsHeader}>
+                <Text style={styles.parkedCartsTitle}>
+                  {t("cart.parkedCarts", "Parked Carts ({{count}})", { count: parkedCarts.length })}
+                </Text>
+                <Pressable accessibilityRole="button" onPress={() => setShowParkedCarts(false)} hitSlop={8}>
+                  <MaterialCommunityIcons name="close" size={22} color={colors.textPrimary} />
+                </Pressable>
+              </View>
+              {parkedCarts.length === 0 ? (
+                <Text style={styles.parkedCartsEmpty}>{t("cart.noParkedCarts", "No parked carts")}</Text>
+              ) : (
+                <ScrollView>
+                  {parkedCarts.map((parked) => (
+                    <View key={parked.id} style={styles.parkedCartItem}>
+                      <View style={styles.parkedCartInfo}>
+                        <Text style={styles.parkedCartCount}>
+                          {t("cart.parkedCartItems", "{{count}} items", { count: parked.items.length })}
+                        </Text>
+                        <Text style={styles.parkedCartTime}>
+                          {new Date(parked.parkedAt).toLocaleTimeString()}
+                        </Text>
+                      </View>
+                      <View style={styles.parkedCartActions}>
+                        <Pressable
+                          accessibilityRole="button"
+                          style={styles.parkedCartResumeButton}
+                          onPress={() => handleResumeCart(parked.id)}
+                        >
+                          <Text style={styles.parkedCartResumeText}>{t("cart.resumeCart", "Resume")}</Text>
+                        </Pressable>
+                        <Pressable
+                          accessibilityRole="button"
+                          style={styles.parkedCartDeleteButton}
+                          onPress={() => handleRemoveParkedCart(parked.id)}
+                          hitSlop={8}
+                        >
+                          <MaterialCommunityIcons name="delete-outline" size={18} color={colors.error} />
+                        </Pressable>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+              {/* STG-376: Park current cart button */}
+              {items.length > 0 && parkedCarts.length < MAX_PARKED_CARTS ? (
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.parkCurrentCartButton}
+                  onPress={() => { handleParkCart(); setShowParkedCarts(false); }}
+                >
+                  <MaterialCommunityIcons name="cart-arrow-down" size={18} color={colors.surface} />
+                  <Text style={styles.parkCurrentCartText}>{t("cart.parkCart", "Park Cart")}</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+
+      {/* STG-387: Floating Sync Now button */}
+      {itemCount === 0 ? (
+        <Pressable
+          accessibilityRole="button"
+          style={styles.syncNowFab}
+          onPress={handleSyncNow}
+          disabled={syncStore.syncing}
+        >
+          <MaterialCommunityIcons name="sync" size={18} color={colors.surface} />
+          <Text style={styles.syncNowFabText}>
+            {syncStore.syncing ? t("sync.syncing", "Syncing...") : t("sync.syncNowButton", "Sync Now")}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -7188,5 +7551,251 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     textAlign: "center",
     marginTop: 4,
     marginBottom: 8,
+  },
+  // STG-389: Queue expiry warning banner
+  queueExpiryBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.warningSoft,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.warning,
+  },
+  queueExpiryText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.warning,
+    fontWeight: "500",
+  },
+  queueExpirySyncButton: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  // STG-391: Offline checkout banner
+  offlineCheckoutBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.surfaceAlt,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  offlineCheckoutText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: "500",
+  },
+  offlineCheckoutCount: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  // STG-376: Parked carts banner
+  parkedCartsBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.primarySoft,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.primary,
+  },
+  parkedCartsText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: "600",
+  },
+  // STG-375: Undo countdown banner
+  undoCountdownBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.textPrimary,
+  },
+  undoCountdownText: {
+    fontSize: 13,
+    color: colors.surface,
+    fontWeight: "500",
+  },
+  undoCountdownButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: colors.surface,
+  },
+  undoCountdownButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  // STG-388: Stock conflict dialog
+  stockConflictOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  stockConflictSheet: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 24,
+    gap: 16,
+    maxWidth: 400,
+    width: "100%",
+  },
+  stockConflictTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    textAlign: "center",
+  },
+  stockConflictMessage: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  stockConflictButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  stockConflictButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stockConflictButtonLocal: {
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  stockConflictButtonServer: {
+    backgroundColor: colors.primary,
+  },
+  stockConflictButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  // STG-376: Parked carts modal
+  parkedCartsOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    justifyContent: "flex-end",
+  },
+  parkedCartsOverlayTap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  parkedCartsSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+    maxHeight: "60%",
+    gap: 12,
+  },
+  parkedCartsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  parkedCartsTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.textPrimary,
+  },
+  parkedCartsEmpty: {
+    fontSize: 14,
+    color: colors.textTertiary,
+    textAlign: "center",
+    paddingVertical: 24,
+  },
+  parkedCartItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  parkedCartInfo: {
+    gap: 2,
+  },
+  parkedCartCount: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  parkedCartTime: {
+    fontSize: 12,
+    color: colors.textTertiary,
+  },
+  parkedCartActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  parkedCartResumeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: colors.primarySoft,
+  },
+  parkedCartResumeText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.primary,
+  },
+  parkedCartDeleteButton: {
+    padding: 4,
+  },
+  parkCurrentCartButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    marginTop: 8,
+  },
+  parkCurrentCartText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.surface,
+  },
+  // STG-387: Sync Now FAB
+  syncNowFab: {
+    position: "absolute",
+    bottom: 16,
+    right: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    ...theme.shadows.md,
+    zIndex: 3,
+  },
+  syncNowFabText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.surface,
   },
 }); }

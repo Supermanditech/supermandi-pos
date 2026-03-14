@@ -14,7 +14,8 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-
+// STG-397: Safe area handling for notched phones
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
@@ -61,6 +62,8 @@ interface DailyClosingScreenProps {
 export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) {
   const colors = useThemeColors();
   const { t } = useTranslation();
+  // STG-397: Safe area insets for notched phones
+  const insets = useSafeAreaInsets();
   const {
     summary,
     history,
@@ -221,7 +224,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
   }, [colors, styles, t]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <BackHeader title={t("dailyClosing.title")} onBack={onBack} />
 
       {/* STG-312: Offline banner */}

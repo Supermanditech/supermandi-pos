@@ -19,7 +19,8 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-
+// STG-397: Safe area handling for notched phones
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { theme, useThemeColors } from "../theme";
 import { formatMoney } from "../utils/money";
@@ -55,6 +56,8 @@ export default function CustomerManagementScreen({
 }: CustomerManagementScreenProps) {
   const colors = useThemeColors();
   const { t } = useTranslation();
+  // STG-397: Safe area insets for notched phones
+  const insets = useSafeAreaInsets();
   const {
     customers,
     selectedCustomer,
@@ -572,7 +575,7 @@ export default function CustomerManagementScreen({
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <BackHeader title="Customers" onBack={onBack} />
 
       {/* Search bar */}

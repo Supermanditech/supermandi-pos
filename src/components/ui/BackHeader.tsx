@@ -76,11 +76,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    // STG-394: Minimum 44dp touch target for accessibility
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 20,
+    borderRadius: 22,
   },
   titleContainer: {
     flex: 1,
@@ -96,6 +97,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   spacer: {
-    width: 40,
+    // STG-394: Match back button width for centering
+    width: 44,
   },
 });

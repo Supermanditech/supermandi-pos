@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+// STG-397: Safe area handling for notched phones
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
@@ -27,6 +29,8 @@ type Rt = RouteProp<RootStackParamList, "BillDetail">;
 export default function BillDetailScreen() {
   const { t } = useTranslation();
   const colors = useThemeColors();
+  // STG-397: Safe area insets for notched phones
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
   const { saleId, billRef } = route.params;
@@ -401,7 +405,7 @@ export default function BillDetailScreen() {
   ) : null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       {/* T-122: Standardized back header with Android BackHandler */}
       <BackHeader title={t("billDetail.title")} />
 

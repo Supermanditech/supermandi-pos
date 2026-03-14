@@ -23,6 +23,9 @@ import { useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 
 import { theme, useThemeColors } from "../theme";
+// STG-395: Responsive columns for tablets
+import { getResponsiveColumns } from "../utils/layout";
+import { getDeviceTypeFromDimensions } from "../utils/deviceType";
 import { CatalogProductCard } from "../components/buy/CatalogProductCard";
 import { CategoryFilter } from "../components/buy/CategoryFilter";
 import { PurchaseCartModal } from "../components/buy/PurchaseCartModal";
@@ -60,7 +63,8 @@ type StockStatusFilter = "all" | "in_stock" | "low_stock" | "out_of_stock";
 // CONSTANTS
 // =============================================================================
 
-const NUM_COLUMNS = 2;
+// STG-395: Default columns — overridden by responsive hook in component
+const NUM_COLUMNS_DEFAULT = 2;
 // GO-LIVE-170: Use centralized pagination config
 const PAGE_SIZE = LIST_PAGE_SIZE;
 // STG-344: Reduced from 400ms to 200ms for faster search response
@@ -81,7 +85,9 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
   const colors = useThemeColors();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  // STG-395: Responsive columns
+  const NUM_COLUMNS = useMemo(() => getResponsiveColumns(width), [width]);
   const searchInputRef = useRef<TextInput>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -547,6 +553,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
   }, [loading, error, hasActiveFilters, handleClearAllFilters, t]);
 
   // Calculate item layout for performance
+  // STG-395: Include NUM_COLUMNS in deps since it's now dynamic
   const getItemLayout = useCallback(
     (_data: ArrayLike<CatalogProduct> | null | undefined, index: number) => {
       const itemHeight = 180; // Approximate card height
@@ -556,7 +563,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
         index,
       };
     },
-    []
+    [NUM_COLUMNS]
   );
 
   return (

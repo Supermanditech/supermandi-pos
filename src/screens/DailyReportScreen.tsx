@@ -15,6 +15,8 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+// STG-397: Safe area handling for notched phones
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Print from "expo-print";
 
 import { theme, useThemeColors } from "../theme";
@@ -238,6 +240,8 @@ export default function DailyReportScreen({
 }: DailyReportScreenProps) {
   const { t } = useTranslation();
   const colors = useThemeColors();
+  // STG-397: Safe area insets for notched phones
+  const insets = useSafeAreaInsets();
 
   const [selectedDate, setSelectedDate] = useState<string>(
     getYYYYMMDD(new Date())
@@ -554,7 +558,7 @@ export default function DailyReportScreen({
   }), [colors]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <BackHeader title={t("dailyReport.title")} onBack={onBack} />
 
       {/* STG-312: Offline banner */}

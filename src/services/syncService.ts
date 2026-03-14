@@ -1,5 +1,7 @@
 import NetInfo from "@react-native-community/netinfo";
 import { syncOutbox } from "./offline/sync";
+import { refreshStockSnapshot } from "./stockService";
+import { isOnline } from "./networkStatus";
 
 let unsubscribe: null | (() => void) = null;
 
@@ -7,6 +9,15 @@ let unsubscribe: null | (() => void) = null;
 let outboxRetryCount = 0;
 const MAX_RETRY_COUNT = 5;
 const BASE_RETRY_DELAY_MS = 1000;
+
+// STG-387: Reduced stock sync interval from 5 minutes to 30 seconds
+const STOCK_SYNC_INTERVAL_MS = 30 * 1000;
+let stockSyncInterval: ReturnType<typeof setInterval> | null = null;
+
+// STG-390: Track reconnection for price cache refresh
+type ReconnectCallback = () => void;
+let reconnectCallbacks: ReconnectCallback[] = [];
+let wasOffline = false;
 
 function getRetryDelay(retryCount: number): number {
   // Exponential backoff: 1s, 2s, 4s, 8s, 16s (capped)
@@ -36,17 +47,97 @@ async function syncOutboxWithRetry(): Promise<void> {
   }
 }
 
+/**
+ * STG-387: Start periodic stock sync (30s interval).
+ * Replaces the old 5-minute polling with more frequent checks.
+ */
+function startStockSync(): void {
+  if (stockSyncInterval) return;
+  stockSyncInterval = setInterval(async () => {
+    try {
+      if (await isOnline()) {
+        await refreshStockSnapshot();
+      }
+    } catch (error) {
+      console.warn("[SyncService] STG-387: Stock sync failed:", error);
+    }
+  }, STOCK_SYNC_INTERVAL_MS);
+  console.log("[SyncService] STG-387: Stock sync started (30s interval)");
+}
+
+function stopStockSync(): void {
+  if (stockSyncInterval) {
+    clearInterval(stockSyncInterval);
+    stockSyncInterval = null;
+    console.log("[SyncService] STG-387: Stock sync stopped");
+  }
+}
+
+/**
+ * STG-387: Manual "Sync Now" — triggers immediate stock + outbox sync.
+ */
+export async function syncNow(): Promise<void> {
+  if (!(await isOnline())) {
+    console.log("[SyncService] Cannot sync — offline");
+    return;
+  }
+  await Promise.all([
+    refreshStockSnapshot(),
+    syncOutboxWithRetry(),
+  ]);
+}
+
+/**
+ * STG-390: Register a callback to run when device reconnects.
+ * Used for price cache refresh on reconnect.
+ */
+export function onReconnect(callback: ReconnectCallback): () => void {
+  reconnectCallbacks.push(callback);
+  return () => {
+    reconnectCallbacks = reconnectCallbacks.filter((cb) => cb !== callback);
+  };
+}
+
 export function startAutoSync(): void {
   if (unsubscribe) return;
+
+  // Check initial state
+  isOnline().then((online) => {
+    wasOffline = !online;
+  });
+
   unsubscribe = NetInfo.addEventListener((state) => {
-    if (state.isConnected) {
+    const connected = Boolean(state.isConnected);
+
+    if (connected) {
       // GO-LIVE-167: Use retry wrapper instead of silent error swallowing
       syncOutboxWithRetry();
+
+      // STG-390: Fire reconnect callbacks when transitioning from offline to online
+      if (wasOffline) {
+        console.log("[SyncService] STG-390: Device reconnected, firing reconnect callbacks");
+        for (const cb of reconnectCallbacks) {
+          try {
+            cb();
+          } catch (error) {
+            console.warn("[SyncService] Reconnect callback error:", error);
+          }
+        }
+      }
+
+      // STG-387: Start stock sync when connected
+      startStockSync();
+    } else {
+      // STG-387: Stop stock sync when disconnected
+      stopStockSync();
     }
+
+    wasOffline = !connected;
   });
 }
 
 export function stopAutoSync(): void {
   unsubscribe?.();
   unsubscribe = null;
+  stopStockSync();
 }
