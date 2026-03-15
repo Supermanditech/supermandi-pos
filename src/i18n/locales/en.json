@@ -1352,6 +1352,7 @@
     "creditGiven": "Credit given",
     "owes": "Owes",
     "advance": "Advance",
+    "storeOwes": "Store Owes",
     "settled": "Settled",
     "last": "Last",
     "viaMethod": "via {{method}}",

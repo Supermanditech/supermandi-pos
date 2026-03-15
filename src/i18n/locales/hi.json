@@ -1352,6 +1352,7 @@
     "creditGiven": "उधार दिया गया",
     "owes": "बकाया",
     "advance": "अग्रिम",
+    "storeOwes": "दुकान देनदार",
     "settled": "चुकता",
     "last": "अंतिम",
     "viaMethod": "{{method}} द्वारा",

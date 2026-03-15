@@ -644,7 +644,8 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
         : isCredit
           ? colors.success
           : colors.textSecondary;
-      const balanceLabel = isOwes ? t("khata.owes") : isCredit ? t("khata.advance") : t("khata.settled");
+      // STG-534: Explicit overpayment label when store owes customer
+      const balanceLabel = isOwes ? t("khata.owes") : isCredit ? t("khata.storeOwes") : t("khata.settled");
 
       const isSelected = bulkSelecting && selectedPhones.has(item.phone);
 
@@ -929,7 +930,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
                   {selectedCustomer.balanceMinor > 0
                     ? ` (${t("khata.owes").toLowerCase()})`
                     : selectedCustomer.balanceMinor < 0
-                      ? ` (${t("khata.advance").toLowerCase()})`
+                      ? ` (${t("khata.storeOwes").toLowerCase()})`
                       : ` (${t("khata.settled").toLowerCase()})`}
                 </Text>
               </View>
