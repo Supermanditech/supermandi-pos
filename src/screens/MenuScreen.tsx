@@ -511,7 +511,7 @@ export default function MenuScreen() {
           accessibilityLabel="Search menu items"
         />
         {searchQuery.length > 0 && (
-          <Pressable onPress={() => setSearchQuery('')} hitSlop={8} accessibilityLabel="Clear search">
+          <Pressable onPress={() => setSearchQuery('')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear search">
             <MaterialCommunityIcons name="close-circle" size={16} color={tc.textTertiary} />
           </Pressable>
         )}

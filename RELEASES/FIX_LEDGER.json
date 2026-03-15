@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 185,
+  "version": 189,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -2199,8 +2199,8 @@
       "description": "CustomerListScreen i18n — replace 40 hardcoded strings with t() calls",
       "test_file": "src/__tests__/screens/CustomerListScreen.stg-270.i18n.unit.test.ts",
       "start_line": 1,
-      "end_line": 926,
-      "checksum": "5c13a7588d1f2574",
+      "end_line": 945,
+      "checksum": "24fca119adf7d3f6",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2541,8 +2541,8 @@
       "description": "MenuScreen i18n — replace 36+ hardcoded strings (updated Layer 6: summary font size)",
       "test_file": "src/__tests__/screens/MenuScreen.stg-172.i18n.unit.test.ts",
       "start_line": 1,
-      "end_line": 2029,
-      "checksum": "6aada0072c4a79f5",
+      "end_line": 2028,
+      "checksum": "329c0048a0689744",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -5185,8 +5185,8 @@
     {
       "ticket": "STG-528",
       "file": "src/screens/CustomerListScreen.tsx",
-      "start_line": 643,
-      "end_line": 655,
+      "start_line": 645,
+      "end_line": 657,
       "checksum": "312a5cf6ee36c1b5",
       "description": "Show error banner in CustomerListScreen when error state is set",
       "test_file": "src/__tests__/screens/CustomerListScreen.tsx",
@@ -5236,7 +5236,8 @@
         "test_guard": "Existing CustomerListScreen tests",
         "single_commit": "Single commit",
         "ticket_parked": "Will mark PARKED"
-      }
+      },
+      "line_shifted_at": "2026-03-15T21:36:07.000Z"
     },
     {
       "ticket": "STG-541",
@@ -6410,6 +6411,52 @@
       "checklist_version": 5,
       "registered_at": "2026-03-15T21:27:18.390Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "STG-532",
+      "file": "src/screens/MenuScreen.tsx",
+      "start_line": 514,
+      "end_line": 514,
+      "checksum": "630b6beaf6baf1e4",
+      "description": "STG-532: Add missing accessibilityRole to Clear search Pressable",
+      "test_file": "src/__tests__/screens/menu-accessibility.stg-532.test.ts",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "backend_api": "N/A",
+        "business_logic": "N/A",
+        "db_schema": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "migration_safe": "N/A"
+      }
+    },
+    {
+      "ticket": "STG-533",
+      "file": "src/screens/CustomerListScreen.tsx",
+      "start_line": 221,
+      "end_line": 940,
+      "checksum": "2fe9fbbb97b77473",
+      "description": "STG-533: Add accessibilityLabel to customer card, add button, submit buttons",
+      "test_file": "src/__tests__/screens/customer-list-accessibility.stg-533.test.ts",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "backend_api": "N/A",
+        "business_logic": "N/A",
+        "db_schema": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "migration_safe": "N/A"
+      }
     }
   ],
   "machine_state_version": 269,
