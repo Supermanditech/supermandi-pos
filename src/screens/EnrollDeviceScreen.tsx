@@ -669,8 +669,9 @@ export default function EnrollDeviceScreen() {
             accessibilityRole="link"
             accessibilityLabel="Contact support via WhatsApp"
           >
-            <MaterialCommunityIcons name="whatsapp" size={18} color="#25D366" />
-            <Text style={[styles.supportButtonText, { color: "#25D366" }]}>WhatsApp Support</Text>
+            {/* STG-504: Use theme token for WhatsApp brand color */}
+            <MaterialCommunityIcons name="whatsapp" size={18} color={tc.whatsapp} />
+            <Text style={[styles.supportButtonText, { color: tc.whatsapp }]}>WhatsApp Support</Text>
           </Pressable>
           <Pressable
             style={styles.supportPhoneButton}
@@ -1062,7 +1063,7 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: theme.borderRadius.md,
-    backgroundColor: "#25D36610",
+    backgroundColor: "#25D36610", // STG-504: WhatsApp brand color at 10% opacity (documented rgba overlay)
   },
   supportPhoneButton: {
     flexDirection: "row",

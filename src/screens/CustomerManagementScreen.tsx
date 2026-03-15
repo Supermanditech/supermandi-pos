@@ -768,7 +768,8 @@ export default function CustomerManagementScreen({
                             void Linking.openURL(`https://wa.me/${phone}`);
                           }}
                         >
-                          <MaterialCommunityIcons name="whatsapp" size={20} color="#25D366" />
+                          {/* STG-504: Use theme token for WhatsApp brand color */}
+                          <MaterialCommunityIcons name="whatsapp" size={20} color={colors.whatsapp} />
                         </Pressable>
                       )}
                     </View>

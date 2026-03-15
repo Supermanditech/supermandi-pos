@@ -385,8 +385,9 @@ export default function ForceUpdateScreen() {
             accessibilityRole="link"
             accessibilityLabel="Contact support via WhatsApp"
           >
-            <MaterialCommunityIcons name="whatsapp" size={16} color="#25D366" />
-            <Text style={[styles.supportLinkText, { color: "#25D366" }]}>WhatsApp Support</Text>
+            {/* STG-504: Use theme token for WhatsApp brand color */}
+            <MaterialCommunityIcons name="whatsapp" size={16} color={colors.whatsapp} />
+            <Text style={[styles.supportLinkText, { color: colors.whatsapp }]}>WhatsApp Support</Text>
           </Pressable>
           <Pressable
             style={styles.supportLink}
