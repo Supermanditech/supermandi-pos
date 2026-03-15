@@ -1,12 +1,12 @@
 {
-  "version": 27,
+  "version": 28,
   "last_updated": "2026-03-15",
   "last_commit_sha": "74cc8695",
   "total_tickets": 551,
-  "tickets_done": 498,
-  "tickets_remaining": 53,
+  "tickets_done": 499,
+  "tickets_remaining": 52,
   "current_layer": 19,
-  "current_ticket": "STG-504",
+  "current_ticket": "STG-505",
   "status": "IN_PROGRESS",
   "mode": "COMPREHENSIVE_AUDIT_FIX",
   "operator_message": "Operator requested comprehensive 6-layer audit of POS app + cross-portal integration on 2026-03-15. 6 parallel agents audited: UI/UX, API/Middleware, DB/Migrations, Cross-Portal, Business Logic, GCP Parity. 59 findings (3 CRITICAL, 10 HIGH, 29 MEDIUM, 17 LOW) registered as STG-493 to STG-551. All 492 previous tickets marked PARKED. Awaiting operator approval to begin implementation.",
@@ -152,37 +152,64 @@
   "mandatory_per_ticket_gates": {
     "_description": "Every ticket MUST pass ALL applicable gates before parking. Gate 14 BLOCKS commit if any checklist item is incomplete.",
     "LAYER_A_UI_UX": {
-      "gates": ["ui_elements", "ux_states", "wiring", "navigation", "i18n_keys"],
+      "gates": [
+        "ui_elements",
+        "ux_states",
+        "wiring",
+        "navigation",
+        "i18n_keys"
+      ],
       "applies_to": "POS screens, portal pages, theme files, i18n files",
       "enforcement": "MANDATORY — N/A only for pure backend tickets with zero UI impact"
     },
     "LAYER_B_API_BACKEND": {
-      "gates": ["backend_api", "api_errors", "store_isolation"],
+      "gates": [
+        "backend_api",
+        "api_errors",
+        "store_isolation"
+      ],
       "applies_to": "Backend routes, services, middleware",
       "enforcement": "MANDATORY — N/A only for pure frontend cosmetic tickets"
     },
     "LAYER_C_BUSINESS": {
-      "gates": ["business_logic", "business_behaviour"],
+      "gates": [
+        "business_logic",
+        "business_behaviour"
+      ],
       "applies_to": "ALL tickets — every change affects behaviour",
       "enforcement": "MANDATORY — NEVER N/A, every ticket must verify end-to-end workflow"
     },
     "LAYER_D_DB": {
-      "gates": ["db_schema", "migration_safe"],
+      "gates": [
+        "db_schema",
+        "migration_safe"
+      ],
       "applies_to": "Tickets with migrations or DB query changes",
       "enforcement": "MANDATORY when DB touched — N/A for UI-only tickets"
     },
     "LAYER_E_DRIFT_SAFETY": {
-      "gates": ["impacted_files", "fix_ledger_check", "no_agent_conflict"],
+      "gates": [
+        "impacted_files",
+        "fix_ledger_check",
+        "no_agent_conflict"
+      ],
       "applies_to": "ALL tickets — prevents multi-agent drift and regression",
       "enforcement": "MANDATORY — NEVER N/A, every ticket must verify zero drift and no agent conflicts"
     },
     "LAYER_F_GCP_PARITY": {
-      "gates": ["gcp_parity", "regression_check", "test_guard"],
+      "gates": [
+        "gcp_parity",
+        "regression_check",
+        "test_guard"
+      ],
       "applies_to": "ALL tickets — staging compatibility and test coverage",
       "enforcement": "MANDATORY — NEVER N/A, every ticket needs tests and GCP compatibility"
     },
     "LAYER_G_GIT": {
-      "gates": ["single_commit", "ticket_parked"],
+      "gates": [
+        "single_commit",
+        "ticket_parked"
+      ],
       "applies_to": "ALL tickets — git discipline enforcement",
       "enforcement": "MANDATORY — NEVER N/A, every ticket = one commit = one tag = PARKED"
     }
@@ -199,26 +226,146 @@
     "per_ticket_testing": "MANDATORY — every ticket gets tested, no exceptions"
   },
   "layers": [
-    { "layer": 0, "name": "Security & P0 Critical Bugs", "tickets": 17, "verified": 17, "status": "VERIFIED" },
-    { "layer": 1, "name": "Foundation: Theme, Utils, i18n Keys", "tickets": 14, "verified": 13, "status": "VERIFIED" },
-    { "layer": 2, "name": "i18n Hardcoded String Replacement", "tickets": 30, "verified": 32, "status": "VERIFIED" },
-    { "layer": 3, "name": "i18n MenuScreen + Hindi Completion", "tickets": 19, "verified": 19, "status": "VERIFIED" },
-    { "layer": 4, "name": "Shared Components", "tickets": 19, "verified": 19, "status": "VERIFIED" },
-    { "layer": 5, "name": "Enrollment & Onboarding Screens", "tickets": 26, "verified": 26, "status": "VERIFIED" },
-    { "layer": 6, "name": "Home, Header, Tabs", "tickets": 19, "verified": 20, "status": "VERIFIED" },
-    { "layer": 7, "name": "SELL Flow", "tickets": 70, "verified": 71, "status": "VERIFIED" },
-    { "layer": 8, "name": "Payment Flow", "tickets": 46, "verified": 54, "status": "VERIFIED" },
-    { "layer": 9, "name": "MenuScreen Redesign", "tickets": 38, "verified": 43, "status": "VERIFIED" },
-    { "layer": 10, "name": "Secondary Screens", "tickets": 32, "verified": 32, "status": "VERIFIED" },
-    { "layer": 11, "name": "Cross-Cutting Audits", "tickets": 19, "verified": 19, "status": "VERIFIED" },
-    { "layer": 12, "name": "PURCHASE Flow", "tickets": 17, "verified": 17, "status": "VERIFIED" },
-    { "layer": 13, "name": "VOICE Flow", "tickets": 10, "verified": 10, "status": "VERIFIED" },
-    { "layer": 14, "name": "REORDER System", "tickets": 29, "verified": 29, "status": "VERIFIED" },
-    { "layer": 15, "name": "CREDIT & BNPL System", "tickets": 25, "verified": 25, "status": "VERIFIED" },
-    { "layer": 16, "name": "Sync, Offline, Device, Layout", "tickets": 17, "verified": 17, "status": "VERIFIED" },
-    { "layer": 17, "name": "Nice-to-Have & P3 Polish", "tickets": 14, "verified": 14, "status": "VERIFIED" },
-    { "layer": 18, "name": "E2E Tests & Regression Guards", "tickets": 3, "verified": 3, "status": "VERIFIED" },
-    { "layer": 19, "name": "Comprehensive Audit Fixes (STG-493..551)", "tickets": 59, "verified": 0, "status": "PENDING" }
+    {
+      "layer": 0,
+      "name": "Security & P0 Critical Bugs",
+      "tickets": 17,
+      "verified": 17,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 1,
+      "name": "Foundation: Theme, Utils, i18n Keys",
+      "tickets": 14,
+      "verified": 13,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 2,
+      "name": "i18n Hardcoded String Replacement",
+      "tickets": 30,
+      "verified": 32,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 3,
+      "name": "i18n MenuScreen + Hindi Completion",
+      "tickets": 19,
+      "verified": 19,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 4,
+      "name": "Shared Components",
+      "tickets": 19,
+      "verified": 19,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 5,
+      "name": "Enrollment & Onboarding Screens",
+      "tickets": 26,
+      "verified": 26,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 6,
+      "name": "Home, Header, Tabs",
+      "tickets": 19,
+      "verified": 20,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 7,
+      "name": "SELL Flow",
+      "tickets": 70,
+      "verified": 71,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 8,
+      "name": "Payment Flow",
+      "tickets": 46,
+      "verified": 54,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 9,
+      "name": "MenuScreen Redesign",
+      "tickets": 38,
+      "verified": 43,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 10,
+      "name": "Secondary Screens",
+      "tickets": 32,
+      "verified": 32,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 11,
+      "name": "Cross-Cutting Audits",
+      "tickets": 19,
+      "verified": 19,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 12,
+      "name": "PURCHASE Flow",
+      "tickets": 17,
+      "verified": 17,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 13,
+      "name": "VOICE Flow",
+      "tickets": 10,
+      "verified": 10,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 14,
+      "name": "REORDER System",
+      "tickets": 29,
+      "verified": 29,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 15,
+      "name": "CREDIT & BNPL System",
+      "tickets": 25,
+      "verified": 25,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 16,
+      "name": "Sync, Offline, Device, Layout",
+      "tickets": 17,
+      "verified": 17,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 17,
+      "name": "Nice-to-Have & P3 Polish",
+      "tickets": 14,
+      "verified": 14,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 18,
+      "name": "E2E Tests & Regression Guards",
+      "tickets": 3,
+      "verified": 3,
+      "status": "VERIFIED"
+    },
+    {
+      "layer": 19,
+      "name": "Comprehensive Audit Fixes (STG-493..551)",
+      "tickets": 59,
+      "verified": 0,
+      "status": "PENDING"
+    }
   ],
   "full_verification_audit": {
     "audit_date": "2026-03-14",

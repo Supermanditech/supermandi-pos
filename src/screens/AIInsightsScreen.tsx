@@ -6,6 +6,7 @@ import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, ActivityIn
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, useThemeColors } from '../theme';
+import { ApiError } from '../services/api/apiClient';
 import * as aiApi from '../services/api/aiApi';
 
 type Tab = 'alerts' | 'forecasts' | 'slow' | 'expiry' | 'prices';
@@ -69,12 +70,21 @@ export default function AIInsightsScreen({ onBack }: Props) {
         }
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to load';
-      if (msg.includes('404') || msg.includes('not found')) {
+      // STG-505: Use HTTP status codes instead of fragile string matching
+      if (err instanceof ApiError && err.status === 404) {
         setError('AI Insights are not yet available for your store. This feature will be activated soon.');
-      } else if (msg.includes('network') || msg.includes('timeout') || msg.includes('fetch')) {
+      } else if (
+        err instanceof ApiError && err.status >= 500
+      ) {
+        setError('Server error. Please try again later.');
+      } else if (
+        !(err instanceof ApiError) &&
+        (err instanceof TypeError ||
+         (err instanceof Error && (err.name === 'AbortError' || err.message?.toLowerCase().includes('timeout'))))
+      ) {
         setError('Unable to connect. Please check your internet connection and try again.');
       } else {
+        const msg = err instanceof Error ? err.message : 'Failed to load';
         setError(msg);
       }
     } finally {

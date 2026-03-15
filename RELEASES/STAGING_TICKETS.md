@@ -11405,7 +11405,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-502 | Device token plaintext fallback — warn when SecureStore unavailable | P1 | OPEN |
 | STG-503 | Zero-amount checkout — block totalMinor <= 0 | P1 | PARKED (already fixed in STG-401, line 272: totalMinor <= 0 → cartValid=false) |
 | STG-504 | Hardcoded WhatsApp color #25D366 — use theme token | P1 | PARKED |
-| STG-505 | AIInsightsScreen error classification — use error codes not string matching | P1 | OPEN |
+| STG-505 | AIInsightsScreen error classification — use error codes not string matching | P1 | PARKED |
 | STG-506 | Migration 128 UNIQUE INDEX — add IF NOT EXISTS guard | P1 | OPEN |
 | STG-507 | PENDING_UPI crash recovery — prevent stock deduction replay | P1 | OPEN |
 | STG-508 | GRN negative quantity — validate >= 0 at input with error message | P2 | OPEN |
