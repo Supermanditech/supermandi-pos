@@ -11410,7 +11410,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-507 | PENDING_UPI crash recovery — prevent stock deduction replay | P1 | PARKED |
 | STG-508 | GRN negative quantity — validate >= 0 at input with error message | P2 | PARKED |
 | STG-509 | GRN excess quantity — backend reject qty > ordered + 10% tolerance | P2 | PARKED |
-| STG-510 | Duplicate scan window — track per-barcode, not single lastScan | P2 | OPEN |
+| STG-510 | Duplicate scan window — track per-barcode, not single lastScan | P2 | PARKED |
 | STG-511 | Offline stock cache — merge entries for multi-barcode products | P2 | OPEN |
 | STG-512 | Credit score calculation — wrap in transaction for consistency | P2 | OPEN |
 | STG-513 | Large amount silent cap — show error instead of truncating to 10M | P2 | OPEN |

@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 88,
+  "version": 90,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -2978,8 +2978,8 @@
     {
       "ticket": "STG-339",
       "file": "src/services/scan/handleScan.ts",
-      "start_line": 474,
-      "end_line": 488,
+      "start_line": 483,
+      "end_line": 497,
       "checksum": "31efa0e7a83a4a98",
       "description": "Removed store_product_id gate — variant picker mandatory for all LOOSE_BULK",
       "test_file": "src/__tests__/scan/handleScan.stg-335.unit.test.ts",
@@ -3012,7 +3012,8 @@
         "gcp_parity": "N/A — POS UI batch fix",
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
-      }
+      },
+      "line_shifted_at": "2026-03-15T17:38:06.752Z"
     },
     {
       "ticket": "STG-341",
@@ -4423,6 +4424,57 @@
         "api_errors": "400 EXCESS_QUANTITY with item name and qty details",
         "store_isolation": "storeId from JWT via getStoreIdFromDevice",
         "db_schema": "N/A — no schema changes"
+      }
+    },
+    {
+      "ticket": "STG-510",
+      "file": "src/services/scan/handleScan.ts",
+      "start_line": 112,
+      "end_line": 130,
+      "checksum": "561ed6c02c6612ac",
+      "description": "Per-barcode duplicate tracking using Map instead of single lastScan",
+      "test_file": "src/__tests__/screens/scan-duplicate.stg-510.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-15T17:39:14.560Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "Per-barcode duplicate detection — A→B→A now correctly caught",
+        "business_behaviour": "Stale entries cleaned after size > 50",
+        "impacted_files": "src/services/scan/handleScan.ts isDuplicate",
+        "fix_ledger_check": "zero drift",
+        "no_agent_conflict": "no conflict",
+        "gcp_parity": "N/A",
+        "regression_check": "6 tests pass",
+        "test_guard": "6/6 pass",
+        "single_commit": "one commit",
+        "ticket_parked": "PARKED"
       }
     }
   ],

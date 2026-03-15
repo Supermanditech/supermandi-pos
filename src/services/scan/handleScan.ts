@@ -72,7 +72,8 @@ const STORM_WINDOW_MS = 2000;
 const STORM_MAX_SCANS_PER_BARCODE = 12;
 const STORM_COOLDOWN_MS = 1000;
 let runtime: ScanRuntime = { intent: "SELL", mode: "SELL" };
-let lastScan: { key: string; ts: number } | null = null;
+// STG-510: Per-barcode duplicate tracking replaces single lastScan
+const lastScanByKey = new Map<string, number>();
 // GL-CRIT-0024: Track scans per barcode instead of globally
 const recentScansByBarcode = new Map<string, number[]>();
 const stormUntilByBarcode = new Map<string, number>();
@@ -109,15 +110,23 @@ function notify(notice: ScanNotice | null): void {
 
 // GL-CRIT-0045: Unified duplicate detection - checks barcode+intent+mode
 // STG-335: Reduced window + toast feedback for duplicate scans
+// STG-510: Per-barcode tracking — Map<key, timestamp> instead of single lastScan
 function isDuplicate(barcode: string, intent: ScanIntent, mode: ScanMode): boolean {
   const key = `${intent}:${mode}:${barcode}`;
   const now = Date.now();
-  if (lastScan && lastScan.key === key && now - lastScan.ts < DUPLICATE_WINDOW_MS) {
+  const lastTs = lastScanByKey.get(key);
+  if (lastTs !== undefined && now - lastTs < DUPLICATE_WINDOW_MS) {
     // STG-335: Inform cashier to use qty stepper instead of re-scanning
     notify({ tone: "info", message: POS_MESSAGES.duplicateScan ?? "Item already scanned — use +/- to adjust quantity" });
     return true;
   }
-  lastScan = { key, ts: now };
+  lastScanByKey.set(key, now);
+  // Clean up stale entries to prevent memory leak
+  if (lastScanByKey.size > 50) {
+    for (const [k, ts] of lastScanByKey) {
+      if (now - ts > DUPLICATE_WINDOW_MS * 2) lastScanByKey.delete(k);
+    }
+  }
   return false;
 }
 
