@@ -3,6 +3,7 @@
 // /health/detailed - Full info (authenticated)
 
 import { Router, Request, Response, NextFunction } from "express";
+import { timingSafeEqual } from "crypto";
 import { getEmailProviderInfo } from "../../../services/emailService";
 
 export const adminHealthRouter = Router();
@@ -23,7 +24,9 @@ function requireAdminToken(req: Request, res: Response, next: NextFunction): voi
     return;
   }
 
-  if (!token || token !== ADMIN_TOKEN) {
+  // STG-499: Use timing-safe comparison to prevent character-by-character timing attacks
+  if (!token || token.length !== ADMIN_TOKEN.length ||
+      !timingSafeEqual(Buffer.from(token), Buffer.from(ADMIN_TOKEN))) {
     res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid or missing admin token' } });
     return;
   }

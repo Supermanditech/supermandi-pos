@@ -11399,7 +11399,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-496 | Payment double-tap — set submittingRef before API call | P0 | PARKED (already fixed in AUD-055-A, lines 965-967) |
 | STG-497 | GRN duplicate submission — add idempotency key to receiveGoods | P0 | PARKED |
 | STG-498 | Cart lock expiry — validate lock before payment submission | P0 | PARKED |
-| STG-499 | Health endpoint timing attack — use crypto.timingSafeEqual | P1 | OPEN |
+| STG-499 | Health endpoint timing attack — use crypto.timingSafeEqual | P1 | PARKED |
 | STG-500 | Webhook idempotency race — atomic Redis SET NX EX | P1 | OPEN |
 | STG-501 | Enrollment rate limiters — share state between burst and sustained | P1 | OPEN |
 | STG-502 | Device token plaintext fallback — warn when SecureStore unavailable | P1 | OPEN |
