@@ -118,19 +118,48 @@ export async function syncOutboxBatch(): Promise<number> {
 
   // AUD-081-A/D FIX: Handle all result statuses properly
   const appliedIds: string[] = [];
+  const duplicateIds: string[] = [];
   const rejectedEvents: Array<{ eventId: string; reason: string }> = [];
 
   for (const r of results) {
-    if (r.status === "applied" || r.status === "duplicate_ignored") {
+    if (r.status === "applied") {
       appliedIds.push(r.eventId);
+    } else if (r.status === "duplicate_ignored") {
+      duplicateIds.push(r.eventId);
     } else if (r.status === "rejected") {
       // AUD-081-D FIX: Mark permanently rejected events to prevent infinite retry
       rejectedEvents.push({ eventId: r.eventId, reason: r.error ?? "unknown" });
     }
   }
 
-  // Mark applied events as synced
-  await markEventsSynced(appliedIds);
+  // STG-546: Process mappings BEFORE clearing outbox entries
+  // This ensures duplicate_ignored events have their mappings persisted first
+  await markMappings(data as SyncResult);
+
+  // STG-546: Verify duplicate_ignored events have mappings before clearing
+  const syncResult = data as SyncResult;
+  const mappedLocalIds = new Set<string>();
+  if (syncResult.saleMappings) {
+    for (const m of syncResult.saleMappings) {
+      const localId = m.saleId ?? m.localSaleId;
+      if (localId) mappedLocalIds.add(localId);
+    }
+  }
+
+  const safeToClearDuplicates: string[] = [];
+  for (const eventId of duplicateIds) {
+    // Find the event in our pending batch to check if it's a sale event
+    const event = events.find(e => e.eventId === eventId);
+    const isSaleEvent = event?.type === "SALE_CREATED" || event?.type === "PAYMENT_CASH" || event?.type === "PAYMENT_DUE";
+    if (isSaleEvent && !mappedLocalIds.has(eventId)) {
+      console.warn(`[STG-546] duplicate_ignored event ${eventId} has no mapping — keeping in outbox`);
+    } else {
+      safeToClearDuplicates.push(eventId);
+    }
+  }
+
+  // Mark applied + verified duplicate events as synced
+  await markEventsSynced([...appliedIds, ...safeToClearDuplicates]);
 
   // Mark rejected events with error flag to prevent infinite loop
   if (rejectedEvents.length > 0) {
@@ -140,10 +169,8 @@ export async function syncOutboxBatch(): Promise<number> {
     console.warn(`[Sync] ${rejectedIds.length} event(s) permanently rejected:`, rejectedEvents);
   }
 
-  await markMappings(data as SyncResult);
-
-  // Return total processed (applied + rejected) to indicate progress
-  return appliedIds.length + rejectedEvents.length;
+  // Return total processed (applied + duplicate cleared + rejected) to indicate progress
+  return appliedIds.length + safeToClearDuplicates.length + rejectedEvents.length;
 }
 
 let syncing = false;
