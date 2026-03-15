@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 122,
+  "version": 126,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -3022,8 +3022,8 @@
     {
       "ticket": "STG-341",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 1192,
-      "end_line": 1195,
+      "start_line": 1193,
+      "end_line": 1196,
       "checksum": "c990d0aada513a1a",
       "description": "Category rail always visible — removed feature flag gate",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3057,13 +3057,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T08:17:36.988Z"
+      "line_shifted_at": "2026-03-15T19:04:34.751Z"
     },
     {
       "ticket": "STG-133",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 1637,
-      "end_line": 1644,
+      "start_line": 1638,
+      "end_line": 1645,
       "checksum": "1d0dbd01856fcea5",
       "description": "Dynamic cart sheet height based on item count (2/5/max tiers)",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3098,13 +3098,13 @@
         "test_guard": "N/A — POS UI batch fix",
         "wiring": "N/A — POS UI display change only"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.005Z"
+      "line_shifted_at": "2026-03-15T19:04:34.771Z"
     },
     {
       "ticket": "STG-370",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 2749,
-      "end_line": 2789,
+      "start_line": 2750,
+      "end_line": 2790,
       "checksum": "0e89e77699956232",
       "description": "Await cart add + catch storage failures with toast + enhanced metadata",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3138,13 +3138,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.068Z"
+      "line_shifted_at": "2026-03-15T19:04:34.833Z"
     },
     {
       "ticket": "STG-400",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 602,
-      "end_line": 620,
+      "start_line": 603,
+      "end_line": 621,
       "checksum": "f2931fdd43a46881",
       "description": "Max per-item qty cap of 9999 — prevents large number input",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3178,7 +3178,7 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.080Z"
+      "line_shifted_at": "2026-03-15T19:04:34.845Z"
     },
     {
       "ticket": "STG-369",
@@ -3222,8 +3222,8 @@
     {
       "ticket": "STG-101",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 1569,
-      "end_line": 1580,
+      "start_line": 1570,
+      "end_line": 1581,
       "checksum": "524c6a41ad9b92f2",
       "description": "GST/tax line in cart totals — inclusive GST computed from catalog items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3257,13 +3257,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.101Z"
+      "line_shifted_at": "2026-03-15T19:04:34.863Z"
     },
     {
       "ticket": "STG-111",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4303,
-      "end_line": 4318,
+      "start_line": 4304,
+      "end_line": 4319,
       "checksum": "4b0a3116aa8decaa",
       "description": "You save display when discount applied",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3297,13 +3297,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T11:44:40.073Z"
+      "line_shifted_at": "2026-03-15T19:04:34.918Z"
     },
     {
       "ticket": "STG-029",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3815,
-      "end_line": 3835,
+      "start_line": 3816,
+      "end_line": 3836,
       "checksum": "c4b00aac0a59663d",
       "description": "Add Product footer button for unlisted items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3337,13 +3337,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T11:44:40.131Z"
+      "line_shifted_at": "2026-03-15T19:04:34.979Z"
     },
     {
       "ticket": "STG-028",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3836,
-      "end_line": 3841,
+      "start_line": 3837,
+      "end_line": 3842,
       "checksum": "946cc12fd4f16017",
       "description": "Product count footer for section context",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3377,13 +3377,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T11:44:40.156Z"
+      "line_shifted_at": "2026-03-15T19:04:35.003Z"
     },
     {
       "ticket": "STG-108",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4063,
-      "end_line": 4070,
+      "start_line": 4064,
+      "end_line": 4071,
       "checksum": "c51161a66b7a5ac2",
       "description": "Empty space guidance in cart when few items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3417,13 +3417,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T11:44:40.194Z"
+      "line_shifted_at": "2026-03-15T19:04:35.043Z"
     },
     {
       "ticket": "STG-107",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 688,
-      "end_line": 691,
+      "start_line": 689,
+      "end_line": 692,
       "checksum": "621637efa53b412f",
       "description": "Product thumbnail image in cart items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3457,13 +3457,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.282Z"
+      "line_shifted_at": "2026-03-15T19:04:35.050Z"
     },
     {
       "ticket": "STG-138",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 698,
-      "end_line": 701,
+      "start_line": 699,
+      "end_line": 702,
       "checksum": "73579ff03f7ac5fb",
       "description": "Weight/unit label in cart items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3497,13 +3497,13 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.289Z"
+      "line_shifted_at": "2026-03-15T19:04:35.058Z"
     },
     {
       "ticket": "STG-033",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 3740,
-      "end_line": 3778,
+      "start_line": 3741,
+      "end_line": 3779,
       "checksum": "859de86c4def559b",
       "description": "Quick-sell favorites horizontal strip above product grid",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3539,7 +3539,7 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T11:44:40.287Z"
+      "line_shifted_at": "2026-03-15T19:04:35.131Z"
     },
     {
       "ticket": "STG-103",
@@ -3581,8 +3581,8 @@
     {
       "ticket": "STG-103-UI",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4217,
-      "end_line": 4272,
+      "start_line": 4218,
+      "end_line": 4273,
       "checksum": "05dfecef25f8a231",
       "description": "Customer name/phone UI section in cart footer",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3618,13 +3618,13 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T11:44:40.399Z"
+      "line_shifted_at": "2026-03-15T19:04:35.229Z"
     },
     {
       "ticket": "STG-112",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4273,
-      "end_line": 4302,
+      "start_line": 4274,
+      "end_line": 4303,
       "checksum": "ec70d8342f04e1c9",
       "description": "Order note/memo expandable field in cart footer",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3660,13 +3660,13 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T11:44:40.469Z"
+      "line_shifted_at": "2026-03-15T19:04:35.287Z"
     },
     {
       "ticket": "STG-128",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 891,
-      "end_line": 914,
+      "start_line": 892,
+      "end_line": 915,
       "checksum": "8f98ecac037577e9",
       "description": "Batch/expiry info display in cart items",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3702,13 +3702,13 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.691Z"
+      "line_shifted_at": "2026-03-15T19:04:35.301Z"
     },
     {
       "ticket": "STG-134",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 933,
-      "end_line": 966,
+      "start_line": 934,
+      "end_line": 967,
       "checksum": "f75246a9b8630f8e",
       "description": "Swipe-to-delete gesture on cart items with undo",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3744,13 +3744,13 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.717Z"
+      "line_shifted_at": "2026-03-15T19:04:35.318Z"
     },
     {
       "ticket": "STG-131",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 4030,
-      "end_line": 4060,
+      "start_line": 4031,
+      "end_line": 4061,
       "checksum": "86aac570060cdc9e",
       "description": "Frequently bought together suggestions in cart footer",
       "test_file": "src/__tests__/screens/SellScanScreen.stg-220.layout.unit.test.ts",
@@ -3786,7 +3786,7 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-14T11:44:40.549Z"
+      "line_shifted_at": "2026-03-15T19:04:35.390Z"
     },
     {
       "ticket": "STG-487",
@@ -3871,8 +3871,8 @@
     {
       "ticket": "STG-102",
       "file": "src/screens/SellScanScreen.tsx",
-      "start_line": 2650,
-      "end_line": 2722,
+      "start_line": 2651,
+      "end_line": 2723,
       "checksum": "699484d044142bc4",
       "description": "Discount limit check + manager approval modal — blocks discounts over maxDiscountPct without manager PIN",
       "test_file": "src/__tests__/stores/staffSessionStore.test.ts",
@@ -3908,7 +3908,7 @@
         "wiring": "DONE",
         "navigation": "DONE"
       },
-      "line_shifted_at": "2026-03-14T08:17:37.975Z"
+      "line_shifted_at": "2026-03-15T19:04:35.474Z"
     },
     {
       "ticket": "STG-498",
@@ -5132,8 +5132,8 @@
     {
       "ticket": "STG-543",
       "file": "src/utils/money.ts",
-      "start_line": 87,
-      "end_line": 88,
+      "start_line": 90,
+      "end_line": 91,
       "checksum": "185c2e32ef6b59ad",
       "description": "Always show .00 on round amounts for consistent display",
       "test_file": "src/__tests__/utils/money.stg-117.smart-formatting.unit.test.ts",
@@ -5178,7 +5178,8 @@
         "test_guard": "Updated stg-117 test + money.test.ts",
         "single_commit": "Single commit",
         "ticket_parked": "Will mark PARKED"
-      }
+      },
+      "line_shifted_at": "2026-03-15T19:04:35.481Z"
     },
     {
       "ticket": "STG-528",
@@ -5234,6 +5235,113 @@
         "test_guard": "Existing CustomerListScreen tests",
         "single_commit": "Single commit",
         "ticket_parked": "Will mark PARKED"
+      }
+    },
+    {
+      "ticket": "STG-541",
+      "file": "src/screens/SellScanScreen.tsx",
+      "start_line": 160,
+      "end_line": 163,
+      "checksum": "3abfcbb5462e29b8",
+      "description": "Allow 1-char search queries for short product names",
+      "test_file": "src/__tests__/screens/search-min-query.stg-541.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-15T19:05:02.662Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "business_logic": "See ticket description",
+        "business_behaviour": "Improved",
+        "impacted_files": "See fix registration",
+        "fix_ledger_check": "Registered",
+        "no_agent_conflict": "No conflicts",
+        "gcp_parity": "Client-side",
+        "regression_check": "Zero drift",
+        "test_guard": "Tests pass",
+        "single_commit": "Yes",
+        "ticket_parked": "Will mark"
+      }
+    },
+    {
+      "ticket": "STG-544",
+      "file": "src/utils/money.ts",
+      "start_line": 74,
+      "end_line": 80,
+      "checksum": "13d1c7d5dc3193ea",
+      "description": "Validate currency code in fallback path, default invalid to INR",
+      "test_file": "src/__tests__/screens/currency-fallback.stg-544.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-15T19:05:02.789Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "See ticket description",
+        "business_behaviour": "Improved",
+        "impacted_files": "See fix registration",
+        "fix_ledger_check": "Registered",
+        "no_agent_conflict": "No conflicts",
+        "gcp_parity": "Client-side",
+        "regression_check": "Zero drift",
+        "test_guard": "Tests pass",
+        "single_commit": "Yes",
+        "ticket_parked": "Will mark"
       }
     }
   ],

@@ -157,8 +157,9 @@ async function syncProductsToOffline(query?: string, sort?: "fefo" | "default"):
     const items: SkuItem[] = [];
 
     // SD-ONBOARD-002C: Use list endpoint for initial load, search for queries
-    if (trimmedQuery.length < 2) {
-      // No query or short query - paginate through all store products
+    // STG-541: Allow 1-char search for short product names (e.g., "A" for Apple)
+    if (trimmedQuery.length < 1) {
+      // No query - paginate through all store products
       logger.debug("SyncProducts", "Using list endpoint for tap-and-add");
       const PAGE = 100;
       let offset = 0;
