@@ -159,17 +159,25 @@ export async function syncOutbox(): Promise<void> {
     let totalSynced = 0;
     const maxBatches = 100; // GO-LIVE-167: Prevent infinite loops
 
+    let consecutiveErrors = 0;
     while (batchCount < maxBatches) {
       try {
         const synced = await syncOutboxBatch();
         if (synced === 0) break; // No more events to sync
         totalSynced += synced;
         batchCount++;
+        consecutiveErrors = 0; // STG-514: Reset backoff on success
       } catch (batchError) {
-        // GO-LIVE-167: Log batch error and re-throw to trigger retry mechanism
+        consecutiveErrors++;
+        // STG-514: Exponential backoff — 1s, 2s, 4s, 8s, max 16s
+        const backoffMs = Math.min(1000 * Math.pow(2, consecutiveErrors - 1), 16000);
         const errorMsg = batchError instanceof Error ? batchError.message : String(batchError);
-        console.error(`[GO-LIVE-167] syncOutboxBatch failed after ${batchCount} batches (${totalSynced} synced): ${errorMsg}`);
-        throw batchError;
+        console.error(`[STG-514] syncOutboxBatch failed (attempt ${consecutiveErrors}, backoff ${backoffMs}ms) after ${batchCount} batches (${totalSynced} synced): ${errorMsg}`);
+        if (consecutiveErrors >= 3) {
+          // STG-514: After 3 consecutive failures, stop retrying within this sync cycle
+          throw batchError;
+        }
+        await new Promise(r => setTimeout(r, backoffMs));
       }
     }
 
