@@ -83,6 +83,8 @@ async function verifyAdminApiKey(apiKey: string): Promise<AdminInfo | null> {
     );
 
     if (result.rowCount === 0) {
+      // STG-520: Hash a dummy value to normalize response time (prevent timing oracle)
+      hashApiKey("timing-normalization-dummy-" + Date.now());
       return null;
     }
 

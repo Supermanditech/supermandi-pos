@@ -11420,7 +11420,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-517 | Supplier price cache — reduce 5-min TTL or add invalidation trigger | P2 | OPEN |
 | STG-518 | HTTPS enforcement — add to supplier-portal and superadmin (like retailer-admin) | P2 | PARKED |
 | STG-519 | CORS_ALLOWED_ORIGINS — set explicitly in Cloud Run env vars | P2 | OPEN |
-| STG-520 | Admin API key lookup — add timing-safe response for missing keys | P2 | OPEN |
+| STG-520 | Admin API key lookup — add timing-safe response for missing keys | P2 | PARKED |
 | STG-521 | Webhook signature format — validate header format before HMAC | P2 | OPEN |
 | STG-522 | Error handler — stop leaking DB constraint names in non-production | P2 | OPEN |
 | STG-523 | Store isolation enforceStoreBinding — log warning when no storeId sent | P2 | OPEN |
