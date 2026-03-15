@@ -166,7 +166,7 @@ These files are from the pre-Cloud Run VM era. They remain in the repo for histo
 
 ## MANDATORY AUTO-CONTINUATION PROTOCOL
 
-> **This section overrides all other session-start behavior. Claude MUST follow this protocol at the start of EVERY session — whether triggered by compaction, layer completion, manual restart, or any other reason — until all 492 tickets across all 18 layers are implemented.**
+> **This section overrides all other session-start behavior. Claude MUST follow this protocol at the start of EVERY session — whether triggered by compaction, layer completion, manual restart, or any other reason — until all 551 tickets across all 19 layers are implemented.**
 
 ### On Every Session Start (No Exceptions):
 
@@ -224,7 +224,7 @@ The system automatically restarts Claude sessions until `tickets_remaining` hits
 **How it works**: `scripts/auto-implement.ps1` runs an infinite `while($true)` loop → launches `claude --yes --max-turns 200 -p <prompt>` → Claude reads `IMPLEMENTATION_STATE.json` → implements tickets → updates state → session ends → script reads state → if `tickets_remaining > 0` → launches next session → repeat until 0.
 
 ### Key Principle:
-**The system never stops until all 492 tickets are done.** Claude implements as many tickets as possible per session. When context fills up, it saves state and exits. The wrapper script immediately launches the next session. Zero human intervention between sessions.
+**The system never stops until all 551 tickets are done.** Claude implements as many tickets as possible per session. When context fills up, it saves state and exits. The wrapper script immediately launches the next session. Zero human intervention between sessions.
 
 ---
 
@@ -309,14 +309,15 @@ TICKET-ID DONE:
 
 **DEPLOYED.** All 6 Cloud Run services live on staging.supermandi.tech (SHA `81c3a2a4`, deployed 2026-03-13). 187/187 migrations applied. CD pipeline #970 — 7/7 jobs GREEN.
 
-## Current Phase: Staging Ticket Implementation (STG-001 → STG-492)
+## Current Phase: Comprehensive Audit Fix Implementation (STG-493 → STG-551)
 
-- **492 tickets** organized in **18 layers** with **29 loophole guards** and **12 GUARD prereq tickets**
-- **Implementation order**: Layer 0 (Security/P0) → Layer 18 (E2E tests)
+- **551 total tickets** organized in **19 layers** — Layers 0-18 COMPLETE (492 PARKED), Layer 19 ACTIVE (59 OPEN)
+- **Layer 19**: Comprehensive Audit Fixes — 3 CRITICAL, 10 HIGH, 29 MEDIUM, 17 LOW
+- **Implementation order**: P0 (STG-493..498) → P1 (STG-499..507) → P2 (STG-508..534) → P3 (STG-535..551)
 - **Active ticket registry**: `RELEASES/STAGING_TICKETS.md`
-- **Next ticket number**: STG-493 (check `<!-- next ticket -->` comment at bottom)
+- **Next ticket number**: STG-552 (check `<!-- next ticket -->` comment at bottom)
 - **Git model**: Linear commits on main, one ticket = one commit = one tag
-- **Current focus**: Layer 0 — Security, DPDP compliance, P0 critical bugs
+- **Current focus**: Layer 19 — Payment safety, GRN dedup, security hardening, GCP migration deploy
 
 ### First Deploy Protocol (Mega-Batch)
 When GCP is ready AND SA-GOLIVE is complete:

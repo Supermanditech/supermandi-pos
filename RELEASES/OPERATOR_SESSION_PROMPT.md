@@ -27,11 +27,35 @@ Do NOT write any code until session-start passes with zero drift.
 
 ---
 
-## MANDATORY Reiteration Protocol (ALL 501 tickets)
+## Current State (2026-03-15)
 
-> Root cause of reiteration: Previous auto-implement sessions + parallel agents violated
-> one-ticket-one-commit discipline, bypassed Gate 11 regex, bulk-committed 10-44 tickets
-> per commit, and caused multi-agent drift on shared files.
+| Field | Value |
+|-------|-------|
+| **HEAD** | `04f84e84` on `main` (clean tree) |
+| **Total tickets** | 551 (492 PARKED + 59 OPEN) |
+| **Layers 0-18** | ALL VERIFIED (492/492 tickets PARKED) |
+| **Layer 19** | Comprehensive Audit Fixes (STG-493..551) — 59 OPEN tickets |
+| **GCP deployed SHA** | `81c3a2a4` (4 commits behind HEAD — needs redeploy after migrations 188, 189) |
+| **Migrations** | 187 applied on staging, 189 in codebase (188, 189 pending apply) |
+| **Machine state version** | 26 |
+| **Mode** | COMPREHENSIVE_AUDIT_FIX |
+| **Next ticket** | STG-493 (apply migration 188 to staging DB) |
+
+### Audit Summary (2026-03-15)
+6-layer comprehensive audit found 59 issues (3 CRITICAL, 10 HIGH, 29 MEDIUM, 17 LOW):
+- **CRITICAL**: 2 unapplied migrations + 192 migrations missing rollback comments
+- **HIGH**: Payment double-tap, GRN dedup, cart lock expiry, webhook race, timing attacks, zero-amount checkout
+- **MEDIUM**: Input validation, cache invalidation, i18n gaps, UX 4-state, accessibility, HTTPS enforcement
+- **LOW**: Documentation, formatting, edge case polish
+
+---
+
+## MANDATORY Implementation Protocol (ALL 551 tickets)
+
+> Layers 0-18 (492 tickets) are COMPLETE and PARKED.
+> Layer 19 (59 tickets, STG-493..551) is the active implementation layer.
+> Root cause of these tickets: Comprehensive 6-layer audit on 2026-03-15 found bugs,
+> edge cases, and hardening gaps across UI/UX, API, DB, cross-portal, business logic, and GCP parity.
 
 ### Reiteration Rules (MANDATORY — NOT advisory):
 1. **One ticket = one commit = one tag** — NO EXCEPTIONS. Gate 11 BLOCKS all bypass patterns.
@@ -181,4 +205,43 @@ Previous sessions used parallel agents that modified the same files simultaneous
 
 ---
 
-Current operator context: [YOUR NOTES — e.g. "reiteration Layer 0: verifying STG-001 through STG-017" or "focus on backend API tickets only"]
+## Layer 19 Implementation Order (Recommended)
+
+```
+Phase 1 — CRITICAL (P0): STG-493, 494, 495, 496, 497, 498
+  → Migrations deploy, payment safety, GRN dedup, cart lock, rollback comments
+Phase 2 — HIGH (P1): STG-499..507
+  → Security hardening, zero-amount checkout, UPI crash recovery, WhatsApp colors
+Phase 3 — MEDIUM (P2): STG-508..534
+  → Input validation, cache, i18n, UX 4-state, accessibility, HTTPS, CORS
+Phase 4 — LOW (P3): STG-535..551
+  → Documentation, formatting, edge case polish
+```
+
+### Ticket Categories in Layer 19
+| Category | Tickets | Count |
+|----------|---------|-------|
+| GCP/Deploy (ops) | STG-493, 494, 519 | 3 |
+| Payment/Checkout safety | STG-496, 498, 503, 507 | 4 |
+| GRN/Inventory safety | STG-497, 508, 509 | 3 |
+| Security hardening | STG-499, 500, 501, 502, 520, 521, 522, 523 | 8 |
+| Business logic guards | STG-510, 511, 512, 513, 514, 515, 534 | 7 |
+| UI/UX fixes | STG-504, 505, 524..533, 549, 550, 551 | 14 |
+| Cross-portal | STG-516, 517, 518 | 3 |
+| DB/Migrations | STG-495, 506 | 2 |
+| Documentation | STG-535..548 | 14 |
+| Edge cases | STG-540..547 | 8 (overlap with above) |
+
+---
+
+## Operator Message (2026-03-15)
+
+> Operator requested comprehensive audit of POS app and cross-portal integration on 2026-03-15.
+> 6 parallel audit agents examined: UI/UX (45 screens), API/Middleware (126 routes), DB (194 migrations),
+> Cross-Portal (4 portals), Business Logic (10 business functions), GCP Parity (6 Cloud Run services).
+> 59 findings registered as STG-493..551. All 492 previous tickets remain PARKED (verified, tagged, committed).
+> Implementation awaiting operator approval. Recommended start: P0 tickets (STG-493..498).
+
+---
+
+Current operator context: [YOUR NOTES — e.g. "Layer 19 Phase 1: fixing CRITICAL P0 tickets STG-493 through STG-498" or "focus on security hardening STG-499..502 only"]

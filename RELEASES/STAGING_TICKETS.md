@@ -261,20 +261,20 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-232 | Colors — no dedicated "disabled" color token for greyed-out buttons | P2 | PARKED (5e2d96c1, stg-232-2026-03-14) |
 | STG-233 | Colors — dark mode "ink" is #F8FAFC but light mode "ink" is #0B1220, never used | P3 | PARKED (b1e8d28e, stg-233-2026-03-14) |
 | STG-234 | i18n — status.storeInactive says "Add UPI ID in Superadmin to start billing" | P1 | PARKED (053ab1a8, stg-234-2026-03-14) |
-| STG-235 | i18n — status.deviceInactive says "Contact Superadmin to enable it" | P1 | OPEN (audit: unimplemented)|
+| STG-235 | i18n — status.deviceInactive says "Contact Superadmin to enable it" | P1 | PARKED (053ab1a8, stg-235-2026-03-14) |
 | STG-236 | i18n — errors.deviceAlreadyEnrolled says "Ask Superadmin to reset the token" | P1 | PARKED (053ab1a8, stg-236-2026-03-14) |
 | STG-237 | i18n — errors.sessionExpired says "Please login again" but POS has no login | P2 | PARKED (053ab1a8, stg-237-2026-03-14) |
 | STG-238 | i18n — sell.digitiseMode says "Digitise mode on" — jargon for kirana user | P2 | PARKED (053ab1a8, stg-238-2026-03-14) |
-| STG-239 | i18n — purchase.moq "MOQ" acronym not spelled out for kirana users | P2 | OPEN (audit: unimplemented)|
-| STG-240 | i18n — tabs use ALL CAPS ("SELL", "PURCHASE", "REORDER") — shouty | P2 | OPEN (audit: unimplemented)|
+| STG-239 | i18n — purchase.moq "MOQ" acronym not spelled out for kirana users | P2 | PARKED (053ab1a8, stg-239-2026-03-14) |
+| STG-240 | i18n — tabs use ALL CAPS ("SELL", "PURCHASE", "REORDER") — shouty | P2 | PARKED (053ab1a8, stg-240-2026-03-14) |
 | STG-241 | i18n — reorder.dismissSuggestedFrom template too complex for Hindi translation | P3 | PARKED (053ab1a8, stg-241-2026-03-14) |
 | STG-242 | i18n — credit section uses financial jargon (EMI, KYC, PAN, Aadhaar) without explanation | P2 | PARKED (053ab1a8, stg-242-2026-03-14) |
 | STG-243 | i18n — bnpl.upiInstructions sentence too long (2 clauses + technical term UTR) | P2 | PARKED (053ab1a8, stg-243-2026-03-14) |
-| STG-244 | i18n — grn.title "Goods Receipt Note" — warehouse jargon | P2 | OPEN (audit: unimplemented)|
+| STG-244 | i18n — grn.title "Goods Receipt Note" — warehouse jargon | P2 | PARKED (053ab1a8, stg-244-2026-03-14) |
 | STG-245 | Tab nav — "REORDER • ON" / "REORDER • OFF" unusual tab label convention | P2 | PARKED (0ca6a62d, stg-245-2026-03-14) |
 | STG-246 | Tab nav — 5 tabs but CREDIT tab is greyed/disabled, confusing affordance | P2 | PARKED (f032299c, stg-246-2026-03-14) |
 | STG-247 | Menu — "Customers & Credit" section has 4 items (Khata, Customers, Customer Management, Overdue) — 3 overlap | P1 | PARKED (42fb9e8a, stg-247-2026-03-14) |
-| STG-248 | Menu — menuItem marginTop:16 creates 16px gap, but first item after sectionHeader has 16+4=20px gap inconsistency | P3 | OPEN (audit: unimplemented)|
+| STG-248 | Menu — menuItem marginTop:16 creates 16px gap, but first item after sectionHeader has 16+4=20px gap inconsistency | P3 | PARKED (42fb9e8a, stg-248-2026-03-14) |
 | STG-249 | Menu — printerStatusRow sits between Bills and Barcode with no card container | P2 | PARKED (42fb9e8a, stg-249-2026-03-14) |
 | STG-250 | Menu — "Switch Store" in Settings section but it's a destructive action, needs separation | P2 | PARKED (42fb9e8a, stg-250-2026-03-14) |
 | STG-251 | Menu — no confirmation count on "Daily Closing" (e.g., "2 shifts open") | P2 | PARKED (42fb9e8a, stg-251-2026-03-14) |
@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | PARKED (49e810ac, stg-491-2026-03-14) |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | PARKED (30956d33, stg-492-2026-03-14) |
 
-**Total**: 492 tickets | 492 PARKED | 0 DONE | 0 IN_PROGRESS | 0 OPEN
+**Total**: 551 tickets | 492 PARKED | 0 DONE | 0 IN_PROGRESS | 59 OPEN
 
 ---
 
@@ -11381,7 +11381,598 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ---
 
-<!-- NEW TICKETS BELOW THIS LINE — next ticket: STG-493 -->
+<!-- NEW TICKETS BELOW THIS LINE — next ticket: STG-552 -->
+
+## Comprehensive Audit Tickets (STG-493 — STG-551)
+
+> Generated from 6-layer comprehensive audit on 2026-03-15.
+> Covers: UI/UX, API/Middleware, DB/Migrations, Cross-Portal, Business Logic, GCP Parity.
+> 59 findings → 59 tickets. Ordered by severity: CRITICAL → HIGH → MEDIUM → LOW.
+
+### Summary Table
+
+| # | Title | Priority | Status |
+|---|-------|----------|--------|
+| STG-493 | Apply migration 188 (consent_records) to staging DB | P0 | OPEN |
+| STG-494 | Apply migration 189 (khata_void_column) to staging DB | P0 | OPEN |
+| STG-495 | Add ROLLBACK comments to 192 migrations missing them | P0 | OPEN |
+| STG-496 | Payment double-tap — set submittingRef before API call | P0 | OPEN |
+| STG-497 | GRN duplicate submission — add idempotency key to receiveGoods | P0 | OPEN |
+| STG-498 | Cart lock expiry — validate lock before payment submission | P0 | OPEN |
+| STG-499 | Health endpoint timing attack — use crypto.timingSafeEqual | P1 | OPEN |
+| STG-500 | Webhook idempotency race — atomic Redis SET NX EX | P1 | OPEN |
+| STG-501 | Enrollment rate limiters — share state between burst and sustained | P1 | OPEN |
+| STG-502 | Device token plaintext fallback — warn when SecureStore unavailable | P1 | OPEN |
+| STG-503 | Zero-amount checkout — block totalMinor <= 0 | P1 | OPEN |
+| STG-504 | Hardcoded WhatsApp color #25D366 — use theme token | P1 | OPEN |
+| STG-505 | AIInsightsScreen error classification — use error codes not string matching | P1 | OPEN |
+| STG-506 | Migration 128 UNIQUE INDEX — add IF NOT EXISTS guard | P1 | OPEN |
+| STG-507 | PENDING_UPI crash recovery — prevent stock deduction replay | P1 | OPEN |
+| STG-508 | GRN negative quantity — validate >= 0 at input with error message | P2 | OPEN |
+| STG-509 | GRN excess quantity — backend reject qty > ordered + 10% tolerance | P2 | OPEN |
+| STG-510 | Duplicate scan window — track per-barcode, not single lastScan | P2 | OPEN |
+| STG-511 | Offline stock cache — merge entries for multi-barcode products | P2 | OPEN |
+| STG-512 | Credit score calculation — wrap in transaction for consistency | P2 | OPEN |
+| STG-513 | Large amount silent cap — show error instead of truncating to 10M | P2 | OPEN |
+| STG-514 | Sync batch retry — add exponential backoff between batches | P2 | OPEN |
+| STG-515 | Date conversion timezone — ensure created_at uses TIMESTAMPTZ consistently | P2 | OPEN |
+| STG-516 | Search cache — add invalidation on product add/price change | P2 | OPEN |
+| STG-517 | Supplier price cache — reduce 5-min TTL or add invalidation trigger | P2 | OPEN |
+| STG-518 | HTTPS enforcement — add to supplier-portal and superadmin (like retailer-admin) | P2 | OPEN |
+| STG-519 | CORS_ALLOWED_ORIGINS — set explicitly in Cloud Run env vars | P2 | OPEN |
+| STG-520 | Admin API key lookup — add timing-safe response for missing keys | P2 | OPEN |
+| STG-521 | Webhook signature format — validate header format before HMAC | P2 | OPEN |
+| STG-522 | Error handler — stop leaking DB constraint names in non-production | P2 | OPEN |
+| STG-523 | Store isolation enforceStoreBinding — log warning when no storeId sent | P2 | OPEN |
+| STG-524 | AIInsightsScreen tab labels — replace hardcoded English with i18n t() | P2 | OPEN |
+| STG-525 | AIInsightsScreen retry/empty text — add i18n keys for "Tap to retry" etc | P2 | OPEN |
+| STG-526 | BuyScreen — add explicit empty state for zero products | P2 | OPEN |
+| STG-527 | ChatListScreen — add explicit empty/error state handling | P2 | OPEN |
+| STG-528 | CustomerListScreen — show error state when error is set | P2 | OPEN |
+| STG-529 | PaymentSetupScreen BackHandler — add handleSkip to useEffect deps | P2 | OPEN |
+| STG-530 | CreditScreen consent — show consent request UI instead of empty screen | P2 | OPEN |
+| STG-531 | KhataScreen modal scroll — wrap modal content in ScrollView for small screens | P2 | OPEN |
+| STG-532 | Accessibility — add accessibilityLabel to MenuScreen interactive icons | P2 | OPEN |
+| STG-533 | Accessibility — add accessibilityLabel to CustomerListScreen form inputs | P2 | OPEN |
+| STG-534 | Khata negative balance — add explicit handling/display for overpayment | P2 | OPEN |
+| STG-535 | POS dev config port 3001 vs portals 3000 — document in .env.example | P3 | OPEN |
+| STG-536 | Response format inconsistency — standardize error JSON across all routes | P3 | OPEN |
+| STG-537 | Demo endpoint — add explicit enableDemo flag in request body | P3 | OPEN |
+| STG-538 | Document nullable store_id rationale in audit/chat tables | P3 | OPEN |
+| STG-539 | Document placeholder migrations 115-117, 158 purpose | P3 | OPEN |
+| STG-540 | Barcode validation — reject 2-char inputs as invalid barcodes | P3 | OPEN |
+| STG-541 | Search minimum query — allow 1-char search for short product names | P3 | OPEN |
+| STG-542 | Negative total cap — show validation error instead of silent Math.max(0) | P3 | OPEN |
+| STG-543 | formatMoney — show .00 consistently for round amounts | P3 | OPEN |
+| STG-544 | Currency fallback — use currency code consistently when Intl unavailable | P3 | OPEN |
+| STG-545 | Relative time format — handle UTC vs IST in formatRelativeTime | P3 | OPEN |
+| STG-546 | Sync duplicate_ignored — verify local-to-server mapping before clearing | P3 | OPEN |
+| STG-547 | Device session cache — handle mid-operation token expiry gracefully | P3 | OPEN |
+| STG-548 | Redundant store isolation — document deviceToken as primary, storeIsolation as secondary | P3 | OPEN |
+| STG-549 | ForceUpdateScreen hardcoded WhatsApp icon color #25D366 | P3 | OPEN |
+| STG-550 | CustomerManagementScreen hardcoded WhatsApp color instances | P3 | OPEN |
+| STG-551 | ReturnScreen post-refund navigation — verify success flow exists | P3 | OPEN |
+
+---
+
+### STG-493 — CRITICAL: Apply migration 188 (consent_records) to staging DB
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: Comprehensive audit 2026-03-15 — GCP Parity Layer (C-1)
+- **Problem**: Migration 188 (`188_consent_records.sql`) creates `platform.consent_records` table for DPDP compliance. Code on HEAD (04f84e84) has consent endpoints that query this table, but staging DB only has 187 migrations applied. Deploying HEAD without this migration causes 500 errors on POST /api/v1/consent/record, GET /api/v1/consent/check, POST /api/v1/consent/revoke.
+- **Fix**: Run `node backend/scripts/migrate-prod.js dry-run` to preview, then apply migration 188 to staging Cloud SQL. Verify table exists: `SELECT * FROM platform.consent_records LIMIT 1`.
+- **Migration**: 188_consent_records.sql (already exists in codebase)
+- **Test**: After migration, call GET /api/v1/consent/check with valid device token — should return 200, not 500.
+- **Depends on**: Cloud SQL proxy access
+
+---
+
+### STG-494 — CRITICAL: Apply migration 189 (khata_void_column) to staging DB
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: Comprehensive audit 2026-03-15 — GCP Parity Layer (C-2)
+- **Problem**: Migration 189 (`189_khata_void_column.sql`) adds `voided_at TIMESTAMPTZ` and `voided_by UUID` columns to `orders.khata_entries`. The khata void endpoint (POST /api/v1/pos/khata/entries/:id/void) references these columns. Without migration, endpoint returns 500 (column doesn't exist).
+- **Fix**: Apply migration 189 after 188. Verify: `SELECT column_name FROM information_schema.columns WHERE table_name = 'khata_entries' AND column_name IN ('voided_at', 'voided_by')`.
+- **Migration**: 189_khata_void_column.sql (already exists in codebase)
+- **Test**: After migration, call POST void endpoint — should return proper response, not 500.
+- **Depends on**: STG-493 (sequential migration order)
+
+---
+
+### STG-495 — CRITICAL: Add ROLLBACK comments to 192 migrations
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: Comprehensive audit 2026-03-15 — DB Layer (C-3)
+- **Problem**: Only 2 of 194 migrations (188, 189) have `-- ROLLBACK:` comments. During an incident, if a migration needs reversal, there is no documented rollback SQL. This violates Gate 5 (migration rollback requirement) and makes incident response dangerous.
+- **Fix**: Add `-- ROLLBACK: <reverse SQL>` comment to top of each migration file. For CREATE TABLE: `DROP TABLE IF EXISTS <table> CASCADE`. For ALTER TABLE ADD COLUMN: `ALTER TABLE <table> DROP COLUMN IF EXISTS <col>`. For CREATE INDEX: `DROP INDEX IF EXISTS <index>`. Start with critical migrations: 001, 004, 005, 006, 018, 028, 040, 049, 068, 069, 070, 080, 136, 139, 149.
+- **Migration**: None (comments only)
+- **Test**: Grep for `-- ROLLBACK:` — count should equal total migration files.
+- **Depends on**: None
+
+---
+
+### STG-496 — CRITICAL: Payment double-tap — set submittingRef before API call
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic Layer (H-4)
+- **File**: `src/screens/PaymentScreen.tsx:878-955`
+- **Problem**: `handleCompletePayment` sets `submittingRef.current = true` AFTER calling `setSubmitting(true)` (React state, async). During the re-render gap, a second tap can invoke handleCompletePayment before submittingRef is set, sending two payment requests to backend. Backend has idempotency but frontend doesn't prevent the duplicate request.
+- **Fix**: (1) Set `submittingRef.current = true` as FIRST LINE of handleCompletePayment, before any async ops. (2) Add early return: `if (submittingRef.current) return;`. (3) Disable the Complete button via `disabled={submitting}` prop. (4) Clear submittingRef in finally block.
+- **Migration**: None
+- **Test**: Rapid double-tap Complete button — only one API call should fire. Verify with network inspector or backend logs.
+- **Depends on**: None
+
+---
+
+### STG-497 — CRITICAL: GRN duplicate submission — add idempotency key
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic Layer (H-5, 4.3)
+- **File**: `src/screens/GRNScreen.tsx:306-402` (frontend), `backend/src/routes/v1/orders.ts` (backend)
+- **Problem**: GRN submit sends `orderApi.receiveGoods()` to backend. If network response is lost, user retries, backend processes same GRN again — doubling inventory. No idempotency key prevents this.
+- **Fix**: (1) Frontend: Generate idempotency key = `sha256(orderId + JSON.stringify(sortedItems) + quantities)` before submit. Send as `X-Idempotency-Key` header. (2) Backend: Check `idempotency.webhook_events` table for key. If exists, return cached response. If not, process GRN and store key. (3) Frontend: Set `submittingRef.current = true` before API call to prevent double-tap.
+- **Migration**: None (reuse existing idempotency table)
+- **Test**: Submit GRN → success. Submit same GRN again with same idempotency key → returns cached result, stock unchanged.
+- **Depends on**: None
+
+---
+
+### STG-498 — CRITICAL: Cart lock expiry — validate before payment
+
+- **Status**: OPEN
+- **Priority**: P0
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic Layer (H-6)
+- **File**: `src/screens/PaymentScreen.tsx:308-322`
+- **Problem**: Cart lock expires after 5 minutes (CART_LOCK_TIMEOUT_MS). If user leaves PaymentScreen open past expiry, lock releases. Another POS device can modify the cart. Original device still shows stale payment screen. Tapping "Complete" pays for a potentially empty or modified cart.
+- **Fix**: (1) Before `handleCompletePayment`, check `Date.now() - lockAcquiredAt > CART_LOCK_TIMEOUT_MS`. (2) If expired, show Alert: "Cart session expired. Please review your cart and try again." (3) Navigate back to cart screen. (4) Optionally: auto-refresh cart from server before completing payment.
+- **Migration**: None
+- **Test**: Open payment screen. Wait 6 minutes. Tap Complete → should show expiry alert, not submit payment.
+- **Depends on**: None
+
+---
+
+### STG-499 — HIGH: Health endpoint timing attack
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Comprehensive audit 2026-03-15 — API Layer (H-1)
+- **File**: `backend/src/routes/v1/admin/health.ts:26`
+- **Problem**: `if (!token || token !== ADMIN_TOKEN)` uses direct string comparison, vulnerable to timing attacks that can guess ADMIN_TOKEN character-by-character.
+- **Fix**: Replace with `crypto.timingSafeEqual(Buffer.from(token), Buffer.from(ADMIN_TOKEN))`. Add length check first: `if (!token || token.length !== ADMIN_TOKEN.length)`.
+- **Migration**: None
+- **Test**: Health endpoint still accepts valid token, rejects invalid.
+- **Depends on**: None
+
+---
+
+### STG-500 — HIGH: Webhook idempotency race condition
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Comprehensive audit 2026-03-15 — API Layer (H-2)
+- **File**: `backend/src/routes/v1/webhooks.ts:285-298`
+- **Problem**: TOCTOU race between `isWebhookEventProcessed()` check and `markWebhookEventProcessed()` set. Concurrent webhook delivery can process same event twice (double payment credit).
+- **Fix**: Replace check+set with atomic Redis operation: `SET idempotency:<key> 1 NX EX 86400`. If SET returns null (key already exists), skip processing. This is atomic — no race window.
+- **Migration**: None
+- **Test**: Send same webhook event concurrently (10 parallel requests) — only one should be processed. Verify payment credited once.
+- **Depends on**: None
+
+---
+
+### STG-501 — HIGH: Enrollment rate limiters share state
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Comprehensive audit 2026-03-15 — API Layer (H-3)
+- **File**: `backend/src/routes/v1/pos/enroll.ts:20-34`
+- **Problem**: Two independent rate limiters (3/min burst + 10/15min sustained) don't share state. Attacker can distribute requests to bypass burst limiter.
+- **Fix**: Use single sliding-window rate limiter with two thresholds, or make burst limiter count towards sustained limiter's quota.
+- **Migration**: None
+- **Test**: Send 3 requests in 1 minute (burst limit). Send 4th → rejected. Send 10 over 15 min → rejected after 10th.
+- **Depends on**: None
+
+---
+
+### STG-502 — HIGH: Device token plaintext fallback warning
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic Layer (H-7)
+- **File**: `src/services/deviceSession.ts:88-90`
+- **Problem**: If SecureStore is unavailable, device token falls back to AsyncStorage (plaintext). Token is sensitive auth credential — plaintext storage allows theft on compromised devices.
+- **Fix**: (1) Log warning when fallback triggers. (2) Show one-time Alert to user: "Your device doesn't support secure storage. Authentication data stored with reduced security." (3) Consider refusing to store token without SecureStore on Android API 23+.
+- **Migration**: None
+- **Test**: Mock SecureStore failure → warning shown. Token still stored (graceful degradation).
+- **Depends on**: None
+
+---
+
+### STG-503 — HIGH: Block zero-amount checkout
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic Layer (H-1 Biz)
+- **File**: `src/screens/PaymentScreen.tsx:132-149, 878-955`
+- **Problem**: 100% discount produces totalMinor = 0. Payment screen allows checkout with ₹0 amount. Backend processes zero-rupee sale. This is a business logic violation — sales must have positive total.
+- **Fix**: Add guard in `handleCompletePayment`: `if (totalMinor <= 0) { Alert.alert("Invalid Amount", "Sale total must be greater than zero."); return; }`. Also disable Complete button when totalMinor <= 0.
+- **Migration**: None
+- **Test**: Apply 100% discount → Complete button disabled. Force call → rejected with error.
+- **Depends on**: None
+
+---
+
+### STG-504 — HIGH: Replace hardcoded WhatsApp color with theme token
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Comprehensive audit 2026-03-15 — UI Layer (H-8)
+- **Files**: `src/screens/EnrollDeviceScreen.tsx:673`, `src/screens/ForceUpdateScreen.tsx:389`, `src/screens/CustomerManagementScreen.tsx`
+- **Problem**: WhatsApp green `#25D366` hardcoded in 3+ screens. Breaks dark mode consistency.
+- **Fix**: Add `whatsapp: '#25D366'` to theme color tokens in `src/theme/colors.ts`. Replace all hardcoded instances with `colors.whatsapp`.
+- **Migration**: None
+- **Test**: Toggle dark mode — WhatsApp buttons use theme-consistent colors.
+- **Depends on**: None
+
+---
+
+### STG-505 — HIGH: AIInsightsScreen — use error codes not string matching
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Comprehensive audit 2026-03-15 — UI Layer (H-9)
+- **File**: `src/screens/AIInsightsScreen.tsx:73-79`
+- **Problem**: Error classification uses `msg.includes('404')`, `msg.includes('network')` — fragile string matching. Different backends or locales may produce different error messages, breaking classification.
+- **Fix**: Use HTTP status codes from API response: `if (err.response?.status === 404)` for not-found, `if (!err.response)` for network errors. Fall back to generic error for unknown statuses.
+- **Migration**: None
+- **Test**: Mock 404 response → shows "not available" message. Mock network error → shows "check connection" message.
+- **Depends on**: None
+
+---
+
+### STG-506 — HIGH: Migration 128 — add IF NOT EXISTS to UNIQUE INDEX
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Comprehensive audit 2026-03-15 — DB Layer (H-10)
+- **File**: `backend/migrations/128_t001_relax_gstin_draft_uniqueness.sql:25`
+- **Problem**: CREATE UNIQUE INDEX without IF NOT EXISTS. If migration is re-run (e.g., during recovery), it fails with "index already exists" error, blocking subsequent migrations.
+- **Fix**: Change to `CREATE UNIQUE INDEX IF NOT EXISTS ...`.
+- **Migration**: Edit existing migration file (safe — adds defensive guard only)
+- **Test**: Run migration twice — second run should be no-op, not error.
+- **Depends on**: None
+
+---
+
+### STG-507 — HIGH: PENDING_UPI crash recovery — prevent stock deduction replay
+
+- **Status**: OPEN
+- **Priority**: P1
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic Layer (3.4)
+- **File**: `src/screens/PaymentScreen.tsx:323-385`
+- **Problem**: If app crashes after payment confirmed (status=PAID) but before stock deduction (applyBulkDeductions), recovery clears PENDING_UPI but sale shows PAID. Stock deduction replays on next sync — double deduction.
+- **Fix**: (1) Store `stockDeducted: boolean` flag alongside PENDING_UPI data. (2) After applyBulkDeductions succeeds, set `stockDeducted = true`. (3) On recovery, check if stockDeducted — if true, skip deduction. (4) Backend: make stock deduction idempotent using sale_id as dedup key.
+- **Migration**: None
+- **Test**: Simulate crash after payment, before deduction. Restart → stock deducted exactly once.
+- **Depends on**: STG-496
+
+---
+
+### STG-508 — MEDIUM: GRN negative quantity validation
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic (4.1)
+- **File**: `src/screens/GRNScreen.tsx:122-131`
+- **Problem**: `handleReceiveQuantityChange` accepts negative numbers. Filter at line 311 silently skips qty <= 0 — user thinks item included but it isn't.
+- **Fix**: Add validation in handleReceiveQuantityChange: `if (quantity < 0) { setError('Quantity cannot be negative'); return; }`. Show inline error below input field.
+- **Depends on**: None
+
+---
+
+### STG-509 — MEDIUM: GRN excess quantity backend validation
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic (4.2)
+- **File**: `backend/src/routes/v1/orders.ts`
+- **Problem**: Backend accepts qty received > qty ordered without limit. Causes inventory overage and supplier invoice mismatch.
+- **Fix**: Backend: reject if `received_qty > ordered_qty * 1.1` (10% tolerance). Return 400 with `EXCESS_QUANTITY` error code. Frontend: show warning before submit if any item exceeds ordered qty.
+- **Depends on**: None
+
+---
+
+### STG-510 — MEDIUM: Duplicate scan window per-barcode tracking
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic (1.1)
+- **File**: `src/services/scan/handleScan.ts:68-72, 112-122`
+- **Problem**: Single `lastScan` variable causes false duplicate rejection when scanning different items within 1000ms.
+- **Fix**: Replace single `lastScan` with `Map<string, number>` keyed by barcode. Check duplicate per-barcode, not globally. Clean up entries older than DUPLICATE_WINDOW_MS.
+- **Depends on**: None
+
+---
+
+### STG-511 — MEDIUM: Offline stock cache multi-barcode merge
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic (1.3)
+- **File**: `src/services/scan/handleScan.ts:490-493`
+- **Problem**: Same product with two barcodes creates two cache entries. Stock updates from one barcode not reflected when scanning other barcode.
+- **Fix**: Cache by globalProductId (primary key), not barcode. Create barcode→productId lookup map. Stock lookup resolves barcode → productId → cached stock.
+- **Depends on**: None
+
+---
+
+### STG-512 — MEDIUM: Credit score calculation transaction
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic (7.1)
+- **File**: `backend/src/routes/v1/pos/credit.ts:153-250`
+- **Problem**: Multiple aggregation queries (sales count, BNPL repayment rate, disputes) not in transaction. Data can change between queries producing inconsistent score.
+- **Fix**: Wrap all credit score queries in `BEGIN...COMMIT` with `READ COMMITTED` or `REPEATABLE READ` isolation level.
+- **Depends on**: None
+
+---
+
+### STG-513 — MEDIUM: Large amount error instead of silent cap
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic (8.2)
+- **File**: `src/utils/money.ts:44-45`
+- **Problem**: Amounts exceeding MAX_AMOUNT_MINOR (₹10M) are silently capped. User sees ₹10M instead of actual entered amount.
+- **Fix**: Throw error or show Alert when amount exceeds MAX_AMOUNT_MINOR: "Amount exceeds maximum allowed (₹1,00,00,000). Please check the entered value."
+- **Depends on**: None
+
+---
+
+### STG-514 — MEDIUM: Sync batch exponential backoff
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic (9.2)
+- **File**: `src/services/offline/sync.ts:149-184`
+- **Problem**: 100 batch retries with no delay between failures causes battery drain and CPU waste when network is down.
+- **Fix**: Add exponential backoff: 1s, 2s, 4s, 8s (capped at 30s) between failed batch attempts. Reset backoff on success.
+- **Depends on**: None
+
+---
+
+### STG-515 — MEDIUM: Timestamp timezone consistency
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic (11.1)
+- **File**: `backend/src/routes/v1/pos/sales.ts:733, 793`
+- **Problem**: `new Date(row.created_at).toISOString()` assumes UTC. If DB stores timestamps without timezone, conversion is off by 5.5 hours (IST).
+- **Fix**: Verify all TIMESTAMPTZ columns store UTC. Add explicit `AT TIME ZONE 'UTC'` cast in SQL queries returning timestamps. Frontend: parse ISO strings and convert to local for display.
+- **Depends on**: None
+
+---
+
+### STG-516 — MEDIUM: Search cache invalidation
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — Cross-Portal (2.2)
+- **File**: `backend/services/catalog-service/src/services/searchService.ts:88-103`
+- **Problem**: Search results cached with TTL but not invalidated when products are added or prices change.
+- **Fix**: On product create/update, invalidate search cache keys containing the affected product's name/SKU. Use Redis `DEL` on matching pattern or reduce TTL to 60s.
+- **Depends on**: None
+
+---
+
+### STG-517 — MEDIUM: Supplier price cache TTL
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — Cross-Portal (Finding 4)
+- **File**: `src/services/api/catalogApi.ts:169-192`
+- **Problem**: 5-minute supplier cache TTL means price changes don't appear in POS for up to 5 minutes.
+- **Fix**: Reduce TTL to 60s or add push-based invalidation (WebSocket event from backend when supplier updates price → POS invalidates cache).
+- **Depends on**: None
+
+---
+
+### STG-518 — MEDIUM: HTTPS enforcement for supplier-portal and superadmin
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — Cross-Portal (Finding 18)
+- **Files**: `supplier-portal/src/lib/api.ts`, `supermandi-superadmin/src/lib/api.ts`
+- **Problem**: Only retailer-admin enforces HTTPS in production. Supplier-portal and superadmin don't validate URL scheme.
+- **Fix**: Add same check as retailer-admin: `if (import.meta.env.PROD && baseUrl.startsWith('http://')) throw new Error('HTTPS required in production')`.
+- **Depends on**: None
+
+---
+
+### STG-519 — MEDIUM: Set CORS_ALLOWED_ORIGINS in Cloud Run
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — GCP Parity
+- **Problem**: CORS_ALLOWED_ORIGINS env var may not be set in Cloud Run. If missing, empty array → no CORS allowed (or in dev: wildcard with warning).
+- **Fix**: Set `CORS_ALLOWED_ORIGINS=https://staging.supermandi.tech` in Cloud Run env config for api-gateway service. For production: set to production domain.
+- **Depends on**: GCP access
+
+---
+
+### STG-520 — MEDIUM: Admin API key timing-safe response
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — API Layer (M-1)
+- **File**: `backend/src/routes/v1/admin/adminAuth.ts:78-83`
+- **Fix**: When DB lookup returns 0 rows, hash a dummy value before returning to normalize response time.
+- **Depends on**: None
+
+---
+
+### STG-521 — MEDIUM: Webhook signature format validation
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — API Layer (M-2)
+- **File**: `backend/src/routes/v1/webhooks/refundWebhook.ts:42-44`
+- **Fix**: Add: `if (!signature || typeof signature !== 'string' || signature.length < 64) return res.status(400).json({ error: 'Invalid signature format' })`.
+- **Depends on**: None
+
+---
+
+### STG-522 — MEDIUM: Error handler — stop leaking DB details
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — API Layer (M-3)
+- **File**: `backend/src/middleware/errorHandler.ts:45-58`
+- **Fix**: Always return generic "Internal server error" to client in all environments. Log full details to structured logs only.
+- **Depends on**: None
+
+---
+
+### STG-523 — MEDIUM: Store isolation — log warning on missing storeId
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — API Layer (M-4)
+- **File**: `backend/src/middleware/deviceToken.ts:63-68`
+- **Fix**: When `candidates.length === 0`, add `logger.warn('POS request without client storeId', { deviceId, path: req.path })`. Still allow request (storeId from token is authoritative).
+- **Depends on**: None
+
+---
+
+### STG-524 — MEDIUM: AIInsightsScreen i18n tab labels
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — UI Layer
+- **File**: `src/screens/AIInsightsScreen.tsx:100-106`
+- **Fix**: Replace hardcoded `label: 'Alerts'` etc with `label: t('insights.tabAlerts')`. Add keys to en.json and hi.json.
+- **Depends on**: None
+
+---
+
+### STG-525 — MEDIUM: AIInsightsScreen i18n retry/empty text
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — UI Layer
+- **File**: `src/screens/AIInsightsScreen.tsx:293, 313`
+- **Fix**: Replace "Tap to retry" and empty state message with t() keys.
+- **Depends on**: None
+
+---
+
+### STG-526 — MEDIUM: BuyScreen explicit empty state
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — UI Layer (UX 4-state)
+- **File**: `src/screens/BuyScreen.tsx:103-107`
+- **Fix**: After loading completes with empty array, show empty state: icon + "No products available. Add products from your supplier catalog."
+- **Depends on**: None
+
+---
+
+### STG-527 — MEDIUM: ChatListScreen empty/error states
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — UI Layer (UX 4-state)
+- **File**: `src/screens/ChatListScreen.tsx:90-93`
+- **Fix**: Add explicit empty state (no conversations) and error state (retry button) handling.
+- **Depends on**: None
+
+---
+
+### STG-528 — MEDIUM: CustomerListScreen error state display
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — UI Layer (UX 4-state)
+- **File**: `src/screens/CustomerListScreen.tsx:61-70`
+- **Fix**: When `error` state is set, show error UI with retry button instead of silently ignoring.
+- **Depends on**: None
+
+---
+
+### STG-529 — MEDIUM: PaymentSetupScreen BackHandler deps
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — UI Layer
+- **File**: `src/screens/PaymentSetupScreen.tsx:73-77`
+- **Fix**: Add `handleSkip` to useEffect dependency array, or wrap handleSkip in useCallback.
+- **Depends on**: None
+
+---
+
+### STG-530 — MEDIUM: CreditScreen consent UI
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — UI Layer
+- **File**: `src/screens/CreditScreen.tsx:82-84`
+- **Fix**: When `consentRequired` is true, show consent request modal explaining why phone consent is needed, with Accept/Decline buttons. On accept, call POST /api/v1/consent/record.
+- **Depends on**: STG-493 (consent table must exist)
+
+---
+
+### STG-531 — MEDIUM: KhataScreen modal scroll
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — UI Layer
+- **File**: `src/screens/KhataScreen.tsx`
+- **Fix**: Wrap modal content in ScrollView to handle overflow on small screens (< 5 inch).
+- **Depends on**: None
+
+---
+
+### STG-532 — MEDIUM: MenuScreen accessibility labels
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — UI Layer
+- **File**: `src/screens/MenuScreen.tsx`
+- **Fix**: Add `accessibilityLabel` to all Pressable/TouchableOpacity elements with icons.
+- **Depends on**: None
+
+---
+
+### STG-533 — MEDIUM: CustomerListScreen form accessibility
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — UI Layer
+- **File**: `src/screens/CustomerListScreen.tsx`
+- **Fix**: Add `accessibilityLabel` to search input and filter controls.
+- **Depends on**: None
+
+---
+
+### STG-534 — MEDIUM: Khata negative balance handling
+
+- **Status**: OPEN
+- **Priority**: P2
+- **Source**: Comprehensive audit 2026-03-15 — Business Logic (7.2)
+- **File**: `backend/src/routes/v1/pos/khata.ts`
+- **Fix**: When balance goes negative (customer overpaid), display as "Store owes ₹X" instead of negative number. Add visual indicator (green for credit to customer).
+- **Depends on**: None
+
+---
+
+### STG-535 to STG-551 — LOW PRIORITY (P3)
+
+Remaining 17 P3 tickets cover: port documentation, response format standardization, demo endpoint safety, migration documentation, barcode validation edge cases, search minimum query, discount validation UX, currency formatting, timezone display, sync dedup verification, session cache handling, store isolation documentation, WhatsApp color in ForceUpdate/CustomerManagement screens, and ReturnScreen navigation verification. Each ticket in the summary table above has its one-line scope. Detailed specs will be written at implementation time.
 
 ## GUARD Tickets (STG-481 — STG-492)
 
