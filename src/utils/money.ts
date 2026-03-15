@@ -72,17 +72,20 @@ export function formatMoney(minor: number | null | undefined, currency: MoneyCur
         maximumFractionDigits: fractionDigits,
       }).format(major);
     } catch {
-      // Fall back to simple formatting.
+      // STG-544: Fallback always uses currency code (not symbol) for consistency
+      const fallbackCurrency = /^[A-Z]{3}$/.test(currency) ? currency : "INR";
       const formatted = major.toFixed(fractionDigits);
-      result = currency === "INR"
+      result = fallbackCurrency === "INR"
         ? `₹ ${formatInrGrouped(formatted)}`
-        : `${currency} ${formatGrouped(formatted)}`;
+        : `${fallbackCurrency} ${formatGrouped(formatted)}`;
     }
   } else {
+    // STG-544: Fallback always uses currency code (not symbol) for consistency
+    const fallbackCurrency = /^[A-Z]{3}$/.test(currency) ? currency : "INR";
     const formatted = major.toFixed(fractionDigits);
-    result = currency === "INR"
+    result = fallbackCurrency === "INR"
       ? `₹ ${formatInrGrouped(formatted)}`
-      : `${currency} ${formatGrouped(formatted)}`;
+      : `${fallbackCurrency} ${formatGrouped(formatted)}`;
   }
   // STG-543: Always show .00 for consistency (supersedes STG-117 smart formatting)
   return result;
