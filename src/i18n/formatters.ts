@@ -165,7 +165,15 @@ export function formatDateTime(
  * Format relative time (e.g., "2 hours ago")
  */
 export function formatRelativeTime(date: Date | string | number): string {
-  const d = date instanceof Date ? date : new Date(date);
+  // STG-545: Ensure UTC-aware parsing — if string lacks timezone suffix, treat as UTC
+  let d: Date;
+  if (date instanceof Date) {
+    d = date;
+  } else if (typeof date === "string" && !date.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(date)) {
+    d = new Date(date + "Z"); // Assume UTC if no timezone info
+  } else {
+    d = new Date(date);
+  }
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffMins = Math.floor(diffMs / 60000);

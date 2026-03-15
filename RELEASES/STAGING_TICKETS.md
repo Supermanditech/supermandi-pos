@@ -11445,7 +11445,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-542 | Negative total cap — show validation error instead of silent Math.max(0) | P3 | OPEN |
 | STG-543 | formatMoney — show .00 consistently for round amounts | P3 | PARKED |
 | STG-544 | Currency fallback — use currency code consistently when Intl unavailable | P3 | PARKED |
-| STG-545 | Relative time format — handle UTC vs IST in formatRelativeTime | P3 | OPEN |
+| STG-545 | Relative time format — handle UTC vs IST in formatRelativeTime | P3 | PARKED |
 | STG-546 | Sync duplicate_ignored — verify local-to-server mapping before clearing | P3 | OPEN |
 | STG-547 | Device session cache — handle mid-operation token expiry gracefully | P3 | OPEN |
 | STG-548 | Redundant store isolation — document deviceToken as primary, storeIsolation as secondary | P3 | OPEN |
