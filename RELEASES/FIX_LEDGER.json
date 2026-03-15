@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 160,
+  "version": 162,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -5985,6 +5985,61 @@
         "test_guard": "done",
         "single_commit": "done",
         "ticket_parked": "done"
+      }
+    },
+    {
+      "ticket": "STG-519",
+      "file": "backend/src/app.ts",
+      "start_line": 76,
+      "end_line": 93,
+      "checksum": "ef067d72ea8f62f3",
+      "description": "Accept both CORS_ALLOWED_ORIGINS and ALLOWED_ORIGINS env vars with filter(Boolean)",
+      "test_file": "src/__tests__/screens/cors-env-vars.stg-519.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-15T20:40:59.704Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "CORS origin lookup: CORS_ALLOWED_ORIGINS || ALLOWED_ORIGINS",
+        "api_errors": "Fatal exit if neither var set in non-dev",
+        "impacted_files": "backend/src/app.ts lines 76-93",
+        "fix_ledger_check": "Registered ef067d72ea8f62f3",
+        "regression_check": "No regressions — additive fallback",
+        "test_guard": "cors-env-vars.stg-519.test.ts 4/4 pass",
+        "single_commit": "fix(STG-519)",
+        "gcp_parity": "Cloud Run uses CORS_ALLOWED_ORIGINS — now accepted",
+        "store_isolation": "N/A — CORS config only",
+        "business_logic": "N/A — infra config",
+        "business_behaviour": "N/A — infra config",
+        "db_schema": "N/A — no DB changes",
+        "no_agent_conflict": "No conflict — app.ts CORS section only",
+        "ticket_parked": "false — completed"
       }
     }
   ],

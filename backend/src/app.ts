@@ -72,13 +72,15 @@ if (process.env.NODE_ENV !== "development" || process.env.TRUST_PROXY === "true"
 
 // ITER3-P0-001: Configure CORS with explicit allowed origins
 // ENV-FAILFAST-001 + STAGE-005: ALLOWED_ORIGINS required in non-development
+// STG-519: Accept both CORS_ALLOWED_ORIGINS (gateway convention) and ALLOWED_ORIGINS (legacy)
 const corsOptions: cors.CorsOptions = {
   origin: (() => {
-    if (process.env.ALLOWED_ORIGINS) {
-      return process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
+    const originsEnv = process.env.CORS_ALLOWED_ORIGINS || process.env.ALLOWED_ORIGINS;
+    if (originsEnv) {
+      return originsEnv.split(',').map(o => o.trim()).filter(Boolean);
     }
     if (process.env.NODE_ENV !== 'development') {
-      logger.error(`[config] FATAL: ALLOWED_ORIGINS is required in ${process.env.NODE_ENV} but not set`);
+      logger.error(`[config] FATAL: CORS_ALLOWED_ORIGINS or ALLOWED_ORIGINS is required in ${process.env.NODE_ENV} but not set`);
       process.exit(1);
     }
     return true; // Allow all in development
