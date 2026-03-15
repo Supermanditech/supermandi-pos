@@ -730,7 +730,8 @@ posSalesRouter.get("/bills", requireDeviceToken, async (req, res) => {
       totalMinor: Number(row.total_minor ?? 0),
       status: String(row.status ?? ""),
       paymentMode: resolvePaymentMode(row.status),
-      createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+      // STG-515: TIMESTAMPTZ columns are returned as JS Date by pg driver — toISOString() is UTC-safe
+      createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at ?? ""),
       currency: row.currency ? String(row.currency) : "INR"
     }));
 
@@ -790,7 +791,8 @@ posSalesRouter.get("/bills/:saleId", requireDeviceToken, async (req, res) => {
       status: String(sale.status ?? ""),
       paymentMode: resolvePaymentMode(sale.status),
       currency: sale.currency ? String(sale.currency) : "INR",
-      createdAt: sale.created_at ? new Date(sale.created_at).toISOString() : new Date().toISOString(),
+      // STG-515: TIMESTAMPTZ columns are returned as JS Date by pg driver — toISOString() is UTC-safe
+      createdAt: sale.created_at instanceof Date ? sale.created_at.toISOString() : String(sale.created_at ?? ""),
       totals: {
         subtotalMinor: Number(sale.subtotal_minor ?? 0),
         discountMinor: Number(sale.discount_minor ?? 0),
