@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 182,
+  "version": 185,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -2161,8 +2161,8 @@
       "description": "KhataScreen i18n — replace 38 hardcoded strings with t() calls",
       "test_file": "src/__tests__/screens/KhataScreen.stg-269.i18n.unit.test.ts",
       "start_line": 1,
-      "end_line": 1138,
-      "checksum": "6681e87047beb204",
+      "end_line": 1147,
+      "checksum": "7e978e111456d8dd",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -6370,6 +6370,45 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-15T21:22:40.375Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "STG-531",
+      "file": "src/screens/KhataScreen.tsx",
+      "start_line": 910,
+      "end_line": 951,
+      "checksum": "1ae2e596e7a4b861",
+      "description": "Wrap ledger modal summary + entries in single ScrollView",
+      "test_file": "src/__tests__/screens/khata-modal-scroll.stg-531.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "migration_safe": "N/A"
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-15T21:27:18.390Z",
       "status": "ACTIVE"
     }
   ],

@@ -907,51 +907,52 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             <View style={styles.modalHeaderSpacer} />
           </View>
 
-          {selectedCustomer && (
-            <View style={styles.ledgerSummaryCard}>
-              <Text style={styles.ledgerSummaryName}>{selectedCustomer.name}</Text>
-              <Text style={styles.ledgerSummaryPhone}>{selectedCustomer.phone}</Text>
-              <View style={styles.ledgerSummaryBalance}>
-                <Text style={styles.ledgerSummaryLabel}>{t("khata.currentBalance")}</Text>
-                <Text
-                  style={[
-                    styles.ledgerSummaryAmount,
-                    {
-                      color:
-                        selectedCustomer.balanceMinor > 0
-                          ? colors.error
-                          : selectedCustomer.balanceMinor < 0
-                            ? colors.success
-                            : colors.textSecondary,
-                    },
-                  ]}
-                >
-                  {formatMoney(Math.abs(selectedCustomer.balanceMinor))}
-                  {selectedCustomer.balanceMinor > 0
-                    ? ` (${t("khata.owes").toLowerCase()})`
-                    : selectedCustomer.balanceMinor < 0
-                      ? ` (${t("khata.storeOwes").toLowerCase()})`
-                      : ` (${t("khata.settled").toLowerCase()})`}
-                </Text>
+          {/* STG-531: Wrap summary + entries in single ScrollView for small screens */}
+          <ScrollView style={styles.ledgerList} contentContainerStyle={styles.ledgerListContent}>
+            {selectedCustomer && (
+              <View style={styles.ledgerSummaryCard}>
+                <Text style={styles.ledgerSummaryName}>{selectedCustomer.name}</Text>
+                <Text style={styles.ledgerSummaryPhone}>{selectedCustomer.phone}</Text>
+                <View style={styles.ledgerSummaryBalance}>
+                  <Text style={styles.ledgerSummaryLabel}>{t("khata.currentBalance")}</Text>
+                  <Text
+                    style={[
+                      styles.ledgerSummaryAmount,
+                      {
+                        color:
+                          selectedCustomer.balanceMinor > 0
+                            ? colors.error
+                            : selectedCustomer.balanceMinor < 0
+                              ? colors.success
+                              : colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    {formatMoney(Math.abs(selectedCustomer.balanceMinor))}
+                    {selectedCustomer.balanceMinor > 0
+                      ? ` (${t("khata.owes").toLowerCase()})`
+                      : selectedCustomer.balanceMinor < 0
+                        ? ` (${t("khata.storeOwes").toLowerCase()})`
+                        : ` (${t("khata.settled").toLowerCase()})`}
+                  </Text>
+                </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {entriesLoading ? (
-            <View style={styles.centerContent}>
-              <ActivityIndicator size="large" color={colors.primary} />
-            </View>
-          ) : customerEntries.length === 0 ? (
-            <EmptyState
-              icon="notebook-outline"
-              title={t("khata.noEntries")}
-              description={t("khata.noEntriesDescription")}
-            />
-          ) : (
-            <ScrollView style={styles.ledgerList} contentContainerStyle={styles.ledgerListContent}>
-              {customerEntries.map(renderLedgerEntry)}
-            </ScrollView>
-          )}
+            {entriesLoading ? (
+              <View style={styles.centerContent}>
+                <ActivityIndicator size="large" color={colors.primary} />
+              </View>
+            ) : customerEntries.length === 0 ? (
+              <EmptyState
+                icon="notebook-outline"
+                title={t("khata.noEntries")}
+                description={t("khata.noEntriesDescription")}
+              />
+            ) : (
+              customerEntries.map(renderLedgerEntry)
+            )}
+          </ScrollView>
         </View>
       </Modal>
 
