@@ -64,7 +64,16 @@ function enforceStoreBinding(req: Request, res: Response, status: PosDeviceStatu
   if (!status.storeId) return true;
 
   const candidates = extractClientStoreIds(req);
-  if (candidates.length === 0) return true;
+  if (candidates.length === 0) {
+    // STG-523: Log when client sends no storeId — aids debugging misconfigured clients
+    log.warn("store_binding_no_store_id", {
+      deviceId: status.deviceId,
+      enrolledStoreId: status.storeId,
+      method: req.method,
+      path: req.originalUrl ?? req.url,
+    });
+    return true;
+  }
 
   const mismatches = candidates.filter((candidate) => candidate.value !== status.storeId);
   if (mismatches.length === 0) return true;
