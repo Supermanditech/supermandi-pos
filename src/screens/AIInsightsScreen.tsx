@@ -6,6 +6,7 @@ import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, ActivityIn
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, useThemeColors } from '../theme';
+import { useTranslation } from 'react-i18next';
 import { ApiError } from '../services/api/apiClient';
 import * as aiApi from '../services/api/aiApi';
 
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export default function AIInsightsScreen({ onBack }: Props) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
 
@@ -72,17 +74,17 @@ export default function AIInsightsScreen({ onBack }: Props) {
     } catch (err: unknown) {
       // STG-505: Use HTTP status codes instead of fragile string matching
       if (err instanceof ApiError && err.status === 404) {
-        setError('AI Insights are not yet available for your store. This feature will be activated soon.');
+        setError(t('aiInsights.error.notAvailable'));
       } else if (
         err instanceof ApiError && err.status >= 500
       ) {
-        setError('Server error. Please try again later.');
+        setError(t('aiInsights.error.serverError'));
       } else if (
         !(err instanceof ApiError) &&
         (err instanceof TypeError ||
          (err instanceof Error && (err.name === 'AbortError' || err.message?.toLowerCase().includes('timeout'))))
       ) {
-        setError('Unable to connect. Please check your internet connection and try again.');
+        setError(t('aiInsights.error.networkError'));
       } else {
         const msg = err instanceof Error ? err.message : 'Failed to load';
         setError(msg);
@@ -108,11 +110,11 @@ export default function AIInsightsScreen({ onBack }: Props) {
   const onRefresh = () => { setRefreshing(true); fetchData(); };
 
   const tabs: Array<{ key: Tab; label: string; icon: string }> = [
-    { key: 'alerts', label: 'Alerts', icon: 'bell-alert-outline' },
-    { key: 'forecasts', label: 'Forecast', icon: 'chart-timeline-variant' },
-    { key: 'slow', label: 'Slow Moving', icon: 'turtle' },
-    { key: 'expiry', label: 'Expiry', icon: 'clock-alert-outline' },
-    { key: 'prices', label: 'Prices', icon: 'tag-multiple-outline' },
+    { key: 'alerts', label: t('aiInsights.tabs.alerts'), icon: 'bell-alert-outline' },
+    { key: 'forecasts', label: t('aiInsights.tabs.forecast'), icon: 'chart-timeline-variant' },
+    { key: 'slow', label: t('aiInsights.tabs.slowMoving'), icon: 'turtle' },
+    { key: 'expiry', label: t('aiInsights.tabs.expiry'), icon: 'clock-alert-outline' },
+    { key: 'prices', label: t('aiInsights.tabs.prices'), icon: 'tag-multiple-outline' },
   ];
 
   const severityColor = (s: string) => {
@@ -273,7 +275,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
         <Pressable testID="ai-insights-back-btn" onPress={onBack} style={styles.backBtn} accessibilityLabel="Go back" accessibilityRole="button">
           <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
         </Pressable>
-        <Text style={styles.headerTitle}>AI Insights</Text>
+        <Text style={styles.headerTitle}>{t('menu.aiInsights')}</Text>
       </View>
 
       {/* Tabs */}
@@ -302,7 +304,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
       {error && (
         <Pressable style={styles.errorBar} onPress={() => { setLoading(true); fetchData(); }} accessibilityRole="button" accessibilityLabel="Tap to retry">
           <Text style={styles.errorText}>{error}</Text>
-          <Text style={[styles.errorText, { fontWeight: '600', marginTop: 4 }]}>Tap to retry</Text>
+          <Text style={[styles.errorText, { fontWeight: '600', marginTop: 4 }]}>{t('aiInsights.tapToRetry')}</Text>
         </Pressable>
       )}
 
@@ -320,7 +322,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
             <View style={styles.center}>
               <MaterialCommunityIcons name="robot-happy-outline" size={48} color={colors.textTertiary} />
               <Text style={styles.emptyText}>
-                AI insights will be available once you have 7+ days of sales data. Keep selling to unlock these insights!
+                {t('aiInsights.emptyState')}
               </Text>
             </View>
           }

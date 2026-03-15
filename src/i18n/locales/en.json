@@ -1649,5 +1649,21 @@
     "paymentFailedDetail": "Unable to complete payment: {{message}}. Please try again.",
     "paymentNotCompleteTitle": "Payment Not Complete",
     "paymentNotCompleteMessage": "Split payment could not be verified. Please try again."
+  },
+  "aiInsights": {
+    "tabs": {
+      "alerts": "Alerts",
+      "forecast": "Forecast",
+      "slowMoving": "Slow Moving",
+      "expiry": "Expiry",
+      "prices": "Prices"
+    },
+    "error": {
+      "notAvailable": "AI Insights are not yet available for your store. This feature will be activated soon.",
+      "serverError": "Server error. Please try again later.",
+      "networkError": "Unable to connect. Please check your internet connection and try again."
+    },
+    "tapToRetry": "Tap to retry",
+    "emptyState": "AI insights will be available once you have 7+ days of sales data. Keep selling to unlock these insights!"
   }
 }
