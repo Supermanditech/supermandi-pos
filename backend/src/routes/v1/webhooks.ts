@@ -44,35 +44,33 @@ setInterval(() => {
 }, 60 * 60 * 1000);
 
 /**
- * T-211: Check if webhook event was already processed (Redis-first, fallback to Map)
+ * STG-500: Atomic claim — SET NX EX eliminates TOCTOU race between check and mark.
+ * Returns true if this call claimed the event (first processor), false if already claimed.
+ * Falls back to in-memory Map when Redis is unavailable (single-instance safety only).
  */
-async function isWebhookEventProcessed(eventId: string): Promise<boolean> {
+async function tryClaimWebhookEvent(eventId: string): Promise<boolean> {
   try {
     const redis = getRedis();
     if (redis) {
-      const result = await redis.get(REDIS_WEBHOOK_PREFIX + eventId);
-      return result !== null;
+      // Atomic: SET key value NX EX ttl — returns "OK" if set, null if key already exists
+      const result = await redis.set(
+        REDIS_WEBHOOK_PREFIX + eventId,
+        "1",
+        "EX",
+        WEBHOOK_IDEMPOTENCY_TTL_SECONDS,
+        "NX"
+      );
+      return result === "OK";
     }
   } catch (err) {
-    log.warn("[T-211] Redis idempotency check failed, using fallback:", err instanceof Error ? err.message : err);
+    log.warn("[STG-500] Redis atomic claim failed, using fallback:", err instanceof Error ? err.message : err);
   }
-  return processedWebhookEventsFallback.has(eventId);
-}
-
-/**
- * T-211: Mark webhook event as processed (Redis with TTL, fallback to Map)
- */
-async function markWebhookEventProcessed(eventId: string): Promise<void> {
-  try {
-    const redis = getRedis();
-    if (redis) {
-      await redis.setex(REDIS_WEBHOOK_PREFIX + eventId, WEBHOOK_IDEMPOTENCY_TTL_SECONDS, "1");
-      return;
-    }
-  } catch (err) {
-    log.warn("[T-211] Redis idempotency mark failed, using fallback:", err instanceof Error ? err.message : err);
+  // Fallback: in-memory Map (not race-safe across instances, but better than nothing)
+  if (processedWebhookEventsFallback.has(eventId)) {
+    return false;
   }
   processedWebhookEventsFallback.set(eventId, Date.now());
+  return true;
 }
 
 // =============================================================================
@@ -281,8 +279,8 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
   const razorpayEventId = payoutEntity?.id || paymentEntity?.id || `${event}-${account_id}-${Date.now()}`;
   const idempotencyKey = `razorpay:${razorpayEventId}:${event}`;
 
-  // T-211: Check idempotency - skip if already processed (Redis-backed)
-  if (await isWebhookEventProcessed(idempotencyKey)) {
+  // STG-500: Atomic claim — if we can't claim, it's a duplicate (no TOCTOU race)
+  if (!(await tryClaimWebhookEvent(idempotencyKey))) {
     log.info(`[SM-018] Duplicate webhook ignored: ${idempotencyKey}`);
     return res.json({ status: "ok", event, duplicate: true });
   }
@@ -294,8 +292,7 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
   if (payoutEvents.includes(event)) {
     const success = await handlePayoutWebhook(pool, event, payload);
     if (success) {
-      // ITER4-P0-007: Mark as processed after successful handling
-      await markWebhookEventProcessed(idempotencyKey);
+      // STG-500: No need to mark — already claimed atomically upfront
 
       // T-262: Write payout event to outbox (best-effort, separate connection)
       try {
@@ -339,8 +336,7 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
   if (paymentEvents.includes(event)) {
     const result = await handleSellPaymentWebhook(pool, event, payload);
     if (result.success) {
-      // ITER4-P0-007: Mark as processed after successful handling
-      await markWebhookEventProcessed(idempotencyKey);
+      // STG-500: No need to mark — already claimed atomically upfront
       return res.json({ status: "ok", event, paymentId: result.paymentId });
     } else {
       return res.status(422).json({ error: result.error || "Failed to process payment webhook" });
@@ -348,8 +344,7 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
   }
 
   // Acknowledge other events without processing
-  // T-211: Mark ignored events as processed too to prevent retries
-  await markWebhookEventProcessed(idempotencyKey);
+  // STG-500: Already claimed atomically upfront — no separate mark needed
   log.info(`[SM-018] Ignoring webhook event: ${event}`);
   return res.json({ status: "ignored", event });
 });

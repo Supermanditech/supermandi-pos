@@ -11400,7 +11400,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-497 | GRN duplicate submission — add idempotency key to receiveGoods | P0 | PARKED |
 | STG-498 | Cart lock expiry — validate lock before payment submission | P0 | PARKED |
 | STG-499 | Health endpoint timing attack — use crypto.timingSafeEqual | P1 | PARKED |
-| STG-500 | Webhook idempotency race — atomic Redis SET NX EX | P1 | OPEN |
+| STG-500 | Webhook idempotency race — atomic Redis SET NX EX | P1 | PARKED |
 | STG-501 | Enrollment rate limiters — share state between burst and sustained | P1 | OPEN |
 | STG-502 | Device token plaintext fallback — warn when SecureStore unavailable | P1 | OPEN |
 | STG-503 | Zero-amount checkout — block totalMinor <= 0 | P1 | PARKED (already fixed in STG-401, line 272: totalMinor <= 0 → cartValid=false) |
