@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 90,
+  "version": 92,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -957,8 +957,8 @@
     {
       "ticket": "STG-116",
       "file": "src/utils/money.ts",
-      "start_line": 47,
-      "end_line": 50,
+      "start_line": 52,
+      "end_line": 55,
       "checksum": "1a455cdec376bc31",
       "description": "formatMoney null/undefined safety: returns em dash for null/undefined input",
       "test_file": "src/__tests__/utils/money.stg-116.null-safety-lakh.unit.test.ts",
@@ -989,13 +989,14 @@
         "gcp_parity": "pure frontend util",
         "regression_check": "25 fixes intact",
         "test_guard": "8 tests pass"
-      }
+      },
+      "line_shifted_at": "2026-03-15T17:42:15.887Z"
     },
     {
       "ticket": "STG-117",
       "file": "src/utils/money.ts",
-      "start_line": 78,
-      "end_line": 81,
+      "start_line": 87,
+      "end_line": 90,
       "checksum": "e74ce0a5e5e9ed62",
       "description": "Smart formatting: drop .00 on round amounts for cleaner display",
       "test_file": "src/__tests__/utils/money.stg-117.smart-formatting.unit.test.ts",
@@ -1026,7 +1027,8 @@
         "gcp_parity": "pure frontend",
         "regression_check": "26 fixes intact, 31 money tests pass",
         "test_guard": "6 tests pass"
-      }
+      },
+      "line_shifted_at": "2026-03-15T17:42:15.889Z"
     },
     {
       "ticket": "STG-234",
@@ -4473,6 +4475,57 @@
         "gcp_parity": "N/A",
         "regression_check": "6 tests pass",
         "test_guard": "6/6 pass",
+        "single_commit": "one commit",
+        "ticket_parked": "PARKED"
+      }
+    },
+    {
+      "ticket": "STG-513",
+      "file": "src/utils/money.ts",
+      "start_line": 47,
+      "end_line": 58,
+      "checksum": "375eb0d2564e765c",
+      "description": "Add isAmountWithinLimit validation and dev warning for over-cap amounts",
+      "test_file": "src/__tests__/screens/money-cap.stg-513.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-15T17:42:37.846Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "Dev warning when amount exceeds cap",
+        "business_behaviour": "Validation function prevents silent truncation",
+        "impacted_files": "src/utils/money.ts",
+        "fix_ledger_check": "zero drift",
+        "no_agent_conflict": "no conflict",
+        "gcp_parity": "N/A",
+        "regression_check": "9 tests pass",
+        "test_guard": "9/9 pass",
         "single_commit": "one commit",
         "ticket_parked": "PARKED"
       }

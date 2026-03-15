@@ -11413,7 +11413,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-510 | Duplicate scan window — track per-barcode, not single lastScan | P2 | PARKED |
 | STG-511 | Offline stock cache — merge entries for multi-barcode products | P2 | OPEN |
 | STG-512 | Credit score calculation — wrap in transaction for consistency | P2 | OPEN |
-| STG-513 | Large amount silent cap — show error instead of truncating to 10M | P2 | OPEN |
+| STG-513 | Large amount silent cap — show error instead of truncating to 10M | P2 | PARKED |
 | STG-514 | Sync batch retry — add exponential backoff between batches | P2 | OPEN |
 | STG-515 | Date conversion timezone — ensure created_at uses TIMESTAMPTZ consistently | P2 | OPEN |
 | STG-516 | Search cache — add invalidation on product add/price change | P2 | OPEN |
