@@ -42,19 +42,13 @@ export function errorHandler(
     return void res.status(409).json({ error: "DUPLICATE_ENTRY", message: "A record with this value already exists", ...(requestId && { requestId }) });
   }
 
-  // ITER4-P1-007: Don't expose internal error messages/stack traces in production
-  // Log the full error for debugging, but return generic message to client
+  // ITER4-P1-007 + STG-522: Never expose internal error messages to client
+  // Log full details server-side for debugging; return generic message always
   if (err instanceof Error) {
     log.error('[ErrorHandler] Internal server error:', err.message);
-    if (process.env.NODE_ENV !== 'production') {
-      log.error(err.stack);
-    }
+    log.error(err.stack);
   }
 
-  const message = process.env.NODE_ENV === 'production'
-    ? "Internal server error"
-    : (err instanceof Error ? err.message : "Unknown error");
-
-  res.status(500).json({ error: message, ...(requestId && { requestId }) });
+  res.status(500).json({ error: "Internal server error", ...(requestId && { requestId }) });
 }
 
