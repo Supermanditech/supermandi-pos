@@ -22,9 +22,13 @@ export function errorHandler(
   const requestId = (_req as any).correlationId as string | undefined;
 
   if (err instanceof HttpError) {
+    // STG-536: Standardize error format — always use { error: { code, message } }
     res.status(err.statusCode).json({
-      error: err.message,
-      details: err.details ?? undefined,
+      error: {
+        code: err.code ?? "HTTP_ERROR",
+        message: err.message,
+        ...(err.details && { details: err.details }),
+      },
       ...(requestId && { requestId }),
     });
     return;
@@ -49,6 +53,7 @@ export function errorHandler(
     log.error(err.stack);
   }
 
-  res.status(500).json({ error: "Internal server error", ...(requestId && { requestId }) });
+  // STG-536: Standardized error format
+  res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" }, ...(requestId && { requestId }) });
 }
 
