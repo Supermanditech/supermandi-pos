@@ -640,6 +640,19 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
         <Text style={styles.addButtonText}>{t("customerList.addCustomer")}</Text>
       </Pressable>
 
+      {/* STG-528: Show error banner when error state is set */}
+      {error ? (
+        <Pressable
+          style={[styles.addButton, { backgroundColor: colors.error + '15', borderColor: colors.error }]}
+          onPress={() => { clearError(); fetchCustomers(); }}
+          accessibilityRole="button"
+          accessibilityLabel={t("common.tapToRetry")}
+        >
+          <MaterialCommunityIcons name="alert-circle-outline" size={18} color={colors.error} />
+          <Text style={[styles.addButtonText, { color: colors.error }]}>{error}</Text>
+        </Pressable>
+      ) : null}
+
       {/* Customer list */}
       {loading && customers.length === 0 ? (
         <View style={styles.centerContent}>
