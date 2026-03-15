@@ -11393,9 +11393,9 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 | # | Title | Priority | Status |
 |---|-------|----------|--------|
-| STG-493 | Apply migration 188 (consent_records) to staging DB | P0 | OPEN |
-| STG-494 | Apply migration 189 (khata_void_column) to staging DB | P0 | OPEN |
-| STG-495 | Add ROLLBACK comments to 192 migrations missing them | P0 | OPEN |
+| STG-493 | Apply migration 188 (consent_records) to staging DB | P0 | PARKED (ops task — run migrate-prod.js on staging DB) |
+| STG-494 | Apply migration 189 (khata_void_column) to staging DB | P0 | PARKED (ops task — run migrate-prod.js on staging DB, after STG-493) |
+| STG-495 | Add ROLLBACK comments to 192 migrations missing them | P0 | PARKED (192 files exceed 15-file gate) |
 | STG-496 | Payment double-tap — set submittingRef before API call | P0 | PARKED (already fixed in AUD-055-A, lines 965-967) |
 | STG-497 | GRN duplicate submission — add idempotency key to receiveGoods | P0 | PARKED |
 | STG-498 | Cart lock expiry — validate lock before payment submission | P0 | PARKED |
@@ -11411,15 +11411,15 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-508 | GRN negative quantity — validate >= 0 at input with error message | P2 | PARKED |
 | STG-509 | GRN excess quantity — backend reject qty > ordered + 10% tolerance | P2 | PARKED |
 | STG-510 | Duplicate scan window — track per-barcode, not single lastScan | P2 | PARKED |
-| STG-511 | Offline stock cache — merge entries for multi-barcode products | P2 | OPEN |
-| STG-512 | Credit score calculation — wrap in transaction for consistency | P2 | OPEN |
+| STG-511 | Offline stock cache — merge entries for multi-barcode products | P2 | PARKED (e9f397e6, stg-511-2026-03-16) |
+| STG-512 | Credit score calculation — wrap in transaction for consistency | P2 | PARKED (d6d8f1b7, stg-512-2026-03-15) |
 | STG-513 | Large amount silent cap — show error instead of truncating to 10M | P2 | PARKED |
-| STG-514 | Sync batch retry — add exponential backoff between batches | P2 | OPEN |
+| STG-514 | Sync batch retry — add exponential backoff between batches | P2 | PARKED (4cc79890, stg-514-2026-03-15) |
 | STG-515 | Date conversion timezone — ensure created_at uses TIMESTAMPTZ consistently | P2 | PARKED |
 | STG-516 | Search cache — add invalidation on product add/price change | P2 | OPEN |
-| STG-517 | Supplier price cache — reduce 5-min TTL or add invalidation trigger | P2 | OPEN |
+| STG-517 | Supplier price cache — reduce 5-min TTL or add invalidation trigger | P2 | PARKED (fc210091, stg-517-2026-03-16) |
 | STG-518 | HTTPS enforcement — add to supplier-portal and superadmin (like retailer-admin) | P2 | PARKED |
-| STG-519 | CORS_ALLOWED_ORIGINS — set explicitly in Cloud Run env vars | P2 | OPEN |
+| STG-519 | CORS_ALLOWED_ORIGINS — set explicitly in Cloud Run env vars | P2 | PARKED (8a39e292, stg-519-2026-03-16) |
 | STG-520 | Admin API key lookup — add timing-safe response for missing keys | P2 | PARKED |
 | STG-521 | Webhook signature format — validate header format before HMAC | P2 | PARKED |
 | STG-522 | Error handler — stop leaking DB constraint names in non-production | P2 | PARKED |
@@ -11430,13 +11430,13 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-527 | ChatListScreen — add explicit empty/error state handling | P2 | PARKED |
 | STG-528 | CustomerListScreen — show error state when error is set | P2 | PARKED |
 | STG-529 | PaymentSetupScreen BackHandler — add handleSkip to useEffect deps | P2 | PARKED |
-| STG-530 | CreditScreen consent — show consent request UI instead of empty screen | P2 | OPEN |
+| STG-530 | CreditScreen consent — show consent request UI instead of empty screen | P2 | PARKED (19f80a90, stg-530-2026-03-16) |
 | STG-531 | KhataScreen modal scroll — wrap modal content in ScrollView for small screens | P2 | PARKED |
 | STG-532 | Accessibility — add accessibilityLabel to MenuScreen interactive icons | P2 | PARKED |
 | STG-533 | Accessibility — add accessibilityLabel to CustomerListScreen form inputs | P2 | PARKED |
-| STG-534 | Khata negative balance — add explicit handling/display for overpayment | P2 | OPEN |
+| STG-534 | Khata negative balance — add explicit handling/display for overpayment | P2 | PARKED (2a3d6cdb, stg-534-2026-03-15) |
 | STG-535 | POS dev config port 3001 vs portals 3000 — document in .env.example | P3 | PARKED |
-| STG-536 | Response format inconsistency — standardize error JSON across all routes | P3 | OPEN |
+| STG-536 | Response format inconsistency — standardize error JSON across all routes | P3 | PARKED (7df7f9d8, stg-536-2026-03-16) |
 | STG-537 | Demo endpoint — add explicit enableDemo flag in request body | P3 | PARKED |
 | STG-538 | Document nullable store_id rationale in audit/chat tables | P3 | PARKED |
 | STG-539 | Document placeholder migrations 115-117, 158 purpose | P3 | PARKED |
@@ -11446,8 +11446,8 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-543 | formatMoney — show .00 consistently for round amounts | P3 | PARKED |
 | STG-544 | Currency fallback — use currency code consistently when Intl unavailable | P3 | PARKED |
 | STG-545 | Relative time format — handle UTC vs IST in formatRelativeTime | P3 | PARKED |
-| STG-546 | Sync duplicate_ignored — verify local-to-server mapping before clearing | P3 | OPEN |
-| STG-547 | Device session cache — handle mid-operation token expiry gracefully | P3 | OPEN |
+| STG-546 | Sync duplicate_ignored — verify local-to-server mapping before clearing | P3 | PARKED (a29a5959, stg-546-2026-03-15) |
+| STG-547 | Device session cache — handle mid-operation token expiry gracefully | P3 | PARKED (ffe82ff0, stg-547-2026-03-16) |
 | STG-548 | Redundant store isolation — document deviceToken as primary, storeIsolation as secondary | P3 | PARKED |
 | STG-549 | ForceUpdateScreen hardcoded WhatsApp icon color #25D366 | P3 | PARKED |
 | STG-550 | CustomerManagementScreen hardcoded WhatsApp color instances | P3 | PARKED |

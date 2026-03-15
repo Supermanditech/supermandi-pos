@@ -22,15 +22,19 @@ function hashCode(code: string): string {
 const rateLimitMultiplier = Math.max(1, parseInt(process.env.RATE_LIMIT_MULTIPLIER || "1", 10));
 
 // SA-P2-011: Redis-backed rate limiting
+// STG-501: Use keyPrefix to isolate burst and sustained limiters — prevents
+// burst limiter's zremrangebyscore from deleting entries the sustained limiter needs
 const enrollmentBurstLimiter = redisRateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 3 * rateLimitMultiplier,
+  keyPrefix: "enroll-burst",
 });
 
 // Rate limiter for enrollment endpoint to prevent brute force attacks
 const enrollmentLimiter = redisRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10 * rateLimitMultiplier,
+  keyPrefix: "enroll-sustained",
 });
 
 // GO-LIVE-052: Rate limiter for label check endpoint

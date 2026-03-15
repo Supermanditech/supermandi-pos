@@ -15,6 +15,8 @@ export interface RedisRateLimitOptions {
   keyGenerator?: (req: Request) => string;
   /** Skip counting failed requests (non-2xx responses) */
   skipFailedRequests?: boolean;
+  /** STG-501: Key prefix to isolate separate limiters sharing the same IP key */
+  keyPrefix?: string;
 }
 
 /**
@@ -64,7 +66,8 @@ export function redisRateLimit(opts: RedisRateLimitOptions) {
 
   return (req: Request, res: Response, next: NextFunction) => {
     const keyGen = opts.keyGenerator || ((r: Request) => r.ip || "unknown");
-    const key = keyGen(req);
+    // STG-501: Prefix isolates burst vs sustained limiters on the same IP
+    const key = opts.keyPrefix ? `${opts.keyPrefix}:${keyGen(req)}` : keyGen(req);
     const windowSeconds = Math.ceil(opts.windowMs / 1000);
 
     // Attempt Redis-backed rate limit check
