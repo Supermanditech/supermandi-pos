@@ -1,7 +1,7 @@
 // GRNScreen - V3.0.9 compliant
 // Goods Receiving Note screen for receiving purchase order items
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -65,6 +65,8 @@ export default function GRNScreen({
   const [order, setOrder] = useState<PurchaseOrderWithItems | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  // STG-497: Synchronous ref guard prevents double-tap before React state update
+  const submittingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   // Receive quantities per item
@@ -304,6 +306,8 @@ export default function GRNScreen({
 
   // Submit GRN
   const handleSubmit = useCallback(async () => {
+    // STG-497: Synchronous ref check prevents double-tap race condition
+    if (submittingRef.current) return;
     if (!storeId || !order || !canSubmit) return;
 
     // Build items array
@@ -321,6 +325,8 @@ export default function GRNScreen({
 
     // SA-P1-004: Proceed with submission (possibly after excess warning)
     const doSubmit = async () => {
+      // STG-497: Set ref FIRST (synchronous) to block concurrent calls
+      submittingRef.current = true;
       setSubmitting(true);
       try {
         const result = await orderApi.receiveGoods(storeId, orderId, {
@@ -397,6 +403,7 @@ export default function GRNScreen({
           online ? t("grn.receiveFailed") : t("grn.receiveFailedOffline")
         );
       } finally {
+        submittingRef.current = false;
         setSubmitting(false);
       }
     };

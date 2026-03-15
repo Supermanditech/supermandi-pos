@@ -11397,13 +11397,13 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-494 | Apply migration 189 (khata_void_column) to staging DB | P0 | OPEN |
 | STG-495 | Add ROLLBACK comments to 192 migrations missing them | P0 | OPEN |
 | STG-496 | Payment double-tap — set submittingRef before API call | P0 | PARKED (already fixed in AUD-055-A, lines 965-967) |
-| STG-497 | GRN duplicate submission — add idempotency key to receiveGoods | P0 | OPEN |
+| STG-497 | GRN duplicate submission — add idempotency key to receiveGoods | P0 | PARKED |
 | STG-498 | Cart lock expiry — validate lock before payment submission | P0 | PARKED |
 | STG-499 | Health endpoint timing attack — use crypto.timingSafeEqual | P1 | OPEN |
 | STG-500 | Webhook idempotency race — atomic Redis SET NX EX | P1 | OPEN |
 | STG-501 | Enrollment rate limiters — share state between burst and sustained | P1 | OPEN |
 | STG-502 | Device token plaintext fallback — warn when SecureStore unavailable | P1 | OPEN |
-| STG-503 | Zero-amount checkout — block totalMinor <= 0 | P1 | OPEN |
+| STG-503 | Zero-amount checkout — block totalMinor <= 0 | P1 | PARKED (already fixed in STG-401, line 272: totalMinor <= 0 → cartValid=false) |
 | STG-504 | Hardcoded WhatsApp color #25D366 — use theme token | P1 | OPEN |
 | STG-505 | AIInsightsScreen error classification — use error codes not string matching | P1 | OPEN |
 | STG-506 | Migration 128 UNIQUE INDEX — add IF NOT EXISTS guard | P1 | OPEN |

@@ -421,6 +421,7 @@ export async function confirmPayment(
 /**
  * Receive goods for a purchase order (GRN).
  * Creates a receive record and updates inventory.
+ * STG-497: Deterministic idempotency key prevents duplicate stock entries on retry.
  */
 export async function receiveGoods(
   storeId: string,
@@ -428,7 +429,14 @@ export async function receiveGoods(
   params: ReceiveGoodsParams
 ): Promise<ReceiveGoodsResponse> {
   const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/receive`;
-  return apiClient.post<ReceiveGoodsResponse>(path, params);
+  // STG-497: Build deterministic idempotency key from orderId + sorted items
+  // Same GRN submit = same key → backend returns cached response on retry
+  const sortedItems = [...params.items]
+    .sort((a, b) => a.orderItemId.localeCompare(b.orderItemId))
+    .map((i) => `${i.orderItemId}:${i.quantityReceived}`)
+    .join(",");
+  const idempotencyKey = `grn-${orderId}-${sortedItems}`;
+  return apiClient.post<ReceiveGoodsResponse>(path, params, { idempotencyKey });
 }
 
 /**

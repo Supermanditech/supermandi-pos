@@ -350,7 +350,7 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown, 
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(deviceToken ? { "x-device-token": deviceToken } : {}),
         ...(staffId ? { "x-staff-id": staffId } : {}),
-        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+        ...(idempotencyKey ? { "X-Idempotency-Key": idempotencyKey } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body)
     });
