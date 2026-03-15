@@ -11427,13 +11427,13 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-524 | AIInsightsScreen tab labels — replace hardcoded English with i18n t() | P2 | PARKED |
 | STG-525 | AIInsightsScreen retry/empty text — add i18n keys for "Tap to retry" etc | P2 | PARKED |
 | STG-526 | BuyScreen — add explicit empty state for zero products | P2 | PARKED |
-| STG-527 | ChatListScreen — add explicit empty/error state handling | P2 | OPEN |
+| STG-527 | ChatListScreen — add explicit empty/error state handling | P2 | PARKED |
 | STG-528 | CustomerListScreen — show error state when error is set | P2 | OPEN |
 | STG-529 | PaymentSetupScreen BackHandler — add handleSkip to useEffect deps | P2 | PARKED |
 | STG-530 | CreditScreen consent — show consent request UI instead of empty screen | P2 | OPEN |
-| STG-531 | KhataScreen modal scroll — wrap modal content in ScrollView for small screens | P2 | OPEN |
-| STG-532 | Accessibility — add accessibilityLabel to MenuScreen interactive icons | P2 | OPEN |
-| STG-533 | Accessibility — add accessibilityLabel to CustomerListScreen form inputs | P2 | OPEN |
+| STG-531 | KhataScreen modal scroll — wrap modal content in ScrollView for small screens | P2 | PARKED |
+| STG-532 | Accessibility — add accessibilityLabel to MenuScreen interactive icons | P2 | PARKED |
+| STG-533 | Accessibility — add accessibilityLabel to CustomerListScreen form inputs | P2 | PARKED |
 | STG-534 | Khata negative balance — add explicit handling/display for overpayment | P2 | OPEN |
 | STG-535 | POS dev config port 3001 vs portals 3000 — document in .env.example | P3 | OPEN |
 | STG-536 | Response format inconsistency — standardize error JSON across all routes | P3 | OPEN |
@@ -11443,7 +11443,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-540 | Barcode validation — reject 2-char inputs | P2 | PARKED |
 | STG-541 | Search minimum query — allow 1-char search for short product names | P3 | OPEN |
 | STG-542 | Negative total cap — show validation error instead of silent Math.max(0) | P3 | OPEN |
-| STG-543 | formatMoney — show .00 consistently for round amounts | P3 | OPEN |
+| STG-543 | formatMoney — show .00 consistently for round amounts | P3 | PARKED |
 | STG-544 | Currency fallback — use currency code consistently when Intl unavailable | P3 | OPEN |
 | STG-545 | Relative time format — handle UTC vs IST in formatRelativeTime | P3 | OPEN |
 | STG-546 | Sync duplicate_ignored — verify local-to-server mapping before clearing | P3 | OPEN |
@@ -11451,7 +11451,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-548 | Redundant store isolation — document deviceToken as primary, storeIsolation as secondary | P3 | OPEN |
 | STG-549 | ForceUpdateScreen hardcoded WhatsApp icon color #25D366 | P3 | PARKED |
 | STG-550 | CustomerManagementScreen hardcoded WhatsApp color instances | P3 | PARKED |
-| STG-551 | ReturnScreen post-refund navigation — verify success flow exists | P3 | OPEN |
+| STG-551 | ReturnScreen post-refund navigation — verify success flow exists | P3 | PARKED |
 
 ---
 

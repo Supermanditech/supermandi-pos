@@ -61,10 +61,10 @@ describe('money utility', () => {
       expect(result).toMatch(/150/);
     });
 
-    it('formats zero as ₹0 (STG-117: smart formatting drops .00)', () => {
+    it('formats zero as ₹0.00 (STG-543: always show decimals)', () => {
       const result = formatMoney(0);
       expect(result).toMatch(/₹.*0/);
-      expect(result).not.toContain('.00');
+      expect(result).toContain('.00');
     });
 
     it('formats small amounts', () => {
@@ -85,10 +85,10 @@ describe('money utility', () => {
       expect(result).toMatch(/50/);
     });
 
-    it('handles NaN input gracefully (STG-117: smart formatting drops .00)', () => {
+    it('handles NaN input gracefully (STG-543: always show decimals)', () => {
       const result = formatMoney(NaN);
       expect(result).toMatch(/₹.*0/);
-      expect(result).not.toContain('.00');
+      expect(result).toContain('.00');
     });
 
     it('handles string-coerced input', () => {

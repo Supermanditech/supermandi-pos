@@ -84,10 +84,7 @@ export function formatMoney(minor: number | null | undefined, currency: MoneyCur
       ? `₹ ${formatInrGrouped(formatted)}`
       : `${currency} ${formatGrouped(formatted)}`;
   }
-  // STG-117: Smart formatting — drop .00 on round amounts for cleaner display
-  if (fractionDigits === 2 && major === Math.floor(major)) {
-    result = result.replace(/\.00\b/, '');
-  }
+  // STG-543: Always show .00 for consistency (supersedes STG-117 smart formatting)
   return result;
 }
 
