@@ -40,8 +40,9 @@ refundWebhookRouter.post('/razorpay/refund', async (req: Request, res: Response)
   }
 
   const signature = req.headers['x-razorpay-signature'] as string;
-  if (!signature) {
-    return res.status(400).json({ error: 'Missing signature header' });
+  // STG-521: Validate signature format before HMAC comparison
+  if (!signature || typeof signature !== 'string' || signature.length < 64 || !/^[a-f0-9]+$/i.test(signature)) {
+    return res.status(400).json({ error: 'Invalid signature format' });
   }
 
   const expectedSignature = crypto
