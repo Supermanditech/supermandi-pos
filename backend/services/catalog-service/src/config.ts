@@ -60,8 +60,8 @@ export const config = {
     defaultTtl: getEnvIntOrDefault('CACHE_DEFAULT_TTL', 300),
     // Search results TTL (2 minutes for fresher results)
     searchTtl: getEnvIntOrDefault('CACHE_SEARCH_TTL', 120),
-    // Catalog TTL (5 minutes)
-    catalogTtl: getEnvIntOrDefault('CACHE_CATALOG_TTL', 300),
+    // STG-517: Catalog TTL reduced from 5min to 2min for fresher supplier prices
+    catalogTtl: getEnvIntOrDefault('CACHE_CATALOG_TTL', 120),
   },
 
   // Search settings
