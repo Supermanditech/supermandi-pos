@@ -23,6 +23,10 @@ type StockCacheState = {
 const cacheByScope = new Map<string, StockCacheState>();
 let activeScope = normalizeStoreScope(null);
 
+// STG-511: Barcode → productId alias map for multi-barcode products
+// When a product has multiple barcodes, all should resolve to the same stock entry
+const barcodeToProductId = new Map<string, string>();
+
 const getState = (scope = activeScope): StockCacheState => {
   const existing = cacheByScope.get(scope);
   if (existing) return existing;
@@ -76,7 +80,9 @@ export async function hydrateStockCacheForStore(storeId?: string | null): Promis
 export function getCachedStock(key: string): number | null {
   const state = getState();
   if (!state.loaded) return null;
-  const entry = state.entries[key];
+  // STG-511: Resolve barcode alias to product ID for multi-barcode products
+  const resolvedKey = barcodeToProductId.get(key) ?? key;
+  const entry = state.entries[resolvedKey] ?? state.entries[key];
   if (!entry) return null;
   if (!Number.isFinite(entry.stock)) return null;
   if (!Number.isFinite(entry.updatedAt)) return null;
@@ -122,6 +128,17 @@ export function getOldestEntryAge(): number | null {
 
 // GL-CRIT-0013: Export TTL for use in refresh logic
 export const STOCK_TTL_MS = STOCK_CACHE_TTL_MS;
+
+/**
+ * STG-511: Register barcode → productId alias so all barcodes resolve to same stock
+ */
+export function registerBarcodeAlias(barcode: string, productId: string): void {
+  const b = barcode?.trim();
+  const p = productId?.trim();
+  if (b && p && b !== p) {
+    barcodeToProductId.set(b, p);
+  }
+}
 
 export function updateStockCacheEntries(
   entries: Array<{ key: string; stock: number }>,

@@ -1,6 +1,6 @@
 import * as productsApi from "./api/productsApi";
 import { getStock, getStockBatch } from "./api/inventoryApi";
-import { getCachedStock, updateStockCacheEntries, hasStaleEntries, isEntryPinProtected, STOCK_TTL_MS } from "./stockCache";
+import { getCachedStock, updateStockCacheEntries, hasStaleEntries, isEntryPinProtected, STOCK_TTL_MS, registerBarcodeAlias } from "./stockCache";
 import { isOnline } from "./networkStatus";
 
 type StockEntry = { key: string; stock: number };
@@ -40,6 +40,10 @@ const buildStockEntriesFromProducts = (products: StockProduct[]): StockEntry[] =
     const barcodeKey = normalizeKey(product.barcode ?? null);
     if (barcodeKey) {
       entries.push({ key: barcodeKey, stock });
+      // STG-511: Register barcode → productId alias for multi-barcode merge
+      if (idKey) {
+        registerBarcodeAlias(barcodeKey, idKey);
+      }
     }
   }
   return entries;
