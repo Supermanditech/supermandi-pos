@@ -11416,7 +11416,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-513 | Large amount silent cap — show error instead of truncating to 10M | P2 | PARKED |
 | STG-514 | Sync batch retry — add exponential backoff between batches | P2 | PARKED (4cc79890, stg-514-2026-03-15) |
 | STG-515 | Date conversion timezone — ensure created_at uses TIMESTAMPTZ consistently | P2 | PARKED |
-| STG-516 | Search cache — add invalidation on product add/price change | P2 | PARKED |
+| STG-516 | Search cache — add invalidation on product add/price change | P2 | PARKED (a4b62444, stg-516-2026-03-16) |
 | STG-517 | Supplier price cache — reduce 5-min TTL or add invalidation trigger | P2 | PARKED (fc210091, stg-517-2026-03-16) |
 | STG-518 | HTTPS enforcement — add to supplier-portal and superadmin (like retailer-admin) | P2 | PARKED |
 | STG-519 | CORS_ALLOWED_ORIGINS — set explicitly in Cloud Run env vars | P2 | PARKED (8a39e292, stg-519-2026-03-16) |
