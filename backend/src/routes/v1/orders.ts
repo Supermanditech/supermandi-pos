@@ -1653,6 +1653,17 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
         const orderItem = itemResult.rows[0];
         const newReceivedQty = (orderItem.received_quantity || 0) + item.quantityReceived;
 
+        // STG-509: Reject if total received exceeds ordered + 10% tolerance
+        const orderedQty = orderItem.ordered_quantity || 0;
+        if (orderedQty > 0 && newReceivedQty > orderedQty * 1.1) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({
+            success: false,
+            error: "EXCESS_QUANTITY",
+            message: `Item "${orderItem.productName}" would exceed 110% of ordered quantity (ordered: ${orderedQty}, would receive: ${newReceivedQty})`,
+          });
+        }
+
         // Determine item status
         let itemStatus = "partial";
         if (newReceivedQty >= orderItem.ordered_quantity) {

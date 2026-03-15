@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 86,
+  "version": 88,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -4368,6 +4368,61 @@
         "test_guard": "6/6 pass",
         "single_commit": "one commit",
         "ticket_parked": "PARKED"
+      }
+    },
+    {
+      "ticket": "STG-509",
+      "file": "backend/src/routes/v1/orders.ts",
+      "start_line": 1653,
+      "end_line": 1666,
+      "checksum": "ee3f40f8c1410e37",
+      "description": "Reject GRN receive if total qty > ordered * 1.1 (10% tolerance)",
+      "test_file": "src/__tests__/screens/grn-excess-qty.stg-509.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-15T17:35:01.572Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "Rejects GRN receive if total > ordered * 1.1",
+        "business_behaviour": "Returns 400 EXCESS_QUANTITY with descriptive message",
+        "impacted_files": "backend/src/routes/v1/orders.ts receive endpoint",
+        "fix_ledger_check": "zero drift",
+        "no_agent_conflict": "no conflict",
+        "gcp_parity": "N/A",
+        "regression_check": "7 tests pass",
+        "test_guard": "7/7 pass",
+        "single_commit": "one commit",
+        "ticket_parked": "PARKED",
+        "backend_api": "POST /orders/:storeId/:orderId/receive — added 400 EXCESS_QUANTITY",
+        "api_errors": "400 EXCESS_QUANTITY with item name and qty details",
+        "store_isolation": "storeId from JWT via getStoreIdFromDevice",
+        "db_schema": "N/A — no schema changes"
       }
     }
   ],
