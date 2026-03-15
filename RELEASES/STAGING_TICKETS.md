@@ -11401,7 +11401,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-498 | Cart lock expiry — validate lock before payment submission | P0 | PARKED |
 | STG-499 | Health endpoint timing attack — use crypto.timingSafeEqual | P1 | PARKED |
 | STG-500 | Webhook idempotency race — atomic Redis SET NX EX | P1 | PARKED |
-| STG-501 | Enrollment rate limiters — share state between burst and sustained | P1 | OPEN |
+| STG-501 | Enrollment rate limiters — share state between burst and sustained | P1 | PARKED (ed7a3303, stg-501-2026-03-16) |
 | STG-502 | Device token plaintext fallback — warn when SecureStore unavailable | P1 | PARKED |
 | STG-503 | Zero-amount checkout — block totalMinor <= 0 | P1 | PARKED (already fixed in STG-401, line 272: totalMinor <= 0 → cartValid=false) |
 | STG-504 | Hardcoded WhatsApp color #25D366 — use theme token | P1 | PARKED |
@@ -11416,7 +11416,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-513 | Large amount silent cap — show error instead of truncating to 10M | P2 | PARKED |
 | STG-514 | Sync batch retry — add exponential backoff between batches | P2 | PARKED (4cc79890, stg-514-2026-03-15) |
 | STG-515 | Date conversion timezone — ensure created_at uses TIMESTAMPTZ consistently | P2 | PARKED |
-| STG-516 | Search cache — add invalidation on product add/price change | P2 | OPEN |
+| STG-516 | Search cache — add invalidation on product add/price change | P2 | PARKED |
 | STG-517 | Supplier price cache — reduce 5-min TTL or add invalidation trigger | P2 | PARKED (fc210091, stg-517-2026-03-16) |
 | STG-518 | HTTPS enforcement — add to supplier-portal and superadmin (like retailer-admin) | P2 | PARKED |
 | STG-519 | CORS_ALLOWED_ORIGINS — set explicitly in Cloud Run env vars | P2 | PARKED (8a39e292, stg-519-2026-03-16) |

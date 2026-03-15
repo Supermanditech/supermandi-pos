@@ -259,6 +259,25 @@ export async function cacheDelete(key: string): Promise<void> {
 }
 
 /**
+ * STG-516: Delete all Redis keys matching a raw pattern (no prefix).
+ * Used for cross-service cache invalidation (e.g., clearing catalog-service
+ * search keys from the main backend after product CRUD).
+ */
+export async function cacheDeleteByPattern(pattern: string): Promise<void> {
+  try {
+    const client = getRedis();
+    if (!client) return;
+
+    const keys = await client.keys(pattern);
+    if (keys.length > 0) {
+      await client.del(...keys);
+    }
+  } catch (error) {
+    log.error(`[Redis Cache] Delete pattern error for ${pattern}:`, error);
+  }
+}
+
+/**
  * Get or set pattern (cache-aside)
  */
 export async function cacheGetOrSet<T>(

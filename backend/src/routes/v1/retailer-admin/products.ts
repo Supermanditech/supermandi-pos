@@ -29,7 +29,8 @@ import {
 import { validatePriceBounds } from "../../../utils/priceBoundsValidator";
 // SCALE-D4: Invalidate catalog page-1 cache on any product CRUD
 // SCALE-D1: Invalidate barcode lookup cache on any product CRUD
-import { cacheDelete } from "../../../db/redis";
+// STG-516: Invalidate search cache on product add/price change
+import { cacheDelete, cacheDeleteByPattern } from "../../../db/redis";
 // SCALE-E1: multer for product image upload (2MB, JPEG/PNG/WebP)
 import multer from "multer";
 
@@ -42,6 +43,11 @@ function invalidateBarcodeCache(storeId: string, barcode: string | null | undefi
   if (barcode) {
     cacheDelete(`barcode:${storeId}:${barcode}`).catch(() => {});
   }
+}
+
+/** STG-516: Invalidate catalog-service search cache keys for a store */
+function invalidateSearchCache(storeId: string): void {
+  cacheDeleteByPattern(`catalog:search:${storeId}:*`).catch(() => {});
 }
 
 export const retailerAdminProductsRouter = Router();
@@ -464,6 +470,8 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     invalidateCatalogPage1(storeId);
     // SCALE-D1: Invalidate barcode lookup cache for the new product
     invalidateBarcodeCache(storeId, validatedBarcode || generatedBarcode);
+    // STG-516: Invalidate search cache so new product appears in results
+    invalidateSearchCache(storeId);
 
     return res.status(201).json({
       ok: true,
@@ -778,6 +786,8 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     for (const row of barcodeRows.rows) {
       invalidateBarcodeCache(storeId, row.barcode);
     }
+    // STG-516: Invalidate search cache so updated product/price appears in results
+    invalidateSearchCache(storeId);
 
     return res.json({
       ok: true,
@@ -844,6 +854,8 @@ retailerAdminProductsRouter.delete("/products/:id", async (req: Request, res: Re
 
     // SCALE-D4: Invalidate cached catalog page 1 for this store
     invalidateCatalogPage1(storeId);
+    // STG-516: Invalidate search cache on product delete
+    invalidateSearchCache(storeId);
 
     return res.json({
       success: true,
@@ -1402,6 +1414,8 @@ retailerAdminProductsRouter.post(
 
       // SCALE-D4: Invalidate catalog page-1 cache
       invalidateCatalogPage1(storeId);
+      // STG-516: Invalidate search cache on image update
+      invalidateSearchCache(storeId);
 
       log.info(`[SCALE-E1] Product image uploaded: store=${storeId} product=${id} url=${imageUrl}`);
 

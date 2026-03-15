@@ -278,12 +278,12 @@ export async function invalidateProductCache(productId: string): Promise<void> {
 }
 
 /**
- * Invalidate search cache (e.g., after product updates)
- * This is a simple invalidation - for production, consider more granular invalidation
+ * STG-516: Invalidate search cache on product add/price change.
+ * Uses cacheDeletePattern to clear all search keys for a store,
+ * or all search keys globally when no storeId is provided.
  */
-export async function invalidateSearchCache(): Promise<void> {
-  // For simplicity, we don't clear search cache here
-  // It will expire naturally based on TTL
-  // In production, you might want to use pub/sub for cache invalidation
-  logger.info('Search cache will expire based on TTL');
+export async function invalidateSearchCache(storeId?: string): Promise<void> {
+  const pattern = storeId ? `${storeId}:*` : '*';
+  await cacheDeletePattern('search', pattern);
+  logger.info(`Search cache invalidated`, { storeId: storeId ?? 'all' });
 }
