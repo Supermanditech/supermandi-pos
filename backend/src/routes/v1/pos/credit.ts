@@ -165,9 +165,13 @@ async function calculateCreditScore(pool: any, storeId: string): Promise<CreditS
     },
   };
 
+  // STG-512: Wrap all queries in a REPEATABLE READ transaction for consistency
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ');
+
     // Get sales data for last 90 days
-    const salesResult = await pool.query(`
+    const salesResult = await client.query(`
       SELECT
         COALESCE(SUM(total_minor), 0) as total_gmv,
         COUNT(*) as transaction_count
@@ -178,7 +182,7 @@ async function calculateCreditScore(pool: any, storeId: string): Promise<CreditS
     `, [storeId]);
 
     // Get BNPL repayment history
-    const bnplResult = await pool.query(`
+    const bnplResult = await client.query(`
       SELECT
         COUNT(*) FILTER (WHERE status = 'paid') as paid_count,
         COUNT(*) FILTER (WHERE status IN ('overdue', 'defaulted')) as default_count,
@@ -188,7 +192,7 @@ async function calculateCreditScore(pool: any, storeId: string): Promise<CreditS
     `, [storeId]);
 
     // Get store age
-    const storeResult = await pool.query(`
+    const storeResult = await client.query(`
       SELECT created_at FROM platform.stores WHERE id = $1
     `, [storeId]);
 
@@ -196,7 +200,7 @@ async function calculateCreditScore(pool: any, storeId: string): Promise<CreditS
     let disputeCount = 0;
     let totalDrawdowns = 0;
     try {
-      const disputeResult = await pool.query(`
+      const disputeResult = await client.query(`
         SELECT
           COUNT(*) FILTER (WHERE status NOT IN ('resolved', 'rejected')) as active_disputes,
           (SELECT COUNT(*) FROM payments.bnpl_drawdowns WHERE store_id = $1) as total_drawdowns
@@ -211,14 +215,14 @@ async function calculateCreditScore(pool: any, storeId: string): Promise<CreditS
     let existingCreditUsed = 0;
     let existingCreditLimit = 0;
     try {
-      const creditResult = await pool.query(`
+      const creditResult = await client.query(`
         SELECT
           COALESCE(SUM(requested_amount_minor) FILTER (WHERE status IN ('approved', 'disbursed')), 0) as used_credit
         FROM payments.credit_applications
         WHERE store_id = $1
       `, [storeId]);
       existingCreditUsed = parseInt(creditResult.rows[0]?.used_credit || '0', 10);
-      const storeCredit = await pool.query(`SELECT bnpl_credit_limit FROM platform.stores WHERE id = $1`, [storeId]);
+      const storeCredit = await client.query(`SELECT bnpl_credit_limit FROM platform.stores WHERE id = $1`, [storeId]);
       existingCreditLimit = parseInt(storeCredit.rows[0]?.bnpl_credit_limit || '5000000', 10);
     } catch { /* column may not exist */ }
 
@@ -307,6 +311,8 @@ async function calculateCreditScore(pool: any, storeId: string): Promise<CreditS
     // STG-450: Map numeric score to tier
     const tier = getTierForScore(totalScore);
 
+    await client.query('COMMIT');
+
     return {
       score: tier.label,
       numericScore: totalScore,
@@ -324,6 +330,8 @@ async function calculateCreditScore(pool: any, storeId: string): Promise<CreditS
     const error = asError(_error);
     log.error("[SM-021] Credit scoring error:", error.message);
     return defaultScore;
+  } finally {
+    client.release();
   }
 }
 
