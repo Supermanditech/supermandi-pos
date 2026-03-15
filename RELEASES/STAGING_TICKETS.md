@@ -11442,7 +11442,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-539 | Document placeholder migrations 115-117, 158 purpose | P3 | PARKED |
 | STG-540 | Barcode validation — reject 2-char inputs | P2 | PARKED |
 | STG-541 | Search minimum query — allow 1-char search for short product names | P3 | PARKED |
-| STG-542 | Negative total cap — show validation error instead of silent Math.max(0) | P3 | OPEN |
+| STG-542 | Negative total cap — show validation error instead of silent Math.max(0) | P3 | PARKED |
 | STG-543 | formatMoney — show .00 consistently for round amounts | P3 | PARKED |
 | STG-544 | Currency fallback — use currency code consistently when Intl unavailable | P3 | PARKED |
 | STG-545 | Relative time format — handle UTC vs IST in formatRelativeTime | P3 | PARKED |

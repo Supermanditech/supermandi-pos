@@ -168,7 +168,12 @@ const calculateCartTotals = (items: CartItem[], discount: CartDiscount | null) =
   const subtotalAfterItemDiscounts = Math.max(0, subtotal - itemDiscountAmount);
   const cartDiscountAmount = calculateDiscountAmount(subtotalAfterItemDiscounts, discount);
   const discountTotal = itemDiscountAmount + cartDiscountAmount;
-  const total = Math.max(0, subtotal - discountTotal);
+  // STG-542: Warn when discount exceeds subtotal (negative total capped to 0)
+  const rawTotal = subtotal - discountTotal;
+  if (rawTotal < 0 && __DEV__) {
+    console.warn(`[cartStore] STG-542: Discount (${discountTotal}) exceeds subtotal (${subtotal}). Total capped to 0.`);
+  }
+  const total = Math.max(0, rawTotal);
 
   return {
     subtotal,
