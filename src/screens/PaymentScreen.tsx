@@ -281,12 +281,14 @@ const PaymentScreen = () => {
     if (loadingSale) return "Creating sale...";
     if (!saleId || !billRef) return "Waiting for sale to be created";
     if (submitting) return "Processing payment...";
+    // STG-498: Block when cart lock expired
+    if (lockExpired) return "Cart lock expired — go back to refresh";
     if (selectedMode === "UPI" && !paymentId) return "Waiting for UPI QR to be generated";
     // STG-115: CARD and WALLET are coming soon
     if (selectedMode === "CARD" || selectedMode === "WALLET") return "This payment method is coming soon";
     if (!cartValid) return "Cart has invalid items";
     return null;
-  }, [loadingSale, saleId, billRef, submitting, selectedMode, paymentId, cartValid]);
+  }, [loadingSale, saleId, billRef, submitting, lockExpired, selectedMode, paymentId, cartValid]);
 
   // STG-119: Auto-dismiss sale error after 8 seconds
   useEffect(() => {
@@ -1154,10 +1156,12 @@ const PaymentScreen = () => {
 
   // STG-401: Include cartValid in submission guard
   // STG-115: Block submission for CARD/WALLET (coming soon)
+  // STG-498: Block submission when cart lock has expired (prevents stale cart payment)
   const canSubmit =
     Boolean(saleId && billRef) &&
     !loadingSale &&
     !submitting &&
+    !lockExpired &&
     cartValid &&
     selectedMode !== "CARD" &&
     selectedMode !== "WALLET" &&

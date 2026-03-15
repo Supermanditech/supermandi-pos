@@ -520,7 +520,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-491 | GUARD: Backend reorder PO submission endpoint | P0 | PARKED (49e810ac, stg-491-2026-03-14) |
 | STG-492 | GUARD: Fix PENDING_UPI_KEY write-before-checkout (double-charge) | P0 | PARKED (30956d33, stg-492-2026-03-14) |
 
-**Total**: 551 tickets | 492 PARKED | 0 DONE | 0 IN_PROGRESS | 59 OPEN
+**Total**: 551 tickets | 494 PARKED | 0 DONE | 0 IN_PROGRESS | 57 OPEN
 
 ---
 
@@ -11396,9 +11396,9 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-493 | Apply migration 188 (consent_records) to staging DB | P0 | OPEN |
 | STG-494 | Apply migration 189 (khata_void_column) to staging DB | P0 | OPEN |
 | STG-495 | Add ROLLBACK comments to 192 migrations missing them | P0 | OPEN |
-| STG-496 | Payment double-tap — set submittingRef before API call | P0 | OPEN |
+| STG-496 | Payment double-tap — set submittingRef before API call | P0 | PARKED (already fixed in AUD-055-A, lines 965-967) |
 | STG-497 | GRN duplicate submission — add idempotency key to receiveGoods | P0 | OPEN |
-| STG-498 | Cart lock expiry — validate lock before payment submission | P0 | OPEN |
+| STG-498 | Cart lock expiry — validate lock before payment submission | P0 | PARKED |
 | STG-499 | Health endpoint timing attack — use crypto.timingSafeEqual | P1 | OPEN |
 | STG-500 | Webhook idempotency race — atomic Redis SET NX EX | P1 | OPEN |
 | STG-501 | Enrollment rate limiters — share state between burst and sustained | P1 | OPEN |

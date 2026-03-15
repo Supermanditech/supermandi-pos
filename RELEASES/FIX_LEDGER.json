@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 78,
+  "version": 79,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -440,8 +440,8 @@
     {
       "ticket": "STG-492",
       "file": "src/screens/PaymentScreen.tsx",
-      "start_line": 875,
-      "end_line": 893,
+      "start_line": 877,
+      "end_line": 895,
       "checksum": "8f76ad08be667b60",
       "description": "Write PENDING_UPI_KEY to AsyncStorage BEFORE completeCheckout, clear after success — crash recovery for UPI double-charge prevention (checksum updated: STG-210 i18n Alert.alert strings)",
       "test_file": "src/__tests__/screens/PaymentScreen.stg-492.upi-crash-recovery.unit.test.tsx",
@@ -477,7 +477,7 @@
         "regression_check": "true",
         "test_guard": "true"
       },
-      "line_shifted_at": "2026-03-14T01:52:34.869Z"
+      "line_shifted_at": "2026-03-15T16:33:09.196Z"
     },
     {
       "ticket": "STG-361",
@@ -3904,6 +3904,63 @@
         "navigation": "DONE"
       },
       "line_shifted_at": "2026-03-14T08:17:37.975Z"
+    },
+    {
+      "ticket": "STG-498",
+      "file": "src/screens/PaymentScreen.tsx",
+      "start_line": 1156,
+      "end_line": 1167,
+      "checksum": "5045b117ae51c522",
+      "description": "Cart lock expiry blocks canSubmit — prevents payment on stale/expired cart lock",
+      "test_file": "src/screens/__tests__/PaymentScreen.canSubmit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-15T16:33:34.796Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "canSubmit guard updated with !lockExpired, button disabled+grayed when expired",
+        "ux_states": "lockExpired=true shows banner + disabledReason text + button disabled",
+        "wiring": "lockExpired→canSubmit→disabled prop→button grayed, disabledReason shows message",
+        "navigation": "N/A — no navigation change",
+        "i18n_keys": "N/A — disabledReason is internal developer hint",
+        "business_logic": "Prevents payment on stale cart — cart lock expired means cart may have been modified by another device",
+        "business_behaviour": "Complete button disabled when lockExpired, user must go back to re-lock",
+        "impacted_files": "PaymentScreen.tsx + test file + FIX_LEDGER.json + STAGING_TICKETS.md",
+        "fix_ledger_check": "fix-guard check: 101 fixes intact, 0 drifted",
+        "no_agent_conflict": "No parallel agents — sequential single-ticket implementation",
+        "gcp_parity": "Frontend-only change, no localhost URLs, no env vars, staging compatible",
+        "regression_check": "9/9 tests pass in stg-498 suite, no existing tests broken",
+        "test_guard": "PaymentScreen.stg-498.cart-lock-expiry.test.ts — 9 tests pass",
+        "parity_scanned": "Parity scan found 2 errors, 0 warnings at 2026-03-15T16:38:18.476Z",
+        "single_commit": "fix(STG-498): block payment when cart lock expired",
+        "ticket_parked": "STAGING_TICKETS.md line 11401 updated to PARKED"
+      }
     }
   ],
   "machine_state_version": 265,
