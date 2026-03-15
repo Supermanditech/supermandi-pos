@@ -426,6 +426,11 @@ async function handleScan(
   // POS-SCAN-001: Normalize barcode case so "abc123" and "ABC123" resolve to same product
   const trimmed = barcode.trim().toUpperCase();
   if (!trimmed) return;
+  // STG-540: Reject inputs shorter than 3 chars — no valid barcode is 1-2 chars
+  if (trimmed.length < 3) {
+    notify({ tone: "info", message: POS_MESSAGES.invalidBarcode ?? "Input too short to be a valid barcode" });
+    return;
+  }
   if (runtime.sellFirstOnboardingActive) return;
 
   const intent = intentOverride ?? runtime.intent;

@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 100,
+  "version": 102,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -2980,8 +2980,8 @@
     {
       "ticket": "STG-339",
       "file": "src/services/scan/handleScan.ts",
-      "start_line": 483,
-      "end_line": 497,
+      "start_line": 488,
+      "end_line": 502,
       "checksum": "31efa0e7a83a4a98",
       "description": "Removed store_product_id gate — variant picker mandatory for all LOOSE_BULK",
       "test_file": "src/__tests__/scan/handleScan.stg-335.unit.test.ts",
@@ -3015,7 +3015,7 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-15T17:38:06.752Z"
+      "line_shifted_at": "2026-03-15T18:01:36.338Z"
     },
     {
       "ticket": "STG-341",
@@ -4749,6 +4749,57 @@
         "test_guard": "3/3 pass",
         "single_commit": "one commit",
         "ticket_parked": "PARKED"
+      }
+    },
+    {
+      "ticket": "STG-540",
+      "file": "src/services/scan/handleScan.ts",
+      "start_line": 429,
+      "end_line": 433,
+      "checksum": "7007a7e41bf5f81d",
+      "description": "Reject barcode inputs shorter than 3 characters as invalid",
+      "test_file": "src/__tests__/screens/scan-min-length.stg-540.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-15T18:01:56.773Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "Rejects <3 char inputs as invalid barcodes",
+        "business_behaviour": "No valid barcode is 1-2 chars; EAN/UPC min 8 chars",
+        "impacted_files": "src/services/scan/handleScan.ts only",
+        "fix_ledger_check": "Registered, checksum 7007a7e41bf5f81d",
+        "no_agent_conflict": "No parallel agents on this file",
+        "gcp_parity": "Client-side only, no GCP change",
+        "regression_check": "STG-339 checksum intact, 7/7 tests pass",
+        "test_guard": "scan-min-length.stg-540.test.ts — 7 tests",
+        "single_commit": "Will be single commit",
+        "ticket_parked": "Will mark PARKED after commit"
       }
     }
   ],

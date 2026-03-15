@@ -11440,7 +11440,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-537 | Demo endpoint — add explicit enableDemo flag in request body | P3 | OPEN |
 | STG-538 | Document nullable store_id rationale in audit/chat tables | P3 | OPEN |
 | STG-539 | Document placeholder migrations 115-117, 158 purpose | P3 | OPEN |
-| STG-540 | Barcode validation — reject 2-char inputs as invalid barcodes | P3 | OPEN |
+| STG-540 | Barcode validation — reject 2-char inputs | P2 | PARKED |
 | STG-541 | Search minimum query — allow 1-char search for short product names | P3 | OPEN |
 | STG-542 | Negative total cap — show validation error instead of silent Math.max(0) | P3 | OPEN |
 | STG-543 | formatMoney — show .00 consistently for round amounts | P3 | OPEN |
@@ -11449,8 +11449,8 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-546 | Sync duplicate_ignored — verify local-to-server mapping before clearing | P3 | OPEN |
 | STG-547 | Device session cache — handle mid-operation token expiry gracefully | P3 | OPEN |
 | STG-548 | Redundant store isolation — document deviceToken as primary, storeIsolation as secondary | P3 | OPEN |
-| STG-549 | ForceUpdateScreen hardcoded WhatsApp icon color #25D366 | P3 | OPEN |
-| STG-550 | CustomerManagementScreen hardcoded WhatsApp color instances | P3 | OPEN |
+| STG-549 | ForceUpdateScreen hardcoded WhatsApp icon color #25D366 | P3 | PARKED |
+| STG-550 | CustomerManagementScreen hardcoded WhatsApp color instances | P3 | PARKED |
 | STG-551 | ReturnScreen post-refund navigation — verify success flow exists | P3 | OPEN |
 
 ---
