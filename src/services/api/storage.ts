@@ -26,6 +26,11 @@ export async function getAuthToken(): Promise<string | null> {
     }
   }
 
+  // STG-502: Warn when SecureStore unavailable during read
+  if (!secureAvailable) {
+    console.warn("[storage] STG-502: SecureStore not available — reading auth token from PLAINTEXT AsyncStorage");
+  }
+
   // Fallback to AsyncStorage (for migration from old versions)
   try {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
@@ -62,7 +67,8 @@ export async function setAuthToken(token: string): Promise<void> {
       console.warn("[storage] SecureStore save failed, falling back to AsyncStorage:", e);
     }
   }
-  // Fallback to AsyncStorage (less secure, but works on all devices)
+  // STG-502: Warn when falling back to plaintext storage
+  console.warn("[storage] STG-502: SecureStore unavailable or failed — saving auth token to PLAINTEXT AsyncStorage");
   await AsyncStorage.setItem(TOKEN_KEY, token);
 }
 
