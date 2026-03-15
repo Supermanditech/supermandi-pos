@@ -62,6 +62,17 @@ export default function PaymentSetupScreen() {
   // PAYMENT-SETUP-OFFLINE-CHECK-MISSING: track connectivity on mount and via listener
   const [isOffline, setIsOffline] = useState(false);
 
+  // STG-529: useCallback so BackHandler useEffect gets stable reference
+  const handleSkip = useCallback(async () => {
+    try {
+      const storeId = await getDeviceStoreId();
+      if (storeId) await AsyncStorage.setItem(getPaymentPromptedKey(storeId), "1");
+    } catch {
+      // Best-effort — skip flag not critical, continue to SellScan
+    }
+    navigation.replace("SellScan");
+  }, [navigation]);
+
   useEffect(() => {
     NetInfo.fetch().then((state) => setIsOffline(!state.isConnected));
     const unsubscribe = NetInfo.addEventListener((state) => setIsOffline(!state.isConnected));
@@ -75,7 +86,7 @@ export default function PaymentSetupScreen() {
       return true;
     });
     return () => sub.remove();
-  }, []);
+  }, [handleSkip]); // STG-529: include handleSkip to avoid stale closure
 
   function validate(): Record<string, string> {
     const errs: Record<string, string> = {};
@@ -153,16 +164,6 @@ export default function PaymentSetupScreen() {
     } finally {
       setSaving(false);
     }
-  }
-
-  async function handleSkip() {
-    try {
-      const storeId = await getDeviceStoreId();
-      if (storeId) await AsyncStorage.setItem(getPaymentPromptedKey(storeId), "1");
-    } catch {
-      // Best-effort — skip flag not critical, continue to SellScan
-    }
-    navigation.replace("SellScan");
   }
 
   const styles = useMemo(() => StyleSheet.create({

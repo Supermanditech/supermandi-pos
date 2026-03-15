@@ -11426,10 +11426,10 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-523 | Store isolation enforceStoreBinding — log warning when no storeId sent | P2 | PARKED |
 | STG-524 | AIInsightsScreen tab labels — replace hardcoded English with i18n t() | P2 | PARKED |
 | STG-525 | AIInsightsScreen retry/empty text — add i18n keys for "Tap to retry" etc | P2 | PARKED |
-| STG-526 | BuyScreen — add explicit empty state for zero products | P2 | OPEN |
+| STG-526 | BuyScreen — add explicit empty state for zero products | P2 | PARKED |
 | STG-527 | ChatListScreen — add explicit empty/error state handling | P2 | OPEN |
 | STG-528 | CustomerListScreen — show error state when error is set | P2 | OPEN |
-| STG-529 | PaymentSetupScreen BackHandler — add handleSkip to useEffect deps | P2 | OPEN |
+| STG-529 | PaymentSetupScreen BackHandler — add handleSkip to useEffect deps | P2 | PARKED |
 | STG-530 | CreditScreen consent — show consent request UI instead of empty screen | P2 | OPEN |
 | STG-531 | KhataScreen modal scroll — wrap modal content in ScrollView for small screens | P2 | OPEN |
 | STG-532 | Accessibility — add accessibilityLabel to MenuScreen interactive icons | P2 | OPEN |
