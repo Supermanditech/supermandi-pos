@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 178,
+  "version": 182,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -1036,8 +1036,8 @@
     {
       "ticket": "STG-234",
       "file": "src/i18n/locales/en.json",
-      "start_line": 516,
-      "end_line": 516,
+      "start_line": 517,
+      "end_line": 517,
       "checksum": "545e178b8a9b9a3c",
       "description": "Rewrite storeInactive: remove Superadmin reference",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1069,7 +1069,7 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T11:44:39.869Z"
+      "line_shifted_at": "2026-03-15T21:22:54.879Z"
     },
     {
       "ticket": "STG-235",
@@ -1112,8 +1112,8 @@
     {
       "ticket": "STG-236",
       "file": "src/i18n/locales/en.json",
-      "start_line": 527,
-      "end_line": 527,
+      "start_line": 528,
+      "end_line": 528,
       "checksum": "26dc0dfc5031580e",
       "description": "Rewrite deviceAlreadyEnrolled: remove Superadmin reference",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1145,13 +1145,13 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T11:44:39.874Z"
+      "line_shifted_at": "2026-03-15T21:22:54.884Z"
     },
     {
       "ticket": "STG-237",
       "file": "src/i18n/locales/en.json",
-      "start_line": 540,
-      "end_line": 540,
+      "start_line": 541,
+      "end_line": 541,
       "checksum": "02eea21082f27f03",
       "description": "Rewrite sessionExpired: re-enter staff PIN instead of login again",
       "test_file": "src/__tests__/i18n/locale-keys.stg-234-238.unit.test.ts",
@@ -1183,7 +1183,7 @@
         "regression_check": "31 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T11:44:39.879Z"
+      "line_shifted_at": "2026-03-15T21:22:54.890Z"
     },
     {
       "ticket": "STG-238",
@@ -1412,8 +1412,8 @@
     {
       "ticket": "STG-242",
       "file": "src/i18n/locales/en.json",
-      "start_line": 746,
-      "end_line": 747,
+      "start_line": 747,
+      "end_line": 748,
       "checksum": "af5ef383ce63e8e7",
       "description": "Explain KYC/UTR/EMI jargon in English locale",
       "test_file": "src/__tests__/i18n/locale-keys.stg-239-244.unit.test.ts",
@@ -1445,7 +1445,7 @@
         "regression_check": "39 fixes intact",
         "test_guard": "11 tests pass"
       },
-      "line_shifted_at": "2026-03-14T11:44:39.894Z"
+      "line_shifted_at": "2026-03-15T21:22:54.898Z"
     },
     {
       "ticket": "STG-243",
@@ -2389,8 +2389,8 @@
       "description": "BuyScreen i18n — replace 11 hardcoded strings with t() calls",
       "test_file": "src/__tests__/screens/BuyScreen.stg-275.i18n.unit.test.ts",
       "start_line": 1,
-      "end_line": 1174,
-      "checksum": "c332b7bd99559409",
+      "end_line": 1180,
+      "checksum": "0672cc399f7fade0",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -2579,8 +2579,8 @@
       "description": "Hindi translation completion — 100% en/hi key parity (updated Layer 7: sell + cart i18n keys)",
       "test_file": "src/__tests__/i18n/locale-completion.stg-054.unit.test.ts",
       "start_line": 1,
-      "end_line": 1674,
-      "checksum": "2d8a70c11982cdd1",
+      "end_line": 1675,
+      "checksum": "206e8c1c44de1b91",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": "N/A",
@@ -6331,6 +6331,45 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-15T21:19:46.280Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "STG-526",
+      "file": "src/screens/BuyScreen.tsx",
+      "start_line": 534,
+      "end_line": 558,
+      "checksum": "0f1fe0f384dd6004",
+      "description": "Explicit empty state with addFromCatalog guidance for zero products",
+      "test_file": "src/__tests__/screens/buy-empty-state.stg-526.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "migration_safe": "N/A"
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-15T21:22:40.375Z",
       "status": "ACTIVE"
     }
   ],

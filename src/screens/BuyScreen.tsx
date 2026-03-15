@@ -531,10 +531,11 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
       );
     }
 
+    // STG-526: Explicit empty state with actionable guidance for zero-product stores
     return (
       <View style={styles.emptyContainer}>
         <MaterialCommunityIcons
-          name="package-variant"
+          name={hasActiveFilters ? "magnify-close" : "package-variant-closed"}
           size={48}
           color={colors.textTertiary}
         />
@@ -543,6 +544,11 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
             ? t('buy.noProducts')
             : t('buy.noProductsAvailable')}
         </Text>
+        {!hasActiveFilters && (
+          <Text style={[styles.emptyText, { fontSize: 13, marginTop: 4 }]}>
+            {t('buy.addFromCatalog')}
+          </Text>
+        )}
         {hasActiveFilters && (
           <Pressable accessibilityRole="button" style={styles.clearButton} onPress={handleClearAllFilters}>
             <Text style={styles.clearButtonText}>{t('buy.clearFilters')}</Text>
