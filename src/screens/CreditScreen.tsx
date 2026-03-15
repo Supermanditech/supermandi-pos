@@ -637,6 +637,69 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
     );
   }
 
+  // STG-530: Show consent request UI when DPDP consent is required
+  if (consentRequired && !loading) {
+    const handleConsentAccept = async () => {
+      setConsentLoading(true);
+      try {
+        await creditApi.recordCreditConsent();
+        setConsentRequired(false);
+        loadData();
+      } catch (err) {
+        const error = asError(err);
+        Alert.alert(t("common.error"), error.message);
+      } finally {
+        setConsentLoading(false);
+      }
+    };
+
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          {onBack && (
+            <Pressable accessibilityRole="button" style={styles.backButton} onPress={onBack}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
+            </Pressable>
+          )}
+          <Text style={styles.headerTitle}>{t("credit.title", "Credit")}</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={styles.centerContent}>
+          <MaterialCommunityIcons name="shield-check-outline" size={48} color={colors.primary} />
+          <Text style={[styles.loadingText, { marginTop: 16, fontWeight: "600", fontSize: 16 }]}>
+            {t("credit.consentTitle", "Consent Required")}
+          </Text>
+          <Text style={[styles.loadingText, { marginTop: 8, paddingHorizontal: 24, textAlign: "center" }]}>
+            {t("credit.consentMessage", "Credit scoring requires your consent to analyze your business data. Your data is processed securely per DPDP guidelines.")}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t("credit.acceptConsent", "Accept & Continue")}
+            style={[styles.applyButton, { marginTop: 24, opacity: consentLoading ? 0.6 : 1 }]}
+            onPress={handleConsentAccept}
+            disabled={consentLoading}
+          >
+            {consentLoading ? (
+              <ActivityIndicator size="small" color={colors.surface} />
+            ) : (
+              <Text style={styles.applyButtonText}>{t("credit.acceptConsent", "Accept & Continue")}</Text>
+            )}
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t("credit.declineConsent", "Decline")}
+            style={{ marginTop: 12, padding: 8 }}
+            onPress={onBack}
+          >
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+              {t("credit.declineConsent", "Decline")}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
   // UIUX-POS-021: Show header with back button during loading (don't trap user)
   if (loading) {
     return (

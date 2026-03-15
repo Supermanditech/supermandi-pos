@@ -1044,7 +1044,11 @@
     "timelineProcessing": "Processing",
     "timelineApproved": "Approved",
     "timelineDisbursed": "Disbursed",
-    "timelineRejected": "Rejected"
+    "timelineRejected": "Rejected",
+    "consentTitle": "Consent Required",
+    "consentMessage": "Credit scoring requires your consent to analyze your business data. Your data is processed securely per DPDP guidelines.",
+    "acceptConsent": "Accept & Continue",
+    "declineConsent": "Decline"
   },
   "chat": {
     "title": "Messages",

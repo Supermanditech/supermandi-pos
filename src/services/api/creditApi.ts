@@ -114,6 +114,16 @@ export interface CreditApplicationsResponse {
 const CREDIT_BASE = "/api/v1/pos/credit";
 
 /**
+ * STG-530: Record DPDP consent for credit scoring
+ * Must be called before credit offers can be displayed
+ */
+export async function recordCreditConsent(): Promise<{ success: boolean }> {
+  return apiClient.post<{ success: boolean }>("/api/v1/consent/record", {
+    consentType: "credit_scoring",
+  });
+}
+
+/**
  * SM-022: Get available credit offers for the store
  * Returns offers based on store's credit score and eligibility
  */

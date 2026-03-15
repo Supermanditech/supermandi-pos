@@ -1044,7 +1044,11 @@
     "timelineProcessing": "प्रक्रिया में",
     "timelineApproved": "स्वीकृत",
     "timelineDisbursed": "वितरित",
-    "timelineRejected": "अस्वीकृत"
+    "timelineRejected": "अस्वीकृत",
+    "consentTitle": "सहमति आवश्यक",
+    "consentMessage": "क्रेडिट स्कोरिंग के लिए आपके व्यापार डेटा का विश्लेषण करने की सहमति आवश्यक है। DPDP दिशानिर्देशों के अनुसार आपका डेटा सुरक्षित रूप से संसाधित किया जाता है।",
+    "acceptConsent": "स्वीकार करें और जारी रखें",
+    "declineConsent": "अस्वीकार करें"
   },
   "chat": {
     "title": "संदेश",
