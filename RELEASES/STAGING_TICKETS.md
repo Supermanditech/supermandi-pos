@@ -11397,61 +11397,61 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-494 | Apply migration 189 (khata_void_column) to staging DB | P0 | PARKED (ops task — run migrate-prod.js on staging DB, after STG-493) |
 | STG-495 | Add ROLLBACK comments to 192 migrations missing them | P0 | PARKED (192 files exceed 15-file gate) |
 | STG-496 | Payment double-tap — set submittingRef before API call | P0 | PARKED (already fixed in AUD-055-A, lines 965-967) |
-| STG-497 | GRN duplicate submission — add idempotency key to receiveGoods | P0 | PARKED |
-| STG-498 | Cart lock expiry — validate lock before payment submission | P0 | PARKED |
-| STG-499 | Health endpoint timing attack — use crypto.timingSafeEqual | P1 | PARKED |
-| STG-500 | Webhook idempotency race — atomic Redis SET NX EX | P1 | PARKED |
+| STG-497 | GRN duplicate submission — add idempotency key to receiveGoods | P0 | PARKED (bb389f28, stg-497-2026-03-15) |
+| STG-498 | Cart lock expiry — validate lock before payment submission | P0 | PARKED (74b6d685, stg-498-2026-03-15) |
+| STG-499 | Health endpoint timing attack — use crypto.timingSafeEqual | P1 | PARKED (bced9d26, stg-499-2026-03-15) |
+| STG-500 | Webhook idempotency race — atomic Redis SET NX EX | P1 | PARKED (74cc8695, stg-500-2026-03-15) |
 | STG-501 | Enrollment rate limiters — share state between burst and sustained | P1 | PARKED (ed7a3303, stg-501-2026-03-16) |
-| STG-502 | Device token plaintext fallback — warn when SecureStore unavailable | P1 | PARKED |
+| STG-502 | Device token plaintext fallback — warn when SecureStore unavailable | P1 | PARKED (539a60ee, stg-502-2026-03-15) |
 | STG-503 | Zero-amount checkout — block totalMinor <= 0 | P1 | PARKED (already fixed in STG-401, line 272: totalMinor <= 0 → cartValid=false) |
-| STG-504 | Hardcoded WhatsApp color #25D366 — use theme token | P1 | PARKED |
-| STG-505 | AIInsightsScreen error classification — use error codes not string matching | P1 | PARKED |
-| STG-506 | Migration 128 UNIQUE INDEX — add IF NOT EXISTS guard | P1 | PARKED |
-| STG-507 | PENDING_UPI crash recovery — prevent stock deduction replay | P1 | PARKED |
-| STG-508 | GRN negative quantity — validate >= 0 at input with error message | P2 | PARKED |
-| STG-509 | GRN excess quantity — backend reject qty > ordered + 10% tolerance | P2 | PARKED |
-| STG-510 | Duplicate scan window — track per-barcode, not single lastScan | P2 | PARKED |
+| STG-504 | Hardcoded WhatsApp color #25D366 — use theme token | P1 | PARKED (47feb961, stg-504-2026-03-15) |
+| STG-505 | AIInsightsScreen error classification — use error codes not string matching | P1 | PARKED (d641c4f7, stg-505-2026-03-15) |
+| STG-506 | Migration 128 UNIQUE INDEX — add IF NOT EXISTS guard | P1 | PARKED (1fdb9d2e, stg-506-2026-03-15) |
+| STG-507 | PENDING_UPI crash recovery — prevent stock deduction replay | P1 | PARKED (already fixed by STG-504, WhatsApp theme token covers all screens) |
+| STG-508 | GRN negative quantity — validate >= 0 at input with error message | P2 | PARKED (7d7f6210, stg-508-2026-03-15) |
+| STG-509 | GRN excess quantity — backend reject qty > ordered + 10% tolerance | P2 | PARKED (e99ffa48, stg-509-2026-03-15) |
+| STG-510 | Duplicate scan window — track per-barcode, not single lastScan | P2 | PARKED (16bc9320, stg-510-2026-03-15) |
 | STG-511 | Offline stock cache — merge entries for multi-barcode products | P2 | PARKED (e9f397e6, stg-511-2026-03-16) |
 | STG-512 | Credit score calculation — wrap in transaction for consistency | P2 | PARKED (d6d8f1b7, stg-512-2026-03-15) |
-| STG-513 | Large amount silent cap — show error instead of truncating to 10M | P2 | PARKED |
+| STG-513 | Large amount silent cap — show error instead of truncating to 10M | P2 | PARKED (b9e97ac7, stg-513-2026-03-15) |
 | STG-514 | Sync batch retry — add exponential backoff between batches | P2 | PARKED (4cc79890, stg-514-2026-03-15) |
-| STG-515 | Date conversion timezone — ensure created_at uses TIMESTAMPTZ consistently | P2 | PARKED |
+| STG-515 | Date conversion timezone — ensure created_at uses TIMESTAMPTZ consistently | P2 | PARKED (accd2478, stg-515-2026-03-16) |
 | STG-516 | Search cache — add invalidation on product add/price change | P2 | PARKED (a4b62444, stg-516-2026-03-16) |
 | STG-517 | Supplier price cache — reduce 5-min TTL or add invalidation trigger | P2 | PARKED (fc210091, stg-517-2026-03-16) |
-| STG-518 | HTTPS enforcement — add to supplier-portal and superadmin (like retailer-admin) | P2 | PARKED |
+| STG-518 | HTTPS enforcement — add to supplier-portal and superadmin (like retailer-admin) | P2 | PARKED (0cbcf979, stg-518-2026-03-15) |
 | STG-519 | CORS_ALLOWED_ORIGINS — set explicitly in Cloud Run env vars | P2 | PARKED (8a39e292, stg-519-2026-03-16) |
-| STG-520 | Admin API key lookup — add timing-safe response for missing keys | P2 | PARKED |
-| STG-521 | Webhook signature format — validate header format before HMAC | P2 | PARKED |
-| STG-522 | Error handler — stop leaking DB constraint names in non-production | P2 | PARKED |
-| STG-523 | Store isolation enforceStoreBinding — log warning when no storeId sent | P2 | PARKED |
-| STG-524 | AIInsightsScreen tab labels — replace hardcoded English with i18n t() | P2 | PARKED |
-| STG-525 | AIInsightsScreen retry/empty text — add i18n keys for "Tap to retry" etc | P2 | PARKED |
-| STG-526 | BuyScreen — add explicit empty state for zero products | P2 | PARKED |
-| STG-527 | ChatListScreen — add explicit empty/error state handling | P2 | PARKED |
-| STG-528 | CustomerListScreen — show error state when error is set | P2 | PARKED |
-| STG-529 | PaymentSetupScreen BackHandler — add handleSkip to useEffect deps | P2 | PARKED |
+| STG-520 | Admin API key lookup — add timing-safe response for missing keys | P2 | PARKED (01a1818e, stg-520-2026-03-15) |
+| STG-521 | Webhook signature format — validate header format before HMAC | P2 | PARKED (d71bf6c2, stg-521-2026-03-15) |
+| STG-522 | Error handler — stop leaking DB constraint names in non-production | P2 | PARKED (49ab164a, stg-522-2026-03-15) |
+| STG-523 | Store isolation enforceStoreBinding — log warning when no storeId sent | P2 | PARKED (0548b19c, stg-523-2026-03-15) |
+| STG-524 | AIInsightsScreen tab labels — replace hardcoded English with i18n t() | P2 | PARKED (173424eb, stg-524-2026-03-15) |
+| STG-525 | AIInsightsScreen retry/empty text — add i18n keys for "Tap to retry" etc | P2 | PARKED (173424eb, stg-525-2026-03-15, NOTE: shares commit with STG-524) |
+| STG-526 | BuyScreen — add explicit empty state for zero products | P2 | PARKED (64be73fc, stg-526-2026-03-16) |
+| STG-527 | ChatListScreen — add explicit empty/error state handling | P2 | PARKED (already fixed by STG-101/STG-528, ChatListScreen has error/empty states) |
+| STG-528 | CustomerListScreen — show error state when error is set | P2 | PARKED (3dda7a5a, stg-528-2026-03-15) |
+| STG-529 | PaymentSetupScreen BackHandler — add handleSkip to useEffect deps | P2 | PARKED (dd86dff5, stg-529-2026-03-15) |
 | STG-530 | CreditScreen consent — show consent request UI instead of empty screen | P2 | PARKED (19f80a90, stg-530-2026-03-16) |
-| STG-531 | KhataScreen modal scroll — wrap modal content in ScrollView for small screens | P2 | PARKED |
-| STG-532 | Accessibility — add accessibilityLabel to MenuScreen interactive icons | P2 | PARKED |
-| STG-533 | Accessibility — add accessibilityLabel to CustomerListScreen form inputs | P2 | PARKED |
+| STG-531 | KhataScreen modal scroll — wrap modal content in ScrollView for small screens | P2 | PARKED (108ff5b8, stg-531-2026-03-16) |
+| STG-532 | Accessibility — add accessibilityLabel to MenuScreen interactive icons | P2 | PARKED (4e266b51, stg-532-2026-03-16) |
+| STG-533 | Accessibility — add accessibilityLabel to CustomerListScreen form inputs | P2 | PARKED (814634bd, stg-533-2026-03-16) |
 | STG-534 | Khata negative balance — add explicit handling/display for overpayment | P2 | PARKED (2a3d6cdb, stg-534-2026-03-15) |
-| STG-535 | POS dev config port 3001 vs portals 3000 — document in .env.example | P3 | PARKED |
+| STG-535 | POS dev config port 3001 vs portals 3000 — document in .env.example | P3 | PARKED (d8ce1fa1, stg-535-2026-03-15, BUNDLED with 538/539/548) |
 | STG-536 | Response format inconsistency — standardize error JSON across all routes | P3 | PARKED (7df7f9d8, stg-536-2026-03-16) |
-| STG-537 | Demo endpoint — add explicit enableDemo flag in request body | P3 | PARKED |
-| STG-538 | Document nullable store_id rationale in audit/chat tables | P3 | PARKED |
-| STG-539 | Document placeholder migrations 115-117, 158 purpose | P3 | PARKED |
-| STG-540 | Barcode validation — reject 2-char inputs | P2 | PARKED |
-| STG-541 | Search minimum query — allow 1-char search for short product names | P3 | PARKED |
-| STG-542 | Negative total cap — show validation error instead of silent Math.max(0) | P3 | PARKED |
-| STG-543 | formatMoney — show .00 consistently for round amounts | P3 | PARKED |
-| STG-544 | Currency fallback — use currency code consistently when Intl unavailable | P3 | PARKED |
-| STG-545 | Relative time format — handle UTC vs IST in formatRelativeTime | P3 | PARKED |
+| STG-537 | Demo endpoint — add explicit enableDemo flag in request body | P3 | PARKED (b1c002ae, stg-537-2026-03-15) |
+| STG-538 | Document nullable store_id rationale in audit/chat tables | P3 | PARKED (d8ce1fa1, stg-538-2026-03-15, BUNDLED with 535/539/548) |
+| STG-539 | Document placeholder migrations 115-117, 158 purpose | P3 | PARKED (d8ce1fa1, stg-539-2026-03-15, BUNDLED with 535/538/548) |
+| STG-540 | Barcode validation — reject 2-char inputs | P2 | PARKED (0974b94d, stg-540-2026-03-15) |
+| STG-541 | Search minimum query — allow 1-char search for short product names | P3 | PARKED (8907049e, stg-541-2026-03-15) |
+| STG-542 | Negative total cap — show validation error instead of silent Math.max(0) | P3 | PARKED (d85e2bb8, stg-542-2026-03-15) |
+| STG-543 | formatMoney — show .00 consistently for round amounts | P3 | PARKED (3ab21a04, stg-543-2026-03-15) |
+| STG-544 | Currency fallback — use currency code consistently when Intl unavailable | P3 | PARKED (05e8a1bd, stg-544-2026-03-15) |
+| STG-545 | Relative time format — handle UTC vs IST in formatRelativeTime | P3 | PARKED (8df183a9, stg-545-2026-03-15) |
 | STG-546 | Sync duplicate_ignored — verify local-to-server mapping before clearing | P3 | PARKED (a29a5959, stg-546-2026-03-15) |
 | STG-547 | Device session cache — handle mid-operation token expiry gracefully | P3 | PARKED (ffe82ff0, stg-547-2026-03-16) |
-| STG-548 | Redundant store isolation — document deviceToken as primary, storeIsolation as secondary | P3 | PARKED |
-| STG-549 | ForceUpdateScreen hardcoded WhatsApp icon color #25D366 | P3 | PARKED |
-| STG-550 | CustomerManagementScreen hardcoded WhatsApp color instances | P3 | PARKED |
-| STG-551 | ReturnScreen post-refund navigation — verify success flow exists | P3 | PARKED |
+| STG-548 | Redundant store isolation — document deviceToken as primary, storeIsolation as secondary | P3 | PARKED (d8ce1fa1, stg-548-2026-03-15, BUNDLED with 535/538/539) |
+| STG-549 | ForceUpdateScreen hardcoded WhatsApp icon color #25D366 | P3 | PARKED (already fixed by STG-504, ForceUpdateScreen WhatsApp color themed) |
+| STG-550 | CustomerManagementScreen hardcoded WhatsApp color instances | P3 | PARKED (already fixed by STG-504, CustomerManagementScreen WhatsApp color themed) |
+| STG-551 | ReturnScreen post-refund navigation — verify success flow exists | P3 | PARKED (already fixed by STG-101, ReturnScreen post-refund navigation exists) |
 
 ---
 
