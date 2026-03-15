@@ -122,11 +122,13 @@ export default function GRNScreen({
   }, [storeId, loadOrder]);
 
   // Handle receive quantity change
+  // STG-508: Clamp negative values to 0 — prevents silent exclusion at submit filter
   const handleReceiveQuantityChange = useCallback(
     (itemId: string, quantity: number) => {
+      const safeQty = Math.max(0, quantity);
       setReceiveQuantities((prev) => ({
         ...prev,
-        [itemId]: quantity,
+        [itemId]: safeQty,
       }));
     },
     []

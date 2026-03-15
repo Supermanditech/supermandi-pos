@@ -11407,8 +11407,8 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-504 | Hardcoded WhatsApp color #25D366 — use theme token | P1 | PARKED |
 | STG-505 | AIInsightsScreen error classification — use error codes not string matching | P1 | PARKED |
 | STG-506 | Migration 128 UNIQUE INDEX — add IF NOT EXISTS guard | P1 | PARKED |
-| STG-507 | PENDING_UPI crash recovery — prevent stock deduction replay | P1 | OPEN |
-| STG-508 | GRN negative quantity — validate >= 0 at input with error message | P2 | OPEN |
+| STG-507 | PENDING_UPI crash recovery — prevent stock deduction replay | P1 | PARKED |
+| STG-508 | GRN negative quantity — validate >= 0 at input with error message | P2 | PARKED |
 | STG-509 | GRN excess quantity — backend reject qty > ordered + 10% tolerance | P2 | OPEN |
 | STG-510 | Duplicate scan window — track per-barcode, not single lastScan | P2 | OPEN |
 | STG-511 | Offline stock cache — merge entries for multi-barcode products | P2 | OPEN |
@@ -11650,14 +11650,12 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 
 ### STG-507 — HIGH: PENDING_UPI crash recovery — prevent stock deduction replay
 
-- **Status**: OPEN
+- **Status**: PARKED (already fixed by STG-101)
 - **Priority**: P1
 - **Source**: Comprehensive audit 2026-03-15 — Business Logic Layer (3.4)
 - **File**: `src/screens/PaymentScreen.tsx:323-385`
 - **Problem**: If app crashes after payment confirmed (status=PAID) but before stock deduction (applyBulkDeductions), recovery clears PENDING_UPI but sale shows PAID. Stock deduction replays on next sync — double deduction.
-- **Fix**: (1) Store `stockDeducted: boolean` flag alongside PENDING_UPI data. (2) After applyBulkDeductions succeeds, set `stockDeducted = true`. (3) On recovery, check if stockDeducted — if true, skip deduction. (4) Backend: make stock deduction idempotent using sale_id as dedup key.
-- **Migration**: None
-- **Test**: Simulate crash after payment, before deduction. Restart → stock deducted exactly once.
+- **Resolution**: Already fixed by STG-101. Frontend does NOT deduct stock — backend handles stock deduction atomically inside the payment endpoints (applyBulkDeductions). `checkoutService.ts:78-81` explicitly documents this. PENDING_UPI recovery only shows an alert, never re-triggers checkout/deduction. No code change needed.
 - **Depends on**: STG-496
 
 ---
