@@ -2,6 +2,10 @@
 // SUP-LOGIN-001: Use same-origin fallback (empty string) when no API URL configured
 // This allows relative paths to work through nginx reverse proxy in production
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || '';
+// STG-518: Enforce HTTPS in production — match retailer-admin FIX-019
+if (API_BASE_URL && API_BASE_URL.startsWith('http:') && process.env.NODE_ENV === 'production') {
+  throw new Error('[STG-518] API_BASE_URL must use HTTPS in production. Got: ' + API_BASE_URL);
+}
 
 export class ApiError extends Error {
   constructor(

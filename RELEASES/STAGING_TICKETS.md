@@ -11418,7 +11418,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-515 | Date conversion timezone — ensure created_at uses TIMESTAMPTZ consistently | P2 | OPEN |
 | STG-516 | Search cache — add invalidation on product add/price change | P2 | OPEN |
 | STG-517 | Supplier price cache — reduce 5-min TTL or add invalidation trigger | P2 | OPEN |
-| STG-518 | HTTPS enforcement — add to supplier-portal and superadmin (like retailer-admin) | P2 | OPEN |
+| STG-518 | HTTPS enforcement — add to supplier-portal and superadmin (like retailer-admin) | P2 | PARKED |
 | STG-519 | CORS_ALLOWED_ORIGINS — set explicitly in Cloud Run env vars | P2 | OPEN |
 | STG-520 | Admin API key lookup — add timing-safe response for missing keys | P2 | OPEN |
 | STG-521 | Webhook signature format — validate header format before HMAC | P2 | OPEN |

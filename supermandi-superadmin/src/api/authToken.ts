@@ -18,6 +18,10 @@
  */
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
+// STG-518: Enforce HTTPS in production — match retailer-admin FIX-019
+if (API_BASE && API_BASE.startsWith('http:') && import.meta.env.PROD) {
+  throw new Error('[STG-518] VITE_API_BASE_URL must use HTTPS in production. Got: ' + API_BASE);
+}
 
 // Storage keys
 const SESSION_TOKEN_KEY = "supermandi_admin_session";
