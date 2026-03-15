@@ -226,3 +226,38 @@ export function getCachedSession(): DeviceSession | null {
 export function isCacheLoaded(): boolean {
   return cacheLoaded;
 }
+
+/**
+ * STG-547: Pre-flight token validation before critical operations
+ * Returns true if token is valid, false if expired/invalid.
+ * Clears session on confirmed expiry so UI can redirect to enrollment.
+ */
+export async function isTokenValid(): Promise<boolean> {
+  const session = await getDeviceSession();
+  if (!session?.deviceToken) return false;
+
+  // Decode JWT payload to check exp claim without a library
+  try {
+    const parts = session.deviceToken.split(".");
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(atob(parts[1]));
+    const exp = payload.exp;
+    if (typeof exp !== "number") return true; // No exp claim — assume valid
+    const nowSec = Math.floor(Date.now() / 1000);
+    const remainingSec = exp - nowSec;
+
+    if (remainingSec <= 0) {
+      console.warn("[STG-547] Device token expired — clearing session");
+      await clearDeviceSession();
+      return false;
+    }
+    if (remainingSec < 300) {
+      // Warn when less than 5 minutes remaining
+      console.warn(`[STG-547] Device token expires in ${remainingSec}s — consider refreshing`);
+    }
+    return true;
+  } catch {
+    // Cannot decode token — assume valid and let API handle rejection
+    return true;
+  }
+}
