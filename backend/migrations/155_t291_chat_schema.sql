@@ -1,3 +1,4 @@
+-- ROLLBACK: DROP TABLE IF EXISTS chat.message_templates; DROP TABLE IF EXISTS chat.messages; DROP TABLE IF EXISTS chat.conversation_members; DROP TABLE IF EXISTS chat.conversations; DROP SCHEMA IF EXISTS chat;
 -- T-291: Chat Database Schema
 -- In-app messaging: retailer ↔ supplier, support channel
 -- T-301: Attachment support (message_type includes 'image', 'document')
@@ -10,7 +11,9 @@ CREATE TABLE IF NOT EXISTS chat.conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   type VARCHAR(20) NOT NULL CHECK (type IN ('direct','group','support')),
   title VARCHAR(200),
-  store_id UUID,                              -- retailer store (for direct/support)
+  -- STG-538: store_id is nullable — system broadcasts and supplier-to-platform chats
+  -- have no specific store context.
+  store_id UUID,
   supplier_id UUID,                           -- supplier (for direct)
   created_by UUID NOT NULL,
   is_active BOOLEAN NOT NULL DEFAULT true,

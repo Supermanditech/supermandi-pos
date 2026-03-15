@@ -1,11 +1,17 @@
 /**
- * SEC-002: Store Isolation Middleware
+ * SEC-002: Store Isolation Middleware (SECONDARY)
  *
- * Enforces that all data access is scoped to the authenticated store's ID.
- * Prevents cross-store data access by:
+ * STG-548: This is the SECONDARY isolation layer. The PRIMARY isolation
+ * for POS devices is deviceToken.ts, which derives storeId server-side
+ * from the device enrollment record (never from client input).
+ *
+ * This middleware provides defense-in-depth by:
  * 1. Extracting store_id from JWT (never from request body)
  * 2. Stripping any store_id from request body/params
  * 3. Injecting the verified store_id into request context
+ *
+ * Both layers must agree — if deviceToken says storeId=X and a portal
+ * JWT says storeId=Y, the request is rejected.
  *
  * CRITICAL: This middleware MUST run after authentication middleware.
  */

@@ -1,5 +1,6 @@
 -- DEV-067: Admin Audit Log Table
 -- Track all administrative actions for compliance and debugging
+-- ROLLBACK: DROP TABLE IF EXISTS admin.audit_log; DROP SCHEMA IF EXISTS admin;
 
 CREATE SCHEMA IF NOT EXISTS admin;
 
@@ -18,7 +19,9 @@ CREATE TABLE IF NOT EXISTS admin.audit_log (
   resource_id VARCHAR(100),  -- ID of the affected resource
 
   -- Context
-  store_id UUID,  -- Store context if applicable
+  -- STG-538: store_id is intentionally nullable — audit captures global/admin-level
+  -- events (superadmin login, system ops) that have no specific store context.
+  store_id UUID,
 
   -- Data
   request_body JSONB,  -- Sanitized request body (no passwords)

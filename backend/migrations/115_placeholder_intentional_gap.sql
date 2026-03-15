@@ -1,3 +1,8 @@
+-- ROLLBACK: No schema changes to undo (placeholder only)
 -- Migration: 115_placeholder_intentional_gap
 -- INTENTIONAL GAP: This migration number was reserved but not used.
 -- Feature was not implemented. No schema changes.
+-- STG-539: Migrations 115-117 were reserved for GSTIN/auth features that were
+-- redesigned before implementation. Kept as placeholders to maintain sequential
+-- numbering (migrate-from-zero requires no gaps). Migration 158 was reserved
+-- for a voice-service schema that was deferred to post-launch.

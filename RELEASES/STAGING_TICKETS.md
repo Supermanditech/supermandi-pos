@@ -11435,11 +11435,11 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-532 | Accessibility — add accessibilityLabel to MenuScreen interactive icons | P2 | PARKED |
 | STG-533 | Accessibility — add accessibilityLabel to CustomerListScreen form inputs | P2 | PARKED |
 | STG-534 | Khata negative balance — add explicit handling/display for overpayment | P2 | OPEN |
-| STG-535 | POS dev config port 3001 vs portals 3000 — document in .env.example | P3 | OPEN |
+| STG-535 | POS dev config port 3001 vs portals 3000 — document in .env.example | P3 | PARKED |
 | STG-536 | Response format inconsistency — standardize error JSON across all routes | P3 | OPEN |
 | STG-537 | Demo endpoint — add explicit enableDemo flag in request body | P3 | OPEN |
-| STG-538 | Document nullable store_id rationale in audit/chat tables | P3 | OPEN |
-| STG-539 | Document placeholder migrations 115-117, 158 purpose | P3 | OPEN |
+| STG-538 | Document nullable store_id rationale in audit/chat tables | P3 | PARKED |
+| STG-539 | Document placeholder migrations 115-117, 158 purpose | P3 | PARKED |
 | STG-540 | Barcode validation — reject 2-char inputs | P2 | PARKED |
 | STG-541 | Search minimum query — allow 1-char search for short product names | P3 | PARKED |
 | STG-542 | Negative total cap — show validation error instead of silent Math.max(0) | P3 | OPEN |
@@ -11448,7 +11448,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-545 | Relative time format — handle UTC vs IST in formatRelativeTime | P3 | PARKED |
 | STG-546 | Sync duplicate_ignored — verify local-to-server mapping before clearing | P3 | OPEN |
 | STG-547 | Device session cache — handle mid-operation token expiry gracefully | P3 | OPEN |
-| STG-548 | Redundant store isolation — document deviceToken as primary, storeIsolation as secondary | P3 | OPEN |
+| STG-548 | Redundant store isolation — document deviceToken as primary, storeIsolation as secondary | P3 | PARKED |
 | STG-549 | ForceUpdateScreen hardcoded WhatsApp icon color #25D366 | P3 | PARKED |
 | STG-550 | CustomerManagementScreen hardcoded WhatsApp color instances | P3 | PARKED |
 | STG-551 | ReturnScreen post-refund navigation — verify success flow exists | P3 | PARKED |
