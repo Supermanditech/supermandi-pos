@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 189,
+  "version": 190,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6484,5 +6484,6 @@
       "checksums_updated": 10
     }
   ],
-  "last_commit_ticket": "audit-v10-backheader"
+  "last_commit_ticket": "audit-v10-backheader",
+  "last_updated": "2026-03-16"
 }

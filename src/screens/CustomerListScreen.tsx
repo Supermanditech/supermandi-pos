@@ -218,7 +218,8 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
   // Render customer card
   const renderCustomerCard = useCallback(
     ({ item }: { item: Customer }) => (
-      <Pressable accessibilityRole="button" style={styles.customerCard} onPress={() => handleCustomerTap(item)}>
+      // STG-533: accessibilityLabel for customer card
+      <Pressable accessibilityRole="button" accessibilityLabel={`View customer ${item.name || 'details'}`} style={styles.customerCard} onPress={() => handleCustomerTap(item)}>
         <View style={styles.customerAvatar}>
           <Text style={styles.customerAvatarText}>
             {(item.name || "?").charAt(0).toUpperCase()}
@@ -635,7 +636,8 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
       </View>
 
       {/* Add button */}
-      <Pressable accessibilityRole="button" style={styles.addButton} onPress={handleOpenAddModal}>
+      {/* STG-533: accessibilityLabel for Add Customer button */}
+      <Pressable accessibilityRole="button" accessibilityLabel="Add Customer" style={styles.addButton} onPress={handleOpenAddModal}>
         <MaterialCommunityIcons name="account-plus-outline" size={18} color={colors.primary} />
         <Text style={styles.addButtonText}>{t("customerList.addCustomer")}</Text>
       </Pressable>
@@ -844,8 +846,10 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               numberOfLines={3}
             />
 
+            {/* STG-533: accessibilityLabel for submit button */}
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={formSubmitting ? "Adding customer" : "Add Customer"}
               style={[styles.submitButton, formSubmitting && styles.submitButtonDisabled]}
               onPress={handleSubmitAdd}
               disabled={formSubmitting}
@@ -919,8 +923,10 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
               numberOfLines={3}
             />
 
+            {/* STG-533: accessibilityLabel for save button */}
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={formSubmitting ? "Saving changes" : "Save Changes"}
               style={[styles.submitButton, formSubmitting && styles.submitButtonDisabled]}
               onPress={handleSubmitEdit}
               disabled={formSubmitting}
