@@ -7,6 +7,7 @@
 -- DRAFT and OTP_VERIFIED applications can share GSTINs.
 --
 -- Also relaxes phone uniqueness similarly, and adds DRAFT auto-expiry.
+-- ROLLBACK: DROP INDEX IF EXISTS auth.ux_applications_gstin_active; DROP INDEX IF EXISTS auth.ux_applications_phone_entity_active; DROP FUNCTION IF EXISTS auth.check_gstin_uniqueness; DROP FUNCTION IF EXISTS auth.expire_stale_drafts;
 
 BEGIN;
 
@@ -14,7 +15,7 @@ BEGIN;
 -- 1. Relax GSTIN uniqueness: only enforce for submitted/approved applications
 -- =============================================================================
 DROP INDEX IF EXISTS auth.ux_applications_gstin_active;
-CREATE UNIQUE INDEX ux_applications_gstin_active
+CREATE UNIQUE INDEX IF NOT EXISTS ux_applications_gstin_active
   ON auth.applications (gstin)
   WHERE status IN ('KYC_SUBMITTED', 'PAYMENTS_SUBMITTED', 'ACTIVE');
 
@@ -22,7 +23,7 @@ CREATE UNIQUE INDEX ux_applications_gstin_active
 -- 2. Relax phone uniqueness: same relaxation
 -- =============================================================================
 DROP INDEX IF EXISTS auth.ux_applications_phone_entity_active;
-CREATE UNIQUE INDEX ux_applications_phone_entity_active
+CREATE UNIQUE INDEX IF NOT EXISTS ux_applications_phone_entity_active
   ON auth.applications (phone, entity_type)
   WHERE status IN ('KYC_SUBMITTED', 'PAYMENTS_SUBMITTED', 'ACTIVE');
 
