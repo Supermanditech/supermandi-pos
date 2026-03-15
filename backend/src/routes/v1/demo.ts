@@ -45,6 +45,10 @@ const DEMO_PHONE = '+919999999999';
  * 4. References the standard demo store
  */
 demoRouter.post("/token", devOnlyMiddleware(), async (req: Request, res: Response) => {
+  // STG-537: Require explicit enableDemo flag to prevent accidental invocation
+  if (req.body?.enableDemo !== true) {
+    return res.status(400).json({ error: "DEMO_NOT_ENABLED", message: "Set enableDemo: true in request body to confirm demo mode" });
+  }
   log.info('[GO-LIVE-139] Generating demo token');
 
   // Generate JTI for potential revocation tracking

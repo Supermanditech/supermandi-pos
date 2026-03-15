@@ -11415,7 +11415,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-512 | Credit score calculation — wrap in transaction for consistency | P2 | OPEN |
 | STG-513 | Large amount silent cap — show error instead of truncating to 10M | P2 | PARKED |
 | STG-514 | Sync batch retry — add exponential backoff between batches | P2 | OPEN |
-| STG-515 | Date conversion timezone — ensure created_at uses TIMESTAMPTZ consistently | P2 | OPEN |
+| STG-515 | Date conversion timezone — ensure created_at uses TIMESTAMPTZ consistently | P2 | PARKED |
 | STG-516 | Search cache — add invalidation on product add/price change | P2 | OPEN |
 | STG-517 | Supplier price cache — reduce 5-min TTL or add invalidation trigger | P2 | OPEN |
 | STG-518 | HTTPS enforcement — add to supplier-portal and superadmin (like retailer-admin) | P2 | PARKED |
@@ -11437,7 +11437,7 @@ OPEN → IN_PROGRESS → DONE → PARKED (on main, tagged)
 | STG-534 | Khata negative balance — add explicit handling/display for overpayment | P2 | OPEN |
 | STG-535 | POS dev config port 3001 vs portals 3000 — document in .env.example | P3 | PARKED |
 | STG-536 | Response format inconsistency — standardize error JSON across all routes | P3 | OPEN |
-| STG-537 | Demo endpoint — add explicit enableDemo flag in request body | P3 | OPEN |
+| STG-537 | Demo endpoint — add explicit enableDemo flag in request body | P3 | PARKED |
 | STG-538 | Document nullable store_id rationale in audit/chat tables | P3 | PARKED |
 | STG-539 | Document placeholder migrations 115-117, 158 purpose | P3 | PARKED |
 | STG-540 | Barcode validation — reject 2-char inputs | P2 | PARKED |
