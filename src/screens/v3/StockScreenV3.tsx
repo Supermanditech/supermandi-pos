@@ -1,0 +1,111 @@
+import React, { useMemo, useState } from "react";
+import { View, Pressable, TextInput, FlatList, StyleSheet, Text } from "react-native";
+import Svg, { Circle, Path } from "react-native-svg";
+import { useThemeColors } from "../../theme";
+import type { ColorPalette } from "../../theme";
+
+// STG-570: Stock screen v3 — current/unsold/movement tabs, search, opening stock + barcode access
+
+type StockItem = { name: string; costMinor: number; sellMinor: number; stock: number; status: "in" | "low" | "out" };
+
+const DEMO: StockItem[] = [
+  { name: "Parle-G 100g", costMinor: 550, sellMinor: 1000, stock: 47, status: "in" },
+  { name: "Amul Milk 500ml", costMinor: 2200, sellMinor: 2800, stock: 5, status: "low" },
+  { name: "Maggi 70g", costMinor: 850, sellMinor: 1400, stock: 8, status: "low" },
+  { name: "Bread Wheat", costMinor: 2800, sellMinor: 4000, stock: 0, status: "out" },
+  { name: "Tata Tea 250g", costMinor: 4200, sellMinor: 8000, stock: 24, status: "in" },
+];
+
+type Props = { onClose: () => void };
+
+export default function StockScreenV3({ onClose }: Props) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const [activeTab, setActiveTab] = useState<"current" | "unsold" | "movement">("current");
+
+  const totalProducts = DEMO.length;
+  const lowCount = DEMO.filter(i => i.status === "low").length;
+  const outCount = DEMO.filter(i => i.status === "out").length;
+
+  const statusColor = (s: string) => s === "in" ? colors.success : s === "low" ? colors.warning : colors.error;
+  const statusLabel = (s: string) => s === "in" ? "In stock" : s === "low" ? "Low" : "Out";
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Stock & Inventory</Text><View style={{ width: 30 }} /></View>
+
+      <View style={styles.tabs}>
+        {(["current", "unsold", "movement"] as const).map(t => (
+          <Pressable key={t} style={[styles.tab, activeTab === t && styles.tabActive]} onPress={() => setActiveTab(t)}>
+            <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>{t === "current" ? "Current" : t === "unsold" ? "Unsold" : "Movement"}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <View style={styles.statsRow}>
+        <View style={styles.stat}><Text style={styles.statLabel}>Products</Text><Text style={styles.statVal}>{totalProducts}</Text></View>
+        <View style={[styles.stat, { borderColor: colors.warning }]}><Text style={styles.statLabel}>Low</Text><Text style={[styles.statVal, { color: colors.warning }]}>{lowCount}</Text></View>
+        <View style={[styles.stat, { borderColor: colors.error }]}><Text style={styles.statLabel}>Out</Text><Text style={[styles.statVal, { color: colors.error }]}>{outCount}</Text></View>
+      </View>
+
+      <View style={styles.searchBar}>
+        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth={2}><Circle cx={11} cy={11} r={8} /><Path d="M21 21l-4.35-4.35" /></Svg>
+        <TextInput style={styles.searchInput} placeholder="Search product..." placeholderTextColor={colors.textTertiary} />
+      </View>
+
+      <FlatList
+        data={DEMO}
+        keyExtractor={(_, i) => String(i)}
+        renderItem={({ item }) => (
+          <View style={styles.itemRow}>
+            <View style={styles.itemImg}><Text style={{ fontSize: 18 }}>📦</Text></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.itemName}>{item.name}</Text>
+              <Text style={styles.itemMeta}>Cost ₹{(item.costMinor / 100).toFixed(0)} · Sell ₹{(item.sellMinor / 100).toFixed(0)}</Text>
+            </View>
+            <View style={{ alignItems: "flex-end" }}>
+              <Text style={[styles.stockQty, { color: statusColor(item.status) }]}>{item.stock}</Text>
+              <Text style={[styles.stockLabel, { color: statusColor(item.status) }]}>{statusLabel(item.status)}</Text>
+            </View>
+          </View>
+        )}
+        showsVerticalScrollIndicator={false}
+      />
+
+      <View style={styles.footer}>
+        <Pressable style={styles.footerBtn}><Text style={styles.footerBtnText}>Opening Stock</Text></Pressable>
+        <Pressable style={styles.footerBtn}><Text style={styles.footerBtnText}>Barcode Labels</Text></Pressable>
+      </View>
+    </View>
+  );
+}
+
+function createStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    header: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 14, flexDirection: "row", alignItems: "center" },
+    backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
+    backText: { color: "#fff", fontSize: 16 },
+    headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
+    tabs: { flexDirection: "row", backgroundColor: colors.surface },
+    tab: { flex: 1, padding: 10, alignItems: "center", borderBottomWidth: 3, borderBottomColor: "transparent" },
+    tabActive: { borderBottomColor: colors.primary },
+    tabText: { fontSize: 12, fontWeight: "700", color: colors.textTertiary },
+    tabTextActive: { color: colors.primary },
+    statsRow: { flexDirection: "row", gap: 6, padding: 10, paddingHorizontal: 14 },
+    stat: { flex: 1, padding: 10, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, alignItems: "center" },
+    statLabel: { fontSize: 10, fontWeight: "700", color: colors.textTertiary },
+    statVal: { fontSize: 18, fontWeight: "900", marginTop: 2 },
+    searchBar: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 14, marginBottom: 8, padding: 10, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border },
+    searchInput: { flex: 1, fontSize: 13, fontWeight: "500", color: colors.textPrimary },
+    itemRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.backgroundSecondary },
+    itemImg: { width: 40, height: 40, borderRadius: 10, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center" },
+    itemName: { fontSize: 14, fontWeight: "700" },
+    itemMeta: { fontSize: 11, color: colors.textTertiary },
+    stockQty: { fontSize: 15, fontWeight: "900" },
+    stockLabel: { fontSize: 10, fontWeight: "600" },
+    footer: { flexDirection: "row", gap: 8, padding: 12, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
+    footerBtn: { flex: 1, paddingVertical: 10, borderRadius: 12, borderWidth: 2, borderColor: colors.primary, alignItems: "center" },
+    footerBtnText: { fontSize: 12, fontWeight: "700", color: colors.primary },
+  });
+}
