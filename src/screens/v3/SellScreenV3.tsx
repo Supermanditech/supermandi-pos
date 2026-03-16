@@ -7,6 +7,7 @@ import BrandedHeader from "../../components/v3/BrandedHeader";
 import CustomerTypeToggle, { type SellMode } from "../../components/v3/CustomerTypeToggle";
 import ProductTileV3, { type ProductTileData } from "../../components/v3/ProductTileV3";
 import CartSheetV3 from "../../components/v3/CartSheetV3";
+import VoiceOverlayV3 from "../../components/v3/VoiceOverlayV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useProductsStore, type Product } from "../../stores/productsStore";
@@ -42,6 +43,7 @@ export default function SellScreenV3() {
   const [selectedCategory, setSelectedCategory] = useState("Frequent");
   const [searchFocused, setSearchFocused] = useState(false);
   const [cartSheetVisible, setCartSheetVisible] = useState(false);
+  const [voiceVisible, setVoiceVisible] = useState(false);
 
   // Existing stores — no new data fetching
   const products = useProductsStore((s) => s.products);
@@ -136,7 +138,7 @@ export default function SellScreenV3() {
             <Path d="M7 7h.01M7 12h10M7 17h.01M12 7h5M12 17h5" />
           </Svg>
         </Pressable>
-        <Pressable style={[styles.iconButton, { backgroundColor: colors.primaryLight }]} accessibilityLabel="Voice input">
+        <Pressable style={[styles.iconButton, { backgroundColor: colors.primaryLight }]} accessibilityLabel="Voice input" onPress={() => setVoiceVisible(true)}>
           <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth={2}>
             <Rect x={9} y={2} width={6} height={12} rx={3} />
             <Path d="M5 10a7 7 0 0014 0M12 18v4M9 22h6" />
@@ -207,6 +209,15 @@ export default function SellScreenV3() {
         sellMode={sellMode}
         onClose={() => setCartSheetVisible(false)}
         onCheckout={() => { setCartSheetVisible(false); /* navigate to payment in STG-556 */ }}
+      />
+
+      {/* STG-558: Voice overlay — opened from mic button in search bar */}
+      <VoiceOverlayV3
+        visible={voiceVisible}
+        onClose={() => setVoiceVisible(false)}
+        onProductMatched={(name, qty) => {
+          showToast(`${name} ×${qty} added via voice`);
+        }}
       />
     </View>
   );

@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 196,
+  "version": 197,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6513,8 +6513,8 @@
       "ticket": "STG-553",
       "file": "src/screens/v3/SellScreenV3.tsx",
       "start_line": 1,
-      "end_line": 245,
-      "checksum": "97561dc4b0efd863",
+      "end_line": 256,
+      "checksum": "6333e1bde30ad331",
       "description": "SellScreenV3 — product grid + Retail/Bulk toggle + CartSheetV3 wired",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
       "depends_on": null,
@@ -6692,6 +6692,43 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T16:27:31.969Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "STG-558",
+      "file": "src/components/v3/VoiceOverlayV3.tsx",
+      "start_line": 1,
+      "end_line": 126,
+      "checksum": "18daa52949a7b391",
+      "description": "Voice overlay v3 — mic pulse, transcript, match confirm, Hindi+English",
+      "test_file": "src/__tests__/screens/voice-v3.stg-558.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-16T16:33:52.087Z",
       "status": "ACTIVE"
     }
   ],
