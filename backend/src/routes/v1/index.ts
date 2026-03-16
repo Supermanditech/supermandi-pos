@@ -116,6 +116,11 @@ import { adminPriceBoundsRouter } from "./admin/priceBounds";  // SA-P0-003: Pri
 import { adminAnomalyAlertsRouter } from "./admin/anomalyAlerts";  // SA-P1-010: Anomaly detection alerts
 import { posExpiryAlertsRouter } from "./pos/expiryAlerts";  // SCALE-C2: POS expiry alerts
 import { consentRouter } from "./consent";  // STG-485: DPDP consent records
+// V3-016: Wholesale B2B routes
+import { posWholesaleRouter } from "./pos/wholesaleFields";
+import { posLastPurchaseRouter } from "./pos/lastPurchase";
+import { posMasterCatalogRouter } from "./pos/masterCatalog";
+import { posSalesVelocityRouter } from "./pos/salesVelocity";
 
 export const v1Router = Router();
 
@@ -162,6 +167,11 @@ v1Router.use("/pos", posNotificationsRouter);  // Phase 8: FCM push notification
 v1Router.use("/pos", posRefundRequestsRouter);  // T-219: UPI refund request management
 v1Router.use("/pos", posWhatsAppRouter);  // WA-001: WhatsApp Cloud API bill sharing
 v1Router.use("/pos", posExpiryAlertsRouter);  // SCALE-C2: Expiry alerts
+// V3-016: Wholesale B2B routes
+v1Router.use("/pos", posWholesaleRouter);
+v1Router.use("/pos", posLastPurchaseRouter);
+v1Router.use("/pos", posMasterCatalogRouter);
+v1Router.use("/pos", posSalesVelocityRouter);
 v1Router.use("/pos/translations", posTranslationsRouter);
 v1Router.use("/", consentRouter);  // STG-485: DPDP consent API (available to POS + portals)
 v1Router.use("/reorder", reorderRouter);
