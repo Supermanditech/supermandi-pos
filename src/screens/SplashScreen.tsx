@@ -20,6 +20,8 @@ import BrandShortmark from "../components/BrandShortmark";
 type RootStackParamList = {
   Splash: undefined;
   EnrollDevice: undefined;
+  V3Phone: undefined;
+  V3OTP: { phone: string };
   SellScan: undefined;
   ForceUpdate: { currentVersion?: string; requiredVersion?: string };
   DeviceBlocked: undefined;
@@ -116,7 +118,7 @@ export default function SplashScreen() {
       const session = await getSessionWithTimeout();
       if (!session) {
         hasNavigated.current = true;
-        navigation.replace("EnrollDevice");
+        navigation.replace("V3Phone"); // V3: Phone+OTP instead of device enrollment
         return;
       }
 

@@ -20,6 +20,9 @@ import i18n, { initI18n } from "./src/i18n";
 import ErrorBoundary from "./src/components/ErrorBoundary";
 import SplashScreen from "./src/screens/SplashScreen";
 import EnrollDeviceScreen from "./src/screens/EnrollDeviceScreen";
+// V3: OTP auth screens
+import PhoneScreenV3 from "./src/screens/v3/PhoneScreenV3";
+import OTPScreenV3 from "./src/screens/v3/OTPScreenV3";
 // #329-332: PaymentSetup shown once after activation if no UPI VPA
 import PaymentSetupScreen from "./src/screens/PaymentSetupScreen";
 // #329: RegisterStoreScreen removed — registration happens on Retailer Web only
@@ -473,6 +476,9 @@ export default function App() {
         >
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="EnrollDevice" component={EnrollDeviceScreen} />
+          {/* V3: OTP auth flow */}
+          <Stack.Screen name="V3Phone" component={PhoneScreenV3} />
+          <Stack.Screen name="V3OTP" component={OTPScreenV3} />
           <Stack.Screen name="PaymentSetup" component={PaymentSetupScreen} />
           {/* #329: RegisterStore removed — registration on Retailer Web only */}
           <Stack.Screen name="DeviceBlocked" component={DeviceBlockedScreen} />
