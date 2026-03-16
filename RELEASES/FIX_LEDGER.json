@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 247,
+  "version": 248,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6661,8 +6661,8 @@
       "ticket": "STG-557",
       "file": "src/screens/v3/SuccessScreenV3.tsx",
       "start_line": 1,
-      "end_line": 134,
-      "checksum": "a5e882392e5dd077",
+      "end_line": 159,
+      "checksum": "2493eef5bc4c4f46",
       "description": "Success screen v3 — profit badge, streak counter, confetti, WhatsApp bill, new sale",
       "test_file": "src/__tests__/screens/success-v3.stg-557.test.ts",
       "depends_on": null,
@@ -6920,8 +6920,8 @@
       "ticket": "STG-564",
       "file": "src/screens/v3/NewProductScreenV3.tsx",
       "start_line": 1,
-      "end_line": 194,
-      "checksum": "4d6e8a10da0d0336",
+      "end_line": 266,
+      "checksum": "789d4459ed709591",
       "description": "New product digitization v3 — auto-fill from master DB, photo, sell/cost/margin, HSN/GST, Add to Store",
       "test_file": "src/__tests__/screens/new-product-v3.stg-564.test.ts",
       "depends_on": null,

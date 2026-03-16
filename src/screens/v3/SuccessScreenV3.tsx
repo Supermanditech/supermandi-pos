@@ -8,7 +8,10 @@ import ProfitBadge from "../../components/v3/ProfitBadge";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useCartStore } from "../../stores/cartStore";
+import { useSettingsStore } from "../../stores/settingsStore";
+import { printerService } from "../../services/printerService";
 import { showToast } from "../../utils/showToast";
+import { logger } from "../../services/logger";
 
 // STG-557: Success screen v3 — profit display, streak, confetti, WhatsApp bill, new sale
 
@@ -44,6 +47,18 @@ export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, 
     const timer = setTimeout(() => setShowConfetti(false), 2000);
     return () => clearTimeout(timer);
   }, []);
+
+  // V3-009: Auto-print receipt if enabled
+  const autoPrint = useSettingsStore((s) => s.printerAutoPrint);
+  const [printStatus, setPrintStatus] = useState<"pending" | "printing" | "done" | "failed">("pending");
+  useEffect(() => {
+    if (!autoPrint) { setPrintStatus("done"); return; }
+    setPrintStatus("printing");
+    const receiptText = `Bill: ${billRef}\n${METHOD_LABELS[paymentMethod]}\n${itemCount} items\nTotal: ${totalDisplay}\n\nThank you!\n— SuperMandi POS`;
+    printerService.printReceipt(receiptText)
+      .then((ok) => { setPrintStatus(ok ? "done" : "failed"); if (!ok) showToast("Print failed — tap Reprint"); })
+      .catch(() => { setPrintStatus("failed"); });
+  }, [autoPrint, billRef, paymentMethod, itemCount, totalDisplay]);
 
   const handleWhatsAppBill = () => {
     const message = `*${billRef}*\n${METHOD_LABELS[paymentMethod]}\n${itemCount} items\n*Total: ${totalDisplay}*\n\nThank you for shopping!\n— SuperMandi POS`;
@@ -82,7 +97,7 @@ export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, 
 
         {/* Print status */}
         <View style={styles.printStatus}>
-          <Text style={styles.printText}>🖨️ Receipt printing...</Text>
+          <Text style={styles.printText}>{printStatus === "printing" ? "🖨️ Printing receipt..." : printStatus === "done" ? "🖨️ Receipt printed ✓" : printStatus === "failed" ? "🖨️ Print failed — tap Reprint" : "🖨️ Ready to print"}</Text>
         </View>
 
         {/* Actions */}
