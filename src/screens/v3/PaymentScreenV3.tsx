@@ -1,16 +1,16 @@
-import React, { useMemo, useState, useCallback } from "react";
-import { View, Pressable, TextInput, StyleSheet, Text, ScrollView } from "react-native";
+import React, { useMemo, useState, useCallback, useRef } from "react";
+import { View, Pressable, TextInput, ActivityIndicator, StyleSheet, Text, ScrollView } from "react-native";
 import Svg, { Path, Rect, Circle, Line } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useCartStore, type SellMode } from "../../stores/cartStore";
+import { createSale, type SaleItemInput } from "../../services/api/posApi";
 import { showToast } from "../../utils/showToast";
+import { logger } from "../../services/logger";
 
-// STG-556: Payment screen v3 — Cash/UPI/Udhar with quick amounts
-// Reuses existing payment API (createSale) — this ticket is UI only.
-// Actual API wiring will be connected when replacing old PaymentScreen route.
+// V3-002: Payment screen v3 — wired to real createSale API
 
 type PaymentScreenV3Props = {
   onBack: () => void;
@@ -55,10 +55,46 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
     setCashReceived(String(amt));
   }, []);
 
-  const handleComplete = useCallback(() => {
+  const [processing, setProcessing] = useState(false);
+  const createSaleInFlight = useRef(false);
+
+  const handleComplete = useCallback(async () => {
     if (!selectedMethod) { showToast("Select payment method"); return; }
-    onComplete(selectedMethod);
-  }, [selectedMethod, onComplete]);
+    if (createSaleInFlight.current) return;
+
+    // V3-002: Call real createSale API
+    createSaleInFlight.current = true;
+    setProcessing(true);
+    try {
+      const saleItems: SaleItemInput[] = items.map((item) => ({
+        productId: item.barcode ?? item.id,
+        barcode: item.barcode,
+        name: item.name,
+        quantity: item.quantity,
+        priceMinor: item.priceMinor,
+        itemDiscount: item.itemDiscount ?? null,
+        batchNumber: item.batchNumber ?? null,
+      }));
+
+      const discount = useCartStore.getState().discount;
+      const result = await createSale({
+        items: saleItems,
+        discountMinor: discount ? (discount.type === "fixed" ? discount.value : 0) : 0,
+        cartDiscount: discount ?? undefined,
+        currency: "INR",
+      });
+
+      logger.debug("V3Payment", `sale_created:${result.saleId},billRef:${result.billRef},total:${result.totals.totalMinor}`);
+      onComplete(selectedMethod);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error?.message ?? err?.message ?? "Sale failed";
+      showToast(msg);
+      logger.debug("V3Payment", `sale_failed:${String(err)}`);
+    } finally {
+      createSaleInFlight.current = false;
+      setProcessing(false);
+    }
+  }, [selectedMethod, items, onComplete]);
 
   return (
     <View style={styles.container}>
@@ -190,13 +226,14 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
       {/* Complete button */}
       <View style={styles.footer}>
         <Pressable
-          style={[styles.completeBtn, !selectedMethod && styles.completeBtnDisabled]}
+          style={[styles.completeBtn, (!selectedMethod || processing) && styles.completeBtnDisabled]}
           onPress={handleComplete}
           disabled={!selectedMethod}
           accessibilityRole="button"
         >
           <Text style={styles.completeBtnText}>
-            {selectedMethod === "CASH" ? `✓ COMPLETE SALE` :
+            {processing ? "Processing..." :
+             selectedMethod === "CASH" ? `✓ COMPLETE SALE` :
              selectedMethod === "UPI" ? `✓ Payment Received` :
              selectedMethod === "DUE" ? `Record Udhar ${totalDisplay}` :
              `Select Payment Method`}

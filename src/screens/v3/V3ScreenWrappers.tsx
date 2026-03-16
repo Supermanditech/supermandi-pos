@@ -30,7 +30,11 @@ export function V3PaymentWrapper() {
 export function V3SuccessWrapper({ route }: any) {
   const nav = useNavigation<Nav>();
   const method = route?.params?.method ?? "CASH";
-  return <SuccessScreenV3 paymentMethod={method} totalMinor={0} itemCount={0} onNewSale={() => nav.navigate("SellScan")} />;
+  // V3-002: Read real cart total/count before clearing
+  const cartStore = require("../../stores/cartStore").useCartStore;
+  const total = cartStore.getState().total;
+  const count = cartStore.getState().items.reduce((s: number, i: any) => s + i.quantity, 0);
+  return <SuccessScreenV3 paymentMethod={method} totalMinor={total} itemCount={count} onNewSale={() => { cartStore.getState().clearCart(true); nav.navigate("SellScan"); }} />;
 }
 
 export function V3ScanWrapper() {

@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, FlatList, TextInput, Pressable, ActivityIndicator, StyleSheet, Text } from "react-native";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import BrandedHeader from "../../components/v3/BrandedHeader";
 import CustomerTypeToggle, { type SellMode } from "../../components/v3/CustomerTypeToggle";
@@ -37,6 +39,7 @@ function productToTileData(p: Product): ProductTileData {
 
 export default function SellScreenV3() {
   const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [sellMode, setSellMode] = useState<SellMode>("retail");
@@ -225,7 +228,7 @@ export default function SellScreenV3() {
         visible={cartSheetVisible}
         sellMode={sellMode}
         onClose={() => setCartSheetVisible(false)}
-        onCheckout={() => { setCartSheetVisible(false); /* navigate to payment in STG-556 */ }}
+        onCheckout={() => { setCartSheetVisible(false); navigation.navigate("V3Payment"); }}
       />
 
       {/* STG-558: Voice overlay — opened from mic button in search bar */}
