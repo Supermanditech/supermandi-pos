@@ -1,11 +1,13 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { View, Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import Svg, { Rect, Circle, Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { getDailySummary, type DailySummary } from "../../services/api/dailySummaryApi";
+import { logger } from "../../services/logger";
 
-// STG-571: More screen v3 — dashboard cards, morning brief, quick access menu
+// V3-023: More screen with real daily summary
 
 type MoreScreenV3Props = { onNavigate: (screen: string) => void };
 
@@ -13,6 +15,12 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const storeName = useSettingsStore((s) => s.storeName) ?? "SuperMandi Store";
+
+  // V3-023: Real daily summary
+  const [summary, setSummary] = useState<DailySummary | null>(null);
+  useEffect(() => {
+    getDailySummary().then(setSummary).catch((e) => logger.debug("MoreV3", `summary_failed:${String(e)}`));
+  }, []);
 
   const MENU_ITEMS = [
     { icon: "📒", label: "Khata (Udhar)", bg: colors.primaryLight, badge: 3, screen: "khata" },
@@ -47,8 +55,8 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
 
         {/* Stats cards */}
         <View style={styles.statsRow}>
-          <Pressable style={styles.statCard} onPress={() => onNavigate("reports")}><Text style={styles.statLabel}>Today's Sales</Text><Text style={styles.statVal}>₹4,850</Text><Text style={styles.statSub}>12 bills</Text></Pressable>
-          <Pressable style={[styles.statCard, { borderColor: colors.error }]} onPress={() => onNavigate("khata")}><Text style={styles.statLabel}>Udhar Pending</Text><Text style={[styles.statVal, { color: colors.error }]}>₹15,400</Text><Text style={styles.statSub}>3 overdue</Text></Pressable>
+          <Pressable style={styles.statCard} onPress={() => onNavigate("reports")}><Text style={styles.statLabel}>Today's Sales</Text><Text style={styles.statVal}>₹{summary ? Math.round(summary.totalSales).toLocaleString("en-IN") : "—"}</Text><Text style={styles.statSub}>{summary?.totalBills ?? 0} bills</Text></Pressable>
+          <Pressable style={[styles.statCard, { borderColor: colors.error }]} onPress={() => onNavigate("khata")}><Text style={styles.statLabel}>Udhar Pending</Text><Text style={[styles.statVal, { color: colors.error }]}>₹{summary ? Math.round((summary.paymentBreakdown?.credit ?? 0)).toLocaleString("en-IN") : "—"}</Text><Text style={styles.statSub}>due</Text></Pressable>
         </View>
 
         {/* Finance banner */}
