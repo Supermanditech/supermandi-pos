@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 193,
+  "version": 194,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -3545,8 +3545,8 @@
     {
       "ticket": "STG-103",
       "file": "src/stores/cartStore.ts",
-      "start_line": 40,
-      "end_line": 50,
+      "start_line": 50,
+      "end_line": 60,
       "checksum": "a244a73dfcb96a37",
       "description": "CartCustomer and CartNote types + setCustomer/setNote actions",
       "test_file": "src/__tests__/stores/cartStore.unit.test.ts",
@@ -3577,7 +3577,8 @@
         "gcp_parity": "POS-only UI change",
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
-      }
+      },
+      "line_shifted_at": "2026-03-16T16:13:16.433Z"
     },
     {
       "ticket": "STG-103-UI",
@@ -5459,8 +5460,8 @@
     {
       "ticket": "STG-542",
       "file": "src/stores/cartStore.ts",
-      "start_line": 171,
-      "end_line": 177,
+      "start_line": 186,
+      "end_line": 192,
       "checksum": "591f250d67b71a80",
       "description": "Warn in __DEV__ when discount exceeds subtotal (negative total capped to 0)",
       "test_file": "src/__tests__/screens/negative-total.stg-542.test.ts",
@@ -5505,7 +5506,8 @@
         "test_guard": "Done",
         "single_commit": "Done",
         "ticket_parked": "Done"
-      }
+      },
+      "line_shifted_at": "2026-03-16T16:13:16.470Z"
     },
     {
       "ticket": "STG-512",
@@ -6579,6 +6581,43 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T15:59:44.954Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "STG-555",
+      "file": "src/components/v3/CartSummaryV3.tsx",
+      "start_line": 1,
+      "end_line": 108,
+      "checksum": "26a3a600fc317424",
+      "description": "Wholesale cart summary — GST CGST/SGST split, trade savings, margin, case count",
+      "test_file": "src/__tests__/screens/wholesale-cart.stg-555.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-16T16:13:16.165Z",
       "status": "ACTIVE"
     }
   ],

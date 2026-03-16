@@ -24,6 +24,16 @@ export interface CartItem {
   priceResolutionMessage?: string;
   // ISSUE-MICRO-068: Track when price was last fetched for freshness validation
   priceFetchedAt?: number;
+  // STG-555: Wholesale B2B fields — additive, optional, no breaking changes
+  tradePriceMinor?: number;     // wholesale/trade price (PTR) in paise
+  mrpMinor?: number;            // MRP in paise (for margin calculation)
+  caseSize?: number;            // units per case/carton
+  unitLabel?: string;           // pcs, kg, ltr, btl, box, tray
+  hsnCode?: string;             // HSN code for GST
+  gstPct?: number;              // GST rate: 0, 5, 12, 18, 28
+  supplierName?: string;        // supplier who sold this product
+  tradeDiscountPct?: number;    // trade discount percentage
+  scheme?: string;              // e.g. "10+1 Free"
 }
 
 export interface ItemDiscount {
@@ -74,8 +84,12 @@ export type CartMutation =
 // GL-CRIT-0011: Cart lock timeout (5 minutes) to auto-unlock after payment failure
 const CART_LOCK_TIMEOUT_MS = 5 * 60 * 1000;
 
+// STG-555: Sell mode for wholesale/retail pricing
+export type SellMode = 'retail' | 'bulk';
+
 interface CartState {
   items: CartItem[];
+  sellMode: SellMode; // STG-555: retail (MRP) or bulk (trade price + GST)
   discount: CartDiscount | null;
   customer: CartCustomer | null; // STG-103: Customer for credit sales
   note: CartNote | null; // STG-112: Order note/memo
@@ -111,6 +125,7 @@ interface CartState {
   isCartLocked: () => boolean; // GL-CRIT-0011: Check if locked (respects timeout)
   setCustomer: (customer: CartCustomer | null) => void; // STG-103
   setNote: (note: CartNote | null) => void; // STG-112
+  setSellMode: (mode: SellMode) => void; // STG-555
   resetForStore: () => void;
   normalizeItemsToStock: () => { changed: boolean; adjustments: StockAdjustment[] }; // GL-CRIT-0014: Return adjustments for notification
   clearLastStockAdjustments: () => void; // GL-CRIT-0014: Clear after UI has shown notification
@@ -289,6 +304,7 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      sellMode: 'retail' as SellMode, // STG-555: default retail
       discount: null,
       customer: null, // STG-103
       note: null, // STG-112
@@ -770,9 +786,15 @@ export const useCartStore = create<CartState>()(
     set({ note: trimmed || null });
   },
 
+  // STG-555: Switch between retail (MRP) and bulk (trade price + GST) mode
+  setSellMode: (mode) => {
+    set({ sellMode: mode });
+  },
+
   resetForStore: () => {
     set({
       items: [],
+      sellMode: 'retail' as SellMode, // STG-555: reset to retail
       discount: null,
       customer: null, // STG-103
       note: null, // STG-112
