@@ -1,8 +1,9 @@
-import React, { useMemo } from "react";
-import { View, Pressable, TextInput, FlatList, StyleSheet, Text } from "react-native";
+import React, { useMemo, useEffect } from "react";
+import { View, Pressable, TextInput, FlatList, ActivityIndicator, StyleSheet, Text } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { useCustomerStore } from "../../stores/customerStore";
 
 // STG-575: Customers v3 — list with WhatsApp contact, purchase history inline
 
@@ -20,11 +21,26 @@ export default function CustomersScreenV3({ onClose }: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  // V3-027: Real customer data
+  const customers = useCustomerStore((s) => s.customers);
+  const loading = useCustomerStore((s) => s.loading);
+  const fetchCustomers = useCustomerStore((s) => s.fetchCustomers);
+  useEffect(() => { void fetchCustomers(); }, [fetchCustomers]);
+
+  const realCustomers: Customer[] = customers.map((c) => ({
+    name: c.name,
+    initial: c.name?.[0] ?? "?",
+    visits: c.visitCount ?? 0,
+    total: Math.round((c.totalPurchasesMinor ?? 0) / 100),
+  }));
+  const displayCustomers = realCustomers.length > 0 ? realCustomers : DEMO;
+
   return (
     <View style={styles.container}>
       <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Customers</Text><Pressable style={styles.addBtn}><Text style={styles.addBtnText}>+ Add</Text></Pressable></View>
       <View style={styles.searchBar}><TextInput style={styles.searchInput} placeholder="Search customer..." placeholderTextColor={colors.textTertiary} /></View>
-      <FlatList data={DEMO} keyExtractor={(c) => c.name} contentContainerStyle={{ padding: 14 }} renderItem={({ item }) => (
+      {loading ? <ActivityIndicator size="small" color={colors.primary} style={{ padding: 20 }} /> : null}
+      <FlatList data={displayCustomers} keyExtractor={(c) => c.name} contentContainerStyle={{ padding: 14 }} renderItem={({ item }) => (
         <View style={styles.card}>
           <View style={styles.avatar}><Text style={styles.initial}>{item.initial}</Text></View>
           <View style={{ flex: 1 }}><Text style={styles.name}>{item.name}</Text><Text style={styles.meta}>{item.visits} visits · ₹{item.total.toLocaleString("en-IN")} total</Text></View>
