@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 245,
+  "version": 246,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6550,8 +6550,8 @@
       "ticket": "STG-554",
       "file": "src/components/v3/CartSheetV3.tsx",
       "start_line": 1,
-      "end_line": 157,
-      "checksum": "83a180b555c73bc5",
+      "end_line": 276,
+      "checksum": "8488c4358a34dce3",
       "description": "Cart sheet v3 — expanded view with items, GST summary, qty controls, pay button",
       "test_file": "src/__tests__/screens/cart-sheet-v3.stg-554.test.ts",
       "depends_on": null,
