@@ -57,7 +57,7 @@ export const useSettingsStore = create<SettingsState>()(
       bnplCreditLimit: 5000000, // SM-020: Default 50k credit limit
       bnplAvailableCredit: 5000000, // SM-020: Default available credit
       creditEnabled: false, // SM-022: Credit disabled by default, enabled per store
-      posV3Enabled: false, // STG-552: POS v3 layout disabled by default
+      posV3Enabled: true, // V3-LAUNCH: POS v3 layout enabled by default
       language: 'en', // Default language
       storeName: null, // GO-LIVE: Persisted for offline display
       storeCode: null, // GO-LIVE: Human-readable store code
@@ -91,7 +91,7 @@ export const useSettingsStore = create<SettingsState>()(
       setThemeMode: (mode) => set({ themeMode: mode }),
     }),
     {
-      name: 'supermandi.settings.v8', // STG-552: Bumped for posV3Enabled field
+      name: 'supermandi.settings.v9', // V3-LAUNCH: Bumped to activate v3 on existing devices
       storage: createJSONStorage(() => AsyncStorage),
       // LIVE.POS.THEME.PERSISTENCE_AND_BOOTSTRAP.001: Log hydration errors
       onRehydrateStorage: () => (_state, error) => {

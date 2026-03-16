@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 238,
+  "version": 239,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6513,8 +6513,8 @@
       "ticket": "STG-553",
       "file": "src/screens/v3/SellScreenV3.tsx",
       "start_line": 1,
-      "end_line": 256,
-      "checksum": "6333e1bde30ad331",
+      "end_line": 273,
+      "checksum": "4f041b6f740b667e",
       "description": "SellScreenV3 — product grid + Retail/Bulk toggle + CartSheetV3 wired",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
       "depends_on": null,

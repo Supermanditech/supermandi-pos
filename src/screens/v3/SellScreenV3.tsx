@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { View, FlatList, TextInput, Pressable, StyleSheet, Text } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { View, FlatList, TextInput, Pressable, ActivityIndicator, StyleSheet, Text } from "react-native";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 
@@ -45,8 +45,12 @@ export default function SellScreenV3() {
   const [cartSheetVisible, setCartSheetVisible] = useState(false);
   const [voiceVisible, setVoiceVisible] = useState(false);
 
-  // Existing stores — no new data fetching
+  // Load products on mount (same as old SellScanScreen)
+  const loadProducts = useProductsStore((s) => s.loadProducts);
+  const productsLoading = useProductsStore((s) => s.loading);
   const products = useProductsStore((s) => s.products);
+  useEffect(() => { void loadProducts(); }, [loadProducts]);
+
   const cartItems = useCartStore((s) => s.items);
   const addItem = useCartStore((s) => s.addItem);
   const cartTotal = useCartStore((s) => {
@@ -170,18 +174,31 @@ export default function SellScreenV3() {
         />
       </View>
 
-      {/* Product grid */}
-      <FlatList
-        data={tileProducts}
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        columnWrapperStyle={styles.gridRow}
-        contentContainerStyle={styles.gridContainer}
-        renderItem={renderTile}
-        showsVerticalScrollIndicator={false}
-        removeClippedSubviews
-        windowSize={5}
-      />
+      {/* Product grid with loading/empty states */}
+      {productsLoading && products.length === 0 ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 40 }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ color: colors.textTertiary, fontSize: 13, marginTop: 12 }}>Loading products...</Text>
+        </View>
+      ) : tileProducts.length === 0 ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 40 }}>
+          <Text style={{ fontSize: 36, marginBottom: 8 }}>📦</Text>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: colors.textSecondary }}>No products yet</Text>
+          <Text style={{ fontSize: 13, color: colors.textTertiary, textAlign: "center", marginTop: 4 }}>Scan a barcode or add products from your supplier catalogue</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={tileProducts}
+          keyExtractor={(item) => item.id}
+          numColumns={3}
+          columnWrapperStyle={styles.gridRow}
+          contentContainerStyle={styles.gridContainer}
+          renderItem={renderTile}
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews
+          windowSize={5}
+        />
+      )}
 
       {/* Cart strip — tap to expand sheet */}
       {cartCount > 0 ? (
