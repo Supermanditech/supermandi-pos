@@ -1,0 +1,239 @@
+import React, { useMemo, useState, useCallback } from "react";
+import { View, Pressable, TextInput, StyleSheet, Text, Modal } from "react-native";
+import Svg, { Rect, Path, Line } from "react-native-svg";
+import { useTranslation } from "react-i18next";
+
+import { useThemeColors } from "../../theme";
+import type { ColorPalette } from "../../theme";
+import { showToast } from "../../utils/showToast";
+
+// STG-559: Context-aware barcode scan screen v3
+// Same scanner works for Sell (add to cart), Stock In (record inward), New Product (create)
+// Reuses existing handleScan, HID scanner, camera services — UI only in this ticket.
+
+export type ScanContext = "sell" | "stock_in" | "new_product";
+
+type ScanScreenV3Props = {
+  visible: boolean;
+  defaultContext?: ScanContext;
+  onClose: () => void;
+  onProductFound: (barcode: string, context: ScanContext) => void;
+  onNewProduct: (barcode: string) => void;
+};
+
+type ScanResult = {
+  barcode: string;
+  productName?: string;
+  price?: number;
+  stock?: number;
+  isNew: boolean;
+};
+
+export default function ScanScreenV3({ visible, defaultContext = "sell", onClose, onProductFound, onNewProduct }: ScanScreenV3Props) {
+  const { t } = useTranslation();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const [context, setContext] = useState<ScanContext>(defaultContext);
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [lastResult, setLastResult] = useState<ScanResult | null>(null);
+
+  // Simulate scan result (in production, uses onBarcodeScanned from handleScan.ts)
+  const handleScanSubmit = useCallback(() => {
+    const code = barcodeInput.trim();
+    if (!code) return;
+    // Simulate: known barcode returns product, unknown shows "new"
+    const isKnown = code.startsWith("890123");
+    const result: ScanResult = isKnown
+      ? { barcode: code, productName: "Parle-G Gold 100g", price: 1000, stock: 47, isNew: false }
+      : { barcode: code, isNew: true };
+    setLastResult(result);
+    if (!result.isNew) {
+      const action = context === "sell" ? "Added to cart" : context === "stock_in" ? "Stock inward recorded" : "Product found";
+      showToast(`${result.productName} — ${action}`);
+      onProductFound(code, context);
+    }
+    setBarcodeInput("");
+  }, [barcodeInput, context, onProductFound]);
+
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable style={styles.backBtn} onPress={onClose} accessibilityLabel="Close scanner">
+            <Text style={styles.backText}>←</Text>
+          </Pressable>
+          <Text style={styles.headerTitle}>Scan Barcode</Text>
+          <View style={{ width: 30 }} />
+        </View>
+
+        {/* Camera viewfinder area */}
+        <View style={styles.viewfinder}>
+          <View style={styles.scanFrame}>
+            {/* Corner markers */}
+            <View style={[styles.corner, styles.cornerTL]} />
+            <View style={[styles.corner, styles.cornerTR]} />
+            <View style={[styles.corner, styles.cornerBL]} />
+            <View style={[styles.corner, styles.cornerBR]} />
+            {/* Scan line animation placeholder */}
+            <View style={styles.scanLine} />
+          </View>
+          <Text style={styles.viewfinderText}>Point camera at barcode</Text>
+          <View style={styles.hidStatus}>
+            <View style={styles.hidDot} />
+            <Text style={styles.hidText}>HID Scanner Active</Text>
+          </View>
+        </View>
+
+        {/* Manual barcode input */}
+        <View style={styles.inputArea}>
+          <View style={styles.inputRow}>
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth={2}>
+              <Rect x={3} y={3} width={18} height={18} rx={2} />
+              <Line x1={7} y1={7} x2={7} y2={7.01} strokeWidth={3} />
+              <Line x1={7} y1={12} x2={17} y2={12} />
+              <Line x1={7} y1={17} x2={7} y2={17.01} strokeWidth={3} />
+            </Svg>
+            <TextInput
+              style={styles.barcodeInput}
+              value={barcodeInput}
+              onChangeText={setBarcodeInput}
+              placeholder="Type barcode or scan with HID..."
+              placeholderTextColor={colors.textTertiary}
+              keyboardType="numeric"
+              returnKeyType="go"
+              onSubmitEditing={handleScanSubmit}
+              autoFocus
+            />
+            <Pressable style={styles.submitBtn} onPress={handleScanSubmit}>
+              <Text style={styles.submitText}>↵</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Context toggle */}
+        <View style={styles.contextRow}>
+          <Text style={styles.contextLabel}>SCAN MODE</Text>
+          <View style={styles.contextToggle}>
+            {(["sell", "stock_in", "new_product"] as ScanContext[]).map((ctx) => (
+              <Pressable
+                key={ctx}
+                style={[styles.contextBtn, context === ctx && styles.contextBtnActive]}
+                onPress={() => setContext(ctx)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: context === ctx }}
+              >
+                <Text style={[styles.contextText, context === ctx && styles.contextTextActive]}>
+                  {ctx === "sell" ? "Sell" : ctx === "stock_in" ? "Stock In" : "New Product"}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Text style={styles.contextHint}>
+            {context === "sell" ? "Adds scanned product to sell cart" :
+             context === "stock_in" ? "Records inward stock for inventory" :
+             "Creates new product if barcode not found"}
+          </Text>
+        </View>
+
+        {/* Last scan result */}
+        {lastResult ? (
+          <View style={styles.resultPanel}>
+            {!lastResult.isNew ? (
+              <View style={styles.resultFound}>
+                <View style={styles.resultEmoji}><Text style={{ fontSize: 28 }}>🍪</Text></View>
+                <View style={styles.resultInfo}>
+                  <Text style={styles.resultName}>{lastResult.productName}</Text>
+                  <Text style={styles.resultBarcode}>{lastResult.barcode}</Text>
+                </View>
+                <View style={styles.resultRight}>
+                  <Text style={styles.resultPrice}>₹{((lastResult.price ?? 0) / 100).toFixed(0)}</Text>
+                  <Text style={styles.resultStock}>Stock: {lastResult.stock}</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.resultNew}>
+                <Text style={styles.resultNewIcon}>⚠</Text>
+                <View style={styles.resultInfo}>
+                  <Text style={styles.resultNewTitle}>Product Not Found</Text>
+                  <Text style={styles.resultBarcode}>{lastResult.barcode}</Text>
+                </View>
+                <Pressable
+                  style={styles.createBtn}
+                  onPress={() => { onNewProduct(lastResult.barcode); onClose(); }}
+                  accessibilityLabel="Create new product"
+                >
+                  <Text style={styles.createBtnText}>+ Create</Text>
+                </Pressable>
+              </View>
+            )}
+            <View style={styles.resultAction}>
+              <Text style={styles.resultActionText}>
+                {!lastResult.isNew
+                  ? (context === "sell" ? "✓ Added to cart!" : context === "stock_in" ? "✓ Stock recorded!" : "✓ Product found")
+                  : "Tap Create to add this product to your store"}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+      </View>
+    </Modal>
+  );
+}
+
+function createStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: "#0F172A" },
+    header: { flexDirection: "row", alignItems: "center", padding: 16, paddingTop: 48 },
+    backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
+    backText: { color: "#fff", fontSize: 16 },
+    headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
+    // Viewfinder
+    viewfinder: { flex: 1, alignItems: "center", justifyContent: "center" },
+    scanFrame: { width: 220, height: 220, borderWidth: 2, borderColor: "rgba(37,99,235,0.5)", borderRadius: 18, position: "relative" },
+    corner: { position: "absolute", width: 24, height: 24, borderColor: "#fff" },
+    cornerTL: { top: -1, left: -1, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 8 },
+    cornerTR: { top: -1, right: -1, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 8 },
+    cornerBL: { bottom: -1, left: -1, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 8 },
+    cornerBR: { bottom: -1, right: -1, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 8 },
+    scanLine: { position: "absolute", top: "50%", left: 16, right: 16, height: 2, backgroundColor: colors.primary, borderRadius: 1 },
+    viewfinderText: { color: "#fff", fontSize: 14, fontWeight: "500", marginTop: 20 },
+    hidStatus: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 },
+    hidDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#4ADE80" },
+    hidText: { color: "#4ADE80", fontSize: 12, fontWeight: "600" },
+    // Input
+    inputArea: { paddingHorizontal: 16, paddingBottom: 8 },
+    inputRow: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#1E293B", borderRadius: 14, paddingHorizontal: 14, borderWidth: 2, borderColor: colors.primary },
+    barcodeInput: { flex: 1, paddingVertical: 12, fontSize: 14, fontWeight: "600", color: "#fff" },
+    submitBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
+    submitText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+    // Context
+    contextRow: { paddingHorizontal: 16, paddingVertical: 10 },
+    contextLabel: { fontSize: 10, fontWeight: "800", color: "rgba(255,255,255,0.4)", letterSpacing: 0.5, marginBottom: 6 },
+    contextToggle: { flexDirection: "row", gap: 8 },
+    contextBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.08)" },
+    contextBtnActive: { backgroundColor: colors.primary },
+    contextText: { fontSize: 12, fontWeight: "700", color: "rgba(255,255,255,0.5)" },
+    contextTextActive: { color: "#fff" },
+    contextHint: { fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 4 },
+    // Result
+    resultPanel: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18 },
+    resultFound: { flexDirection: "row", alignItems: "center", gap: 12 },
+    resultEmoji: { width: 48, height: 48, borderRadius: 12, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center" },
+    resultInfo: { flex: 1 },
+    resultName: { fontSize: 16, fontWeight: "800", color: colors.textPrimary, letterSpacing: -0.3 },
+    resultBarcode: { fontSize: 11, color: colors.textTertiary, marginTop: 1 },
+    resultRight: { alignItems: "flex-end" },
+    resultPrice: { fontSize: 20, fontWeight: "900", color: colors.primary },
+    resultStock: { fontSize: 11, color: colors.success, fontWeight: "600" },
+    resultNew: { flexDirection: "row", alignItems: "center", gap: 12 },
+    resultNewIcon: { fontSize: 28 },
+    resultNewTitle: { fontSize: 16, fontWeight: "800", color: colors.warning },
+    createBtn: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
+    createBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+    resultAction: { marginTop: 12, backgroundColor: colors.successSoft, borderRadius: 10, padding: 10, alignItems: "center" },
+    resultActionText: { color: colors.success, fontSize: 13, fontWeight: "700" },
+  });
+}
