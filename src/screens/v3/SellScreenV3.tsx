@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, FlatList, TextInput, Pressable, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { View, FlatList, TextInput, Pressable, ActivityIndicator, RefreshControl, StyleSheet, Text } from "react-native";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
@@ -10,14 +10,18 @@ import CustomerTypeToggle, { type SellMode } from "../../components/v3/CustomerT
 import ProductTileV3, { type ProductTileData } from "../../components/v3/ProductTileV3";
 import CartSheetV3 from "../../components/v3/CartSheetV3";
 import VoiceOverlayV3 from "../../components/v3/VoiceOverlayV3";
+import UniversalSearchV3, { type SearchResult } from "../../components/v3/UniversalSearchV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useProductsStore, type Product } from "../../stores/productsStore";
 import { useCartStore } from "../../stores/cartStore";
+import { searchStoreProducts } from "../../services/api/sellSearchApi";
 import { formatMoney } from "../../utils/money";
 import { showToast } from "../../utils/showToast";
+import { getDeviceStoreId } from "../../services/deviceSession";
+import { logger } from "../../services/logger";
 
-// STG-553: POS v3 Sell screen — product grid with Retail/Bulk toggle
+// V3-006: Sell screen with pull-to-refresh, category filtering, search
 // Reads from existing productsStore + cartStore. No backend changes.
 
 const CATEGORIES = ["Frequent", "Beverages", "Snacks", "Dairy", "Staples", "Home Care"];
@@ -44,18 +48,69 @@ export default function SellScreenV3() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [sellMode, setSellMode] = useState<SellMode>("retail");
   const [selectedCategory, setSelectedCategory] = useState("Frequent");
-  const [searchFocused, setSearchFocused] = useState(false);
+  const [searchVisible, setSearchVisible] = useState(false);
   const [cartSheetVisible, setCartSheetVisible] = useState(false);
   const [voiceVisible, setVoiceVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
 
-  // Load products on mount (same as old SellScanScreen)
+  // Load products on mount
   const loadProducts = useProductsStore((s) => s.loadProducts);
+  const checkAndRefresh = useProductsStore((s) => s.checkAndRefresh);
   const productsLoading = useProductsStore((s) => s.loading);
   const products = useProductsStore((s) => s.products);
   useEffect(() => { void loadProducts(); }, [loadProducts]);
 
+  // V3-006: Pull-to-refresh
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await checkAndRefresh(); } catch {}
+    setRefreshing(false);
+  }, [checkAndRefresh]);
+
+  // V3-006: Search handler — queries sellSearchApi
+  const handleSearchQuery = useCallback(async (query: string) => {
+    if (query.length < 2) { setSearchResults([]); return; }
+    setSearchLoading(true);
+    try {
+      const storeId = await getDeviceStoreId();
+      if (!storeId) { setSearchResults([]); return; }
+      const groups = await searchStoreProducts(storeId, query, { limit: 20 });
+      // Flatten search groups into SearchResult[]
+      const flat: SearchResult[] = groups.flatMap((g) =>
+        (g.matches ?? []).map((sku) => ({
+          id: sku.storeProductId ?? sku.productId ?? g.groupId,
+          name: sku.displayName ?? g.displayName,
+          barcode: sku.barcode,
+          priceMinor: sku.sellPrice ?? 0,
+          stock: sku.currentStock,
+          brand: g.brand,
+        }))
+      );
+      setSearchResults(flat);
+    } catch (err) {
+      logger.debug("SellV3Search", `failed:${String(err)}`);
+      setSearchResults([]);
+    }
+    setSearchLoading(false);
+  }, []);
+
   const cartItems = useCartStore((s) => s.items);
   const addItem = useCartStore((s) => s.addItem);
+
+  // V3-006: Search result → add to cart
+  const handleSearchSelect = useCallback((result: SearchResult) => {
+    const existing = cartItems.find((i) => i.barcode === result.barcode || i.id === result.id);
+    if (existing) {
+      useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
+      showToast(`${result.name} ×${existing.quantity + 1}`);
+    } else {
+      addItem({ id: result.barcode ?? result.id, name: result.name, priceMinor: result.priceMinor, barcode: result.barcode, currency: "INR" });
+      showToast(`${result.name} added`);
+    }
+    setSearchVisible(false);
+  }, [cartItems, addItem]);
   const cartTotal = useCartStore((s) => {
     const price = sellMode === "bulk" ? 0.85 : 1;
     return s.items.reduce((sum, item) => sum + item.priceMinor * item.quantity * price, 0);
@@ -126,19 +181,13 @@ export default function SellScreenV3() {
 
       {/* Search bar */}
       <View style={styles.searchBar}>
-        <View style={[styles.searchInput, searchFocused && styles.searchInputFocused]}>
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={searchFocused ? colors.primary : colors.textTertiary} strokeWidth={2} strokeLinecap="round">
+        <Pressable style={styles.searchInput} onPress={() => setSearchVisible(true)}>
+          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth={2} strokeLinecap="round">
             <Circle cx={11} cy={11} r={8} />
             <Path d="M21 21l-4.35-4.35" />
           </Svg>
-          <TextInput
-            style={styles.searchText}
-            placeholder={t("sell.searchProducts", "Search your products...")}
-            placeholderTextColor={colors.textTertiary}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-          />
-        </View>
+          <Text style={[styles.searchText, { color: colors.textTertiary }]}>{t("sell.searchProducts", "Search your products...")}</Text>
+        </Pressable>
         <Pressable style={[styles.iconButton, { backgroundColor: colors.backgroundSecondary }]} accessibilityLabel="Scan barcode" onPress={() => navigation.navigate("V3Scan")}>
           <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}>
             <Rect x={3} y={3} width={18} height={18} rx={2} />
@@ -200,6 +249,7 @@ export default function SellScreenV3() {
           showsVerticalScrollIndicator={false}
           removeClippedSubviews
           windowSize={5}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[colors.primary]} />}
         />
       )}
 
@@ -238,6 +288,17 @@ export default function SellScreenV3() {
         onProductMatched={(name, qty) => {
           showToast(`${name} ×${qty} added via voice`);
         }}
+      />
+
+      {/* V3-006: Universal search overlay */}
+      <UniversalSearchV3
+        context="sell"
+        visible={searchVisible}
+        onClose={() => setSearchVisible(false)}
+        onSelect={handleSearchSelect}
+        results={searchResults}
+        loading={searchLoading}
+        onQueryChange={handleSearchQuery}
       />
     </View>
   );
