@@ -2,14 +2,15 @@ import React, { useMemo, useState, useCallback } from "react";
 import { View, FlatList, Pressable, StyleSheet, Text } from "react-native";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import SupplierProductCardV3, { type SupplierProduct } from "../../components/v3/SupplierProductCardV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
 
-// STG-561: BUY tab — supplier catalogue with wholesale metadata
-// Reads from existing catalogApi — this ticket is UI structure only.
+// V3-004: BUY tab with sub-screen navigation wired
 
 const SUPPLIERS = ["All Suppliers", "ABC Distributors", "XYZ Trading", "Fresh Dairy Co"];
 const CATEGORIES = ["All", "Biscuits", "Tea & Coffee", "Noodles", "Oil & Ghee", "Dairy", "Cleaning"];
@@ -23,6 +24,7 @@ const DEMO_PRODUCTS: SupplierProduct[] = [
 
 export default function BuyScreenV3() {
   const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [selectedSupplier, setSelectedSupplier] = useState(0);
@@ -44,7 +46,7 @@ export default function BuyScreenV3() {
           <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth={2}><Circle cx={11} cy={11} r={8} /><Path d="M21 21l-4.35-4.35" /></Svg>
           <Text style={styles.searchPlaceholder}>Search supplier products...</Text>
         </View>
-        <Pressable style={styles.scanBtn} accessibilityLabel="Scan barcode">
+        <Pressable style={styles.scanBtn} accessibilityLabel="Scan barcode" onPress={() => navigation.navigate("V3Scan")}>
           <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}><Rect x={3} y={3} width={18} height={18} rx={2} /><Path d="M7 7h.01M7 12h10M7 17h.01" /></Svg>
         </Pressable>
       </View>
@@ -93,11 +95,12 @@ export default function BuyScreenV3() {
             orderQtyCases={orderQtys[item.id] ?? item.moq}
             onQtyChange={(c) => handleQtyChange(item.id, c)}
             onAddToCart={() => showToast(`${item.name} ×${orderQtys[item.id] ?? item.moq} cases added`)}
+            onPress={() => navigation.navigate("V3Compare", { productName: item.name })}
           />
         )}
         ListFooterComponent={
           /* Counter Purchase CTA */
-          <Pressable style={styles.counterCta} accessibilityRole="button">
+          <Pressable style={styles.counterCta} accessibilityRole="button" onPress={() => navigation.navigate("V3CounterPurchase")}>
             <View style={styles.counterIcon}>
               <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2}><Rect x={3} y={3} width={18} height={18} rx={2} /><Path d="M7 7h.01M7 12h10M7 17h.01" /></Svg>
             </View>
