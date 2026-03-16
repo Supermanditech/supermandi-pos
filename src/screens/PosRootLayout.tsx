@@ -74,6 +74,8 @@ import { POS_MESSAGES } from "../utils/uiStatus";
 import { hydrateStockCacheForStore, setStockCacheStoreId } from "../services/stockCache";
 import { refreshStockSnapshot } from "../services/stockService";
 import { useSettingsStore } from "../stores/settingsStore";
+// STG-552: POS v3 layout behind feature flag
+import PosRootLayoutV3 from "./v3/PosRootLayoutV3";
 import { theme, useThemeColors } from "../theme";
 import { showToast } from "../utils/showToast";
 // GATE-000: Import probeReadiness for startup endpoint check
@@ -120,6 +122,12 @@ const POS_DEVICE_HINTS = ["sunmi", "pax", "urovo", "newland", "zebra", "honeywel
 const TAB_PILL_ANIMATION_MS = 200;
 
 export default function PosRootLayout() {
+  // STG-552: If v3 enabled, render new 4-tab layout instead
+  const posV3Enabled = useSettingsStore((s) => s.posV3Enabled);
+  if (posV3Enabled) {
+    return <PosRootLayoutV3 />;
+  }
+
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const isFocused = useIsFocused();

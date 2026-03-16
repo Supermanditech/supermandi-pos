@@ -16,6 +16,7 @@ type SettingsState = {
   bnplCreditLimit: number; // SM-020: BNPL credit limit in minor units (paise)
   bnplAvailableCredit: number; // SM-020: Available BNPL credit
   creditEnabled: boolean; // SM-022: Credit/Loans feature flag
+  posV3Enabled: boolean; // STG-552: POS v3 layout feature flag
   language: SupportedLanguage;
   storeName: string | null; // GO-LIVE: Store name from SuperAdmin (read-only, persisted for offline)
   storeCode: string | null; // GO-LIVE: Human-readable store code
@@ -36,6 +37,7 @@ type SettingsState = {
   setBnplCreditLimit: (limit: number) => void; // SM-020
   setBnplAvailableCredit: (credit: number) => void; // SM-020
   setCreditEnabled: (enabled: boolean) => void; // SM-022
+  setPosV3Enabled: (enabled: boolean) => void; // STG-552
   setLanguage: (lang: SupportedLanguage) => void;
   setStoreName: (name: string | null) => void;
   setStoreCode: (code: string | null) => void;
@@ -55,6 +57,7 @@ export const useSettingsStore = create<SettingsState>()(
       bnplCreditLimit: 5000000, // SM-020: Default 50k credit limit
       bnplAvailableCredit: 5000000, // SM-020: Default available credit
       creditEnabled: false, // SM-022: Credit disabled by default, enabled per store
+      posV3Enabled: false, // STG-552: POS v3 layout disabled by default
       language: 'en', // Default language
       storeName: null, // GO-LIVE: Persisted for offline display
       storeCode: null, // GO-LIVE: Human-readable store code
@@ -75,6 +78,7 @@ export const useSettingsStore = create<SettingsState>()(
       setBnplCreditLimit: (limit) => set({ bnplCreditLimit: limit }), // SM-020
       setBnplAvailableCredit: (credit) => set({ bnplAvailableCredit: credit }), // SM-020
       setCreditEnabled: (enabled) => set({ creditEnabled: Boolean(enabled) }), // SM-022
+      setPosV3Enabled: (enabled) => set({ posV3Enabled: Boolean(enabled) }), // STG-552
       setLanguage: (lang) => {
         set({ language: lang });
         // Also update i18n instance
@@ -87,7 +91,7 @@ export const useSettingsStore = create<SettingsState>()(
       setThemeMode: (mode) => set({ themeMode: mode }),
     }),
     {
-      name: 'supermandi.settings.v7', // LIVE.POS.THEME: Bumped version for themeMode field
+      name: 'supermandi.settings.v8', // STG-552: Bumped for posV3Enabled field
       storage: createJSONStorage(() => AsyncStorage),
       // LIVE.POS.THEME.PERSISTENCE_AND_BOOTSTRAP.001: Log hydration errors
       onRehydrateStorage: () => (_state, error) => {
