@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import BrandedHeader from "../../components/v3/BrandedHeader";
 import CustomerTypeToggle, { type SellMode } from "../../components/v3/CustomerTypeToggle";
 import ProductTileV3, { type ProductTileData } from "../../components/v3/ProductTileV3";
+import CartSheetV3 from "../../components/v3/CartSheetV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useProductsStore, type Product } from "../../stores/productsStore";
@@ -40,6 +41,7 @@ export default function SellScreenV3() {
   const [sellMode, setSellMode] = useState<SellMode>("retail");
   const [selectedCategory, setSelectedCategory] = useState("Frequent");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [cartSheetVisible, setCartSheetVisible] = useState(false);
 
   // Existing stores — no new data fetching
   const products = useProductsStore((s) => s.products);
@@ -179,9 +181,9 @@ export default function SellScreenV3() {
         windowSize={5}
       />
 
-      {/* Cart strip */}
+      {/* Cart strip — tap to expand sheet */}
       {cartCount > 0 ? (
-        <View style={styles.cartStrip}>
+        <Pressable style={styles.cartStrip} onPress={() => setCartSheetVisible(true)} accessibilityRole="button" accessibilityLabel="View cart">
           <View style={styles.cartLeft}>
             <Text style={styles.cartCount}>{cartCount} item{cartCount !== 1 ? "s" : ""}</Text>
             <Text style={styles.cartItems} numberOfLines={1}>
@@ -189,15 +191,23 @@ export default function SellScreenV3() {
             </Text>
           </View>
           <Text style={styles.cartTotal}>₹{Math.round(cartTotal / 100).toLocaleString("en-IN")}</Text>
-          <Pressable style={styles.payButton} accessibilityRole="button" accessibilityLabel="Pay">
+          <Pressable style={styles.payButton} onPress={(e) => { e.stopPropagation?.(); setCartSheetVisible(true); }} accessibilityRole="button" accessibilityLabel="Pay">
             <Text style={styles.payButtonText}>PAY →</Text>
           </Pressable>
-        </View>
+        </Pressable>
       ) : (
         <View style={styles.cartEmpty}>
           <Text style={styles.cartEmptyText}>Cart empty — tap a product or scan barcode</Text>
         </View>
       )}
+
+      {/* STG-554: Cart sheet overlay */}
+      <CartSheetV3
+        visible={cartSheetVisible}
+        sellMode={sellMode}
+        onClose={() => setCartSheetVisible(false)}
+        onCheckout={() => { setCartSheetVisible(false); /* navigate to payment in STG-556 */ }}
+      />
     </View>
   );
 }
