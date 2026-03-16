@@ -6,10 +6,11 @@ import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
+import { useProductsStore } from "../../stores/productsStore";
+import { useCartStore } from "../../stores/cartStore";
+import { logger } from "../../services/logger";
 
-// STG-559: Context-aware barcode scan screen v3
-// Same scanner works for Sell (add to cart), Stock In (record inward), New Product (create)
-// Reuses existing handleScan, HID scanner, camera services — UI only in this ticket.
+// V3-003: Context-aware barcode scan — wired to real productsStore + cartStore
 
 export type ScanContext = "sell" | "stock_in" | "new_product";
 
@@ -37,23 +38,49 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
   const [barcodeInput, setBarcodeInput] = useState("");
   const [lastResult, setLastResult] = useState<ScanResult | null>(null);
 
-  // Simulate scan result (in production, uses onBarcodeScanned from handleScan.ts)
+  // V3-003: Real barcode lookup from productsStore + cartStore
+  const getProductByBarcode = useProductsStore((s) => s.getProductByBarcode);
+  const addItem = useCartStore((s) => s.addItem);
+
   const handleScanSubmit = useCallback(() => {
     const code = barcodeInput.trim();
     if (!code) return;
-    // Simulate: known barcode returns product, unknown shows "new"
-    const isKnown = code.startsWith("890123");
-    const result: ScanResult = isKnown
-      ? { barcode: code, productName: "Parle-G Gold 100g", price: 1000, stock: 47, isNew: false }
-      : { barcode: code, isNew: true };
-    setLastResult(result);
-    if (!result.isNew) {
-      const action = context === "sell" ? "Added to cart" : context === "stock_in" ? "Stock inward recorded" : "Product found";
-      showToast(`${result.productName} — ${action}`);
-      onProductFound(code, context);
+
+    // Look up barcode in store's product database
+    const product = getProductByBarcode(code);
+    if (product) {
+      const result: ScanResult = {
+        barcode: code,
+        productName: product.name,
+        price: product.priceMinor,
+        stock: product.stock ?? undefined,
+        isNew: false,
+      };
+      setLastResult(result);
+
+      if (context === "sell") {
+        // Add to cart
+        const existing = useCartStore.getState().items.find((i) => i.barcode === code);
+        if (existing) {
+          useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
+          showToast(`${product.name} ×${existing.quantity + 1}`);
+        } else {
+          addItem({ id: code, name: product.name, priceMinor: product.priceMinor, barcode: code, currency: "INR" });
+          showToast(`${product.name} added to cart`);
+        }
+        onProductFound(code, context);
+      } else if (context === "stock_in") {
+        showToast(`${product.name} — ready for stock inward`);
+        onProductFound(code, context);
+      }
+      logger.debug("V3Scan", `found:${code},product:${product.name},context:${context}`);
+    } else {
+      // Product not found — show new product prompt
+      setLastResult({ barcode: code, isNew: true });
+      logger.debug("V3Scan", `not_found:${code}`);
     }
     setBarcodeInput("");
-  }, [barcodeInput, context, onProductFound]);
+  }, [barcodeInput, context, getProductByBarcode, addItem, onProductFound]);
 
   if (!visible) return null;
 

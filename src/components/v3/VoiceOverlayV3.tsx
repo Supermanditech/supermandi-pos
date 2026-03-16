@@ -6,10 +6,14 @@ import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
+import {
+  startRecording, stopRecording, cancelRecording,
+  submitVoiceCommand, type VoiceCommandResult,
+  VoiceRateLimitError, VoiceTimeoutError,
+} from "../../services/voice";
+import { logger } from "../../services/logger";
 
-// STG-558: Voice overlay v3 — always-accessible from sell screen header mic button
-// Wraps existing voice services (startRecording, stopRecording, submitVoiceCommand).
-// This component handles the UI; actual voice API is connected in production wiring.
+// V3-003: Voice overlay wired to real voice services
 
 type VoiceOverlayV3Props = {
   visible: boolean;
@@ -42,14 +46,62 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
     return () => anim.stop();
   }, [state, pulseAnim]);
 
-  // Simulate voice flow (in production, uses real voice services)
+  // V3-003: Real voice flow — startRecording on visible, submit on stop
   useEffect(() => {
-    if (!visible) { setState("listening"); setTranscript(""); setMatchedProduct(""); return; }
-    // Simulate: listening → transcript → matched
-    const t1 = setTimeout(() => { setTranscript('"2 Parle-G bada wala"'); setState("processing"); }, 1500);
-    const t2 = setTimeout(() => { setMatchedProduct("Parle-G 100g"); setMatchedQty(2); setState("matched"); }, 2500);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    if (!visible) { setState("idle"); setTranscript(""); setMatchedProduct(""); return; }
+    let cancelled = false;
+
+    const runVoice = async () => {
+      try {
+        setState("listening");
+        await startRecording();
+        // Wait for user to tap confirm or auto-stop triggers
+      } catch (err) {
+        if (!cancelled) {
+          if (err instanceof VoiceRateLimitError) {
+            showToast("Voice rate limited — try again in a moment");
+          } else {
+            logger.debug("VoiceV3", `start_failed:${String(err)}`);
+          }
+          setState("error");
+        }
+      }
+    };
+    void runVoice();
+
+    return () => { cancelled = true; void cancelRecording().catch(() => {}); };
   }, [visible]);
+
+  // Submit recording and get result
+  const handleStopAndSubmit = useCallback(async () => {
+    setState("processing");
+    try {
+      // submitVoiceCommand needs storeId — get from device session
+      const { getDeviceStoreId } = require("../../services/deviceSession");
+      const storeId = await getDeviceStoreId();
+      const result: VoiceCommandResult = await submitVoiceCommand(storeId ?? "");
+      const intent = result.intent;
+      const productName = intent?.productName ?? intent?.slots?.query ?? "";
+      const qty = intent?.quantity ?? intent?.slots?.quantity ?? 1;
+      if (result.success && productName) {
+        setTranscript(result.transcript ?? "");
+        setMatchedProduct(productName);
+        setMatchedQty(qty);
+        setState("matched");
+        logger.debug("VoiceV3", `matched:${productName},qty:${qty}`);
+      } else {
+        setTranscript(result.transcript ?? result.message ?? "");
+        setState("error");
+        showToast(result.message || "Could not match product — try again");
+      }
+    } catch (err) {
+      if (err instanceof VoiceTimeoutError) {
+        showToast("Voice timed out");
+      }
+      setState("error");
+      logger.debug("VoiceV3", `submit_failed:${String(err)}`);
+    }
+  }, []);
 
   const handleConfirm = useCallback(() => {
     onProductMatched(matchedProduct, matchedQty);
@@ -103,6 +155,11 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
           ) : null}
 
           {/* Action buttons */}
+          {state === "listening" ? (
+            <Pressable style={styles.confirmBtn} onPress={handleStopAndSubmit}>
+              <Text style={styles.confirmText}>Done Speaking — Submit</Text>
+            </Pressable>
+          ) : null}
           {state === "matched" ? (
             <View style={styles.actionRow}>
               <Pressable style={styles.confirmBtn} onPress={handleConfirm}>
@@ -112,6 +169,11 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
                 <Text style={styles.retryText}>Try Again</Text>
               </Pressable>
             </View>
+          ) : null}
+          {state === "error" ? (
+            <Pressable style={styles.retryBtn} onPress={handleRetry}>
+              <Text style={styles.retryText}>Try Again</Text>
+            </Pressable>
           ) : null}
 
           {/* Language hint */}

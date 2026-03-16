@@ -139,7 +139,7 @@ export default function SellScreenV3() {
             onBlur={() => setSearchFocused(false)}
           />
         </View>
-        <Pressable style={[styles.iconButton, { backgroundColor: colors.backgroundSecondary }]} accessibilityLabel="Scan barcode">
+        <Pressable style={[styles.iconButton, { backgroundColor: colors.backgroundSecondary }]} accessibilityLabel="Scan barcode" onPress={() => navigation.navigate("V3Scan")}>
           <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}>
             <Rect x={3} y={3} width={18} height={18} rx={2} />
             <Path d="M7 7h.01M7 12h10M7 17h.01M12 7h5M12 17h5" />
