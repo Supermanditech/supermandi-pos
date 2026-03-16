@@ -1,0 +1,181 @@
+import React, { useMemo } from "react";
+import { View, Pressable, StyleSheet, Text } from "react-native";
+import { useThemeColors } from "../../theme";
+import type { ColorPalette } from "../../theme";
+import type { SellMode } from "./CustomerTypeToggle";
+
+// STG-553: Product tile for v3 sell grid — stock dot, cart badge, case size, wholesale price
+
+export interface ProductTileData {
+  id: string;
+  name: string;
+  priceMrpMinor: number;      // MRP in paise
+  priceTradeMinor?: number;   // wholesale/trade price in paise (optional)
+  barcode?: string;
+  brand?: string;
+  category?: string;
+  stock?: number;
+  caseSize?: number;           // units per case
+  unit?: string;               // pcs, kg, ltr, btl
+}
+
+type ProductTileV3Props = {
+  product: ProductTileData;
+  sellMode: SellMode;
+  cartQty: number;
+  onPress: () => void;
+};
+
+function getStockStatus(stock?: number): "in" | "low" | "out" | "unknown" {
+  if (stock == null) return "unknown";
+  if (stock <= 0) return "out";
+  if (stock <= 10) return "low";
+  return "in";
+}
+
+export default function ProductTileV3({ product, sellMode, cartQty, onPress }: ProductTileV3Props) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const stockStatus = getStockStatus(product.stock);
+  const displayPrice = sellMode === "bulk" && product.priceTradeMinor
+    ? product.priceTradeMinor
+    : product.priceMrpMinor;
+  const priceLabel = `₹${(displayPrice / 100).toFixed(displayPrice % 100 === 0 ? 0 : 2)}`;
+  const emoji = getCategoryEmoji(product.category);
+
+  return (
+    <Pressable
+      style={[styles.tile, cartQty > 0 && styles.tileInCart]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${product.name}, ${priceLabel}, tap to add to cart`}
+    >
+      {cartQty > 0 ? (
+        <View style={styles.cartBadge}>
+          <Text style={styles.cartBadgeText}>{cartQty}</Text>
+        </View>
+      ) : null}
+
+      {stockStatus !== "unknown" ? (
+        <View style={[
+          styles.stockDot,
+          stockStatus === "in" && styles.dotGreen,
+          stockStatus === "low" && styles.dotYellow,
+          stockStatus === "out" && styles.dotRed,
+        ]} />
+      ) : null}
+
+      <View style={styles.imageArea}>
+        <Text style={styles.emoji}>{emoji}</Text>
+        {product.brand ? (
+          <Text style={styles.brandLabel}>{product.brand}</Text>
+        ) : null}
+      </View>
+
+      <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
+      <Text style={styles.price}>{priceLabel}</Text>
+
+      {product.caseSize ? (
+        <Text style={styles.caseInfo}>
+          {sellMode === "bulk" ? "Trade" : "MRP"} · {product.caseSize}/{product.unit ?? "pcs"}
+        </Text>
+      ) : null}
+    </Pressable>
+  );
+}
+
+function getCategoryEmoji(cat?: string): string {
+  const map: Record<string, string> = {
+    Biscuits: "🍪", Tea: "🍵", Noodles: "🍜", Cleaning: "🫧",
+    Dairy: "🥛", Bakery: "🍞", Staples: "🧂", Oil: "🫒",
+    Chocolate: "🍫", Snacks: "🍿", Beverages: "🥤",
+  };
+  return map[cat ?? ""] ?? "📦";
+}
+
+function createStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    tile: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 10,
+      alignItems: "center",
+      borderWidth: 2,
+      borderColor: "transparent",
+      position: "relative",
+    },
+    tileInCart: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primaryLight,
+    },
+    cartBadge: {
+      position: "absolute",
+      top: -6,
+      left: -6,
+      backgroundColor: colors.primary,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 2,
+    },
+    cartBadgeText: {
+      color: "#FFFFFF",
+      fontSize: 11,
+      fontWeight: "800",
+    },
+    stockDot: {
+      position: "absolute",
+      top: 7,
+      right: 7,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      borderWidth: 2,
+      borderColor: colors.surface,
+      zIndex: 1,
+    },
+    dotGreen: { backgroundColor: colors.success },
+    dotYellow: { backgroundColor: colors.warning },
+    dotRed: { backgroundColor: colors.error },
+    imageArea: {
+      width: "100%",
+      aspectRatio: 1,
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 6,
+    },
+    emoji: {
+      fontSize: 34,
+    },
+    brandLabel: {
+      fontSize: 8,
+      fontWeight: "700",
+      color: colors.textTertiary,
+      letterSpacing: 0.3,
+      marginTop: 2,
+    },
+    name: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      lineHeight: 14,
+      textAlign: "center",
+      height: 28,
+    },
+    price: {
+      fontSize: 15,
+      fontWeight: "800",
+      color: colors.primary,
+      marginTop: 2,
+    },
+    caseInfo: {
+      fontSize: 8,
+      color: colors.textTertiary,
+      marginTop: 1,
+    },
+  });
+}

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import BottomNavV3, { type V3Tab } from "../../components/v3/BottomNavV3";
 import ScreenErrorBoundary from "../../components/ui/ScreenErrorBoundary";
+import SellScreenV3 from "./SellScreenV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useCartStore } from "../../stores/cartStore";
@@ -38,7 +39,7 @@ export default function PosRootLayoutV3() {
       <View style={styles.content}>
         {activeTab === "SELL" ? (
           <ScreenErrorBoundary screenName="SellV3">
-            <PlaceholderScreen name="SELL" description="Product grid, barcode scan, voice input, cart strip, Retail/Bulk toggle. Replacing SellScanScreen (8005 lines)." />
+            <SellScreenV3 />
           </ScreenErrorBoundary>
         ) : null}
         {activeTab === "BUY" ? (

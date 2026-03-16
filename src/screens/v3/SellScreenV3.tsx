@@ -1,0 +1,235 @@
+import React, { useCallback, useMemo, useState } from "react";
+import { View, FlatList, TextInput, Pressable, StyleSheet, Text } from "react-native";
+import Svg, { Rect, Path, Circle } from "react-native-svg";
+import { useTranslation } from "react-i18next";
+
+import BrandedHeader from "../../components/v3/BrandedHeader";
+import CustomerTypeToggle, { type SellMode } from "../../components/v3/CustomerTypeToggle";
+import ProductTileV3, { type ProductTileData } from "../../components/v3/ProductTileV3";
+import { useThemeColors } from "../../theme";
+import type { ColorPalette } from "../../theme";
+import { useProductsStore, type Product } from "../../stores/productsStore";
+import { useCartStore } from "../../stores/cartStore";
+import { formatMoney } from "../../utils/money";
+import { showToast } from "../../utils/showToast";
+
+// STG-553: POS v3 Sell screen — product grid with Retail/Bulk toggle
+// Reads from existing productsStore + cartStore. No backend changes.
+
+const CATEGORIES = ["Frequent", "Beverages", "Snacks", "Dairy", "Staples", "Home Care"];
+
+function productToTileData(p: Product): ProductTileData {
+  return {
+    id: p.id,
+    name: p.name,
+    priceMrpMinor: p.priceMinor,
+    priceTradeMinor: Math.round(p.priceMinor * 0.85), // ~15% trade margin estimate
+    barcode: p.barcode,
+    category: p.category,
+    stock: p.stock,
+    brand: p.description?.split(" ")?.[0], // rough brand extraction
+    caseSize: 24, // default case size — will come from backend in STG-555
+    unit: "pcs",
+  };
+}
+
+export default function SellScreenV3() {
+  const { t } = useTranslation();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const [sellMode, setSellMode] = useState<SellMode>("retail");
+  const [selectedCategory, setSelectedCategory] = useState("Frequent");
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  // Existing stores — no new data fetching
+  const products = useProductsStore((s) => s.products);
+  const cartItems = useCartStore((s) => s.items);
+  const addItem = useCartStore((s) => s.addItem);
+  const cartTotal = useCartStore((s) => {
+    const price = sellMode === "bulk" ? 0.85 : 1;
+    return s.items.reduce((sum, item) => sum + item.priceMinor * item.quantity * price, 0);
+  });
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Map products to tile data
+  const tileProducts: ProductTileData[] = useMemo(
+    () => products.slice(0, 30).map(productToTileData),
+    [products]
+  );
+
+  // Get cart qty for a product
+  const getCartQty = useCallback(
+    (productId: string): number => {
+      const item = cartItems.find((i) => i.id === productId || i.barcode === productId);
+      return item?.quantity ?? 0;
+    },
+    [cartItems]
+  );
+
+  // Add product to cart
+  const handleAddProduct = useCallback(
+    (product: ProductTileData) => {
+      const existing = cartItems.find((i) => i.id === product.id || i.barcode === product.barcode);
+      if (existing) {
+        useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
+        showToast(`${product.name} ×${existing.quantity + 1}`);
+      } else {
+        const price = sellMode === "bulk" && product.priceTradeMinor
+          ? product.priceTradeMinor
+          : product.priceMrpMinor;
+        addItem({
+          id: product.barcode ?? product.id,
+          name: product.name,
+          priceMinor: price,
+          currency: "INR",
+          barcode: product.barcode,
+          metadata: {
+            brand: product.brand,
+            caseSize: product.caseSize,
+            unit: product.unit,
+            sellMode,
+          },
+        });
+        showToast(`${product.name} added`);
+      }
+    },
+    [cartItems, addItem, sellMode]
+  );
+
+  const renderTile = useCallback(
+    ({ item }: { item: ProductTileData }) => (
+      <ProductTileV3
+        product={item}
+        sellMode={sellMode}
+        cartQty={getCartQty(item.barcode ?? item.id)}
+        onPress={() => handleAddProduct(item)}
+      />
+    ),
+    [sellMode, getCartQty, handleAddProduct]
+  );
+
+  return (
+    <View style={styles.container}>
+      {/* Branded header */}
+      <BrandedHeader />
+
+      {/* Search bar */}
+      <View style={styles.searchBar}>
+        <View style={[styles.searchInput, searchFocused && styles.searchInputFocused]}>
+          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={searchFocused ? colors.primary : colors.textTertiary} strokeWidth={2} strokeLinecap="round">
+            <Circle cx={11} cy={11} r={8} />
+            <Path d="M21 21l-4.35-4.35" />
+          </Svg>
+          <TextInput
+            style={styles.searchText}
+            placeholder={t("sell.searchProducts", "Search your products...")}
+            placeholderTextColor={colors.textTertiary}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+          />
+        </View>
+        <Pressable style={[styles.iconButton, { backgroundColor: colors.backgroundSecondary }]} accessibilityLabel="Scan barcode">
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}>
+            <Rect x={3} y={3} width={18} height={18} rx={2} />
+            <Path d="M7 7h.01M7 12h10M7 17h.01M12 7h5M12 17h5" />
+          </Svg>
+        </Pressable>
+        <Pressable style={[styles.iconButton, { backgroundColor: colors.primaryLight }]} accessibilityLabel="Voice input">
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth={2}>
+            <Rect x={9} y={2} width={6} height={12} rx={3} />
+            <Path d="M5 10a7 7 0 0014 0M12 18v4M9 22h6" />
+          </Svg>
+        </Pressable>
+      </View>
+
+      {/* Retail / Bulk toggle */}
+      <CustomerTypeToggle mode={sellMode} onModeChange={setSellMode} />
+
+      {/* Category chips */}
+      <View style={styles.chipRow}>
+        <FlatList
+          horizontal
+          data={CATEGORIES}
+          keyExtractor={(item) => item}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipContent}
+          renderItem={({ item }) => (
+            <Pressable
+              style={[styles.chip, selectedCategory === item && styles.chipActive]}
+              onPress={() => setSelectedCategory(item)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: selectedCategory === item }}
+            >
+              <Text style={[styles.chipText, selectedCategory === item && styles.chipTextActive]}>{item}</Text>
+            </Pressable>
+          )}
+        />
+      </View>
+
+      {/* Product grid */}
+      <FlatList
+        data={tileProducts}
+        keyExtractor={(item) => item.id}
+        numColumns={3}
+        columnWrapperStyle={styles.gridRow}
+        contentContainerStyle={styles.gridContainer}
+        renderItem={renderTile}
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews
+        windowSize={5}
+      />
+
+      {/* Cart strip */}
+      {cartCount > 0 ? (
+        <View style={styles.cartStrip}>
+          <View style={styles.cartLeft}>
+            <Text style={styles.cartCount}>{cartCount} item{cartCount !== 1 ? "s" : ""}</Text>
+            <Text style={styles.cartItems} numberOfLines={1}>
+              {cartItems.slice(0, 3).map((i) => i.name.split(" ")[0]).join(", ")}
+            </Text>
+          </View>
+          <Text style={styles.cartTotal}>₹{Math.round(cartTotal / 100).toLocaleString("en-IN")}</Text>
+          <Pressable style={styles.payButton} accessibilityRole="button" accessibilityLabel="Pay">
+            <Text style={styles.payButtonText}>PAY →</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.cartEmpty}>
+          <Text style={styles.cartEmptyText}>Cart empty — tap a product or scan barcode</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function createStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    // Search
+    searchBar: { flexDirection: "row", gap: 8, padding: 10, paddingHorizontal: 14, backgroundColor: colors.surface },
+    searchInput: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: colors.background, borderRadius: 14, borderWidth: 2, borderColor: colors.border },
+    searchInputFocused: { borderColor: colors.primary, backgroundColor: colors.surface },
+    searchText: { flex: 1, fontSize: 14, fontWeight: "500", color: colors.textPrimary },
+    iconButton: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+    // Chips
+    chipRow: { backgroundColor: colors.surface },
+    chipContent: { paddingHorizontal: 14, paddingVertical: 10, gap: 8 },
+    chip: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 22, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border },
+    chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    chipText: { fontSize: 12, fontWeight: "700", color: colors.textSecondary },
+    chipTextActive: { color: "#FFFFFF" },
+    // Grid
+    gridContainer: { paddingHorizontal: 14, paddingVertical: 12 },
+    gridRow: { gap: 10, marginBottom: 10 },
+    // Cart strip
+    cartStrip: { marginHorizontal: 12, marginBottom: 8, borderRadius: 18, padding: 14, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.primary },
+    cartLeft: { flexDirection: "column", gap: 2 },
+    cartCount: { fontSize: 13, fontWeight: "700", color: "#FFFFFF" },
+    cartItems: { fontSize: 10, color: "rgba(255,255,255,0.8)", maxWidth: 140 },
+    cartTotal: { fontSize: 18, fontWeight: "900", color: "#FFFFFF", marginHorizontal: 12 },
+    payButton: { backgroundColor: "#FFFFFF", paddingHorizontal: 22, paddingVertical: 10, borderRadius: 12 },
+    payButtonText: { color: colors.primary, fontSize: 14, fontWeight: "800" },
+    cartEmpty: { marginHorizontal: 12, marginBottom: 8, borderRadius: 18, padding: 14, borderWidth: 2, borderStyle: "dashed", borderColor: colors.border, alignItems: "center" },
+    cartEmptyText: { fontSize: 12, fontWeight: "500", color: colors.textTertiary },
+  });
+}
