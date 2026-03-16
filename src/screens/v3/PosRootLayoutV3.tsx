@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import BottomNavV3, { type V3Tab } from "../../components/v3/BottomNavV3";
 import ScreenErrorBoundary from "../../components/ui/ScreenErrorBoundary";
 import SellScreenV3 from "./SellScreenV3";
+import BuyScreenV3 from "./BuyScreenV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useCartStore } from "../../stores/cartStore";
@@ -44,7 +45,7 @@ export default function PosRootLayoutV3() {
         ) : null}
         {activeTab === "BUY" ? (
           <ScreenErrorBoundary screenName="BuyV3">
-            <PlaceholderScreen name="BUY" description="Supplier catalogue with wholesale metadata (PTR/PTS/HSN/MOQ), counter purchase, price comparison. New tab." />
+            <BuyScreenV3 />
           </ScreenErrorBoundary>
         ) : null}
         {activeTab === "STORE" ? (
