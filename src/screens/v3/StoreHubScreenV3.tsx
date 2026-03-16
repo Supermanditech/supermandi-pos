@@ -1,24 +1,52 @@
-import React, { useMemo } from "react";
-import { View, Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import React, { useMemo, useState, useEffect } from "react";
+import { View, Pressable, ScrollView, ActivityIndicator, StyleSheet, Text } from "react-native";
 import Svg, { Rect, Path, Circle, Line } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getPurchaseHistory } from "../../services/api/inventoryApi";
+import { logger } from "../../services/logger";
 
-// STG-567: Store hub — 4 action cards (Receive/Reorder/Stock/Barcode) + recent orders
+// V3-019: Store hub with real purchase history
 
 type StoreHubScreenV3Props = {
   onNavigate: (screen: "grn" | "reorder" | "stock" | "barcode") => void;
 };
 
-const RECENT_ORDERS = [
-  { supplier: "ABC Distributors", daysAgo: 3, items: 12, total: 4500, status: "Delivered" as const },
-  { supplier: "XYZ Trading", daysAgo: 5, items: 8, total: 2100, status: "In Transit" as const },
-  { supplier: "Fresh Dairy Co", daysAgo: 7, items: 5, total: 1800, status: "Delivered" as const },
-];
+type RecentOrder = { supplier: string; daysAgo: number; items: number; total: number; status: "Delivered" | "In Transit" };
 
 export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+
+  // V3-019: Fetch real purchase history
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const result = await getPurchaseHistory(undefined, undefined, 5);
+        const orders: RecentOrder[] = (result.entries ?? []).map((e: any) => {
+          const daysAgo = Math.max(1, Math.round((Date.now() - new Date(e.created_at ?? e.createdAt ?? Date.now()).getTime()) / 86400000));
+          return {
+            supplier: e.supplier_name ?? e.supplierName ?? "Supplier",
+            daysAgo,
+            items: e.item_count ?? e.itemCount ?? 0,
+            total: Math.round((e.total_minor ?? e.totalMinor ?? 0) / 100),
+            status: (e.status === "delivered" ? "Delivered" : "In Transit") as "Delivered" | "In Transit",
+          };
+        });
+        setRecentOrders(orders);
+      } catch (err) {
+        logger.debug("StoreHubV3", `fetch_failed:${String(err)}`);
+        // Fallback
+        setRecentOrders([
+          { supplier: "No recent orders", daysAgo: 0, items: 0, total: 0, status: "Delivered" },
+        ]);
+      }
+      setLoadingOrders(false);
+    };
+    void fetch();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -57,7 +85,8 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
         </View>
 
         <Text style={styles.sectionTitle}>RECENT ORDERS</Text>
-        {RECENT_ORDERS.map((order, i) => (
+        {loadingOrders ? <ActivityIndicator size="small" color={colors.primary} style={{ padding: 20 }} /> : null}
+        {recentOrders.map((order, i) => (
           <View key={i} style={styles.orderCard}>
             <View style={{ flex: 1 }}>
               <Text style={styles.orderSupplier}>{order.supplier}</Text>

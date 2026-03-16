@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 257,
+  "version": 258,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -7031,8 +7031,8 @@
       "ticket": "STG-567",
       "file": "src/screens/v3/StoreHubScreenV3.tsx",
       "start_line": 1,
-      "end_line": 93,
-      "checksum": "467fbc6cdb49eecf",
+      "end_line": 124,
+      "checksum": "d33e0807fe155b77",
       "description": "Store hub v3 — 4 SVG action cards, recent orders",
       "test_file": "src/__tests__/screens/store-layer4.stg-567-570.test.ts",
       "depends_on": null,
