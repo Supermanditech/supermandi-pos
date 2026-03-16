@@ -6,8 +6,11 @@ import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
+import { upsertLocalProduct, setLocalPrice } from "../../services/offline/scan";
+import { useCartStore } from "../../stores/cartStore";
+import { logger } from "../../services/logger";
 
-// STG-564: New product digitization — scan-to-add in 10 seconds
+// V3-012: New product digitization — wired to upsertLocalProduct + cartStore
 // If barcode is in SuperMandi master DB → auto-fill name/brand/MRP, retailer only sets sell price
 // If not in master DB → full form with photo
 // Reuses existing upsertLocalProduct (connected in production wiring)
@@ -49,11 +52,37 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
 
   const canSubmit = name.trim().length > 0 && (sellPrice.trim().length > 0 || mrp.trim().length > 0);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) { showToast("Enter product name and price"); return; }
-    onProductAdded(barcode, name);
-    showToast(`${name} added to store & cart`);
-    onClose();
+    try {
+      // V3-012: Save product to offline DB
+      const stockQty = parseInt(openingStock, 10) || 0;
+      await upsertLocalProduct(barcode, name, "INR", category || null, null, stockQty);
+
+      // Set sell price
+      const priceMinor = Math.round(parseFloat(sellPrice || mrp) * 100);
+      if (priceMinor > 0) {
+        await setLocalPrice(barcode, priceMinor);
+      }
+
+      // Add to cart
+      useCartStore.getState().addItem({
+        id: barcode,
+        name,
+        priceMinor: priceMinor || Math.round(parseFloat(mrp) * 100) || 0,
+        barcode,
+        currency: "INR",
+        metadata: { brand, category, packSize, unit, hsnCode, gstPct: parseInt(gstPct, 10) || 18 },
+      });
+
+      logger.debug("NewProductV3", `created:${barcode},name:${name},price:${priceMinor}`);
+      onProductAdded(barcode, name);
+      showToast(`${name} added to store & cart`);
+      onClose();
+    } catch (err) {
+      showToast("Failed to save product");
+      logger.debug("NewProductV3", `failed:${String(err)}`);
+    }
   };
 
   return (
