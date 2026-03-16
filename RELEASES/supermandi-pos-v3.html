@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>SuperMandi POS — v3 Complete Prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--p:#2563EB;--pd:#1D4ED8;--pl:#EFF6FF;--a:#14B8A6;--ad:#0D9488;--al:#F0FDFA;--bg:#F7F9FC;--b2:#F1F5F9;--b3:#E2E8F0;--s:#FFF;--t1:#0F172A;--t2:#475569;--t3:#64748B;--ok:#16A34A;--ol:#ECFDF5;--er:#DC2626;--el:#FEF2F2;--w:#F59E0B;--wl:#FFF7ED;--bd:#E2E8F0;--wa:#25D366;--pur:#7C3AED;--pul:#F5F3FF}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#0B1120}
+.app{max-width:430px;margin:0 auto;height:100%;display:flex;flex-direction:column;background:var(--bg);position:relative;overflow:hidden;box-shadow:0 0 100px rgba(37,99,235,.08)}
+
+/* === SCREENS === */
+.sc{display:none;flex-direction:column;height:100%;position:absolute;inset:0;background:var(--bg);z-index:1}
+.sc.on{display:flex;z-index:2;animation:scIn .3s cubic-bezier(.25,.46,.45,.94)}
+@keyframes scIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+
+/* === HEADER === */
+.hd{background:linear-gradient(135deg,var(--p) 0%,var(--pd) 100%);padding:14px 16px;display:flex;align-items:center;gap:10px;min-height:56px;position:relative;z-index:5}
+.hd::after{content:'';position:absolute;bottom:-12px;left:0;right:0;height:12px;background:linear-gradient(to bottom,rgba(37,99,235,.06),transparent);pointer-events:none}
+.hd h1{color:#fff;font-size:16px;font-weight:700;flex:1;letter-spacing:-.3px}
+.hd .bk{color:#fff;width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.15);border-radius:10px;cursor:pointer;font-size:16px;transition:all .15s;border:none}
+.hd .bk:hover{background:rgba(255,255,255,.25)}
+.hd-btn{padding:7px 14px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:none;transition:all .15s}
+.hd-btn.w{background:rgba(255,255,255,.2);color:#fff;backdrop-filter:blur(4px)}
+.hd-btn.s{background:#fff;color:var(--p)}
+
+/* === BOTTOM NAV — SuperMandi Signature === */
+.bn{display:flex;background:#fff;padding:0;flex-shrink:0;position:relative;z-index:5;overflow:visible}
+.bn::before{content:'';position:absolute;top:-20px;left:0;right:0;height:20px;background:linear-gradient(to top,rgba(255,255,255,.9),transparent);pointer-events:none}
+.bn-t{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 10px;cursor:pointer;position:relative;transition:all .25s cubic-bezier(.4,0,.2,1);-webkit-tap-highlight-color:transparent}
+.bn-t:active .ic{transform:scale(.85)}
+
+/* Icon container */
+.bn-t .ic{width:56px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:16px;transition:all .3s cubic-bezier(.4,0,.2,1);position:relative}
+.bn-t .ic svg{width:22px;height:22px;transition:all .3s}
+
+/* === ALL TABS — always colored, SuperMandi blue family === */
+.bn-t .ic svg{stroke:var(--p);stroke-width:1.6;fill:none;opacity:.45}
+.bn-t .lb{font-size:10px;font-weight:600;color:var(--p);opacity:.5;transition:all .3s;letter-spacing:.2px}
+
+/* === ACTIVE — full intensity + elevated === */
+.bn-t.on .ic{background:var(--p);box-shadow:0 4px 14px rgba(37,99,235,.35);transform:translateY(-2px)}
+.bn-t.on .ic svg{stroke:#fff;stroke-width:2;fill:#fff;fill-opacity:.2;opacity:1}
+.bn-t.on .lb{color:var(--p);font-weight:800;font-size:10px;opacity:1}
+
+/* Active glow ring */
+.bn-t.on .ic::after{content:'';position:absolute;inset:-3px;border-radius:19px;background:var(--p);opacity:.12;z-index:-1;animation:navGlow 2s ease-in-out infinite}
+@keyframes navGlow{0%,100%{opacity:.12;transform:scale(1)}50%{opacity:.2;transform:scale(1.08)}}
+
+/* Badge */
+.bn-b{position:absolute;top:0;left:calc(50% + 12px);background:linear-gradient(135deg,#EF4444,#DC2626);color:#fff;font-size:8px;font-weight:800;padding:2px 6px;border-radius:10px;box-shadow:0 2px 8px rgba(239,68,68,.4);min-width:16px;text-align:center;z-index:2;line-height:12px;border:2px solid #fff}
+
+/* BUY tab — same SuperMandi blue, not teal (brand consistency) */
+.bn-t.buy.on .ic{background:var(--p);box-shadow:0 4px 14px rgba(37,99,235,.35)}
+.bn-t.buy.on .ic::after{background:var(--p)}
+.bn-t.buy.on .lb{color:var(--p)}
+
+/* === BODY SCROLL === */
+.bd{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+.bd::-webkit-scrollbar{width:2px}.bd::-webkit-scrollbar-thumb{background:var(--b3);border-radius:2px}
+
+/* === SEARCH === */
+.sb{display:flex;gap:8px;padding:10px 14px;background:var(--s)}
+.sb input{flex:1;padding:12px 16px;border-radius:14px;border:2px solid var(--b3);font-size:14px;font-weight:500;background:var(--bg);outline:none;transition:all .2s}
+.sb input:focus{border-color:var(--p);background:#fff;box-shadow:0 0 0 4px rgba(37,99,235,.08)}
+.sb input::placeholder{color:var(--t3)}
+.sb-ic{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border:none;flex-shrink:0;transition:all .15s;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.sb-ic:hover{transform:scale(1.08);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+
+/* === CHIPS === */
+.ch{display:flex;gap:8px;padding:10px 14px;overflow-x:auto;background:var(--s);scrollbar-width:none}
+.ch::-webkit-scrollbar{display:none}
+.cp{padding:8px 18px;border-radius:22px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;border:none;transition:all .2s}
+.cp.on{background:linear-gradient(135deg,var(--p),#3B82F6);color:#fff;box-shadow:0 3px 12px rgba(37,99,235,.25)}
+.cp.off{background:#fff;color:var(--t2);border:1.5px solid var(--b3)}
+.cp.off:hover{border-color:var(--p);color:var(--p)}
+
+/* === PRODUCT GRID === */
+.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px 14px}
+.pt{background:#fff;border-radius:16px;padding:10px;text-align:center;cursor:pointer;border:2px solid transparent;position:relative;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.pt:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(37,99,235,.1);border-color:rgba(37,99,235,.3)}
+.pt:active{transform:scale(.96)}
+.pt.inc{border-color:var(--p);background:linear-gradient(to bottom,var(--pl),#fff);box-shadow:0 4px 16px rgba(37,99,235,.15)}
+.pt-img{width:100%;aspect-ratio:1;background:var(--b2);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:6px;position:relative;overflow:hidden}
+.pt-img .pi-icon{font-size:34px;line-height:1}
+.pt-img .pi-brand{font-size:8px;font-weight:700;color:var(--t3);letter-spacing:.3px;margin-top:2px}
+.pt-n{font-size:11px;font-weight:600;color:var(--t1);line-height:1.3;height:28px;overflow:hidden}
+.pt-p{font-size:15px;font-weight:800;color:var(--p);margin-top:2px}
+.pt-sd{position:absolute;top:7px;right:7px;width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.sd-g{background:var(--ok)}.sd-y{background:var(--w)}.sd-r{background:var(--er)}
+.pt-cb{position:absolute;top:-6px;left:-6px;background:linear-gradient(135deg,var(--p),#3B82F6);color:#fff;font-size:11px;font-weight:800;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(37,99,235,.35);animation:pop .3s cubic-bezier(.68,-.55,.265,1.55)}
+@keyframes pop{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+
+/* === CART STRIP === */
+.cs{margin:0 12px 8px;border-radius:18px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;flex-shrink:0;background:linear-gradient(135deg,var(--p),var(--pd));box-shadow:0 6px 24px rgba(37,99,235,.25);transition:all .2s}
+.cs:hover{transform:translateY(-1px);box-shadow:0 8px 32px rgba(37,99,235,.3)}
+.cs-l{display:flex;flex-direction:column;color:#fff;gap:2px}.cs-c{font-size:13px;font-weight:700}.cs-i{font-size:10px;opacity:.8}
+.cs-t{font-size:18px;font-weight:900;color:#fff;margin:0 12px}
+.cs-btn{background:#fff;color:var(--p);padding:10px 22px;border-radius:12px;font-weight:800;font-size:14px;border:none;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.1);transition:all .15s;letter-spacing:-.2px}
+.cs-btn:hover{transform:scale(1.05);box-shadow:0 4px 14px rgba(0,0,0,.15)}
+.cs-empty{margin:0 12px 8px;border-radius:18px;padding:14px;text-align:center;color:var(--t3);font-size:12px;font-weight:500;border:2px dashed var(--b3);flex-shrink:0}
+
+/* === CARDS === */
+.cd{background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.03);border:1px solid rgba(226,232,240,.5);transition:all .2s}
+.cd:hover{box-shadow:0 4px 16px rgba(0,0,0,.06)}
+
+/* === BUTTONS === */
+.bt{padding:14px 24px;border-radius:14px;border:none;font-size:15px;font-weight:700;cursor:pointer;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;width:100%;letter-spacing:-.2px}
+.bt:active{transform:scale(.97)}
+.bt-p{background:linear-gradient(135deg,var(--p),#3B82F6);color:#fff;box-shadow:0 4px 16px rgba(37,99,235,.25)}
+.bt-p:hover{box-shadow:0 6px 24px rgba(37,99,235,.35);transform:translateY(-1px)}
+.bt-g{background:linear-gradient(135deg,var(--ok),#22C55E);color:#fff;box-shadow:0 4px 16px rgba(22,163,74,.25)}
+.bt-o{background:#fff;color:var(--p);border:2px solid var(--p)}
+.bt-o:hover{background:var(--pl)}
+.bt-gh{background:none;color:var(--t3);padding:10px}
+.bt-er{background:linear-gradient(135deg,var(--er),#EF4444);color:#fff}
+.bt-sm{padding:8px 16px;font-size:12px;border-radius:10px;width:auto}
+.bt-lg{padding:16px 32px;font-size:17px;border-radius:16px}
+
+/* === INPUTS === */
+.ip{width:100%;padding:14px 16px;border-radius:14px;border:2px solid var(--b3);font-size:15px;font-weight:500;outline:none;transition:all .2s}
+.ip:focus{border-color:var(--p);box-shadow:0 0 0 4px rgba(37,99,235,.08)}
+.ip-lb{font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+
+/* === SECTION TITLE === */
+.st{font-size:10px;font-weight:800;color:var(--t3);padding:16px 16px 8px;text-transform:uppercase;letter-spacing:.8px}
+
+/* === PAYMENT BUTTONS === */
+.py-g{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:20px 16px}
+.py-b{padding:28px 12px;border-radius:20px;border:2px solid var(--b3);text-align:center;cursor:pointer;background:#fff;transition:all .25s;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.py-b:hover{border-color:var(--p);background:var(--pl);transform:translateY(-4px);box-shadow:0 12px 32px rgba(37,99,235,.12)}
+.py-b:active{transform:scale(.96)}
+.py-b .pi{font-size:40px;margin-bottom:10px}.py-b .pl{font-size:17px;font-weight:800;letter-spacing:-.3px}
+
+/* === QUICK AMOUNTS === */
+.qa-g{display:flex;gap:10px;padding:0 16px;flex-wrap:wrap;justify-content:center}
+.qa{padding:14px 22px;border-radius:14px;border:2px solid var(--b3);font-size:16px;font-weight:800;cursor:pointer;background:#fff;transition:all .2s;letter-spacing:-.3px}
+.qa:hover{border-color:var(--ok);background:var(--ol);transform:translateY(-2px)}
+.qa.ex{background:linear-gradient(135deg,var(--ok),#22C55E);color:#fff;border-color:var(--ok);box-shadow:0 4px 16px rgba(22,163,74,.25)}
+
+/* === CART ITEMS === */
+.ci{display:flex;align-items:center;padding:14px 16px;gap:12px;border-bottom:1px solid var(--b2);transition:background .15s}
+.ci:hover{background:rgba(37,99,235,.02)}
+.ci-im{width:44px;height:44px;background:linear-gradient(135deg,var(--b2),#fff);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.ci-nf{flex:1;min-width:0}.ci-nm{font-size:14px;font-weight:700;letter-spacing:-.2px}.ci-pr{font-size:11px;color:var(--t3);margin-top:1px}
+.ci-qty{display:flex;align-items:center;background:var(--b2);border-radius:10px;overflow:hidden}
+.qb{width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;cursor:pointer;border:none;background:none;color:var(--p);transition:background .1s}
+.qb:hover{background:var(--pl)}.qb:active{background:var(--p);color:#fff}
+.qv{font-size:15px;font-weight:800;min-width:24px;text-align:center}
+.ci-tt{font-size:15px;font-weight:800;min-width:48px;text-align:right;letter-spacing:-.3px}
+
+/* === MENU ITEMS === */
+.mi{display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;border-bottom:1px solid rgba(241,245,249,.8);transition:all .15s}
+.mi:hover{background:var(--pl);padding-left:22px}
+.mi:active{background:rgba(37,99,235,.06)}
+.mi-ic{font-size:20px;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.mi .lb{font-size:14px;font-weight:600;flex:1;letter-spacing:-.2px}.mi .ar{font-size:14px;color:var(--b3);transition:all .15s}
+.mi:hover .ar{transform:translateX(4px);color:var(--p)}
+.mi .bg{background:var(--er);color:#fff;font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;box-shadow:0 2px 6px rgba(220,38,38,.2)}
+
+/* === KHATA === */
+.kc{display:flex;align-items:center;gap:12px;padding:14px 16px;background:#fff;border-radius:14px;border:1px solid var(--bd);cursor:pointer;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,.02)}
+.kc+.kc{margin-top:8px}
+.kc:hover{box-shadow:0 4px 16px rgba(0,0,0,.06);transform:translateX(3px)}
+.kc:active{transform:scale(.98)}
+.kav{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--pl),#DBEAFE);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--p);flex-shrink:0;box-shadow:0 2px 8px rgba(37,99,235,.1)}
+.ki{flex:1;min-width:0}.kn{font-size:14px;font-weight:700;letter-spacing:-.2px}.kd{font-size:11px;color:var(--t3);margin-top:1px}
+.ka{font-size:17px;font-weight:900;letter-spacing:-.3px}
+.ka.od{color:var(--er)}.ka.pe{color:var(--w)}
+
+/* === ACTION GRID === */
+.ag{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px}
+.ac{background:#fff;border-radius:18px;padding:24px 16px;text-align:center;cursor:pointer;border:1.5px solid var(--b3);transition:all .25s;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.ac:hover{border-color:var(--p);transform:translateY(-4px);box-shadow:0 12px 32px rgba(37,99,235,.1)}
+.ac:active{transform:scale(.97)}
+.ac .ai{font-size:40px;margin-bottom:8px}.ac .at{font-size:15px;font-weight:800;letter-spacing:-.3px}
+.ac .as{font-size:11px;color:var(--t3);margin-top:4px}
+
+/* === SUPPLIER CARDS === */
+.sc-c{display:flex;gap:12px;padding:14px;background:#fff;border-radius:14px;border:1px solid var(--bd);cursor:pointer;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,.02)}
+.sc-c+.sc-c{margin-top:8px}
+.sc-c:hover{box-shadow:0 6px 20px rgba(0,0,0,.06);border-color:var(--p);transform:translateY(-2px)}
+
+/* === PROFIT BADGE === */
+.pb{display:inline-flex;align-items:center;gap:3px;background:var(--ol);color:var(--ok);padding:4px 10px;border-radius:8px;font-size:11px;font-weight:800}
+
+/* === MORNING CARD === */
+.mc{background:linear-gradient(135deg,#1E40AF,var(--p),#3B82F6);border-radius:20px;padding:20px;color:#fff;margin:12px 14px;box-shadow:0 8px 32px rgba(37,99,235,.2);position:relative;overflow:hidden}
+.mc::before{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,.05);border-radius:50%}
+.mc h3{font-size:15px;font-weight:700;letter-spacing:-.2px;margin-bottom:8px}
+.mc .ms{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;opacity:.9}.mc .mv{font-weight:700;opacity:1}
+
+/* === TABS === */
+.tb{display:flex;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.tb-t{flex:1;padding:12px;text-align:center;font-size:12px;font-weight:700;cursor:pointer;color:var(--t3);border-bottom:3px solid transparent;transition:all .15s;letter-spacing:-.1px}
+.tb-t.on{color:var(--p);border-bottom-color:var(--p)}
+.tb-t:hover{color:var(--p)}
+
+/* === REPORT CARDS === */
+.rc{background:#fff;border-radius:14px;padding:16px;border:1px solid var(--bd);transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,.02)}
+.rc:hover{box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.rc-t{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t3)}.rc-v{font-size:22px;font-weight:900;margin-top:4px;letter-spacing:-.5px}.rc-s{font-size:11px;color:var(--t3);margin-top:2px}
+
+/* === FINANCE CARDS === */
+.fc{background:#fff;border-radius:18px;padding:18px;border:1px solid var(--bd);transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.fc:hover{box-shadow:0 8px 24px rgba(0,0,0,.08);transform:translateY(-2px)}
+.fc-pv{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--p)}
+.fc-am{font-size:24px;font-weight:900;margin:6px 0 4px;letter-spacing:-.5px}.fc-dt{font-size:12px;color:var(--t3);line-height:1.4}
+
+/* === GRN === */
+.gr{display:flex;align-items:center;padding:14px 16px;gap:10px;border-bottom:1px solid var(--b2);transition:background .15s}
+.gr:hover{background:rgba(37,99,235,.02)}
+.gr-ck{width:26px;height:26px;border:2px solid var(--b3);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px;font-weight:700;transition:all .15s}
+.gr-ck.ck{background:linear-gradient(135deg,var(--p),#3B82F6);border-color:var(--p);color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.25)}
+
+/* === TOGGLE === */
+.tg{width:48px;height:28px;border-radius:14px;background:var(--b3);position:relative;cursor:pointer;flex-shrink:0;transition:all .25s}
+.tg.on{background:linear-gradient(135deg,var(--p),#3B82F6);box-shadow:0 2px 10px rgba(37,99,235,.2)}
+.tg::after{content:'';position:absolute;width:24px;height:24px;border-radius:50%;background:#fff;top:2px;left:2px;transition:all .25s cubic-bezier(.68,-.55,.27,1.55);box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.tg.on::after{left:22px}
+
+/* === SETTINGS ROWS === */
+.sr{display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--b2);gap:14px}
+.sr .ic{font-size:18px;width:20px;text-align:center}.sr .lb{flex:1;font-size:14px;font-weight:600}.sr .vl{font-size:12px;color:var(--t3);font-weight:500}
+
+/* === SUCCESS === */
+.su-c{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,var(--ol),#DCFCE7);display:flex;align-items:center;justify-content:center;font-size:48px;margin:0 auto;box-shadow:0 8px 32px rgba(22,163,74,.15);animation:suPop .5s cubic-bezier(.68,-.55,.265,1.55)}
+@keyframes suPop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+
+/* === VOICE === */
+.vo{background:rgba(15,23,42,.95);backdrop-filter:blur(20px);border-radius:24px;padding:36px;margin:20px;text-align:center;color:#fff;box-shadow:0 24px 64px rgba(0,0,0,.3)}
+.vo-w{font-size:60px;animation:pu 1.5s infinite}
+@keyframes pu{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+.vo-tx{font-size:20px;margin-top:16px;font-weight:700;letter-spacing:-.3px}
+.vo-m{background:linear-gradient(135deg,var(--ok),#22C55E);color:#fff;padding:12px 24px;border-radius:14px;margin-top:16px;display:inline-block;font-size:16px;font-weight:700;box-shadow:0 4px 16px rgba(22,163,74,.25)}
+
+/* === SCAN === */
+.sf{width:220px;height:220px;border:3px solid rgba(37,99,235,.8);border-radius:18px;position:relative;margin:0 auto;box-shadow:0 0 32px rgba(37,99,235,.25),inset 0 0 32px rgba(37,99,235,.03)}
+.sl{width:190px;height:2px;background:linear-gradient(90deg,transparent,var(--p),transparent);position:absolute;left:50%;transform:translateX(-50%);animation:sm 2s ease-in-out infinite;box-shadow:0 0 12px rgba(37,99,235,.5)}
+@keyframes sm{0%,100%{top:25%}50%{top:75%}}
+
+/* === CHART === */
+.cb{height:14px;border-radius:7px;margin:6px 0;transition:width .5s cubic-bezier(.25,.46,.45,.94)}
+
+/* === STREAK / GAMIFICATION === */
+.streak{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#FEF3C7,#FDE68A);color:#92400E;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:800;box-shadow:0 2px 6px rgba(245,158,11,.15)}
+
+/* === CONFETTI (success) === */
+.confetti{position:absolute;width:8px;height:8px;border-radius:2px;animation:fall 1.5s ease-in forwards;pointer-events:none;z-index:100}
+@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(400px) rotate(720deg);opacity:0}}
+
+/* === PULSE DOT === */
+.pulse-dot{width:8px;height:8px;border-radius:50%;background:var(--ok);position:relative}
+.pulse-dot::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--ok);animation:pd 2s infinite;opacity:0}
+@keyframes pd{0%{transform:scale(.8);opacity:.8}100%{transform:scale(2);opacity:0}}
+
+/* === FOCUS VISIBLE === */
+button:focus-visible,input:focus-visible{outline:3px solid var(--p);outline-offset:2px}
+
+/* === V4 COMPREHENSIVE POLISH === */
+
+/* SVG Icon system — replaces emojis in nav/buttons/headers */
+.icon-svg{width:22px;height:22px;display:inline-block;vertical-align:middle}
+
+/* Bottom nav — replace emojis with clean SVG icons */
+.bn-t .ic{font-size:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+.bn-t .ic svg{width:22px;height:22px}
+.bn-t .ic::before{font-size:20px;display:block} /* fallback */
+
+/* Proper Indian locale touches */
+.inp-phone::before{content:'+91';position:absolute;left:16px;color:var(--t3);font-weight:600}
+
+/* Interactive button states — ripple effect */
+.bt,.py-b,.ac,.pt,.kc,.mi,.cp{position:relative;overflow:hidden}
+.bt::after,.py-b::after,.ac::after,.pt::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at var(--rx,50%) var(--ry,50%),rgba(255,255,255,.3) 0%,transparent 60%);opacity:0;transition:opacity .3s}
+.bt:active::after,.py-b:active::after,.ac:active::after,.pt:active::after{opacity:1}
+
+/* Realistic toggle with labels */
+.tg{position:relative}
+.tg::before{content:'OFF';position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:7px;font-weight:800;color:rgba(255,255,255,.5);letter-spacing:.3px;transition:opacity .2s}
+.tg.on::before{content:'ON';left:6px;right:auto;color:rgba(255,255,255,.8)}
+
+/* Header with SuperMandi logo */
+.hd-logo{display:flex;align-items:center;gap:8px}
+.hd-logo svg{width:24px;height:24px;flex-shrink:0}
+
+/* Active chip indicator */
+.cp.on{position:relative}
+.cp.on::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:#fff;border-radius:50%}
+
+/* Product tile — add to cart animation */
+.pt-added{animation:addFlash .4s ease}
+@keyframes addFlash{0%{background:#fff}30%{background:var(--pl)}100%{background:#fff}}
+
+/* Realistic search with icon inside */
+.sb input{padding-left:40px;background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='8' cy='8' r='5'/%3E%3Cpath d='M14 14l-3-3'/%3E%3C/svg%3E") 14px center no-repeat}
+.sb input:focus{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%232563EB' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='8' cy='8' r='5'/%3E%3Cpath d='M14 14l-3-3'/%3E%3C/svg%3E")}
+
+/* Realistic notification dot */
+.notif-dot{width:6px;height:6px;border-radius:50%;background:var(--er);position:absolute;top:8px;right:8px;box-shadow:0 0 0 2px #fff}
+
+/* Better cart item hover — swipe hint */
+.ci{position:relative}
+.ci::before{content:'← swipe to delete';position:absolute;right:-100px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--er);font-weight:600;opacity:0;transition:all .3s}
+
+/* Quick amount buttons — selected state */
+.qa.sel{background:var(--p);color:#fff;border-color:var(--p);box-shadow:0 4px 16px rgba(37,99,235,.25)}
+
+/* Payment method selected state */
+.py-b.sel{border-color:var(--p);background:var(--pl);box-shadow:0 4px 16px rgba(37,99,235,.15)}
+.py-b.sel::after{content:'✓';position:absolute;top:8px;right:8px;width:20px;height:20px;background:var(--p);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+
+/* Morning card interactive */
+.mc{cursor:pointer;transition:all .2s}
+.mc:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(37,99,235,.25)}
+.mc:active{transform:scale(.98)}
+
+/* Khata overdue pulsing border */
+.kc[style*="border-left:4px solid"]{animation:overduePulse 3s infinite}
+@keyframes overduePulse{0%,100%{border-left-color:var(--er)}50%{border-left-color:#FCA5A5}}
+
+/* Finance card — hover reveals CTA */
+.fc .fc-cta{max-height:0;overflow:hidden;transition:max-height .3s;margin-top:0}
+.fc:hover .fc-cta{max-height:60px;margin-top:12px}
+
+/* Streak badge animation */
+.streak{animation:streakGlow 2s infinite}
+@keyframes streakGlow{0%,100%{box-shadow:0 2px 6px rgba(245,158,11,.15)}50%{box-shadow:0 2px 16px rgba(245,158,11,.35)}}
+
+/* Stock status badges — more prominent */
+.stock-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700}
+.stock-badge.in{background:var(--ol);color:var(--ok)}
+.stock-badge.low{background:var(--wl);color:var(--w)}
+.stock-badge.out{background:var(--el);color:var(--er)}
+
+/* GRN check animation */
+.gr-ck.ck{animation:checkPop .3s cubic-bezier(.68,-.55,.265,1.55)}
+@keyframes checkPop{0%{transform:scale(.5)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+
+/* Scan frame corner markers */
+.sf::before,.sf::after{content:'';position:absolute;width:20px;height:20px;border-color:rgba(255,255,255,.8);border-style:solid;border-width:0}
+.sf::before{top:8px;left:8px;border-top-width:3px;border-left-width:3px;border-top-left-radius:4px}
+.sf::after{bottom:8px;right:8px;border-bottom-width:3px;border-right-width:3px;border-bottom-right-radius:4px}
+
+/* Voice wave rings */
+.vo-w{position:relative}
+.vo-w::after{content:'';position:absolute;inset:-20px;border-radius:50%;border:2px solid rgba(37,99,235,.3);animation:voiceRing 2s infinite}
+@keyframes voiceRing{0%{transform:scale(.8);opacity:.8}100%{transform:scale(1.6);opacity:0}}
+
+/* Cart strip — item count pulse when changed */
+.cs-c.pulse{animation:countPulse .3s}
+@keyframes countPulse{0%{transform:scale(1)}50%{transform:scale(1.1);color:#fff}100%{transform:scale(1)}}
+
+/* Quantity button press feedback */
+.qb:active{background:var(--p);color:#fff;transform:scale(.9)}
+.qb{transition:all .1s}
+
+/* Better scrollbar for lists */
+.bd{scrollbar-color:var(--b3) transparent;scrollbar-width:thin}
+
+/* Report chart bars with gradient */
+.cb{background-size:200% 100%;animation:shimmer 2s ease infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* Loading skeleton animation */
+.skeleton{background:linear-gradient(90deg,var(--b2) 25%,var(--b3) 50%,var(--b2) 75%);background-size:200% 100%;animation:skLoad 1.5s infinite}
+@keyframes skLoad{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* Tooltip on hover for truncated text */
+.pt-n{cursor:default}
+.pt-n:hover{overflow:visible;white-space:normal;height:auto;position:relative;z-index:5;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.1);border-radius:4px;padding:2px 4px}
+
+/* Print button animation */
+.print-anim{animation:printSlide .5s ease}
+@keyframes printSlide{0%{transform:translateY(-5px);opacity:0}100%{transform:none;opacity:1}}
+
+/* WhatsApp button — proper green */
+.bt-wa{background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;box-shadow:0 4px 12px rgba(37,211,102,.25)}
+.bt-wa:hover{box-shadow:0 6px 20px rgba(37,211,102,.35)}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+<!-- ===== SPLASH ===== -->
+<div class="sc on" id="splash">
+<div class="bd" style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff 0%,var(--pl) 100%);flex:1">
+  <div style="animation:suPop .6s cubic-bezier(.68,-.55,.265,1.55)">
+    <svg width="72" height="72" viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="8" fill="#2563EB"/><rect x="9" y="9" width="14" height="3.2" rx="1.6" fill="#fff"/><rect x="9" y="14.4" width="14" height="3.2" rx="1.6" fill="#fff"/><rect x="9" y="19.8" width="14" height="3.2" rx="1.6" fill="#fff"/><circle cx="16" cy="25.3" r="2.1" fill="#fff"/></svg>
+  </div>
+  <div style="font-size:30px;font-weight:900;color:var(--p);margin-top:16px;letter-spacing:-.8px">SuperMandi</div>
+  <div style="font-size:14px;color:var(--t3);font-weight:500;margin-top:4px">Point of Sale</div>
+  <div style="margin-top:40px;width:32px;height:32px;border:3px solid var(--p);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite"></div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+  <div style="color:var(--t3);font-size:12px;margin-top:12px;font-weight:500">Connecting to store...</div>
+</div>
+<div style="padding:16px"><button class="bt bt-p bt-lg" onclick="nav('login')">Continue</button></div>
+</div>
+
+<!-- ===== LOGIN ===== -->
+<div class="sc" id="login">
+<div class="bd" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;background:linear-gradient(180deg,#fff 0%,var(--pl) 100%);flex:1">
+  <svg width="52" height="52" viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="8" fill="#2563EB"/><rect x="9" y="9" width="14" height="3.2" rx="1.6" fill="#fff"/><rect x="9" y="14.4" width="14" height="3.2" rx="1.6" fill="#fff"/><rect x="9" y="19.8" width="14" height="3.2" rx="1.6" fill="#fff"/><circle cx="16" cy="25.3" r="2.1" fill="#fff"/></svg>
+  <div style="font-size:22px;font-weight:900;color:var(--p);margin-top:12px;letter-spacing:-.5px">SuperMandi POS</div>
+  <div style="font-size:12px;color:var(--t3);margin-top:4px;font-weight:500">SU260305-003 · SuperMandi Store</div>
+  <div style="width:100%;margin-top:32px;text-align:left">
+    <div class="ip-lb">Staff Phone</div>
+    <input class="ip" type="tel" placeholder="98765 43210" value="98765 43210">
+    <div class="ip-lb" style="margin-top:16px">PIN</div>
+    <input class="ip" type="password" placeholder="● ● ● ●" value="••••" style="letter-spacing:4px">
+  </div>
+  <button class="bt bt-p bt-lg" style="margin-top:24px" onclick="nav('sell');setTimeout(showGuide,500)">Login →</button>
+  <div style="margin-top:16px;font-size:12px;color:var(--t3);cursor:pointer;font-weight:500">Switch Store ↗</div>
+</div>
+</div>
+
+<!-- ===== SELL ===== -->
+<div class="sc" id="sell">
+<!-- Branded top bar -->
+<div style="background:linear-gradient(135deg,var(--p),var(--pd));padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
+  <div style="display:flex;align-items:center;gap:8px">
+    <svg width="22" height="22" viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="8" fill="#fff"/><rect x="9" y="9" width="14" height="3.2" rx="1.6" fill="#2563EB"/><rect x="9" y="14.4" width="14" height="3.2" rx="1.6" fill="#2563EB"/><rect x="9" y="19.8" width="14" height="3.2" rx="1.6" fill="#2563EB"/><circle cx="16" cy="25.3" r="2.1" fill="#2563EB"/></svg>
+    <span style="color:#fff;font-size:15px;font-weight:800;letter-spacing:-.3px">SuperMandi</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <div style="display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);padding:4px 10px;border-radius:8px"><div class="pulse-dot" style="width:6px;height:6px;background:#4ADE80"></div><span style="color:rgba(255,255,255,.9);font-size:10px;font-weight:600">Online</span></div>
+    <button style="background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:10px;font-size:14px;cursor:pointer" onclick="nav('more')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.5"><circle cx="8" cy="3" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="8" cy="13" r="1"/></svg>
+    </button>
+  </div>
+</div>
+<div class="sb">
+  <input placeholder="Search your products..." onfocus="nav('search')">
+  <button class="sb-ic" style="background:var(--b2);color:var(--t2)" onclick="nav('scan')" title="Scan barcode">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h.01M7 12h10M7 17h.01M12 7h5M12 17h5"/></svg>
+  </button>
+  <button class="sb-ic" style="background:var(--pl);color:var(--p)" onclick="nav('voice')" title="Voice input">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0014 0M12 18v4m-3 0h6"/></svg>
+  </button>
+</div>
+<!-- Customer type toggle — Retail vs Bulk/Trade -->
+<div style="padding:6px 14px;background:#fff;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--b3)">
+  <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--t3)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    CUSTOMER
+  </div>
+  <div id="sell-mode-toggle" style="display:flex;background:var(--b2);border-radius:10px;overflow:hidden;font-size:11px;font-weight:700">
+    <button onclick="setSellMode('retail')" id="mode-retail" style="padding:6px 16px;border:none;cursor:pointer;transition:all .15s;background:var(--p);color:#fff;border-radius:10px">Retail</button>
+    <button onclick="setSellMode('bulk')" id="mode-bulk" style="padding:6px 16px;border:none;cursor:pointer;transition:all .15s;background:transparent;color:var(--t3)">Bulk / Trade</button>
+  </div>
+</div>
+<div class="ch">
+  <button class="cp on">Frequent</button>
+  <button class="cp off">Beverages</button>
+  <button class="cp off">Snacks</button>
+  <button class="cp off">Dairy</button>
+  <button class="cp off">Staples</button>
+  <button class="cp off">Home Care</button>
+</div>
+<div class="bd">
+  <div class="pg" id="pgrid"></div>
+</div>
+<div id="cs-area"></div>
+<div class="bn">
+  <div class="bn-t on" onclick="nav('sell')"><span class="ic"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg></span><span class="lb">SELL</span></div>
+  <div class="bn-t buy" onclick="nav('buy')"><span class="ic"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg></span><span class="lb">BUY</span></div>
+  <div class="bn-t" onclick="nav('store')"><span class="ic"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg></span><span class="lb">STORE</span></div>
+  <div class="bn-t" onclick="nav('more')"><span class="ic"><svg viewBox="0 0 24 24" stroke-linecap="round"><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="18" x2="20" y2="18"/></svg></span><span class="lb">MORE</span><span class="bn-b">3</span></div>
+</div>
+</div>
+
+<!-- ===== SEARCH ===== -->
+<div class="sc" id="search">
+<div class="sb"><input placeholder="Type product name..." autofocus value="parle" style="padding-left:40px;background:var(--s) url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22><text y=%2215%22 font-size=%2214%22>🔍</text></svg>') 10px center/20px no-repeat"><button class="sb-ic" style="background:var(--b2);font-size:14px;font-weight:700;color:var(--t3)" onclick="nav('sell')">✕</button></div>
+<div class="bd" style="background:#fff">
+  <div class="st">RESULTS</div>
+  <div class="ci" onclick="nav('sell')" style="cursor:pointer"><div class="ci-im">🍪</div><div class="ci-nf"><div class="ci-nm">Parle-G Gold 100g</div><div class="ci-pr">₹10 · Stock: 47 🟢</div></div><div style="color:var(--p);font-weight:800;font-size:13px">+ Add</div></div>
+  <div class="ci" onclick="nav('sell')" style="cursor:pointer"><div class="ci-im">🍪</div><div class="ci-nf"><div class="ci-nm">Parle Monaco 200g</div><div class="ci-pr">₹35 · Stock: 12 🟡</div></div><div style="color:var(--p);font-weight:800;font-size:13px">+ Add</div></div>
+  <div class="ci" onclick="nav('sell')" style="cursor:pointer"><div class="ci-im">🍪</div><div class="ci-nf"><div class="ci-nm">Parle Hide & Seek 120g</div><div class="ci-pr">₹30 · Stock: 8 🟡</div></div><div style="color:var(--p);font-weight:800;font-size:13px">+ Add</div></div>
+  <div class="st">RECENT SEARCHES</div>
+  <div style="display:flex;gap:8px;padding:0 16px;flex-wrap:wrap">
+    <span class="cp off" style="font-size:11px;padding:6px 14px">Tata Tea</span>
+    <span class="cp off" style="font-size:11px;padding:6px 14px">Maggi</span>
+    <span class="cp off" style="font-size:11px;padding:6px 14px">Amul</span>
+    <span class="cp off" style="font-size:11px;padding:6px 14px">Surf</span>
+  </div>
+</div>
+</div>
+
+<!-- ===== CART ===== -->
+<div class="sc" id="cart">
+<div class="hd"><button class="bk" onclick="nav('sell')">←</button><h1>Cart</h1><button class="hd-btn w" onclick="C=[];render();nav('sell')">Clear All</button></div>
+<div class="bd" id="cart-list"></div>
+<div id="cart-sum" style="padding:12px 18px;background:#fff;border-top:1px solid var(--b3)"></div>
+<div style="padding:6px 16px;display:flex;gap:8px"><button class="bt bt-o bt-sm" style="flex:1" onclick="nav('sell')">+ Add More</button><button class="bt bt-o bt-sm" style="flex:1">📌 Park</button></div>
+<div style="padding:8px 16px 16px"><button class="bt bt-p bt-lg" onclick="nav('payment')">PAY →</button></div>
+</div>
+
+<!-- ===== VOICE ===== -->
+<div class="sc" id="voice">
+<div class="hd"><button class="bk" onclick="nav('sell')">←</button><h1>Voice Input</h1></div>
+<div class="bd" style="background:#0F172A;display:flex;flex-direction:column;justify-content:center;padding:20px;flex:1">
+  <div class="vo">
+    <div class="vo-w">🎤</div>
+    <div style="color:#94A3B8;font-size:13px;margin-top:8px;font-weight:500">Listening...</div>
+    <div class="vo-tx">"2 Parle-G bada wala"</div>
+    <div class="vo-m">✓ Parle-G 100g × 2 — ₹20</div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="bt bt-g" style="flex:1" onclick="nav('sell')">✓ Add</button>
+      <button class="bt" style="flex:1;background:#334155;color:#fff">Retry</button>
+    </div>
+  </div>
+  <div style="text-align:center;color:#64748B;font-size:11px;margin-top:16px;font-weight:500">Hindi + English · "Maggi teen" · "bill karo"</div>
+</div>
+</div>
+
+<!-- ===== SCAN ===== -->
+<div class="sc" id="scan">
+<div style="position:absolute;top:14px;left:16px;z-index:10;display:flex;gap:8px;align-items:center"><button class="bk" onclick="nav('sell')" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.15);border-radius:10px;cursor:pointer;color:#fff;border:none;font-size:16px;backdrop-filter:blur(4px)">←</button><span style="color:#fff;font-size:16px;font-weight:700">Scan Barcode</span></div>
+<div class="bd" style="background:#0F172A;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding-top:60px">
+  <div class="sf"><div class="sl"></div></div>
+  <div style="color:#fff;margin-top:24px;font-size:15px;font-weight:600">Point camera at barcode</div>
+  <div style="display:flex;gap:6px;margin-top:8px;align-items:center"><div class="pulse-dot"></div><span style="color:var(--ok);font-size:12px;font-weight:600">HID Scanner Active</span></div>
+  <div style="position:absolute;bottom:0;left:0;right:0;background:#fff;padding:18px;border-radius:20px 20px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,.15)" class="fadein">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:48px;height:48px;border-radius:12px;background:var(--b2);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:24px">🍪</span></div>
+      <div style="flex:1"><div style="font-size:16px;font-weight:800;letter-spacing:-.3px">Parle-G Gold 100g</div><div style="font-size:12px;color:var(--t3)">8901234567890</div></div>
+      <div style="text-align:right"><div style="font-size:20px;font-weight:900;color:var(--p)">₹10</div><div style="font-size:11px;color:var(--ok);font-weight:600">Stock: 47</div></div>
+    </div>
+    <div style="background:var(--ol);border-radius:12px;padding:12px;margin-top:12px;text-align:center;color:var(--ok);font-weight:800;font-size:14px">✓ Added to cart!</div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="bt bt-o bt-sm" style="flex:1" onclick="nav('newprod')">New Product</button>
+      <button class="bt bt-p bt-sm" style="flex:1" onclick="nav('sell')">Continue</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===== NEW PRODUCT ===== -->
+<div class="sc" id="newprod">
+<div class="hd"><button class="bk" onclick="nav('scan')">←</button><h1>Add New Product</h1></div>
+<div class="bd" style="padding:14px">
+  <div class="cd" style="background:var(--wl);border-color:#FDE68A;margin-bottom:14px"><div style="font-size:13px;color:#92400E;font-weight:500">📷 Barcode <strong>8904567890123</strong> not found in database.</div></div>
+  <div style="text-align:center;margin-bottom:16px"><div style="width:72px;height:72px;background:var(--b2);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:32px;cursor:pointer;transition:all .15s;box-shadow:0 2px 8px rgba(0,0,0,.04)">📷</div><div style="font-size:11px;color:var(--t3);margin-top:4px;font-weight:500">Photograph product</div></div>
+  <div class="ip-lb">Product Name *</div><input class="ip" placeholder="e.g., Parle Monaco 200g" style="margin-bottom:12px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div><div class="ip-lb">Selling Price *</div><input class="ip" placeholder="₹ 25"></div>
+    <div><div class="ip-lb">Cost Price</div><input class="ip" placeholder="₹ 18"></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+    <div><div class="ip-lb">Category</div><input class="ip" placeholder="Snacks"></div>
+    <div><div class="ip-lb">Stock Qty</div><input class="ip" value="24"></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+    <div><div class="ip-lb">Brand</div><input class="ip" placeholder="Parle"></div>
+    <div><div class="ip-lb">Pack Size</div><input class="ip" placeholder="200g"></div>
+  </div>
+  <button class="bt bt-p bt-lg" style="margin-top:20px" onclick="nav('sell')">Add to Store & Cart</button>
+</div>
+</div>
+
+<!-- ===== PAYMENT ===== -->
+<div class="sc" id="payment">
+<div class="hd"><button class="bk" onclick="nav('cart')">←</button><h1>Payment</h1></div>
+<div class="bd" style="padding:20px;text-align:center">
+  <div id="pay-tot" style="font-size:44px;font-weight:900;margin:16px 0 4px;letter-spacing:-1px">₹0</div>
+  <div id="pay-ct" style="font-size:14px;color:var(--t3);font-weight:500">0 items</div>
+  <div class="py-g" style="margin-top:28px">
+    <div class="py-b" onclick="nav('cash')"><div class="pi">💵</div><div class="pl">CASH</div></div>
+    <div class="py-b" onclick="nav('upi')"><div class="pi">📱</div><div class="pl">UPI</div></div>
+    <div class="py-b" onclick="nav('udhar')"><div class="pi">📋</div><div class="pl">UDHAR</div></div>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:8px"><button class="bt bt-gh bt-sm" style="flex:1">Split Payment</button><button class="bt bt-gh bt-sm" style="flex:1">Add Discount</button></div>
+</div>
+</div>
+
+<!-- ===== CASH ===== -->
+<div class="sc" id="cash">
+<div class="hd"><button class="bk" onclick="nav('payment')">←</button><h1>Cash Payment</h1></div>
+<div class="bd" style="padding:20px;text-align:center">
+  <div style="font-size:40px;font-weight:900;margin:12px 0;letter-spacing:-1px" id="cash-tot">₹0</div>
+  <div style="font-size:14px;color:var(--t3);margin-bottom:24px;font-weight:500">Amount to collect</div>
+  <div class="qa-g"><button class="qa ex" id="qa-ex">EXACT</button><button class="qa">₹200</button><button class="qa">₹500</button><button class="qa">₹1000</button></div>
+  <div style="margin-top:20px"><div class="ip-lb" style="text-align:left">Or enter received</div><input class="ip" type="number" placeholder="₹" style="font-size:24px;text-align:center;font-weight:800"></div>
+  <div style="margin-top:16px;padding:16px;background:var(--b2);border-radius:14px"><div style="font-size:13px;color:var(--t3);font-weight:500">Change to return</div><div style="font-size:28px;font-weight:900;letter-spacing:-.5px">₹0</div></div>
+  <button class="bt bt-g bt-lg" style="margin-top:24px" onclick="nav('success')">✓ COMPLETE SALE</button>
+</div>
+</div>
+
+<!-- ===== UPI ===== -->
+<div class="sc" id="upi">
+<div class="hd"><button class="bk" onclick="nav('payment')">←</button><h1>UPI Payment</h1></div>
+<div class="bd" style="padding:20px;text-align:center">
+  <div style="font-size:34px;font-weight:900;margin:8px 0;letter-spacing:-.8px" id="upi-tot">₹0</div>
+  <div style="width:200px;height:200px;background:#fff;border:3px solid var(--b3);border-radius:18px;margin:24px auto;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.06)">
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;width:160px;height:160px" id="qr"></div>
+  </div>
+  <div style="font-size:14px;color:var(--t3);font-weight:500">Customer scans this QR</div>
+  <div style="margin-top:16px;padding:12px;background:var(--wl);border-radius:12px;display:flex;align-items:center;gap:8px;justify-content:center">
+    <div style="width:12px;height:12px;border:2px solid var(--w);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite"></div>
+    <span style="font-size:13px;color:#92400E;font-weight:600">Waiting for payment...</span>
+  </div>
+  <button class="bt bt-g bt-lg" style="margin-top:20px" onclick="nav('success')">✓ Received</button>
+</div>
+</div>
+
+<!-- ===== UDHAR ===== -->
+<div class="sc" id="udhar">
+<div class="hd"><button class="bk" onclick="nav('payment')">←</button><h1>Udhar (Credit)</h1></div>
+<div class="bd" style="padding:16px">
+  <div style="text-align:center;font-size:34px;font-weight:900;margin:8px 0;letter-spacing:-.8px" id="udh-tot">₹0</div>
+  <div style="text-align:center;font-size:13px;color:var(--t3);margin-bottom:20px;font-weight:500">Record as customer due</div>
+  <div class="ip-lb">Customer Name *</div><input class="ip" placeholder="e.g., Ramesh" style="margin-bottom:10px">
+  <div class="ip-lb">Phone</div><input class="ip" placeholder="+91 98765..." style="margin-bottom:14px">
+  <div class="st" style="padding:8px 0">OR SELECT EXISTING</div>
+  <div class="kc" onclick="nav('success')"><div class="kav">R</div><div class="ki"><div class="kn">Ramesh Kumar</div><div class="kd">Existing due: ₹3,200</div></div></div>
+  <div class="kc" onclick="nav('success')"><div class="kav">S</div><div class="ki"><div class="kn">Suresh Patel</div><div class="kd">No pending dues</div></div></div>
+  <button class="bt bt-p bt-lg" style="margin-top:20px" onclick="nav('success')">Record Udhar</button>
+</div>
+</div>
+
+<!-- ===== SUCCESS ===== -->
+<div class="sc" id="success">
+<div class="bd" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;background:linear-gradient(180deg,#fff,var(--ol));flex:1;position:relative;overflow:hidden" id="success-bd">
+  <div class="su-c">✓</div>
+  <div style="font-size:24px;font-weight:900;margin-top:20px;letter-spacing:-.5px">Payment Received!</div>
+  <div style="font-size:36px;font-weight:900;margin-top:8px;letter-spacing:-1px" id="suc-tot">₹0</div>
+  <div style="font-size:14px;color:var(--t3);font-weight:500">Cash · 3 items</div>
+  <div class="pb" style="margin-top:12px;font-size:14px;padding:8px 16px" id="suc-profit">Profit: ₹0</div>
+  <div class="streak" style="margin-top:8px">🔥 12 sales today — keep going!</div>
+  <div style="margin-top:6px;padding:8px 16px;background:var(--b2);border-radius:10px;font-size:12px;color:var(--t3);font-weight:500">🖨️ Receipt printing...</div>
+  <div style="width:100%;margin-top:28px;display:flex;flex-direction:column;gap:8px">
+    <button class="bt bt-p bt-lg" onclick="C=[];render();nav('sell');celebrate()">💰 New Sale</button>
+    <div style="display:flex;gap:8px">
+      <button class="bt bt-o bt-sm" style="flex:1">🖨️ Reprint</button>
+      <button class="bt bt-o bt-sm" style="flex:1">📱 WhatsApp</button>
+      <button class="bt bt-gh bt-sm" style="flex:1;color:var(--er)">Void</button>
+    </div>
+  </div>
+  <div style="margin-top:20px;font-size:11px;color:#94A3B8;font-weight:500">Bill #SM-2026-0316-0023 · 10:42 AM</div>
+</div>
+</div>
+
+<!-- ===== BUY ===== -->
+<div class="sc" id="buy">
+<div class="sb"><input placeholder="Search supplier products..."><button class="sb-ic" style="background:var(--b2);color:var(--t2)" onclick="nav('scan')">📷</button></div>
+<div style="padding:8px 14px;background:#fff">
+  <div style="font-size:10px;font-weight:800;color:var(--t3);margin-bottom:6px;letter-spacing:.5px">BUYING FROM</div>
+  <div style="display:flex;gap:8px;overflow-x:auto" class="ch" style="padding:0">
+    <button class="cp on" style="padding:8px 18px">🏪 All Suppliers</button>
+    <button class="cp off" style="padding:8px 16px">ABC Distributors</button>
+    <button class="cp off" style="padding:8px 16px">XYZ Trading</button>
+    <button class="cp off" style="padding:8px 16px">Fresh Dairy Co</button>
+  </div>
+</div>
+<div class="ch"><button class="cp on">All</button><button class="cp off">Biscuits</button><button class="cp off">Tea</button><button class="cp off">Noodles</button><button class="cp off">Oil</button><button class="cp off">Dairy</button></div>
+<div class="bd" style="padding:8px 12px;display:flex;flex-direction:column;gap:8px">
+  <!-- Wholesale SKU Card 1: Parle-G -->
+  <div class="cd" style="padding:12px;cursor:pointer" onclick="nav('compare')">
+    <div style="display:flex;gap:12px">
+      <div style="width:56px;height:56px;border-radius:12px;background:var(--b2);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:26px">🍪</span><span style="font-size:7px;font-weight:700;color:var(--t3)">Parle</span></div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between">
+          <div><div style="font-size:14px;font-weight:800;letter-spacing:-.2px">Parle-G Gold 100g</div><div style="font-size:10px;color:var(--t3)">HSN 1905 · GST 18% · Parle Products</div></div>
+          <div style="text-align:right"><div style="font-size:16px;font-weight:900;color:var(--ok)">₹8.50</div><div style="font-size:9px;color:var(--t3)">PTR/unit</div></div>
+        </div>
+        <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">
+          <span style="font-size:9px;background:var(--b2);padding:2px 7px;border-radius:5px;color:var(--t2);font-weight:600">MRP ₹10</span>
+          <span style="font-size:9px;background:var(--b2);padding:2px 7px;border-radius:5px;color:var(--t2);font-weight:600">PTS ₹8.00</span>
+          <span style="font-size:9px;background:var(--b2);padding:2px 7px;border-radius:5px;color:var(--t2);font-weight:600">Case: 48 pcs</span>
+          <span style="font-size:9px;background:var(--b2);padding:2px 7px;border-radius:5px;color:var(--t2);font-weight:600">MOQ: 1 case</span>
+          <span class="pb" style="font-size:9px;padding:2px 7px">Margin 15%</span>
+        </div>
+        <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">
+          <span style="font-size:9px;background:var(--wl);padding:2px 7px;border-radius:5px;color:#92400E;font-weight:700">Scheme: 10+1 Free</span>
+          <span style="font-size:9px;background:var(--al);padding:2px 7px;border-radius:5px;color:var(--ad);font-weight:700">Trade Disc: 15%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+          <div style="font-size:10px;color:var(--w);font-weight:700">Your stock: 12 pcs (⚠ 2 days)</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <div class="ci-qty" style="transform:scale(.85)"><button class="qb">−</button><span class="qv">2</span><button class="qb">+</button></div>
+            <span style="font-size:9px;color:var(--t3)">cases</span>
+            <button style="background:linear-gradient(135deg,var(--p),#3B82F6);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ Cart</button>
+          </div>
+        </div>
+        <div style="font-size:9px;color:var(--t3);margin-top:4px;display:flex;justify-content:space-between"><span>2 cases = 96 pcs · ₹816 + GST</span><span>Delivery: 2 days</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Wholesale SKU Card 2: Tata Tea -->
+  <div class="cd" style="padding:12px">
+    <div style="display:flex;gap:12px">
+      <div style="width:56px;height:56px;border-radius:12px;background:var(--b2);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:26px">🍵</span><span style="font-size:7px;font-weight:700;color:var(--t3)">Tata</span></div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between">
+          <div><div style="font-size:14px;font-weight:800">Tata Tea Premium 250g</div><div style="font-size:10px;color:var(--t3)">HSN 0902 · GST 5% · Tata Consumer</div></div>
+          <div style="text-align:right"><div style="font-size:16px;font-weight:900;color:var(--ok)">₹68.00</div><div style="font-size:9px;color:var(--t3)">PTR/unit</div></div>
+        </div>
+        <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">
+          <span style="font-size:9px;background:var(--b2);padding:2px 7px;border-radius:5px;color:var(--t2);font-weight:600">MRP ₹80</span>
+          <span style="font-size:9px;background:var(--b2);padding:2px 7px;border-radius:5px;color:var(--t2);font-weight:600">PTS ₹64.00</span>
+          <span style="font-size:9px;background:var(--b2);padding:2px 7px;border-radius:5px;color:var(--t2);font-weight:600">Case: 24 pcs</span>
+          <span style="font-size:9px;background:var(--b2);padding:2px 7px;border-radius:5px;color:var(--t2);font-weight:600">MOQ: 1 case</span>
+          <span class="pb" style="font-size:9px;padding:2px 7px">Margin 15%</span>
+        </div>
+        <div style="display:flex;gap:4px;margin-top:4px"><span style="font-size:9px;background:var(--al);padding:2px 7px;border-radius:5px;color:var(--ad);font-weight:700">Trade Disc: 15%</span><span style="font-size:9px;background:var(--pl);padding:2px 7px;border-radius:5px;color:var(--p);font-weight:700">Credit: 30 days</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+          <div style="font-size:10px;color:var(--ok);font-weight:700">Your stock: 24 pcs (✓ 5 days)</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <div class="ci-qty" style="transform:scale(.85)"><button class="qb">−</button><span class="qv">1</span><button class="qb">+</button></div>
+            <span style="font-size:9px;color:var(--t3)">cases</span>
+            <button style="background:linear-gradient(135deg,var(--p),#3B82F6);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ Cart</button>
+          </div>
+        </div>
+        <div style="font-size:9px;color:var(--t3);margin-top:4px"><span>1 case = 24 pcs · ₹1,632 + GST</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Wholesale SKU Card 3: Amul Milk -->
+  <div class="cd" style="padding:12px;border-left:3px solid var(--er)">
+    <div style="display:flex;gap:12px">
+      <div style="width:56px;height:56px;border-radius:12px;background:var(--b2);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:26px">🥛</span><span style="font-size:7px;font-weight:700;color:var(--t3)">Amul</span></div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between">
+          <div><div style="font-size:14px;font-weight:800">Amul Taaza Milk 500ml</div><div style="font-size:10px;color:var(--t3)">HSN 0401 · GST 5% · GCMMF</div></div>
+          <div style="text-align:right"><div style="font-size:16px;font-weight:900;color:var(--ok)">₹24.00</div><div style="font-size:9px;color:var(--t3)">PTR/unit</div></div>
+        </div>
+        <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">
+          <span style="font-size:9px;background:var(--b2);padding:2px 7px;border-radius:5px;color:var(--t2);font-weight:600">MRP ₹28</span>
+          <span style="font-size:9px;background:var(--b2);padding:2px 7px;border-radius:5px;color:var(--t2);font-weight:600">PTS ₹22.00</span>
+          <span style="font-size:9px;background:var(--b2);padding:2px 7px;border-radius:5px;color:var(--t2);font-weight:600">Crate: 12 pcs</span>
+          <span style="font-size:9px;background:var(--b2);padding:2px 7px;border-radius:5px;color:var(--t2);font-weight:600">MOQ: 2 crates</span>
+          <span class="pb" style="font-size:9px;padding:2px 7px">Margin 14%</span>
+        </div>
+        <div style="display:flex;gap:4px;margin-top:4px"><span style="font-size:9px;background:var(--el);padding:2px 7px;border-radius:5px;color:var(--er);font-weight:700">URGENT — Runs out today</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+          <div style="font-size:10px;color:var(--er);font-weight:700">Your stock: 5 pcs</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <div class="ci-qty" style="transform:scale(.85)"><button class="qb">−</button><span class="qv">3</span><button class="qb">+</button></div>
+            <span style="font-size:9px;color:var(--t3)">crates</span>
+            <button style="background:linear-gradient(135deg,var(--p),#3B82F6);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ Cart</button>
+          </div>
+        </div>
+        <div style="font-size:9px;color:var(--t3);margin-top:4px"><span>3 crates = 36 pcs · ₹864 + GST · Same-day delivery</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Counter Purchase quick access -->
+  <div class="cd" style="padding:12px;cursor:pointer;border:2px dashed var(--p);background:var(--pl)" onclick="nav('counter')">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:44px;height:44px;border-radius:12px;background:var(--p);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h.01M7 12h10M7 17h.01M12 7h5M12 17h5"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:800;color:var(--p)">Counter Purchase</div>
+        <div style="font-size:11px;color:var(--t3)">Supplier at counter? Scan products, enter details, record purchase</div>
+      </div>
+      <div style="font-size:16px;color:var(--p)">→</div>
+    </div>
+  </div>
+
+  <!-- Credit banner -->
+  <div style="cursor:pointer" onclick="nav('finance')"><div style="background:linear-gradient(135deg,var(--pur),#5B21B6);border-radius:16px;padding:14px;color:#fff;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(124,58,237,.2)"><div style="font-size:28px">💳</div><div style="flex:1"><div style="font-size:13px;font-weight:800">Buy Now, Pay Later</div><div style="font-size:11px;opacity:.85">₹50,000 credit · 0% for 30 days</div></div><div style="font-size:16px;opacity:.7">›</div></div></div>
+</div>
+<div class="cs" style="background:linear-gradient(135deg,var(--a),var(--ad))"><div class="cs-l"><span class="cs-c">🛒 3 items · 2 suppliers</span><span class="cs-i">Parle-G ×48, Tea ×24, Milk ×30</span></div><span class="cs-t">₹1,932</span><button class="cs-btn" style="color:var(--a)">ORDER →</button></div>
+<div class="bn">
+  <div class="bn-t" onclick="nav('sell')"><span class="ic"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg></span><span class="lb">SELL</span></div>
+  <div class="bn-t buy on" onclick="nav('buy')"><span class="ic"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg></span><span class="lb">BUY</span><span class="bn-b" style="background:var(--a)">3</span></div>
+  <div class="bn-t" onclick="nav('store')"><span class="ic"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg></span><span class="lb">STORE</span></div>
+  <div class="bn-t" onclick="nav('more')"><span class="ic"><svg viewBox="0 0 24 24" stroke-linecap="round"><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="18" x2="20" y2="18"/></svg></span><span class="lb">MORE</span></div>
+</div>
+</div>
+
+<!-- ===== COMPARE ===== -->
+<div class="sc" id="compare">
+<div class="hd"><button class="bk" onclick="nav('buy')">←</button><h1>🍪 Parle-G 100g</h1></div>
+<div class="bd" style="padding:14px">
+  <div class="cd" style="background:var(--pl);text-align:center;margin-bottom:12px"><div style="font-size:12px;color:var(--t3);font-weight:500">You sell at <b>₹10</b> · Current stock: 12</div><div style="font-size:12px;color:var(--p);font-weight:700;margin-top:2px">Need ~50 units (1 week supply)</div></div>
+  <div class="st" style="padding:4px 0">COMPARE SUPPLIERS</div>
+  <div class="cd" style="border:2px solid var(--ok);margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:800">⭐ Supplier A</div><div style="font-size:11px;color:var(--t3)">MOQ: 48 · 2 day delivery</div></div><div style="text-align:right"><div style="font-size:18px;font-weight:900;color:var(--ok)">₹5.20/u</div><span class="pb">Best Price</span></div></div><div style="font-size:12px;color:var(--t3);margin-top:6px">Total: ₹249.60 · <b>Margin: 48%</b></div><button class="bt bt-g" style="margin-top:10px">Order from A</button></div>
+  <div class="cd" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:800">Supplier B</div><div style="font-size:11px;color:var(--t3)">MOQ: 24 · 1 day · Free delivery</div></div><div style="font-size:18px;font-weight:900">₹5.50/u</div></div><button class="bt bt-o bt-sm" style="margin-top:10px">Order from B</button></div>
+  <div class="cd"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:800">Supplier C</div><div style="font-size:11px;color:var(--t3)">No MOQ · 3 days · BNPL</div></div><div style="font-size:18px;font-weight:900">₹5.80/u</div></div><button class="bt bt-o bt-sm" style="margin-top:10px">Order from C</button></div>
+</div>
+</div>
+
+<!-- ===== COUNTER PURCHASE — Scan, Quick-add, Edit, Repeat ===== -->
+<div class="sc" id="counter">
+<div class="hd"><button class="bk" onclick="nav('buy')">←</button><h1>Counter Purchase</h1></div>
+
+<!-- === SCAN ZONE — prominent, always at top === -->
+<div style="padding:12px 14px;background:linear-gradient(to bottom,var(--pl),#fff)">
+  <!-- Two scan modes side by side -->
+  <div style="display:flex;gap:8px;margin-bottom:8px">
+    <button style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:var(--p);color:#fff;border:none;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(37,99,235,.25);transition:all .15s" onclick="toast('Camera scan mode active','info')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h.01M7 12h10M7 17h.01M12 7h5M12 17h5"/></svg>
+      Camera Scan
+    </button>
+    <button style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:#fff;color:var(--p);border:2px solid var(--p);border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--p)" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M6 12h12M6 16h.01M12 8h6M12 16h6"/></svg>
+      HID Scanner
+    </button>
+  </div>
+  <!-- Barcode input with live status -->
+  <div style="display:flex;gap:8px;align-items:center">
+    <div style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;background:#fff;border-radius:12px;border:2px solid var(--p);box-shadow:0 0 0 4px rgba(37,99,235,.06)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--p)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h.01M7 12h10M7 17h.01"/></svg>
+      <input id="counter-scan-input" style="border:none;background:none;flex:1;font-size:14px;font-weight:600;outline:none;color:var(--t1)" placeholder="Scan or type barcode..." autofocus>
+      <div class="pulse-dot" style="width:7px;height:7px"></div>
+      <span style="font-size:9px;color:var(--ok);font-weight:700;background:var(--ol);padding:2px 6px;border-radius:4px">READY</span>
+    </div>
+    <button style="background:var(--p);color:#fff;border:none;width:44px;height:44px;border-radius:12px;font-size:14px;cursor:pointer;font-weight:800;flex-shrink:0" onclick="toast('Product added from scan','success')">↵</button>
+  </div>
+  <div style="font-size:9px;color:var(--t3);margin-top:4px;text-align:center">Scan continuously — each barcode auto-adds to list below</div>
+</div>
+
+<!-- Supplier quick-select -->
+<div style="padding:6px 14px;background:#fff;border-bottom:1px solid var(--b3)">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:10px;font-weight:700;color:var(--t3)">SUPPLIER:</span>
+    <select style="flex:1;padding:8px 12px;border-radius:10px;border:1.5px solid var(--b3);font-size:13px;font-weight:600;color:var(--t1);outline:none;background:#fff">
+      <option>Select or add supplier...</option>
+      <option selected>ABC Distributors (GSTIN: 27AABCU9603R1ZM)</option>
+      <option>XYZ Trading Co</option>
+      <option>Fresh Dairy Co</option>
+    </select>
+    <button style="background:var(--p);color:#fff;border:none;width:32px;height:32px;border-radius:10px;font-size:16px;cursor:pointer;font-weight:700;flex-shrink:0">+</button>
+  </div>
+  <div style="font-size:9px;color:var(--t3);margin-top:4px;padding-left:70px">Invoice #: <input style="border:none;border-bottom:1px solid var(--b3);font-size:9px;width:100px;outline:none;font-weight:600" placeholder="Enter invoice no." value="INV-2026-0458"> · Date: 16 Mar 2026</div>
+</div>
+
+<div class="bd" style="padding:10px 14px">
+
+  <!-- ===== SCANNED ITEMS LIST ===== -->
+  <div class="st" style="padding:4px 0;display:flex;justify-content:space-between;align-items:center">
+    <span>SCANNED ITEMS (3)</span>
+    <button style="font-size:10px;color:var(--p);font-weight:700;background:var(--pl);border:none;padding:4px 10px;border-radius:8px;cursor:pointer" onclick="toast('Enter product name to add manually','info')">+ Add Manually</button>
+  </div>
+
+  <!-- ===== Item 1: REPEAT PURCHASE — auto-filled from last order ===== -->
+  <div class="cd" style="padding:12px;margin-bottom:8px;border-left:3px solid var(--p)">
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--b2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🍪</div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:14px;font-weight:800">Parle-G Gold 100g</div>
+          <span style="font-size:9px;background:var(--pl);color:var(--p);padding:2px 8px;border-radius:6px;font-weight:700">Repeat</span>
+        </div>
+        <div style="font-size:10px;color:var(--t3);margin-top:2px">Barcode: 8901234567890 · Parle · HSN 1905 · GST 18%</div>
+
+        <!-- Last purchase info — auto-fill reference -->
+        <div style="margin-top:6px;padding:6px 10px;background:var(--pl);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:9px;color:var(--p)">
+            <span style="font-weight:700">Last Purchase:</span> 2 cases @ ₹8.50/u · 5 Mar · ABC Dist.
+          </div>
+          <button style="font-size:9px;font-weight:700;color:var(--p);background:#fff;border:1px solid var(--p);padding:2px 8px;border-radius:6px;cursor:pointer" onclick="toast('Same as last order applied','success')">Same ↺</button>
+        </div>
+
+        <!-- Core fields — pre-filled from last purchase, editable -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px">
+          <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">QTY (CASES)</div><input class="ip" value="2" style="padding:8px;font-size:14px;font-weight:800;text-align:center"></div>
+          <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">PURCHASE ₹/UNIT</div><input class="ip" value="8.50" style="padding:8px;font-size:14px;font-weight:700;text-align:center"></div>
+          <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">SELL ₹/UNIT</div><input class="ip" value="10.00" style="padding:8px;font-size:14px;font-weight:700;text-align:center"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+          <span style="font-size:10px;color:var(--t3)">2 cases × 48 pcs = <b>96 units</b> · Total: <b style="color:var(--t1)">₹816</b></span>
+          <span class="pb" style="font-size:9px">Margin 15%</span>
+        </div>
+
+        <!-- Edit hint -->
+        <div style="font-size:9px;color:var(--t3);margin-top:4px;font-style:italic">Tap any field above to edit · Price changed? Update purchase ₹</div>
+
+        <!-- Expandable details (+) -->
+        <details style="margin-top:8px">
+          <summary style="font-size:10px;color:var(--p);font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;list-style:none">
+            <span style="width:18px;height:18px;background:var(--pl);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--p)">+</span>
+            More Details (Tax, Batch, Scheme, Discount)
+          </summary>
+          <div style="margin-top:8px;padding:10px;background:var(--bg);border-radius:10px">
+            <div style="font-size:9px;font-weight:700;color:var(--p);margin-bottom:6px">TAX DETAILS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">HSN CODE</div><input class="ip" value="1905" style="padding:6px;font-size:12px"></div>
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">GST %</div><select style="width:100%;padding:6px;border-radius:10px;border:1.5px solid var(--b3);font-size:12px;font-weight:600"><option>5%</option><option>12%</option><option selected>18%</option><option>28%</option></select></div>
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">CESS %</div><input class="ip" value="0" style="padding:6px;font-size:12px"></div>
+            </div>
+
+            <div style="font-size:9px;font-weight:700;color:var(--p);margin:10px 0 6px">TRADE TERMS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">TRADE DISC %</div><input class="ip" value="15" style="padding:6px;font-size:12px"></div>
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">SCHEME</div><input class="ip" placeholder="e.g. 10+1 Free" value="10+1" style="padding:6px;font-size:12px"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">MRP ₹</div><input class="ip" value="10.00" style="padding:6px;font-size:12px"></div>
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">PTR / PTS ₹</div><input class="ip" value="8.50 / 8.00" style="padding:6px;font-size:12px"></div>
+            </div>
+
+            <div style="font-size:9px;font-weight:700;color:var(--p);margin:10px 0 6px">BATCH & EXPIRY</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">BATCH NO.</div><input class="ip" placeholder="e.g. B2026-03" style="padding:6px;font-size:12px"></div>
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">EXPIRY DATE</div><input class="ip" type="date" style="padding:6px;font-size:12px"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">MFG DATE</div><input class="ip" type="date" style="padding:6px;font-size:12px"></div>
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">SHELF LIFE</div><input class="ip" placeholder="12 months" style="padding:6px;font-size:12px"></div>
+            </div>
+
+            <div style="font-size:9px;font-weight:700;color:var(--p);margin:10px 0 6px">PAYMENT TERMS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">CREDIT DAYS</div><select style="width:100%;padding:6px;border-radius:10px;border:1.5px solid var(--b3);font-size:12px;font-weight:600"><option>COD</option><option>7 days</option><option>15 days</option><option selected>30 days</option><option>45 days</option><option>60 days</option></select></div>
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">DAMAGE/RETURN</div><select style="width:100%;padding:6px;border-radius:10px;border:1.5px solid var(--b3);font-size:12px;font-weight:600"><option selected>Replaceable</option><option>Non-returnable</option><option>Credit note</option></select></div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Item 2: EXISTING but first time purchase — in DB, no purchase history ===== -->
+  <div class="cd" style="padding:12px;margin-bottom:8px;border-left:3px solid var(--ok)">
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--b2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🫖</div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:14px;font-weight:800">Tata Tea Premium 250g</div>
+          <span style="font-size:9px;background:var(--ol);color:var(--ok);padding:2px 8px;border-radius:6px;font-weight:700">In Store</span>
+        </div>
+        <div style="font-size:10px;color:var(--t3);margin-top:2px">Barcode: 8901234500001 · Tata · HSN 0902 · GST 5%</div>
+        <div style="margin-top:4px;font-size:9px;color:var(--t3);font-style:italic">No previous purchase from this supplier — enter price below</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px">
+          <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">QTY (CASES)</div><input class="ip" value="1" style="padding:8px;font-size:14px;font-weight:800;text-align:center"></div>
+          <div><div style="font-size:8px;font-weight:700;color:var(--er);margin-bottom:2px">PURCHASE ₹ *</div><input class="ip" placeholder="₹" style="padding:8px;font-size:14px;font-weight:700;text-align:center;border-color:var(--er);border-style:dashed"></div>
+          <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">SELL ₹/UNIT</div><input class="ip" value="80.00" style="padding:8px;font-size:14px;font-weight:700;text-align:center"></div>
+        </div>
+        <div style="margin-top:6px;padding:6px 8px;background:var(--el);border-radius:6px;font-size:9px;color:var(--er);font-weight:600">
+          ⚠ Enter purchase price to calculate margin & update ledger
+        </div>
+
+        <details style="margin-top:8px">
+          <summary style="font-size:10px;color:var(--p);font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;list-style:none">
+            <span style="width:18px;height:18px;background:var(--pl);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--p)">+</span>
+            Add Trade Terms, Batch & Tax Details
+          </summary>
+          <div style="margin-top:8px;padding:10px;background:var(--bg);border-radius:10px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">TRADE DISC %</div><input class="ip" placeholder="0" style="padding:6px;font-size:12px"></div>
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">SCHEME</div><input class="ip" placeholder="e.g. 5+1" style="padding:6px;font-size:12px"></div>
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">CREDIT DAYS</div><select style="width:100%;padding:6px;border-radius:10px;border:1.5px solid var(--b3);font-size:12px;font-weight:600"><option>COD</option><option selected>30 days</option></select></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">BATCH NO.</div><input class="ip" placeholder="Optional" style="padding:6px;font-size:12px"></div>
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">EXPIRY</div><input class="ip" type="date" style="padding:6px;font-size:12px"></div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- Item 3: NEW PRODUCT — scanned but not found, full entry -->
+  <div class="cd" style="padding:12px;margin-bottom:8px;border-left:3px solid var(--w)">
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--wl);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--w)" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:14px;font-weight:800;color:var(--w)">New Product</div>
+          <span style="font-size:9px;background:var(--wl);color:#92400E;padding:2px 8px;border-radius:6px;font-weight:700">First Time</span>
+        </div>
+        <div style="font-size:10px;color:var(--t3);margin-top:2px">Barcode: 8907890123456 — Not in your store</div>
+
+        <!-- Required fields for new product -->
+        <div style="margin-top:8px;padding:8px;background:var(--wl);border-radius:8px;font-size:9px;color:#92400E;font-weight:600">
+          ⚠ Add product details for ledger sync, stock tracking & GST compliance
+        </div>
+
+        <div style="margin-top:8px">
+          <div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">PRODUCT NAME *</div>
+          <input class="ip" placeholder="e.g. Britannia Good Day 200g" style="padding:8px;font-size:13px;margin-bottom:6px">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">BRAND *</div><input class="ip" placeholder="Britannia" style="padding:8px;font-size:12px"></div>
+          <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">CATEGORY *</div><select style="width:100%;padding:8px;border-radius:10px;border:1.5px solid var(--b3);font-size:12px;font-weight:600"><option>Select...</option><option>Biscuits</option><option>Snacks</option><option>Beverages</option><option>Dairy</option><option>Staples</option><option>Cleaning</option><option>Personal Care</option></select></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px">
+          <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">PACK SIZE</div><input class="ip" placeholder="200g" style="padding:8px;font-size:12px"></div>
+          <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">UNIT</div><select style="width:100%;padding:8px;border-radius:10px;border:1.5px solid var(--b3);font-size:12px;font-weight:600"><option>pcs</option><option>kg</option><option>ltr</option><option>btl</option><option>box</option></select></div>
+          <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">CASE QTY</div><input class="ip" placeholder="24" style="padding:8px;font-size:12px"></div>
+        </div>
+
+        <!-- Core purchase fields -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px">
+          <div><div style="font-size:8px;font-weight:700;color:var(--er);margin-bottom:2px">QTY (CASES) *</div><input class="ip" value="1" style="padding:8px;font-size:14px;font-weight:800;text-align:center;border-color:var(--b3)"></div>
+          <div><div style="font-size:8px;font-weight:700;color:var(--er);margin-bottom:2px">PURCHASE ₹ *</div><input class="ip" placeholder="₹" style="padding:8px;font-size:14px;font-weight:700;text-align:center"></div>
+          <div><div style="font-size:8px;font-weight:700;color:var(--er);margin-bottom:2px">MRP ₹ *</div><input class="ip" placeholder="₹" style="padding:8px;font-size:14px;font-weight:700;text-align:center"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+          <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">SELL PRICE ₹</div><input class="ip" placeholder="₹" style="padding:8px;font-size:12px"></div>
+          <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">HSN CODE</div><input class="ip" placeholder="e.g. 1905" style="padding:8px;font-size:12px"></div>
+        </div>
+
+        <!-- Expandable: same (+) pattern -->
+        <details style="margin-top:8px">
+          <summary style="font-size:10px;color:var(--p);font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;list-style:none">
+            <span style="width:18px;height:18px;background:var(--pl);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--p)">+</span>
+            More Details (Tax, Batch, Trade Terms)
+          </summary>
+          <div style="margin-top:8px;padding:10px;background:var(--bg);border-radius:10px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">GST %</div><select style="width:100%;padding:6px;border-radius:10px;border:1.5px solid var(--b3);font-size:12px;font-weight:600"><option>0%</option><option>5%</option><option>12%</option><option selected>18%</option><option>28%</option></select></div>
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">TRADE DISC %</div><input class="ip" placeholder="0" style="padding:6px;font-size:12px"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">BATCH NO.</div><input class="ip" placeholder="Optional" style="padding:6px;font-size:12px"></div>
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">EXPIRY DATE</div><input class="ip" type="date" style="padding:6px;font-size:12px"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">SCHEME</div><input class="ip" placeholder="e.g. 5+1" style="padding:6px;font-size:12px"></div>
+              <div><div style="font-size:8px;font-weight:700;color:var(--t3);margin-bottom:2px">CREDIT DAYS</div><select style="width:100%;padding:6px;border-radius:10px;border:1.5px solid var(--b3);font-size:12px;font-weight:600"><option>COD</option><option>7 days</option><option>15 days</option><option selected>30 days</option></select></div>
+            </div>
+            <div style="margin-top:8px;padding:8px;background:var(--pl);border-radius:8px;font-size:9px;color:var(--p);font-weight:600">
+              💡 Adding HSN, batch & expiry helps with: GST returns, FEFO stock rotation, expiry alerts, and supplier claims
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reasons banner — why add details -->
+  <div class="cd" style="padding:10px 14px;background:var(--pl);border-color:var(--p);margin-bottom:8px">
+    <div style="font-size:11px;font-weight:700;color:var(--p);margin-bottom:4px">Why add full product details?</div>
+    <div style="display:flex;flex-direction:column;gap:4px;font-size:10px;color:var(--t2)">
+      <div style="display:flex;align-items:center;gap:6px"><span style="color:var(--ok)">✓</span> <b>Stock sync</b> — auto-updates inventory count across all screens</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="color:var(--ok)">✓</span> <b>GST compliance</b> — HSN + tax rate auto-fills in invoices & returns</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="color:var(--ok)">✓</span> <b>Margin tracking</b> — purchase vs sell price = real-time profit visibility</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="color:var(--ok)">✓</span> <b>Expiry alerts</b> — batch + expiry enables FEFO and auto-warnings</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="color:var(--ok)">✓</span> <b>Supplier ledger</b> — links purchase to supplier for payment tracking & claims</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="color:var(--ok)">✓</span> <b>Reorder intelligence</b> — sales velocity + stock = smart reorder suggestions</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Purchase summary footer -->
+<div style="padding:10px 14px;background:#fff;border-top:1px solid var(--b3)">
+  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-bottom:4px">
+    <span>3 items · 1 supplier · INV-2026-0458</span>
+    <span style="color:var(--ok);font-weight:700">2 repeat · 1 new</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px">
+    <span style="color:var(--t3)">Subtotal (3 items)</span><span style="font-weight:700">₹2,448</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-bottom:2px">
+    <span>GST (mixed rates)</span><span>₹298.56</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ok);margin-bottom:2px">
+    <span>Trade Discounts Applied</span><span>-₹122.40</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:900;border-top:2px solid var(--t1);padding-top:6px;margin-top:4px">
+    <span>Grand Total</span><span>₹2,624.16</span>
+  </div>
+  <div style="font-size:9px;color:var(--t3);margin-top:2px;text-align:right">Payment: 30 days credit · Expected margin: ₹612 (24%)</div>
+  <div style="display:flex;gap:8px;margin-top:10px">
+    <button class="bt bt-o bt-sm" style="flex:1" onclick="toast('Draft saved','success')">Save Draft</button>
+    <button class="bt bt-p" style="flex:2" onclick="toast('Purchase confirmed! Stock updated.','success');setTimeout(()=>nav('store'),1500)">Confirm Purchase</button>
+  </div>
+</div>
+</div>
+
+<!-- ===== STORE ===== -->
+<div class="sc" id="store">
+<div class="hd"><h1><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" style="vertical-align:-2px;margin-right:6px"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>Store</h1></div>
+<div class="bd">
+  <div class="ag">
+    <div class="ac" onclick="nav('grn')"><div class="ai"><svg width="44" height="44" viewBox="0 0 48 48" fill="none"><rect x="8" y="16" width="32" height="24" rx="3" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1.5"/><path d="M8 22h32" stroke="#94A3B8" stroke-width="1.5"/><rect x="14" y="8" width="20" height="10" rx="2" fill="#2563EB"/><path d="M18 12h12" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M20 15h8" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".6"/><path d="M14 28h6v6h-6z" fill="#2563EB" rx="1" opacity=".15"/><path d="M22 28h6v6h-6z" fill="#2563EB" rx="1" opacity=".15"/><path d="M30 28h6v6h-6z" fill="#2563EB" rx="1" opacity=".15"/><circle cx="38" cy="36" r="6" fill="#16A34A"/><path d="M35 36l2 2 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="at">Receive Stock</div><div class="as">Scan & receive goods</div></div>
+    <div class="ac" onclick="nav('reorder')"><div class="ai"><svg width="44" height="44" viewBox="0 0 48 48" fill="none"><rect x="10" y="6" width="28" height="36" rx="3" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/><path d="M16 14h16M16 20h12M16 26h14" stroke="#2563EB" stroke-width="1.5" stroke-linecap="round" opacity=".5"/><path d="M16 32h8" stroke="#2563EB" stroke-width="1.5" stroke-linecap="round" opacity=".3"/><circle cx="36" cy="36" r="8" fill="#F59E0B"/><path d="M36 32v4h-4" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M28 36a8 8 0 0116 0" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".5" transform="rotate(-45 36 36)"/></svg></div><div class="at">Reorder</div><div class="as" style="color:var(--w);font-weight:700">5 items low</div></div>
+    <div class="ac" onclick="nav('stock')"><div class="ai"><svg width="44" height="44" viewBox="0 0 48 48" fill="none"><rect x="6" y="8" width="36" height="32" rx="3" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/><rect x="12" y="26" width="6" height="10" rx="1.5" fill="#2563EB"/><rect x="21" y="20" width="6" height="16" rx="1.5" fill="#2563EB" opacity=".7"/><rect x="30" y="14" width="6" height="22" rx="1.5" fill="#2563EB" opacity=".4"/><path d="M12 36h26" stroke="#CBD5E1" stroke-width="1"/><path d="M10 16l8-2 8 6 8-8 6 4" stroke="#14B8A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="10" cy="16" r="2" fill="#14B8A6"/><circle cx="18" cy="14" r="2" fill="#14B8A6"/><circle cx="26" cy="20" r="2" fill="#14B8A6"/><circle cx="34" cy="12" r="2" fill="#14B8A6"/><circle cx="40" cy="16" r="2" fill="#14B8A6"/></svg></div><div class="at">Stock Report</div><div class="as">Inventory levels</div></div>
+    <div class="ac"><div class="ai"><svg width="44" height="44" viewBox="0 0 48 48" fill="none"><rect x="10" y="4" width="28" height="40" rx="3" fill="#fff" stroke="#E2E8F0" stroke-width="1.5"/><rect x="14" y="10" width="20" height="4" rx="1" fill="#0F172A"/><rect x="14" y="16" width="20" height="2" rx="1" fill="#0F172A" opacity=".8"/><rect x="14" y="20" width="20" height="4" rx="1" fill="#0F172A"/><rect x="14" y="26" width="20" height="2" rx="1" fill="#0F172A" opacity=".8"/><rect x="14" y="30" width="20" height="4" rx="1" fill="#0F172A"/><rect x="18" y="36" width="12" height="4" rx="1" fill="#E2E8F0"/><circle cx="38" cy="38" r="7" fill="#2563EB"/><path d="M35 38h6M38 35v6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg></div><div class="at">Barcode Labels</div><div class="as">Print barcode sheets</div></div>
+  </div>
+  <div class="st">RECENT ORDERS</div>
+  <div style="padding:0 14px 14px;display:flex;flex-direction:column;gap:8px">
+    <div class="cd" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer"><div><div style="font-size:13px;font-weight:700">ABC Distributors</div><div style="font-size:11px;color:var(--t3)">3 days ago · 12 items</div></div><div style="text-align:right"><div style="font-size:14px;font-weight:800">₹4,500</div><div style="font-size:10px;color:var(--ok);font-weight:600">Delivered ✓</div></div></div>
+    <div class="cd" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer"><div><div style="font-size:13px;font-weight:700">XYZ Trading</div><div style="font-size:11px;color:var(--t3)">5 days ago · 8 items</div></div><div style="text-align:right"><div style="font-size:14px;font-weight:800">₹2,100</div><div style="font-size:10px;color:var(--w);font-weight:600">In Transit</div></div></div>
+  </div>
+</div>
+<div class="bn">
+  <div class="bn-t" onclick="nav('sell')"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg></span><span class="lb">SELL</span></div>
+  <div class="bn-t buy" onclick="nav('buy')"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg></span><span class="lb">BUY</span></div>
+  <div class="bn-t on" onclick="nav('store')"><span class="ic"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg></span><span class="lb">STORE</span></div>
+  <div class="bn-t" onclick="nav('more')"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span><span class="lb">MORE</span></div>
+</div>
+</div>
+
+<!-- ===== GRN ===== -->
+<div class="sc" id="grn">
+<div class="hd"><button class="bk" onclick="nav('store')">←</button><h1>Receive Stock</h1></div>
+<div style="padding:10px 14px;background:#fff">
+  <div style="display:flex;gap:8px;align-items:center">
+    <div style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg);border-radius:12px;border:2px solid var(--b3)">
+      <span style="font-size:16px">📟</span>
+      <input style="border:none;background:none;flex:1;font-size:14px;font-weight:500;outline:none" placeholder="Scan barcode (HID)...">
+      <div class="pulse-dot"></div>
+      <span style="font-size:10px;color:var(--ok);font-weight:700;white-space:nowrap">Active</span>
+    </div>
+    <button class="sb-ic" style="background:var(--b2);color:var(--t2)" onclick="nav('scan')">📷</button>
+  </div>
+</div>
+<div class="tb"><div class="tb-t on">Against PO</div><div class="tb-t">Ad-hoc Inward</div></div>
+<div style="padding:8px 14px;background:var(--pl);font-size:12px;color:var(--pd);font-weight:500;display:flex;justify-content:space-between">
+  <span>PO #1234 · Supplier ABC</span><span style="font-weight:700">₹4,500</span>
+</div>
+<div class="bd">
+  <div class="gr"><div class="gr-ck ck">✓</div><div style="flex:1"><div style="font-weight:700;font-size:13px">🍪 Parle-G 100g</div><div style="font-size:10px;color:var(--t3)">8901234567890</div><div style="font-size:11px;color:var(--ok);font-weight:600;margin-top:2px">48 of 48 received ✓</div></div><div class="ci-qty"><button class="qb">−</button><span class="qv">48</span><button class="qb">+</button></div><div style="font-size:11px;color:var(--p);font-weight:700;cursor:pointer;padding:6px">Edit ▸</div></div>
+  <div class="gr"><div class="gr-ck ck">✓</div><div style="flex:1"><div style="font-weight:700;font-size:13px">🫖 Tata Tea 250g</div><div style="font-size:10px;color:var(--t3)">8901234500001</div><div style="font-size:11px;color:var(--ok);font-weight:600;margin-top:2px">24 of 24 received ✓</div></div><div class="ci-qty"><button class="qb">−</button><span class="qv">24</span><button class="qb">+</button></div><div style="font-size:11px;color:var(--p);font-weight:700;cursor:pointer;padding:6px">Edit ▸</div></div>
+  <div style="background:var(--el)"><div class="gr" style="background:transparent"><div class="gr-ck" style="border-color:var(--er)"></div><div style="flex:1"><div style="font-weight:700;font-size:13px">🍜 Maggi 70g</div><div style="font-size:10px;color:var(--t3)">8901234500002</div><div style="font-size:11px;color:var(--er);font-weight:600;margin-top:2px">0 of 50 — Scan to receive</div></div><div class="ci-qty"><button class="qb">−</button><span class="qv" style="color:var(--er)">0</span><button class="qb">+</button></div><div style="font-size:11px;color:var(--p);font-weight:700;cursor:pointer;padding:6px">Edit ▸</div></div></div>
+  <!-- Scan feedback -->
+  <div style="margin:12px 14px;padding:12px;background:var(--ol);border:1.5px solid var(--ok);border-radius:14px;display:flex;align-items:center;gap:10px"><span style="font-size:22px">📟</span><div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--ok)">Last scan: Parle-G 100g</div><div style="font-size:11px;color:var(--t3)">Auto-matched · Qty 48</div></div><span style="font-size:16px">✓</span></div>
+</div>
+<div style="padding:10px 14px;background:#fff;border-top:1px solid var(--b3)">
+  <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t3);margin-bottom:6px;font-weight:500"><span>Received: 2 of 3 items</span><span style="font-weight:700;color:var(--t1)">₹3,280</span></div>
+  <div style="display:flex;gap:8px"><button class="bt bt-o bt-sm" style="flex:1">Match All</button><button class="bt bt-g" style="flex:2">✓ Confirm Receipt</button></div>
+</div>
+</div>
+
+<!-- ===== REORDER ===== -->
+<div class="sc" id="reorder">
+<div class="hd"><button class="bk" onclick="nav('store')">←</button><h1>Reorder Suggestions</h1></div>
+<div class="bd" style="padding:12px;display:flex;flex-direction:column;gap:8px">
+  <div class="cd" style="border-left:4px solid var(--er)"><div style="display:flex;justify-content:space-between"><div><div style="font-size:14px;font-weight:800">🥛 Amul Milk 500ml</div><div style="font-size:11px;color:var(--t3)">Stock: 5 · Sells ~8/day</div><div style="font-size:11px;color:var(--er);font-weight:700">Runs out today!</div></div><div style="text-align:right"><div style="font-size:13px;font-weight:800">Order 30</div><div style="font-size:11px;color:var(--t3)">₹420</div></div></div><div style="display:flex;gap:6px;margin-top:10px"><button class="bt bt-p bt-sm" style="flex:1">✓ Approve</button><button class="bt bt-o bt-sm" style="flex:1">Edit</button><button class="bt bt-gh bt-sm">✕</button></div></div>
+  <div class="cd" style="border-left:4px solid var(--w)"><div style="display:flex;justify-content:space-between"><div><div style="font-size:14px;font-weight:800">🍪 Parle-G 100g</div><div style="font-size:11px;color:var(--t3)">Stock: 12 · Sells ~6/day</div><div style="font-size:11px;color:var(--w);font-weight:700">2 days left</div></div><div style="text-align:right"><div style="font-size:13px;font-weight:800">Order 50</div><div style="font-size:11px;color:var(--t3)">₹260</div></div></div><div style="display:flex;gap:6px;margin-top:10px"><button class="bt bt-p bt-sm" style="flex:1">✓ Approve</button><button class="bt bt-o bt-sm" style="flex:1">Edit</button><button class="bt bt-gh bt-sm">✕</button></div></div>
+</div>
+<div style="padding:12px"><button class="bt bt-p bt-lg">Approve All (₹680)</button></div>
+</div>
+
+<!-- ===== MORE ===== -->
+<div class="sc" id="more">
+<div style="padding:12px 18px;background:linear-gradient(135deg,var(--p),var(--pd));color:#fff">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div><div style="font-size:17px;font-weight:800;letter-spacing:-.3px">Good Morning, Raju 👋</div><div style="font-size:11px;opacity:.8;margin-top:2px;font-weight:500;display:flex;align-items:center;gap:6px">SU260305-003 <div class="pulse-dot" style="background:#fff"></div> Online</div></div>
+    <button class="bk" onclick="nav('settings')" style="background:rgba(255,255,255,.15)">⚙️</button>
+  </div>
+</div>
+<div class="bd">
+  <div class="mc"><h3>📊 Yesterday</h3><div class="ms"><span>Sales</span><span class="mv">₹15,400 (↑12%)</span></div><div class="ms"><span>Profit</span><span class="mv">₹2,310</span></div><div class="ms"><span>Top Item</span><span class="mv">Parle-G (47 sold)</span></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px">
+    <div class="rc" onclick="nav('reports')"><div class="rc-t">Today's Sales</div><div class="rc-v">₹4,850</div><div class="rc-s">12 bills</div></div>
+    <div class="rc" style="border-color:var(--er)" onclick="nav('khata')"><div class="rc-t">Udhar Pending</div><div class="rc-v" style="color:var(--er)">₹15,400</div><div class="rc-s">3 overdue</div></div>
+  </div>
+  <!-- Finance banner -->
+  <div style="margin:10px 14px;cursor:pointer" onclick="nav('finance')"><div style="background:linear-gradient(135deg,var(--pur),#5B21B6);border-radius:16px;padding:14px 16px;color:#fff;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(124,58,237,.15)"><div style="font-size:28px">💳</div><div style="flex:1"><div style="font-size:14px;font-weight:800">Credit & Finance</div><div style="font-size:12px;opacity:.85">BNPL · Credit Line · Bill Discounting</div></div><div style="background:rgba(255,255,255,.2);padding:6px 14px;border-radius:10px;font-size:12px;font-weight:700">View →</div></div></div>
+  <div class="st">QUICK ACCESS</div>
+  <div style="background:#fff;border-radius:14px;margin:0 14px;border:1px solid var(--bd);overflow:hidden">
+    <div class="mi" onclick="nav('khata')"><span class="mi-ic" style="background:var(--pl)">📒</span><span class="lb">Khata (Udhar)</span><span class="bg">3</span><span class="ar">›</span></div>
+    <div class="mi" onclick="nav('customers')"><span class="mi-ic" style="background:var(--ol)">👥</span><span class="lb">Customers</span><span class="ar">›</span></div>
+    <div class="mi" onclick="nav('reports')"><span class="mi-ic" style="background:var(--wl)">📊</span><span class="lb">Reports</span><span class="ar">›</span></div>
+    <div class="mi" onclick="nav('stock')"><span class="mi-ic" style="background:var(--b2)">📦</span><span class="lb">Stock</span><span class="ar">›</span></div>
+    <div class="mi" onclick="nav('sales')"><span class="mi-ic" style="background:var(--pl)">🧾</span><span class="lb">Sales History</span><span class="ar">›</span></div>
+    <div class="mi" onclick="nav('settings')"><span class="mi-ic" style="background:var(--b2)">⚙️</span><span class="lb">Settings</span><span class="ar">›</span></div>
+    <div class="mi"><span class="mi-ic" style="background:var(--b2)">❓</span><span class="lb">Help</span><span class="ar">›</span></div>
+  </div>
+  <div style="height:16px"></div>
+</div>
+<div class="bn">
+  <div class="bn-t" onclick="nav('sell')"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg></span><span class="lb">SELL</span></div>
+  <div class="bn-t buy" onclick="nav('buy')"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg></span><span class="lb">BUY</span></div>
+  <div class="bn-t" onclick="nav('store')"><span class="ic"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg></span><span class="lb">STORE</span></div>
+  <div class="bn-t on" onclick="nav('more')"><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span><span class="lb">MORE</span></div>
+</div>
+</div>
+
+<!-- ===== KHATA ===== -->
+<div class="sc" id="khata">
+<div class="hd"><button class="bk" onclick="nav('more')">←</button><h1><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="vertical-align:-2px;margin-right:6px"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8M8 11h6"/></svg>Khata</h1><button class="hd-btn s">+ Record</button></div>
+<div style="padding:10px 14px;background:var(--el);display:flex;justify-content:space-between"><div><div style="font-size:10px;color:#991B1B;font-weight:700">OUTSTANDING</div><div style="font-size:18px;font-weight:900;color:var(--er)">₹15,400</div></div><div style="text-align:right"><div style="font-size:10px;color:#991B1B;font-weight:700">OVERDUE</div><div style="font-size:18px;font-weight:900;color:var(--er)">₹4,200</div></div></div>
+<div class="sb"><input placeholder="Search customer..."></div>
+<div class="bd" style="padding:10px 14px">
+  <div class="st" style="padding:2px 0;color:var(--er)">⚠ OVERDUE</div>
+  <div class="kc" style="border-left:4px solid var(--er)"><div class="kav">R</div><div class="ki"><div class="kn">Ramesh Kumar</div><div class="kd">45 days overdue</div></div><div><div class="ka od">₹3,200</div><div style="display:flex;gap:4px;margin-top:4px"><button class="bt bt-sm" style="background:var(--wa);color:#fff;padding:4px 10px;font-size:10px;width:auto">📱</button><button class="bt bt-sm bt-p" style="padding:4px 10px;font-size:10px;width:auto">💰</button></div></div></div>
+  <div class="st" style="padding:12px 0 2px">PENDING</div>
+  <div class="kc"><div class="kav">S</div><div class="ki"><div class="kn">Suresh Patel</div><div class="kd">7 days</div></div><div><div class="ka pe">₹2,100</div></div></div>
+  <div class="kc"><div class="kav">M</div><div class="ki"><div class="kn">Mohan Singh</div><div class="kd">2 days</div></div><div><div class="ka pe">₹800</div></div></div>
+</div>
+</div>
+
+<!-- ===== FINANCE ===== -->
+<div class="sc" id="finance">
+<div class="hd" style="background:linear-gradient(135deg,var(--pur),#5B21B6)"><button class="bk" onclick="nav('more')">←</button><h1>💳 Credit & Finance</h1></div>
+<div class="tb"><div class="tb-t on">Offers</div><div class="tb-t">My Loans</div><div class="tb-t">Bill Discount</div></div>
+<div class="bd" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+  <div class="cd" style="background:var(--pl);border-color:var(--p);margin-bottom:2px"><div style="font-size:12px;color:var(--p);font-weight:700">Credit Score: 720 ✓ Eligible</div></div>
+  <div class="fc"><div style="display:flex;justify-content:space-between;align-items:center"><span class="fc-pv">SuperMandi Finance</span><span class="pb" style="background:var(--pul);color:var(--pur)">BNPL</span></div><div class="fc-am">₹50,000</div><div class="fc-dt">Buy Now Pay Later · 0% for 30 days<br>3 EMIs of ₹16,667</div><div style="margin-top:12px"><button class="bt bt-p bt-sm">Apply Now</button></div></div>
+  <div class="fc"><div style="display:flex;justify-content:space-between;align-items:center"><span class="fc-pv">Lendingkart</span><span class="pb" style="background:var(--wl);color:var(--w)">Credit Line</span></div><div class="fc-am">₹2,00,000</div><div class="fc-dt">Business credit · 1.5%/month<br>Draw as needed</div><div style="margin-top:12px"><button class="bt bt-o bt-sm">Details</button></div></div>
+  <div class="fc"><div style="display:flex;justify-content:space-between;align-items:center"><span class="fc-pv">FinBox</span><span class="pb" style="background:var(--ol);color:var(--ok)">Bill Discount</span></div><div class="fc-am">Sell Bill Discounting</div><div class="fc-dt">90% of invoice value upfront<br>Funds in 24 hours</div><div style="margin-top:12px"><button class="bt bt-o bt-sm">Upload Invoice</button></div></div>
+</div>
+</div>
+
+<!-- ===== REPORTS ===== -->
+<div class="sc" id="reports">
+<div class="hd"><button class="bk" onclick="nav('more')">←</button><h1>📊 Reports</h1></div>
+<div class="tb"><div class="tb-t on">Today</div><div class="tb-t">Week</div><div class="tb-t">Month</div></div>
+<div class="bd" style="padding:14px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+    <div class="rc"><div class="rc-t">Sales</div><div class="rc-v">₹4,850</div><div class="rc-s">12 bills</div></div>
+    <div class="rc"><div class="rc-t">Profit</div><div class="rc-v" style="color:var(--ok)">₹726</div><div class="rc-s">15% margin</div></div>
+  </div>
+  <div class="st" style="padding:4px 0">PAYMENT SPLIT</div>
+  <div class="cd">
+    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:500"><span>Cash</span><span style="font-weight:800">₹3,200 (66%)</span></div><div class="cb" style="width:66%;background:linear-gradient(90deg,var(--ok),#22C55E)"></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:500;margin-top:8px"><span>UPI</span><span style="font-weight:800">₹1,200 (25%)</span></div><div class="cb" style="width:25%;background:linear-gradient(90deg,var(--p),#3B82F6)"></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:500;margin-top:8px"><span>Udhar</span><span style="font-weight:800">₹450 (9%)</span></div><div class="cb" style="width:9%;background:linear-gradient(90deg,var(--w),#FBBF24)"></div>
+  </div>
+</div>
+</div>
+
+<!-- ===== STOCK ===== -->
+<div class="sc" id="stock">
+<div class="hd"><button class="bk" onclick="nav('more')">←</button><h1>📦 Stock</h1></div>
+<div class="tb"><div class="tb-t on">Current</div><div class="tb-t">Unsold</div><div class="tb-t">Movement</div></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 14px">
+  <div class="rc" style="padding:10px;text-align:center"><div class="rc-t">Products</div><div class="rc-v" style="font-size:18px">142</div></div>
+  <div class="rc" style="padding:10px;text-align:center;border-color:var(--w)"><div class="rc-t">Low</div><div class="rc-v" style="font-size:18px;color:var(--w)">7</div></div>
+  <div class="rc" style="padding:10px;text-align:center;border-color:var(--er)"><div class="rc-t">Out</div><div class="rc-v" style="font-size:18px;color:var(--er)">3</div></div>
+</div>
+<div class="sb"><input placeholder="Search product..."></div>
+<div class="bd">
+  <div class="ci"><div class="ci-im">🍪</div><div class="ci-nf"><div class="ci-nm">Parle-G 100g</div><div class="ci-pr">Cost ₹5.50 · Sell ₹10</div></div><div style="text-align:right"><div style="font-size:15px;font-weight:900;color:var(--ok)">47</div><div style="font-size:10px;color:var(--ok);font-weight:600">In stock</div></div></div>
+  <div class="ci"><div class="ci-im">🥛</div><div class="ci-nf"><div class="ci-nm">Amul Milk 500ml</div><div class="ci-pr">Cost ₹22 · Sell ₹28</div></div><div style="text-align:right"><div style="font-size:15px;font-weight:900;color:var(--w)">5</div><div style="font-size:10px;color:var(--w);font-weight:600">Low</div></div></div>
+  <div class="ci"><div class="ci-im">🍞</div><div class="ci-nf"><div class="ci-nm">Bread Wheat</div><div class="ci-pr">Cost ₹28 · Sell ₹40</div></div><div style="text-align:right"><div style="font-size:15px;font-weight:900;color:var(--er)">0</div><div style="font-size:10px;color:var(--er);font-weight:600">Out</div></div></div>
+</div>
+</div>
+
+<!-- ===== CUSTOMERS ===== -->
+<div class="sc" id="customers">
+<div class="hd"><button class="bk" onclick="nav('more')">←</button><h1>👥 Customers</h1><button class="hd-btn s">+ Add</button></div>
+<div class="sb"><input placeholder="Search customer..."></div>
+<div class="bd" style="padding:10px 14px">
+  <div class="kc"><div class="kav">R</div><div class="ki"><div class="kn">Ramesh Kumar</div><div class="kd">32 visits · ₹24,500 total</div></div><div style="font-size:12px;color:var(--t3)">›</div></div>
+  <div class="kc"><div class="kav">S</div><div class="ki"><div class="kn">Suresh Patel</div><div class="kd">18 visits · ₹12,800</div></div><div style="font-size:12px;color:var(--t3)">›</div></div>
+  <div class="kc"><div class="kav">M</div><div class="ki"><div class="kn">Mohan Singh</div><div class="kd">45 visits · ₹38,000</div></div><div style="font-size:12px;color:var(--t3)">›</div></div>
+</div>
+</div>
+
+<!-- ===== SALES HISTORY ===== -->
+<div class="sc" id="sales">
+<div class="hd"><button class="bk" onclick="nav('more')">←</button><h1>🧾 Sales</h1></div>
+<div class="bd">
+  <div class="ci" style="cursor:pointer"><div class="ci-im" style="background:var(--ol);color:var(--ok);font-size:14px;font-weight:700">💵</div><div class="ci-nf"><div class="ci-nm">Bill #SM-0023 · ₹162</div><div class="ci-pr">Cash · 3 items · 10:42 AM</div></div><div style="font-size:12px;color:var(--t3)">›</div></div>
+  <div class="ci" style="cursor:pointer"><div class="ci-im" style="background:var(--pl);color:var(--p);font-size:14px;font-weight:700">📱</div><div class="ci-nf"><div class="ci-nm">Bill #SM-0022 · ₹480</div><div class="ci-pr">UPI · 5 items · 10:15 AM</div></div><div style="font-size:12px;color:var(--t3)">›</div></div>
+  <div class="ci" style="cursor:pointer"><div class="ci-im" style="background:var(--wl);color:var(--w);font-size:14px;font-weight:700">📋</div><div class="ci-nf"><div class="ci-nm">Bill #SM-0021 · ₹245</div><div class="ci-pr">Udhar (Ramesh) · 9:50 AM</div></div><div style="font-size:12px;color:var(--t3)">›</div></div>
+</div>
+</div>
+
+<!-- ===== SETTINGS ===== -->
+<div class="sc" id="settings">
+<div class="hd"><button class="bk" onclick="nav('more')">←</button><h1>Settings</h1></div>
+<div class="bd">
+  <div class="st">Store</div><div style="background:#fff">
+    <div class="sr"><span class="ic">🏪</span><span class="lb">Store Name</span><span class="vl">SuperMandi Store</span></div>
+    <div class="sr"><span class="ic">👤</span><span class="lb">Staff</span><span class="vl">Raju (Manager)</span></div>
+  </div>
+  <div class="st">Hardware</div><div style="background:#fff">
+    <div class="sr"><span class="ic">🖨️</span><span class="lb">Printer</span><span class="vl" style="color:var(--ok);font-weight:600">Connected ✓</span></div>
+    <div class="sr"><span class="ic">📟</span><span class="lb">HID Scanner</span><span class="vl" style="color:var(--ok);font-weight:600">Active ✓</span></div>
+    <div class="sr"><span class="ic">🔄</span><span class="lb">Auto-Print</span><div class="tg on"></div></div>
+  </div>
+  <div class="st">Payments</div><div style="background:#fff">
+    <div class="sr"><span class="ic">📱</span><span class="lb">UPI ID</span><span class="vl">store@upi</span></div>
+    <div class="sr"><span class="ic">⚡</span><span class="lb">Express Checkout</span><div class="tg on"></div></div>
+  </div>
+  <div class="st">Preferences</div><div style="background:#fff">
+    <div class="sr"><span class="ic">🌐</span><span class="lb">Language</span><span class="vl">हिंदी</span></div>
+    <div class="sr"><span class="ic">🌙</span><span class="lb">Dark Mode</span><div class="tg"></div></div>
+    <div class="sr"><span class="ic">🔊</span><span class="lb">Sounds</span><div class="tg on"></div></div>
+  </div>
+  <div style="padding:16px"><button class="bt bt-o" style="margin-bottom:8px">Switch Staff</button><button class="bt bt-er">Logout</button></div>
+</div>
+</div>
+
+</div>
+
+<script>
+// === NAV with breadcrumb tracking ===
+let hist=['splash'];
+let navNames={splash:'Loading',login:'Login',sell:'Sell',search:'Search',cart:'Cart',voice:'Voice',scan:'Scan',newprod:'New Product',payment:'Payment',cash:'Cash',upi:'UPI',udhar:'Udhar',success:'Receipt',buy:'Buy Stock',compare:'Compare',store:'Store',grn:'Receive',reorder:'Reorder',more:'Dashboard',khata:'Khata',finance:'Finance',reports:'Reports',stock:'Stock',customers:'Customers',sales:'Sales',settings:'Settings'};
+
+function nav(id){
+  document.querySelectorAll('.sc').forEach(s=>s.classList.remove('on'));
+  const s=document.getElementById(id);
+  if(s){s.classList.add('on');const b=s.querySelector('.bd');if(b)b.scrollTop=0}
+  hist.push(id);
+  // Update all active nav states
+  document.querySelectorAll('.bn-t').forEach(t=>{
+    const lbl=t.querySelector('.lb');
+    if(!lbl)return;
+    const n=lbl.textContent.trim();
+    const map={SELL:'sell',BUY:'buy',STORE:'store',MORE:'more'};
+    t.classList.toggle('on',map[n]===id);
+    if(n==='BUY')t.classList.toggle('on',id==='buy');
+  });
+}
+
+// === TOAST NOTIFICATION ===
+function toast(msg,type='info'){
+  const t=document.createElement('div');
+  const bg={info:'var(--p)',success:'var(--ok)',error:'var(--er)',warning:'var(--w)'};
+  t.style.cssText=`position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-20px);background:${bg[type]||bg.info};color:#fff;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:1000;opacity:0;transition:all .3s;box-shadow:0 4px 16px rgba(0,0,0,.15);max-width:80%;text-align:center;pointer-events:none;font-family:Inter,sans-serif`;
+  t.textContent=msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>{t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)'});
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(-20px)';setTimeout(()=>t.remove(),300)},2000);
+}
+
+// === NAVIGATION GUIDE (first-time help) ===
+let guideShown=false;
+function showGuide(){
+  if(guideShown)return;guideShown=true;
+  const g=document.createElement('div');
+  g.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:20px;font-family:Inter,sans-serif';
+  g.innerHTML=`
+    <div style="background:#fff;border-radius:20px;padding:24px;max-width:380px;width:100%;text-align:center">
+      <div style="font-size:36px;margin-bottom:12px">👋</div>
+      <div style="font-size:18px;font-weight:800;color:#0F172A;letter-spacing:-.3px">Welcome to SuperMandi POS</div>
+      <div style="font-size:13px;color:#64748B;margin-top:8px;line-height:1.5">
+        <div style="display:flex;align-items:center;gap:10px;text-align:left;padding:8px 0;border-bottom:1px solid #F1F5F9">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg>
+          <span><b style="color:#0F172A">SELL</b> — Billing & checkout</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;text-align:left;padding:8px 0;border-bottom:1px solid #F1F5F9">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#14B8A6" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+          <span><b style="color:#0F172A">BUY</b> — Order from suppliers</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;text-align:left;padding:8px 0;border-bottom:1px solid #F1F5F9">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+          <span><b style="color:#0F172A">STORE</b> — Stock & inventory</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;text-align:left;padding:8px 0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.5"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          <span><b style="color:#0F172A">MORE</b> — Reports, Khata, Settings</span>
+        </div>
+      </div>
+      <button onclick="this.parentElement.parentElement.remove()" style="margin-top:16px;background:linear-gradient(135deg,#2563EB,#3B82F6);color:#fff;border:none;padding:14px 32px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;width:100%;box-shadow:0 4px 16px rgba(37,99,235,.25)">Got it, Start Billing →</button>
+    </div>`;
+  document.body.appendChild(g);
+  g.addEventListener('click',(e)=>{if(e.target===g)g.remove()});
+}
+
+// === PRODUCTS — FMCG Wholesale B2B model ===
+// p=retail MRP, wp=wholesale/trade price per unit, cs=case size, moq=min order qty
+const P=[
+  {n:'Parle-G 100g',    ic:'🍪',br:'Parle',   cat:'Biscuits',  p:10,  wp:8.5,  cs:48, moq:1,  hsn:'1905',  s:'g', u:'pcs'},
+  {n:'Tata Tea 250g',   ic:'🍵',br:'Tata',    cat:'Tea',       p:80,  wp:68,   cs:24, moq:1,  hsn:'0902',  s:'g', u:'pcs'},
+  {n:'Maggi 70g',       ic:'🍜',br:'Nestle',  cat:'Noodles',   p:14,  wp:11.5, cs:48, moq:1,  hsn:'1902',  s:'y', u:'pcs'},
+  {n:'Surf Excel 500g', ic:'🫧',br:'HUL',     cat:'Cleaning',  p:120, wp:98,   cs:24, moq:1,  hsn:'3402',  s:'g', u:'pcs'},
+  {n:'Amul Milk 500ml', ic:'🥛',br:'Amul',    cat:'Dairy',     p:28,  wp:24,   cs:12, moq:1,  hsn:'0401',  s:'g', u:'pcs'},
+  {n:'Bread Wheat',     ic:'🍞',br:'Modern',  cat:'Bakery',    p:40,  wp:34,   cs:8,  moq:1,  hsn:'1905',  s:'r', u:'pcs'},
+  {n:'Tata Salt 1kg',   ic:'🧂',br:'Tata',    cat:'Staples',   p:24,  wp:19,   cs:24, moq:1,  hsn:'2501',  s:'g', u:'pcs'},
+  {n:'Fortune Oil 1L',  ic:'🫒',br:'Fortune', cat:'Oil',       p:155, wp:138,  cs:12, moq:1,  hsn:'1512',  s:'g', u:'btl'},
+  {n:'Rice 5kg',        ic:'🍚',br:'ITC',     cat:'Staples',   p:380, wp:340,  cs:4,  moq:1,  hsn:'1006',  s:'g', u:'bag'},
+  {n:'Amul Butter 100g',ic:'🧈',br:'Amul',    cat:'Dairy',     p:56,  wp:48,   cs:30, moq:1,  hsn:'0405',  s:'g', u:'pcs'},
+  {n:'Eggs (6 pcs)',    ic:'🥚',br:'Farm',    cat:'Dairy',     p:42,  wp:36,   cs:10, moq:1,  hsn:'0407',  s:'y', u:'tray'},
+  {n:'Dairy Milk 50g',  ic:'🍫',br:'Cadbury', cat:'Chocolate', p:45,  wp:38,   cs:40, moq:1,  hsn:'1806',  s:'g', u:'pcs'}
+];
+let sellMode='retail'; // 'retail' or 'bulk'
+let C=[];
+
+// === RENDER GRID ===
+function renderGrid(){
+  const g=document.getElementById('pgrid');if(!g)return;
+  g.innerHTML=P.map((p,i)=>{
+    const inCart=C.find(c=>c.i===i);
+    const price=sellMode==='bulk'?p.wp:p.p;
+    const margin=Math.round((1-p.wp/p.p)*100);
+    return`<div class="pt${inCart?' inc':''}" onclick="addC(${i})">
+      ${inCart?`<div class="pt-cb">${inCart.q}</div>`:''}
+      <div class="pt-sd sd-${p.s}"></div>
+      <div class="pt-img"><span class="pi-icon">${p.ic}</span><span class="pi-brand">${p.br}</span></div>
+      <div class="pt-n">${p.n}</div>
+      <div class="pt-p">₹${price}</div>
+      <div style="font-size:8px;color:var(--t3);margin-top:1px">${sellMode==='bulk'?'Trade · ':'MRP · '}${p.cs}/${p.u} case</div>
+    </div>`;
+  }).join('');
+}
+
+// === ADD TO CART ===
+function setSellMode(m){
+  sellMode=m;
+  document.getElementById('mode-retail').style.cssText=m==='retail'?'padding:6px 16px;border:none;cursor:pointer;background:var(--p);color:#fff;border-radius:10px':'padding:6px 16px;border:none;cursor:pointer;background:transparent;color:var(--t3)';
+  document.getElementById('mode-bulk').style.cssText=m==='bulk'?'padding:6px 16px;border:none;cursor:pointer;background:var(--a);color:#fff;border-radius:10px':'padding:6px 16px;border:none;cursor:pointer;background:transparent;color:var(--t3)';
+  toast(m==='bulk'?'Bulk/Trade mode — wholesale prices + GST':'Retail mode — MRP prices','info');
+  render();
+}
+
+function addC(i){
+  const ex=C.find(c=>c.i===i);
+  if(ex){ex.q++;toast(`${P[i].n} ×${ex.q}`,'success')}
+  else{C.push({i,q:1});toast(`${P[i].n} added to cart`,'success')}
+  render();
+  // Flash animation on the tile
+  const tiles=document.querySelectorAll('#pgrid .pt');
+  if(tiles[i]){tiles[i].classList.add('pt-added');setTimeout(()=>tiles[i].classList.remove('pt-added'),400)}
+}
+function chgQ(ci,d){C[ci].q+=d;if(C[ci].q<=0)C.splice(ci,1);render()}
+
+// === RENDER ALL ===
+function render(){
+  renderGrid();
+  const isBulk=sellMode==='bulk';
+  const tot=C.reduce((s,c)=>s+(isBulk?P[c.i].wp:P[c.i].p)*c.q,0);
+  const cnt=C.reduce((s,c)=>s+c.q,0);
+  const gst=Math.round(tot*0.18);
+  const area=document.getElementById('cs-area');
+  if(C.length===0){
+    area.innerHTML=`<div class="cs-empty">Cart empty — tap product or scan barcode</div>`;
+  }else{
+    const cases=isBulk?C.reduce((s,c)=>s+Math.floor(c.q/P[c.i].cs),0):0;
+    const caseLabel=isBulk&&cases>0?` · ${cases} case${cases>1?'s':''}`:'' ;
+    area.innerHTML=`<div class="cs" onclick="nav('cart')"><div class="cs-l"><span class="cs-c">${cnt} item${cnt>1?'s':''}${caseLabel}</span><span class="cs-i">${C.map(c=>P[c.i].n.split(' ')[0]+(c.q>1?' ×'+c.q:'')).join(', ')}</span></div><span class="cs-t">₹${tot.toLocaleString('en-IN')}</span><button class="cs-btn" onclick="event.stopPropagation();nav('payment')">PAY →</button></div>`;
+  }
+  // Cart screen
+  const cl=document.getElementById('cart-list');
+  const sp=sellMode==='bulk';
+  if(cl)cl.innerHTML=C.map((c,ci)=>{
+    const pr=sp?P[c.i].wp:P[c.i].p;
+    return`<div class="ci"><div class="ci-im">${P[c.i].ic}</div><div class="ci-nf"><div class="ci-nm">${P[c.i].n}</div><div class="ci-pr">₹${pr}/${P[c.i].u} · ${P[c.i].br} · HSN ${P[c.i].hsn}</div>${sp&&c.q>=P[c.i].cs?`<div style="font-size:9px;color:var(--ok);font-weight:700;margin-top:1px">= ${Math.floor(c.q/P[c.i].cs)} case${Math.floor(c.q/P[c.i].cs)>1?'s':''} ${c.q%P[c.i].cs?'+ '+c.q%P[c.i].cs+' loose':''}</div>`:''}</div><div class="ci-qty"><button class="qb" onclick="chgQ(${ci},-1)">−</button><span class="qv">${c.q}</span><button class="qb" onclick="chgQ(${ci},1)">+</button></div><div class="ci-tt">₹${pr*c.q}</div></div>`}).join('');
+  const cs2=document.getElementById('cart-sum');
+  if(cs2){
+    const cgst=Math.round(tot*0.09);
+    const sgst=cgst;
+    const grand=tot+cgst+sgst;
+    const savings=isBulk?C.reduce((s,c)=>(P[c.i].p-P[c.i].wp)*c.q+s,0):0;
+    cs2.innerHTML=C.length?`
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0"><span>Subtotal (${cnt} items)</span><span>₹${tot.toLocaleString('en-IN')}</span></div>
+      ${isBulk?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ok)"><span>Trade Discount</span><span>-₹${savings.toLocaleString('en-IN')} saved vs MRP</span></div>`:''}
+      ${isBulk?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;color:var(--t3)"><span>CGST (9%)</span><span>₹${cgst.toLocaleString('en-IN')}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;color:var(--t3)"><span>SGST (9%)</span><span>₹${sgst.toLocaleString('en-IN')}</span></div>`:''}
+      <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:900;border-top:2px solid var(--t1);padding-top:8px;margin-top:4px;letter-spacing:-.3px"><span>Total${isBulk?' (incl. GST)':''}</span><span>₹${(isBulk?grand:tot).toLocaleString('en-IN')}</span></div>
+    `:'';
+  }
+  // Payment
+  const finalTot=isBulk?tot+Math.round(tot*0.18):tot;
+  ['pay-tot','cash-tot','upi-tot','udh-tot'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='₹'+finalTot.toLocaleString('en-IN')});
+  const pc=document.getElementById('pay-ct');if(pc)pc.textContent=cnt+' items'+(isBulk?' · Trade/GST':'');
+  const qe=document.getElementById('qa-ex');if(qe)qe.textContent='EXACT ₹'+finalTot.toLocaleString('en-IN');
+  const spt=document.getElementById('suc-tot');if(spt)spt.textContent='₹'+finalTot.toLocaleString('en-IN');
+  const margin=isBulk?C.reduce((s,c)=>(P[c.i].p-P[c.i].wp)*c.q+s,0):Math.round(tot*.15);
+  const pr2=document.getElementById('suc-profit');if(pr2)pr2.textContent=`Margin: ₹${margin.toLocaleString('en-IN')} (${Math.round(margin/Math.max(tot,1)*100)}%)`;
+}
+
+// === CONFETTI ===
+// Make chips interactive
+document.addEventListener('click',e=>{
+  if(e.target.classList.contains('cp')){
+    const parent=e.target.parentElement;
+    parent.querySelectorAll('.cp').forEach(c=>{c.classList.remove('on');c.classList.add('off')});
+    e.target.classList.remove('off');e.target.classList.add('on');
+  }
+  // Make tabs interactive
+  if(e.target.classList.contains('tb-t')){
+    const parent=e.target.parentElement;
+    parent.querySelectorAll('.tb-t').forEach(t=>t.classList.remove('on'));
+    e.target.classList.add('on');
+  }
+  // Make toggles interactive
+  if(e.target.classList.contains('tg')){
+    e.target.classList.toggle('on');
+  }
+  // Quick amount selection
+  if(e.target.classList.contains('qa')){
+    e.target.parentElement.querySelectorAll('.qa').forEach(q=>{q.classList.remove('sel');q.classList.remove('ex')});
+    e.target.classList.add('sel');
+  }
+  // Payment method selection
+  if(e.target.closest('.py-b')){
+    const btn=e.target.closest('.py-b');
+    btn.parentElement.querySelectorAll('.py-b').forEach(b=>b.classList.remove('sel'));
+    btn.classList.add('sel');
+  }
+  // GRN checkboxes
+  if(e.target.classList.contains('gr-ck')){
+    e.target.classList.toggle('ck');
+    if(e.target.classList.contains('ck'))e.target.textContent='✓';else e.target.textContent='';
+  }
+});
+
+function celebrate(){
+  const bd=document.getElementById('success-bd');if(!bd)return;
+  const colors=['#2563EB','#14B8A6','#F59E0B','#DC2626','#16A34A','#7C3AED'];
+  for(let i=0;i<24;i++){
+    const c=document.createElement('div');c.className='confetti';
+    c.style.cssText=`left:${Math.random()*100}%;top:-10px;background:${colors[Math.floor(Math.random()*colors.length)]};width:${6+Math.random()*6}px;height:${6+Math.random()*6}px;animation-delay:${Math.random()*.5}s;animation-duration:${1+Math.random()}s`;
+    bd.appendChild(c);setTimeout(()=>c.remove(),2000);
+  }
+}
+
+// === QR ===
+const qr=document.getElementById('qr');
+if(qr)for(let i=0;i<49;i++){const d=document.createElement('div');d.style.cssText=`background:${Math.random()>.45?'var(--t1)':'#fff'};border-radius:1px`;qr.appendChild(d)}
+
+// Init
+render();
+</script>
+</body>
+</html>
