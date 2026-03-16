@@ -11,6 +11,7 @@ import ProductTileV3, { type ProductTileData } from "../../components/v3/Product
 import CartSheetV3 from "../../components/v3/CartSheetV3";
 import VoiceOverlayV3 from "../../components/v3/VoiceOverlayV3";
 import UniversalSearchV3, { type SearchResult } from "../../components/v3/UniversalSearchV3";
+import { OfflineBanner } from "../../components/ui/OfflineBanner";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useProductsStore, type Product } from "../../stores/productsStore";
@@ -178,6 +179,8 @@ export default function SellScreenV3() {
     <View style={styles.container}>
       {/* Branded header */}
       <BrandedHeader />
+      {/* V3-029: Offline banner */}
+      <OfflineBanner />
 
       {/* Search bar */}
       <View style={styles.searchBar}>
