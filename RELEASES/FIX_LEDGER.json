@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 246,
+  "version": 247,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6624,8 +6624,8 @@
       "ticket": "STG-556",
       "file": "src/screens/v3/PaymentScreenV3.tsx",
       "start_line": 1,
-      "end_line": 301,
-      "checksum": "ba42d617804d18eb",
+      "end_line": 335,
+      "checksum": "cf050afde214a962",
       "description": "Payment screen v3 — Cash/UPI/Udhar with quick amounts, GST total, Hindi labels",
       "test_file": "src/__tests__/screens/payment-v3.stg-556.test.ts",
       "depends_on": null,

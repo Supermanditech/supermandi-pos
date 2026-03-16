@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useCartStore, type SellMode } from "../../stores/cartStore";
-import { createSale, type SaleItemInput } from "../../services/api/posApi";
+import { createSale, initUpiPayment, recordCashPayment, recordDuePayment, confirmUpiPaymentManual, type SaleItemInput } from "../../services/api/posApi";
 import { showToast } from "../../utils/showToast";
 import { logger } from "../../services/logger";
 
@@ -56,45 +56,79 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
   }, []);
 
   const [processing, setProcessing] = useState(false);
+  const [saleId, setSaleId] = useState<string | null>(null);
+  const [upiData, setUpiData] = useState<{ paymentId: string; upiVpa: string; billRef: string } | null>(null);
   const createSaleInFlight = useRef(false);
 
+  // V3-008: Step 1 — Create sale
+  const createSaleStep = useCallback(async (): Promise<string | null> => {
+    const saleItems: SaleItemInput[] = items.map((item) => ({
+      productId: item.barcode ?? item.id,
+      barcode: item.barcode,
+      name: item.name,
+      quantity: item.quantity,
+      priceMinor: item.priceMinor,
+      itemDiscount: item.itemDiscount ?? null,
+      batchNumber: item.batchNumber ?? null,
+    }));
+    const discount = useCartStore.getState().discount;
+    const result = await createSale({
+      items: saleItems,
+      discountMinor: discount ? (discount.type === "fixed" ? discount.value : 0) : 0,
+      cartDiscount: discount ?? undefined,
+      currency: "INR",
+    });
+    logger.debug("V3Payment", `sale_created:${result.saleId},billRef:${result.billRef}`);
+    setSaleId(result.saleId);
+    return result.saleId;
+  }, [items]);
+
+  // V3-008: Step 2 — Record payment by method
   const handleComplete = useCallback(async () => {
     if (!selectedMethod) { showToast("Select payment method"); return; }
     if (createSaleInFlight.current) return;
 
-    // V3-002: Call real createSale API
+    // Lock cart during payment
+    useCartStore.getState().lockCart();
     createSaleInFlight.current = true;
     setProcessing(true);
+
     try {
-      const saleItems: SaleItemInput[] = items.map((item) => ({
-        productId: item.barcode ?? item.id,
-        barcode: item.barcode,
-        name: item.name,
-        quantity: item.quantity,
-        priceMinor: item.priceMinor,
-        itemDiscount: item.itemDiscount ?? null,
-        batchNumber: item.batchNumber ?? null,
-      }));
+      // Create sale first (if not already created)
+      const id = saleId ?? await createSaleStep();
+      if (!id) throw new Error("Failed to create sale");
 
-      const discount = useCartStore.getState().discount;
-      const result = await createSale({
-        items: saleItems,
-        discountMinor: discount ? (discount.type === "fixed" ? discount.value : 0) : 0,
-        cartDiscount: discount ?? undefined,
-        currency: "INR",
-      });
+      // Record payment based on method
+      if (selectedMethod === "CASH") {
+        await recordCashPayment({ saleId: id });
+        logger.debug("V3Payment", `cash_recorded:${id}`);
+      } else if (selectedMethod === "UPI") {
+        // Init UPI → get QR data → for now user confirms manually
+        const upi = await initUpiPayment({ saleId: id });
+        setUpiData({ paymentId: upi.paymentId, upiVpa: upi.upiVpa, billRef: upi.billRef });
+        logger.debug("V3Payment", `upi_initiated:${upi.paymentId}`);
+        // Manual confirmation — user taps "Payment Received"
+        await confirmUpiPaymentManual({ paymentId: upi.paymentId });
+        logger.debug("V3Payment", `upi_confirmed:${id}`);
+      } else if (selectedMethod === "DUE") {
+        // Auto-commit customer info from cartStore before recording DUE
+        const customer = useCartStore.getState().customer;
+        if (!customer?.name) { showToast("Add customer name for Udhar"); setProcessing(false); createSaleInFlight.current = false; return; }
+        await recordDuePayment({ saleId: id });
+        logger.debug("V3Payment", `due_recorded:${id},customer:${customer.name}`);
+      }
 
-      logger.debug("V3Payment", `sale_created:${result.saleId},billRef:${result.billRef},total:${result.totals.totalMinor}`);
       onComplete(selectedMethod);
     } catch (err: any) {
-      const msg = err?.response?.data?.error?.message ?? err?.message ?? "Sale failed";
+      const msg = err?.response?.data?.error?.message ?? err?.message ?? "Payment failed";
       showToast(msg);
-      logger.debug("V3Payment", `sale_failed:${String(err)}`);
+      logger.debug("V3Payment", `payment_failed:${String(err)}`);
     } finally {
+      useCartStore.getState().unlockCart();
       createSaleInFlight.current = false;
       setProcessing(false);
     }
-  }, [selectedMethod, items, onComplete]);
+  }, [selectedMethod, saleId, createSaleStep, onComplete]);
 
   return (
     <View style={styles.container}>
