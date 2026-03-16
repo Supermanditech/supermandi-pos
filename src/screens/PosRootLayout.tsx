@@ -122,11 +122,8 @@ const POS_DEVICE_HINTS = ["sunmi", "pax", "urovo", "newland", "zebra", "honeywel
 const TAB_PILL_ANIMATION_MS = 200;
 
 export default function PosRootLayout() {
-  // STG-552: If v3 enabled, render new 4-tab layout instead
-  const posV3Enabled = useSettingsStore((s) => s.posV3Enabled);
-  if (posV3Enabled) {
-    return <PosRootLayoutV3 />;
-  }
+  // V3-LAUNCH: Always render v3 layout — old layout replaced
+  return <PosRootLayoutV3 />;
 
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
@@ -1245,8 +1242,8 @@ export default function PosRootLayout() {
             style={[
               styles.tabIndicator,
               {
-                top: indicatorLayout.y,
-                height: indicatorLayout.height,
+                top: indicatorLayout?.y ?? 0,
+                height: indicatorLayout?.height ?? 0,
                 width: tabIndicatorWidth,
                 backgroundColor: indicatorColor,
                 transform: [{ translateX: tabIndicatorX }],
