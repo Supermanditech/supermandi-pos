@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import BottomNavV3, { type V3Tab } from "../../components/v3/BottomNavV3";
 import ScreenErrorBoundary from "../../components/ui/ScreenErrorBoundary";
@@ -11,6 +13,8 @@ import MoreScreenV3 from "./MoreScreenV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useCartStore } from "../../stores/cartStore";
+
+type Nav = NativeStackNavigationProp<any>;
 
 // STG-552: POS v3 root layout — 4-tab navigation (SELL / BUY / STORE / MORE)
 // Placeholder screens will be replaced by actual v3 screens in subsequent tickets.
@@ -30,12 +34,18 @@ function PlaceholderScreen({ name, description }: { name: string; description: s
 
 export default function PosRootLayoutV3() {
   const { t } = useTranslation();
+  const navigation = useNavigation<Nav>();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<V3Tab>("SELL");
 
   // Cart badge from existing store
   const cartCount = useCartStore((s) => s.items?.length ?? 0);
+
+  // V3-001: Navigation helper for sub-screens
+  const navigateTo = useCallback((screen: string, params?: any) => {
+    navigation.navigate(screen, params);
+  }, [navigation]);
 
   return (
     <View style={styles.container}>
@@ -52,12 +62,22 @@ export default function PosRootLayoutV3() {
         ) : null}
         {activeTab === "STORE" ? (
           <ScreenErrorBoundary screenName="StoreV3">
-            <StoreHubScreenV3 onNavigate={(s) => {/* sub-navigation in future ticket */}} />
+            <StoreHubScreenV3 onNavigate={(s) => {
+              const map: Record<string, string> = { grn: "V3GRN", reorder: "V3Reorder", stock: "V3Stock", barcode: "BarcodeSheet" };
+              if (map[s]) navigateTo(map[s]);
+            }} />
           </ScreenErrorBoundary>
         ) : null}
         {activeTab === "MORE" ? (
           <ScreenErrorBoundary screenName="MoreV3">
-            <MoreScreenV3 onNavigate={(s) => {/* sub-navigation in future ticket */}} />
+            <MoreScreenV3 onNavigate={(s) => {
+              const map: Record<string, string> = {
+                khata: "V3Khata", customers: "V3Customers", reports: "V3Reports",
+                stock: "V3Stock", finance: "V3Finance", sales: "SalesHistory",
+                settings: "V3Settings", help: "Help",
+              };
+              if (map[s]) navigateTo(map[s]);
+            }} />
           </ScreenErrorBoundary>
         ) : null}
       </View>

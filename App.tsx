@@ -78,6 +78,14 @@ import AIInsightsScreen from "./src/screens/AIInsightsScreen";
 import BulkPurchaseCreditScreen from "./src/screens/BulkPurchaseCreditScreen";
 // HELP-001: Help & Support screen
 import HelpScreen from "./src/screens/HelpScreen";
+
+// V3-001: V3 sub-screen wrappers for React Navigation stack
+import {
+  V3PaymentWrapper, V3SuccessWrapper, V3ScanWrapper, V3NewProductWrapper,
+  V3CompareWrapper, V3CounterPurchaseWrapper, V3GRNWrapper, V3ReorderWrapper,
+  V3StockWrapper, V3KhataWrapper, V3FinanceWrapper, V3ReportsWrapper,
+  V3CustomersWrapper, V3SettingsWrapper,
+} from "./src/screens/v3/V3ScreenWrappers";
 import { theme, useThemeColors } from "./src/theme";
 import { useSettingsStore, useSettingsHydrated } from "./src/stores/settingsStore";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -523,6 +531,22 @@ export default function App() {
           <Stack.Screen name="BulkPurchaseCredit" component={BulkPurchaseCreditWrapper} />
           {/* HELP-001: Help & Support */}
           <Stack.Screen name="Help" component={HelpScreenWrapper} options={{ headerShown: false }} />
+
+          {/* V3-001: V3 sub-screens with navigation wrappers */}
+          <Stack.Screen name="V3Payment" component={V3PaymentWrapper} />
+          <Stack.Screen name="V3Success" component={V3SuccessWrapper} />
+          <Stack.Screen name="V3Scan" component={V3ScanWrapper} />
+          <Stack.Screen name="V3NewProduct" component={V3NewProductWrapper} />
+          <Stack.Screen name="V3Compare" component={V3CompareWrapper} />
+          <Stack.Screen name="V3CounterPurchase" component={V3CounterPurchaseWrapper} />
+          <Stack.Screen name="V3GRN" component={V3GRNWrapper} />
+          <Stack.Screen name="V3Reorder" component={V3ReorderWrapper} />
+          <Stack.Screen name="V3Stock" component={V3StockWrapper} />
+          <Stack.Screen name="V3Khata" component={V3KhataWrapper} />
+          <Stack.Screen name="V3Finance" component={V3FinanceWrapper} />
+          <Stack.Screen name="V3Reports" component={V3ReportsWrapper} />
+          <Stack.Screen name="V3Customers" component={V3CustomersWrapper} />
+          <Stack.Screen name="V3Settings" component={V3SettingsWrapper} />
         </Stack.Navigator>
       </NavigationContainer>
         </ErrorBoundary>
