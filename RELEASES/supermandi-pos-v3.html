@@ -425,7 +425,6 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--p);outline-offs
     <span style="color:#fff;font-size:15px;font-weight:800;letter-spacing:-.3px">SuperMandi</span>
   </div>
   <div style="display:flex;align-items:center;gap:6px">
-    <button id="lang-btn" onclick="toggleLang()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:4px 10px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer">EN | हि</button>
     <div style="display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);padding:4px 10px;border-radius:8px"><div class="pulse-dot" style="width:6px;height:6px;background:#4ADE80"></div><span style="color:rgba(255,255,255,.9);font-size:10px;font-weight:600">Online</span></div>
     <button style="background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:10px;font-size:14px;cursor:pointer" onclick="nav('more')">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.5"><circle cx="8" cy="3" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="8" cy="13" r="1"/></svg>
@@ -1291,7 +1290,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--p);outline-offs
     <div class="sr"><span class="ic">⚡</span><span class="lb">Express Checkout</span><div class="tg on"></div></div>
   </div>
   <div class="st">Preferences</div><div style="background:#fff">
-    <div class="sr"><span class="ic">🌐</span><span class="lb">Language</span><span class="vl">हिंदी</span></div>
+    <div class="sr" onclick="toggleLang()" style="cursor:pointer"><span class="ic">🌐</span><span class="lb">Language</span><div id="lang-toggle" style="display:flex;background:var(--b2);border-radius:10px;overflow:hidden;font-size:11px;font-weight:700"><button id="lang-en" style="padding:5px 12px;border:none;cursor:pointer;background:var(--p);color:#fff;border-radius:10px;transition:all .15s">English</button><button id="lang-hi" style="padding:5px 12px;border:none;cursor:pointer;background:transparent;color:var(--t3);transition:all .15s">हिंदी</button></div></div>
     <div class="sr"><span class="ic">🌙</span><span class="lb">Dark Mode</span><div class="tg"></div></div>
     <div class="sr"><span class="ic">🔊</span><span class="lb">Sounds</span><div class="tg on"></div></div>
   </div>
@@ -1424,9 +1423,12 @@ const hi={
 };
 function toggleLang(){
   lang=lang==='en'?'hi':'en';
-  const btn=document.getElementById('lang-btn');
-  btn.textContent=lang==='en'?'EN | हि':'हि | EN';
-  btn.style.background=lang==='hi'?'rgba(255,255,255,.3)':'rgba(255,255,255,.15)';
+  const enBtn=document.getElementById('lang-en');
+  const hiBtn=document.getElementById('lang-hi');
+  if(enBtn&&hiBtn){
+    enBtn.style.cssText=lang==='en'?'padding:5px 12px;border:none;cursor:pointer;background:var(--p);color:#fff;border-radius:10px':'padding:5px 12px;border:none;cursor:pointer;background:transparent;color:var(--t3)';
+    hiBtn.style.cssText=lang==='hi'?'padding:5px 12px;border:none;cursor:pointer;background:var(--p);color:#fff;border-radius:10px':'padding:5px 12px;border:none;cursor:pointer;background:transparent;color:var(--t3)';
+  }
   toast(lang==='hi'?'हिंदी मोड सक्रिय':'English mode active','info');
   // Update visible text elements
   document.querySelectorAll('.lb,.at,.cp,.bt,.pl').forEach(el=>{
