@@ -6,6 +6,7 @@ import BottomNavV3, { type V3Tab } from "../../components/v3/BottomNavV3";
 import ScreenErrorBoundary from "../../components/ui/ScreenErrorBoundary";
 import SellScreenV3 from "./SellScreenV3";
 import BuyScreenV3 from "./BuyScreenV3";
+import StoreHubScreenV3 from "./StoreHubScreenV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useCartStore } from "../../stores/cartStore";
@@ -50,7 +51,7 @@ export default function PosRootLayoutV3() {
         ) : null}
         {activeTab === "STORE" ? (
           <ScreenErrorBoundary screenName="StoreV3">
-            <PlaceholderScreen name="STORE" description="Receive stock (GRN + HID scan), reorder suggestions, stock reports, barcode labels. Consolidates 10 screens." />
+            <StoreHubScreenV3 onNavigate={(s) => {/* sub-navigation in future ticket */}} />
           </ScreenErrorBoundary>
         ) : null}
         {activeTab === "MORE" ? (
