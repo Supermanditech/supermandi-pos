@@ -192,6 +192,8 @@ const PROTECTED_ENDPOINT_PATTERNS = [
 // These endpoints must work without authentication (e.g., enrollment creates the token)
 const PUBLIC_ENDPOINT_PATTERNS = [
   /^\/api\/v1\/pos\/enroll$/,  // Enrollment endpoint - creates the device token
+  /^\/api\/v1\/pos\/auth\/send-otp$/,  // V3: OTP send — no token needed
+  /^\/api\/v1\/pos\/auth\/verify-otp$/,  // V3: OTP verify — creates the token
 ];
 
 // GO-LIVE FIX: Check if an endpoint requires device token authentication
