@@ -7,6 +7,7 @@ import ScreenErrorBoundary from "../../components/ui/ScreenErrorBoundary";
 import SellScreenV3 from "./SellScreenV3";
 import BuyScreenV3 from "./BuyScreenV3";
 import StoreHubScreenV3 from "./StoreHubScreenV3";
+import MoreScreenV3 from "./MoreScreenV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useCartStore } from "../../stores/cartStore";
@@ -56,7 +57,7 @@ export default function PosRootLayoutV3() {
         ) : null}
         {activeTab === "MORE" ? (
           <ScreenErrorBoundary screenName="MoreV3">
-            <PlaceholderScreen name="MORE" description="Dashboard, khata, credit/finance, reports, customers, sales history, settings. Consolidates 15+ screens." />
+            <MoreScreenV3 onNavigate={(s) => {/* sub-navigation in future ticket */}} />
           </ScreenErrorBoundary>
         ) : null}
       </View>

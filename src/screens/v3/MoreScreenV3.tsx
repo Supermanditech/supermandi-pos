@@ -1,0 +1,112 @@
+import React, { useMemo } from "react";
+import { View, Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import Svg, { Rect, Circle, Path } from "react-native-svg";
+import { useThemeColors } from "../../theme";
+import type { ColorPalette } from "../../theme";
+import { useSettingsStore } from "../../stores/settingsStore";
+
+// STG-571: More screen v3 — dashboard cards, morning brief, quick access menu
+
+type MoreScreenV3Props = { onNavigate: (screen: string) => void };
+
+export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const storeName = useSettingsStore((s) => s.storeName) ?? "SuperMandi Store";
+
+  const MENU_ITEMS = [
+    { icon: "📒", label: "Khata (Udhar)", bg: colors.primaryLight, badge: 3, screen: "khata" },
+    { icon: "👥", label: "Customers", bg: colors.successSoft, screen: "customers" },
+    { icon: "📊", label: "Reports", bg: colors.warningSoft, screen: "reports" },
+    { icon: "📦", label: "Stock", bg: colors.backgroundSecondary, screen: "stock" },
+    { icon: "💳", label: "Credit & Finance", bg: "#F5F3FF", screen: "finance" },
+    { icon: "🧾", label: "Sales History", bg: colors.primaryLight, screen: "sales" },
+    { icon: "⚙️", label: "Settings", bg: colors.backgroundSecondary, screen: "settings" },
+    { icon: "❓", label: "Help", bg: colors.backgroundSecondary, screen: "help" },
+  ];
+
+  return (
+    <View style={styles.container}>
+      {/* Branded header */}
+      <View style={styles.header}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.greeting}>Good Morning 👋</Text>
+          <Text style={styles.storeInfo}>{storeName} · Online</Text>
+        </View>
+        <Pressable style={styles.settingsBtn} onPress={() => onNavigate("settings")}><Text style={styles.settingsIcon}>⚙️</Text></Pressable>
+      </View>
+
+      <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+        {/* Morning brief */}
+        <View style={styles.morningCard}>
+          <Text style={styles.morningTitle}>📊 Yesterday</Text>
+          {[["Sales", "₹15,400 (↑12%)"], ["Profit", "₹2,310"], ["Top Item", "Parle-G (47 sold)"]].map(([k, v]) => (
+            <View key={k} style={styles.morningRow}><Text style={styles.morningKey}>{k}</Text><Text style={styles.morningVal}>{v}</Text></View>
+          ))}
+        </View>
+
+        {/* Stats cards */}
+        <View style={styles.statsRow}>
+          <Pressable style={styles.statCard} onPress={() => onNavigate("reports")}><Text style={styles.statLabel}>Today's Sales</Text><Text style={styles.statVal}>₹4,850</Text><Text style={styles.statSub}>12 bills</Text></Pressable>
+          <Pressable style={[styles.statCard, { borderColor: colors.error }]} onPress={() => onNavigate("khata")}><Text style={styles.statLabel}>Udhar Pending</Text><Text style={[styles.statVal, { color: colors.error }]}>₹15,400</Text><Text style={styles.statSub}>3 overdue</Text></Pressable>
+        </View>
+
+        {/* Finance banner */}
+        <Pressable style={styles.financeBanner} onPress={() => onNavigate("finance")}>
+          <Text style={styles.financeIcon}>💳</Text>
+          <View style={{ flex: 1 }}><Text style={styles.financeTitle}>Credit & Finance</Text><Text style={styles.financeSub}>BNPL · Credit Line · Bill Discounting</Text></View>
+          <View style={styles.financeArrow}><Text style={styles.financeArrowText}>View →</Text></View>
+        </Pressable>
+
+        {/* Quick access menu */}
+        <Text style={styles.sectionTitle}>QUICK ACCESS</Text>
+        <View style={styles.menuCard}>
+          {MENU_ITEMS.map((item) => (
+            <Pressable key={item.label} style={styles.menuItem} onPress={() => onNavigate(item.screen)}>
+              <View style={[styles.menuIcon, { backgroundColor: item.bg }]}><Text style={{ fontSize: 18 }}>{item.icon}</Text></View>
+              <Text style={styles.menuLabel}>{item.label}</Text>
+              {item.badge ? <View style={styles.menuBadge}><Text style={styles.menuBadgeText}>{item.badge}</Text></View> : null}
+              <Text style={styles.menuArrow}>›</Text>
+            </Pressable>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function createStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    header: { backgroundColor: colors.primary, paddingHorizontal: 18, paddingVertical: 12, flexDirection: "row", alignItems: "center" },
+    greeting: { color: "#fff", fontSize: 17, fontWeight: "800", letterSpacing: -0.3 },
+    storeInfo: { color: "rgba(255,255,255,0.8)", fontSize: 11, fontWeight: "500", marginTop: 2 },
+    settingsBtn: { width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
+    settingsIcon: { fontSize: 18 },
+    body: { flex: 1 },
+    morningCard: { margin: 14, padding: 18, borderRadius: 20, backgroundColor: colors.primary, overflow: "hidden" },
+    morningTitle: { color: "#fff", fontSize: 15, fontWeight: "700", marginBottom: 8 },
+    morningRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
+    morningKey: { color: "rgba(255,255,255,0.8)", fontSize: 13 },
+    morningVal: { color: "#fff", fontSize: 13, fontWeight: "700" },
+    statsRow: { flexDirection: "row", gap: 8, paddingHorizontal: 14 },
+    statCard: { flex: 1, padding: 14, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border },
+    statLabel: { fontSize: 10, fontWeight: "700", color: colors.textTertiary, textTransform: "uppercase", letterSpacing: 0.5 },
+    statVal: { fontSize: 22, fontWeight: "900", marginTop: 4, letterSpacing: -0.5 },
+    statSub: { fontSize: 11, color: colors.textTertiary, marginTop: 2 },
+    financeBanner: { marginHorizontal: 14, marginTop: 10, padding: 14, borderRadius: 16, backgroundColor: "#7C3AED", flexDirection: "row", alignItems: "center", gap: 12 },
+    financeIcon: { fontSize: 28 },
+    financeTitle: { color: "#fff", fontSize: 14, fontWeight: "800" },
+    financeSub: { color: "rgba(255,255,255,0.85)", fontSize: 12 },
+    financeArrow: { backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10 },
+    financeArrowText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+    sectionTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, paddingHorizontal: 14, marginTop: 14, marginBottom: 8 },
+    menuCard: { marginHorizontal: 14, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
+    menuItem: { flexDirection: "row", alignItems: "center", gap: 14, padding: 14, borderBottomWidth: 1, borderBottomColor: colors.backgroundSecondary },
+    menuIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+    menuLabel: { flex: 1, fontSize: 14, fontWeight: "600" },
+    menuBadge: { backgroundColor: colors.error, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+    menuBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
+    menuArrow: { fontSize: 14, color: colors.border },
+  });
+}
