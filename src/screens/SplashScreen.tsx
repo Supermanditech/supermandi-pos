@@ -30,7 +30,7 @@ type RootStackParamList = {
 type NavProp = NativeStackNavigationProp<RootStackParamList, "Splash">;
 
 /** S1-8: Named constant for splash hold time */
-const SPLASH_DURATION_MS = 1000;
+const SPLASH_DURATION_MS = 0; // V3: instant navigation, no splash delay
 
 /** S1-3: Timeout for getDeviceSession() to prevent infinite hang */
 const SESSION_TIMEOUT_MS = 5000;
