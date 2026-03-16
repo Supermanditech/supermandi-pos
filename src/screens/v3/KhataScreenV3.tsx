@@ -1,11 +1,12 @@
-import React, { useMemo } from "react";
-import { View, Pressable, TextInput, ScrollView, StyleSheet, Text } from "react-native";
+import React, { useMemo, useEffect } from "react";
+import { View, Pressable, TextInput, ScrollView, ActivityIndicator, StyleSheet, Text } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
+import { useKhataStore } from "../../stores/khataStore";
 
-// STG-572: Khata v3 — overdue alerts, WhatsApp reminders, collect payment
+// V3-024: Khata with real khataStore
 
 type Customer = { name: string; initial: string; days: number; amount: number; overdue: boolean };
 const OVERDUE: Customer[] = [
@@ -25,6 +26,25 @@ export default function KhataScreenV3({ onClose }: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  // V3-024: Real khata data from store
+  const khataCustomers = useKhataStore((s) => s.customers);
+  const khataLoading = useKhataStore((s) => s.loading);
+  const fetchKhataCustomers = useKhataStore((s) => s.fetchCustomers);
+  useEffect(() => { void fetchKhataCustomers(); }, [fetchKhataCustomers]);
+
+  // Map khata customers to display format (merge with demo fallback)
+  const realOverdue: Customer[] = khataCustomers
+    .filter((c) => c.balanceMinor > 0 && c.lastEntryAt && (Date.now() - new Date(c.lastEntryAt).getTime()) > 30 * 86400000)
+    .map((c) => ({ name: c.name, initial: c.name[0] ?? "?", days: Math.round((Date.now() - new Date(c.lastEntryAt ?? Date.now()).getTime()) / 86400000), amount: Math.round(c.balanceMinor / 100), overdue: true }));
+  const realPending: Customer[] = khataCustomers
+    .filter((c) => c.balanceMinor > 0 && (!c.lastEntryAt || (Date.now() - new Date(c.lastEntryAt).getTime()) <= 30 * 86400000))
+    .map((c) => ({ name: c.name, initial: c.name[0] ?? "?", days: Math.max(1, Math.round((Date.now() - new Date(c.lastEntryAt ?? Date.now()).getTime()) / 86400000)), amount: Math.round(c.balanceMinor / 100), overdue: false }));
+
+  const displayOverdue = realOverdue.length > 0 ? realOverdue : OVERDUE;
+  const displayPending = realPending.length > 0 ? realPending : PENDING;
+  const totalOutstanding = khataCustomers.reduce((s, c) => s + Math.max(0, c.balanceMinor), 0);
+  const totalOverdue = realOverdue.reduce((s, c) => s + c.amount * 100, 0);
+
   const renderCustomer = (c: Customer) => (
     <View key={c.name} style={[styles.kCard, c.overdue && styles.kCardOverdue]}>
       <View style={styles.kAvatar}><Text style={styles.kInitial}>{c.initial}</Text></View>
@@ -42,13 +62,14 @@ export default function KhataScreenV3({ onClose }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Khata</Text><Pressable style={styles.addBtn}><Text style={styles.addBtnText}>+ Record</Text></Pressable></View>
-      <View style={styles.summaryBar}><View><Text style={styles.sumLabel}>OUTSTANDING</Text><Text style={styles.sumVal}>₹15,400</Text></View><View style={{ alignItems: "flex-end" }}><Text style={styles.sumLabel}>OVERDUE</Text><Text style={styles.sumVal}>₹4,200</Text></View></View>
+      <View style={styles.summaryBar}><View><Text style={styles.sumLabel}>OUTSTANDING</Text><Text style={styles.sumVal}>₹{Math.round(totalOutstanding / 100).toLocaleString("en-IN")}</Text></View><View style={{ alignItems: "flex-end" }}><Text style={styles.sumLabel}>OVERDUE</Text><Text style={styles.sumVal}>₹{Math.round(totalOverdue / 100).toLocaleString("en-IN")}</Text></View></View>
+      {khataLoading ? <ActivityIndicator size="small" color={colors.primary} style={{ padding: 10 }} /> : null}
       <View style={styles.searchBar}><TextInput style={styles.searchInput} placeholder="Search customer..." placeholderTextColor={colors.textTertiary} /></View>
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
         <Text style={[styles.section, { color: colors.error }]}>⚠ OVERDUE</Text>
-        {OVERDUE.map(renderCustomer)}
+        {displayOverdue.map(renderCustomer)}
         <Text style={styles.section}>PENDING</Text>
-        {PENDING.map(renderCustomer)}
+        {displayPending.map(renderCustomer)}
       </ScrollView>
       <View style={styles.footer}>
         <Pressable style={styles.bulkWaBtn} onPress={() => showToast("Reminders sent to all overdue")}><Svg width={14} height={14} viewBox="0 0 24 24" fill="#fff"><Path d={WA_SVG} /><Path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.638l4.72-1.391A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" /></Svg><Text style={styles.bulkWaText}>Remind All Overdue</Text></Pressable>
