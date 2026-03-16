@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useCallback } from "react";
-import { View, FlatList, Pressable, StyleSheet, Text } from "react-native";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
+import { View, FlatList, Pressable, ActivityIndicator, StyleSheet, Text } from "react-native";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
@@ -9,18 +9,34 @@ import SupplierProductCardV3, { type SupplierProduct } from "../../components/v3
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
+import { getCatalog, type CatalogProduct } from "../../services/api/catalogApi";
+import { getDeviceStoreId } from "../../services/deviceSession";
+import { logger } from "../../services/logger";
 
-// V3-004: BUY tab with sub-screen navigation wired
+// V3-013: BUY tab wired to real catalogApi
 
-const SUPPLIERS = ["All Suppliers", "ABC Distributors", "XYZ Trading", "Fresh Dairy Co"];
-const CATEGORIES = ["All", "Biscuits", "Tea & Coffee", "Noodles", "Oil & Ghee", "Dairy", "Cleaning"];
+const DEFAULT_CATEGORIES = ["All", "Biscuits", "Tea & Coffee", "Noodles", "Oil & Ghee", "Dairy", "Cleaning"];
 
-// Demo wholesale products
-const DEMO_PRODUCTS: SupplierProduct[] = [
-  { id: "1", name: "Parle-G Gold 100g", brand: "Parle", category: "Biscuits", packSize: "100g", caseSize: 48, unit: "pcs", mrpMinor: 1000, ptrMinor: 850, ptsMinor: 800, hsnCode: "1905", gstPct: 18, moq: 1, supplierName: "ABC Distributors", deliveryDays: 2, tradeDiscountPct: 15, scheme: "10+1 Free", currentStock: 12, daysOfStock: 2 },
-  { id: "2", name: "Tata Tea Premium 250g", brand: "Tata", category: "Tea & Coffee", packSize: "250g", caseSize: 24, unit: "pcs", mrpMinor: 8000, ptrMinor: 6800, ptsMinor: 6400, hsnCode: "0902", gstPct: 5, moq: 1, supplierName: "XYZ Trading", deliveryDays: 1, tradeDiscountPct: 15, creditDays: 30, currentStock: 24, daysOfStock: 5 },
-  { id: "3", name: "Amul Taaza Milk 500ml", brand: "Amul", category: "Dairy", packSize: "500ml", caseSize: 12, unit: "pcs", mrpMinor: 2800, ptrMinor: 2400, hsnCode: "0401", gstPct: 5, moq: 2, supplierName: "Fresh Dairy Co", deliveryDays: 0, currentStock: 5, daysOfStock: 1 },
-];
+// Map CatalogProduct → SupplierProduct for the card
+function catalogToSupplier(p: CatalogProduct): SupplierProduct {
+  return {
+    id: p.id,
+    name: p.name,
+    brand: p.brand ?? "",
+    category: p.category ?? "",
+    packSize: p.netContentValue ? `${p.netContentValue}${p.netContentUnit ?? ""}` : "",
+    caseSize: 24, // Default — real case size from wholesale API (V3-017)
+    unit: p.unit ?? "pcs",
+    mrpMinor: (p as any).bestPrice ? Math.round((p as any).bestPrice * 100) : 0,
+    ptrMinor: (p as any).bestPrice ? Math.round((p as any).bestPrice * 85) : 0, // ~15% margin estimate
+    hsnCode: p.hsnCode ?? "",
+    gstPct: p.gstRate ?? p.defaultGstRate ?? 18,
+    moq: 1,
+    supplierName: (p as any).supplierName ?? "Supplier",
+    deliveryDays: 2,
+    // bnplAvailable will come from wholesale API (V3-017)
+  };
+}
 
 export default function BuyScreenV3() {
   const { t } = useTranslation();
@@ -29,10 +45,40 @@ export default function BuyScreenV3() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [selectedSupplier, setSelectedSupplier] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState(0);
-  const [orderQtys, setOrderQtys] = useState<Record<string, number>>({ "1": 2, "2": 1, "3": 3 });
+  const [orderQtys, setOrderQtys] = useState<Record<string, number>>({});
+  const [products, setProducts] = useState<SupplierProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [suppliers, setSuppliers] = useState<string[]>(["All Suppliers"]);
+
+  // V3-013: Fetch real catalog data
+  useEffect(() => {
+    const fetchCatalog = async () => {
+      setLoading(true);
+      try {
+        const storeId = await getDeviceStoreId();
+        if (!storeId) { setLoading(false); return; }
+        const result = await getCatalog(storeId, { limit: 50 });
+        const mapped = result.data.map(catalogToSupplier);
+        setProducts(mapped);
+        // Extract unique suppliers
+        const uniqueSuppliers = [...new Set(mapped.map((p) => p.supplierName).filter(Boolean))];
+        setSuppliers(["All Suppliers", ...uniqueSuppliers]);
+        // Set default order qtys (MOQ for each)
+        const defaultQtys: Record<string, number> = {};
+        mapped.forEach((p) => { defaultQtys[p.id] = p.moq; });
+        setOrderQtys(defaultQtys);
+        logger.debug("BuyV3", `loaded:${mapped.length} products from ${uniqueSuppliers.length} suppliers`);
+      } catch (err) {
+        logger.debug("BuyV3", `fetch_failed:${String(err)}`);
+        showToast("Failed to load catalogue");
+      }
+      setLoading(false);
+    };
+    void fetchCatalog();
+  }, []);
 
   const cartItemCount = Object.values(orderQtys).reduce((s, v) => s + (v > 0 ? 1 : 0), 0);
-  const cartTotal = DEMO_PRODUCTS.reduce((s, p) => s + (orderQtys[p.id] ?? 0) * p.caseSize * p.ptrMinor, 0);
+  const cartTotal = products.reduce((s, p) => s + (orderQtys[p.id] ?? 0) * p.caseSize * p.ptrMinor, 0);
 
   const handleQtyChange = useCallback((id: string, cases: number) => {
     setOrderQtys((prev) => ({ ...prev, [id]: Math.max(0, cases) }));
@@ -56,7 +102,7 @@ export default function BuyScreenV3() {
         <Text style={styles.supplierLabel}>BUYING FROM</Text>
         <FlatList
           horizontal
-          data={SUPPLIERS}
+          data={suppliers}
           keyExtractor={(s) => s}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.supplierChips}
@@ -71,7 +117,7 @@ export default function BuyScreenV3() {
       {/* Category chips */}
       <FlatList
         horizontal
-        data={CATEGORIES}
+        data={DEFAULT_CATEGORIES}
         keyExtractor={(c) => c}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.categoryChips}
@@ -84,8 +130,14 @@ export default function BuyScreenV3() {
       />
 
       {/* Product list */}
-      <FlatList
-        data={DEMO_PRODUCTS}
+      {loading ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 40 }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ color: colors.textTertiary, fontSize: 13, marginTop: 12 }}>Loading catalogue...</Text>
+        </View>
+      ) : null}
+      {!loading ? <FlatList
+        data={products}
         keyExtractor={(p) => p.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
@@ -111,14 +163,14 @@ export default function BuyScreenV3() {
             <Text style={styles.counterArrow}>→</Text>
           </Pressable>
         }
-      />
+      /> : null}
 
       {/* Purchase cart strip */}
       {cartItemCount > 0 ? (
         <View style={styles.cartStrip}>
           <View style={styles.cartLeft}>
             <Text style={styles.cartCount}>{cartItemCount} item{cartItemCount > 1 ? "s" : ""} · {Object.values(orderQtys).reduce((s, v) => s + v, 0)} cases</Text>
-            <Text style={styles.cartItems}>{DEMO_PRODUCTS.filter(p => (orderQtys[p.id] ?? 0) > 0).map(p => p.name.split(" ")[0]).join(", ")}</Text>
+            <Text style={styles.cartItems}>{products.filter((p: SupplierProduct) => (orderQtys[p.id] ?? 0) > 0).map((p: SupplierProduct) => p.name.split(" ")[0]).join(", ")}</Text>
           </View>
           <Text style={styles.cartTotal}>₹{Math.round(cartTotal / 100).toLocaleString("en-IN")}</Text>
           <Pressable style={styles.orderBtn} accessibilityLabel="Place order">
