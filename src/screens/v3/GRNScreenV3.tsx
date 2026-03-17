@@ -1,29 +1,55 @@
-import React, { useMemo, useState, useCallback } from "react";
-import { View, TextInput, Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
+import { View, TextInput, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator } from "react-native";
 import Svg, { Rect, Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import ExpandableDetails from "../../components/v3/ExpandableDetails";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
+import * as orderApi from "../../services/api/orderApi";
+import { getDeviceStoreId } from "../../services/deviceSession";
 
-// STG-568: GRN v3 — HID+camera scan, per-item edit (price/batch/expiry), PO matching
+// V3-042: GRN v3 — wire real pending PO items from orderApi
 
-type GRNItem = { barcode: string; name: string; ordered: number; received: number; checked: boolean };
-
-const DEMO_ITEMS: GRNItem[] = [
-  { barcode: "8901234567890", name: "Parle-G 100g", ordered: 48, received: 48, checked: true },
-  { barcode: "8901234500001", name: "Tata Tea 250g", ordered: 24, received: 24, checked: true },
-  { barcode: "8901234500002", name: "Maggi 70g", ordered: 50, received: 0, checked: false },
-];
+type GRNItem = { barcode: string; name: string; ordered: number; received: number; checked: boolean; productId?: string };
 
 type GRNScreenV3Props = { onClose: () => void };
 
 export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [items, setItems] = useState(DEMO_ITEMS);
+  const [items, setItems] = useState<GRNItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"po" | "adhoc">("po");
+  // V3-042: Load pending PO items on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const sid = await getDeviceStoreId();
+        if (!sid) { setLoading(false); return; }
+        const res = await orderApi.listOrders(sid, { status: ["submitted", "confirmed", "shipped", "partial_received"] as any, limit: 20 });
+        const allItems: GRNItem[] = [];
+        for (const order of res.data ?? []) {
+          const detail = await orderApi.getOrder(sid, order.id);
+          for (const item of detail.items ?? []) {
+            allItems.push({
+              barcode: item.barcode ?? "",
+              name: item.productName ?? "Unknown",
+              ordered: item.orderedQuantity ?? 0,
+              received: item.receivedQuantity ?? 0,
+              checked: (item.receivedQuantity ?? 0) >= (item.orderedQuantity ?? 0),
+              productId: item.productId,
+            });
+          }
+        }
+        setItems(allItems);
+      } catch (err) {
+        showToast("Could not load pending orders");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const toggleCheck = useCallback((idx: number) => {
     setItems(prev => prev.map((it, i) => i === idx ? { ...it, checked: !it.checked, received: !it.checked ? it.ordered : 0 } : it));
