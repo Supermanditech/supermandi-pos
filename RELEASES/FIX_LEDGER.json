@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 293,
+  "version": 294,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6923,8 +6923,8 @@
       "ticket": "STG-560",
       "file": "src/components/v3/UniversalSearchV3.tsx",
       "start_line": 1,
-      "end_line": 176,
-      "checksum": "333c5745500d67e6",
+      "end_line": 202,
+      "checksum": "1d2bd7b81b1cd17e",
       "description": "Universal search v3 — context-aware for sell (store inventory) and buy (supplier catalogue)",
       "test_file": "src/__tests__/screens/universal-search-v3.stg-560.test.ts",
       "depends_on": null,
@@ -7071,8 +7071,8 @@
       "ticket": "STG-564",
       "file": "src/screens/v3/NewProductScreenV3.tsx",
       "start_line": 1,
-      "end_line": 266,
-      "checksum": "789d4459ed709591",
+      "end_line": 279,
+      "checksum": "a72a54e84587fdf0",
       "description": "New product digitization v3 — auto-fill from master DB, photo, sell/cost/margin, HSN/GST, Add to Store",
       "test_file": "src/__tests__/screens/new-product-v3.stg-564.test.ts",
       "depends_on": null,

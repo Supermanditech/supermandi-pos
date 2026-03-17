@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from "react"
 import { View, FlatList, TextInput, Pressable, StyleSheet, Text } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -37,8 +38,10 @@ type UniversalSearchV3Props = {
   onQueryChange?: (query: string) => void;
 };
 
-const RECENT_SEARCHES_SELL = ["Tata Tea", "Maggi", "Amul", "Surf"];
-const RECENT_SEARCHES_BUY = ["Parle", "Nestle", "HUL", "ITC"];
+const RECENT_KEY = "@supermandi.recent_searches";
+const RECENT_MAX = 8;
+const DEFAULT_RECENT = ["Tata Tea", "Maggi", "Amul", "Surf"];
+const DEFAULT_RECENT_BUY = ["Parle", "Nestle", "HUL", "ITC"];
 
 // Demo results for prototype
 const DEMO_SELL: SearchResult[] = [
@@ -57,12 +60,28 @@ export default function UniversalSearchV3({ context, visible, onClose, onSelect,
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [query, setQuery] = useState("");
+  const [recentSearches, setRecentSearches] = useState<string[]>(DEFAULT_RECENT);
   const inputRef = useRef<TextInput>(null);
 
   const isSell = context === "sell";
   const placeholder = isSell ? "Search your products..." : "Search supplier catalogue...";
-  const recentSearches = isSell ? RECENT_SEARCHES_SELL : RECENT_SEARCHES_BUY;
   const displayResults = results ?? (query.length > 0 ? (isSell ? DEMO_SELL : DEMO_BUY) : []);
+
+  // V3-064: Load persisted recent searches on mount
+  useEffect(() => {
+    AsyncStorage.getItem(RECENT_KEY).then((raw) => {
+      if (raw) { try { setRecentSearches(JSON.parse(raw)); } catch {} }
+    }).catch(() => {});
+  }, []);
+
+  // V3-064: Save search term to recent list
+  const saveRecentSearch = useCallback((term: string) => {
+    setRecentSearches((prev) => {
+      const updated = [term, ...prev.filter((t) => t !== term)].slice(0, RECENT_MAX);
+      AsyncStorage.setItem(RECENT_KEY, JSON.stringify(updated)).catch(() => {});
+      return updated;
+    });
+  }, []);
 
   useEffect(() => {
     if (visible) { setTimeout(() => inputRef.current?.focus(), 100); }
@@ -134,7 +153,7 @@ export default function UniversalSearchV3({ context, visible, onClose, onSelect,
             data={displayResults}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <Pressable style={styles.resultRow} onPress={() => { onSelect(item); showToast(`${item.name} ${isSell ? "added" : "selected"}`); }} accessibilityRole="button">
+              <Pressable style={styles.resultRow} onPress={() => { saveRecentSearch(query); onSelect(item); showToast(`${item.name} ${isSell ? "added" : "selected"}`); }} accessibilityRole="button">
                 <View style={styles.resultImg}><Text style={{ fontSize: 18 }}>🍪</Text></View>
                 <View style={styles.resultInfo}>
                   <Text style={styles.resultName} numberOfLines={1}>{item.name}</Text>

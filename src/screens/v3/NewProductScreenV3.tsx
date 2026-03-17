@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { View, TextInput, Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { View, TextInput, Pressable, ScrollView, StyleSheet, Text, Image } from "react-native";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 
@@ -37,6 +37,7 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
   const masterResult = useMemo(() => lookupMasterDB(barcode), [barcode]);
   const isAutoFilled = masterResult.found;
 
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [name, setName] = useState(masterResult.name ?? "");
   const [brand, setBrand] = useState(masterResult.brand ?? "");
   const [category, setCategory] = useState(masterResult.category ?? "");
@@ -113,12 +114,23 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
         )}
 
         {/* Photo capture */}
-        <Pressable style={styles.photoBox} accessibilityLabel="Take product photo">
-          <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth={1.5}>
-            <Path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-            <Circle cx={12} cy={13} r={4} />
-          </Svg>
-          <Text style={styles.photoText}>Tap to photograph product</Text>
+        <Pressable style={[styles.photoBox, photoUri ? { borderColor: colors.primary } : null]}
+          accessibilityLabel="Take product photo"
+          onPress={() => {
+            // V3-060: Photo capture — requires expo-image-picker (not yet installed)
+            showToast("Photo capture requires expo-image-picker — install with: npx expo install expo-image-picker");
+          }}>
+          {photoUri ? (
+            <Image source={{ uri: photoUri }} style={{ width: 64, height: 64, borderRadius: 12 }} />
+          ) : (
+            <>
+              <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth={1.5}>
+                <Path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                <Circle cx={12} cy={13} r={4} />
+              </Svg>
+              <Text style={styles.photoText}>Tap to photograph product</Text>
+            </>
+          )}
         </Pressable>
 
         {/* Barcode (read-only) */}
