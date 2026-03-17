@@ -2,10 +2,11 @@ import React, { useMemo } from "react";
 import { View, Pressable, StyleSheet, Text } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import type { SellMode } from "../../stores/cartStore";
 
 // STG-553: Retail / Bulk trade toggle for sell screen
-
-export type SellMode = "retail" | "bulk";
+// Re-export SellMode for backwards compatibility
+export type { SellMode };
 
 type CustomerTypeToggleProps = {
   mode: SellMode;

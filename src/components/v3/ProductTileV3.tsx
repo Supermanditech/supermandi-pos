@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { View, Pressable, StyleSheet, Text } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
-import type { SellMode } from "./CustomerTypeToggle";
+import type { SellMode } from "../../stores/cartStore";
 
 // STG-553: Product tile for v3 sell grid — stock dot, cart badge, case size, wholesale price
 
