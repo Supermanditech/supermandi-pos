@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -22,6 +22,7 @@ export default function BillDetailScreenV3({ billRef, date, method, totalMinor, 
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const total = Math.round(totalMinor / 100);
+  const [printing, setPrinting] = useState(false);
 
   return (
     <View style={styles.container}>
@@ -56,10 +57,15 @@ export default function BillDetailScreenV3({ billRef, date, method, totalMinor, 
       </ScrollView>
 
       <View style={styles.footer}>
-        <Pressable style={styles.printBtn} onPress={() => {
-          printerService.printReceipt(`Bill: ${billRef}\nTotal: ₹${total}`).catch(() => showToast("Print failed"));
+        <Pressable style={[styles.printBtn, printing && { opacity: 0.5 }]} disabled={printing} onPress={async () => {
+          setPrinting(true);
+          try {
+            await printerService.printReceipt(`Bill: ${billRef}\nTotal: ₹${total}`);
+            showToast("Receipt printed");
+          } catch { showToast("Print failed"); }
+          setPrinting(false);
         }}>
-          <Text style={styles.printText}>🖨️ Reprint</Text>
+          <Text style={styles.printText}>{printing ? "Printing..." : "🖨️ Reprint"}</Text>
         </Pressable>
         <Pressable style={styles.waBtn} onPress={() => showToast("Bill shared on WhatsApp")}>
           <Text style={styles.waText}>📱 WhatsApp</Text>

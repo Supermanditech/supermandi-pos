@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 330,
+  "version": 331,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -7772,7 +7772,7 @@
       "file": "src/screens/v3/BillDetailScreenV3.tsx",
       "start_line": 1,
       "end_line": 100,
-      "checksum": "b1e841a98b13dfc5",
+      "checksum": "e2cd878e5cb4b5ac",
       "description": "V3-067 screen",
       "test_file": "N/A",
       "status": "ACTIVE",
