@@ -42,8 +42,35 @@ export async function staffMe(): Promise<StaffMeResponse> {
 
 // STG-488: Verify manager PIN for discount approval
 export async function verifyManagerPin(input: {
-  phone: string;
   pin: string;
+  phone?: string;
 }): Promise<VerifyPinResponse> {
   return apiClient.post("/api/v1/pos/staff/verify-pin", input);
+}
+
+// V3-POS-024: Staff management from POS
+export type StaffMember = {
+  id: string;
+  name: string;
+  role: string;
+  is_active: boolean;
+  is_owner?: boolean;
+  last_login_at?: string;
+  created_at: string;
+};
+
+export async function listStaff(): Promise<{ staff: StaffMember[] }> {
+  return apiClient.get("/api/v1/pos/staff/list");
+}
+
+export async function createStaff(input: { name: string; pin: string; role: string }): Promise<{ staff: StaffMember }> {
+  return apiClient.post("/api/v1/pos/staff/create", input);
+}
+
+export async function resetStaffPin(staffId: string, pin: string): Promise<{ success: boolean }> {
+  return apiClient.post(`/api/v1/pos/staff/${staffId}/reset-pin`, { pin });
+}
+
+export async function toggleStaffActive(staffId: string): Promise<{ staff: StaffMember }> {
+  return apiClient.post(`/api/v1/pos/staff/${staffId}/toggle-active`, {});
 }

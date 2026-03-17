@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { View, Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
+import { View, Pressable, ScrollView, StyleSheet, Text, Alert, TextInput } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -7,6 +7,8 @@ import { useSettingsStore } from "../../stores/settingsStore";
 import { useStaffSessionStore } from "../../stores/staffSessionStore";
 import { clearDeviceSession } from "../../services/deviceSession";
 import { showToast } from "../../utils/showToast";
+import { listStaff, createStaff, toggleStaffActive, type StaffMember } from "../../services/api/staffApi";
+import { isOnline } from "../../services/networkStatus";
 import i18n from "../../i18n";
 
 // STG-576: Settings v3 — unified with language toggle, printer, HID, express checkout
@@ -87,6 +89,50 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
             </View>
           </View>
         ))}
+        {/* V3-POS-024: Staff Management (owner/manager only) */}
+        {(() => {
+          const session = useStaffSessionStore.getState().session;
+          if (session?.role !== "MANAGER") return null;
+          return (
+            <View>
+              <Text style={styles.sectionTitle}>STAFF MANAGEMENT</Text>
+              <View style={styles.sectionCard}>
+                <Pressable style={styles.row} onPress={async () => {
+                  const online = await isOnline();
+                  if (!online) { showToast("Staff management requires internet"); return; }
+                  try {
+                    const result = await listStaff();
+                    const staffList = result.staff.map((s: StaffMember) => `${s.name} (${s.role})${s.is_owner ? " — Owner" : ""}${!s.is_active ? " [inactive]" : ""}`).join("\n");
+                    Alert.alert("Store Staff", staffList || "No staff configured.\n\nCreate staff to enable PIN login.", [{ text: "OK" }]);
+                  } catch { showToast("Could not load staff list"); }
+                }}>
+                  <Text style={styles.rowIcon}>👥</Text>
+                  <Text style={styles.rowLabel}>View Staff</Text>
+                  <Text style={styles.rowValue}>→</Text>
+                </Pressable>
+                <Pressable style={styles.row} onPress={() => {
+                  Alert.prompt ? Alert.prompt("Add Staff", "Enter staff name:", async (staffName) => {
+                    if (!staffName?.trim()) return;
+                    Alert.prompt("Set PIN", "Enter 4-6 digit PIN for " + staffName, async (staffPin) => {
+                      if (!staffPin || !/^\d{4,6}$/.test(staffPin)) { showToast("PIN must be 4-6 digits"); return; }
+                      try {
+                        await createStaff({ name: staffName.trim(), pin: staffPin, role: "CASHIER" });
+                        showToast(`Staff "${staffName.trim()}" created`);
+                      } catch (err: any) {
+                        showToast(err?.response?.data?.error?.message ?? "Failed to create staff");
+                      }
+                    });
+                  }) : showToast("Use retailer web to manage staff on this device");
+                }}>
+                  <Text style={styles.rowIcon}>➕</Text>
+                  <Text style={styles.rowLabel}>Add Staff</Text>
+                  <Text style={styles.rowValue}>→</Text>
+                </Pressable>
+              </View>
+            </View>
+          );
+        })()}
+
         <View style={styles.footerActions}>
           <Pressable style={styles.switchBtn} onPress={() => {
             useStaffSessionStore.getState().clearSession();

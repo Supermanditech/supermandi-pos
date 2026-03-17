@@ -24,6 +24,7 @@ import { posReportsRouter } from "./pos/reports";  // T-199: Daily sales report
 import { posOverduePaymentsRouter } from "./pos/overduePayments";  // T-193: Overdue DUE payments
 import { tokenManagementRouter } from "./pos/tokenManagement";  // GL-WF-045-A: Token security
 import { posStaffRouter } from "./pos/staff";  // SA-P1-001: POS staff login
+import { posStaffManageRouter } from "./pos/staffManage";  // V3-POS-024: Owner staff management
 import { posShiftsRouter } from "./pos/shifts";  // POS-SHIFT-001: Staff shift management
 import { posDailyClosingRouter } from "./pos/dailyClosing";  // POS-DAILY-001: Daily closing reconciliation
 import { posChatRouter } from "./pos/chat";  // STG-152: POS chat proxy with device token auth
@@ -161,6 +162,7 @@ v1Router.use("/pos", posReportsRouter);  // T-199: Daily sales report
 v1Router.use("/pos", posOverduePaymentsRouter);  // T-193: Overdue DUE payments
 v1Router.use("/pos", tokenManagementRouter);  // GL-WF-045-A: Token security endpoints
 v1Router.use("/pos", posStaffRouter);  // SA-P1-001: POS staff login
+v1Router.use("/pos", posStaffManageRouter);  // V3-POS-024: Owner staff management
 v1Router.use("/pos", posShiftsRouter);  // POS-SHIFT-001: Staff shift management
 v1Router.use("/pos", posDailyClosingRouter);  // POS-DAILY-001: Daily closing reconciliation
 v1Router.use("/pos", posKhataRouter);  // POS-KHATA-001: Khata credit ledger
