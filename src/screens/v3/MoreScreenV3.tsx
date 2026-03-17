@@ -25,14 +25,14 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
   }, []);
 
   const MENU_ITEMS = [
-    { icon: "📒", label: "Khata (Udhar)", bg: colors.primaryLight, badge: 3, screen: "khata" },
-    { icon: "👥", label: "Customers", bg: colors.successSoft, screen: "customers" },
-    { icon: "📊", label: "Reports", bg: colors.warningSoft, screen: "reports" },
-    { icon: "📦", label: "Stock", bg: colors.backgroundSecondary, screen: "stock" },
-    { icon: "💳", label: "Credit & Finance", bg: "#F5F3FF", screen: "finance" },
-    { icon: "🧾", label: "Sales History", bg: colors.primaryLight, screen: "sales" },
-    { icon: "⚙️", label: "Settings", bg: colors.backgroundSecondary, screen: "settings" },
-    { icon: "❓", label: "Help", bg: colors.backgroundSecondary, screen: "help" },
+    { icon: "📒", label: t("more.khata", "Khata (Udhar)"), bg: colors.primaryLight, badge: 3, screen: "khata" },
+    { icon: "👥", label: t("more.customers", "Customers"), bg: colors.successSoft, screen: "customers" },
+    { icon: "📊", label: t("more.reports", "Reports"), bg: colors.warningSoft, screen: "reports" },
+    { icon: "📦", label: t("more.stock", "Stock"), bg: colors.backgroundSecondary, screen: "stock" },
+    { icon: "💳", label: t("more.finance", "Credit & Finance"), bg: "#F5F3FF", screen: "finance" },
+    { icon: "🧾", label: t("more.salesHistory", "Sales History"), bg: colors.primaryLight, screen: "sales" },
+    { icon: "⚙️", label: t("more.settings", "Settings"), bg: colors.backgroundSecondary, screen: "settings" },
+    { icon: "❓", label: t("more.help", "Help"), bg: colors.backgroundSecondary, screen: "help" },
   ];
 
   return (

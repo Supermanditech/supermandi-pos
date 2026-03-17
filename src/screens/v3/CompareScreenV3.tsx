@@ -54,6 +54,8 @@ export default function CompareScreenV3({ visible, productName, packSize, mrpMin
     const fetch = async () => {
       setLoading(true);
       try {
+        const online = await isOnline();
+        if (!online) { showToast("Offline — comparison unavailable"); setLoading(false); return; }
         const storeId = await getDeviceStoreId();
         if (!storeId) return;
         // Use productName as lookup — in production, pass productId

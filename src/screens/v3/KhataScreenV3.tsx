@@ -31,7 +31,13 @@ export default function KhataScreenV3({ onClose }: Props) {
   const khataCustomers = useKhataStore((s) => s.customers);
   const khataLoading = useKhataStore((s) => s.loading);
   const fetchKhataCustomers = useKhataStore((s) => s.fetchCustomers);
-  useEffect(() => { void fetchKhataCustomers(); }, [fetchKhataCustomers]);
+  useEffect(() => {
+    (async () => {
+      const online = await isOnline();
+      if (!online) { showToast("Offline — showing cached khata"); return; }
+      void fetchKhataCustomers();
+    })();
+  }, [fetchKhataCustomers]);
 
   // Map khata customers to display format (merge with demo fallback)
   const realOverdue: Customer[] = khataCustomers

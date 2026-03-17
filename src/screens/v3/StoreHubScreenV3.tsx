@@ -4,6 +4,7 @@ import Svg, { Rect, Path, Circle, Line } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getPurchaseHistory } from "../../services/api/inventoryApi";
+import { isOnline } from "../../services/networkStatus";
 import { logger } from "../../services/logger";
 
 // V3-019: Store hub with real purchase history
@@ -24,6 +25,8 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
   useEffect(() => {
     const fetch = async () => {
       try {
+        const online = await isOnline();
+        if (!online) { setLoadingOrders(false); return; }
         const result = await getPurchaseHistory(undefined, undefined, 5);
         const orders: RecentOrder[] = (result.entries ?? []).map((e: any) => {
           const daysAgo = Math.max(1, Math.round((Date.now() - new Date(e.created_at ?? e.createdAt ?? Date.now()).getTime()) / 86400000));

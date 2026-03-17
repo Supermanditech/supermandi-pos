@@ -23,6 +23,8 @@ export default function StockScreenV3({ onClose }: Props) {
   useEffect(() => {
     (async () => {
       try {
+        const online = await isOnline();
+        if (!online) { showToast("Offline — stock data unavailable"); setLoading(false); return; }
         const res = await getStockStatement(200, true);
         const mapped: StockItem[] = (res.data ?? []).map((p: any) => ({
           name: p.name ?? "Unknown",

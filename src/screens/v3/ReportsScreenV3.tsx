@@ -22,6 +22,8 @@ export default function ReportsScreenV3({ onClose }: Props) {
   useEffect(() => {
     (async () => {
       try {
+        const online = await isOnline();
+        if (!online) { showToast("Offline — report unavailable"); setLoading(false); return; }
         // V3-066: Period-based date calculation
         const now = new Date();
         let dateParam: string | undefined;

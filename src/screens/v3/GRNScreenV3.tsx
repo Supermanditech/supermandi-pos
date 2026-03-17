@@ -26,6 +26,8 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
   useEffect(() => {
     (async () => {
       try {
+        const online = await isOnline();
+        if (!online) { showToast("Offline — cached data shown"); setLoading(false); return; }
         const sid = await getDeviceStoreId();
         if (!sid) { setLoading(false); return; }
         const res = await orderApi.listOrders(sid, { status: ["submitted", "confirmed", "shipped", "partial_received"] as any, limit: 20 });
