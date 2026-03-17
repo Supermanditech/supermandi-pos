@@ -5,7 +5,7 @@
   "surface": "pos",
   "riskClass": "medium",
   "title": "OrderDetailScreen: useEffect empty-dependency review required",
-  "description": "R7 source-first finding R7-POS-P2-CODE-064. Dimension: Wiring. Severity: P2. Source SHA: 6886c3a5. Source file: src/screens/OrderDetailScreen.tsx:4. Found 1 empty-dependency effects; verify closure safety for mutable dependencies.",
+  "description": "R7 source-first finding R7-POS-P2-CODE-064. Dimension: Wiring. Severity: P2. Source SHA: 6886c3a5. Source file: src/screens/v3/BuyScreenV3.tsx:4. Found 1 empty-dependency effects; verify closure safety for mutable dependencies.",
   "status": "done",
   "severity": "P2",
   "parentTicketId": null,
@@ -58,7 +58,7 @@
   "operator": {
     "reportedBy": "claude-r7-audit",
     "reproSteps": [
-      "Open src/screens/OrderDetailScreen.tsx and inspect line 4",
+      "Open src/screens/v3/BuyScreenV3.tsx and inspect line 4",
       "Reproduce OrderDetailScreen: useEffect empty-dependency review required on staging path https://staging.supermandi.tech/api/v1/health"
     ],
     "finalSignoff": false,
@@ -174,7 +174,7 @@
       "false_positive=reviewed_source_code"
     ],
     "parityProof": [
-      "source_file=src/screens/OrderDetailScreen.tsx",
+      "source_file=src/screens/v3/BuyScreenV3.tsx",
       "source_line=4"
     ]
   },
@@ -189,9 +189,9 @@
     "mockUsageApproved": false,
     "productionDataTested": true,
     "disclosedToOperator": false,
-    "notes": "R7 source-first ticket generated from code evidence at src/screens/OrderDetailScreen.tsx:4.",
+    "notes": "R7 source-first ticket generated from code evidence at src/screens/v3/BuyScreenV3.tsx:4.",
     "evidence": [
-      "file=src/screens/OrderDetailScreen.tsx",
+      "file=src/screens/v3/BuyScreenV3.tsx",
       "loc=889",
       "empty_deps_effects=1"
     ]

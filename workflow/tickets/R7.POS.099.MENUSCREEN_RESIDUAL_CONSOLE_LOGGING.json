@@ -5,7 +5,7 @@
   "surface": "pos",
   "riskClass": "low",
   "title": "MenuScreen: Residual console logging",
-  "description": "R7 source-first finding R7-POS-P3-CODE-013. Dimension: UI. Severity: P3. Source SHA: 6886c3a5. Source file: src/screens/MenuScreen.tsx:123. Found 5 console statements in runtime path; this can leak internals and add noise in production debugging.",
+  "description": "R7 source-first finding R7-POS-P3-CODE-013. Dimension: UI. Severity: P3. Source SHA: 6886c3a5. Source file: src/screens/v3/MoreScreenV3.tsx:123. Found 5 console statements in runtime path; this can leak internals and add noise in production debugging.",
   "status": "done",
   "severity": "P3",
   "parentTicketId": null,
@@ -58,7 +58,7 @@
   "operator": {
     "reportedBy": "claude-r7-audit",
     "reproSteps": [
-      "Open src/screens/MenuScreen.tsx and inspect line 123",
+      "Open src/screens/v3/MoreScreenV3.tsx and inspect line 123",
       "Reproduce MenuScreen: Residual console logging on staging path https://staging.supermandi.tech/api/v1/health"
     ],
     "finalSignoff": false,
@@ -174,7 +174,7 @@
       "false_positive=reviewed_source_code"
     ],
     "parityProof": [
-      "source_file=src/screens/MenuScreen.tsx",
+      "source_file=src/screens/v3/MoreScreenV3.tsx",
       "source_line=123"
     ]
   },
@@ -189,9 +189,9 @@
     "mockUsageApproved": false,
     "productionDataTested": true,
     "disclosedToOperator": false,
-    "notes": "R7 source-first ticket generated from code evidence at src/screens/MenuScreen.tsx:123.",
+    "notes": "R7 source-first ticket generated from code evidence at src/screens/v3/MoreScreenV3.tsx:123.",
     "evidence": [
-      "file=src/screens/MenuScreen.tsx",
+      "file=src/screens/v3/MoreScreenV3.tsx",
       "loc=1566",
       "console_count=5"
     ]

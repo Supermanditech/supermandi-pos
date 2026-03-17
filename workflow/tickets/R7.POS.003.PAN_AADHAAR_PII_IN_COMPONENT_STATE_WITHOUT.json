@@ -5,7 +5,7 @@
   "surface": "pos",
   "riskClass": "high",
   "title": "PAN/Aadhaar PII in component state without sanitization",
-  "description": "R7 source-first finding CR-01. Dimension: Wiring. Severity: P1. Source SHA: 6886c3a5. Source file: src/screens/CreditScreen.tsx:1. R7 summary top finding for POS: PAN/Aadhaar PII in component state without sanitization",
+  "description": "R7 source-first finding CR-01. Dimension: Wiring. Severity: P1. Source SHA: 6886c3a5. Source file: src/screens/v3/FinanceScreenV3.tsx:1. R7 summary top finding for POS: PAN/Aadhaar PII in component state without sanitization",
   "status": "done",
   "severity": "P1",
   "parentTicketId": null,
@@ -58,7 +58,7 @@
   "operator": {
     "reportedBy": "claude-r7-audit",
     "reproSteps": [
-      "Open src/screens/CreditScreen.tsx and inspect line 1",
+      "Open src/screens/v3/FinanceScreenV3.tsx and inspect line 1",
       "Reproduce PAN/Aadhaar PII in component state without sanitization on staging path https://staging.supermandi.tech/api/v1/health"
     ],
     "finalSignoff": false,
@@ -174,7 +174,7 @@
       "false_positive=reviewed_source_code"
     ],
     "parityProof": [
-      "source_file=src/screens/CreditScreen.tsx",
+      "source_file=src/screens/v3/FinanceScreenV3.tsx",
       "source_line=1"
     ]
   },
@@ -189,7 +189,7 @@
     "mockUsageApproved": false,
     "productionDataTested": true,
     "disclosedToOperator": false,
-    "notes": "R7 source-first ticket generated from code evidence at src/screens/CreditScreen.tsx:1.",
+    "notes": "R7 source-first ticket generated from code evidence at src/screens/v3/FinanceScreenV3.tsx:1.",
     "evidence": [
       "summary_source=R7_frontend_summary.json",
       "target=CreditScreen"

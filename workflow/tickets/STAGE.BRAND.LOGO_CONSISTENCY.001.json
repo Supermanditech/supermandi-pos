@@ -211,10 +211,10 @@
       "supermandi-superadmin/src/components/LoginGate.tsx",
       "src/screens/SplashScreen.tsx",
       "src/screens/EnrollDeviceScreen.tsx",
-      "src/screens/StaffLoginScreen.tsx",
+      "src/screens/v3/PhoneScreenV3.tsx",
       "src/screens/DeviceBlockedScreen.tsx",
       "src/screens/ForceUpdateScreen.tsx",
-      "src/screens/MenuScreen.tsx"
+      "src/screens/v3/MoreScreenV3.tsx"
     ],
     "apiProof": [],
     "parityProof": [

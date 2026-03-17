@@ -5,7 +5,7 @@
   "surface": "pos",
   "riskClass": "low",
   "title": "StaffLoginScreen: Medium complexity module warrants micro-audit",
-  "description": "R7 source-first finding R7-POS-P3-CODE-018. Dimension: UI. Severity: P3. Source SHA: 6886c3a5. Source file: src/screens/StaffLoginScreen.tsx:1. File size (260 LOC) crosses micro-audit threshold; verify UI/UX consistency and event wiring branches.",
+  "description": "R7 source-first finding R7-POS-P3-CODE-018. Dimension: UI. Severity: P3. Source SHA: 6886c3a5. Source file: src/screens/v3/PhoneScreenV3.tsx:1. File size (260 LOC) crosses micro-audit threshold; verify UI/UX consistency and event wiring branches.",
   "status": "done",
   "severity": "P3",
   "parentTicketId": null,
@@ -58,7 +58,7 @@
   "operator": {
     "reportedBy": "claude-r7-audit",
     "reproSteps": [
-      "Open src/screens/StaffLoginScreen.tsx and inspect line 1",
+      "Open src/screens/v3/PhoneScreenV3.tsx and inspect line 1",
       "Reproduce StaffLoginScreen: Medium complexity module warrants micro-audit on staging path https://staging.supermandi.tech/api/v1/health"
     ],
     "finalSignoff": false,
@@ -174,7 +174,7 @@
       "false_positive=reviewed_source_code"
     ],
     "parityProof": [
-      "source_file=src/screens/StaffLoginScreen.tsx",
+      "source_file=src/screens/v3/PhoneScreenV3.tsx",
       "source_line=1"
     ]
   },
@@ -189,9 +189,9 @@
     "mockUsageApproved": false,
     "productionDataTested": true,
     "disclosedToOperator": false,
-    "notes": "R7 source-first ticket generated from code evidence at src/screens/StaffLoginScreen.tsx:1.",
+    "notes": "R7 source-first ticket generated from code evidence at src/screens/v3/PhoneScreenV3.tsx:1.",
     "evidence": [
-      "file=src/screens/StaffLoginScreen.tsx",
+      "file=src/screens/v3/PhoneScreenV3.tsx",
       "loc=260",
       "loc=260"
     ]

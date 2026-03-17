@@ -5,7 +5,7 @@
   "surface": "pos",
   "riskClass": "medium",
   "title": "OrderDetailScreen: TODO/FIXME markers in production path",
-  "description": "R7 source-first finding R7-POS-P2-CODE-061. Dimension: Business logic. Severity: P2. Source SHA: 6886c3a5. Source file: src/screens/OrderDetailScreen.tsx:222. Found 1 TODO/FIXME/HACK markers; unresolved notes in active path indicate unfinished logic or guardrails.",
+  "description": "R7 source-first finding R7-POS-P2-CODE-061. Dimension: Business logic. Severity: P2. Source SHA: 6886c3a5. Source file: src/screens/v3/BuyScreenV3.tsx:222. Found 1 TODO/FIXME/HACK markers; unresolved notes in active path indicate unfinished logic or guardrails.",
   "status": "done",
   "severity": "P2",
   "parentTicketId": null,
@@ -58,7 +58,7 @@
   "operator": {
     "reportedBy": "claude-r7-audit",
     "reproSteps": [
-      "Open src/screens/OrderDetailScreen.tsx and inspect line 222",
+      "Open src/screens/v3/BuyScreenV3.tsx and inspect line 222",
       "Reproduce OrderDetailScreen: TODO/FIXME markers in production path on staging path https://staging.supermandi.tech/api/v1/health"
     ],
     "finalSignoff": false,
@@ -174,7 +174,7 @@
       "false_positive=reviewed_source_code"
     ],
     "parityProof": [
-      "source_file=src/screens/OrderDetailScreen.tsx",
+      "source_file=src/screens/v3/BuyScreenV3.tsx",
       "source_line=222"
     ]
   },
@@ -189,9 +189,9 @@
     "mockUsageApproved": false,
     "productionDataTested": true,
     "disclosedToOperator": false,
-    "notes": "R7 source-first ticket generated from code evidence at src/screens/OrderDetailScreen.tsx:222.",
+    "notes": "R7 source-first ticket generated from code evidence at src/screens/v3/BuyScreenV3.tsx:222.",
     "evidence": [
-      "file=src/screens/OrderDetailScreen.tsx",
+      "file=src/screens/v3/BuyScreenV3.tsx",
       "loc=889",
       "todo_count=1"
     ]

@@ -175,7 +175,7 @@
       "https://staging.supermandi.tech/api/v1/pos"
     ],
     "afterVisual": [
-      "src/screens/PosRootLayout.tsx"
+      "src/screens/v3/PosRootLayoutV3.tsx"
     ],
     "apiProof": [
       "typecheck-clean-pos-root"
@@ -271,7 +271,7 @@
     "zeroSilentFailures": {
       "status": "pass",
       "evidence": [
-        "src/screens/PosRootLayout.tsx"
+        "src/screens/v3/PosRootLayoutV3.tsx"
       ],
       "notes": "Guard must show explicit user dialog."
     },

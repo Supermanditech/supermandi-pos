@@ -118,7 +118,7 @@
       "workflow/templates/staging_batch.example.json",
       "workflow/templates/ticket.example.json",
       "workflow/tickets/.gitkeep",
-      "src/screens/StaffLoginScreen.tsx",
+      "src/screens/v3/PhoneScreenV3.tsx",
       "workflow/tickets/REQ.AUDIT.W5.POS.STAFF-PHONE-VALIDATION-INTL-FORMAT.001.json"
     ]
   },
@@ -285,7 +285,7 @@
   },
   "implementation": {
     "evidence": {
-      "fix": "src/screens/StaffLoginScreen.tsx",
+      "fix": "src/screens/v3/PhoneScreenV3.tsx",
       "description": "maxLength changed from 10 to 13; placeholder \"10-digit phone (or +91...)\"; code at line 39 already handles prefix stripping"
     }
   }

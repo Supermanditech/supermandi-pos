@@ -5,7 +5,7 @@
   "surface": "pos",
   "riskClass": "medium",
   "title": "PosRootLayout: Type-safety gap via any casts",
-  "description": "R7 source-first finding R7-POS-P2-CODE-015. Dimension: Wiring. Severity: P2. Source SHA: 6886c3a5. Source file: src/screens/PosRootLayout.tsx:260. Found 4 occurrences of any/as any; this weakens compile-time guarantees and allows silent runtime drift.",
+  "description": "R7 source-first finding R7-POS-P2-CODE-015. Dimension: Wiring. Severity: P2. Source SHA: 6886c3a5. Source file: src/screens/v3/PosRootLayoutV3.tsx:260. Found 4 occurrences of any/as any; this weakens compile-time guarantees and allows silent runtime drift.",
   "status": "done",
   "severity": "P2",
   "parentTicketId": null,
@@ -58,7 +58,7 @@
   "operator": {
     "reportedBy": "claude-r7-audit",
     "reproSteps": [
-      "Open src/screens/PosRootLayout.tsx and inspect line 260",
+      "Open src/screens/v3/PosRootLayoutV3.tsx and inspect line 260",
       "Reproduce PosRootLayout: Type-safety gap via any casts on staging path https://staging.supermandi.tech/api/v1/health"
     ],
     "finalSignoff": false,
@@ -174,7 +174,7 @@
       "false_positive=reviewed_source_code"
     ],
     "parityProof": [
-      "source_file=src/screens/PosRootLayout.tsx",
+      "source_file=src/screens/v3/PosRootLayoutV3.tsx",
       "source_line=260"
     ]
   },
@@ -189,9 +189,9 @@
     "mockUsageApproved": false,
     "productionDataTested": true,
     "disclosedToOperator": false,
-    "notes": "R7 source-first ticket generated from code evidence at src/screens/PosRootLayout.tsx:260.",
+    "notes": "R7 source-first ticket generated from code evidence at src/screens/v3/PosRootLayoutV3.tsx:260.",
     "evidence": [
-      "file=src/screens/PosRootLayout.tsx",
+      "file=src/screens/v3/PosRootLayoutV3.tsx",
       "loc=1655",
       "any_count=4"
     ]

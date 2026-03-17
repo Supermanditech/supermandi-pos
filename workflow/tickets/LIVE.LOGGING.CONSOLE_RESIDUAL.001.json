@@ -176,8 +176,8 @@
     ],
     "afterVisual": [
       "backend/services/api-gateway/src/middleware/jwtAuth.ts",
-      "src/screens/PosRootLayout.tsx",
-      "src/screens/SellScanScreen.tsx"
+      "src/screens/v3/PosRootLayoutV3.tsx",
+      "src/screens/v3/SellScreenV3.tsx"
     ],
     "apiProof": [
       "typecheck-clean-pos-app",
@@ -277,7 +277,7 @@
       "status": "pass",
       "evidence": [
         "src/services/logger.ts",
-        "src/screens/SellScanScreen.tsx"
+        "src/screens/v3/SellScreenV3.tsx"
       ],
       "notes": "Error-path logs use logger.warn, not suppressed in production."
     },

@@ -5,7 +5,7 @@
   "surface": "pos",
   "riskClass": "low",
   "title": "ReorderSettingsScreen: Residual console logging",
-  "description": "R7 source-first finding R7-POS-P3-CODE-033. Dimension: UI. Severity: P3. Source SHA: 6886c3a5. Source file: src/screens/ReorderSettingsScreen.tsx:68. Found 3 console statements in runtime path; this can leak internals and add noise in production debugging.",
+  "description": "R7 source-first finding R7-POS-P3-CODE-033. Dimension: UI. Severity: P3. Source SHA: 6886c3a5. Source file: src/screens/v3/ReorderScreenV3.tsx:68. Found 3 console statements in runtime path; this can leak internals and add noise in production debugging.",
   "status": "done",
   "severity": "P3",
   "parentTicketId": null,
@@ -58,7 +58,7 @@
   "operator": {
     "reportedBy": "claude-r7-audit",
     "reproSteps": [
-      "Open src/screens/ReorderSettingsScreen.tsx and inspect line 68",
+      "Open src/screens/v3/ReorderScreenV3.tsx and inspect line 68",
       "Reproduce ReorderSettingsScreen: Residual console logging on staging path https://staging.supermandi.tech/api/v1/health"
     ],
     "finalSignoff": false,
@@ -174,7 +174,7 @@
       "false_positive=reviewed_source_code"
     ],
     "parityProof": [
-      "source_file=src/screens/ReorderSettingsScreen.tsx",
+      "source_file=src/screens/v3/ReorderScreenV3.tsx",
       "source_line=68"
     ]
   },
@@ -189,9 +189,9 @@
     "mockUsageApproved": false,
     "productionDataTested": true,
     "disclosedToOperator": false,
-    "notes": "R7 source-first ticket generated from code evidence at src/screens/ReorderSettingsScreen.tsx:68.",
+    "notes": "R7 source-first ticket generated from code evidence at src/screens/v3/ReorderScreenV3.tsx:68.",
     "evidence": [
-      "file=src/screens/ReorderSettingsScreen.tsx",
+      "file=src/screens/v3/ReorderScreenV3.tsx",
       "loc=589",
       "console_count=3"
     ]

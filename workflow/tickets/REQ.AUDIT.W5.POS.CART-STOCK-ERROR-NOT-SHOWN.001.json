@@ -118,7 +118,7 @@
       "workflow/templates/staging_batch.example.json",
       "workflow/templates/ticket.example.json",
       "workflow/tickets/.gitkeep",
-      "src/screens/SellScanScreen.tsx",
+      "src/screens/v3/SellScreenV3.tsx",
       "workflow/tickets/REQ.AUDIT.W5.POS.CART-STOCK-ERROR-NOT-SHOWN.001.json"
     ]
   },
@@ -285,7 +285,7 @@
   },
   "implementation": {
     "evidence": {
-      "fix": "src/screens/SellScanScreen.tsx",
+      "fix": "src/screens/v3/SellScreenV3.tsx",
       "description": "Added {showStock && stockValue === null} conditional rendering alert-circle-outline badge with \"Stock data unavailable\" message"
     }
   }

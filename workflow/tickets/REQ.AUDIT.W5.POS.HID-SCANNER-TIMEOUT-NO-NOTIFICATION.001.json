@@ -118,7 +118,7 @@
       "workflow/templates/staging_batch.example.json",
       "workflow/templates/ticket.example.json",
       "workflow/tickets/.gitkeep",
-      "src/screens/PosRootLayout.tsx",
+      "src/screens/v3/PosRootLayoutV3.tsx",
       "workflow/tickets/REQ.AUDIT.W5.POS.HID-SCANNER-TIMEOUT-NO-NOTIFICATION.001.json"
     ]
   },
@@ -285,7 +285,7 @@
   },
   "implementation": {
     "evidence": {
-      "fix": "src/screens/PosRootLayout.tsx",
+      "fix": "src/screens/v3/PosRootLayoutV3.tsx",
       "description": "added showToast in setTimeout callback when scannerOk transitions to false after 15s inactivity"
     }
   }

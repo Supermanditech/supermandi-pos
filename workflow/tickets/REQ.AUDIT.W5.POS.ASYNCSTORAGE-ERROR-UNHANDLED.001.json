@@ -118,7 +118,7 @@
       "workflow/templates/staging_batch.example.json",
       "workflow/templates/ticket.example.json",
       "workflow/tickets/.gitkeep",
-      "src/screens/PosRootLayout.tsx",
+      "src/screens/v3/PosRootLayoutV3.tsx",
       "src/services/posMode.ts",
       "workflow/tickets/REQ.AUDIT.W5.POS.ASYNCSTORAGE-ERROR-UNHANDLED.001.json"
     ]
@@ -286,7 +286,7 @@
   },
   "implementation": {
     "evidence": {
-      "fix": "src/screens/PosRootLayout.tsx",
+      "fix": "src/screens/v3/PosRootLayoutV3.tsx",
       "description": "replaced void loadLastMode() with loadLastMode().catch() that sets SELL default and lastModeLoaded=true"
     }
   }

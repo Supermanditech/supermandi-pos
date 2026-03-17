@@ -5,7 +5,7 @@
   "surface": "pos",
   "riskClass": "high",
   "title": "Tab switch Alert can be silently dismissed",
-  "description": "R7 source-first finding R1-01. Dimension: Wiring. Severity: P1. Source SHA: 6886c3a5. Source file: src/screens/PosRootLayout.tsx:32. R7 summary top finding for POS: Tab switch Alert can be silently dismissed",
+  "description": "R7 source-first finding R1-01. Dimension: Wiring. Severity: P1. Source SHA: 6886c3a5. Source file: src/screens/v3/PosRootLayoutV3.tsx:32. R7 summary top finding for POS: Tab switch Alert can be silently dismissed",
   "status": "done",
   "severity": "P1",
   "parentTicketId": null,
@@ -58,7 +58,7 @@
   "operator": {
     "reportedBy": "claude-r7-audit",
     "reproSteps": [
-      "Open src/screens/PosRootLayout.tsx and inspect line 32",
+      "Open src/screens/v3/PosRootLayoutV3.tsx and inspect line 32",
       "Reproduce Tab switch Alert can be silently dismissed on staging path https://staging.supermandi.tech/api/v1/health"
     ],
     "finalSignoff": false,
@@ -174,7 +174,7 @@
       "false_positive=reviewed_source_code"
     ],
     "parityProof": [
-      "source_file=src/screens/PosRootLayout.tsx",
+      "source_file=src/screens/v3/PosRootLayoutV3.tsx",
       "source_line=32"
     ]
   },
@@ -189,7 +189,7 @@
     "mockUsageApproved": false,
     "productionDataTested": true,
     "disclosedToOperator": false,
-    "notes": "R7 source-first ticket generated from code evidence at src/screens/PosRootLayout.tsx:32.",
+    "notes": "R7 source-first ticket generated from code evidence at src/screens/v3/PosRootLayoutV3.tsx:32.",
     "evidence": [
       "summary_source=R7_frontend_summary.json",
       "target=PosRootLayout"

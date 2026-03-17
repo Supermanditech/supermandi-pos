@@ -118,8 +118,8 @@
       "workflow/templates/staging_batch.example.json",
       "workflow/templates/ticket.example.json",
       "workflow/tickets/.gitkeep",
-      "src/screens/PosRootLayout.tsx",
-      "src/screens/MenuScreen.tsx",
+      "src/screens/v3/PosRootLayoutV3.tsx",
+      "src/screens/v3/MoreScreenV3.tsx",
       "workflow/tickets/REQ.AUDIT.W5.POS.ICON-BUTTON-A11Y-LABELS-MISSING.001.json"
     ]
   },
@@ -286,7 +286,7 @@
   },
   "implementation": {
     "evidence": {
-      "fix": "src/screens/MenuScreen.tsx",
+      "fix": "src/screens/v3/MoreScreenV3.tsx",
       "description": "sync Pressable: accessibilityLabel (dynamic for syncing/idle), accessibilityRole=\"button\"; tabs already have a11y"
     }
   }
