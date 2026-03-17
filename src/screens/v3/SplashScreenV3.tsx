@@ -31,6 +31,7 @@ import { initOfflineDb } from "../../services/offline/localDb";
 import { syncOutbox } from "../../services/offline/sync";
 import { getDeviceSession } from "../../services/deviceSession";
 import { fetchUiStatus } from "../../services/api/uiStatusApi";
+import { useStaffSessionStore } from "../../stores/staffSessionStore";
 import { getDeviceMeta } from "../../services/deviceInfo";
 import { showToast } from "../../utils/showToast";
 
@@ -100,8 +101,15 @@ export default function SplashScreenV3() {
         setStatusText("Continuing offline...");
       }
 
-      setStatusText("Ready!");
-      safeNavigate("SellScan");
+      // V3-OWNER-023: If device bound but no staff session, route to staff login
+      const staffSession = useStaffSessionStore.getState().session;
+      if (staffSession) {
+        setStatusText("Ready!");
+        safeNavigate("SellScan");
+      } else {
+        setStatusText("Staff login required");
+        safeNavigate("V3StaffLogin");
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       if (__DEV__) console.warn("[SplashV3] Session check failed:", msg);

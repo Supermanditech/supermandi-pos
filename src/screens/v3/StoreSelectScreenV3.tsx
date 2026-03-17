@@ -40,7 +40,7 @@ export default function StoreSelectScreenV3() {
       if (result.storeCode) useSettingsStore.getState().setStoreCode(result.storeCode);
 
       showToast(`Welcome to ${result.storeName}!`);
-      navigation.reset({ index: 0, routes: [{ name: "SellScan" }] });
+      navigation.reset({ index: 0, routes: [{ name: "V3StaffLogin" }] });
     } catch (err: any) {
       showToast(err?.message ?? "Failed to select store");
     }

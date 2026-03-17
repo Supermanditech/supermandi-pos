@@ -32,7 +32,7 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
   const SECTIONS: SettingsSection[] = [
     { title: "STORE", items: [
       { icon: "🏪", label: "Store Name", value: storeName },
-      { icon: "👤", label: "Staff", value: "Raju (Manager)" },
+      { icon: "👤", label: "Staff", value: (() => { const s = useStaffSessionStore.getState().session; return s ? `${s.name} (${s.role})` : "Not logged in"; })() },
     ]},
     { title: "HARDWARE", items: [
       { icon: "🖨️", label: "Printer", value: "Connected ✓", valueColor: colors.success },

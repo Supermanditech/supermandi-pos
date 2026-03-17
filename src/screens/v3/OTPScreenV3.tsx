@@ -80,7 +80,7 @@ export default function OTPScreenV3() {
       logger.debug("OTPV3", `verified:${phone},store:${result.storeCode}`);
       showToast(`Welcome to ${result.storeName}!`);
 
-      navigation.reset({ index: 0, routes: [{ name: "SellScan" }] });
+      navigation.reset({ index: 0, routes: [{ name: "V3StaffLogin" }] });
     } catch (err: any) {
       const msg = err?.response?.data?.error?.message ?? err?.message ?? "OTP verification failed";
       showToast(msg);
