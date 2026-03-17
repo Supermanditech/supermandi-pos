@@ -72,6 +72,7 @@ export default function StockScreenV3({ onClose }: Props) {
       <FlatList
         data={items}
         keyExtractor={(_, i) => String(i)}
+        ListEmptyComponent={!loading ? <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>📦</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No inventory</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Add products to see stock levels here</Text></View> : null}
         renderItem={({ item }) => (
           <View style={styles.itemRow}>
             <View style={styles.itemImg}><Text style={{ fontSize: 18 }}>📦</Text></View>

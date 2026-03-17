@@ -141,6 +141,13 @@ export default function BuyScreenV3() {
         keyExtractor={(p) => p.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={{ padding: 32, alignItems: "center" }}>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>📦</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No supplier products</Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4, textAlign: "center" }}>Connect with suppliers to browse their catalogue</Text>
+          </View>
+        }
         renderItem={({ item }) => (
           <SupplierProductCardV3
             product={item}

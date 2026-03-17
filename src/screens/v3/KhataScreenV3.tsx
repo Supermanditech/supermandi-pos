@@ -66,10 +66,20 @@ export default function KhataScreenV3({ onClose }: Props) {
       {khataLoading ? <ActivityIndicator size="small" color={colors.primary} style={{ padding: 10 }} /> : null}
       <View style={styles.searchBar}><TextInput style={styles.searchInput} placeholder="Search customer..." placeholderTextColor={colors.textTertiary} /></View>
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.section, { color: colors.error }]}>⚠ OVERDUE</Text>
-        {displayOverdue.map(renderCustomer)}
-        <Text style={styles.section}>PENDING</Text>
-        {displayPending.map(renderCustomer)}
+        {!khataLoading && displayOverdue.length === 0 && displayPending.length === 0 ? (
+          <View style={{ padding: 32, alignItems: "center" }}>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>📒</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No credit entries</Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Credit entries appear when you sell on due or add manual credit</Text>
+          </View>
+        ) : (
+          <>
+            <Text style={[styles.section, { color: colors.error }]}>⚠ OVERDUE</Text>
+            {displayOverdue.map(renderCustomer)}
+            <Text style={styles.section}>PENDING</Text>
+            {displayPending.map(renderCustomer)}
+          </>
+        )}
       </ScrollView>
       <View style={styles.footer}>
         <Pressable style={styles.bulkWaBtn} onPress={() => showToast("Reminders sent to all overdue")}><Svg width={14} height={14} viewBox="0 0 24 24" fill="#fff"><Path d={WA_SVG} /><Path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.638l4.72-1.391A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" /></Svg><Text style={styles.bulkWaText}>Remind All Overdue</Text></Pressable>

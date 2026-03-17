@@ -91,6 +91,14 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
       <View style={styles.poInfo}><Text style={styles.poText}>PO #1234 · Supplier ABC</Text><Text style={styles.poTotal}>₹4,500</Text></View>
 
       <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+        {loading && <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />}
+        {!loading && items.length === 0 && (
+          <View style={{ padding: 32, alignItems: "center" }}>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>📋</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No pending deliveries</Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Place a purchase order to receive goods here</Text>
+          </View>
+        )}
         {items.map((item, idx) => (
           <View key={item.barcode} style={[styles.itemRow, !item.checked && item.ordered > 0 && styles.itemRowPending]}>
             <Pressable style={[styles.check, item.checked && styles.checkChecked]} onPress={() => toggleCheck(idx)}>
