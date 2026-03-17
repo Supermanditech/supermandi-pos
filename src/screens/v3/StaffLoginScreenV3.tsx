@@ -17,7 +17,9 @@ import { staffLogin } from "../../services/api/staffApi";
 import { useStaffSessionStore } from "../../stores/staffSessionStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { clearDeviceSession } from "../../services/deviceSession";
+import { isOnline } from "../../services/networkStatus";
 import { logger } from "../../services/logger";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type Nav = NativeStackNavigationProp<any>;
 
@@ -40,15 +42,37 @@ export default function StaffLoginScreenV3() {
     setLoading(true);
     setError(null);
     try {
-      const result = await staffLogin({ pin });
-      // Persist staff session
-      useStaffSessionStore.getState().setSession({
-        staffId: result.staffId,
-        name: result.name,
-        role: result.role,
-        maxDiscountPct: result.maxDiscountPct ?? (result.role === "MANAGER" ? 100 : 10),
-      });
-      logger.debug("StaffLoginV3", `login:${result.staffId},role:${result.role},owner:${result.isOwner}`);
+      const online = await isOnline();
+
+      if (online) {
+        // Online: verify with backend
+        const result = await staffLogin({ pin });
+        const session = {
+          staffId: result.staffId,
+          name: result.name,
+          role: result.role,
+          maxDiscountPct: result.maxDiscountPct ?? (result.role === "MANAGER" ? 100 : 10),
+        };
+        useStaffSessionStore.getState().setSession(session);
+        // V3-SESSION-025: Cache PIN+session for offline re-entry
+        await AsyncStorage.setItem("supermandi.pin_cache", JSON.stringify({ pin, ...session, cachedAt: Date.now() }));
+        logger.debug("StaffLoginV3", `login:${result.staffId},role:${result.role},owner:${result.isOwner}`);
+      } else {
+        // Offline: check cached PIN
+        const cached = await AsyncStorage.getItem("supermandi.pin_cache");
+        if (!cached) { setError("Offline — no cached login available"); setPin(""); setLoading(false); return; }
+        const parsed = JSON.parse(cached);
+        if (parsed.pin !== pin) { setError("Invalid PIN (offline)"); setPin(""); setLoading(false); return; }
+        // Cache valid — restore session
+        useStaffSessionStore.getState().setSession({
+          staffId: parsed.staffId,
+          name: parsed.name,
+          role: parsed.role,
+          maxDiscountPct: parsed.maxDiscountPct,
+        });
+        logger.debug("StaffLoginV3", `offline_login:${parsed.staffId}`);
+      }
+
       navigation.reset({ index: 0, routes: [{ name: "SellScan" }] });
     } catch (err: any) {
       const msg = err?.response?.data?.error?.message ?? err?.message ?? "Login failed";

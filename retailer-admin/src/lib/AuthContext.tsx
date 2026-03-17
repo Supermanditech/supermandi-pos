@@ -66,8 +66,8 @@ const LEGACY_KEYS = [
 
 // RCAT-AUTH-001: Idle timeout configuration
 // GL-CRIT-0076: Make idle timeout configurable via environment variable
-// Default: 30 minutes, can be overridden with VITE_IDLE_TIMEOUT_MINUTES
-const IDLE_TIMEOUT_MINUTES = parseInt(import.meta.env.VITE_IDLE_TIMEOUT_MINUTES || '30', 10);
+// V3-SESSION-025: Default changed from 30 → 60 minutes per owner auth requirement
+const IDLE_TIMEOUT_MINUTES = parseInt(import.meta.env.VITE_IDLE_TIMEOUT_MINUTES || '60', 10);
 const IDLE_TIMEOUT_MS = Math.max(5, IDLE_TIMEOUT_MINUTES) * 60 * 1000; // Minimum 5 minutes
 // GL-WF-028: Warning 5 minutes before timeout (or 1/6 of timeout if timeout is short)
 const WARNING_BEFORE_MS = Math.min(5 * 60 * 1000, IDLE_TIMEOUT_MS / 6);
