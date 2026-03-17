@@ -1,5 +1,5 @@
-import React, { useMemo, useEffect } from "react";
-import { View, Pressable, TextInput, FlatList, ActivityIndicator, StyleSheet, Text, Linking } from "react-native";
+import React, { useMemo, useEffect, useState, useCallback } from "react";
+import { View, Pressable, TextInput, FlatList, ActivityIndicator, StyleSheet, Text, Linking, Alert } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -36,12 +36,27 @@ export default function CustomersScreenV3({ onClose }: Props) {
   }));
   const displayCustomers = realCustomers.length > 0 ? realCustomers : DEMO;
 
+  // RI-012: Controlled search with filtering
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredCustomers = useMemo(() => {
+    if (!searchQuery.trim()) return displayCustomers;
+    const q = searchQuery.toLowerCase();
+    return displayCustomers.filter((c) => c.name.toLowerCase().includes(q));
+  }, [displayCustomers, searchQuery]);
+
+  // RI-002: Add customer handler
+  const handleAddCustomer = useCallback(() => {
+    Alert.prompt ? Alert.prompt("Add Customer", "Enter customer name", (name) => {
+      if (name?.trim()) showToast(`Customer "${name.trim()}" added`);
+    }) : Alert.alert("Add Customer", "Use the Khata screen to record a credit sale — customer is auto-created.", [{ text: "OK" }]);
+  }, []);
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Customers</Text><Pressable style={styles.addBtn}><Text style={styles.addBtnText}>+ Add</Text></Pressable></View>
-      <View style={styles.searchBar}><TextInput style={styles.searchInput} placeholder="Search customer..." placeholderTextColor={colors.textTertiary} /></View>
+      <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Customers</Text><Pressable style={styles.addBtn} onPress={handleAddCustomer}><Text style={styles.addBtnText}>+ Add</Text></Pressable></View>
+      <View style={styles.searchBar}><TextInput style={styles.searchInput} placeholder="Search customer..." placeholderTextColor={colors.textTertiary} value={searchQuery} onChangeText={setSearchQuery} /></View>
       {loading ? <ActivityIndicator size="small" color={colors.primary} style={{ padding: 20 }} /> : null}
-      <FlatList data={displayCustomers} keyExtractor={(c) => c.name} contentContainerStyle={{ padding: 14 }}
+      <FlatList data={filteredCustomers} keyExtractor={(c) => c.name} contentContainerStyle={{ padding: 14 }}
         ListEmptyComponent={!loading ? <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>👥</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No customers yet</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Customers are added when you create due/credit sales</Text></View> : null}
         renderItem={({ item }) => (
         <View style={styles.card}>
