@@ -42,6 +42,14 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
     showToast("Same as last order applied");
   }, []);
 
+  const handleFieldChange = useCallback((idx: number, field: string, value: string) => {
+    setItems((prev) => prev.map((it, i) => {
+      if (i !== idx) return it;
+      if (field === "caseSize") return { ...it, caseSize: parseInt(value, 10) || 1 };
+      return { ...it, [field]: value };
+    }));
+  }, []);
+
   // V3-041: Real barcode lookup — checks productsStore first, then marks as new
   const handleBarcodeScan = useCallback(async (barcode: string) => {
     if (!barcode.trim()) return;
@@ -180,6 +188,7 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
             onQtyChange={(qty) => handleQtyChange(idx, qty)}
             onPriceChange={(price) => handlePriceChange(idx, price)}
             onSameAsLast={() => handleSameAsLast(idx)}
+            onFieldChange={(field, value) => handleFieldChange(idx, String(field), value)}
           />
         ))}
 

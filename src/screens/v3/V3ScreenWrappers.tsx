@@ -95,5 +95,5 @@ export function V3CustomersWrapper() {
 
 export function V3SettingsWrapper() {
   const nav = useNavigation<Nav>();
-  return <SettingsScreenV3 onClose={() => nav.goBack()} />;
+  return <SettingsScreenV3 onClose={() => nav.goBack()} onSwitchStaff={() => nav.navigate("PhoneLogin" as any)} onLogout={() => nav.navigate("Splash" as any)} />;
 }

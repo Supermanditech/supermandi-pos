@@ -49,6 +49,8 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
   const [splitVisible, setSplitVisible] = useState(false);
   const [splitCash, setSplitCash] = useState("");
   const [splitSecondMethod, setSplitSecondMethod] = useState<"UPI" | "DUE">("UPI");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const quickAmounts = useMemo(() => getQuickAmounts(grandTotal), [grandTotal]);
   const splitCashNum = parseInt(splitCash, 10) || 0;
   const splitRemainder = Math.max(0, Math.round(grandTotal / 100) - splitCashNum);
@@ -125,11 +127,9 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
         await confirmUpiPaymentManual({ paymentId: upi.paymentId });
         logger.debug("V3Payment", `upi_confirmed:${id}`);
       } else if (selectedMethod === "DUE") {
-        // Auto-commit customer info from cartStore before recording DUE
-        const customer = useCartStore.getState().customer;
-        if (!customer?.name) { showToast("Add customer name for Udhar"); setProcessing(false); createSaleInFlight.current = false; return; }
-        await recordDuePayment({ saleId: id });
-        logger.debug("V3Payment", `due_recorded:${id},customer:${customer.name}`);
+        if (!customerName.trim()) { showToast("Add customer name for Udhar"); useCartStore.getState().unlockCart(); setProcessing(false); createSaleInFlight.current = false; return; }
+        await recordDuePayment({ saleId: id, customerName: customerName.trim(), customerPhone: customerPhone.trim() || undefined });
+        logger.debug("V3Payment", `due_recorded:${id},customer:${customerName}`);
       }
 
       onComplete(selectedMethod);
@@ -142,7 +142,7 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
       createSaleInFlight.current = false;
       setProcessing(false);
     }
-  }, [selectedMethod, saleId, createSaleStep, onComplete]);
+  }, [selectedMethod, saleId, createSaleStep, onComplete, customerName, customerPhone]);
 
   return (
     <View style={styles.container}>
@@ -265,8 +265,8 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
         {selectedMethod === "DUE" ? (
           <View style={styles.udharSection}>
             <Text style={styles.udharTitle}>Record as customer due</Text>
-            <TextInput style={styles.udharInput} placeholder="Customer name" placeholderTextColor={colors.textTertiary} />
-            <TextInput style={styles.udharInput} placeholder="+91 phone number" placeholderTextColor={colors.textTertiary} keyboardType="phone-pad" />
+            <TextInput style={styles.udharInput} placeholder="Customer name" placeholderTextColor={colors.textTertiary} value={customerName} onChangeText={setCustomerName} />
+            <TextInput style={styles.udharInput} placeholder="+91 phone number" placeholderTextColor={colors.textTertiary} keyboardType="phone-pad" value={customerPhone} onChangeText={setCustomerPhone} maxLength={10} />
           </View>
         ) : null}
       </ScrollView>

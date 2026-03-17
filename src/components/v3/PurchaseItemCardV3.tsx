@@ -12,6 +12,8 @@ export interface PurchaseItemData {
   barcode: string;
   name?: string;
   brand?: string;
+  category?: string;
+  packSize?: string;
   hsnCode?: string;
   gstPct?: number;
   state: PurchaseItemState;
@@ -32,6 +34,7 @@ type PurchaseItemCardV3Props = {
   onQtyChange: (qty: number) => void;
   onPriceChange: (price: string) => void;
   onSameAsLast: () => void;
+  onFieldChange?: (field: keyof PurchaseItemData, value: string) => void;
 };
 
 const BORDER_COLORS: Record<PurchaseItemState, string> = { repeat: "#2563EB", existing: "#16A34A", new: "#F59E0B" };
@@ -39,7 +42,7 @@ const STATE_LABELS: Record<PurchaseItemState, string> = { repeat: "Repeat", exis
 const STATE_BG: Record<PurchaseItemState, string> = { repeat: "#EFF6FF", existing: "#ECFDF5", new: "#FFF7ED" };
 const STATE_FG: Record<PurchaseItemState, string> = { repeat: "#2563EB", existing: "#16A34A", new: "#92400E" };
 
-export default function PurchaseItemCardV3({ item, onQtyChange, onPriceChange, onSameAsLast }: PurchaseItemCardV3Props) {
+export default function PurchaseItemCardV3({ item, onQtyChange, onPriceChange, onSameAsLast, onFieldChange }: PurchaseItemCardV3Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const totalUnits = item.qtyCases * (item.caseSize ?? 24);
@@ -87,14 +90,14 @@ export default function PurchaseItemCardV3({ item, onQtyChange, onPriceChange, o
           {/* New product: name + brand inputs */}
           {item.state === "new" ? (
             <View style={styles.newFields}>
-              <TextInput style={styles.fieldInput} placeholder="Product name *" placeholderTextColor={colors.textTertiary} />
+              <TextInput style={styles.fieldInput} placeholder="Product name *" placeholderTextColor={colors.textTertiary} value={item.name ?? ""} onChangeText={(v) => onFieldChange?.("name", v)} />
               <View style={styles.fieldRow}>
-                <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="Brand *" placeholderTextColor={colors.textTertiary} />
-                <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="Category" placeholderTextColor={colors.textTertiary} />
+                <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="Brand *" placeholderTextColor={colors.textTertiary} value={item.brand ?? ""} onChangeText={(v) => onFieldChange?.("brand", v)} />
+                <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="Category" placeholderTextColor={colors.textTertiary} value={item.category ?? ""} onChangeText={(v) => onFieldChange?.("category", v)} />
               </View>
               <View style={styles.fieldRow}>
-                <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="Pack size" placeholderTextColor={colors.textTertiary} />
-                <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="Case qty" placeholderTextColor={colors.textTertiary} keyboardType="numeric" />
+                <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="Pack size" placeholderTextColor={colors.textTertiary} value={item.packSize ?? ""} onChangeText={(v) => onFieldChange?.("packSize", v)} />
+                <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="Case qty" placeholderTextColor={colors.textTertiary} keyboardType="numeric" value={item.caseSize ? String(item.caseSize) : ""} onChangeText={(v) => onFieldChange?.("caseSize", v)} />
               </View>
             </View>
           ) : null}

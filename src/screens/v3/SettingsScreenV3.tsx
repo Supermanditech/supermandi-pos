@@ -4,13 +4,16 @@ import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { useStaffSessionStore } from "../../stores/staffSessionStore";
+import { clearDeviceSession } from "../../services/deviceSession";
 import { showToast } from "../../utils/showToast";
+import i18n from "../../i18n";
 
 // STG-576: Settings v3 — unified with language toggle, printer, HID, express checkout
 
-type Props = { onClose: () => void };
+type Props = { onClose: () => void; onSwitchStaff?: () => void; onLogout?: () => void };
 
-export default function SettingsScreenV3({ onClose }: Props) {
+export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -67,10 +70,10 @@ export default function SettingsScreenV3({ onClose }: Props) {
                   ) : null}
                   {item.langToggle ? (
                     <View style={styles.langToggle}>
-                      <Pressable style={[styles.langBtn, language === "en" && styles.langBtnActive]} onPress={() => { setLanguage("en"); showToast("English"); }}>
+                      <Pressable style={[styles.langBtn, language === "en" && styles.langBtnActive]} onPress={() => { setLanguage("en"); i18n.changeLanguage("en"); showToast("English"); }}>
                         <Text style={[styles.langText, language === "en" && styles.langTextActive]}>English</Text>
                       </Pressable>
-                      <Pressable style={[styles.langBtn, language === "hi" && styles.langBtnActive]} onPress={() => { setLanguage("hi"); showToast("हिंदी"); }}>
+                      <Pressable style={[styles.langBtn, language === "hi" && styles.langBtnActive]} onPress={() => { setLanguage("hi"); i18n.changeLanguage("hi"); showToast("हिंदी"); }}>
                         <Text style={[styles.langText, language === "hi" && styles.langTextActive]}>हिंदी</Text>
                       </Pressable>
                     </View>
@@ -81,8 +84,17 @@ export default function SettingsScreenV3({ onClose }: Props) {
           </View>
         ))}
         <View style={styles.footerActions}>
-          <Pressable style={styles.switchBtn}><Text style={styles.switchText}>Switch Staff</Text></Pressable>
-          <Pressable style={styles.logoutBtn}><Text style={styles.logoutText}>Logout</Text></Pressable>
+          <Pressable style={styles.switchBtn} onPress={() => {
+            useStaffSessionStore.getState().clearSession();
+            showToast("Staff session cleared");
+            onSwitchStaff?.();
+          }}><Text style={styles.switchText}>Switch Staff</Text></Pressable>
+          <Pressable style={styles.logoutBtn} onPress={async () => {
+            useStaffSessionStore.getState().clearSession();
+            await clearDeviceSession();
+            showToast("Logged out");
+            onLogout?.();
+          }}><Text style={styles.logoutText}>Logout</Text></Pressable>
         </View>
       </ScrollView>
     </View>
