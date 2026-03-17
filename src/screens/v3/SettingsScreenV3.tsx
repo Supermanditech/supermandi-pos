@@ -129,6 +129,31 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
                   <Text style={styles.rowValue}>→</Text>
                 </Pressable>
               </View>
+              {/* V3-POS-024: Owner Quick PIN */}
+              <Text style={[styles.sectionTitle, { marginTop: 14 }]}>OWNER QUICK PIN</Text>
+              <View style={styles.sectionCard}>
+                <Pressable style={styles.row} onPress={() => {
+                  Alert.prompt ? Alert.prompt("Set Owner PIN", "Enter 4-6 digit PIN for quick POS re-entry:", async (ownerPin) => {
+                    if (!ownerPin || !/^\d{4,6}$/.test(ownerPin)) { showToast("PIN must be 4-6 digits"); return; }
+                    Alert.prompt("Confirm PIN", "Re-enter the PIN:", async (confirmPin) => {
+                      if (ownerPin !== confirmPin) { showToast("PINs do not match"); return; }
+                      const online = await isOnline();
+                      if (!online) { showToast("Setting PIN requires internet"); return; }
+                      try {
+                        const { apiClient } = require("../../services/api/apiClient");
+                        await apiClient.post("/api/v1/retailer-admin/staff/owner-pin", { pin: ownerPin });
+                        showToast("Owner PIN set — use it for quick re-entry after idle lock");
+                      } catch (err: any) {
+                        showToast(err?.response?.data?.error?.message ?? "Failed to set PIN");
+                      }
+                    });
+                  }) : showToast("Use retailer web to set your owner PIN");
+                }}>
+                  <Text style={styles.rowIcon}>🔐</Text>
+                  <Text style={styles.rowLabel}>Set/Reset Owner PIN</Text>
+                  <Text style={styles.rowValue}>→</Text>
+                </Pressable>
+              </View>
             </View>
           );
         })()}
