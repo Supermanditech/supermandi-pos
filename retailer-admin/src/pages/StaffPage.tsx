@@ -38,6 +38,11 @@ export default function StaffPage() {
   const [resetTarget, setResetTarget] = useState<string | null>(null);
   const [resetPin, setResetPin] = useState('');
 
+  // Edit staff state
+  const [editTarget, setEditTarget] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState('');
+
   const fetchStaff = useCallback(async () => {
     try {
       setLoading(true);
@@ -73,6 +78,20 @@ export default function StaffPage() {
       await fetchStaff();
     } catch { alert('Network error'); }
     finally { setCreating(false); }
+  };
+
+  const handleEdit = async (staffId: string) => {
+    if (!editName.trim() || editName.trim().length < 2) { alert('Name must be at least 2 characters'); return; }
+    try {
+      const res = await authFetch(`/api/v1/retailer-admin/staff/${staffId}`, accessToken, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName.trim(), role: editRole }),
+      });
+      if (!res.ok) { const d = await res.json(); alert(d?.error?.message ?? 'Failed to update'); return; }
+      setEditTarget(null); setEditName(''); setEditRole('');
+      await fetchStaff();
+    } catch { alert('Network error'); }
   };
 
   const handleToggleActive = async (staffId: string) => {
@@ -162,8 +181,23 @@ export default function StaffPage() {
             {s.name[0]?.toUpperCase() ?? '?'}
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700 }}>{s.name} {s.is_owner && <span style={{ fontSize: 11, color: '#2563EB', backgroundColor: '#DBEAFE', padding: '2px 6px', borderRadius: 4 }}>Owner</span>}</div>
-            <div style={{ fontSize: 13, color: '#64748B' }}>{s.role} · {s.is_active ? 'Active' : 'Inactive'}{s.last_login_at ? ` · Last login: ${new Date(s.last_login_at).toLocaleDateString()}` : ''}</div>
+            {editTarget === s.id ? (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Name"
+                  style={{ flex: 1, padding: 6, borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 14 }} />
+                <select value={editRole} onChange={e => setEditRole(e.target.value)}
+                  style={{ padding: 6, borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 13 }}>
+                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <button onClick={() => handleEdit(s.id)} style={{ padding: '6px 12px', backgroundColor: '#2563EB', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                <button onClick={() => setEditTarget(null)} style={{ padding: '6px 12px', backgroundColor: '#E2E8F0', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontWeight: 700 }}>{s.name} {s.is_owner && <span style={{ fontSize: 11, color: '#2563EB', backgroundColor: '#DBEAFE', padding: '2px 6px', borderRadius: 4 }}>Owner</span>}</div>
+                <div style={{ fontSize: 13, color: '#64748B' }}>{s.role} · {s.is_active ? 'Active' : 'Inactive'}{s.last_login_at ? ` · Last login: ${new Date(s.last_login_at).toLocaleDateString()}` : ''}</div>
+              </>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {resetTarget === s.id ? (
@@ -176,6 +210,9 @@ export default function StaffPage() {
               </>
             ) : (
               <>
+                {!s.is_owner && editTarget !== s.id && (
+                  <button onClick={() => { setEditTarget(s.id); setEditName(s.name); setEditRole(s.role); }} style={{ padding: '8px 12px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Edit</button>
+                )}
                 <button onClick={() => setResetTarget(s.id)} style={{ padding: '8px 12px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Reset PIN</button>
                 {!s.is_owner && (
                   <button onClick={() => handleToggleActive(s.id)} style={{ padding: '8px 12px', backgroundColor: s.is_active ? '#FEF2F2' : '#F0FDF4', color: s.is_active ? '#DC2626' : '#16A34A', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
