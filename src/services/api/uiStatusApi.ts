@@ -153,7 +153,19 @@ export async function fetchUiStatus(): Promise<UiStatusResponse> {
 
     if (!response.ok) {
       if (__DEV__) console.log("[uiStatus] Failed:", response.status);
-      // Fall back to local session data
+
+      // V3-API-005: Distinguish auth failure from other failures
+      // 401/403 = auth failure — MUST throw to prevent dead session entering POS
+      if (response.status === 401 || response.status === 403) {
+        let errorCode = "DEVICE_UNAUTHORIZED";
+        try {
+          const body = await response.json();
+          errorCode = body?.error?.code ?? errorCode;
+        } catch {}
+        throw new Error(errorCode);
+      }
+
+      // Other failures (500, 502, etc.) = server issue — fall back to cached
       const session = await getDeviceSession();
       const settings = useSettingsStore.getState();
       return {
