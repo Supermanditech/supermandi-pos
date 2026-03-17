@@ -51,7 +51,12 @@ export default function OTPScreenV3() {
     setLoading(true);
     try {
       // V3-063: Verify OTP — may return multi-store list or single session
-      const result = await apiClient.post<any>("/api/v1/pos/auth/verify-otp", { phone, otp: code });
+      // DA-035: 15s timeout to prevent stuck loading state
+      const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Verification timed out — check your connection")), 15000));
+      const result = await Promise.race([
+        apiClient.post<any>("/api/v1/pos/auth/verify-otp", { phone, otp: code }),
+        timeoutPromise,
+      ]);
 
       if (result.multiStore && result.stores?.length > 1) {
         // Multi-store: navigate to store selector
