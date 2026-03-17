@@ -176,10 +176,8 @@ export default function SellScreenV3() {
     }
     setSearchVisible(false);
   }, [cartItems, addItem]);
-  const cartTotal = useCartStore((s) => {
-    const price = sellMode === "bulk" ? 0.85 : 1;
-    return s.items.reduce((sum, item) => sum + item.priceMinor * item.quantity * price, 0);
-  });
+  // V3-HARDEN-059: No invented 0.85 pricing — retail mode only until trade contract exists
+  const cartTotal = useCartStore((s) => s.items.reduce((sum, item) => sum + item.priceMinor * item.quantity, 0));
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   // V3-FIX-041: Filter by category + use frequent products when "Frequent" selected
@@ -297,8 +295,9 @@ export default function SellScreenV3() {
         ) : null}
       </View>
 
-      {/* Retail / Bulk toggle */}
-      <CustomerTypeToggle mode={sellMode} onModeChange={setSellMode} />
+      {/* V3-HARDEN-059: Bulk/Trade disabled until real store-side trade pricing contract exists
+         No production path should use invented 0.85 math */}
+      {/* <CustomerTypeToggle mode={sellMode} onModeChange={setSellMode} /> */}
 
       {/* V3-FIX-039: Hide category chips when categoryBrowsingEnabled=false */}
       {categoryBrowsingEnabled ? <View style={styles.chipRow}>
@@ -329,9 +328,13 @@ export default function SellScreenV3() {
         </View>
       ) : tileProducts.length === 0 ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 40 }}>
-          <Text style={{ fontSize: 36, marginBottom: 8 }}>📦</Text>
-          <Text style={{ fontSize: 16, fontWeight: "700", color: colors.textSecondary }}>No products yet</Text>
-          <Text style={{ fontSize: 13, color: colors.textTertiary, textAlign: "center", marginTop: 4 }}>Scan a barcode or add products from your supplier catalogue</Text>
+          <Text style={{ fontSize: 36, marginBottom: 8 }}>{selectedCategory === "Frequent" ? "📊" : "📦"}</Text>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: colors.textSecondary }}>
+            {selectedCategory === "Frequent" ? "No frequent items yet" : products.length === 0 ? "No products yet" : `No ${selectedCategory} products`}
+          </Text>
+          <Text style={{ fontSize: 13, color: colors.textTertiary, textAlign: "center", marginTop: 4 }}>
+            {selectedCategory === "Frequent" ? "Complete a few sales and your most-sold products will appear here" : products.length === 0 ? "Scan a barcode or add products from your supplier catalogue" : "Try another category or search for a specific product"}
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -367,7 +370,7 @@ export default function SellScreenV3() {
         </Pressable>
       ) : (
         <View style={styles.cartEmpty}>
-          <Text style={styles.cartEmptyText}>Cart empty — tap a product or scan barcode</Text>
+          <Text style={styles.cartEmptyText}>Cart empty — tap product or scan barcode</Text>
         </View>
       )}
 

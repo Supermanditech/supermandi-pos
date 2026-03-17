@@ -296,10 +296,11 @@ function scheduleReconnect(): void {
  * Polling fallback: periodically check for updates when SSE is not available.
  * This is the reliable fallback path for React Native environments.
  */
+// V3-DELETE-057: Polling fallback rewritten to use fetchUiStatus
+// instead of non-existent /sync/poll endpoint
 function startPollingFallback(): void {
   if (pollingTimer) return;
-
-  console.log("[SSE] Starting polling fallback");
+  console.log("[SSE] Starting polling fallback via fetchUiStatus");
   useSyncStore.getState().setConnectionStatus("connected");
 
   const poll = async () => {
@@ -309,56 +310,25 @@ function startPollingFallback(): void {
         useSyncStore.getState().setConnectionStatus("disconnected");
         return;
       }
-
-      const deviceToken = await getDeviceToken();
-      if (!deviceToken) return;
-
-      // Poll the sync/events endpoint for any pending events since last check
-      const url = `${API_BASE_URL}/api/v1/pos/sync/poll${lastEventTimestamp ? `?since=${encodeURIComponent(lastEventTimestamp)}` : ""}`;
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "x-device-token": deviceToken,
-        },
-      });
-
-      if (!response.ok) {
-        // If the polling endpoint doesn't exist (404), that is acceptable.
-        // The auto-sync service handles periodic data refresh separately.
-        if (response.status === 404) {
-          // Endpoint not implemented yet — that is fine, auto-sync covers this
-          useSyncStore.getState().setConnectionStatus("connected");
-          return;
-        }
-        console.warn(`[SSE/Poll] Server returned ${response.status}`);
-        return;
+      const status = await fetchUiStatus();
+      if (status.features) {
+        const settings = useSettingsStore.getState();
+        if (status.features.buyEnabled !== undefined) settings.setBuyEnabled(status.features.buyEnabled);
+        if (status.features.reorderEnabled !== undefined) settings.setReorderEnabled(status.features.reorderEnabled);
+        if (status.features.creditEnabled !== undefined) settings.setCreditEnabled(status.features.creditEnabled);
+        if (status.features.bnplEnabled !== undefined) settings.setBnplEnabled(status.features.bnplEnabled);
+        if (status.features.voiceEnabled !== undefined) settings.setVoiceEnabled(status.features.voiceEnabled);
+        if (status.features.categoryBrowsingEnabled !== undefined) settings.setCategoryBrowsingEnabled(status.features.categoryBrowsingEnabled);
       }
-
-      const data = await response.json() as { events?: SSEEvent[] };
       useSyncStore.getState().setConnectionStatus("connected");
-
-      if (data.events && Array.isArray(data.events)) {
-        for (const event of data.events) {
-          try {
-            await handleEvent(event);
-          } catch (error) {
-            console.error("[SSE/Poll] Error handling event:", error);
-          }
-        }
-      }
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      console.warn("[SSE/Poll] Polling failed:", errorMsg);
+      if (__DEV__) console.warn("[SSE/Poll] Fallback poll error:", error);
       useSyncStore.getState().setConnectionStatus("disconnected");
     }
   };
 
-  // Run immediately, then on interval
   void poll();
-  pollingTimer = setInterval(() => {
-    void poll();
-  }, POLLING_INTERVAL_MS);
+  pollingTimer = setInterval(() => { void poll(); }, POLLING_INTERVAL_MS);
 }
 
 function stopPollingFallback(): void {
