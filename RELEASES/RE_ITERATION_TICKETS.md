@@ -117,18 +117,48 @@
 
 ---
 
+---
+
+## Layer 2 Findings (API/Backend/DB/GCP)
+
+### RI-024: Migrations 186 + 189 missing ROLLBACK comments
+- **Files**: backend/migrations/186_sup_pos_grn_tables.sql, backend/migrations/189_khata_void_column.sql
+- **Fix**: Add ROLLBACK comment headers per Zero-Regression-Rules
+- **Severity**: MEDIUM
+
+### RI-025: OTP storeId validation silently falls back instead of rejecting
+- **Files**: backend/src/routes/v1/pos/otpAuth.ts:126-128
+- **Problem**: Invalid storeId in request body silently falls back to first store instead of 400 error
+- **Fix**: Return 400 if storeId provided but not in user's store list
+- **Severity**: LOW (security hardening)
+
+### RI-026: Socket.io CORS fallback includes hardcoded localhost URLs
+- **Files**: backend/src/services/chat/socketManager.ts:84-87
+- **Problem**: If CORS_ALLOWED_ORIGINS env not set, accepts connections from localhost:5173/5174/4001
+- **Fix**: Remove localhost from fallback, require env var in production
+- **Severity**: MEDIUM (GCP parity)
+
+### Layer 2 PASS items (no action needed):
+- SQL injection: All parameterized queries ✓
+- Offline handling: posApi.ts checks isOnline() on all critical paths ✓
+- Error typing: ApiError properly structured ✓
+- Store isolation: storeId always from JWT/posDevice middleware ✓
+- Sensitive logging: OTP masked, tokens not logged ✓
+
+---
+
 ## Summary
 
 | Severity | Count |
 |----------|-------|
 | CRITICAL | 1 |
 | HIGH | 10 |
-| MEDIUM | 8 |
-| LOW | 4 |
-| **TOTAL** | **23** |
+| MEDIUM | 11 |
+| LOW | 5 |
+| **TOTAL** | **26** |
 
 ### Implementation Order
-1. RI-001 (CRITICAL type fix)
+1. RI-001 (CRITICAL type fix) — DONE
 2. RI-002..011 (HIGH — missing handlers + API guards)
-3. RI-012..019 (MEDIUM — search wiring, error states, type safety)
-4. RI-020..023 (LOW — guards, print/share wiring)
+3. RI-012..019, RI-024, RI-026 (MEDIUM — search, errors, migrations, CORS)
+4. RI-020..023, RI-025 (LOW — guards, print/share, OTP hardening)
