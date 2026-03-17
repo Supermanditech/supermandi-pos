@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useRef } from "react";
-import { View, Pressable, TextInput, ActivityIndicator, StyleSheet, Text, ScrollView, Modal } from "react-native";
+import { View, Pressable, TextInput, ActivityIndicator, StyleSheet, Text, ScrollView, Modal, Alert } from "react-native";
 import Svg, { Path, Rect, Circle, Line } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 
@@ -15,7 +15,7 @@ import { logger } from "../../services/logger";
 
 type PaymentScreenV3Props = {
   onBack: () => void;
-  onComplete: (method: "CASH" | "UPI" | "DUE", saleId?: string) => void;
+  onComplete: (method: "CASH" | "UPI" | "DUE", saleId?: string, totalMinor?: number, itemCount?: number) => void;
 };
 
 type PaymentMethod = "CASH" | "UPI" | "DUE";
@@ -69,7 +69,9 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
   const createSaleInFlight = useRef(false);
 
   // PD-012: Offline guard before sale creation
+  // RI-011: Guard against empty items
   const createSaleStep = useCallback(async (): Promise<string | null> => {
+    if (items.length === 0) { showToast("Cart is empty"); return null; }
     const online = await isOnline();
     if (!online && selectedMethod === "UPI") {
       showToast("UPI requires internet connection");
@@ -132,7 +134,7 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
         logger.debug("V3Payment", `due_recorded:${id},customer:${customerName}`);
       }
 
-      onComplete(selectedMethod, id);
+      onComplete(selectedMethod, id, grandTotal, itemCount);
     } catch (err: any) {
       const msg = err?.response?.data?.error?.message ?? err?.message ?? "Payment failed";
       showToast(msg);
@@ -211,7 +213,13 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
         {/* Secondary actions */}
         <View style={styles.secondaryRow}>
           <Pressable style={styles.secondaryBtn} onPress={() => setSplitVisible(true)}><Text style={styles.secondaryText}>Split Payment</Text></Pressable>
-          <Pressable style={styles.secondaryBtn}><Text style={styles.secondaryText}>Add Discount</Text></Pressable>
+          <Pressable style={styles.secondaryBtn} onPress={() => {
+            Alert.alert("Add Discount", "Choose discount type:", [
+              { text: "Cancel", style: "cancel" },
+              { text: "10%", onPress: () => { useCartStore.getState().applyDiscount({ type: "percentage", value: 10 }); showToast("10% discount applied"); } },
+              { text: "₹50 off", onPress: () => { useCartStore.getState().applyDiscount({ type: "fixed", value: 5000 }); showToast("₹50 discount applied"); } },
+            ]);
+          }}><Text style={styles.secondaryText}>Add Discount</Text></Pressable>
         </View>
 
         {/* Cash section — shown when CASH selected */}

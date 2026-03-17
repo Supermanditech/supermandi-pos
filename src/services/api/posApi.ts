@@ -121,7 +121,7 @@ export async function recordCashPayment(input: {
 
 export async function recordDuePayment(input: {
   saleId: string;
-  customerName?: string;
+  customerName: string;
   customerPhone?: string;
 }): Promise<{ status: string }> {
   if (await isOnline()) {

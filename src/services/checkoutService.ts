@@ -26,6 +26,7 @@ export interface CheckoutInput {
   totalMinor: number;
   currency: string;
   transactionId: string;
+  customerName?: string;
 }
 
 export interface CheckoutResult {
@@ -51,7 +52,7 @@ export interface CheckoutResult {
 export async function completeCheckout(
   input: CheckoutInput
 ): Promise<CheckoutResult> {
-  const { saleId, billRef, paymentMode, paymentId, items } = input;
+  const { saleId, billRef, paymentMode, paymentId, items, customerName } = input;
 
   // Step 1: Record payment
   let paymentStatus: string;
@@ -66,7 +67,7 @@ export async function completeCheckout(
       const result = await recordCashPayment({ saleId });
       paymentStatus = result.status;
     } else {
-      const result = await recordDuePayment({ saleId });
+      const result = await recordDuePayment({ saleId, customerName: customerName ?? "Walk-in Customer" });
       paymentStatus = result.status;
     }
   } catch (error) {

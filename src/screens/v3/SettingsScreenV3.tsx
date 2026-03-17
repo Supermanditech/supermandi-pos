@@ -22,6 +22,10 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
   const themeMode = useSettingsStore((s) => s.themeMode);
   const toggleTheme = useSettingsStore((s) => s.toggleTheme);
   const storeName = useSettingsStore((s) => s.storeName) ?? "SuperMandi Store";
+  const autoPrint = useSettingsStore((s) => s.printerAutoPrint);
+  const setAutoPrint = useSettingsStore((s) => s.setPrinterAutoPrint);
+  const [expressCheckout, setExpressCheckout] = React.useState(true);
+  const [soundEnabled, setSoundEnabled] = React.useState(true);
 
   type SettingsItem = { icon: string; label: string; value?: string; valueColor?: string; toggle?: boolean; on?: boolean; onToggle?: () => void; langToggle?: boolean };
   type SettingsSection = { title: string; items: SettingsItem[] };
@@ -33,16 +37,16 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
     { title: "HARDWARE", items: [
       { icon: "🖨️", label: "Printer", value: "Connected ✓", valueColor: colors.success },
       { icon: "📟", label: "HID Scanner", value: "Active ✓", valueColor: colors.success },
-      { icon: "🔄", label: "Auto-Print", toggle: true, on: true },
+      { icon: "🔄", label: "Auto-Print", toggle: true, on: autoPrint, onToggle: () => setAutoPrint(!autoPrint) },
     ]},
     { title: "PAYMENTS", items: [
       { icon: "📱", label: "UPI ID", value: "store@upi" },
-      { icon: "⚡", label: "Express Checkout", toggle: true, on: true },
+      { icon: "⚡", label: "Express Checkout", toggle: true, on: expressCheckout, onToggle: () => setExpressCheckout(!expressCheckout) },
     ]},
     { title: "PREFERENCES", items: [
       { icon: "🌐", label: "Language", langToggle: true },
       { icon: "🌙", label: "Dark Mode", toggle: true, on: themeMode === "dark", onToggle: toggleTheme },
-      { icon: "🔊", label: "Sounds", toggle: true, on: true },
+      { icon: "🔊", label: "Sounds", toggle: true, on: soundEnabled, onToggle: () => setSoundEnabled(!soundEnabled) },
     ]},
     { title: "DATA", items: [
       { icon: "☁️", label: "Last Sync", value: "2 min ago ✓", valueColor: colors.success },
