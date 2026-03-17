@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { View, Pressable, TextInput, StyleSheet, Text, Modal } from "react-native";
 import Svg, { Rect, Path, Line } from "react-native-svg";
 import { useTranslation } from "react-i18next";
@@ -8,6 +8,7 @@ import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
 import { useProductsStore } from "../../stores/productsStore";
 import { useCartStore } from "../../stores/cartStore";
+import { setHidScanHandler } from "../../services/hidScannerService";
 import { logger } from "../../services/logger";
 
 // V3-003: Context-aware barcode scan — wired to real productsStore + cartStore
@@ -81,6 +82,42 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
     }
     setBarcodeInput("");
   }, [barcodeInput, context, getProductByBarcode, addItem, onProductFound]);
+
+  // DA-028: Wire HID scanner service — hardware barcodes auto-submit
+  useEffect(() => {
+    if (!visible) return;
+    const handler = (barcode: string) => {
+      setBarcodeInput(barcode);
+      // Auto-submit after short delay for HID scanner
+      setTimeout(() => {
+        const code = barcode.trim();
+        if (!code) return;
+        const product = getProductByBarcode(code);
+        if (product) {
+          if (context === "sell") {
+            const existing = useCartStore.getState().items.find((i) => i.barcode === code);
+            if (existing) {
+              useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
+              showToast(`${product.name} ×${existing.quantity + 1}`);
+            } else {
+              addItem({ id: code, name: product.name, priceMinor: product.priceMinor, barcode: code, currency: "INR" });
+              showToast(`${product.name} added to cart`);
+            }
+            onProductFound(code, context);
+          } else {
+            showToast(`${product.name} — ${context}`);
+            onProductFound(code, context);
+          }
+          setLastResult({ barcode: code, productName: product.name, price: product.priceMinor, stock: product.stock ?? undefined, isNew: false });
+        } else {
+          setLastResult({ barcode: code, isNew: true });
+        }
+        setBarcodeInput("");
+      }, 50);
+    };
+    setHidScanHandler(handler);
+    return () => setHidScanHandler(null);
+  }, [visible, context, getProductByBarcode, addItem, onProductFound]);
 
   if (!visible) return null;
 
