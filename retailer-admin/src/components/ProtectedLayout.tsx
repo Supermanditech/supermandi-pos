@@ -92,6 +92,7 @@ export default function ProtectedLayout() {
     { path: 'compliance', label: 'Compliance', icon: FileSpreadsheet },
     { path: 'settings', label: 'Settings', icon: Settings }, // GL-RJ-005
     { path: 'settings/payments', label: 'Payments', icon: CreditCard }, // RET-WEB-003
+    { path: 'staff', label: 'Staff', icon: Users }, // V3-OWNER-023
     { path: 'devices', label: 'Devices', icon: Smartphone }, // RET-WEB-002
     { path: 'invoices', label: 'Invoices', icon: Receipt }, // T-073
     { path: 'reconciliation', label: 'Reconciliation', icon: IndianRupee }, // T-151
