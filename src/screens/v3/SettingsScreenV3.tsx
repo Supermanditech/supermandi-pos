@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
-import { View, Pressable, ScrollView, StyleSheet, Text, Alert, TextInput } from "react-native";
+import { View, Pressable, ScrollView, StyleSheet, Text, Alert, TextInput, Modal } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -28,6 +28,15 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
   const setAutoPrint = useSettingsStore((s) => s.setPrinterAutoPrint);
   const [expressCheckout, setExpressCheckout] = React.useState(true);
   const [soundEnabled, setSoundEnabled] = React.useState(true);
+
+  // Cross-platform modal state (replaces Alert.prompt for Android compatibility)
+  type ModalMode = "add-staff" | "owner-pin" | null;
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
+  const [modalStep, setModalStep] = useState(0); // 0=name, 1=pin for add-staff; 0=pin, 1=confirm for owner-pin
+  const [modalName, setModalName] = useState("");
+  const [modalPin, setModalPin] = useState("");
+  const [modalConfirmPin, setModalConfirmPin] = useState("");
+  const [modalError, setModalError] = useState("");
 
   type SettingsItem = { icon: string; label: string; value?: string; valueColor?: string; toggle?: boolean; on?: boolean; onToggle?: () => void; langToggle?: boolean };
   type SettingsSection = { title: string; items: SettingsItem[] };
@@ -111,18 +120,7 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
                   <Text style={styles.rowValue}>→</Text>
                 </Pressable>
                 <Pressable style={styles.row} onPress={() => {
-                  Alert.prompt ? Alert.prompt("Add Staff", "Enter staff name:", async (staffName) => {
-                    if (!staffName?.trim()) return;
-                    Alert.prompt("Set PIN", "Enter 4-6 digit PIN for " + staffName, async (staffPin) => {
-                      if (!staffPin || !/^\d{4,6}$/.test(staffPin)) { showToast("PIN must be 4-6 digits"); return; }
-                      try {
-                        await createStaff({ name: staffName.trim(), pin: staffPin, role: "CASHIER" });
-                        showToast(`Staff "${staffName.trim()}" created`);
-                      } catch (err: any) {
-                        showToast(err?.response?.data?.error?.message ?? "Failed to create staff");
-                      }
-                    });
-                  }) : showToast("Use retailer web to manage staff on this device");
+                  setModalMode("add-staff"); setModalStep(0); setModalName(""); setModalPin(""); setModalError("");
                 }}>
                   <Text style={styles.rowIcon}>➕</Text>
                   <Text style={styles.rowLabel}>Add Staff</Text>
@@ -133,21 +131,7 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
               <Text style={[styles.sectionTitle, { marginTop: 14 }]}>OWNER QUICK PIN</Text>
               <View style={styles.sectionCard}>
                 <Pressable style={styles.row} onPress={() => {
-                  Alert.prompt ? Alert.prompt("Set Owner PIN", "Enter 4-6 digit PIN for quick POS re-entry:", async (ownerPin) => {
-                    if (!ownerPin || !/^\d{4,6}$/.test(ownerPin)) { showToast("PIN must be 4-6 digits"); return; }
-                    Alert.prompt("Confirm PIN", "Re-enter the PIN:", async (confirmPin) => {
-                      if (ownerPin !== confirmPin) { showToast("PINs do not match"); return; }
-                      const online = await isOnline();
-                      if (!online) { showToast("Setting PIN requires internet"); return; }
-                      try {
-                        const { apiClient } = require("../../services/api/apiClient");
-                        await apiClient.post("/api/v1/retailer-admin/staff/owner-pin", { pin: ownerPin });
-                        showToast("Owner PIN set — use it for quick re-entry after idle lock");
-                      } catch (err: any) {
-                        showToast(err?.response?.data?.error?.message ?? "Failed to set PIN");
-                      }
-                    });
-                  }) : showToast("Use retailer web to set your owner PIN");
+                  setModalMode("owner-pin"); setModalStep(0); setModalPin(""); setModalConfirmPin(""); setModalError("");
                 }}>
                   <Text style={styles.rowIcon}>🔐</Text>
                   <Text style={styles.rowLabel}>Set/Reset Owner PIN</Text>
@@ -172,6 +156,113 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
           }}><Text style={styles.logoutText}>Logout</Text></Pressable>
         </View>
       </ScrollView>
+
+      {/* Cross-platform modal for Add Staff + Owner PIN (works on Android) */}
+      <Modal visible={modalMode !== null} transparent animationType="slide" onRequestClose={() => setModalMode(null)} testID="settings-modal">
+        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
+            {modalMode === "add-staff" && (
+              <>
+                <Text style={{ fontSize: 18, fontWeight: "800", marginBottom: 4 }}>
+                  {modalStep === 0 ? "Add Staff — Name" : "Add Staff — PIN"}
+                </Text>
+                {modalStep === 0 ? (
+                  <>
+                    <Text style={{ fontSize: 13, color: colors.textTertiary, marginBottom: 12 }}>Enter the staff member's name</Text>
+                    <TextInput
+                      style={{ padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, fontSize: 16, fontWeight: "600" }}
+                      value={modalName} onChangeText={setModalName} placeholder="Staff name" autoFocus testID="modal-staff-name"
+                    />
+                    {modalError ? <Text style={{ color: colors.error, fontSize: 12, marginTop: 6 }}>{modalError}</Text> : null}
+                    <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>
+                      <Pressable onPress={() => setModalMode(null)} style={{ flex: 1, padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, alignItems: "center" }}>
+                        <Text style={{ fontWeight: "700", color: colors.textSecondary }}>Cancel</Text>
+                      </Pressable>
+                      <Pressable onPress={() => {
+                        if (!modalName.trim() || modalName.trim().length < 2) { setModalError("Name must be at least 2 characters"); return; }
+                        setModalStep(1); setModalError("");
+                      }} style={{ flex: 2, padding: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: "center" }}>
+                        <Text style={{ fontWeight: "800", color: "#fff" }}>Next →</Text>
+                      </Pressable>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <Text style={{ fontSize: 13, color: colors.textTertiary, marginBottom: 12 }}>Set 4-6 digit PIN for {modalName.trim()}</Text>
+                    <TextInput
+                      style={{ padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, fontSize: 20, fontWeight: "700", textAlign: "center", letterSpacing: 8 }}
+                      value={modalPin} onChangeText={v => setModalPin(v.replace(/\D/g, "").slice(0, 6))}
+                      keyboardType="number-pad" secureTextEntry maxLength={6} autoFocus testID="modal-staff-pin"
+                    />
+                    {modalError ? <Text style={{ color: colors.error, fontSize: 12, marginTop: 6 }}>{modalError}</Text> : null}
+                    <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>
+                      <Pressable onPress={() => { setModalStep(0); setModalPin(""); setModalError(""); }} style={{ flex: 1, padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, alignItems: "center" }}>
+                        <Text style={{ fontWeight: "700", color: colors.textSecondary }}>Back</Text>
+                      </Pressable>
+                      <Pressable onPress={async () => {
+                        if (!/^\d{4,6}$/.test(modalPin)) { setModalError("PIN must be 4-6 digits"); return; }
+                        try {
+                          await createStaff({ name: modalName.trim(), pin: modalPin, role: "CASHIER" });
+                          showToast(`Staff "${modalName.trim()}" created`);
+                          setModalMode(null);
+                        } catch (err: any) {
+                          setModalError(err?.response?.data?.error?.message ?? "Failed to create staff");
+                        }
+                      }} style={{ flex: 2, padding: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: "center" }}>
+                        <Text style={{ fontWeight: "800", color: "#fff" }}>Create Staff</Text>
+                      </Pressable>
+                    </View>
+                  </>
+                )}
+              </>
+            )}
+
+            {modalMode === "owner-pin" && (
+              <>
+                <Text style={{ fontSize: 18, fontWeight: "800", marginBottom: 4 }}>
+                  {modalStep === 0 ? "Set Owner PIN" : "Confirm PIN"}
+                </Text>
+                <Text style={{ fontSize: 13, color: colors.textTertiary, marginBottom: 12 }}>
+                  {modalStep === 0 ? "Enter 4-6 digit PIN for quick POS re-entry" : "Re-enter the PIN to confirm"}
+                </Text>
+                <TextInput
+                  style={{ padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, fontSize: 20, fontWeight: "700", textAlign: "center", letterSpacing: 8 }}
+                  value={modalStep === 0 ? modalPin : modalConfirmPin}
+                  onChangeText={v => { const clean = v.replace(/\D/g, "").slice(0, 6); modalStep === 0 ? setModalPin(clean) : setModalConfirmPin(clean); }}
+                  keyboardType="number-pad" secureTextEntry maxLength={6} autoFocus
+                  testID={modalStep === 0 ? "modal-owner-pin" : "modal-owner-pin-confirm"}
+                />
+                {modalError ? <Text style={{ color: colors.error, fontSize: 12, marginTop: 6 }}>{modalError}</Text> : null}
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>
+                  <Pressable onPress={() => { if (modalStep === 0) setModalMode(null); else { setModalStep(0); setModalConfirmPin(""); setModalError(""); } }} style={{ flex: 1, padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, alignItems: "center" }}>
+                    <Text style={{ fontWeight: "700", color: colors.textSecondary }}>{modalStep === 0 ? "Cancel" : "Back"}</Text>
+                  </Pressable>
+                  <Pressable onPress={async () => {
+                    if (modalStep === 0) {
+                      if (!/^\d{4,6}$/.test(modalPin)) { setModalError("PIN must be 4-6 digits"); return; }
+                      setModalStep(1); setModalError("");
+                    } else {
+                      if (modalPin !== modalConfirmPin) { setModalError("PINs do not match"); return; }
+                      const online = await isOnline();
+                      if (!online) { setModalError("Setting PIN requires internet"); return; }
+                      try {
+                        const { apiClient } = require("../../services/api/apiClient");
+                        await apiClient.post("/api/v1/retailer-admin/staff/owner-pin", { pin: modalPin });
+                        showToast("Owner PIN set — use it for quick re-entry after idle lock");
+                        setModalMode(null);
+                      } catch (err: any) {
+                        setModalError(err?.response?.data?.error?.message ?? "Failed to set PIN");
+                      }
+                    }
+                  }} style={{ flex: 2, padding: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: "center" }}>
+                    <Text style={{ fontWeight: "800", color: "#fff" }}>{modalStep === 0 ? "Next →" : "Set PIN"}</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
