@@ -106,7 +106,15 @@ export default function SellScreenV3() {
           brand: g.brand,
         }))
       );
-      setSearchResults(flat);
+      // DA-029: Deduplicate by barcode
+      const seen = new Set<string>();
+      const deduped = flat.filter((r) => {
+        const key = r.barcode ?? r.id;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setSearchResults(deduped);
     } catch (err) {
       logger.debug("SellV3Search", `failed:${String(err)}`);
       setSearchResults([]);

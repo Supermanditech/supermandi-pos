@@ -186,7 +186,7 @@ export default function BuyScreenV3() {
             <Text style={styles.cartItems}>{products.filter((p: SupplierProduct) => (orderQtys[p.id] ?? 0) > 0).map((p: SupplierProduct) => p.name.split(" ")[0]).join(", ")}</Text>
           </View>
           <Text style={styles.cartTotal}>₹{Math.round(cartTotal / 100).toLocaleString("en-IN")}</Text>
-          <Pressable style={styles.orderBtn} accessibilityLabel="Place order">
+          <Pressable style={styles.orderBtn} accessibilityLabel="Place order" onPress={() => showToast(`Order placed: ${cartItemCount} items · ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")}`)}>
             <Text style={styles.orderBtnText}>ORDER →</Text>
           </Pressable>
         </View>

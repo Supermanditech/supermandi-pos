@@ -64,7 +64,7 @@ export default function PhoneScreenV3() {
               placeholder="98765 43210"
               placeholderTextColor={colors.textTertiary}
               keyboardType="phone-pad"
-              maxLength={15}
+              maxLength={10}
               autoFocus
               onSubmitEditing={handleContinue}
             />

@@ -60,7 +60,7 @@ export default function KhataScreenV3({ onClose }: Props) {
         <Text style={[styles.kAmount, c.overdue && styles.kAmountOverdue]}>₹{c.amount.toLocaleString("en-IN")}</Text>
         <View style={styles.kActions}>
           <Pressable style={styles.waSmBtn} onPress={() => showToast(`Reminder sent to ${c.name}`)}><Svg width={10} height={10} viewBox="0 0 24 24" fill="#fff"><Path d={WA_SVG} /></Svg></Pressable>
-          <Pressable style={styles.collectBtn}><Text style={styles.collectText}>Collect</Text></Pressable>
+          <Pressable style={styles.collectBtn} onPress={() => showToast(`Collect ₹${c.amount} from ${c.name}`)}><Text style={styles.collectText}>Collect</Text></Pressable>
         </View>
       </View>
     </View>

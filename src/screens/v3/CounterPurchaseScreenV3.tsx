@@ -159,7 +159,7 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
       <View style={styles.supplierRow}>
         <Text style={styles.supplierLabel}>SUPPLIER:</Text>
         <TextInput style={[styles.supplierSelect, { fontSize: 12, fontWeight: "600", color: colors.textPrimary }]} value={supplierName} onChangeText={setSupplierName} placeholder="Enter supplier name..." placeholderTextColor={colors.textTertiary} />
-        <Pressable style={styles.supplierAdd}><Text style={styles.supplierAddText}>+</Text></Pressable>
+        <Pressable style={styles.supplierAdd} onPress={() => showToast("Select supplier from your supplier list")}><Text style={styles.supplierAddText}>+</Text></Pressable>
       </View>
       <View style={styles.invoiceRow}>
         <Text style={styles.invoiceLabel}>Invoice #:</Text>
@@ -171,7 +171,11 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
       <ScrollView style={styles.itemsList} showsVerticalScrollIndicator={false}>
         <View style={styles.itemsHeader}>
           <Text style={styles.itemsTitle}>SCANNED ITEMS ({items.length})</Text>
-          <Pressable onPress={() => showToast("Add manually")}><Text style={styles.addManual}>+ Add Manually</Text></Pressable>
+          <Pressable onPress={() => {
+            const barcode = `MANUAL-${Date.now()}`;
+            setItems((prev) => [{ barcode, state: "new" as const, qtyCases: 1, purchasePrice: "", sellPrice: "", caseSize: 1 }, ...prev]);
+            showToast("Manual entry added — fill product details");
+          }}><Text style={styles.addManual}>+ Add Manually</Text></Pressable>
         </View>
 
         {items.length === 0 && (

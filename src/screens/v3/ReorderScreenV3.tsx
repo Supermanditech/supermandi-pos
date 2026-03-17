@@ -81,7 +81,7 @@ export default function ReorderScreenV3({ onClose }: Props) {
             </View>
             <View style={styles.cardActions}>
               <Pressable style={styles.approveBtn} onPress={() => showToast(`${item.name} approved`)}><Text style={styles.approveBtnText}>✓ Approve</Text></Pressable>
-              <Pressable style={styles.editBtn}><Text style={styles.editBtnText}>Edit</Text></Pressable>
+              <Pressable style={styles.editBtn} onPress={() => showToast(`Edit qty for ${item.name}`)}><Text style={styles.editBtnText}>Edit</Text></Pressable>
               <Pressable style={styles.dismissBtn}><Text style={styles.dismissBtnText}>✕</Text></Pressable>
             </View>
           </View>

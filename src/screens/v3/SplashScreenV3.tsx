@@ -11,6 +11,12 @@ type Props = { onReady: (destination: "phone" | "pos" | "blocked" | "update") =>
 
 export default function SplashScreenV3({ onReady }: Props) {
   const [statusText, setStatusText] = useState("Loading...");
+  const navigatedRef = useRef(false);
+  const safeOnReady = (dest: "phone" | "pos" | "blocked" | "update") => {
+    if (navigatedRef.current) return;
+    navigatedRef.current = true;
+    onReady(dest);
+  };
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const spinAnim = useRef(new Animated.Value(0)).current;
@@ -35,7 +41,7 @@ export default function SplashScreenV3({ onReady }: Props) {
         const token = await getDeviceToken();
         if (!token) {
           setStatusText("Welcome!");
-          onReady("phone");
+          safeOnReady("phone");
           return;
         }
 
@@ -44,19 +50,20 @@ export default function SplashScreenV3({ onReady }: Props) {
           setStatusText("Checking status...");
           const status = await fetchUiStatusStrict();
           if (status?.deviceActive === false) {
-            onReady("blocked");
+            safeOnReady("blocked");
             return;
           }
           if (status?.forceUpdate) {
-            onReady("update");
+            safeOnReady("update");
             return;
           }
         } catch {
           // Offline — proceed to POS (offline-first)
+          setStatusText("Continuing offline...");
         }
 
         setStatusText("Ready!");
-        onReady("pos");
+        safeOnReady("pos");
       } catch {
         setStatusText("Welcome!");
         onReady("phone");

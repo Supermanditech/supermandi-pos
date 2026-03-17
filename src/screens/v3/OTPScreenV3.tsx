@@ -24,6 +24,7 @@ export default function OTPScreenV3() {
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(30);
   const inputRefs = useRef<Array<TextInput | null>>([]);
+  const submittingRef = useRef(false);
 
   // Auto-advance OTP inputs
   const handleOtpChange = useCallback((index: number, value: string) => {
@@ -44,6 +45,8 @@ export default function OTPScreenV3() {
   const handleVerify = useCallback(async (otpCode?: string) => {
     const code = otpCode ?? otp.join("");
     if (code.length !== 6) { showToast("Enter 6-digit OTP"); return; }
+    if (submittingRef.current) return;
+    submittingRef.current = true;
 
     setLoading(true);
     try {
@@ -73,6 +76,7 @@ export default function OTPScreenV3() {
       logger.debug("OTPV3", `verify_failed:${phone}:${String(err)}`);
     }
     setLoading(false);
+    submittingRef.current = false;
   }, [otp, phone, navigation]);
 
   const handleResend = useCallback(async () => {

@@ -93,8 +93,8 @@ export default function StockScreenV3({ onClose }: Props) {
       />
 
       <View style={styles.footer}>
-        <Pressable style={styles.footerBtn}><Text style={styles.footerBtnText}>Opening Stock</Text></Pressable>
-        <Pressable style={styles.footerBtn}><Text style={styles.footerBtnText}>Barcode Labels</Text></Pressable>
+        <Pressable style={styles.footerBtn} onPress={() => showToast("Opening stock — scan barcodes to set initial quantities")}><Text style={styles.footerBtnText}>Opening Stock</Text></Pressable>
+        <Pressable style={styles.footerBtn} onPress={() => showToast("Barcode labels — print barcode stickers for products")}><Text style={styles.footerBtnText}>Barcode Labels</Text></Pressable>
       </View>
     </View>
   );

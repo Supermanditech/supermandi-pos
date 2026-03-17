@@ -2,6 +2,8 @@ import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { View, TextInput, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator } from "react-native";
 import Svg, { Rect, Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import ExpandableDetails from "../../components/v3/ExpandableDetails";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -17,6 +19,7 @@ type GRNItem = { barcode: string; name: string; ordered: number; received: numbe
 type GRNScreenV3Props = { onClose: () => void };
 
 export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [items, setItems] = useState<GRNItem[]>([]);
@@ -24,6 +27,7 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
   const [activeTab, setActiveTab] = useState<"po" | "adhoc">("po");
   // V3-042: Load pending PO items on mount
   useEffect(() => {
+    let mounted = true;
     (async () => {
       try {
         const online = await isOnline();
@@ -45,13 +49,14 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
             });
           }
         }
-        setItems(allItems);
+        if (mounted) setItems(allItems);
       } catch (err) {
-        showToast("Could not load pending orders");
+        if (mounted) showToast("Could not load pending orders");
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     })();
+    return () => { mounted = false; };
   }, []);
 
   const toggleCheck = useCallback((idx: number) => {
@@ -82,7 +87,7 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
           <View style={styles.hidDot} />
           <Text style={styles.hidLabel}>Active</Text>
         </View>
-        <Pressable style={styles.camBtn}><Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}><Rect x={3} y={3} width={18} height={18} rx={2} /><Path d="M7 7h.01M7 12h10" /></Svg></Pressable>
+        <Pressable style={styles.camBtn} onPress={() => navigation.navigate("V3Scan" as any)}><Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}><Rect x={3} y={3} width={18} height={18} rx={2} /><Path d="M7 7h.01M7 12h10" /></Svg></Pressable>
       </View>
 
       {/* Tabs */}
@@ -134,7 +139,7 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
       <View style={styles.footer}>
         <Text style={styles.footerMeta}>Received: {receivedCount}/{items.length} items ({totalReceived}/{totalOrdered} units)</Text>
         <View style={styles.footerActions}>
-          <Pressable style={styles.matchAllBtn} onPress={() => { setItems(prev => prev.map(it => ({ ...it, checked: true, received: it.ordered }))); showToast("All items matched to PO"); }}><Text style={styles.matchAllText}>Match All</Text></Pressable>
+          <Pressable style={styles.matchAllBtn} onPress={async () => { const online = await isOnline(); if (!online) { showToast("Offline — match all requires connection"); return; } setItems(prev => prev.map(it => ({ ...it, checked: true, received: it.ordered }))); showToast("All items matched to PO"); }}><Text style={styles.matchAllText}>Match All</Text></Pressable>
           <Pressable style={styles.confirmBtn} onPress={() => { showToast("Receipt confirmed! Stock updated."); setTimeout(onClose, 1000); }}><Text style={styles.confirmText}>✓ Confirm Receipt</Text></Pressable>
         </View>
       </View>

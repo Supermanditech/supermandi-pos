@@ -32,9 +32,10 @@ export function V3SuccessWrapper({ route }: any) {
   const method = route?.params?.method ?? "CASH";
   // V3-002: Read real cart total/count before clearing
   const cartStore = require("../../stores/cartStore").useCartStore;
-  const total = cartStore.getState().total;
-  const count = cartStore.getState().items.reduce((s: number, i: any) => s + i.quantity, 0);
-  return <SuccessScreenV3 paymentMethod={method} totalMinor={total} itemCount={count} onNewSale={() => { cartStore.getState().clearCart(true); nav.navigate("SellScan"); }} />;
+  const total = cartStore.getState()?.total ?? 0;
+  const items = cartStore.getState()?.items ?? [];
+  const count = items.reduce((s: number, i: any) => s + (i?.quantity ?? 0), 0);
+  return <SuccessScreenV3 paymentMethod={method} totalMinor={total} itemCount={count} onNewSale={() => { cartStore.getState()?.clearCart?.(true); nav.navigate("SellScan"); }} />;
 }
 
 export function V3ScanWrapper() {
@@ -50,7 +51,8 @@ export function V3NewProductWrapper({ route }: any) {
 
 export function V3CompareWrapper({ route }: any) {
   const nav = useNavigation<Nav>();
-  return <CompareScreenV3 visible={true} productName={route?.params?.productName ?? "Product"} packSize="" mrpMinor={1000} currentStock={0} sellPriceMinor={1000} weeklyNeed={50} onClose={() => nav.goBack()} onOrder={() => nav.goBack()} />;
+  const params = route?.params ?? {};
+  return <CompareScreenV3 visible={true} productName={params.productName ?? "Product"} packSize={params.packSize ?? ""} mrpMinor={params.mrpMinor ?? 1000} currentStock={params.currentStock ?? 0} sellPriceMinor={params.sellPriceMinor ?? 1000} weeklyNeed={params.weeklyNeed ?? 50} onClose={() => nav.goBack()} onOrder={() => nav.goBack()} />;
 }
 
 export function V3CounterPurchaseWrapper() {

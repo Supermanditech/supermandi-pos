@@ -1,9 +1,10 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { View, Pressable, StyleSheet, Text } from "react-native";
 import Svg, { Rect, Circle } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { isOnline as checkOnline } from "../../services/networkStatus";
 
 // STG-553: Branded header for v3 sell screen — SuperMandi logo + online status + menu
 
@@ -13,10 +14,14 @@ type BrandedHeaderProps = {
 
 export default function BrandedHeader({ onMenuPress }: BrandedHeaderProps) {
   const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const storeName = useSettingsStore((s) => s.storeName) ?? "SuperMandi";
-  // Simple online check — will be replaced with proper network listener in later ticket
-  const [isOnline] = React.useState(true);
+  const [isOnline, setIsOnline] = React.useState(true);
+  React.useEffect(() => {
+    checkOnline().then(setIsOnline).catch(() => setIsOnline(false));
+    const interval = setInterval(() => { checkOnline().then(setIsOnline).catch(() => setIsOnline(false)); }, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <View style={styles.container}>
