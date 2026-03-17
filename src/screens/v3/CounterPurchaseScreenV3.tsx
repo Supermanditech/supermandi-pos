@@ -53,6 +53,7 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
   // V3-041: Real barcode lookup — checks productsStore first, then marks as new
   const handleBarcodeScan = useCallback(async (barcode: string) => {
     if (!barcode.trim()) return;
+    try {
     // Prevent duplicate scan
     if (items.some((it) => it.barcode === barcode.trim())) {
       showToast("Already scanned");
@@ -88,6 +89,9 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
       showToast("New product — fill details below");
     }
     setBarcodeInput("");
+    } catch (err) {
+      showToast("Scan failed — try again");
+    }
   }, [items, getProductByBarcode]);
 
   // PD-013: Confirm purchase with offline guard

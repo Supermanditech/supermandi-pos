@@ -6,6 +6,7 @@ import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { getDailySummary, type DailySummary } from "../../services/api/dailySummaryApi";
+import { isOnline } from "../../services/networkStatus";
 import { logger } from "../../services/logger";
 
 // V3-023: More screen with real daily summary
@@ -21,7 +22,10 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
   // V3-023: Real daily summary
   const [summary, setSummary] = useState<DailySummary | null>(null);
   useEffect(() => {
-    getDailySummary().then(setSummary).catch((e) => logger.debug("MoreV3", `summary_failed:${String(e)}`));
+    isOnline().then((on) => {
+      if (!on) return;
+      getDailySummary().then(setSummary).catch((e) => logger.debug("MoreV3", `summary_failed:${String(e)}`));
+    });
   }, []);
 
   const MENU_ITEMS = [

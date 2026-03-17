@@ -55,6 +55,8 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
 
   const handleSubmit = async () => {
     if (!canSubmit) { showToast("Enter product name and price"); return; }
+    const priceVal = parseFloat(sellPrice || mrp);
+    if (!priceVal || priceVal <= 0) { showToast("Price must be greater than ₹0"); return; }
     try {
       // V3-012: Save product to offline DB
       const stockQty = parseInt(openingStock, 10) || 0;

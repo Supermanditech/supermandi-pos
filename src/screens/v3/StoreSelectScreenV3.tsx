@@ -59,6 +59,7 @@ export default function StoreSelectScreenV3() {
         data={stores}
         keyExtractor={(s) => s.id}
         contentContainerStyle={styles.list}
+        ListEmptyComponent={<View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No stores available</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Contact support to get store access</Text></View>}
         renderItem={({ item }) => (
           <Pressable style={styles.card} onPress={() => handleSelect(item)}>
             <View style={styles.storeIcon}>

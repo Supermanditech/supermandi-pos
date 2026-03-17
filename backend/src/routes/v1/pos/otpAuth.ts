@@ -45,7 +45,7 @@ posOtpAuthRouter.post("/auth/send-otp", async (req, res) => {
     );
 
     // V3-057: Send OTP via WhatsApp Business API (primary) with console.log fallback
-    console.log(`[OTP] Phone: ${phone}, OTP: ${otp} (expires: ${expiresAt.toISOString()})`);
+    console.log(`[OTP] Phone: ${phone.slice(0, 3)}***${phone.slice(-2)}, OTP: ****** (expires: ${expiresAt.toISOString()})`);
     if (isWhatsAppConfigured()) {
       try {
         await sendTextMessage({

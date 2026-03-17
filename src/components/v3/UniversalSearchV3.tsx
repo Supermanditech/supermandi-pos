@@ -154,7 +154,7 @@ export default function UniversalSearchV3({ context, visible, onClose, onSelect,
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <Pressable style={styles.resultRow} onPress={() => { saveRecentSearch(query); onSelect(item); showToast(`${item.name} ${isSell ? "added" : "selected"}`); }} accessibilityRole="button">
-                <View style={styles.resultImg}><Text style={{ fontSize: 18 }}>🍪</Text></View>
+                <View style={styles.resultImg}><Text style={{ fontSize: 18 }}>{item.brand?.match(/dairy|milk|curd/i) ? "🥛" : item.brand?.match(/tea|coffee/i) ? "☕" : item.brand?.match(/oil|ghee/i) ? "🫗" : "📦"}</Text></View>
                 <View style={styles.resultInfo}>
                   <Text style={styles.resultName} numberOfLines={1}>{item.name}</Text>
                   <Text style={styles.resultDetail}>

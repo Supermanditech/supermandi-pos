@@ -77,7 +77,10 @@ export default function ReportsScreenV3({ onClose }: Props) {
         </View>
         <Text style={styles.section}>PAYMENT SPLIT</Text>
         <View style={styles.splitCard}>
-          {[["Cash", 3200, 66, colors.success], ["UPI", 1200, 25, colors.primary], ["Udhar", 450, 9, colors.warning]].map(([label, amt, pct, color]) => (
+          {(() => {
+          const total = cashAmount + upiAmount + dueAmount || 1;
+          return [["Cash", cashAmount, Math.round(cashAmount / total * 100), colors.success], ["UPI", upiAmount, Math.round(upiAmount / total * 100), colors.primary], ["Udhar", dueAmount, Math.round(dueAmount / total * 100), colors.warning]];
+        })().map(([label, amt, pct, color]) => (
             <View key={String(label)}>
               <View style={styles.splitRow}><Text style={styles.splitLabel}>{label as string}</Text><Text style={styles.splitVal}>₹{(amt as number).toLocaleString("en-IN")} ({pct}%)</Text></View>
               <View style={[styles.bar, { width: `${pct as number}%`, backgroundColor: color as string }]} />
