@@ -29,7 +29,8 @@ function catalogToSupplier(p: CatalogProduct): SupplierProduct {
     caseSize: 24, // Default — real case size from wholesale API (V3-017)
     unit: p.unit ?? "pcs",
     mrpMinor: (p as any).bestPrice ? Math.round((p as any).bestPrice * 100) : 0,
-    ptrMinor: (p as any).bestPrice ? Math.round((p as any).bestPrice * 85) : 0, // ~15% margin estimate
+    // PD-022: Use admin-approved retail price if available, else estimate
+    ptrMinor: (p as any).adminRetailPriceMinor ?? ((p as any).bestPrice ? Math.round((p as any).bestPrice * 85) : 0),
     hsnCode: p.hsnCode ?? "",
     gstPct: p.gstRate ?? p.defaultGstRate ?? 18,
     moq: 1,
