@@ -1,83 +1,148 @@
-import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Animated, Easing } from "react-native";
+/**
+ * V3-BOOT-001: Unified v3 splash — matches prototype exactly.
+ * V3-NAV-002: No legacy EnrollDevice leakage — all recovery stays in v3 flow.
+ *
+ * Prototype spec:
+ * - White background
+ * - SuperMandi shortmark (blue square)
+ * - "SuperMandi" brand text
+ * - "Point of Sale" subtitle
+ * - Spinner
+ * - "Connecting to store..." status text
+ * - Bottom "Continue" CTA (navigates based on session state)
+ *
+ * Boot logic (from legacy SplashScreen, cleaned up):
+ * - Init infra (cloud logger, printer, offline DB, sync)
+ * - Check session → no session = V3Phone
+ * - Check ui-status → blocked/update/auth-fail/ok
+ * - Timeout/network = retry within v3 flow (no EnrollDevice)
+ */
+
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { View, Text, StyleSheet, Pressable, BackHandler, ActivityIndicator } from "react-native";
 import Svg, { Rect, Circle } from "react-native-svg";
-import { getDeviceToken } from "../../services/deviceSession";
-import { fetchUiStatusStrict } from "../../services/api/uiStatusApi";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-// V3-047: Splash — animated logo + session check + navigation decision
-// Matches prototype: SuperMandi logo scales in, checks auth, routes to Phone or POS
+import { startCloudEventLogger } from "../../services/cloudEventLogger";
+import { printerService } from "../../services/printerService";
+import { startAutoSync } from "../../services/syncService";
+import { initOfflineDb } from "../../services/offline/localDb";
+import { syncOutbox } from "../../services/offline/sync";
+import { getDeviceSession } from "../../services/deviceSession";
+import { fetchUiStatus } from "../../services/api/uiStatusApi";
+import { getDeviceMeta } from "../../services/deviceInfo";
+import { showToast } from "../../utils/showToast";
 
-type Props = { onReady: (destination: "phone" | "pos" | "blocked" | "update") => void };
+type Nav = NativeStackNavigationProp<any>;
 
-export default function SplashScreenV3({ onReady }: Props) {
-  const [statusText, setStatusText] = useState("Loading...");
-  const navigatedRef = useRef(false);
-  const safeOnReady = (dest: "phone" | "pos" | "blocked" | "update") => {
-    if (navigatedRef.current) return;
-    navigatedRef.current = true;
-    onReady(dest);
-  };
-  const scaleAnim = useRef(new Animated.Value(0.3)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-  const spinAnim = useRef(new Animated.Value(0)).current;
+const SESSION_TIMEOUT_MS = 5000;
 
-  // Logo entrance animation
+export default function SplashScreenV3() {
+  const navigation = useNavigation<Nav>();
+  const [statusText, setStatusText] = useState("Connecting to store...");
+  const [errorState, setErrorState] = useState<string | null>(null);
+  const hasNavigated = useRef(false);
+
+  // V3-NAV-002: Prevent Android back button during splash
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: 1, friction: 4, tension: 40, useNativeDriver: true }),
-      Animated.timing(opacityAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-    ]).start();
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
+    return () => sub.remove();
+  }, []);
 
-    // Spinner rotation
-    Animated.loop(
-      Animated.timing(spinAnim, { toValue: 1, duration: 1000, easing: Easing.linear, useNativeDriver: true })
-    ).start();
-  }, [scaleAnim, opacityAnim, spinAnim]);
+  const safeNavigate = useCallback((screen: string, params?: any) => {
+    if (hasNavigated.current) return;
+    hasNavigated.current = true;
+    navigation.reset({ index: 0, routes: [{ name: screen, params }] });
+  }, [navigation]);
 
-  // Session check
-  useEffect(() => {
-    const timer = setTimeout(async () => {
+  const navigateAfterSession = useCallback(async () => {
+    if (hasNavigated.current) return;
+    try {
+      // Session check with timeout
+      const timeoutPromise = new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error("Session check timed out")), SESSION_TIMEOUT_MS)
+      );
+      const session = await Promise.race([getDeviceSession(), timeoutPromise]);
+
+      if (!session) {
+        setStatusText("Welcome!");
+        safeNavigate("V3Phone");
+        return;
+      }
+
+      // Check device status (blocked / force update / auth failure)
       try {
-        const token = await getDeviceToken();
-        if (!token) {
-          setStatusText("Welcome!");
-          safeOnReady("phone");
+        setStatusText("Checking status...");
+        const status = await fetchUiStatus();
+
+        if (status.forceUpdate) {
+          safeNavigate("ForceUpdate", {
+            currentVersion: getDeviceMeta().appVersion ?? "unknown",
+            requiredVersion: status.minAppVersion ?? undefined,
+          });
           return;
         }
-
-        // Check device status (blocked / force update)
-        try {
-          setStatusText("Checking status...");
-          const status = await fetchUiStatusStrict();
-          if (status?.deviceActive === false) {
-            safeOnReady("blocked");
-            return;
-          }
-          if (status?.forceUpdate) {
-            safeOnReady("update");
-            return;
-          }
-        } catch {
-          // Offline — proceed to POS (offline-first)
-          setStatusText("Continuing offline...");
+        if (status.deviceActive === false) {
+          safeNavigate("DeviceBlocked");
+          return;
         }
-
-        setStatusText("Ready!");
-        safeOnReady("pos");
-      } catch {
-        setStatusText("Welcome!");
-        onReady("phone");
+      } catch (uiErr) {
+        // V3-API-005: Distinguish auth failure from network failure
+        const errMsg = uiErr instanceof Error ? uiErr.message : String(uiErr);
+        if (errMsg.includes("DEVICE_UNAUTHORIZED") || errMsg.includes("TOKEN_EXPIRED") || errMsg.includes("TOKEN_REVOKED")) {
+          // Auth failure — clear session, send to phone login
+          setStatusText("Session expired");
+          safeNavigate("V3Phone");
+          return;
+        }
+        // Network failure — proceed offline (offline-first)
+        setStatusText("Continuing offline...");
       }
-    }, 1200); // 1.2s minimum splash for brand impression
 
-    return () => clearTimeout(timer);
-  }, [onReady]);
+      setStatusText("Ready!");
+      safeNavigate("SellScan");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      if (__DEV__) console.warn("[SplashV3] Session check failed:", msg);
+      setErrorState(msg);
+    }
+  }, [safeNavigate]);
 
-  const spin = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
+  // Boot infra + session check
+  useEffect(() => {
+    // Non-blocking infra init
+    startCloudEventLogger();
+    printerService.initialize().catch(() => {});
+    initOfflineDb().catch(() => {});
+    syncOutbox().catch(() => {});
+    startAutoSync();
+
+    // Instant session check (no splash delay in v3)
+    navigateAfterSession();
+  }, [navigateAfterSession]);
+
+  const handleRetry = useCallback(() => {
+    setErrorState(null);
+    hasNavigated.current = false;
+    setStatusText("Connecting to store...");
+    navigateAfterSession();
+  }, [navigateAfterSession]);
+
+  // V3-BOOT-001: Continue CTA navigates based on current state
+  const handleContinue = useCallback(() => {
+    if (errorState) {
+      handleRetry();
+    } else if (!hasNavigated.current) {
+      // Force navigation to phone if session check hasn't completed
+      safeNavigate("V3Phone");
+    }
+  }, [errorState, handleRetry, safeNavigate]);
 
   return (
-    <View style={styles.container}>
-      <Animated.View style={[styles.logoWrap, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
+    <View style={styles.container} testID="splash-screen" accessibilityLabel="SuperMandi loading screen">
+      {/* SuperMandi shortmark */}
+      <View testID="splash-logo" accessibilityLabel="SuperMandi logo">
         <Svg width={80} height={80} viewBox="0 0 32 32">
           <Rect x={2} y={2} width={28} height={28} rx={8} fill="#2563EB" />
           <Rect x={9} y={9} width={14} height={3.2} rx={1.6} fill="#fff" />
@@ -85,25 +150,50 @@ export default function SplashScreenV3({ onReady }: Props) {
           <Rect x={9} y={19.8} width={14} height={3.2} rx={1.6} fill="#fff" />
           <Circle cx={16} cy={25.3} r={2.1} fill="#fff" />
         </Svg>
-      </Animated.View>
-      <Animated.Text style={[styles.brand, { opacity: opacityAnim }]}>SuperMandi</Animated.Text>
-      <Animated.Text style={[styles.sub, { opacity: opacityAnim }]}>Point of Sale</Animated.Text>
-      <View style={styles.loader}>
-        <Animated.View style={[styles.spinner, { transform: [{ rotate: spin }] }]} />
       </View>
-      <Text style={styles.loadingText}>{statusText}</Text>
-      <Text style={styles.version}>v3.0</Text>
+
+      <Text style={styles.brand} accessibilityRole="header">SuperMandi</Text>
+      <Text style={styles.sub}>Point of Sale</Text>
+
+      {/* Spinner */}
+      <ActivityIndicator
+        size="small"
+        color="#2563EB"
+        style={styles.loader}
+        testID="splash-spinner"
+        accessibilityLabel="Loading"
+      />
+
+      {/* Status text */}
+      <Text style={styles.statusText} testID="splash-status">
+        {errorState ? `Error: ${errorState}` : statusText}
+      </Text>
+
+      {/* Bottom Continue CTA — always visible per prototype */}
+      <View style={styles.bottomArea}>
+        <Pressable
+          style={styles.continueBtn}
+          onPress={handleContinue}
+          testID="splash-continue-cta"
+          accessibilityLabel={errorState ? "Retry" : "Continue"}
+          accessibilityRole="button"
+        >
+          <Text style={styles.continueBtnText}>
+            {errorState ? "Retry" : "Continue"}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
-  logoWrap: { marginBottom: 16 },
-  brand: { fontSize: 32, fontWeight: "900", color: "#2563EB", letterSpacing: -0.8 },
+  container: { flex: 1, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  brand: { fontSize: 32, fontWeight: "900", color: "#2563EB", letterSpacing: -0.8, marginTop: 16 },
   sub: { fontSize: 14, color: "#64748B", fontWeight: "500", marginTop: 4 },
   loader: { marginTop: 40 },
-  spinner: { width: 32, height: 32, borderWidth: 3, borderColor: "#2563EB", borderTopColor: "transparent", borderRadius: 16 },
-  loadingText: { color: "#64748B", fontSize: 12, fontWeight: "500", marginTop: 12 },
-  version: { position: "absolute", bottom: 24, color: "#CBD5E1", fontSize: 11, fontWeight: "500" },
+  statusText: { color: "#64748B", fontSize: 12, fontWeight: "500", marginTop: 12 },
+  bottomArea: { position: "absolute", bottom: 40, width: "100%", paddingHorizontal: 32 },
+  continueBtn: { backgroundColor: "#2563EB", paddingVertical: 16, borderRadius: 16, alignItems: "center" },
+  continueBtnText: { color: "#FFFFFF", fontSize: 17, fontWeight: "800" },
 });

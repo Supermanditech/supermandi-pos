@@ -19,8 +19,10 @@ import i18n, { initI18n } from "./src/i18n";
 // AUDIT-POS-049: Error Boundary to catch render crashes
 import ErrorBoundary from "./src/components/ErrorBoundary";
 
-// V3-048: Only v3 screens + system screens
-import SplashScreen from "./src/screens/SplashScreen";
+// V3-BOOT-001: Unified v3 splash replaces legacy SplashScreen
+import SplashScreenV3 from "./src/screens/v3/SplashScreenV3";
+// Legacy splash kept for reference but no longer mounted
+// import SplashScreen from "./src/screens/SplashScreen";
 import DeviceBlockedScreen from "./src/screens/DeviceBlockedScreen";
 import ForceUpdateScreen from "./src/screens/ForceUpdateScreen";
 import PaymentSetupScreen from "./src/screens/PaymentSetupScreen";
@@ -141,7 +143,7 @@ export default function App() {
           }}
         >
           {/* System screens */}
-          <Stack.Screen name="Splash" component={SplashScreen} />
+          <Stack.Screen name="Splash" component={SplashScreenV3} />
           <Stack.Screen name="DeviceBlocked" component={DeviceBlockedScreen} />
           <Stack.Screen name="ForceUpdate" component={ForceUpdateScreen} />
           <Stack.Screen name="EnrollDevice" component={EnrollDeviceScreen} />
