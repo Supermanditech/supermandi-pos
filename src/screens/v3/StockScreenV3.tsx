@@ -1,20 +1,14 @@
-import React, { useMemo, useState } from "react";
-import { View, Pressable, TextInput, FlatList, StyleSheet, Text } from "react-native";
+import React, { useMemo, useState, useEffect } from "react";
+import { View, Pressable, TextInput, FlatList, StyleSheet, Text, ActivityIndicator } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getStockStatement } from "../../services/api/inventoryApi";
+import { showToast } from "../../utils/showToast";
 
-// STG-570: Stock screen v3 — current/unsold/movement tabs, search, opening stock + barcode access
+// V3-044: Stock screen v3 — wire real getStockStatement API
 
 type StockItem = { name: string; costMinor: number; sellMinor: number; stock: number; status: "in" | "low" | "out" };
-
-const DEMO: StockItem[] = [
-  { name: "Parle-G 100g", costMinor: 550, sellMinor: 1000, stock: 47, status: "in" },
-  { name: "Amul Milk 500ml", costMinor: 2200, sellMinor: 2800, stock: 5, status: "low" },
-  { name: "Maggi 70g", costMinor: 850, sellMinor: 1400, stock: 8, status: "low" },
-  { name: "Bread Wheat", costMinor: 2800, sellMinor: 4000, stock: 0, status: "out" },
-  { name: "Tata Tea 250g", costMinor: 4200, sellMinor: 8000, stock: 24, status: "in" },
-];
 
 type Props = { onClose: () => void };
 
@@ -22,10 +16,32 @@ export default function StockScreenV3({ onClose }: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<"current" | "unsold" | "movement">("current");
+  const [items, setItems] = useState<StockItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const totalProducts = DEMO.length;
-  const lowCount = DEMO.filter(i => i.status === "low").length;
-  const outCount = DEMO.filter(i => i.status === "out").length;
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await getStockStatement(200, true);
+        const mapped: StockItem[] = (res.data ?? []).map((p: any) => ({
+          name: p.name ?? "Unknown",
+          costMinor: p.unitCostMinor ?? 0,
+          sellMinor: p.unitPriceMinor ?? p.priceMinor ?? 0,
+          stock: p.quantity ?? 0,
+          status: (p.quantity ?? 0) <= 0 ? "out" as const : (p.quantity ?? 0) <= (p.lowStockThreshold ?? 5) ? "low" as const : "in" as const,
+        }));
+        setItems(mapped);
+      } catch (err) {
+        showToast("Could not load stock data");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const totalProducts = items.length;
+  const lowCount = items.filter(i => i.status === "low").length;
+  const outCount = items.filter(i => i.status === "out").length;
 
   const statusColor = (s: string) => s === "in" ? colors.success : s === "low" ? colors.warning : colors.error;
   const statusLabel = (s: string) => s === "in" ? "In stock" : s === "low" ? "Low" : "Out";
@@ -54,7 +70,7 @@ export default function StockScreenV3({ onClose }: Props) {
       </View>
 
       <FlatList
-        data={DEMO}
+        data={items}
         keyExtractor={(_, i) => String(i)}
         renderItem={({ item }) => (
           <View style={styles.itemRow}>

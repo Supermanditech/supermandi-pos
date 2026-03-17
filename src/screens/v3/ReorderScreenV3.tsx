@@ -1,32 +1,70 @@
-import React, { useMemo } from "react";
-import { View, Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import React, { useMemo, useState, useEffect } from "react";
+import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
+import { listPendingReorders, getStockDeficit, isCriticallyLow, getEstimatedTotal } from "../../services/api/reorderApi";
+import type { PendingReorder } from "../../services/api/reorderApi";
+import { getDeviceStoreId } from "../../services/deviceSession";
 
-// STG-569: Reorder v3 — stock runout prediction, approve/edit/dismiss, WhatsApp send
+// V3-043: Reorder v3 — wire real listPendingReorders API
 
-type ReorderItem = { name: string; stock: number; dailySales: number; daysLeft: number; orderQty: number; cost: number; supplier: string; urgency: "critical" | "low" | "normal" };
-
-const DEMO: ReorderItem[] = [
-  { name: "Amul Milk 500ml", stock: 5, dailySales: 8, daysLeft: 1, orderQty: 30, cost: 420, supplier: "Fresh Dairy", urgency: "critical" },
-  { name: "Parle-G 100g", stock: 12, dailySales: 6, daysLeft: 2, orderQty: 50, cost: 260, supplier: "ABC Dist.", urgency: "low" },
-  { name: "Tata Salt 1kg", stock: 8, dailySales: 2, daysLeft: 4, orderQty: 24, cost: 384, supplier: "ABC Dist.", urgency: "normal" },
-];
+type ReorderItem = { name: string; stock: number; dailySales: number; daysLeft: number; orderQty: number; cost: number; supplier: string; urgency: "critical" | "low" | "normal"; id: string };
 
 type Props = { onClose: () => void };
 
 export default function ReorderScreenV3({ onClose }: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const total = DEMO.reduce((s, i) => s + i.cost, 0);
+  const [items, setItems] = useState<ReorderItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      try {
+        const sid = await getDeviceStoreId();
+        if (!sid) { setLoading(false); return; }
+        const res = await listPendingReorders(sid, { status: "pending", limit: 50 });
+        const mapped: ReorderItem[] = (res.data ?? []).map((p: PendingReorder) => {
+          const deficit = getStockDeficit(p);
+          const dailySales = deficit > 0 ? Math.ceil(deficit / 7) : 1;
+          const daysLeft = dailySales > 0 ? Math.round(p.currentStock / dailySales) : 99;
+          return {
+            id: p.id,
+            name: p.productName,
+            stock: p.currentStock,
+            dailySales,
+            daysLeft,
+            orderQty: p.suggestedQuantity,
+            cost: getEstimatedTotal(p),
+            supplier: p.suggestedSupplierName ?? "Unknown",
+            urgency: isCriticallyLow(p) ? "critical" as const : daysLeft <= 3 ? "low" as const : "normal" as const,
+          };
+        });
+        setItems(mapped);
+      } catch (err) {
+        showToast("Could not load reorder suggestions");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const total = items.reduce((s, i) => s + i.cost, 0);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Reorder Suggestions</Text><View style={{ width: 30 }} /></View>
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
-        {DEMO.map((item, i) => (
+        {loading && <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />}
+        {!loading && items.length === 0 && (
+          <View style={{ padding: 32, alignItems: "center" }}>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>✅</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>All stock levels healthy</Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>No reorder suggestions right now</Text>
+          </View>
+        )}
+        {items.map((item, i) => (
           <View key={i} style={[styles.card, { borderLeftColor: item.urgency === "critical" ? colors.error : item.urgency === "low" ? colors.warning : colors.border }]}>
             <View style={styles.cardTop}>
               <View style={{ flex: 1 }}>

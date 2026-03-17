@@ -1,11 +1,13 @@
-import React, { useMemo, useState } from "react";
-import { View, Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import React, { useMemo, useState, useEffect } from "react";
+import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
+import { getDailySummary } from "../../services/api/dailySummaryApi";
+import type { DailySummary } from "../../services/api/dailySummaryApi";
 
-// STG-574: Reports v3 — today/week/month, payment split, WhatsApp share
+// V3-045: Reports v3 — wire real getDailySummary API
 
 type Props = { onClose: () => void };
 
@@ -13,6 +15,27 @@ export default function ReportsScreenV3({ onClose }: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<"today" | "week" | "month">("today");
+  const [summary, setSummary] = useState<DailySummary | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await getDailySummary();
+        setSummary(data);
+      } catch (err) {
+        showToast("Could not load report");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [activeTab]);
+
+  const salesTotal = summary?.totalSales ?? 0;
+  const billCount = summary?.totalBills ?? 0;
+  const cashAmount = summary?.paymentBreakdown?.cash ?? 0;
+  const upiAmount = summary?.paymentBreakdown?.upi ?? 0;
+  const dueAmount = summary?.paymentBreakdown?.credit ?? 0;
 
   return (
     <View style={styles.container}>
@@ -25,9 +48,17 @@ export default function ReportsScreenV3({ onClose }: Props) {
         ))}
       </View>
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+        {loading && <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />}
+        {!loading && !summary && (
+          <View style={{ padding: 32, alignItems: "center" }}>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>📊</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No sales data</Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Complete your first sale to see reports</Text>
+          </View>
+        )}
         <View style={styles.statsRow}>
-          <View style={styles.stat}><Text style={styles.statLabel}>Sales</Text><Text style={styles.statVal}>₹4,850</Text><Text style={styles.statSub}>12 bills</Text></View>
-          <View style={styles.stat}><Text style={styles.statLabel}>Profit</Text><Text style={[styles.statVal, { color: colors.success }]}>₹726</Text><Text style={styles.statSub}>15% margin</Text></View>
+          <View style={styles.stat}><Text style={styles.statLabel}>Sales</Text><Text style={styles.statVal}>₹{Math.round(salesTotal).toLocaleString("en-IN")}</Text><Text style={styles.statSub}>{billCount} bills</Text></View>
+          <View style={styles.stat}><Text style={styles.statLabel}>Profit</Text><Text style={[styles.statVal, { color: colors.success }]}>—</Text><Text style={styles.statSub}>—</Text></View>
         </View>
         <Text style={styles.section}>PAYMENT SPLIT</Text>
         <View style={styles.splitCard}>

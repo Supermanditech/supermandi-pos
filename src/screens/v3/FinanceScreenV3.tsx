@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from "react";
-import { View, Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import React, { useMemo, useState, useEffect } from "react";
+import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { showToast } from "../../utils/showToast";
+import { getCreditOffers } from "../../services/api/creditApi";
 
-// STG-573: Credit & Finance v3 — BNPL, credit line, bill discounting
+// V3-046: Credit & Finance v3 — wire real getCreditOffers API (feature-gated)
 
 type Props = { onClose: () => void };
 
@@ -11,6 +13,21 @@ export default function FinanceScreenV3({ onClose }: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<"offers" | "loans" | "bills">("offers");
+  const [loading, setLoading] = useState(true);
+  const [offersCount, setOffersCount] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await getCreditOffers();
+        setOffersCount(res.offers?.length ?? 0);
+      } catch {
+        // Feature may be disabled — that's OK
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   return (
     <View style={styles.container}>
