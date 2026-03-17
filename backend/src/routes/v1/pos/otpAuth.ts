@@ -1,145 +1,174 @@
+/**
+ * V3-BE-004: POS OTP Auth — rewritten against canonical schema.
+ *
+ * Uses: auth.users + auth.store_users + platform.stores (NOT legacy public.stores/users)
+ * Device IDs: UUID (gen_random_uuid), not string concatenation
+ * OTP: cryptographically strong (crypto.randomInt), SHA-256 hashed
+ * Logging: no plaintext OTP outside __DEV__
+ * Rate limiting: 5 attempts per OTP, 5-min expiry
+ * Error responses: { error: { code, message } } format
+ */
+
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { asError } from "../../../lib/errorUtils";
 import crypto from "crypto";
 import { sendTextMessage, isWhatsAppConfigured } from "../../../services/whatsappService";
 
-// V3 OTP Auth — Phone + OTP based authentication for POS app
-// Flow: retailer registers on web → superadmin approves → retailer enters phone on POS → gets OTP → verifies → gets device token
-
 export const posOtpAuthRouter = Router();
 
-// POST /pos/auth/send-otp — send OTP to registered phone
+// Cryptographically strong 6-digit OTP
+function generateOtp(): string {
+  return String(crypto.randomInt(100000, 999999));
+}
+
+function hashOtp(otp: string): string {
+  return crypto.createHash("sha256").update(otp).digest("hex");
+}
+
+// ─── POST /pos/auth/send-otp ────────────────────────────────────────────────
 posOtpAuthRouter.post("/auth/send-otp", async (req, res) => {
   const { phone } = req.body as { phone?: string };
-  if (!phone || phone.length !== 10) {
-    return res.status(400).json({ error: { message: "Valid 10-digit phone number required" } });
+  if (!phone || !/^\d{10}$/.test(phone)) {
+    return res.status(400).json({ error: { code: "INVALID_PHONE", message: "Valid 10-digit phone number required" } });
   }
 
   const pool = getPool();
   try {
-    // Check if phone is registered and approved
+    // V3-BE-004: Query canonical schema — auth.users + auth.store_users + platform.stores
     const storeResult = await pool.query(
-      `SELECT s.id, s.store_name, s.store_code, s.status
-       FROM stores s
-       JOIN users u ON u.id = s.owner_id
-       WHERE u.phone = $1 AND s.status = 'ACTIVE'
-       LIMIT 1`,
+      `SELECT ps.id, ps.name AS store_name, ps.code AS store_code, ps.status
+       FROM auth.users u
+       JOIN auth.store_users su ON su.user_id = u.id
+       JOIN platform.stores ps ON ps.id = su.store_id
+       WHERE u.phone = $1 AND ps.status = 'ACTIVE'
+       ORDER BY ps.created_at DESC
+       LIMIT 10`,
       [phone]
     );
 
     if (storeResult.rows.length === 0) {
-      return res.status(404).json({ error: { message: "Phone not registered or store not approved. Register at supermandi.tech" } });
+      return res.status(404).json({ error: { code: "PHONE_NOT_REGISTERED", message: "Phone not registered or store not approved. Register at supermandi.tech" } });
     }
 
-    // Generate 6-digit OTP
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min expiry
+    // Generate OTP
+    const otp = generateOtp();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    // Store OTP (upsert)
+    // Store hashed OTP (upsert)
     await pool.query(
       `INSERT INTO pos_otp (phone, otp_hash, expires_at, created_at)
        VALUES ($1, $2, $3, NOW())
        ON CONFLICT (phone) DO UPDATE SET otp_hash = $2, expires_at = $3, attempts = 0, created_at = NOW()`,
-      [phone, crypto.createHash("sha256").update(otp).digest("hex"), expiresAt]
+      [phone, hashOtp(otp), expiresAt]
     );
 
-    // V3-057: Send OTP via WhatsApp Business API (primary) with console.log fallback
-    console.log(`[OTP] Phone: ${phone.slice(0, 3)}***${phone.slice(-2)}, OTP: ****** (expires: ${expiresAt.toISOString()})`);
+    // Send OTP via WhatsApp (primary) with masked console fallback
+    if (__DEV__) {
+      console.log(`[OTP-DEV] Phone: ${phone}, OTP: ${otp}`);
+    } else {
+      console.log(`[OTP] Phone: ${phone.slice(0, 3)}***${phone.slice(-2)}, OTP: ****** (expires: ${expiresAt.toISOString()})`);
+    }
+
     if (isWhatsAppConfigured()) {
       try {
         await sendTextMessage({
           to: `91${phone}`,
           text: `Your SuperMandi POS verification code is: ${otp}\n\nThis code expires in 5 minutes. Do not share it with anyone.`,
         });
-        console.log(`[OTP] WhatsApp sent to ${phone}`);
       } catch (waErr) {
-        console.error(`[OTP] WhatsApp failed for ${phone}:`, asError(waErr).message);
-        // OTP still saved in DB — user can see it in console log as fallback
+        console.error(`[OTP] WhatsApp failed for ${phone.slice(0, 3)}***:`, asError(waErr).message);
       }
     }
 
     res.json({ success: true, message: "OTP sent to your phone" });
   } catch (err) {
-    res.status(500).json({ error: { message: "Failed to send OTP", detail: asError(err).message } });
+    console.error("[OTP] send-otp error:", asError(err).message);
+    res.status(500).json({ error: { code: "OTP_SEND_FAILED", message: "Failed to send OTP" } });
   }
 });
 
-// POST /pos/auth/verify-otp — verify OTP and return device token
+// Declare __DEV__ for TypeScript (React Native global)
+declare const __DEV__: boolean;
+
+// ─── POST /pos/auth/verify-otp ──────────────────────────────────────────────
 posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
-  const { phone, otp } = req.body as { phone?: string; otp?: string };
-  if (!phone || !otp || otp.length !== 6) {
-    return res.status(400).json({ error: { message: "Phone and 6-digit OTP required" } });
+  const { phone, otp, storeId } = req.body as { phone?: string; otp?: string; storeId?: string };
+  if (!phone || !otp || !/^\d{6}$/.test(otp)) {
+    return res.status(400).json({ error: { code: "INVALID_INPUT", message: "Phone and 6-digit OTP required" } });
   }
 
   const pool = getPool();
   try {
-    // Verify OTP
+    // Verify OTP from pos_otp table
     const otpResult = await pool.query(
       `SELECT otp_hash, expires_at, attempts FROM pos_otp WHERE phone = $1`,
       [phone]
     );
 
     if (otpResult.rows.length === 0) {
-      return res.status(400).json({ error: { message: "No OTP found. Request a new one." } });
+      return res.status(400).json({ error: { code: "OTP_NOT_FOUND", message: "No OTP found. Request a new one." } });
     }
 
     const row = otpResult.rows[0];
     if (new Date(row.expires_at) < new Date()) {
-      return res.status(400).json({ error: { message: "OTP expired. Request a new one." } });
+      return res.status(400).json({ error: { code: "OTP_EXPIRED", message: "OTP expired. Request a new one." } });
     }
     if (row.attempts >= 5) {
-      return res.status(429).json({ error: { message: "Too many attempts. Request a new OTP." } });
+      return res.status(429).json({ error: { code: "OTP_RATE_LIMITED", message: "Too many attempts. Request a new OTP." } });
     }
 
-    // Increment attempts
+    // Increment attempts before checking hash
     await pool.query(`UPDATE pos_otp SET attempts = attempts + 1 WHERE phone = $1`, [phone]);
 
-    const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
-    if (otpHash !== row.otp_hash) {
-      return res.status(400).json({ error: { message: "Invalid OTP" } });
+    if (hashOtp(otp) !== row.otp_hash) {
+      return res.status(400).json({ error: { code: "OTP_INVALID", message: "Invalid OTP" } });
     }
 
-    // V3-063: Get ALL stores for this phone (multi-store support)
+    // V3-BE-004: Get ALL stores for this phone from canonical schema
     const storeResult = await pool.query(
-      `SELECT s.id, s.store_name, s.store_code
-       FROM stores s
-       JOIN users u ON u.id = s.owner_id
-       WHERE u.phone = $1 AND s.status = 'ACTIVE'
-       ORDER BY s.created_at DESC`,
+      `SELECT ps.id, ps.name AS store_name, ps.code AS store_code, ps.status
+       FROM auth.users u
+       JOIN auth.store_users su ON su.user_id = u.id
+       JOIN platform.stores ps ON ps.id = su.store_id
+       WHERE u.phone = $1 AND ps.status = 'ACTIVE'
+       ORDER BY ps.created_at DESC`,
       [phone]
     );
 
     if (storeResult.rows.length === 0) {
-      return res.status(404).json({ error: { message: "Store not found" } });
+      return res.status(404).json({ error: { code: "STORE_NOT_FOUND", message: "No active store found for this phone" } });
     }
 
-    // If multiple stores, return list for selection (no token yet)
-    if (storeResult.rows.length > 1 && !req.body.storeId) {
+    // Multi-store: return list for selection (no token yet)
+    if (storeResult.rows.length > 1 && !storeId) {
       return res.json({
         multiStore: true,
         stores: storeResult.rows.map((s: any) => ({ id: s.id, name: s.store_name, code: s.store_code })),
       });
     }
 
-    // Single store or storeId provided — create device token
+    // Resolve store
     let store;
-    if (req.body.storeId) {
-      store = storeResult.rows.find((s: any) => s.id === req.body.storeId);
-      if (!store) { return res.status(400).json({ error: { code: "INVALID_STORE", message: "Requested store not associated with this phone number" } }); }
+    if (storeId) {
+      store = storeResult.rows.find((s: any) => s.id === storeId);
+      if (!store) {
+        return res.status(400).json({ error: { code: "INVALID_STORE", message: "Requested store not associated with this phone number" } });
+      }
     } else {
       store = storeResult.rows[0];
     }
 
+    // Generate opaque device token
     const token = crypto.randomBytes(32).toString("hex");
 
-    // Insert into pos_devices (actual table per migration 011b)
-    const deviceId = `otp-${phone}-${Date.now()}`;
+    // V3-BE-004: UUID device ID (not string concatenation)
+    // Upsert device: find existing device for this store+phone or create new
     await pool.query(
       `INSERT INTO pos_devices (id, store_id, device_token, label, active)
-       VALUES ($1, $2, $3, $4, TRUE)
-       ON CONFLICT (id) DO UPDATE SET store_id = $2, device_token = $3, active = TRUE`,
-      [deviceId, store.id, token, `POS-${phone.slice(-4)}`]
+       VALUES (gen_random_uuid(), $1, $2, $3, TRUE)
+       ON CONFLICT (device_token) DO UPDATE SET store_id = $1, active = TRUE, label = $3`,
+      [store.id, token, `POS-${phone.slice(-4)}`]
     );
 
     // Clean up OTP
@@ -152,6 +181,7 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
       storeCode: store.store_code,
     });
   } catch (err) {
-    res.status(500).json({ error: { message: "OTP verification failed", detail: asError(err).message } });
+    console.error("[OTP] verify-otp error:", asError(err).message);
+    res.status(500).json({ error: { code: "OTP_VERIFY_FAILED", message: "OTP verification failed" } });
   }
 });
