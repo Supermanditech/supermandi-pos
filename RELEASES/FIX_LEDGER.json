@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 282,
+  "version": 283,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -234,7 +234,7 @@
         "test_guard": true
       },
       "registered_at": "2026-03-13T19:54:26.646Z",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist_evidence": {
         "ui_elements": "Demo category names never shown in production",
         "ux_states": "N/A — empty array triggers existing empty state",
@@ -246,7 +246,9 @@
         "gcp_parity": "No env vars, pure __DEV__",
         "regression_check": "Typecheck passes, all tests pass",
         "test_guard": "4 tests verify __DEV__ guard on both files"
-      }
+      },
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-142",
@@ -834,7 +836,7 @@
         "test_guard": true
       },
       "registered_at": "2026-03-13T20:37:33.584Z",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist_evidence": {
         "ui_elements": "removed 6 hex fallbacks across SellTile and PaymentScreen",
         "operator_approved": "cosmetic cleanup, no visual change",
@@ -847,7 +849,9 @@
         "wiring": "no wiring change",
         "navigation": "no navigation change"
       },
-      "line_shifted_at": "2026-03-14T10:27:55.395Z"
+      "line_shifted_at": "2026-03-14T10:27:55.395Z",
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-233",
@@ -950,7 +954,7 @@
         "test_guard": true
       },
       "registered_at": "2026-03-13T20:41:13.471Z",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist_evidence": {
         "ui_elements": "formatPrice delegates to formatMoney",
         "wiring": "formatMoney import added",
@@ -963,7 +967,9 @@
         "ux_states": "null returns dash, same behavior",
         "navigation": "no navigation change"
       },
-      "line_shifted_at": "2026-03-13T21:03:46.047Z"
+      "line_shifted_at": "2026-03-13T21:03:46.047Z",
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-116",
@@ -1601,7 +1607,7 @@
         "test_guard": true
       },
       "registered_at": "2026-03-13T21:04:00.914Z",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist_evidence": {
         "operator_approved": "yes",
         "ui_elements": "yes",
@@ -1613,7 +1619,9 @@
         "gcp_parity": "na",
         "regression_check": "yes",
         "test_guard": "yes"
-      }
+      },
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-291",
@@ -1642,7 +1650,7 @@
         "test_guard": true
       },
       "registered_at": "2026-03-13T21:04:03.088Z",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist_evidence": {
         "ui_elements": "yes",
         "ux_states": "na",
@@ -1654,7 +1662,9 @@
         "gcp_parity": "na",
         "regression_check": "yes",
         "test_guard": "yes"
-      }
+      },
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-291",
@@ -1683,7 +1693,7 @@
         "test_guard": true
       },
       "registered_at": "2026-03-13T21:04:05.128Z",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist_evidence": {
         "ui_elements": "yes",
         "ux_states": "na",
@@ -1695,7 +1705,9 @@
         "gcp_parity": "na",
         "regression_check": "yes",
         "test_guard": "yes"
-      }
+      },
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-257",
@@ -2707,7 +2719,7 @@
       "start_line": 1,
       "end_line": 198,
       "checksum": "df4e43efcab8a4b1",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist": {
         "ui_elements": true,
         "ux_states": true,
@@ -2735,7 +2747,9 @@
         "gcp_parity": "N/A",
         "regression_check": "Zero drift",
         "test_guard": "68 tests pass"
-      }
+      },
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-484",
@@ -2745,7 +2759,7 @@
       "start_line": 1,
       "end_line": 435,
       "checksum": "e48fb6f7691b1fed",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist": {
         "ui_elements": true,
         "ux_states": true,
@@ -2761,7 +2775,9 @@
         "gcp_parity": true,
         "regression_check": true,
         "test_guard": true
-      }
+      },
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-222",
@@ -2771,7 +2787,7 @@
       "start_line": 1,
       "end_line": 575,
       "checksum": "44154ee48c38f1f5",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist": {
         "ui_elements": true,
         "ux_states": true,
@@ -2799,7 +2815,9 @@
         "gcp_parity": "N/A",
         "regression_check": "Zero drift",
         "test_guard": "68 tests pass"
-      }
+      },
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-292",
@@ -2809,7 +2827,7 @@
       "start_line": 1,
       "end_line": 367,
       "checksum": "83626d27be8008dc",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist": {
         "ui_elements": true,
         "ux_states": true,
@@ -2837,7 +2855,9 @@
         "gcp_parity": "N/A",
         "regression_check": "Zero drift",
         "test_guard": "68 tests pass"
-      }
+      },
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-012",
@@ -2847,7 +2867,7 @@
       "start_line": 1,
       "end_line": 315,
       "checksum": "27316a6b8022f083",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist": {
         "ui_elements": true,
         "ux_states": true,
@@ -2875,7 +2895,9 @@
         "gcp_parity": "N/A",
         "regression_check": "Zero drift",
         "test_guard": "68 tests pass"
-      }
+      },
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-009",
@@ -2885,7 +2907,7 @@
       "checksum": "44154ee48c38f1f5",
       "description": "SellTile redesign with stock badges, brand display, thumbnails",
       "test_file": "src/__tests__/components/SellTile.stg-009.redesign.unit.test.ts",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist": {
         "ui_elements": true,
         "ux_states": true,
@@ -2913,7 +2935,9 @@
         "gcp_parity": "N/A",
         "regression_check": "Zero drift",
         "test_guard": "61 tests pass"
-      }
+      },
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-228",
@@ -2923,7 +2947,7 @@
       "checksum": "44154ee48c38f1f5",
       "description": "MRP strikethrough + discount badge + add button on SellTile",
       "test_file": "src/__tests__/components/SellTile.stg-228.dependents.unit.test.ts",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist": {
         "ui_elements": true,
         "ux_states": true,
@@ -2951,7 +2975,9 @@
         "gcp_parity": "N/A",
         "regression_check": "Zero drift",
         "test_guard": "37 tests pass"
-      }
+      },
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-356",
@@ -2961,7 +2987,7 @@
       "checksum": "b9b5dd41110a5db9",
       "description": "Brand ellipsis on narrow screens — priority brand > mode > packSize",
       "test_file": "src/__tests__/components/SellTile.stg-222.fixes.unit.test.ts",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "registered_at": "2026-03-14T00:31:16.075Z",
       "checklist": {
         "ui_elements": true,
@@ -2992,7 +3018,9 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
       },
-      "line_shifted_at": "2026-03-14T10:27:55.470Z"
+      "line_shifted_at": "2026-03-14T10:27:55.470Z",
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-357",
@@ -3002,7 +3030,7 @@
       "checksum": "dc401bae774249b2",
       "description": "Combined bottom row — stock + expiry in single compact line",
       "test_file": "src/__tests__/components/SellTile.stg-222.fixes.unit.test.ts",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "registered_at": "2026-03-14T00:31:16.075Z",
       "checklist": {
         "ui_elements": true,
@@ -3032,7 +3060,9 @@
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix",
         "wiring": "N/A — POS UI display change only"
-      }
+      },
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-339",
@@ -3251,7 +3281,7 @@
       "checksum": "53b374f65b8ece6b",
       "description": "VariantPicker shows unit price for comparison + fallback when no store_product_id",
       "test_file": "src/__tests__/components/SellTile.stg-009.redesign.unit.test.ts",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "registered_at": "2026-03-14T00:31:16.075Z",
       "checklist": {
         "ui_elements": true,
@@ -3280,7 +3310,9 @@
         "gcp_parity": "N/A — POS UI batch fix",
         "regression_check": "N/A — POS UI batch fix",
         "test_guard": "N/A — POS UI batch fix"
-      }
+      },
+      "superseded_by": "V3-049",
+      "superseded_reason": "Old component deleted"
     },
     {
       "ticket": "STG-101",
