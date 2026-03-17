@@ -2,8 +2,6 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from "react"
 import { View, FlatList, TextInput, Pressable, StyleSheet, Text } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
@@ -38,49 +36,40 @@ type UniversalSearchV3Props = {
   onQueryChange?: (query: string) => void;
 };
 
-const RECENT_KEY = "@supermandi.recent_searches";
+// V3-FIX-038: Store-scoped recent searches — no global key, no demo fallbacks
+import { getHistory as getRecentSearches, addTerm as saveRecentSearchTerm } from "../../services/searchHistory";
+import { getDeviceStoreId } from "../../services/deviceSession";
 const RECENT_MAX = 8;
-const DEFAULT_RECENT = ["Tata Tea", "Maggi", "Amul", "Surf"];
-const DEFAULT_RECENT_BUY = ["Parle", "Nestle", "HUL", "ITC"];
-
-// Demo results for prototype
-const DEMO_SELL: SearchResult[] = [
-  { id: "1", name: "Parle-G Gold 100g", barcode: "8901234567890", brand: "Parle", priceMinor: 1000, stock: 47 },
-  { id: "2", name: "Parle Monaco 200g", barcode: "8901234567891", brand: "Parle", priceMinor: 3500, stock: 12 },
-  { id: "3", name: "Parle Hide & Seek 120g", barcode: "8901234567892", brand: "Parle", priceMinor: 3000, stock: 8 },
-];
-const DEMO_BUY: SearchResult[] = [
-  { id: "1", name: "Parle-G Gold 100g", brand: "Parle", priceMinor: 850, supplier: "ABC Dist.", margin: 15, caseSize: 48 },
-  { id: "2", name: "Parle Monaco 200g", brand: "Parle", priceMinor: 2800, supplier: "ABC Dist.", margin: 20, caseSize: 24 },
-  { id: "3", name: "Parle Krackjack 200g", brand: "Parle", priceMinor: 2500, supplier: "XYZ Trading", margin: 18, caseSize: 24 },
-];
 
 export default function UniversalSearchV3({ context, visible, onClose, onSelect, results, loading, onQueryChange }: UniversalSearchV3Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [query, setQuery] = useState("");
-  const [recentSearches, setRecentSearches] = useState<string[]>(DEFAULT_RECENT);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const inputRef = useRef<TextInput>(null);
+
+  // V3-FIX-038: Load store-scoped recent searches
+  useEffect(() => {
+    if (visible) {
+      getDeviceStoreId().then((sid) => {
+        if (sid) getRecentSearches(sid).then(setRecentSearches).catch(() => {});
+      });
+    }
+  }, [visible]);
 
   const isSell = context === "sell";
   const placeholder = isSell ? "Search your products..." : "Search supplier catalogue...";
-  const displayResults = results ?? (query.length > 0 ? (isSell ? DEMO_SELL : DEMO_BUY) : []);
+  // V3-FIX-038: No demo fallback — only real results from parent
+  const displayResults = results ?? [];
 
-  // V3-064: Load persisted recent searches on mount
-  useEffect(() => {
-    AsyncStorage.getItem(RECENT_KEY).then((raw) => {
-      if (raw) { try { setRecentSearches(JSON.parse(raw)); } catch {} }
-    }).catch(() => {});
-  }, []);
+  // V3-FIX-038: Old global load removed — store-scoped load is above
 
-  // V3-064: Save search term to recent list
-  const saveRecentSearch = useCallback((term: string) => {
-    setRecentSearches((prev) => {
-      const updated = [term, ...prev.filter((t) => t !== term)].slice(0, RECENT_MAX);
-      AsyncStorage.setItem(RECENT_KEY, JSON.stringify(updated)).catch(() => {});
-      return updated;
-    });
+  // V3-FIX-038: Use store-scoped search history service
+  const handleSaveSearch = useCallback(async (term: string) => {
+    const sid = await getDeviceStoreId();
+    if (sid) saveRecentSearchTerm(sid, term).catch(() => {});
+    setRecentSearches((prev) => [term, ...prev.filter((t) => t !== term)].slice(0, RECENT_MAX));
   }, []);
 
   useEffect(() => {
@@ -153,7 +142,7 @@ export default function UniversalSearchV3({ context, visible, onClose, onSelect,
             data={displayResults}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <Pressable style={styles.resultRow} onPress={() => { saveRecentSearch(query); onSelect(item); showToast(`${item.name} ${isSell ? "added" : "selected"}`); }} accessibilityRole="button">
+              <Pressable style={styles.resultRow} onPress={() => { handleSaveSearch(query); onSelect(item); showToast(`${item.name} ${isSell ? "added" : "selected"}`); }} accessibilityRole="button">
                 <View style={styles.resultImg}><Text style={{ fontSize: 18 }}>{item.brand?.match(/dairy|milk|curd/i) ? "🥛" : item.brand?.match(/tea|coffee/i) ? "☕" : item.brand?.match(/oil|ghee/i) ? "🫗" : "📦"}</Text></View>
                 <View style={styles.resultInfo}>
                   <Text style={styles.resultName} numberOfLines={1}>{item.name}</Text>

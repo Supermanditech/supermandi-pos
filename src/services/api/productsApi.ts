@@ -615,3 +615,14 @@ export async function fetchProductSubstitutes(productId: string): Promise<Substi
     return [];
   }
 }
+
+
+// V3-FIX-041: Fetch frequently sold products for SELL home
+export async function getFrequentProducts(): Promise<any[]> {
+  try {
+    const result = await apiClient.get<{ products: any[] }>("/api/v1/pos/products/frequent");
+    return result.products ?? [];
+  } catch {
+    return [];
+  }
+}

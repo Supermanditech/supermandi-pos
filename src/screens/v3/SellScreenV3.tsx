@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, FlatList, TextInput, Pressable, ActivityIndicator, RefreshControl, StyleSheet, Text } from "react-native";
+import { View, FlatList, TextInput, Pressable, ActivityIndicator, RefreshControl, StyleSheet, Text, Modal } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
@@ -21,25 +22,39 @@ import { getFmcgCategories, type FmcgCategory } from "../../services/api/catalog
 import { formatMoney } from "../../utils/money";
 import { showToast } from "../../utils/showToast";
 import { getDeviceStoreId } from "../../services/deviceSession";
+import { useSettingsStore } from "../../stores/settingsStore";
+import { getFrequentProducts } from "../../services/api/productsApi";
 import { logger } from "../../services/logger";
 
 // V3-059: Dynamic categories from API with static fallback
 const FALLBACK_CATEGORIES = ["Frequent", "Beverages", "Snacks", "Dairy", "Staples", "Home Care"];
 
+// V3-FIX-042: Use real backend fields, no synthetic fallbacks
 function productToTileData(p: Product): ProductTileData {
   return {
     id: p.id,
     name: p.name,
     priceMrpMinor: p.priceMinor,
-    // V3-058: Use real trade price if available, fallback to 85% estimate
-    priceTradeMinor: (p as any).tradePriceMinor ?? Math.round(p.priceMinor * 0.85),
+    priceTradeMinor: (p as any).tradePriceMinor ?? undefined, // no fake 85% — undefined if no real trade price
     barcode: p.barcode,
     category: p.category,
     stock: p.stock,
-    brand: p.description?.split(" ")?.[0], // rough brand extraction
-    caseSize: 24, // default case size — will come from backend in STG-555
-    unit: "pcs",
+    brand: (p as any).brand ?? undefined, // real brand from backend, not guessed
+    caseSize: (p as any).caseSize ?? undefined, // real case size from backend, not hardcoded
+    unit: (p as any).unit ?? "pcs",
   };
+}
+
+// V3-FIX-036: Welcome guide local persistence
+const GUIDE_VERSION = "1";
+async function shouldShowGuide(storeId: string): Promise<boolean> {
+  const key = `supermandi.guide.${storeId}.v${GUIDE_VERSION}`;
+  const dismissed = await AsyncStorage.getItem(key);
+  return dismissed !== "1";
+}
+async function dismissGuide(storeId: string): Promise<void> {
+  const key = `supermandi.guide.${storeId}.v${GUIDE_VERSION}`;
+  await AsyncStorage.setItem(key, "1");
 }
 
 export default function SellScreenV3() {
@@ -49,23 +64,29 @@ export default function SellScreenV3() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [sellMode, setSellMode] = useState<SellMode>("retail");
   const [selectedCategory, setSelectedCategory] = useState("Frequent");
-  const [categories, setCategories] = useState<string[]>(FALLBACK_CATEGORIES);
+  // V3-FIX-040: Fixed V3 category-group contract — not raw taxonomy
+  const categories = FALLBACK_CATEGORIES;
 
-  // V3-059: Load dynamic categories from API
+  // V3-FIX-036: Welcome guide state
+  const [showGuide, setShowGuide] = useState(false);
   useEffect(() => {
     (async () => {
-      try {
-        const storeId = await getDeviceStoreId();
-        if (!storeId) return;
-        const cats = await getFmcgCategories(storeId);
-        if (cats.length > 0) {
-          setCategories(["Frequent", ...cats.map((c) => c.labelEn)]);
-        }
-      } catch {
-        // Fallback to static categories — already set
-      }
+      const storeId = await getDeviceStoreId();
+      if (storeId && await shouldShowGuide(storeId)) setShowGuide(true);
     })();
   }, []);
+  const handleDismissGuide = useCallback(async () => {
+    setShowGuide(false);
+    const storeId = await getDeviceStoreId();
+    if (storeId) await dismissGuide(storeId);
+  }, []);
+
+  // V3-FIX-039: Feature flags from settingsStore
+  const voiceEnabled = useSettingsStore((s) => (s as any).voiceEnabled ?? true);
+  const categoryBrowsingEnabled = useSettingsStore((s) => (s as any).categoryBrowsingEnabled ?? true);
+
+  // V3-FIX-041: Frequent products state
+  const [frequentProducts, setFrequentProducts] = useState<Product[]>([]);
   const [searchVisible, setSearchVisible] = useState(false);
   const [cartSheetVisible, setCartSheetVisible] = useState(false);
   const [voiceVisible, setVoiceVisible] = useState(false);
@@ -79,6 +100,15 @@ export default function SellScreenV3() {
   const productsLoading = useProductsStore((s) => s.loading);
   const products = useProductsStore((s) => s.products);
   useEffect(() => { void loadProducts(); }, [loadProducts]);
+
+  // V3-FIX-041: Load frequent products
+  useEffect(() => {
+    if (selectedCategory === "Frequent") {
+      getFrequentProducts().then((fps) => {
+        setFrequentProducts(fps.map((p: any) => ({ id: p.id ?? p.product_id, name: p.name ?? p.display_name, priceMinor: p.sell_price ?? p.mrp ?? 0, barcode: p.barcode, category: p.category, stock: p.current_stock ?? 0, description: p.brand, currency: "INR" })));
+      }).catch(() => {});
+    }
+  }, [selectedCategory]);
 
   // V3-006: Pull-to-refresh
   const handleRefresh = useCallback(async () => {
@@ -143,21 +173,34 @@ export default function SellScreenV3() {
   });
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  // PD-026: Sort by frequency (recently sold first), then alphabetical
+  // V3-FIX-041: Filter by category + use frequent products when "Frequent" selected
   const tileProducts: ProductTileData[] = useMemo(() => {
-    const sorted = [...products].sort((a, b) => {
-      // Products in cart first (currently being sold)
+    // Source: Frequent loads from API, other categories filter from products store
+    const sourceProducts = selectedCategory === "Frequent" && frequentProducts.length > 0
+      ? frequentProducts
+      : products;
+
+    // V3-FIX-041: Category filter (skip for "Frequent" which is already filtered by backend)
+    const filtered = selectedCategory === "Frequent"
+      ? sourceProducts
+      : sourceProducts.filter((p) => {
+          if (!p.category) return true; // show uncategorized in all
+          const cat = p.category.toLowerCase();
+          const sel = selectedCategory.toLowerCase();
+          return cat.includes(sel) || sel.includes(cat);
+        });
+
+    const sorted = [...filtered].sort((a, b) => {
       const aInCart = cartItems.some(c => c.id === a.id || c.barcode === a.barcode) ? 1 : 0;
       const bInCart = cartItems.some(c => c.id === b.id || c.barcode === b.barcode) ? 1 : 0;
       if (aInCart !== bInCart) return bInCart - aInCart;
-      // Then by stock (in-stock first)
       const aStock = (a.stock ?? 0) > 0 ? 1 : 0;
       const bStock = (b.stock ?? 0) > 0 ? 1 : 0;
       if (aStock !== bStock) return bStock - aStock;
       return a.name.localeCompare(b.name);
     });
     return sorted.map(productToTileData);
-  }, [products, cartItems]);
+  }, [products, cartItems, selectedCategory, frequentProducts]);
 
   // Get cart qty for a product
   const getCartQty = useCallback(
@@ -212,10 +255,12 @@ export default function SellScreenV3() {
 
   return (
     <View style={styles.container}>
-      {/* Branded header */}
-      <BrandedHeader />
-      {/* V3-029: Offline banner */}
-      <OfflineBanner />
+      {/* V3-FIX-037: Header with working menu + unified online state (no separate OfflineBanner) */}
+      <BrandedHeader onMenuPress={() => {
+        // Navigate to MORE tab from SELL
+        const parent = navigation.getParent?.();
+        if (parent) parent.navigate("MORE" as any);
+      }} />
 
       {/* Search bar */}
       <View style={styles.searchBar}>
@@ -232,19 +277,22 @@ export default function SellScreenV3() {
             <Path d="M7 7h.01M7 12h10M7 17h.01M12 7h5M12 17h5" />
           </Svg>
         </Pressable>
-        <Pressable style={[styles.iconButton, { backgroundColor: colors.primaryLight }]} accessibilityLabel="Voice input" onPress={() => setVoiceVisible(true)}>
-          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth={2}>
-            <Rect x={9} y={2} width={6} height={12} rx={3} />
-            <Path d="M5 10a7 7 0 0014 0M12 18v4M9 22h6" />
-          </Svg>
-        </Pressable>
+        {/* V3-FIX-039: Hide voice when voiceEnabled=false */}
+        {voiceEnabled ? (
+          <Pressable style={[styles.iconButton, { backgroundColor: colors.primaryLight }]} accessibilityLabel="Voice input" onPress={() => setVoiceVisible(true)}>
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth={2}>
+              <Rect x={9} y={2} width={6} height={12} rx={3} />
+              <Path d="M5 10a7 7 0 0014 0M12 18v4M9 22h6" />
+            </Svg>
+          </Pressable>
+        ) : null}
       </View>
 
       {/* Retail / Bulk toggle */}
       <CustomerTypeToggle mode={sellMode} onModeChange={setSellMode} />
 
-      {/* Category chips */}
-      <View style={styles.chipRow}>
+      {/* V3-FIX-039: Hide category chips when categoryBrowsingEnabled=false */}
+      {categoryBrowsingEnabled ? <View style={styles.chipRow}>
         <FlatList
           horizontal
           data={categories}
@@ -262,7 +310,7 @@ export default function SellScreenV3() {
             </Pressable>
           )}
         />
-      </View>
+      </View> : null}
 
       {/* Product grid with loading/empty states */}
       {productsLoading && products.length === 0 ? (
@@ -341,6 +389,33 @@ export default function SellScreenV3() {
         loading={searchLoading}
         onQueryChange={handleSearchQuery}
       />
+
+      {/* V3-FIX-036: Welcome guide modal */}
+      <Modal visible={showGuide} transparent animationType="fade" onRequestClose={handleDismissGuide} testID="sell-welcome-guide">
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }}>
+          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 28, maxWidth: 340, width: "100%" }}>
+            <Text style={{ fontSize: 22, fontWeight: "900", color: "#2563EB", textAlign: "center", letterSpacing: -0.5 }}>Welcome to SuperMandi POS</Text>
+            <View style={{ marginTop: 20, gap: 12 }}>
+              {[
+                { tab: "SELL", desc: "Billing & checkout", color: "#2563EB" },
+                { tab: "BUY", desc: "Order from suppliers", color: "#16A34A" },
+                { tab: "STORE", desc: "Stock & inventory", color: "#F59E0B" },
+                { tab: "MORE", desc: "Reports, Khata, Settings", color: "#7C3AED" },
+              ].map(({ tab, desc, color }) => (
+                <View key={tab} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: color, alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ color: "#fff", fontSize: 11, fontWeight: "800" }}>{tab}</Text>
+                  </View>
+                  <Text style={{ fontSize: 14, fontWeight: "600", color: "#334155" }}>{desc}</Text>
+                </View>
+              ))}
+            </View>
+            <Pressable onPress={handleDismissGuide} style={{ marginTop: 24, backgroundColor: "#2563EB", paddingVertical: 14, borderRadius: 14, alignItems: "center" }} testID="sell-guide-dismiss">
+              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>Got it, Start Billing →</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
