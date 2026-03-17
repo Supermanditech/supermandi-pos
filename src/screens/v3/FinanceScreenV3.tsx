@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator } from "react-native";
+import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator, Alert } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
@@ -61,7 +61,9 @@ export default function FinanceScreenV3({ onClose }: Props) {
                 showToast(err?.message ?? "Application failed — try again later");
               }
             }}><Text style={styles.applyText}>Apply Now</Text></Pressable></View>
-            <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>LENDINGKART</Text><View style={[styles.bnplBadge, { backgroundColor: colors.warningSoft }]}><Text style={[styles.bnplText, { color: colors.warning }]}>Credit Line</Text></View></View><Text style={styles.offerAmount}>₹2,00,000</Text><Text style={styles.offerDetail}>Business credit · 1.5%/month{"\n"}Draw as needed</Text><Pressable style={styles.detailBtn}><Text style={styles.detailText}>Details</Text></Pressable></View>
+            <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>LENDINGKART</Text><View style={[styles.bnplBadge, { backgroundColor: colors.warningSoft }]}><Text style={[styles.bnplText, { color: colors.warning }]}>Credit Line</Text></View></View><Text style={styles.offerAmount}>₹2,00,000</Text><Text style={styles.offerDetail}>Business credit · 1.5%/month{"\n"}Draw as needed</Text><Pressable style={styles.detailBtn} onPress={() => {
+              Alert.alert("LendingKart Credit Line", "₹2,00,000 credit line at 1.5%/month.\n\nDraw funds as needed, pay interest only on what you use.\n\nContact: support@lendingkart.com", [{ text: "OK" }]);
+            }}><Text style={styles.detailText}>Details</Text></Pressable></View>
           </>
         )}
         {!loading && activeTab === "loans" && (
@@ -74,9 +76,9 @@ export default function FinanceScreenV3({ onClose }: Props) {
           )
         )}
         {!loading && activeTab === "bills" && (
-          <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>🧾</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>Bill Discounting</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4, textAlign: "center" }}>Upload supplier invoices to get 90% value upfront</Text><Pressable style={[styles.applyBtn, { marginTop: 16, width: "100%" }]}><Text style={styles.applyText}>Upload Invoice</Text></Pressable></View>
+          <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>🧾</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>Bill Discounting</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4, textAlign: "center" }}>Upload supplier invoices to get 90% value upfront</Text><Pressable style={[styles.applyBtn, { marginTop: 16, width: "100%" }]} onPress={() => Alert.alert("Upload Invoice", "Invoice upload requires document scanner integration.\n\nThis feature will be available in the next update.", [{ text: "OK" }])}><Text style={styles.applyText}>Upload Invoice</Text></Pressable></View>
         )}
-        <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>FINBOX</Text><View style={[styles.bnplBadge, { backgroundColor: colors.successSoft }]}><Text style={[styles.bnplText, { color: colors.success }]}>Bill Discount</Text></View></View><Text style={styles.offerAmount}>Sell Bill Discounting</Text><Text style={styles.offerDetail}>90% of invoice value upfront{"\n"}Funds in 24 hours</Text><Pressable style={styles.detailBtn}><Text style={styles.detailText}>Upload Invoice</Text></Pressable></View>
+        <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>FINBOX</Text><View style={[styles.bnplBadge, { backgroundColor: colors.successSoft }]}><Text style={[styles.bnplText, { color: colors.success }]}>Bill Discount</Text></View></View><Text style={styles.offerAmount}>Sell Bill Discounting</Text><Text style={styles.offerDetail}>90% of invoice value upfront{"\n"}Funds in 24 hours</Text><Pressable style={styles.detailBtn} onPress={() => Alert.alert("Finbox Bill Discounting", "Upload supplier invoices to get 90% value upfront.\n\nFunds disbursed within 24 hours.", [{ text: "OK" }])}><Text style={styles.detailText}>Upload Invoice</Text></Pressable></View>
       </ScrollView>
     </View>
   );
