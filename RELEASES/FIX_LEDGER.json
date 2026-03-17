@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 329,
+  "version": 330,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -7257,7 +7257,7 @@
       "file": "src/screens/v3/ReorderScreenV3.tsx",
       "start_line": 1,
       "end_line": 127,
-      "checksum": "16a830b5afcd7ca8",
+      "checksum": "d21c6d8b00d6686a",
       "description": "Reorder v3 — stock runout prediction, approve/edit/dismiss, WhatsApp send",
       "test_file": "src/__tests__/screens/store-layer4.stg-567-570.test.ts",
       "depends_on": null,

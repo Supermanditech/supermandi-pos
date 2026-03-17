@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator } from "react-native";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
+import { View, Pressable, ScrollView, TextInput, StyleSheet, Text, ActivityIndicator } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -21,6 +21,13 @@ export default function ReorderScreenV3({ onClose }: Props) {
   const [items, setItems] = useState<ReorderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+
+  const handleQtyEdit = useCallback((idx: number, newQty: string) => {
+    const qty = parseInt(newQty, 10);
+    if (isNaN(qty) || qty < 1) return;
+    setItems((prev) => prev.map((it, i) => i === idx ? { ...it, orderQty: qty, cost: qty * (it.cost / (it.orderQty || 1)) } : it));
+  }, []);
   useEffect(() => {
     (async () => {
       try {
@@ -93,9 +100,15 @@ export default function ReorderScreenV3({ onClose }: Props) {
                   showToast(`${item.name} approved — order will be placed`);
                 } catch { showToast("Failed to approve"); }
               }}><Text style={styles.approveBtnText}>{approvedIds.has(item.id) ? "✓ Approved" : "✓ Approve"}</Text></Pressable>
-              <Pressable style={styles.editBtn} onPress={() => showToast(`Edit qty for ${item.name}`)}><Text style={styles.editBtnText}>Edit</Text></Pressable>
+              <Pressable style={styles.editBtn} onPress={() => setEditingIdx(editingIdx === i ? null : i)}><Text style={styles.editBtnText}>{editingIdx === i ? "Done" : "Edit"}</Text></Pressable>
               <Pressable style={styles.dismissBtn} onPress={() => setItems((prev) => prev.filter((_, j) => j !== i))}><Text style={styles.dismissBtnText}>✕</Text></Pressable>
             </View>
+            {editingIdx === i ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8, padding: 8, backgroundColor: colors.primaryLight, borderRadius: 8 }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.primary }}>Order Qty:</Text>
+                <TextInput style={{ flex: 1, padding: 8, borderRadius: 8, borderWidth: 1.5, borderColor: colors.primary, fontSize: 14, fontWeight: "700", textAlign: "center", backgroundColor: colors.surface }} defaultValue={String(item.orderQty)} onEndEditing={(e) => handleQtyEdit(i, e.nativeEvent.text)} keyboardType="numeric" />
+              </View>
+            ) : null}
           </View>
         ))}
       </ScrollView>
