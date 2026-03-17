@@ -326,10 +326,30 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
                 <Text style={{ fontWeight: "700", color: colors.textSecondary }}>Cancel</Text>
               </Pressable>
               <Pressable onPress={async () => {
+                const totalRupees = Math.round(grandTotal / 100);
                 if (splitCashNum <= 0 || splitRemainder <= 0) { showToast("Enter valid cash amount"); return; }
+                if (splitCashNum + splitRemainder !== totalRupees) { showToast(`Cash ₹${splitCashNum} + ${splitSecondMethod} ₹${splitRemainder} must equal total ₹${totalRupees}`); return; }
                 setSplitVisible(false);
-                // Use the same sale flow — create sale first, then split payment
-                showToast("Split payment: Cash + " + splitSecondMethod);
+                useCartStore.getState().lockCart();
+                setProcessing(true);
+                createSaleInFlight.current = true;
+                try {
+                  const id = saleId ?? await createSaleStep();
+                  if (!id) throw new Error("Failed to create sale");
+                  const payments: SplitPaymentItem[] = [
+                    { mode: "CASH", amountMinor: splitCashNum * 100 },
+                    { mode: splitSecondMethod, amountMinor: splitRemainder * 100 },
+                  ];
+                  await createSplitPayment({ saleId: id, payments });
+                  logger.debug("V3Payment", `split_done:${id},cash:${splitCashNum},${splitSecondMethod}:${splitRemainder}`);
+                  onComplete("CASH");
+                } catch (err: any) {
+                  showToast(err?.message ?? "Split payment failed");
+                } finally {
+                  useCartStore.getState().unlockCart();
+                  createSaleInFlight.current = false;
+                  setProcessing(false);
+                }
               }} style={{ flex: 2, padding: 14, borderRadius: 14, backgroundColor: colors.primary, alignItems: "center" }}>
                 <Text style={{ fontWeight: "800", color: "#fff" }}>Confirm Split</Text>
               </Pressable>
