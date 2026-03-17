@@ -158,3 +158,98 @@ For each screen, the following 12 dimensions MUST be 100% complete before unlock
 All 12 dimensions covered. No missing interactions, logic, or dependencies.
 
 ---
+
+
+## SCREEN 2: LOGIN (Phone + OTP) (LOCKED)
+
+### Prototype vs Code Reconciliation
+Prototype shows Staff Phone + PIN. Code implements Phone -> OTP (V3-035). Code is correct - OTP is the new auth flow.
+
+### D1: User Interactions
+- 2.1 Enter phone number (10-digit, +91 prefix)
+- 2.2 Tap Continue -> call send-otp API -> navigate to OTP screen
+- 2.3 Enter 6 OTP digits (auto-advance between boxes)
+- 2.4 Auto-submit on 6th digit
+- 2.5 Tap Verify -> call verify-otp API
+- 2.6 Tap Resend OTP (30s cooldown)
+- 2.7 Tap Register here -> open web registration
+- 2.8 Back navigation from OTP to Phone
+
+### D2: UI/UX States
+- Default: Logo + Welcome + phone input (Phone) / 6 OTP boxes (OTP)
+- Loading: Button spinner, disabled
+- Error: Toast messages (not registered / invalid OTP / expired / too many attempts)
+- Success: Navigate to POS (OTP) / Navigate to OTP screen (Phone)
+- Rate limited: Resend in Xs countdown
+
+### D3: Navigation
+- Splash -> PhoneScreen (no token)
+- PhoneScreen -> OTPScreen (OTP sent)
+- OTPScreen -> PosRootLayoutV3 (verified, stack reset)
+- OTPScreen -> PhoneScreen (back)
+
+### D4: API Contracts
+- POST /api/v1/pos/auth/send-otp {phone} -> {success, message} | 400/404/500
+- POST /api/v1/pos/auth/verify-otp {phone, otp} -> {token, storeId, storeName, storeCode} | 400/429/404/500
+- Both in PUBLIC endpoint allowlist (no device token needed)
+
+### D5: Backend Services
+- otpAuth.ts: send-otp (validate phone, check stores+users, generate OTP, hash SHA256, upsert pos_otp)
+- otpAuth.ts: verify-otp (check hash+expiry+attempts, get store, generate 64-char token, upsert devices)
+- Registered at v1/index.ts line 173
+
+### D6: Database
+- pos_otp (NEW migration 191): phone PK, otp_hash, expires_at, attempts, created_at
+- stores (existing): id, store_name, store_code, status, owner_id
+- users (existing): id, phone
+- devices (existing): token, store_id, phone, label, status
+
+### D7: Business Logic
+- Phone: 10 digits Indian mobile only
+- Store must be ACTIVE status
+- OTP: 6 random digits, 5-min expiry, SHA256 hashed, max 5 attempts
+- Device token: 32 random bytes hex
+- Session saved to SecureStore
+- Navigation stack reset on success (no back to auth)
+- Resend cooldown: 30 seconds client-side
+
+### D8: Edge Cases
+- Unregistered phone -> 404
+- Store not ACTIVE -> 404 (same message, no info leak)
+- OTP expired -> 400
+- Wrong OTP -> 400 (attempts increment)
+- 5+ wrong attempts -> 429
+- Network error -> toast + retry
+- Multi-store same phone -> first ACTIVE (LIMIT 1)
+
+### D9: Offline
+- Auth is NOT possible offline (requires server) - correct behavior
+- If already authed, splash bypasses login entirely
+
+### D10: GCP Parity
+- Route registered in v1/index.ts YES
+- Migration 191 written YES, NOT applied (GCP deploy ON HOLD)
+- OTP delivery: TODO - currently console.log only (needs SMS gateway)
+
+### D11: Cross-Role
+- Retailer POS: enters phone, gets OTP, logs in
+- SuperAdmin: approves store (enables login), can deactivate (blocks login)
+- Supplier: no interaction
+- Retailer Web: registers at supermandi.tech (creates user+store)
+
+### D12: Production Tickets
+- V3-035 Phone+OTP auth flow: DONE
+- V3-036 Splash transition: DONE
+- V3-037 Public endpoint allowlist: DONE
+- V3-016 Route registration: DONE
+- V3-017 Migration 191: DONE
+
+### GAPS
+- G1 (HIGH): OTP delivery is console.log only - needs SMS/WhatsApp gateway
+- G2 (LOW): Multi-store selector for same-phone users
+- G3 (LOW): Register here link not wired to Linking.openURL
+- G4 (LOW): OTP cleanup cron for expired rows
+
+### VERDICT: SCREEN 2 COMPLETE (4 minor gaps noted)
+
+---
