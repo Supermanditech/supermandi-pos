@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 342,
+  "version": 343,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -7806,8 +7806,8 @@
       "file": "backend/src/routes/v1/admin/catalog.ts",
       "start_line": 1,
       "end_line": 436,
-      "checksum": "f5b3bfe548f83ac5",
-      "description": "Admin margin control + SKU approval",
+      "checksum": "c43e303aa15689e8",
+      "description": "Admin margin control + SKU approval + SYS-002 stock reconciliation endpoints",
       "test_file": "N/A",
       "status": "ACTIVE",
       "checklist_version": 5,

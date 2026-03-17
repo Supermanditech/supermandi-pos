@@ -6,6 +6,7 @@ import { getPool } from "../../../db/client";
 import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
+import { reconcileStockBalances, checkStockDivergence } from "../../../services/stockReconciliation";
 
 export const adminCatalogRouter = Router();
 
@@ -430,6 +431,39 @@ adminCatalogRouter.patch(
     } catch (err) {
       log.error(`[AUDIT-005] SKU approval failed:`, asError(err));
       res.status(500).json({ error: "Failed to approve SKU" });
+    }
+  }
+);
+
+// SYS-002: Stock balance reconciliation — check divergence
+adminCatalogRouter.get(
+  "/stock-reconciliation/check",
+  requireAdminToken,
+  async (_req, res) => {
+    try {
+      const storeId = typeof _req.query.storeId === "string" ? _req.query.storeId : undefined;
+      const result = await checkStockDivergence(storeId);
+      res.json(result);
+    } catch (err) {
+      log.error("[SYS-002] Stock divergence check failed:", asError(err));
+      res.status(500).json({ error: "Failed to check stock divergence" });
+    }
+  }
+);
+
+// SYS-002: Stock balance reconciliation — run correction
+adminCatalogRouter.post(
+  "/stock-reconciliation/run",
+  requireAdminToken,
+  requirePermission("manage_inventory"),
+  async (_req, res) => {
+    try {
+      const storeId = typeof _req.body?.storeId === "string" ? _req.body.storeId : undefined;
+      const result = await reconcileStockBalances(storeId);
+      res.json(result);
+    } catch (err) {
+      log.error("[SYS-002] Stock reconciliation failed:", asError(err));
+      res.status(500).json({ error: "Failed to run stock reconciliation" });
     }
   }
 );
