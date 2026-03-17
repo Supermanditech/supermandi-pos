@@ -389,3 +389,344 @@ Prototype shows Staff Phone + PIN. Code implements Phone -> OTP (V3-035). Code i
 All 12 dimensions covered. Core sell flow is production-ready. Gaps are enhancements, not blockers.
 
 ---
+
+## SCREEN 4: UNIVERSAL SEARCH (LOCKED)
+
+- **Interactions**: Type query (300ms debounce), tap result (add to cart + close), tap X (close), tap recent chip (populate query)
+- **UI States**: Default (recent searches), Loading, Results list, Empty ("No results")
+- **Navigation**: Sell -> Search (focus); Search -> Sell (X or result tap)
+- **API**: GET /api/v1/pos/store-products/search?q={query} via sellSearchApi
+- **Backend**: Existing trigram search on store_products (deployed)
+- **DB**: store_products + pg_trgm (existing)
+- **Business Logic**: Min 2 chars, 300ms debounce, stock status coloring
+- **Edge Cases**: Empty query shows recent; network fail uses cache; special chars sanitized
+- **Offline**: Local productsStore cache search; server fails gracefully
+- **Gaps**: Recent searches not persisted (LOW)
+- **Tickets**: STG-560, V3-006 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 5: CART SHEET (LOCKED)
+
+- **Interactions**: Qty stepper, swipe-to-delete, discount chips (5%/10%/custom), customer info, Clear All, Add More, Park cart, WhatsApp Share, PAY
+- **UI States**: Items list, empty cart, discount section, customer section
+- **Navigation**: Sell (cart strip) -> Cart; Cart -> Sell (Add More); Cart -> Payment (PAY)
+- **API**: None (Zustand state); PAY navigates to PaymentScreenV3
+- **DB**: None (AsyncStorage for parked carts)
+- **Business Logic**: Max 3 parked carts; discount % or fixed; manager PIN for > staff limit
+- **Edge Cases**: Empty cart -> message; 0 qty -> remove; total=0 -> PAY disabled
+- **Offline**: Fully works offline
+- **Gaps**: Swipe-to-delete uses trash icon (LOW); Park max 3 not enforced (LOW)
+- **Tickets**: STG-554, V3-007 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 6: VOICE INPUT (LOCKED)
+
+- **Interactions**: Open mic, speak product+qty, stop, Add (confirm), Retry
+- **UI States**: Idle, Recording (pulse), Processing, Result (matched product), Error
+- **Navigation**: Sell (mic) -> Voice; Voice -> Sell (Add or close)
+- **API**: POST /api/v1/voice/interpret (audio)
+- **Backend**: voice-service on Cloud Run (existing)
+- **Business Logic**: 10s max recording; confidence threshold; Hindi+English
+- **Edge Cases**: No mic permission; background noise; network required
+- **Offline**: NOT available offline
+- **Gaps**: None critical
+- **Tickets**: STG-558, V3-003 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 7: BARCODE SCANNER (LOCKED)
+
+- **Interactions**: Camera auto-start, barcode detected -> lookup, HID input, New Product, Continue
+- **UI States**: Scanning (camera), Product Found (bottom card), Not Found, HID Active
+- **Navigation**: Sell/Buy -> Scan; Scan -> Sell (found); Scan -> NewProduct (unknown)
+- **API**: productsStore.getProductByBarcode (local) + GET /api/v1/pos/scan/:barcode (fallback)
+- **Business Logic**: HID 15s timeout, 45s camera idle; context param for cart destination; dedup 500ms
+- **Edge Cases**: Camera denied; HID disconnected; rapid scans
+- **Offline**: Local lookup works; server fails gracefully
+- **Gaps**: None critical
+- **Tickets**: STG-559, V3-003 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 8: NEW PRODUCT ENTRY (LOCKED)
+
+- **Interactions**: Barcode pre-filled, camera photo, fill details, Add to Store and Cart
+- **UI States**: Form, Validation error, Saving, Success
+- **Navigation**: Scan -> NewProduct; NewProduct -> Sell (after save)
+- **API**: POST /api/v1/pos/store-products via upsertLocalProduct
+- **DB**: store_products INSERT
+- **Business Logic**: Required: name + selling price; barcode from scan; stock = qty entered
+- **Edge Cases**: Duplicate barcode -> update; no photo -> placeholder; offline -> local DB
+- **Offline**: Saves to SQLite, syncs when online
+- **Gaps**: Photo capture not wired (MEDIUM); master DB auto-fill not implemented (LOW)
+- **Tickets**: STG-564, V3-012 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREENS 9-12: PAYMENT FLOW (LOCKED)
+
+### Screen 9: Payment Hub - Total + CASH/UPI/UDHAR buttons + Split + Discount
+### Screen 10: Cash - Quick amounts (EXACT/200/500/1000) + change calc + COMPLETE SALE
+### Screen 11: UPI - QR code + polling + Received button
+### Screen 12: Udhar - Customer name+phone + existing customer list + Record Udhar
+
+- **Interactions**: Select method; Cash: quick amount or custom; UPI: wait QR or manual; Udhar: enter/select customer
+- **API**: createSale, recordCashPayment, recordDuePayment, initUpiPayment (all existing)
+- **DB**: sales, sale_items, payments tables (existing)
+- **Business Logic**: Stock validation (GO-LIVE-233); cart lock 5min; UPI QR; large txn alert >5000; idempotent
+- **Edge Cases**: Network fail -> retry; double-tap prevention; UPI timeout; offline -> outbox
+- **Offline**: Cash works offline (outbox); UPI NOT offline; Udhar offline (outbox)
+- **Gaps**: Split payment not implemented (MEDIUM); discount button duplicates CartSheet (LOW)
+- **Tickets**: STG-556, V3-002, V3-008 - ALL DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 13: SUCCESS (LOCKED)
+
+- **Interactions**: Auto-print, New Sale, Reprint, WhatsApp Send Bill, Void
+- **UI States**: Success (confetti + check), Printing, Print failed, Voiding
+- **Navigation**: Payment -> Success; Success -> Sell (New Sale)
+- **API**: voidSale, printerService (local), WhatsApp Linking.openURL
+- **DB**: sales.status = VOIDED on void
+- **Business Logic**: Profit = sell - cost per item; streak = today sales count; auto-print if enabled; confetti animation
+- **Edge Cases**: Print fails -> retry; void after print; offline -> outbox
+- **Offline**: Print works (Bluetooth); WhatsApp needs network; void queued
+- **Gaps**: None critical
+- **Tickets**: STG-557, V3-002, V3-009 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 14: BUY - SUPPLIER CATALOGUE (LOCKED)
+
+- **Interactions**: Search supplier products; filter by supplier chip; tap product -> compare prices; tap Counter Purchase CTA; scan barcode; adjust order qty per product
+- **UI States**: Loading (spinner), Products grid with supplier cards (name, MOQ, PTR, margin), Empty ("No supplier products")
+- **Navigation**: Bottom nav BUY tab; BUY -> Compare (product tap); BUY -> CounterPurchase; BUY -> Scan
+- **API**: GET /api/v1/catalog (getCatalog) with storeId; search via searchCatalog
+- **Backend**: catalog-service (existing, deployed)
+- **DB**: supplier_products, suppliers, catalog_search (existing)
+- **Business Logic**: Wholesale pricing (PTR/PTS/scheme); MOQ enforcement; BNPL eligibility badge; case-based ordering
+- **Edge Cases**: No suppliers linked -> empty; network fail -> cached catalog; supplier offline -> show last price
+- **Offline**: Cached catalog from last sync; order queued in outbox
+- **Gaps**: Supplier filter uses static list not API (MEDIUM); real wholesale pricing needs migration 190 deployed (MEDIUM)
+- **Tickets**: STG-561, V3-013 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 15: PRICE COMPARISON (LOCKED)
+
+- **Interactions**: View all suppliers for a product; compare PTR/MOQ/delivery/BNPL; tap "Order" to add to purchase cart
+- **UI States**: Loading, Supplier list sorted by price, Empty
+- **Navigation**: BUY (product tap) -> Compare; Compare -> BUY (back)
+- **API**: GET /api/v1/catalog/products/:id/suppliers (getProductSuppliers)
+- **Backend**: catalog-service (existing)
+- **DB**: supplier_products JOIN suppliers
+- **Business Logic**: Sort by price ascending; highlight best deal; show MOQ + delivery days
+- **Offline**: Cached supplier data
+- **Gaps**: None critical
+- **Tickets**: STG-562, V3-014 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 16: COUNTER PURCHASE (LOCKED)
+
+- **Interactions**: HID/camera barcode scan; auto-add scanned items; 3 item states (repeat/existing/new); supplier name + invoice no; qty/price edit; expandable details (+); Confirm -> recordManualInward
+- **UI States**: Empty (no items scanned), Items list, Saving (spinner), Success
+- **Navigation**: BUY -> CounterPurchase; CounterPurchase -> BUY (back/success)
+- **API**: POST /api/v1/pos/inventory/inward (recordManualInward)
+- **Backend**: inventory-service (existing)
+- **DB**: inventory_ledger, store_products (stock update)
+- **Business Logic**: Repeat detection via productsStore; auto-fill last purchase price; GST calculation; duplicate scan prevention
+- **Edge Cases**: Unknown barcode -> new product state; network fail -> queue; empty price -> validation block
+- **Offline**: Queue in outbox; products looked up locally
+- **Gaps**: None critical after V3-041 wiring
+- **Tickets**: STG-563, V3-041 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 17: STORE HUB (LOCKED)
+
+- **Interactions**: 4 action cards (Receive Stock, Reorder, Stock Report, Barcode Labels); recent orders list
+- **UI States**: Loading, Action grid + recent orders, Empty orders
+- **Navigation**: Bottom nav STORE tab; Store -> GRN/Reorder/Stock/BarcodeSheet
+- **API**: GET /api/v1/pos/inventory/purchase-history (getPurchaseHistory)
+- **Backend**: inventory-service (existing)
+- **DB**: inventory_ledger (existing)
+- **Business Logic**: Recent orders sorted by date; status badges (Delivered/In Transit)
+- **Offline**: Cached recent orders
+- **Gaps**: None critical
+- **Tickets**: STG-567, V3-019 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 18: GRN - GOODS RECEIVED NOTE (LOCKED)
+
+- **Interactions**: PO/Adhoc tabs; barcode scan to find item; checkbox per item; qty received edit; bulk receive; notes; Confirm Receive
+- **UI States**: Loading, PO items list with checkboxes, Empty ("No pending deliveries"), Receiving (spinner)
+- **Navigation**: Store -> GRN; GRN -> Store (back/success)
+- **API**: GET /api/v1/orders (listOrders); GET /api/v1/orders/:id (getOrder); POST /api/v1/orders/:id/receive (receiveGoods)
+- **Backend**: order-service (existing)
+- **DB**: purchase_orders, purchase_order_items, inventory_ledger
+- **Business Logic**: Partial receive support; excess qty warning; auto-update stock on receive
+- **Offline**: View cached PO items; receive queued in outbox
+- **Gaps**: None critical after V3-042 wiring
+- **Tickets**: STG-568, V3-042 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 19: REORDER SUGGESTIONS (LOCKED)
+
+- **Interactions**: View low-stock items with urgency (critical/low/normal); approve/dismiss; edit qty; approve all
+- **UI States**: Loading, Suggestions list with urgency coloring, Empty ("All stock levels healthy")
+- **Navigation**: Store -> Reorder; Reorder -> Store (back)
+- **API**: GET /api/v1/reorder/stores/:id/reorder/pending (listPendingReorders)
+- **Backend**: reorder-service (existing)
+- **DB**: reorder_pending, store_products
+- **Business Logic**: Urgency: critical (<1 day stock), low (<3 days), normal; suggested qty from reorder policy; estimated cost
+- **Offline**: Cached suggestions
+- **Gaps**: None critical after V3-043 wiring
+- **Tickets**: STG-569, V3-043 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 20: MORE / DASHBOARD (LOCKED)
+
+- **Interactions**: View yesterday summary (sales/profit/top item); tap Today Sales -> Reports; tap Udhar -> Khata; tap Finance banner -> Finance; Quick access menu items
+- **UI States**: Loading, Dashboard cards + menu list
+- **Navigation**: Bottom nav MORE tab; More -> Khata/Customers/Reports/Stock/Sales/Settings/Help/Finance
+- **API**: GET /api/v1/pos/reports/daily-summary (getDailySummary)
+- **Backend**: reports route (existing)
+- **DB**: sales, sale_items (aggregation)
+- **Business Logic**: Yesterday stats with % change; greeting by time of day; store code display
+- **Offline**: Cached last summary
+- **Gaps**: None critical after V3-023 wiring
+- **Tickets**: STG-571, V3-023 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 21: KHATA / CREDIT BOOK (LOCKED)
+
+- **Interactions**: View overdue + pending customers; tap customer -> ledger entries; add credit; record payment; bulk WhatsApp reminders; search
+- **UI States**: Loading, Overdue + Pending sections, Empty ("No credit entries")
+- **Navigation**: More -> Khata; Khata -> More (back)
+- **API**: khataStore.fetchCustomers(), addEntry(), recordPayment()
+- **Backend**: /api/v1/pos/khata/* (existing)
+- **DB**: khata_entries, khata_customers
+- **Business Logic**: Balance = credits - payments; overdue = >30 days; outstanding summary
+- **Offline**: Cached customer list; entries queued in outbox
+- **Gaps**: None critical after V3-024 wiring
+- **Tickets**: STG-572, V3-024 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 22: CREDIT AND FINANCE (LOCKED)
+
+- **Interactions**: Tabs: Offers/Loans/Bills; view credit offers; apply for credit; view active loans
+- **UI States**: Loading, Offers list, Empty ("No credit offers"), Feature disabled
+- **Navigation**: More (Finance banner) -> Finance; Finance -> More (back)
+- **API**: getCreditOffers() from creditApi
+- **Backend**: /api/v1/pos/credit/* (existing, feature-gated)
+- **DB**: credit_offers, credit_applications
+- **Business Logic**: Feature gate check; BNPL/credit line/bill discounting categories
+- **Offline**: Cached offers; applications queued
+- **Gaps**: Full loan management UI not implemented (MEDIUM - future fintech integration)
+- **Tickets**: STG-573, V3-046 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 23: REPORTS (LOCKED)
+
+- **Interactions**: Tabs: Today/Week/Month; view sales + profit + payment split; share report
+- **UI States**: Loading, Stats cards + payment breakdown, Empty ("No sales data")
+- **Navigation**: More -> Reports; Reports -> More (back)
+- **API**: getDailySummary(date) from dailySummaryApi
+- **Backend**: /api/v1/pos/reports/* (existing)
+- **DB**: sales aggregate queries
+- **Business Logic**: Payment breakdown (Cash/UPI/Due); period comparison; top products
+- **Offline**: Cached last report
+- **Gaps**: Week/Month tabs use same daily API (should have period aggregation) (LOW)
+- **Tickets**: STG-574, V3-045 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 24: STOCK AND INVENTORY (LOCKED)
+
+- **Interactions**: Tabs: Current/Unsold/Movement; search products; view stock levels + cost + sell price + margin
+- **UI States**: Loading, Product list with status badges, Empty ("No inventory")
+- **Navigation**: More/Store -> Stock; Stock -> back
+- **API**: getStockStatement() from inventoryApi
+- **Backend**: /api/v1/pos/inventory/stock-statement (existing)
+- **DB**: store_products, inventory_ledger
+- **Business Logic**: Status: in/low/out based on threshold; valuation = qty x cost; sort by status (out first)
+- **Offline**: Cached stock data
+- **Gaps**: None critical after V3-044 wiring
+- **Tickets**: STG-570, V3-044 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 25: CUSTOMERS (LOCKED)
+
+- **Interactions**: Search customers; view profile (visits, total, last visit); WhatsApp contact; add customer
+- **UI States**: Loading, Customer list with avatars, Empty ("No customers yet")
+- **Navigation**: More -> Customers; Customers -> More (back)
+- **API**: customerStore.fetchCustomers()
+- **Backend**: /api/v1/pos/customers (existing)
+- **DB**: customers table
+- **Business Logic**: Customer created on first DUE sale; visit count + total tracked
+- **Offline**: Cached customer list
+- **Gaps**: None critical after V3-027 wiring
+- **Tickets**: STG-575, V3-027 - DONE
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 26: SALES HISTORY (LOCKED)
+
+- **Interactions**: View past bills; tap bill -> detail; reprint; share on WhatsApp
+- **UI States**: Loading, Bills list, Empty ("No sales yet")
+- **Navigation**: More -> Sales; Sales -> More (back)
+- **API**: getSalesHistory() from inventoryApi
+- **Backend**: /api/v1/pos/sales/history (existing)
+- **DB**: sales, sale_items
+- **Business Logic**: Sorted by date desc; payment method badge; total per bill
+- **Offline**: Cached recent sales
+- **Gaps**: Bill detail sub-screen not in v3 (shows in More screen inline) (LOW)
+- **Tickets**: Part of MoreScreenV3
+- **VERDICT: COMPLETE**
+
+---
+
+## SCREEN 27: SETTINGS (LOCKED)
+
+- **Interactions**: Store details (name, code); language toggle (Hindi/English); dark mode toggle; printer settings; HID scanner toggle; UPI setup; sync now; switch store; logout
+- **UI States**: Settings list with toggle switches
+- **Navigation**: More -> Settings; Settings -> More (back); Settings -> Phone (logout)
+- **API**: No direct API (reads/writes settingsStore)
+- **Backend**: None (client-side preferences)
+- **DB**: None (AsyncStorage via Zustand persist)
+- **Business Logic**: Language toggle updates i18n; dark mode updates theme; printer test via printerService; sync triggers productsStore.loadProducts
+- **Offline**: Fully works offline (local preferences)
+- **Gaps**: None critical after V3-028 wiring
+- **Tickets**: STG-576, V3-028 - DONE
+- **VERDICT: COMPLETE**
+
+---
