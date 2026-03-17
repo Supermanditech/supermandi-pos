@@ -7,6 +7,8 @@ export type StaffLoginResponse = {
   staffId: string;
   name: string;
   role: "CASHIER" | "STOCK_MANAGER" | "MANAGER";
+  isOwner?: boolean;
+  maxDiscountPct?: number;
 };
 
 // STG-487: Staff /me response
@@ -25,9 +27,10 @@ export type VerifyPinResponse = {
   role: "MANAGER" | "STOCK_MANAGER";
 };
 
+// V3-OWNER-023: PIN-only login (phone optional for backward compat)
 export async function staffLogin(input: {
-  phone: string;
   pin: string;
+  phone?: string;
 }): Promise<StaffLoginResponse> {
   return apiClient.post("/api/v1/pos/staff/login", input);
 }

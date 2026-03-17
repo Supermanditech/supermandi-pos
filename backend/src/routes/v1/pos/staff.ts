@@ -17,20 +17,27 @@ const pinFailures = new Map<string, { count: number; resetAt: number }>();
 const PIN_RATE_LIMIT_MAX = 5;
 const PIN_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
-// POST /api/v1/pos/staff/login
-// Authenticates a store staff member by phone + PIN
+// V3-OWNER-023 + V3-BIZ-026: POST /api/v1/pos/staff/login
+// Authenticates by PIN only on a store-bound device.
+// Looks up staff by pin_lookup_hash within the device's store.
+// Supports both staff and owner POS identities.
+import crypto from "crypto";
+
+function pinLookupHash(pin: string, storeId: string): string {
+  return crypto.createHash("sha256").update(`${storeId}:${pin}`).digest("hex");
+}
+
 posStaffRouter.post("/staff/login", requireDeviceToken, async (req, res) => {
   try {
-    const { phone, pin } = req.body ?? {};
+    const { pin } = req.body ?? {};
     const posDevice = (req as any).posDevice as PosDeviceContext;
 
-    if (!phone || typeof phone !== "string" || !pin || typeof pin !== "string") {
+    if (!pin || typeof pin !== "string") {
       return res.status(400).json({
-        error: { code: "INVALID_INPUT", message: "phone and pin are required" }
+        error: { code: "INVALID_INPUT", message: "PIN is required" }
       });
     }
 
-    // Validate PIN format: 4-6 digits
     if (!/^\d{4,6}$/.test(pin)) {
       return res.status(400).json({
         error: { code: "INVALID_PIN_FORMAT", message: "PIN must be 4-6 digits" }
@@ -42,33 +49,76 @@ posStaffRouter.post("/staff/login", requireDeviceToken, async (req, res) => {
       return res.status(503).json({ error: { code: "SERVICE_UNAVAILABLE", message: "Database unavailable" } });
     }
 
-    // Lookup staff by store_id + phone + active
+    // V3-BIZ-026: PIN-only lookup using store-scoped pin_lookup_hash
+    const lookupHash = pinLookupHash(pin, posDevice.storeId);
     const result = await pool.query(
-      `SELECT id, name, phone, pin_hash, role
+      `SELECT id, name, pin_hash, role, is_owner, locked_until, failed_login_count
        FROM platform.store_staff
-       WHERE store_id = $1::uuid AND phone = $2 AND is_active = true`,
-      [posDevice.storeId, phone.trim()]
+       WHERE store_id = $1::uuid AND pin_lookup_hash = $2 AND is_active = true`,
+      [posDevice.storeId, lookupHash]
     );
 
     const staff = result.rows[0];
     if (!staff) {
+      // Fallback: try legacy phone+pin lookup for backward compatibility
+      const { phone } = req.body ?? {};
+      if (phone && typeof phone === "string") {
+        const legacyResult = await pool.query(
+          `SELECT id, name, pin_hash, role
+           FROM platform.store_staff
+           WHERE store_id = $1::uuid AND phone = $2 AND is_active = true`,
+          [posDevice.storeId, phone.trim()]
+        );
+        const legacyStaff = legacyResult.rows[0];
+        if (legacyStaff) {
+          const pinValid = await bcrypt.compare(pin, legacyStaff.pin_hash);
+          if (pinValid) {
+            // Update last_login_at
+            await pool.query(`UPDATE platform.store_staff SET last_login_at = NOW() WHERE id = $1`, [legacyStaff.id]);
+            return res.json({ staffId: legacyStaff.id, name: legacyStaff.name, role: legacyStaff.role, isOwner: false, maxDiscountPct: legacyStaff.role === "MANAGER" ? 100 : 10 });
+          }
+        }
+      }
       return res.status(401).json({
-        error: { code: "STAFF_INVALID_CREDENTIALS", message: "Invalid phone or PIN" }
+        error: { code: "STAFF_INVALID_CREDENTIALS", message: "Invalid PIN" }
       });
     }
 
-    // Verify PIN
-    const pinValid = await bcrypt.compare(pin, staff.pin_hash);
-    if (!pinValid) {
-      return res.status(401).json({
-        error: { code: "STAFF_INVALID_CREDENTIALS", message: "Invalid phone or PIN" }
+    // V3-SESSION-025: Durable lockout check
+    if (staff.locked_until && new Date(staff.locked_until) > new Date()) {
+      const remainingMin = Math.ceil((new Date(staff.locked_until).getTime() - Date.now()) / 60000);
+      return res.status(429).json({
+        error: { code: "STAFF_LOCKED", message: `Account locked. Try again in ${remainingMin} minutes.` }
       });
     }
+
+    // Verify PIN with bcrypt
+    const pinValid = await bcrypt.compare(pin, staff.pin_hash);
+    if (!pinValid) {
+      // Durable failed login tracking
+      const newCount = (staff.failed_login_count ?? 0) + 1;
+      const lockUntil = newCount >= PIN_RATE_LIMIT_MAX ? new Date(Date.now() + PIN_RATE_LIMIT_WINDOW_MS) : null;
+      await pool.query(
+        `UPDATE platform.store_staff SET failed_login_count = $1, last_failed_login_at = NOW(), locked_until = $2 WHERE id = $3`,
+        [newCount, lockUntil, staff.id]
+      );
+      return res.status(401).json({
+        error: { code: "STAFF_INVALID_CREDENTIALS", message: "Invalid PIN" }
+      });
+    }
+
+    // Success — reset lockout and update login timestamp
+    await pool.query(
+      `UPDATE platform.store_staff SET failed_login_count = 0, locked_until = NULL, last_login_at = NOW() WHERE id = $1`,
+      [staff.id]
+    );
 
     return res.json({
       staffId: staff.id,
       name: staff.name,
-      role: staff.role
+      role: staff.role,
+      isOwner: staff.is_owner ?? false,
+      maxDiscountPct: staff.role === "MANAGER" ? 100 : staff.role === "STOCK_MANAGER" ? 50 : 10,
     });
   } catch (err) {
     log.error("[POS Staff Login] Error:", err);
