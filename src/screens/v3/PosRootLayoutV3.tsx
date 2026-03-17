@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
@@ -13,6 +13,7 @@ import MoreScreenV3 from "./MoreScreenV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useCartStore } from "../../stores/cartStore";
+import { isOnline } from "../../services/networkStatus";
 
 type Nav = NativeStackNavigationProp<any>;
 
@@ -42,6 +43,15 @@ export default function PosRootLayoutV3() {
   // Cart badge from existing store
   const cartCount = useCartStore((s) => s.items?.length ?? 0);
 
+  // V3-050: Offline detection — show banner when no network
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    const check = () => isOnline().then((on) => setOffline(!on)).catch(() => setOffline(true));
+    check();
+    const interval = setInterval(check, 15000); // Check every 15s
+    return () => clearInterval(interval);
+  }, []);
+
   // V3-001: Navigation helper for sub-screens
   const navigateTo = useCallback((screen: string, params?: any) => {
     navigation.navigate(screen, params);
@@ -49,6 +59,11 @@ export default function PosRootLayoutV3() {
 
   return (
     <View style={styles.container}>
+      {offline && (
+        <View style={{ backgroundColor: "#FEF3C7", paddingVertical: 6, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: "#92400E" }}>Offline — data may not be current</Text>
+        </View>
+      )}
       <View style={styles.content}>
         {activeTab === "SELL" ? (
           <ScreenErrorBoundary screenName="SellV3">
