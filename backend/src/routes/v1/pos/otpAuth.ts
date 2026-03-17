@@ -129,11 +129,13 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
 
     const token = crypto.randomBytes(32).toString("hex");
 
+    // Insert into pos_devices (actual table per migration 011b)
+    const deviceId = `otp-${phone}-${Date.now()}`;
     await pool.query(
-      `INSERT INTO devices (token, store_id, phone, label, status, created_at)
-       VALUES ($1, $2, $3, $4, 'ACTIVE', NOW())
-       ON CONFLICT (token) DO UPDATE SET store_id = $2, phone = $3, status = 'ACTIVE'`,
-      [token, store.id, phone, `POS-${phone.slice(-4)}`]
+      `INSERT INTO pos_devices (id, store_id, device_token, label, active)
+       VALUES ($1, $2, $3, $4, TRUE)
+       ON CONFLICT (id) DO UPDATE SET store_id = $2, device_token = $3, active = TRUE`,
+      [deviceId, store.id, token, `POS-${phone.slice(-4)}`]
     );
 
     // Clean up OTP

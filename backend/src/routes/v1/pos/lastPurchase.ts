@@ -10,7 +10,7 @@ export const posLastPurchaseRouter = Router();
 
 posLastPurchaseRouter.get("/purchase/last/:barcode", requireDeviceToken, async (req, res) => {
   const pool = getPool();
-  const storeId = (req as any).deviceStoreId;
+  const { storeId } = (req as any).posDevice as { storeId: string };
   const { barcode } = req.params;
   const supplierId = req.query.supplierId as string | undefined;
 

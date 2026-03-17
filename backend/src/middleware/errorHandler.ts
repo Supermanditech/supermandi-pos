@@ -27,7 +27,7 @@ export function errorHandler(
       error: {
         code: err.code ?? "HTTP_ERROR",
         message: err.message,
-        ...(err.details && { details: err.details }),
+        ...(err.details ? { details: err.details } : {}),
       },
       ...(requestId && { requestId }),
     });

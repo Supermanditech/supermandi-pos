@@ -14,7 +14,7 @@ export const posSyncSseRouter = Router();
 
 // GET /api/v1/pos/sync/events — SSE stream
 posSyncSseRouter.get("/sync/events", requireDeviceToken, async (req: Request, res: Response) => {
-  const storeId = (req as any).storeId;
+  const { storeId } = (req as any).posDevice as { storeId: string };
   if (!storeId) {
     return res.status(401).json({ error: "Store not identified" });
   }

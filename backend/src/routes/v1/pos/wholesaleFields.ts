@@ -12,7 +12,7 @@ export const posWholesaleRouter = Router();
 // GET /pos/catalogue/wholesale/:productId — returns all supplier offers with wholesale metadata
 posWholesaleRouter.get("/catalogue/wholesale/:productId", requireDeviceToken, requireActiveStore, async (req, res) => {
   const pool = getPool();
-  const storeId = (req as any).deviceStoreId;
+  const { storeId } = (req as any).posDevice as { storeId: string };
   const { productId } = req.params;
 
   try {

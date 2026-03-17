@@ -10,7 +10,7 @@ export const posSalesVelocityRouter = Router();
 
 posSalesVelocityRouter.get("/stock/velocity", requireDeviceToken, async (req, res) => {
   const pool = getPool();
-  const storeId = (req as any).deviceStoreId;
+  const { storeId } = (req as any).posDevice as { storeId: string };
 
   try {
     const result = await pool.query(
