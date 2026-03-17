@@ -1,10 +1,11 @@
-import React, { useMemo, useEffect } from "react";
-import { View, Pressable, TextInput, ScrollView, ActivityIndicator, StyleSheet, Text } from "react-native";
+import React, { useMemo, useEffect, useState } from "react";
+import { View, Pressable, TextInput, ScrollView, ActivityIndicator, StyleSheet, Text, Alert } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
+import { recordCollectionCash } from "../../services/api/posApi";
 import { useKhataStore } from "../../stores/khataStore";
 
 // V3-024: Khata with real khataStore
@@ -60,7 +61,20 @@ export default function KhataScreenV3({ onClose }: Props) {
         <Text style={[styles.kAmount, c.overdue && styles.kAmountOverdue]}>₹{c.amount.toLocaleString("en-IN")}</Text>
         <View style={styles.kActions}>
           <Pressable style={styles.waSmBtn} onPress={() => showToast(`Reminder sent to ${c.name}`)}><Svg width={10} height={10} viewBox="0 0 24 24" fill="#fff"><Path d={WA_SVG} /></Svg></Pressable>
-          <Pressable style={styles.collectBtn} onPress={() => showToast(`Collect ₹${c.amount} from ${c.name}`)}><Text style={styles.collectText}>Collect</Text></Pressable>
+          <Pressable style={styles.collectBtn} onPress={() => {
+            Alert.alert("Collect Payment", `Record ₹${c.amount} collection from ${c.name}?`, [
+              { text: "Cancel", style: "cancel" },
+              { text: "Cash", onPress: async () => {
+                const online = await isOnline();
+                if (!online) { showToast("Collection requires connection"); return; }
+                try {
+                  await recordCollectionCash({ amountMinor: c.amount * 100, reference: c.name });
+                  showToast(`₹${c.amount} collected from ${c.name}`);
+                  void fetchKhataCustomers();
+                } catch { showToast("Collection failed"); }
+              }},
+            ]);
+          }}><Text style={styles.collectText}>Collect</Text></Pressable>
         </View>
       </View>
     </View>
