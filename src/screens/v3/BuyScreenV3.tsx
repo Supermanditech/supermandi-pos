@@ -11,6 +11,7 @@ import type { ColorPalette } from "../../theme";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import { getCatalog, type CatalogProduct } from "../../services/api/catalogApi";
+import { createOrder, submitOrder, type CreateOrderParams } from "../../services/api/orderApi";
 import { getDeviceStoreId } from "../../services/deviceSession";
 import { logger } from "../../services/logger";
 
@@ -186,7 +187,29 @@ export default function BuyScreenV3() {
             <Text style={styles.cartItems}>{products.filter((p: SupplierProduct) => (orderQtys[p.id] ?? 0) > 0).map((p: SupplierProduct) => p.name.split(" ")[0]).join(", ")}</Text>
           </View>
           <Text style={styles.cartTotal}>₹{Math.round(cartTotal / 100).toLocaleString("en-IN")}</Text>
-          <Pressable style={styles.orderBtn} accessibilityLabel="Place order" onPress={() => showToast(`Order placed: ${cartItemCount} items · ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")}`)}>
+          <Pressable style={styles.orderBtn} accessibilityLabel="Place order" onPress={async () => {
+            const online = await isOnline();
+            if (!online) { showToast("Order requires internet connection"); return; }
+            const sid = await getDeviceStoreId();
+            if (!sid) { showToast("Store not configured"); return; }
+            const selectedProducts = products.filter((p) => (orderQtys[p.id] ?? 0) > 0);
+            if (selectedProducts.length === 0) { showToast("No items in order"); return; }
+            const supplierId = selectedProducts[0].supplierName ?? "default";
+            const orderItems = selectedProducts.map((p) => ({
+              supplierProductId: p.id,
+              quantity: (orderQtys[p.id] ?? 0) * p.caseSize,
+              unitPrice: p.ptrMinor,
+            }));
+            try {
+              const order = await createOrder(sid, { supplierId, orderType: "standard" as any, items: orderItems });
+              await submitOrder(sid, order.id);
+              showToast(`Order placed: ${cartItemCount} items · ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")}`);
+              logger.debug("BuyV3", `order_submitted:${order.id},items:${orderItems.length}`);
+              setOrderQtys({});
+            } catch (err: any) {
+              showToast(err?.message ?? "Failed to place order");
+            }
+          }}>
             <Text style={styles.orderBtnText}>ORDER →</Text>
           </Pressable>
         </View>
