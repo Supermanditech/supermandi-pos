@@ -887,6 +887,10 @@ jobs:
         run: |
           chmod +x scripts/gates/routing-smoke.sh
           bash scripts/gates/routing-smoke.sh
+          chmod +x scripts/gates/otp-auth-smoke.sh
+          bash scripts/gates/otp-auth-smoke.sh
+          chmod +x scripts/gates/sell-home-smoke.sh
+          bash scripts/gates/sell-home-smoke.sh
 
   # ==========================================================================
   # STAGE-017: Hardened smoke tests — every check has retries, timeouts,

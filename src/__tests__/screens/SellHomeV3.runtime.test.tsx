@@ -1,12 +1,17 @@
 /**
- * V3-HARDEN-063 + V3-HARDEN-064: SELL-home verification tests
+ * V3-HARDEN-063: SELL-home contract verification tests
  *
- * Layer 1: Contract verification — proves production code invariants hold
- * Layer 2: Component interaction — tests mounted sub-components in isolation
+ * These are CODE CONTRACT tests, NOT runtime UI tests.
+ * They verify production invariants (no demo data, no fake pricing,
+ * correct wiring, feature flag propagation) by inspecting source files.
  *
- * NOTE: Full SellScreenV3 mount requires too many native dependencies for jest.
- * Full click-path coverage belongs in e2e-tests/ (Detox/Maestro on device).
- * These tests prove the contracts that make click-paths correct.
+ * IMPORTANT: These do NOT satisfy V3-HARDEN-064 (click-path runtime coverage).
+ * V3-HARDEN-064 requires device/emulator e2e tests defined in:
+ *   e2e-tests/tests/sell-home-clickmap.spec.ts
+ *
+ * V3-HARDEN-064 STATUS: SPEC WRITTEN, NOT YET EXECUTABLE
+ * Reason: Mounted RN component tests fail due to native module dependencies.
+ * Full click-path proof requires Maestro/Detox on emulator.
  */
 const fs = require("fs");
 
