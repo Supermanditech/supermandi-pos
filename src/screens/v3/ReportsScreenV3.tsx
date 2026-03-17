@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator } from "react-native";
+import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator, Linking, Alert } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
+import { printerService } from "../../services/printerService";
 import { getDailySummary } from "../../services/api/dailySummaryApi";
 import type { DailySummary } from "../../services/api/dailySummaryApi";
 
@@ -19,6 +20,7 @@ export default function ReportsScreenV3({ onClose }: Props) {
   const [summary, setSummary] = useState<DailySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [cache, setCache] = useState<Record<string, DailySummary>>({});
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     // DA-059: Return cached data immediately, skip refetch
@@ -43,6 +45,7 @@ export default function ReportsScreenV3({ onClose }: Props) {
         setSummary(data);
         setCache((prev) => ({ ...prev, [activeTab]: data }));
       } catch (err) {
+        setError(true);
         showToast("Could not load report");
       } finally {
         setLoading(false);
@@ -68,7 +71,14 @@ export default function ReportsScreenV3({ onClose }: Props) {
       </View>
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
         {loading && <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />}
-        {!loading && !summary && (
+        {!loading && error && (
+          <View style={{ padding: 32, alignItems: "center" }}>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>⚠</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.error }}>Could not load report</Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Check your connection and try again</Text>
+          </View>
+        )}
+        {!loading && !error && !summary && (
           <View style={{ padding: 32, alignItems: "center" }}>
             <Text style={{ fontSize: 36, marginBottom: 8 }}>📊</Text>
             <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No sales data</Text>
@@ -92,9 +102,15 @@ export default function ReportsScreenV3({ onClose }: Props) {
           ))}
         </View>
         <View style={styles.actionRow}>
-          <Pressable style={styles.actionBtn} onPress={() => showToast("Printing...")}><Text style={styles.actionText}>🖨️ Print</Text></Pressable>
-          <Pressable style={styles.waBtn} onPress={() => showToast("Report shared")}><Svg width={12} height={12} viewBox="0 0 24 24" fill="#fff"><Path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479c0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" /></Svg><Text style={styles.waText}>Share</Text></Pressable>
-          <Pressable style={styles.actionBtn}><Text style={styles.actionText}>📄 PDF</Text></Pressable>
+          <Pressable style={styles.actionBtn} onPress={async () => {
+            const text = `Report: ${activeTab}\nSales: ₹${Math.round(salesTotal).toLocaleString("en-IN")}\nBills: ${billCount}\nCash: ₹${Math.round(cashAmount).toLocaleString("en-IN")}\nUPI: ₹${Math.round(upiAmount).toLocaleString("en-IN")}\nUdhar: ₹${Math.round(dueAmount).toLocaleString("en-IN")}`;
+            try { await printerService.printReceipt(text); showToast("Report printed"); } catch { showToast("Print failed"); }
+          }}><Text style={styles.actionText}>🖨️ Print</Text></Pressable>
+          <Pressable style={styles.waBtn} onPress={() => {
+            const msg = encodeURIComponent(`*SuperMandi ${activeTab} Report*\nSales: ₹${Math.round(salesTotal).toLocaleString("en-IN")} (${billCount} bills)\nCash: ₹${Math.round(cashAmount).toLocaleString("en-IN")}\nUPI: ₹${Math.round(upiAmount).toLocaleString("en-IN")}\nUdhar: ₹${Math.round(dueAmount).toLocaleString("en-IN")}`);
+            Linking.openURL(`whatsapp://send?text=${msg}`).catch(() => showToast("WhatsApp not installed"));
+          }}><Svg width={12} height={12} viewBox="0 0 24 24" fill="#fff"><Path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479c0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" /></Svg><Text style={styles.waText}>Share</Text></Pressable>
+          <Pressable style={styles.actionBtn} onPress={() => Alert.alert("PDF Export", "PDF export will be available in the next update.", [{ text: "OK" }])}><Text style={styles.actionText}>📄 PDF</Text></Pressable>
         </View>
       </ScrollView>
     </View>

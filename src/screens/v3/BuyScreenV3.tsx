@@ -162,7 +162,7 @@ export default function BuyScreenV3() {
             orderQtyCases={orderQtys[item.id] ?? item.moq}
             onQtyChange={(c) => handleQtyChange(item.id, c)}
             onAddToCart={() => showToast(`${item.name} ×${orderQtys[item.id] ?? item.moq} cases added`)}
-            onPress={() => navigation.navigate("V3Compare", { productName: item.name })}
+            onPress={() => navigation.navigate("V3Compare", { productName: item.name, packSize: item.packSize, mrpMinor: item.mrpMinor, currentStock: 0, sellPriceMinor: item.ptrMinor, weeklyNeed: Math.max(1, item.moq) })}
           />
         )}
         ListFooterComponent={

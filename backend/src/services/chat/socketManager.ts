@@ -83,8 +83,7 @@ export async function initChatSocket(
   // CORS: restrict to known portal origins (not wildcard)
   const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
     ? process.env.CORS_ALLOWED_ORIGINS.split(',')
-    : ['https://staging.supermandi.tech', 'https://supermandi.tech',
-       'http://localhost:5173', 'http://localhost:5174', 'http://localhost:4001'];
+    : ['https://staging.supermandi.tech', 'https://supermandi.tech'];
 
   const io = new Server(httpServer, {
     path: '/ws/chat',

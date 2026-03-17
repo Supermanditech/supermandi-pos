@@ -123,9 +123,13 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
     }
 
     // Single store or storeId provided — create device token
-    const store = req.body.storeId
-      ? storeResult.rows.find((s: any) => s.id === req.body.storeId) ?? storeResult.rows[0]
-      : storeResult.rows[0];
+    let store;
+    if (req.body.storeId) {
+      store = storeResult.rows.find((s: any) => s.id === req.body.storeId);
+      if (!store) { return res.status(400).json({ error: { code: "INVALID_STORE", message: "Requested store not associated with this phone number" } }); }
+    } else {
+      store = storeResult.rows[0];
+    }
 
     const token = crypto.randomBytes(32).toString("hex");
 

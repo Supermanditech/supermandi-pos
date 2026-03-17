@@ -18,6 +18,7 @@ export default function OTPScreenV3() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const route = useRoute<any>();
   const phone = route.params?.phone ?? "";
+  React.useEffect(() => { if (!phone) { showToast("Phone number missing"); navigation.goBack(); } }, [phone, navigation]);
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);

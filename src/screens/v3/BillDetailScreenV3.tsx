@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { View, Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { View, Pressable, ScrollView, StyleSheet, Text, Linking } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
@@ -67,7 +67,10 @@ export default function BillDetailScreenV3({ billRef, date, method, totalMinor, 
         }}>
           <Text style={styles.printText}>{printing ? "Printing..." : "🖨️ Reprint"}</Text>
         </Pressable>
-        <Pressable style={styles.waBtn} onPress={() => showToast("Bill shared on WhatsApp")}>
+        <Pressable style={styles.waBtn} onPress={() => {
+          const msg = encodeURIComponent(`*Bill: ${billRef}*\n${method}\n${items.length} items\n*Total: ₹${total.toLocaleString("en-IN")}*\n\nThank you!\n— SuperMandi POS`);
+          Linking.openURL(`whatsapp://send?text=${msg}`).catch(() => showToast("WhatsApp not installed"));
+        }}>
           <Text style={styles.waText}>📱 WhatsApp</Text>
         </Pressable>
       </View>

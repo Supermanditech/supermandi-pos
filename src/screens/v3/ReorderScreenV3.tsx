@@ -20,6 +20,7 @@ export default function ReorderScreenV3({ onClose }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [items, setItems] = useState<ReorderItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
 
@@ -52,6 +53,7 @@ export default function ReorderScreenV3({ onClose }: Props) {
         });
         setItems(mapped);
       } catch (err) {
+        setLoadError(true);
         showToast("Could not load reorder suggestions");
       } finally {
         setLoading(false);
@@ -66,7 +68,14 @@ export default function ReorderScreenV3({ onClose }: Props) {
       <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Reorder Suggestions</Text><View style={{ width: 30 }} /></View>
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
         {loading && <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />}
-        {!loading && items.length === 0 && (
+        {!loading && loadError && (
+          <View style={{ padding: 32, alignItems: "center" }}>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>⚠</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.error }}>Could not load suggestions</Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Check connection and try again</Text>
+          </View>
+        )}
+        {!loading && !loadError && items.length === 0 && (
           <View style={{ padding: 32, alignItems: "center" }}>
             <Text style={{ fontSize: 36, marginBottom: 8 }}>✅</Text>
             <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>All stock levels healthy</Text>

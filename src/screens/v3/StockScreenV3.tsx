@@ -42,6 +42,13 @@ export default function StockScreenV3({ onClose }: Props) {
     })();
   }, []);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return items;
+    const q = searchQuery.toLowerCase();
+    return items.filter((i) => i.name.toLowerCase().includes(q));
+  }, [items, searchQuery]);
+
   const totalProducts = items.length;
   const lowCount = items.filter(i => i.status === "low").length;
   const outCount = items.filter(i => i.status === "out").length;
@@ -69,11 +76,11 @@ export default function StockScreenV3({ onClose }: Props) {
 
       <View style={styles.searchBar}>
         <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth={2}><Circle cx={11} cy={11} r={8} /><Path d="M21 21l-4.35-4.35" /></Svg>
-        <TextInput style={styles.searchInput} placeholder="Search product..." placeholderTextColor={colors.textTertiary} />
+        <TextInput style={styles.searchInput} placeholder="Search product..." placeholderTextColor={colors.textTertiary} value={searchQuery} onChangeText={setSearchQuery} />
       </View>
 
       <FlatList
-        data={items}
+        data={filteredItems}
         keyExtractor={(_, i) => String(i)}
         ListEmptyComponent={!loading ? <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>📦</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No inventory</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Add products to see stock levels here</Text></View> : null}
         renderItem={({ item }) => (

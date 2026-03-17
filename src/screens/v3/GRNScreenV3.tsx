@@ -24,6 +24,7 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [items, setItems] = useState<GRNItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [activeTab, setActiveTab] = useState<"po" | "adhoc">("po");
   // V3-042: Load pending PO items on mount
   useEffect(() => {
@@ -51,7 +52,7 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
         }
         if (mounted) setItems(allItems);
       } catch (err) {
-        if (mounted) showToast("Could not load pending orders");
+        if (mounted) { setLoadError(true); showToast("Could not load pending orders"); }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -100,7 +101,14 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
 
       <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
         {loading && <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />}
-        {!loading && items.length === 0 && (
+        {!loading && loadError && (
+          <View style={{ padding: 32, alignItems: "center" }}>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>⚠</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.error }}>Could not load orders</Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Check connection and try again</Text>
+          </View>
+        )}
+        {!loading && !loadError && items.length === 0 && (
           <View style={{ padding: 32, alignItems: "center" }}>
             <Text style={{ fontSize: 36, marginBottom: 8 }}>📋</Text>
             <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No pending deliveries</Text>
