@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from "react";
-import { View, FlatList, TextInput, Pressable, StyleSheet, Text, ScrollView } from "react-native";
+import { View, FlatList, TextInput, Pressable, StyleSheet, Text, ScrollView, ActivityIndicator } from "react-native";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 
@@ -7,26 +7,26 @@ import PurchaseItemCardV3, { type PurchaseItemData } from "../../components/v3/P
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
+import { useProductsStore } from "../../stores/productsStore";
+import { recordManualInward } from "../../services/api/inventoryApi";
+import { getPurchaseHistory } from "../../services/api/inventoryApi";
 
-// STG-563: Counter Purchase screen — supplier at counter, scan products, full metadata entry
+// V3-041: Counter Purchase screen — wire real barcode lookup + createPurchase API
 
 type CounterPurchaseScreenV3Props = {
   onClose: () => void;
 };
 
-// Demo scanned items
-const DEMO_ITEMS: PurchaseItemData[] = [
-  { barcode: "8901234567890", name: "Parle-G Gold 100g", brand: "Parle", hsnCode: "1905", gstPct: 18, state: "repeat", lastPurchasePrice: 8.5, lastPurchaseQty: 2, lastPurchaseDate: "5 Mar", lastSupplier: "ABC Dist.", qtyCases: 2, purchasePrice: "8.50", sellPrice: "10.00", caseSize: 48 },
-  { barcode: "8901234500001", name: "Tata Tea Premium 250g", brand: "Tata", hsnCode: "0902", gstPct: 5, state: "existing", qtyCases: 1, purchasePrice: "", sellPrice: "80.00", caseSize: 24 },
-  { barcode: "8907890123456", state: "new", qtyCases: 1, purchasePrice: "", sellPrice: "", caseSize: 24 },
-];
-
 export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScreenV3Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [items, setItems] = useState<PurchaseItemData[]>(DEMO_ITEMS);
+  const [items, setItems] = useState<PurchaseItemData[]>([]);
   const [barcodeInput, setBarcodeInput] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [supplierName, setSupplierName] = useState("");
+  const [invoiceNo, setInvoiceNo] = useState("");
+  const getProductByBarcode = useProductsStore((s) => s.getProductByBarcode);
 
   const handleQtyChange = useCallback((idx: number, qty: number) => {
     setItems((prev) => prev.map((it, i) => i === idx ? { ...it, qtyCases: qty } : it));
@@ -40,6 +40,72 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
     setItems((prev) => prev.map((it, i) => i === idx && it.lastPurchasePrice ? { ...it, purchasePrice: String(it.lastPurchasePrice), qtyCases: it.lastPurchaseQty ?? it.qtyCases } : it));
     showToast("Same as last order applied");
   }, []);
+
+  // V3-041: Real barcode lookup — checks productsStore first, then marks as new
+  const handleBarcodeScan = useCallback(async (barcode: string) => {
+    if (!barcode.trim()) return;
+    // Prevent duplicate scan
+    if (items.some((it) => it.barcode === barcode.trim())) {
+      showToast("Already scanned");
+      setBarcodeInput("");
+      return;
+    }
+    const product = getProductByBarcode(barcode.trim());
+    if (product) {
+      // Known product — existing in store inventory
+      const newItem: PurchaseItemData = {
+        barcode: product.barcode ?? barcode.trim(),
+        name: product.name,
+        brand: product.category ?? undefined,
+        state: "existing" as const,
+        qtyCases: 1,
+        purchasePrice: product.priceMinor ? String(product.priceMinor / 100) : "",
+        sellPrice: product.priceMinor ? String(product.priceMinor / 100) : "",
+        caseSize: 1,
+      };
+      setItems((prev) => [newItem, ...prev]);
+      showToast(`Added: ${product.name}`);
+    } else {
+      // Unknown barcode — new product
+      const newItem: PurchaseItemData = {
+        barcode: barcode.trim(),
+        state: "new" as const,
+        qtyCases: 1,
+        purchasePrice: "",
+        sellPrice: "",
+        caseSize: 1,
+      };
+      setItems((prev) => [newItem, ...prev]);
+      showToast("New product — fill details below");
+    }
+    setBarcodeInput("");
+  }, [items, getProductByBarcode]);
+
+  // V3-041: Confirm purchase — record manual inward via API
+  const handleConfirm = useCallback(async () => {
+    if (items.length === 0) { showToast("No items to save"); return; }
+    const incomplete = items.find((it) => !it.purchasePrice || parseFloat(it.purchasePrice) <= 0);
+    if (incomplete) { showToast("Enter purchase price for all items"); return; }
+    setSaving(true);
+    try {
+      const txnItems = items.map((it) => ({
+        productId: it.barcode, // Uses barcode as productId for new products
+        quantity: it.qtyCases * (it.caseSize ?? 1),
+        unitCost: Math.round(parseFloat(it.purchasePrice) * 100), // Convert to minor units
+      }));
+      await recordManualInward(
+        txnItems,
+        invoiceNo ? `Invoice: ${invoiceNo}` : undefined,
+        supplierName ? { name: supplierName } : null,
+      );
+      showToast("Purchase confirmed! Stock updated.");
+      setTimeout(onClose, 1200);
+    } catch (err) {
+      showToast("Failed to save purchase — check connection");
+    } finally {
+      setSaving(false);
+    }
+  }, [items, invoiceNo, supplierName, onClose]);
 
   const totalAmount = items.reduce((s, it) => {
     const price = parseFloat(it.purchasePrice) || 0;
@@ -73,7 +139,7 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
           <TextInput style={styles.scanInput} value={barcodeInput} onChangeText={setBarcodeInput} placeholder="Scan barcode or type product name..." placeholderTextColor={colors.textTertiary} autoFocus />
           <View style={styles.readyDot} />
           <Text style={styles.readyText}>READY</Text>
-          <Pressable style={styles.scanSubmit} onPress={() => { setBarcodeInput(""); showToast("Product scanned"); }}><Text style={styles.scanSubmitText}>↵</Text></Pressable>
+          <Pressable style={styles.scanSubmit} onPress={() => handleBarcodeScan(barcodeInput)}><Text style={styles.scanSubmitText}>↵</Text></Pressable>
         </View>
         <Text style={styles.scanHint}>Scan continuously — each barcode auto-adds below</Text>
       </View>
@@ -81,12 +147,12 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
       {/* Supplier selector */}
       <View style={styles.supplierRow}>
         <Text style={styles.supplierLabel}>SUPPLIER:</Text>
-        <View style={styles.supplierSelect}><Text style={styles.supplierText}>ABC Distributors (GSTIN: 27AABCU...)</Text></View>
+        <TextInput style={[styles.supplierSelect, { fontSize: 12, fontWeight: "600", color: colors.textPrimary }]} value={supplierName} onChangeText={setSupplierName} placeholder="Enter supplier name..." placeholderTextColor={colors.textTertiary} />
         <Pressable style={styles.supplierAdd}><Text style={styles.supplierAddText}>+</Text></Pressable>
       </View>
       <View style={styles.invoiceRow}>
         <Text style={styles.invoiceLabel}>Invoice #:</Text>
-        <TextInput style={styles.invoiceInput} placeholder="Enter invoice no." defaultValue="INV-2026-0458" placeholderTextColor={colors.textTertiary} />
+        <TextInput style={styles.invoiceInput} placeholder="Enter invoice no." value={invoiceNo} onChangeText={setInvoiceNo} placeholderTextColor={colors.textTertiary} />
         <Text style={styles.invoiceDate}>16 Mar 2026</Text>
       </View>
 
@@ -97,6 +163,13 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
           <Pressable onPress={() => showToast("Add manually")}><Text style={styles.addManual}>+ Add Manually</Text></Pressable>
         </View>
 
+        {items.length === 0 && (
+          <View style={{ padding: 24, alignItems: "center" }}>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>📦</Text>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textSecondary }}>No items scanned yet</Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4, textAlign: "center" }}>Scan a barcode or type product name above to start adding items</Text>
+          </View>
+        )}
         {items.map((item, idx) => (
           <PurchaseItemCardV3
             key={item.barcode}
@@ -119,7 +192,7 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
       {/* Footer summary */}
       <View style={styles.footer}>
         <View style={styles.footerTop}>
-          <Text style={styles.footerMeta}>{items.length} items · 1 supplier · INV-2026-0458</Text>
+          <Text style={styles.footerMeta}>{items.length} items{supplierName ? ` · ${supplierName}` : ""}{invoiceNo ? ` · ${invoiceNo}` : ""}</Text>
           <Text style={styles.footerCount}>{items.filter(i => i.state === "repeat").length} repeat · {items.filter(i => i.state === "new").length} new</Text>
         </View>
         <View style={styles.footerRow}><Text style={styles.footerLabel}>Subtotal</Text><Text style={styles.footerValue}>₹{Math.round(totalAmount).toLocaleString("en-IN")}</Text></View>
@@ -131,7 +204,9 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
             <Svg width={12} height={12} viewBox="0 0 24 24" fill="#fff"><Path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479c0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" /><Path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.638l4.72-1.391A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" /></Svg>
             <Text style={styles.waBtnText}>Send</Text>
           </Pressable>
-          <Pressable style={styles.confirmBtn} onPress={() => { showToast("Purchase confirmed! Stock updated."); setTimeout(onClose, 1500); }}><Text style={styles.confirmText}>Confirm</Text></Pressable>
+          <Pressable style={[styles.confirmBtn, saving && { opacity: 0.6 }]} onPress={handleConfirm} disabled={saving}>
+            {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.confirmText}>Confirm</Text>}
+          </Pressable>
         </View>
       </View>
     </View>
