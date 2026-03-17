@@ -272,3 +272,164 @@ adminCatalogRouter.patch(
     }
   }
 );
+
+// =============================================================================
+// AUDIT-007: SuperAdmin Margin Control
+// POST /api/v1/admin/catalog/supplier-products/:id/margin
+// Set % or fixed margin on a supplier product before publishing to retailers
+// =============================================================================
+adminCatalogRouter.post(
+  "/catalog/supplier-products/:id/margin",
+  requirePermission("catalog", "write"),
+  async (req, res) => {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    const { id } = req.params;
+    if (!id || !isValidUUID(id)) {
+      return res.status(400).json({ error: "id must be a valid UUID" });
+    }
+
+    const { marginPct, marginFixedMinor } = req.body as {
+      marginPct?: number;
+      marginFixedMinor?: number;
+    };
+
+    if (marginPct === undefined && marginFixedMinor === undefined) {
+      return res.status(400).json({ error: "Provide marginPct (e.g., 15) or marginFixedMinor (e.g., 500)" });
+    }
+
+    if (marginPct !== undefined && (marginPct < 0 || marginPct > 100)) {
+      return res.status(400).json({ error: "marginPct must be between 0 and 100" });
+    }
+
+    try {
+      // Get current purchase price
+      const product = await pool.query(
+        `SELECT purchase_price FROM catalog.supplier_products WHERE id = $1`,
+        [id]
+      );
+      if (product.rows.length === 0) {
+        return res.status(404).json({ error: "Supplier product not found" });
+      }
+
+      const purchasePrice = product.rows[0].purchase_price;
+
+      // Calculate retail price
+      let retailPrice: number;
+      if (marginPct !== undefined) {
+        retailPrice = Math.round(purchasePrice * (1 + marginPct / 100));
+      } else {
+        retailPrice = purchasePrice + (marginFixedMinor ?? 0);
+      }
+
+      // Update margin columns
+      await pool.query(
+        `UPDATE catalog.supplier_products
+         SET admin_margin_pct = $2,
+             admin_margin_fixed_minor = $3,
+             admin_retail_price_minor = $4,
+             admin_approved_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $1`,
+        [id, marginPct ?? null, marginFixedMinor ?? null, retailPrice]
+      );
+
+      log.info(`[AUDIT-007] Margin set for supplier product ${id}: pct=${marginPct}, fixed=${marginFixedMinor}, retail=${retailPrice}`);
+
+      res.json({
+        success: true,
+        supplierProductId: id,
+        purchasePrice,
+        marginPct: marginPct ?? null,
+        marginFixedMinor: marginFixedMinor ?? null,
+        retailPrice,
+      });
+    } catch (err) {
+      log.error(`[AUDIT-007] Margin update failed:`, asError(err));
+      res.status(500).json({ error: "Failed to set margin" });
+    }
+  }
+);
+
+// =============================================================================
+// AUDIT-008: Get margin-applied retail price for retailer view
+// GET /api/v1/admin/catalog/supplier-products/:id/pricing
+// =============================================================================
+adminCatalogRouter.get(
+  "/catalog/supplier-products/:id/pricing",
+  requirePermission("catalog", "read"),
+  async (req, res) => {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    const { id } = req.params;
+    if (!id || !isValidUUID(id)) {
+      return res.status(400).json({ error: "id must be a valid UUID" });
+    }
+
+    try {
+      const result = await pool.query(
+        `SELECT id, name, purchase_price, mrp, admin_margin_pct, admin_margin_fixed_minor, admin_retail_price_minor, admin_approved_at
+         FROM catalog.supplier_products WHERE id = $1`,
+        [id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Supplier product not found" });
+      }
+
+      const row = result.rows[0];
+      res.json({
+        id: row.id,
+        name: row.name,
+        purchasePrice: row.purchase_price,
+        mrp: row.mrp,
+        marginPct: row.admin_margin_pct,
+        marginFixedMinor: row.admin_margin_fixed_minor,
+        retailPrice: row.admin_retail_price_minor,
+        approvedAt: row.admin_approved_at,
+      });
+    } catch (err) {
+      log.error(`[AUDIT-008] Pricing fetch failed:`, asError(err));
+      res.status(500).json({ error: "Failed to fetch pricing" });
+    }
+  }
+);
+
+// =============================================================================
+// AUDIT-005: SKU-level approval
+// PATCH /api/v1/admin/catalog/supplier-products/:id/approve
+// =============================================================================
+adminCatalogRouter.patch(
+  "/catalog/supplier-products/:id/approve",
+  requirePermission("catalog", "write"),
+  async (req, res) => {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    const { id } = req.params;
+    if (!id || !isValidUUID(id)) {
+      return res.status(400).json({ error: "id must be a valid UUID" });
+    }
+
+    try {
+      const result = await pool.query(
+        `UPDATE catalog.supplier_products
+         SET admin_approved_at = NOW(), updated_at = NOW()
+         WHERE id = $1 AND admin_approved_at IS NULL
+         RETURNING id, name`,
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Product not found or already approved" });
+      }
+
+      log.info(`[AUDIT-005] SKU approved: ${result.rows[0].name} (${id})`);
+      res.json({ success: true, approved: result.rows[0] });
+    } catch (err) {
+      log.error(`[AUDIT-005] SKU approval failed:`, asError(err));
+      res.status(500).json({ error: "Failed to approve SKU" });
+    }
+  }
+);

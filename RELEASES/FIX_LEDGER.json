@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 297,
+  "version": 298,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6665,7 +6665,7 @@
       "file": "src/screens/v3/SellScreenV3.tsx",
       "start_line": 1,
       "end_line": 358,
-      "checksum": "dd56ca036bd1181e",
+      "checksum": "e47299489cfb05d8",
       "description": "SellScreenV3 — product grid + Retail/Bulk toggle + CartSheetV3 wired",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
       "depends_on": null,
@@ -7800,6 +7800,40 @@
         "operator_approved": true
       },
       "checklist_version": 5
+    },
+    {
+      "ticket": "AUDIT-007",
+      "file": "backend/src/routes/v1/admin/catalog.ts",
+      "start_line": 1,
+      "end_line": 436,
+      "checksum": "f5b3bfe548f83ac5",
+      "description": "Admin margin control + SKU approval",
+      "test_file": "N/A",
+      "status": "ACTIVE",
+      "checklist_version": 5,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true
+      }
     }
   ],
   "machine_state_version": 269,

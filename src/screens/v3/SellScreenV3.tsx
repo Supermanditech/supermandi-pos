@@ -135,9 +135,9 @@ export default function SellScreenV3() {
   });
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Map products to tile data
+  // AUDIT-009: Map ALL products to tile data (FlatList handles virtualization)
   const tileProducts: ProductTileData[] = useMemo(
-    () => products.slice(0, 30).map(productToTileData),
+    () => products.map(productToTileData),
     [products]
   );
 
