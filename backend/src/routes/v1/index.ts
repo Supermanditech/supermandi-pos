@@ -120,6 +120,8 @@ import { consentRouter } from "./consent";  // STG-485: DPDP consent records
 import { posOtpAuthRouter } from "./pos/otpAuth";
 // V3-016: Wholesale B2B routes
 import { posWholesaleRouter } from "./pos/wholesaleFields";
+// AUDIT-013: SSE real-time sync
+import { posSyncSseRouter } from "./pos/syncEvents.sse";
 import { posLastPurchaseRouter } from "./pos/lastPurchase";
 import { posMasterCatalogRouter } from "./pos/masterCatalog";
 import { posSalesVelocityRouter } from "./pos/salesVelocity";
@@ -177,6 +179,7 @@ v1Router.use("/pos", posLastPurchaseRouter);
 v1Router.use("/pos", posMasterCatalogRouter);
 v1Router.use("/pos", posSalesVelocityRouter);
 v1Router.use("/pos/translations", posTranslationsRouter);
+v1Router.use("/pos", posSyncSseRouter); // AUDIT-013: SSE sync events
 v1Router.use("/", consentRouter);  // STG-485: DPDP consent API (available to POS + portals)
 v1Router.use("/reorder", reorderRouter);
 v1Router.use("/orders", ordersRouter);
