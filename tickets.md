@@ -1,0 +1,4632 @@
+# V3 Splash/Auth/Store-Connection Tickets
+
+Date: 2026-03-17
+Audience: Claude
+Prototype source: `RELEASES/supermandi-pos-v3.html`
+Scope: The v3 splash screen shown in the prototype (`splash`) and the full path behind it: boot UI, navigation, session wiring, OTP auth, ui-status, device/store backend, DB schema, migrations, Cloud Run/gateway parity, business edge cases, and regression coverage.
+
+## High-confidence findings
+
+Use these code paths as source of truth. Existing release audits overstate completeness for this flow.
+
+1. Prototype vs app entrypoint drift
+   - Prototype splash is the white gradient boot screen with `Connecting to store...` and a bottom `Continue` CTA.
+   - `App.tsx:136,144` still boots the app with legacy `SplashScreen`, not `SplashScreenV3`.
+   - `src/screens/v3/SplashScreenV3.tsx` exists but is currently unused.
+
+2. Legacy fallback still leaks into v3 boot
+   - `src/screens/SplashScreen.tsx:121` routes no-session users to `V3Phone`.
+   - `src/screens/SplashScreen.tsx:231-237` still sends the timeout/error recovery path to `EnrollDevice` via `Continue Offline`.
+   - Result: default v3 auth is phone+OTP, but recovery still drops users into old code-based activation.
+
+3. Splash prototype parity is incomplete even in `SplashScreenV3`
+   - `src/screens/v3/SplashScreenV3.tsx` has no bottom `Continue` CTA, no explicit retry/error UI, and adds a `v3.0` watermark not present in the prototype.
+   - Status copy is dynamic (`Loading...`, `Welcome!`, `Ready!`) instead of the locked prototype copy (`Connecting to store...`).
+
+4. OTP backend is not aligned with the canonical schema
+   - `backend/src/routes/v1/pos/otpAuth.ts:24-25,106-107` still queries `stores` + `users` and joins on `s.owner_id`.
+   - The runtime fallback `stores` table created in `backend/src/db/ensureSchema.ts` does not expose `owner_id`, `store_name`, `store_code`, or `status` in the shape this route expects.
+   - Current `public.stores` view (`backend/migrations/184_sa_p1_006_allowed_payment_methods.sql:20-49`) also does not expose `owner_id`.
+   - There is no corresponding migration in this repo that creates a compatible `public.users` table/view for this route.
+
+5. OTP device creation is incompatible with current device schema direction
+   - `backend/src/routes/v1/pos/otpAuth.ts:133-135` inserts `pos_devices.id` as `otp-${phone}-${Date.now()}`.
+   - `backend/migrations/163_wave3b_type_normalization.sql:345` converts `pos_devices.id` to UUID.
+   - Result: OTP auth and migrated DB assumptions are in conflict.
+
+6. Client token contract is inconsistent
+   - OTP backend returns a random hex device token, not a JWT.
+   - `src/services/deviceSession.ts:243` still tries to decode device tokens as JWT via `atob(parts[1])`.
+   - `src/services/api/apiClient.ts:392-395` only clears session when the error string equals `device_unauthorized`, while backend middleware emits `DEVICE_UNAUTHORIZED`.
+
+7. ui-status can still let invalid sessions drift into POS
+   - `backend/src/middleware/deviceToken.ts` tracks `tokenExpired` and `tokenRevoked`.
+   - `requireDeviceTokenAllowInactive` does not enforce those states before returning status context.
+   - `src/services/api/uiStatusApi.ts:154-182` converts any non-OK `ui-status` response into safe defaults instead of distinguishing auth failure from offline failure.
+
+8. Store metadata hydration is incomplete for OTP login
+   - `src/screens/v3/OTPScreenV3.tsx` and `src/screens/v3/StoreSelectScreenV3.tsx` save only `deviceId`, `storeId`, and `deviceToken`.
+   - They do not persist `storeName` or `storeCode` into `settingsStore`, so first-render v3 surfaces can show fallback branding until another sync path runs.
+   - `src/services/sseClient.ts` exports `startSSEClient()` / `stopSSEClient()` but there are no call sites.
+
+9. Test coverage is missing where the risk is highest
+   - No local tests were found for `backend/src/routes/v1/pos/otpAuth.ts`.
+   - No local tests were found for `PhoneScreenV3`, `OTPScreenV3`, `StoreSelectScreenV3`, or `SplashScreenV3`.
+
+## Old flow vs v3 target
+
+| Area | Old / current code | v3 target |
+|---|---|---|
+| App boot | Legacy `SplashScreen` mounted in navigator | Single v3 splash gate |
+| Recovery path | Can still redirect to `EnrollDevice` | Must stay inside v3 phone+OTP flow unless user explicitly uses activation flow |
+| Auth model | Mixed: OTP on happy path, code-based enrollment on fallback path | One primary path: phone -> OTP -> optional store select -> POS |
+| Device creation | Legacy `EnrollDevice` applies richer invariants than OTP auth | OTP auth must meet the same device/store invariants or call shared helper |
+| Token semantics | Random opaque token in backend, partial JWT assumptions in client | One opaque-token contract end to end |
+| Store hydration | Enroll flow sets `storeName` / `storeCode`, OTP flow does not | Both auth paths hydrate identical local state |
+| Boot auth check | `ui-status` non-OK becomes default success | Offline/network failures may fallback, auth failures may not |
+
+## Ticket order
+
+Implement in this order:
+
+1. `V3-BOOT-001`
+2. `V3-NAV-002`
+3. `V3-CLIENT-003`
+4. `V3-BE-004`
+5. `V3-API-005`
+6. `V3-DB-006`
+7. `V3-GCP-007`
+8. `V3-BIZ-008`
+9. `V3-REG-009`
+
+---
+
+## V3-BOOT-001 - Unify splash entrypoint and restore prototype UI parity
+
+Priority: P0
+Layers: UI/UX, wiring, navigation
+
+Problem:
+- The prototype splash is the requested screen, but the app still boots into legacy `SplashScreen`.
+- `SplashScreenV3` is closer visually but is not wired into the navigator and still misses prototype elements.
+
+Scope:
+- Replace the mounted splash entrypoint with a single canonical v3 splash implementation.
+- Match the prototype for:
+  - white to pale-blue gradient background
+  - SuperMandi mark
+  - `Point of Sale`
+  - spinner
+  - `Connecting to store...`
+  - bottom `Continue` CTA
+- Remove the `v3.0` watermark from the splash screen.
+
+Files:
+- `App.tsx`
+- `src/screens/SplashScreen.tsx`
+- `src/screens/v3/SplashScreenV3.tsx`
+- Optional: extract shared branded splash component if that reduces duplication
+
+Acceptance:
+- Cold start lands on a splash screen that visually matches `RELEASES/supermandi-pos-v3.html`.
+- There is only one production splash implementation in active use.
+- Screen has testIDs/accessibility labels for logo, loading text, spinner, and CTA.
+
+---
+
+## V3-NAV-002 - Remove legacy activation leakage from the v3 boot funnel
+
+Priority: P0
+Layers: navigation, recovery UX, regression
+
+Problem:
+- Timeout/error recovery from splash still routes to `EnrollDevice`, which is the old activation flow.
+- That creates a mixed-model experience and reintroduces old code paths after the user has already entered the v3 funnel.
+
+Scope:
+- Make the v3 boot graph explicit:
+  - valid session -> `SellScan`
+  - no session -> `V3Phone`
+  - blocked -> `DeviceBlocked`
+  - force update -> `ForceUpdate`
+  - timeout/network failure -> retry and/or continue within the v3 auth flow
+- Keep `EnrollDevice` reachable only for explicit code-based activation use cases such as deep links or an intentional alternate flow.
+- Ensure `Continue` CTA uses current session state instead of hardcoded navigation.
+
+Files:
+- `src/screens/SplashScreen.tsx`
+- `src/screens/v3/SplashScreenV3.tsx`
+- `App.tsx`
+- `src/screens/EnrollDeviceScreen.tsx`
+
+Acceptance:
+- No default splash recovery path routes to `EnrollDevice`.
+- Back/replace behavior is deterministic and documented.
+- Timeout does not flash old screens before returning to the v3 auth path.
+
+---
+
+## V3-CLIENT-003 - Normalize client auth/token/store-state handling
+
+Priority: P0
+Layers: client wiring, auth contract, UX correctness
+
+Problem:
+- Client assumes device tokens may be JWTs even though OTP auth returns opaque random tokens.
+- Unauthorized handling depends on the wrong error string.
+- OTP login does not hydrate store name/code, and no runtime sync client is started after login.
+
+Scope:
+- Remove JWT decoding assumptions from device-token validity checks or move them behind a true JWT-only guard.
+- Normalize unauthorized handling in `apiClient` using backend error codes:
+  - `DEVICE_UNAUTHORIZED`
+  - `TOKEN_EXPIRED`
+  - `TOKEN_REVOKED`
+- Update auth screens to read `ApiError.payload` correctly and show backend message text instead of generic `Request failed (...)`.
+- Persist `storeName` and `storeCode` after OTP login and store selection.
+- Start/stop `startSSEClient()` (or an equivalent status sync bootstrap) from the POS root and logout path.
+
+Files:
+- `src/services/deviceSession.ts`
+- `src/services/api/apiClient.ts`
+- `src/screens/v3/PhoneScreenV3.tsx`
+- `src/screens/v3/OTPScreenV3.tsx`
+- `src/screens/v3/StoreSelectScreenV3.tsx`
+- `src/screens/v3/PosRootLayoutV3.tsx`
+- `src/stores/settingsStore.ts`
+
+Acceptance:
+- Invalid/revoked tokens clear session and do not trap the user inside a broken POS state.
+- OTP auth surfaces friendly backend messages.
+- First render after OTP login shows the actual store name/code.
+- Runtime settings/store updates begin once the POS root mounts.
+
+---
+
+## V3-BE-004 - Rewrite POS OTP backend against canonical store/user/device models
+
+Priority: P0
+Layers: backend, backend API, auth, data model
+
+Problem:
+- `otpAuth.ts` still uses legacy `stores`/`users` joins that do not match the current canonical schema.
+- The route also expects columns such as `owner_id`, `store_name`, `store_code`, and `status` that do not match the runtime `stores` fallback table shape.
+- Device creation in OTP auth bypasses richer enrollment/device lifecycle rules and uses non-UUID IDs.
+
+Scope:
+- Rewrite `send-otp` and `verify-otp` against canonical data:
+  - `platform.stores`
+  - `auth.users`
+  - `auth.store_users` and/or retailer-phone ownership mapping
+- Do not depend on `public.stores.owner_id` or `public.users`.
+- Generate canonical device rows:
+  - UUID device IDs
+  - token expiry fields populated consistently
+  - label/device metadata/fingerprint handled consistently
+  - re-enrollment and duplicate-device semantics defined
+- Reject invalid `storeId` instead of silently falling back to the first store.
+- Add backend rate limiting and cryptographically strong OTP generation.
+- Stop any plaintext OTP logging outside explicitly gated dev/test modes.
+
+Files:
+- `backend/src/routes/v1/pos/otpAuth.ts`
+- Shared device/token helpers if needed
+- Any shared auth/store lookup utilities introduced during the rewrite
+
+Acceptance:
+- OTP auth works against the canonical schema without relying on compatibility views that omit required columns.
+- Device insert/update works on DBs where `pos_devices.id` is UUID.
+- Multi-store verification only succeeds for a store the user actually owns.
+- Error responses include stable `code` + user-safe `message`.
+
+---
+
+## V3-API-005 - Harden ui-status and boot gating for expired/revoked/unauthorized sessions
+
+Priority: P0
+Layers: frontend API, backend API, security, regression
+
+Problem:
+- `ui-status` currently behaves like a soft fallback even for auth failures.
+- `requireDeviceTokenAllowInactive` does not block expired/revoked tokens before returning status context.
+- Splash can therefore send a dead session into POS.
+
+Scope:
+- Decide and implement one rule:
+  - offline/network failures may fallback to cached POS mode
+  - auth failures may not
+- Enforce token-expired and token-revoked handling in the read-only status path.
+- Teach `fetchUiStatus` to distinguish:
+  - network timeout / transport error
+  - 401 unauthorized / revoked / expired
+  - 403 inactive device / inactive store
+- Route auth failures to session clear + `V3Phone` or a dedicated recovery state.
+
+Files:
+- `backend/src/middleware/deviceToken.ts`
+- `backend/src/routes/v1/pos/uiStatus.ts`
+- `src/services/api/uiStatusApi.ts`
+- `src/screens/SplashScreen.tsx`
+- `src/screens/v3/SplashScreenV3.tsx`
+
+Acceptance:
+- A revoked or expired token never reaches `SellScan`.
+- Offline users with a still-valid cached session can still continue offline.
+- Boot behavior differs correctly between network failure and auth failure.
+
+---
+
+## V3-DB-006 - Close DB and migration gaps for OTP auth and device creation
+
+Priority: P0
+Layers: DB, migrations, schema parity
+
+Problem:
+- The OTP flow depends on `pos_otp` and on device-row writes that are currently out of sync with the evolved `pos_devices` schema.
+- Repo audit docs already note migration 191 as pending in some environments.
+
+Scope:
+- Verify `backend/migrations/191_pos_otp_table.sql` is part of the required rollout for this flow.
+- If canonical OTP auth needs extra columns or cleanup semantics, add a forward migration instead of ad hoc runtime SQL.
+- Ensure migrate-from-zero covers the final OTP/device schema path.
+- Add schema-level verification for:
+  - `pos_otp`
+  - `pos_devices.id` UUID compatibility
+  - any indexes used by OTP lookup / store selection
+
+Files:
+- `backend/migrations/191_pos_otp_table.sql`
+- Any new migration required by the backend rewrite
+- Migration verification scripts if needed
+
+Acceptance:
+- Empty DB -> all migrations -> OTP auth path works.
+- No backend code depends on table/view columns that migrations do not create.
+- Cloud SQL dry-run for this flow is clean before rollout.
+
+---
+
+## V3-GCP-007 - Add Cloud Run and gateway parity gates for splash/auth rollout
+
+Priority: P1
+Layers: GCP parity, deployment, operations
+
+Problem:
+- The gateway currently proxies `/api/v1/pos/*` to the main backend, but this flow has no explicit parity gate proving the required routes, migrations, and secrets are present in Cloud Run.
+- Existing docs mention pending migrations but there is no implementation ticket tying boot/auth rollout to deploy readiness.
+
+Scope:
+- Add staging/prod smoke checks for:
+  - `POST /api/v1/pos/auth/send-otp`
+  - `POST /api/v1/pos/auth/verify-otp`
+  - `GET /api/v1/pos/ui-status`
+  - `POST /api/v1/pos/token/refresh`
+- Fail deploy/readiness if migration 191 or any follow-up migration is pending.
+- Validate required secrets/config for OTP delivery and any auth dependencies used by this path.
+- Document that this flow still depends on the monolith-backed POS router unless/until microservice parity is implemented.
+
+Files:
+- `backend/services/api-gateway/src/config.ts`
+- `backend/src/startup/validateGcp.ts`
+- `backend/scripts/migrate.js`
+- Deploy/smoke scripts used in staging and Cloud Run
+
+Acceptance:
+- There is a repeatable smoke test proving the boot/auth flow through the gateway in GCP.
+- Missing migration or missing secret blocks rollout early instead of failing at runtime.
+
+---
+
+## V3-BIZ-008 - Lock business rules and edge cases for phone+OTP store connection
+
+Priority: P1
+Layers: business logic, UX copy, backend validation
+
+Problem:
+- The happy path exists in fragments, but business rules are not consistently enforced across splash, OTP auth, store selection, and device creation.
+
+Required edge cases to implement and verify:
+- Phone exists but no ACTIVE store
+- Phone owns multiple stores and provided `storeId` is invalid
+- Store becomes inactive between `send-otp` and `verify-otp`
+- OTP expires while user is on store-select screen
+- OTP resend after repeated attempts / lockout
+- Existing device token is revoked while app is offline
+- Same handset re-authenticates to same store
+- Same handset re-authenticates to a different store
+- Store has reached `max_devices`
+- Store metadata not yet hydrated when POS first renders
+
+Files:
+- `src/screens/v3/PhoneScreenV3.tsx`
+- `src/screens/v3/OTPScreenV3.tsx`
+- `src/screens/v3/StoreSelectScreenV3.tsx`
+- `backend/src/routes/v1/pos/otpAuth.ts`
+- Any shared device/store rule helpers
+
+Acceptance:
+- Each edge case has an explicit backend behavior, client message, and navigation result.
+- No silent fallback selects the wrong store or creates the wrong device record.
+
+---
+
+## V3-REG-009 - Add regression coverage for the full splash/auth/store-binding funnel
+
+Priority: P1
+Layers: regression, tests, CI confidence
+
+Problem:
+- This flow currently has almost no targeted automated coverage despite touching initial app boot, auth, device lifecycle, and store binding.
+
+Scope:
+- Add frontend tests for:
+  - mounted splash route
+  - splash timeout/recovery behavior
+  - phone screen success/failure messaging
+  - OTP verify success/failure/timeout
+  - multi-store selector path
+  - invalid token boot handling
+- Add backend tests for:
+  - send-otp against canonical schema
+  - verify-otp multi-store success and invalid-store rejection
+  - UUID-safe device creation
+  - revoked/expired token handling in `ui-status`
+- Add one end-to-end smoke flow for:
+  - no session -> phone -> OTP -> store select -> POS
+
+Files:
+- `src/__tests__/screens/*`
+- `src/__tests__/services/api/*`
+- `backend/tests/*`
+- `e2e-tests/tests/*`
+
+Acceptance:
+- CI fails if boot/auth/store-binding regresses.
+- Test suite covers both the happy path and the known edge-case matrix from `V3-BIZ-008`.
+
+---
+
+## Done means
+
+This screen is only "done" when all of the following are simultaneously true:
+
+- The prototype splash is the real mounted splash.
+- The app no longer falls back into old activation from normal v3 boot recovery.
+- OTP auth uses the canonical schema and device model.
+- Invalid/revoked/expired sessions do not slip through splash into POS.
+- Store metadata is hydrated immediately after OTP auth.
+- Required DB migrations are applied and verified in GCP.
+- Regression tests exist for the funnel end to end.
+
+---
+
+# V3 Staff-Login / Switch-Store Tickets
+
+Date: 2026-03-17
+Audience: Claude
+Prototype source: `RELEASES/supermandi-pos-v3.html`
+Scope: The prototype-derived `login` screen shown after the splash/store-binding flow. The HTML prototype shows `Staff Phone + PIN`, but the approved product direction for implementation is now `PIN only` on a store-bound device.
+
+These tickets are additive. They sit on top of `V3-BOOT-001` through `V3-REG-009` because the prototype login screen only makes sense after the device is already bound to a store.
+
+## High-confidence findings
+
+1. Prototype intent is a store-bound staff-auth screen, not the retailer phone-OTP onboarding screen
+   - `RELEASES/supermandi-pos-v3.html` shows:
+     - `SuperMandi POS`
+     - `SU260305-003 · SuperMandi Store`
+     - `Staff Phone`
+     - `PIN`
+     - `Login →`
+     - `Switch Store ↗`
+   - `RELEASES/pos-prototype.html` explicitly models:
+     - `Splash -> Phone -> OTP -> Store Select -> Staff Login -> Sell Screen`
+   - Current `RELEASES/V3_SCREEN_REGISTRY.md` claims the prototype `login` screen has been reconciled into `PhoneScreenV3 + OTPScreenV3`, but that is not what the prototype HTML actually shows.
+   - Approved implementation override: keep the store-bound staff-login stage, but remove the staff phone field and use `PIN only`.
+
+2. Current v3 navigation bypasses staff login completely
+   - `App.tsx` mounts `V3Phone`, `V3OTP`, and `V3StoreSelect`, but no mounted staff-login route.
+   - `src/screens/v3/OTPScreenV3.tsx` resets directly to `SellScan` on single-store success.
+   - `src/screens/v3/StoreSelectScreenV3.tsx` also resets directly to `SellScan` after store selection.
+
+3. Old-screen references still exist, but the actual screen file is gone
+   - No local `src/screens/StaffLoginScreen.tsx` file exists in this checkout.
+   - Multiple release docs still claim `StaffLoginScreen.tsx` exists and is production-ready.
+   - `src/__tests__/screens/StaffLoginScreen.stg-327.unit.test.ts` is only a countdown helper test, not a real screen test.
+
+4. Current switch flows are broken and drift from the prototype
+   - Prototype action is `Switch Store`.
+   - `src/screens/v3/SettingsScreenV3.tsx` exposes `Switch Staff` and `Logout`, not `Switch Store`.
+   - `src/screens/v3/V3ScreenWrappers.tsx` wires `onSwitchStaff` to `PhoneLogin`, which is not a mounted route in `App.tsx`.
+   - Existing i18n/logout copy still assumes re-enrollment in places, which conflicts with the v3 phone+OTP/store-select model.
+
+5. Staff auth backend and DB already exist, but they are detached from v3 UI
+   - `src/services/api/staffApi.ts` already exposes:
+     - `POST /api/v1/pos/staff/login`
+     - `GET /api/v1/pos/staff/me`
+     - `POST /api/v1/pos/staff/verify-pin`
+   - `backend/src/routes/v1/pos/staff.ts` implements those routes.
+   - `platform.store_staff` already exists via:
+     - `backend/migrations/120_sa_p1_001_store_staff.sql`
+     - `backend/src/db/ensureSchema.ts`
+   - `backend/src/middleware/posStaff.ts` already enforces `x-staff-id` for staff-protected routes.
+
+6. Staff session/state hydration is incomplete
+   - `src/stores/staffSessionStore.ts` exists, but no active v3 login screen populates it.
+   - `src/services/api/apiClient.ts` only sends `x-staff-id` if `staffSessionStore.session` exists.
+   - `src/screens/v3/SettingsScreenV3.tsx` hardcodes `Raju (Manager)` instead of rendering the actual staff session.
+
+7. Staff auth security is below production grade
+   - `backend/src/routes/v1/pos/staff.ts` still authenticates by `phone + PIN`, which no longer matches the approved `PIN only` product direction.
+   - `POST /api/v1/pos/staff/login` has no rate limit, no lockout, and no auth-audit logging.
+   - `POST /api/v1/pos/staff/verify-pin` has only an in-memory per-process limiter, so Cloud Run instance hops can bypass it.
+   - `backend/src/services/authAuditService.ts` exists but is not used by POS staff login.
+   - `PIN only` login requires a unique-per-store PIN lookup design; the current schema only guarantees uniqueness by phone.
+
+8. Business flow is ambiguous between store binding and staff identity
+   - OTP auth binds the device to a store.
+   - Staff login should bind the human operator to that store-bound device.
+   - Current flow skips the second step and therefore allows the POS shell to mount without a real staff session.
+   - Some backend routes require `requirePosStaff`; others only record `x-staff-id` opportunistically, which creates inconsistent behavior.
+
+9. Regression coverage is shallow where it matters
+   - No focused frontend tests were found for a real mounted v3 staff-login screen, because the screen is missing.
+   - No backend route tests were found for `POST /api/v1/pos/staff/login`.
+   - Existing backend tests for `staff/me` and `verify-pin` are mostly schema/contract tests, not route/integration tests.
+
+## Old flow vs v3 target
+
+| Area | Old / current code | v3 target |
+|---|---|---|
+| Store connection | Phone -> OTP -> optional store select | Same |
+| Staff auth | Legacy/stale `StaffLoginScreen` references only; current v3 skips it | Explicit `StaffLoginScreenV3` after device-store binding |
+| Route after OTP | Direct `SellScan` reset | `V3StaffLogin` unless a valid staff session already exists for the same store |
+| Switch action | Settings shows `Switch Staff`; prototype shows `Switch Store` | Bound-store login shows `Switch Store`, POS settings can still offer `Switch Staff` separately |
+| Staff state | `staffSessionStore` exists but is not mounted into boot/auth flow | Staff session populated on login and enforced where required |
+| Store/staff display | Hardcoded fallback values (`SuperMandi Store`, `Raju (Manager)`) | Real `storeCode`, `storeName`, `staff name`, `role` |
+| Security | No durable rate limit/lockout on staff login; login keyed by phone | Unique-per-store PIN lookup, stable error codes, durable throttling/audit |
+| Recovery | Some paths still imply re-enrollment/logout | Staff-session expiry should return to staff login; store switch should return to v3 store-binding flow |
+
+## Ticket order
+
+Implement in this order after `V3-REG-009`:
+
+1. `V3-LOGIN-010`
+2. `V3-NAV-011`
+3. `V3-CLIENT-012`
+4. `V3-BE-013`
+5. `V3-DB-014`
+6. `V3-GCP-015`
+7. `V3-BIZ-016`
+8. `V3-REG-017`
+
+---
+
+## V3-LOGIN-010 - Build the real v3 staff-login screen from the approved prototype override
+
+Priority: P0
+Layers: UI/UX, frontend wiring
+
+Problem:
+- The prototype login screen is a store-bound staff PIN gate.
+- The current app has no mounted screen that matches that UI or purpose.
+
+Scope:
+- Create `StaffLoginScreenV3` and mount it in the app.
+- Match the prototype card style, but apply the product-approved interaction override:
+  - blue mark + `SuperMandi POS`
+  - bound store code and store name in the subtitle
+  - single `PIN` input
+  - primary `Login →` CTA
+  - `Switch Store ↗` secondary action
+- Render actual store metadata from `settingsStore`, not hardcoded placeholders.
+- Add loading, invalid-credentials, locked/rate-limited, no-staff-configured, empty-store-meta, and offline-disabled states.
+- Add testIDs/accessibility labels for:
+  - store header
+  - pin input
+  - login CTA
+  - switch-store action
+
+Files:
+- New: `src/screens/v3/StaffLoginScreenV3.tsx`
+- `App.tsx`
+- Optional shared branded auth card component if it reduces duplication cleanly
+
+Acceptance:
+- The mounted screen visually matches the prototype login card with the approved PIN-only override.
+- Store code/name come from live state.
+- No hardcoded `Raju (Manager)` or fake store name remains in the login surface.
+
+---
+
+## V3-NAV-011 - Insert staff login into the v3 route graph and repair switch flows
+
+Priority: P0
+Layers: navigation, session gating, recovery
+
+Problem:
+- OTP/store-select currently jump straight into `SellScan`.
+- `Switch Staff` points to a dead `PhoneLogin` route.
+- Prototype `Switch Store` behavior does not exist in the active flow.
+
+Scope:
+- Make the route graph explicit:
+  - `Splash -> V3Phone -> V3OTP -> optional V3StoreSelect -> V3StaffLogin -> SellScan`
+  - If device session exists but no valid staff session exists for that store, route to `V3StaffLogin`
+  - If both device session and staff session are valid for the same store, route to `SellScan`
+- Change OTP/store-select success to land on `V3StaffLogin`, not `SellScan`.
+- Replace the dead `PhoneLogin` navigation target.
+- Split the concepts clearly:
+  - `Switch Staff` from settings: clear only staff session, keep device-store session, route to `V3StaffLogin`
+  - `Switch Store` from login: clear staff session and device-store session, route back into v3 phone/store-binding flow
+- Ensure store-switch does not route to `EnrollDevice`.
+
+Files:
+- `App.tsx`
+- `src/screens/SplashScreen.tsx`
+- `src/screens/v3/OTPScreenV3.tsx`
+- `src/screens/v3/StoreSelectScreenV3.tsx`
+- `src/screens/v3/SettingsScreenV3.tsx`
+- `src/screens/v3/V3ScreenWrappers.tsx`
+- New route typing where needed
+
+Acceptance:
+- There is a mounted `V3StaffLogin` route.
+- OTP/store-select never bypass staff login on a fresh session.
+- `Switch Staff` and `Switch Store` have distinct, working behaviors.
+- No navigation path references `PhoneLogin`.
+
+---
+
+## V3-CLIENT-012 - Wire staff session bootstrap, hydration, and UX messages
+
+Priority: P0
+Layers: client state, API integration, UX correctness
+
+Problem:
+- Staff API and session store exist, but the login UI does not use them.
+- Store/staff display currently falls back to placeholders.
+
+Scope:
+- Call `staffLogin()` from the new v3 staff-login screen using `pin` only.
+- After successful login, call `staffMe()` or extend login response so the client has:
+  - `staffId`
+  - `name`
+  - `role`
+  - `maxDiscountPct`
+- Persist the result into `staffSessionStore`.
+- Render real staff/store values in settings and other surfaces instead of placeholders.
+- On device-store change, clear stale staff session if it belongs to a different store context.
+- Route staff-session expiry back to `V3StaffLogin`, not to old enrollment/re-enrollment copy where device session is still valid.
+- Normalize client error handling so backend `error.code` and `error.message` show up cleanly on the screen.
+
+Files:
+- `src/services/api/staffApi.ts`
+- `src/stores/staffSessionStore.ts`
+- `src/services/api/apiClient.ts`
+- `src/screens/v3/StaffLoginScreenV3.tsx`
+- `src/screens/v3/SettingsScreenV3.tsx`
+- `src/screens/v3/PosRootLayoutV3.tsx`
+- `src/stores/settingsStore.ts`
+- Any helper used to validate staff session against current store session
+
+Acceptance:
+- Successful login creates a real persisted staff session.
+- First render of POS settings shows real staff/store metadata.
+- Staff-session expiry returns to staff login without unnecessarily clearing the device-store session.
+
+---
+
+## V3-BE-013 - Harden the POS staff-auth backend contract
+
+Priority: P0
+Layers: backend, backend API, auth contract
+
+Problem:
+- `/api/v1/pos/staff/login` exists but is minimal and not production-hardened.
+- It is still keyed by `phone + PIN`, while the required model is `PIN only`.
+- Status handling and error semantics are incomplete.
+
+Scope:
+- Change staff login to accept `pin` only on a store-bound device.
+- Add a server-side lookup strategy that safely supports `PIN only`, for example:
+  - store `pin_hash` for password-style verification
+  - store a deterministic `pin_lookup_hash` for indexed lookup and uniqueness enforcement
+- Enforce uniqueness of active staff PINs within a store.
+- Return stable structured errors with `code` + user-safe `message`.
+- Enforce store/device preconditions consistently before staff auth succeeds.
+- Decide whether `maxDiscountPct` belongs in login response or in a mandatory `staff/me` follow-up, then standardize it.
+- Add auth-audit logging for successful and failed POS staff logins using existing audit infrastructure where possible.
+- Review staff-protected POS routes and make sure the staff-login contract is sufficient for routes that require `x-staff-id`.
+
+Files:
+- `backend/src/routes/v1/pos/staff.ts`
+- `backend/src/middleware/posStaff.ts`
+- `backend/src/services/authAuditService.ts`
+- Any shared PIN lookup/hash helper introduced
+
+Acceptance:
+- `staff/login` accepts `PIN only` and resolves exactly one active staff member within the current store.
+- Backend returns deterministic error codes for invalid input, invalid credentials, locked/rate-limited, inactive staff, and unenrolled device.
+- Successful staff login can be audited.
+
+---
+
+## V3-DB-014 - Add durable staff-auth schema support and migration parity
+
+Priority: P1
+Layers: DB, migrations, schema parity
+
+Problem:
+- `platform.store_staff` is currently too thin for durable auth controls.
+- Current rate limiting is process memory, which is not sufficient for multi-instance Cloud Run behavior.
+
+Scope:
+- Add a forward migration for any durable staff-auth state needed by `V3-BE-013`, for example:
+  - `updated_at`
+  - `last_login_at`
+  - `last_failed_login_at`
+  - `failed_login_count`
+  - `locked_until`
+  - `last_login_ip`
+- Add schema support for `PIN only` login:
+  - `pin_lookup_hash`
+  - unique/indexed lookup per store
+  - any phone-column deprecation, nullability change, or profile-only conversion needed by the final owner/staff model
+- Keep `ensureSchema.ts` aligned with the migrated shape or stop relying on runtime schema drift for this table.
+- Verify index/constraint coverage for:
+  - store-scoped PIN uniqueness / lookup
+  - active-staff lookup
+  - any lockout queries
+- Validate compatibility with admin staff CRUD endpoints and enrollment auto-create logic.
+
+Files:
+- `backend/migrations/120_sa_p1_001_store_staff.sql`
+- New migration(s) following 120
+- `backend/src/db/ensureSchema.ts`
+- `backend/src/routes/v1/admin/staff.ts`
+- `backend/src/routes/v1/pos/enroll.ts`
+
+Acceptance:
+- Migrate-from-zero produces the final `platform.store_staff` shape needed by staff auth.
+- Durable lockout state does not depend on in-memory maps.
+- Admin staff CRUD, enrollment auto-create, and POS staff login all agree on the schema.
+
+---
+
+## V3-GCP-015 - Add GCP/gateway parity checks for staff-auth rollout
+
+Priority: P1
+Layers: GCP parity, deployment, operations
+
+Problem:
+- Staff auth routes are mounted, but there is no explicit rollout gate proving that Cloud Run, gateway routing, and migrations are all aligned for the login screen.
+
+Scope:
+- Add staging/prod smoke checks for:
+  - `POST /api/v1/pos/staff/login`
+  - `GET /api/v1/pos/staff/me`
+  - `POST /api/v1/pos/staff/verify-pin`
+- Fail readiness/deploy if the required `store_staff` auth migration is missing.
+- Confirm the gateway path for `/api/v1/pos/*` reaches the backend version that contains the staff-auth changes.
+- Validate any secrets/config used by the chosen audit/rate-limit implementation.
+
+Files:
+- `backend/src/startup/validateGcp.ts`
+- `backend/services/api-gateway/src/config.ts`
+- deploy/smoke scripts for staging and prod
+- migration validation scripts
+
+Acceptance:
+- There is a repeatable GCP smoke proving staff login end to end through the gateway.
+- Missing migration or missing auth dependency blocks rollout before runtime failure.
+
+---
+
+## V3-BIZ-016 - Lock the business rules for staff login and store switching
+
+Priority: P1
+Layers: business logic, UX copy, validation
+
+Problem:
+- The prototype implies a clear operator model, but the codebase currently mixes device auth, store binding, staff auth, and switch-store semantics.
+
+Required edge cases to define and implement:
+- Device is bound to a store but no active staff exists
+- Store has exactly one default auto-created manager from enrollment (`1234`) and owner has never changed the PIN
+- Staff is inactive after device-store binding but before staff login
+- Staff-session expires while device session is still valid
+- Store is switched while cart, draft sale, or shift state exists
+- Staff switches without changing store
+- Manager PIN verification happens after a cashier session is active
+- Duplicate PIN attempted for two active staff in the same store
+- Weak/default PIN policy and reset behavior
+- Device token belongs to Store A but stale staff session belongs to an old Store B
+- Cloud Run instance restart occurs during brute-force attempts
+
+Files:
+- `src/screens/v3/StaffLoginScreenV3.tsx`
+- `src/screens/v3/SettingsScreenV3.tsx`
+- `src/stores/staffSessionStore.ts`
+- `backend/src/routes/v1/pos/staff.ts`
+- `backend/src/routes/v1/pos/enroll.ts`
+- Any shift/cart cleanup helpers touched by switch flows
+
+Acceptance:
+- Each edge case has an explicit backend behavior, client message, and navigation result.
+- `Switch Store` semantics are documented and implemented consistently.
+- The default-manager bootstrap path does not leave the operator in a dead-end or insecure state.
+
+---
+
+## V3-REG-017 - Add real regression coverage for the store-bound staff-auth funnel
+
+Priority: P1
+Layers: tests, regression, CI confidence
+
+Problem:
+- Existing tests are mostly placeholders, contract schemas, or helper logic.
+- There is no real regression suite for `OTP/store bind -> staff login -> POS`.
+
+Scope:
+- Add frontend screen tests for:
+  - `V3StaffLogin` render with store header
+  - successful login
+  - invalid credentials
+  - locked/rate-limited state
+  - no-staff-configured state
+  - `Switch Store`
+  - `Switch Staff`
+  - stale staff session vs changed store session
+- Add backend route/integration tests for:
+  - `POST /api/v1/pos/staff/login`
+  - unique store-scoped PIN lookup
+  - inactive staff
+  - durable rate limit / lockout
+  - `GET /api/v1/pos/staff/me`
+  - `POST /api/v1/pos/staff/verify-pin`
+- Add one e2e smoke flow for:
+  - no session -> phone -> OTP -> store select -> staff login -> sell
+
+Files:
+- `src/__tests__/screens/*`
+- `src/__tests__/services/api/*`
+- `backend/tests/*`
+- `e2e-tests/tests/*`
+
+Acceptance:
+- CI fails if the staff-login funnel regresses.
+- Tests cover the actual mounted route graph, not just type/contract helpers.
+
+---
+
+## Done means for this screen
+
+This login screen is only "done" when all of the following are simultaneously true:
+
+- The prototype staff-login card exists as a real mounted v3 screen.
+- OTP/store selection no longer bypasses staff login.
+- `Switch Store` works from the login screen without falling back to legacy enrollment.
+- `Switch Staff` works from settings without using a dead route.
+- A valid staff session is created, persisted, and used for protected POS APIs.
+- Staff login uses `PIN only`, unique store-scoped PIN lookup, durable throttling/lockout, and audit logging.
+- Required DB migrations are applied and verified in GCP.
+- Regression tests cover the end-to-end path from store bind through staff login.
+
+---
+
+# Requirement Override: Owner Creates Staff, Staff Logs Into POS
+
+Date: 2026-03-17
+Audience: Claude
+Status: This section overrides any earlier interpretation that daily POS auth is owner phone OTP.
+
+## Product direction locked by operator
+
+Target interaction:
+
+1. Store owner registers on retailer web
+2. Store owner gets/owns the store context on retailer web
+3. Store owner creates POS staff on retailer web
+4. POS device is connected to that store
+5. Staff logs into POS with `PIN only`
+6. Staff operates POS
+
+This means:
+
+- Owner registration happens on retailer web, not on POS
+- Staff records are a retailer-owner-managed resource, not a SuperAdmin-only operational dependency for the normal flow
+- Daily POS auth is `staff PIN only`
+- Owner phone OTP may still exist for retailer web login or first-time store/device connection, but it must not be the primary daily POS operator login
+
+## Current gap against that requirement
+
+Confirmed from code:
+
+- Retailer web has authenticated store-owner routes under `/api/v1/retailer-admin/*`
+- Retailer web already manages products, settings, devices, customers, etc.
+- Staff CRUD exists only under SuperAdmin endpoints:
+  - `backend/src/routes/v1/admin/staff.ts`
+  - `supermandi-superadmin/src/api/staff.ts`
+- No normal retailer-owner staff CRUD surface was found in `retailer-admin/`
+- POS already has staff-login backend and DB:
+  - `backend/src/routes/v1/pos/staff.ts`
+  - `platform.store_staff`
+
+So the missing architectural piece is not staff auth itself. It is owner-scoped staff management on retailer web plus aligning POS to treat staff PIN login as the default operator step after device-store binding.
+
+## Revised interaction to implement
+
+Canonical flow:
+
+- Retailer web:
+  - owner registers
+  - owner signs in
+  - owner opens a Staff page
+  - owner creates staff members with:
+    - name
+    - PIN
+    - role
+    - active/inactive status
+- POS:
+  - if device is not yet connected to a store, run store/device connection flow
+  - once the device is connected to a store, show the staff login screen
+  - staff enters PIN
+  - app creates/persists staff session
+  - POS opens
+
+Blocked-state rule:
+
+- If the store has no active staff, POS must not invent a hidden staff path for normal production use.
+- It should show a clear message telling the operator that the store owner must create staff in retailer web.
+
+## Additional tickets required by this requirement
+
+Implement after `V3-REG-017`:
+
+1. `V3-OWNER-018`
+2. `V3-API-019`
+3. `V3-POS-020`
+4. `V3-BIZ-021`
+5. `V3-REG-022`
+
+---
+
+## V3-OWNER-018 - Add retailer-owner staff management in retailer web
+
+Priority: P0
+Layers: retailer web, UI/UX, navigation
+
+Problem:
+- Staff creation is currently treated as a SuperAdmin function.
+- That conflicts with the required business flow where the retailer owner creates staff after registration.
+
+Scope:
+- Add a staff management surface to `retailer-admin/` for authenticated store owners.
+- Required capabilities:
+  - list staff for the current owner store
+  - add staff
+  - edit name/role/active status
+  - reset staff PIN
+- Required fields:
+  - name
+  - PIN
+  - role (`CASHIER`, `STOCK_MANAGER`, `MANAGER`)
+  - active/inactive
+- Remove staff mobile number from the normal POS-auth model.
+- If business still wants contact info later, treat it as optional profile data, not as the POS login identifier.
+- Add owner-facing empty state:
+  - explain that POS staff must be created here before staff can log into the POS
+
+Likely files:
+- New retailer page/component under `retailer-admin/src/pages/`
+- `retailer-admin/src/lib/api.ts`
+- retailer web route registration/navigation
+
+Acceptance:
+- A retailer owner can create and manage staff for their own store without SuperAdmin involvement.
+- Empty-state and success/error states are production-grade.
+
+---
+
+## V3-API-019 - Add owner-scoped retailer-admin staff CRUD APIs
+
+Priority: P0
+Layers: backend API, authorization, store ownership
+
+Problem:
+- Existing staff CRUD is mounted under `/api/v1/admin/*`, which is the wrong ownership model for the required flow.
+
+Scope:
+- Add retailer-owner-scoped staff CRUD endpoints under `/api/v1/retailer-admin/*`.
+- Reuse the `platform.store_staff` model; do not fork staff data.
+- Enforce:
+  - current authenticated retailer owner can only manage staff for their own store
+  - no cross-store write/read access
+  - stable validation and error contracts
+- Endpoints needed:
+  - list staff
+  - create staff
+  - update staff
+  - reset staff PIN
+- Owner-side create/update contract should no longer require staff phone for POS auth.
+- Reuse shared validation/business rules with admin staff routes where practical.
+
+Likely files:
+- New `backend/src/routes/v1/retailer-admin/staff.ts`
+- `backend/src/routes/v1/index.ts`
+- Shared validation/helpers extracted from `backend/src/routes/v1/admin/staff.ts`
+
+Acceptance:
+- Retailer-owner staff CRUD works through authenticated retailer-admin routes.
+- Store ownership is enforced by backend, not just by frontend routing.
+
+---
+
+## V3-POS-020 - Make staff PIN login the primary POS operator gate
+
+Priority: P0
+Layers: POS navigation, auth model, UX
+
+Problem:
+- Current v3 work still leans on phone+OTP as if it were the daily operator login.
+- The required model is owner-created staff -> staff logs in.
+
+Scope:
+- Treat `PIN only` as the primary daily POS login on a store-bound device.
+- Keep store/device connection separate from operator login.
+- If the device is store-bound:
+  - route to `V3StaffLogin`
+  - do not route to owner OTP flow for normal daily use
+- If there are zero active staff:
+  - block login
+  - show actionable message: owner must create staff in retailer web
+- Keep `Switch Store` as a device/store action, not as a substitute for missing staff setup.
+
+Likely files:
+- `App.tsx`
+- `src/screens/SplashScreen.tsx`
+- `src/screens/v3/StaffLoginScreenV3.tsx`
+- `src/screens/v3/SettingsScreenV3.tsx`
+- `src/screens/v3/OTPScreenV3.tsx`
+- `src/screens/v3/StoreSelectScreenV3.tsx`
+
+Acceptance:
+- Daily POS use on a configured device starts with staff login.
+- Staff login is no longer modeled as an optional extra after owner OTP.
+- POS does not ask staff for phone number.
+
+---
+
+## V3-BIZ-021 - Remove normal-flow dependence on hidden auto-created staff
+
+Priority: P1
+Layers: business logic, onboarding policy, security
+
+Problem:
+- `backend/src/routes/v1/pos/enroll.ts` currently auto-creates a default manager staff with PIN `1234` if no staff exists.
+- That may be useful as a temporary fallback, but it is not the desired normal production flow.
+
+Scope:
+- Decide and implement the production rule:
+  - either remove auto-created default staff entirely from the normal path
+  - or keep it only as an explicitly documented transitional fallback
+- If fallback is kept:
+  - surface it clearly to the owner
+  - force/reset it quickly
+  - do not let it silently replace owner-created staff management
+- Align all docs and UX copy with the actual chosen rule.
+
+Files:
+- `backend/src/routes/v1/pos/enroll.ts`
+- retailer web onboarding/device activation surfaces
+- `tickets.md`-driven implementation docs if touched
+
+Acceptance:
+- The normal production path is owner-created staff, not silent default staff bootstrap.
+- No insecure hidden dependency remains in the main operator flow.
+- If a default bootstrap staff exists temporarily, it must still comply with the final `PIN only` login contract.
+
+---
+
+## V3-REG-022 - Add cross-surface regression coverage for owner-created staff -> POS login
+
+Priority: P1
+Layers: regression, CI, cross-surface confidence
+
+Problem:
+- The required journey crosses retailer web, backend staff CRUD, and POS login.
+- Current tests do not cover that path.
+
+Scope:
+- Add regression coverage for:
+  - retailer owner creates staff on retailer web
+  - staff appears in `platform.store_staff`
+  - store-bound POS accepts that staff `PIN`
+  - inactive staff is rejected
+  - reset PIN invalidates old PIN immediately
+  - duplicate active PIN in the same store is rejected
+  - zero-staff state produces the expected blocked guidance
+- Include at least one smoke/e2e proof across surfaces.
+
+Files:
+- `retailer-admin/src/__tests__/*`
+- `backend/tests/*`
+- `src/__tests__/screens/*`
+- `e2e-tests/tests/*`
+
+Acceptance:
+- CI proves the intended business journey:
+  - owner registers/signs in on retailer web
+  - owner creates staff
+  - staff logs into POS
+
+---
+
+# Final Requirement Lock: Owner OTP + Staff PIN + Easy Idle Re-Entry
+
+Date: 2026-03-17
+Audience: Claude
+Status: This is the final authoritative auth flow unless the operator changes it again. It supersedes narrower interpretations such as `staff PIN only for everyone`.
+
+## Required business flow
+
+1. Retailer registers on retailer web
+2. SuperAdmin approves store activation
+3. Retailer owner can log into:
+   - retailer web with `phone + OTP`
+   - POS app with `phone + OTP`
+4. After retailer owner logs into POS app, owner can create/manage staff from:
+   - POS Settings
+   - retailer web
+5. Staff can log into POS using a PIN created by the owner
+6. Owner and staff should both have easy re-entry on POS after idle lock without repeated OTP during the normal full-day store operation
+
+## Locked auth model
+
+Owner auth:
+- Primary login on retailer web: `phone + OTP`
+- Primary login on POS app: `phone + OTP`
+- Owner must be able to reach staff-management controls from retailer web and POS Settings after login
+- Owner must be able to create/reset a POS quick PIN from retailer web and POS Settings
+- Owner quick PIN is for POS re-entry and unlock only; retailer web login remains `phone + OTP`
+
+Staff auth:
+- Staff login on POS is `PIN`
+- Staff PIN can be created/reset from retailer web and POS Settings
+- Staff should not need OTP for normal POS use
+
+Fast re-entry on POS after idle:
+- POS should soft-lock operator session on idle
+- Re-entry after idle should use `PIN`, not repeated OTP
+- This applies to both:
+  - retailer owner on POS
+  - staff on POS
+- Re-entry should work on the already bound device even when the network is temporarily unavailable, using a secure local verifier cache plus forced re-sync when connectivity returns
+
+Hard rule:
+- Owner and staff cannot share the same actual PIN inside the same store
+- If two identities share one PIN, the app cannot safely determine who logged in, which breaks:
+  - audit trail
+  - shift attribution
+  - sales attribution
+  - role enforcement
+- Therefore PIN must be unique per store across the owner’s POS identity and all staff identities
+
+## Current runtime/session baseline found in code
+
+- POS idle timeout currently logs out after `35 minutes` in `src/hooks/useSessionTimeout.ts`
+- POS warning currently appears at `30 minutes`
+- Retailer web idle timeout currently uses `30 minutes` in `retailer-admin/src/lib/AuthContext.tsx`
+- Retailer web warning starts `5 minutes` before timeout
+
+These values are not yet tied cleanly to the required owner/staff dual-auth model.
+
+## Required session behavior
+
+POS app:
+- Store/device session should be long-lived enough for daily store operation
+- Owner OTP should not be required again and again during a normal working day
+- Idle should clear the active operator session, not destroy the whole device-store binding
+- Re-entry after idle should land on a fast PIN screen
+- OTP should only be required again for harder boundaries such as:
+  - explicit logout
+  - device revocation
+  - token expiry/revocation
+  - store switch
+  - owner session bootstrap on a fresh/untrusted device
+- Recommended baseline:
+  - device/store trust: `30 days` rolling on a trusted POS device, or until revoked
+  - owner trusted POS session after OTP: `30 days` rolling with silent refresh where possible
+  - active operator session: soft-lock after `10 minutes` idle, unlock by PIN
+  - hard clear of active operator context: at app restart, explicit logout, store switch, deactivation, or cryptographic/session revocation
+- Owner and staff PIN unlock on POS must not depend on repeated OTP during the working day
+
+Retailer web:
+- Owner login remains `phone + OTP`
+- Session should survive normal refresh/navigation with token refresh
+- Idle timeout and warning behavior must be made explicit and tested
+- Recommended baseline:
+  - idle timeout: `60 minutes`
+  - warning: `5 minutes` before idle expiry
+  - absolute session ceiling: `12 hours` before fresh OTP is required again
+
+## Edge cases that must be covered
+
+- SuperAdmin has not yet approved the store
+- Owner tries POS OTP login before store approval
+- Owner logs into POS but no device-store connection exists yet
+- Owner has multiple approved stores and logs into POS with OTP
+- Owner creates staff from retailer web and staff logs into POS immediately
+- Owner creates staff from POS Settings and the same staff appears in retailer web immediately
+- Owner sets or resets their own POS quick PIN from retailer web and from POS Settings
+- Owner resets a staff PIN from retailer web while staff is logged in on POS
+- Owner resets a staff PIN from POS Settings while staff is logged in on POS
+- Owner changes/deactivates a staff member while that staff has an active POS session
+- POS sits idle all day and repeatedly locks/unlocks
+- Network is down during owner OTP bootstrap
+- Network is down during staff PIN unlock on an already bound device
+- Owner PIN unlock vs staff PIN unlock on the same device
+- Duplicate PIN attempted for owner/staff within the same store
+- Store switch while owner or staff has an active POS session
+
+## Additional tickets required by this final requirement
+
+Implement after `V3-REG-022`:
+
+1. `V3-OWNER-023`
+2. `V3-POS-024`
+3. `V3-SESSION-025`
+4. `V3-BIZ-026`
+5. `V3-REG-027`
+
+---
+
+## V3-OWNER-023 - Support retailer-owner OTP login on both retailer web and POS
+
+Priority: P0
+Layers: retailer auth, POS auth, navigation, backend API
+
+Problem:
+- The final requirement explicitly needs owner OTP login on both surfaces.
+- Earlier tickets were drifting toward staff-only POS auth.
+
+Scope:
+- Keep retailer owner `phone + OTP` login on retailer web.
+- Add/keep retailer owner `phone + OTP` login on POS for owner bootstrap.
+- After successful owner POS login:
+  - allow entry to owner-capable POS mode
+  - expose staff-management entry point in POS Settings
+- If owner belongs to multiple approved stores:
+  - require explicit store selection after OTP
+  - bind the active POS device/store context before staff management or operator unlock
+- Ensure store approval gates OTP login correctly.
+
+Acceptance:
+- Approved owner can log into retailer web with OTP.
+- Approved owner can log into POS with OTP.
+- Unapproved owner is blocked with clear messaging.
+- Multi-store owners cannot accidentally land in the wrong store context on POS.
+
+---
+
+## V3-POS-024 - Add owner staff-management controls to POS Settings
+
+Priority: P0
+Layers: POS settings, owner capabilities, backend wiring
+
+Problem:
+- Final requirement says owner must be able to create/manage staff from POS Settings as well as retailer web.
+- Current POS Settings does not provide real owner staff CRUD.
+
+Scope:
+- Add a staff-management area in POS Settings visible only to the retailer owner POS session.
+- Required actions:
+  - list staff
+  - add staff
+  - reset PIN
+  - activate/deactivate
+  - update role
+- Add owner self-service controls in POS Settings for:
+  - create/reset owner POS quick PIN
+  - force staff logout after PIN reset/deactivation
+- Use the same backend/store data as retailer web.
+- Propagate changes across platforms without drift.
+
+Acceptance:
+- Owner can manage staff from POS Settings.
+- Staff created in POS Settings are visible in retailer web and can log into POS immediately.
+- Owner can create/reset their own POS quick PIN from POS Settings.
+
+---
+
+## V3-SESSION-025 - Split device session, owner session, and operator PIN re-entry correctly
+
+Priority: P0
+Layers: session architecture, security, UX
+
+Problem:
+- Current timeouts are surface-specific and do not reflect the required all-day POS usage.
+- Repeated OTP on POS would be operationally unacceptable.
+
+Scope:
+- Define and implement three distinct layers:
+  - device/store binding session
+  - owner OTP-authenticated session
+  - active operator session (owner or staff) for POS usage
+- Idle on POS should:
+  - soft-lock the active operator
+  - keep device/store binding intact
+  - allow quick re-entry with PIN
+- PIN re-entry on an already bound POS device should work with temporary network loss using a secure local verifier cache, then reconcile revocations/resets when online
+- Explicit logout or hard auth failure should:
+  - clear the higher-level owner/device auth as appropriate
+- Review and rationalize current timeout baselines:
+  - POS idle warning at 30m / logout at 35m
+  - retailer web idle timeout at 30m
+- Replace them with the target session model:
+  - POS trusted device/store session: 30 days rolling
+  - POS owner trusted session: 30 days rolling
+  - POS active operator soft-lock: 10 minutes idle
+  - retailer web idle timeout: 60 minutes
+  - retailer web absolute session ceiling: 12 hours
+
+Acceptance:
+- POS can run all day without repeated owner OTP in the normal case.
+- Idle lock returns to easy PIN re-entry.
+- Hard auth boundaries still require stronger login.
+- Offline PIN re-entry on a previously synced, still-trusted POS device behaves predictably and is covered by tests.
+
+---
+
+## V3-BIZ-026 - Enforce store-wide PIN uniqueness and identity attribution
+
+Priority: P0
+Layers: business logic, DB constraints, security
+
+Problem:
+- Final requirement wants easy PIN re-entry for owner and staff on POS.
+- If owner and staff can share the same actual PIN, identity is ambiguous and the system becomes incorrect.
+
+Scope:
+- Enforce unique PIN per store across:
+  - owner POS identity
+  - all staff identities
+- Decide how owner is represented for POS PIN re-entry:
+  - as a linked manager/staff-style identity
+  - or as a parallel owner-PIN identity with the same uniqueness guarantees
+- Ensure audit/shift/sale attribution always resolves to one user identity.
+- Reject owner/staff same-PIN attempts with clear product messaging instead of silent overwrite or ambiguous login.
+
+Acceptance:
+- Same actual PIN cannot be assigned to two active identities in the same store.
+- Every PIN login maps to exactly one actor.
+- Retailer owner and staff can both unlock quickly on POS, but never through a shared PIN identity.
+
+---
+
+## V3-REG-027 - Add full regression coverage for owner OTP + staff PIN + idle re-entry
+
+Priority: P1
+Layers: regression, CI, e2e
+
+Scope:
+- Add tests for:
+  - owner OTP login on retailer web
+  - owner OTP login on POS
+  - owner creates staff from retailer web
+  - owner creates staff from POS Settings
+  - owner creates/resets their own POS quick PIN from retailer web
+  - owner creates/resets their own POS quick PIN from POS Settings
+  - staff PIN login on POS
+  - owner PIN re-entry on POS after idle
+  - staff PIN re-entry on POS after idle
+  - duplicate PIN rejection within the same store
+  - owner/staff same-PIN rejection with clear message
+  - staff deactivation/reset while staff session is active
+  - offline PIN re-entry on a bound device after prior sync
+  - multi-store owner OTP login on POS with store selection
+  - approval/not-approved store states
+
+Acceptance:
+- CI proves the final business journey end to end with the required smooth-login behavior.
+
+---
+
+# Third Screen Investigation: SELL Home + Welcome Guide Overlay
+
+Prototype source:
+- `RELEASES/supermandi-pos-v3.html`
+
+Current mounted screen path:
+- `App.tsx` mounts `SellScan -> PosRootLayoutV3`
+- `PosRootLayoutV3` defaults to `SELL`
+- `SELL` tab renders `SellScreenV3`
+
+What the prototype screen actually is:
+- This is not a separate auth screen.
+- It is the main v3 SELL home with:
+  - branded top bar
+  - online status
+  - kebab/menu button
+  - search
+  - retail vs bulk toggle
+  - category chips
+  - product grid
+  - bottom nav
+  - first-run welcome/guide modal (`Welcome to SuperMandi POS`)
+
+## Current findings for this screen
+
+UI / UX gaps:
+- `SellScreenV3` does not implement the prototype welcome/guide modal at all.
+- `BrandedHeader` supports `onMenuPress`, but `SellScreenV3` does not pass it, so the prototype kebab/menu affordance is dead.
+- `selectedCategory` changes local state only; the category chips do not filter the grid.
+- `Frequent` chip is fake in the current screen. Backend already has `/api/v1/pos/products/frequent`, but the v3 UI does not use it.
+- Product tiles still use synthetic/fallback display logic:
+  - fake trade price = `85%` of retail
+  - fake `caseSize = 24`
+  - rough brand extraction from description
+  - emoji-only imagery instead of using available image data
+- Offline/network status is fragmented:
+  - `PosRootLayoutV3` has an offline banner
+  - `SellScreenV3` renders `OfflineBanner`
+  - `BrandedHeader` independently polls network and shows its own online pill
+
+Wiring / navigation gaps:
+- The prototype guide appears after login; current app has no persisted first-entry guide state.
+- The repo already defines onboarding-related storage keys, but they are not wired into v3 SELL home.
+- The route-swap docs overstate completeness: `ROUTE_SWAP_GUIDE.md` claims v3 flag-based swapping and “Ready” parity, but `App.tsx` hard-mounts v3 directly and several SELL home behaviors are still missing.
+- `posV3Enabled` exists in `settingsStore`, but current app boot does not use it as the route switch described in the docs.
+
+Frontend API / client gaps:
+- `SellScreenV3` loads its grid through `productsStore -> productsApi.listProducts()` instead of the richer SELL-specific contract in `sellSearchApi`.
+- `productsStore` strips out rich SELL-home fields already available from backend routes:
+  - `storeProductId`
+  - `mrp`
+  - `brand`
+  - `category`
+  - `image_url`
+  - `gst_rate`
+  - `net_content_*`
+  - `metadataUpdatedAt`
+- `catalogApi.getCategoryProducts()` exists but is not used.
+- `UniversalSearchV3` bypasses the dedicated store-scoped `searchHistory` service and instead writes to a single global AsyncStorage key, which risks cross-store/cross-context leakage on shared devices.
+- `UniversalSearchV3` still contains demo fallback results in production code.
+- SELL-home feature flags from `ui-status` / `settingsStore` are not respected:
+  - `voiceEnabled`
+  - `categoryBrowsingEnabled`
+
+Backend / backend API gaps:
+- POS SELL backend routes already exist for:
+  - search
+  - lookup
+  - list
+  - category list
+  - category products
+  - frequent products
+- But the mounted SSE route is in drift:
+  - `index.ts` mounts `pos/syncEvents.sse.ts`
+  - `syncEvents.sse.ts` is stale and does not match the client event contract
+  - `syncEvents.ts` contains the correct event-style SSE contract, but is not the mounted route
+- This means `startSSEClient()` in `PosRootLayoutV3` is likely not receiving the event format it expects.
+- Category counts can drift from visible product lists because:
+  - product list/search routes enforce extra supplier-approval visibility logic
+  - category count route currently counts store products more broadly
+
+DB / migration / table findings:
+- Existing tables already cover most of this screen:
+  - `catalog.store_products`
+  - `catalog.store_product_barcodes`
+  - `catalog.products`
+  - `catalog.fmcg_taxonomy`
+  - `inventory.stock_balances`
+  - `public.sales`
+  - `public.sale_items`
+  - `platform.stores`
+  - `platform.feature_flags`
+  - `pos_devices`
+- No backend DB table is required just to persist the welcome guide if the behavior is device-local. That should stay local unless product explicitly needs cross-device tutorial sync.
+- However, bulk/trade pricing on SELL is not backed by a trustworthy store-sell data contract today. Current UI uses a synthetic `85%` fallback, which is not acceptable as production business logic.
+- If `Bulk / Trade` remains a real SELL mode, the repo likely needs a real store-side trade-pricing contract and possibly a forward migration. If product does not want that now, the toggle should be degraded or disabled instead of inventing prices.
+
+GCP / parity findings:
+- API gateway broadly proxies `/api/v1/pos`, so the issue is not route absence.
+- The real parity risk is streaming/runtime behavior:
+  - mounted SSE implementation drift
+  - gateway / Cloud Run buffering / long-lived connection behavior
+  - event contract parity between backend and React Native SSE client
+
+Business / edge-case findings:
+- Shared-device first-run behavior must be defined:
+  - show the welcome guide once per device+store?
+  - once per operator?
+  - once per app version?
+- Current recommendation:
+  - show once per device+store+guide-version
+  - do not re-show on every staff switch
+  - expose it again manually from Help/More
+- Need explicit handling for:
+  - no products in store
+  - no sales history for `Frequent`
+  - feature flags disabling voice or category browsing
+  - offline entry with cached data
+  - store switch on shared device
+  - search history leakage across stores/operators
+  - barcode conflicts
+  - very large catalogs where loading everything eagerly is too slow
+  - bulk/trade mode when no true trade price exists
+
+Regression / old-code vs v3 findings:
+- Existing SELL v3 tests are mostly static source-string assertions, not behavioral tests.
+- Current docs and tests overstate readiness for this screen.
+- Old code references for SELL parity are stale; the repo no longer contains the large legacy `SellScanScreen` implementation the docs still reference.
+
+## Tickets for this third screen
+
+Implement after `V3-REG-027`:
+
+1. `V3-SELL-028`
+2. `V3-WIRING-029`
+3. `V3-API-030`
+4. `V3-BE-031`
+5. `V3-DB-032`
+6. `V3-GCP-033`
+7. `V3-BIZ-034`
+8. `V3-REG-035`
+
+---
+
+## V3-SELL-028 - Build the real v3 SELL home guide and header parity
+
+Priority: P0
+Layers: UI/UX, interaction, navigation affordances
+
+Problem:
+- The prototype third screen is the v3 SELL home with a first-run welcome/guide overlay.
+- Current `SellScreenV3` lacks that guide entirely and does not wire the header kebab/menu action.
+
+Scope:
+- Implement the welcome/guide modal shown in the prototype:
+  - title and copy parity
+  - `SELL / BUY / STORE / MORE` explanation rows
+  - primary CTA `Got it, Start Billing`
+- Show it automatically on the first successful entry to SELL home after auth/device binding.
+- Add accessible dismissal behavior:
+  - CTA dismiss
+  - backdrop dismiss only if product approves
+  - test IDs for automation
+- Wire the header kebab/menu button to a real action:
+  - quick settings/help/action sheet or direct navigation per product decision
+- Remove visual drift against the prototype where feasible without breaking existing design system.
+
+Acceptance:
+- First entry to SELL home can show the guide.
+- Dismissing the guide returns user to the live SELL screen without navigation reset.
+- Header kebab/menu is visible and wired.
+
+---
+
+## V3-WIRING-029 - Rewire SELL home state, chips, feature flags, and local persistence
+
+Priority: P0
+Layers: local state, store state, navigation, feature flags
+
+Problem:
+- Current SELL-home state is partially fake:
+  - category chips do nothing
+  - `Frequent` is not wired
+  - onboarding persistence is absent
+  - feature flags are ignored
+  - search history persistence bypasses the store-scoped service
+
+Scope:
+- Add local persistence for the SELL-home guide using a versioned, store-scoped local key.
+- Decide and implement guide-display policy:
+  - recommended: once per `device + store + guideVersion`
+  - do not re-show on every staff switch
+- Replace the dead `selectedCategory` UI with real category selection behavior.
+- Wire `Frequent` to a real data path instead of treating it as a fake static category.
+- Respect SELL-home feature flags:
+  - hide/disable voice entry when `voiceEnabled=false`
+  - hide/disable category browsing when `categoryBrowsingEnabled=false`
+- Replace `UniversalSearchV3`’s global AsyncStorage recent-search key with the existing store-scoped search history service.
+- Remove or explicitly gate demo-only search fallback data.
+- Rationalize online/offline status so SELL home has one coherent status model instead of three disconnected surfaces.
+
+Acceptance:
+- Category selection changes the visible product set.
+- `Frequent` shows real frequent products or a correct empty state.
+- Guide dismissal persists locally and does not leak across unrelated stores.
+- Voice/category controls follow backend/store flags.
+- Search history is store-scoped and shared-device safe.
+
+---
+
+## V3-API-030 - Move SELL home to the authoritative SELL-specific frontend data contract
+
+Priority: P0
+Layers: frontend API client, state modeling, product mapping
+
+Problem:
+- `SellScreenV3` currently uses generic `productsStore -> productsApi.listProducts()`.
+- That path strips rich data already exposed by the SELL-specific endpoints and forces fake defaults in the UI.
+
+Scope:
+- Stop driving SELL home from the generic `productsStore` mapping for the main product grid.
+- Introduce or refactor a SELL-home-specific client/state path using the existing authoritative endpoints:
+  - store product list
+  - store product search
+  - category products
+  - frequent products
+- Preserve richer tile/search fields already returned by backend:
+  - `storeProductId`
+  - `brand`
+  - `category`
+  - `mrp`
+  - `image_url`
+  - `gst_rate`
+  - `net_content_value`
+  - `net_content_unit`
+  - `metadataUpdatedAt`
+- Remove fake UI data synthesis such as:
+  - `priceTradeMinor = price * 0.85`
+  - hardcoded `caseSize = 24`
+  - brand extraction from description
+- Keep grid/search/cart identity coherent across:
+  - tap-to-add
+  - search add
+  - scan add
+  - cart updates
+
+Acceptance:
+- SELL home grid/search show data that matches authoritative backend payloads.
+- Fake fallback pricing/metadata are removed from production paths.
+- Grid/search/cart use a coherent identity model.
+
+---
+
+## V3-BE-031 - Align SELL-home backend contracts for categories, frequent products, and SSE
+
+Priority: P0
+Layers: backend API, SSE contract, route hygiene
+
+Problem:
+- The frontend is not the only issue. Backend contract drift exists too:
+  - duplicate SSE route implementations
+  - mounted SSE route does not match client expectations
+  - category count visibility may diverge from visible list/search results
+  - frequent-products API exists but has no frontend contract owner today
+
+Scope:
+- Collapse the duplicate SSE implementations and keep one mounted source of truth.
+- Ensure the mounted SSE route matches the React Native client contract:
+  - proper `event:` framing
+  - `connected`
+  - `product_updated`
+  - `stock_updated`
+  - `settings_updated`
+  - heartbeat behavior
+- Remove or deprecate stale SSE route files/imports.
+- Audit category-count queries so the category chips/counts reflect the same product-visibility rules as SELL list/search.
+- Formalize the frequent-products response contract for SELL home.
+- Confirm store/product update broadcasts reach the SELL home via SSE or define a polling fallback that is actually tested.
+
+Acceptance:
+- Mounted SSE route and client use the same protocol.
+- Category counts match visible SELL-home products.
+- Frequent-products contract is stable and documented by tests.
+
+---
+
+## V3-DB-032 - Lock the DB and migration strategy for SELL-home category/frequent/bulk behavior
+
+Priority: P0
+Layers: DB, query strategy, migrations, business contract
+
+Problem:
+- This screen mostly reuses existing catalog tables, but one business/data gap is unresolved:
+  - `Bulk / Trade` SELL mode currently uses invented pricing
+- Also, guide persistence does NOT justify a backend table by default.
+
+Scope:
+- Explicitly decide the data model for SELL-side bulk/trade pricing:
+  - if bulk/trade SELL is real, add a real store-side pricing contract and forward migrations as needed
+  - if not, degrade or disable the bulk toggle instead of using synthetic pricing
+- Verify/adjust DB-backed query paths used by:
+  - category browsing
+  - frequent products
+  - stock-aware SELL listing
+- Do not create a backend DB table for guide dismissal unless product explicitly requires cross-device sync.
+- If schema changes are needed for bulk/trade pricing, update both POS and retailer-admin data paths together.
+
+Acceptance:
+- No production SELL path uses invented trade price math.
+- DB changes are forward-migrated only.
+- Guide persistence remains local unless there is an explicit approved requirement for server-side sync.
+
+---
+
+## V3-GCP-033 - Verify gateway and production parity for SELL-home live updates
+
+Priority: P1
+Layers: gateway, infra parity, runtime behavior
+
+Problem:
+- This screen depends on live product/settings freshness, but production parity risk is in SSE/runtime behavior, not just route existence.
+
+Scope:
+- Verify that the mounted SELL-home routes work correctly through the API gateway in deployed environments:
+  - store-products list/search/lookup
+  - category endpoints
+  - frequent-products endpoint
+  - SSE endpoint
+- Verify streaming headers/buffering behavior for the mounted SSE route in gateway/GCP deployment.
+- Add a parity checklist or smoke validation for:
+  - gateway proxying
+  - long-lived stream stability
+  - disconnect/reconnect behavior
+  - fallback behavior when streaming is unavailable
+
+Acceptance:
+- SELL home receives the same route behavior in local/staging/live environments.
+- SSE either works correctly through gateway/GCP or cleanly falls back to a tested polling path.
+
+---
+
+## V3-BIZ-034 - Nail the shared-device business rules for SELL home
+
+Priority: P1
+Layers: product rules, shared device behavior, UX edge cases
+
+Problem:
+- This screen sits at the start of all-day cashier operation on shared devices.
+- First-run guide, frequent products, search history, and offline behavior can easily become noisy or unsafe if rules are not explicit.
+
+Scope:
+- Define and implement rules for:
+  - when the guide shows
+  - when it can be reopened
+  - whether owner/staff/operator switch should reset it
+  - whether search history is shared per store or per operator
+- Define empty states for:
+  - no products
+  - no frequent history
+  - disabled voice/category features
+  - offline cached mode
+- Define SELL-home behavior when:
+  - store is inactive or partially activated
+  - search returns barcode conflicts
+  - catalog is large
+  - bulk/trade mode lacks real pricing
+
+Acceptance:
+- Shared-device behavior is explicit and testable.
+- SELL home remains fast and predictable without cross-store/operator leakage.
+
+---
+
+## V3-REG-035 - Add real regression coverage for the SELL home and welcome-guide flow
+
+Priority: P1
+Layers: frontend regression, backend regression, e2e
+
+Problem:
+- Existing v3 SELL tests are mostly source-text checks and do not prove runtime behavior.
+
+Scope:
+- Add behavioral tests for:
+  - guide shown on first entry
+  - guide dismissal persistence
+  - guide manual reopen from Help/More if implemented
+  - category selection changes results
+  - `Frequent` chip loads real frequent products
+  - no frequent-history empty state
+  - feature flag gating for voice/category browsing
+  - store-scoped search history
+  - search add / tap add / scan add identity consistency
+  - offline cached SELL-home behavior
+  - SSE-driven product/settings refresh or polling fallback
+  - duplicate/stale SSE route regression
+- Add backend tests for:
+  - frequent-products query contract
+  - category count parity with visible list/search rules
+  - mounted SSE route framing and event types
+
+Acceptance:
+- CI proves SELL home behavior, not just file contents.
+- The prototype third screen has runtime regression coverage across UI, wiring, backend contract, and live update behavior.
+
+---
+
+# Main-HEAD-only Audit Override: SELL Home + Welcome Guide
+
+Date: 2026-03-17
+Audit basis:
+- Git target: `main`
+- HEAD commit: `2fdad49f00a8cc068ea6b978d4dc49ed15853344`
+- Prototype source of truth: `RELEASES/supermandi-pos-v3.html`
+- Current local feature branch was ignored for this audit. All file validation below was done with `git show main:...`.
+
+This section is the authoritative replacement for the earlier SELL-home tickets `V3-SELL-028` through `V3-REG-035`.
+
+## Main-only findings
+
+1. Welcome guide is missing completely on `main`
+- Prototype: `supermandi-pos-v3.html:1336-1366` creates `showGuide()` and shows `Welcome to SuperMandi POS` after login.
+- `main:src/screens/v3/SellScreenV3.tsx`
+- `main:src/screens/v3/PosRootLayoutV3.tsx`
+- There is no guide modal, no first-entry persistence, and no `Got it, Start Billing ->` flow anywhere in committed app code.
+
+2. SELL header parity is incomplete and partially dead
+- Prototype: `supermandi-pos-v3.html:422-430` shows logo, online pill, and a kebab button that routes to `more`.
+- `main:src/components/v3/BrandedHeader.tsx` can render a menu button, but `main:src/screens/v3/SellScreenV3.tsx` mounts it without `onMenuPress`.
+- `main` also duplicates online/offline state in three places:
+  - `src/components/v3/BrandedHeader.tsx`
+  - `src/screens/v3/PosRootLayoutV3.tsx`
+  - `src/components/ui/OfflineBanner.tsx`
+
+3. Search UX is still scaffold-level, not V3-complete
+- Prototype search (`supermandi-pos-v3.html:475-489`) is a dedicated V3 state with typed query, results, and recent searches.
+- `main:src/components/v3/UniversalSearchV3.tsx` still uses:
+  - demo results `DEMO_SELL` / `DEMO_BUY`
+  - a global AsyncStorage key `@supermandi.recent_searches`
+  - no store scoping despite the committed `src/services/searchHistory.ts` service already existing
+
+4. Category rail is not V3-faithful and is not actually wired
+- Prototype chips are exactly `Frequent`, `Beverages`, `Snacks`, `Dairy`, `Staples`, `Home Care` (`supermandi-pos-v3.html:454-460`).
+- `main:src/screens/v3/SellScreenV3.tsx` starts with those labels, then replaces them with raw taxonomy labels from `getFmcgCategories()`.
+- `main:backend/migrations/026_fmcg_taxonomy.sql` seeds `Sab`, `Atta-Dal`, `Chawal`, `Masala`, `Tel-Ghee`, etc. Those do not match the prototype rail.
+- `selectedCategory` only changes chip styling; it does not change the product set.
+
+5. `Frequent` is fake UI today
+- `main:backend/src/routes/v1/pos/storeProducts.ts` already exposes `GET /api/v1/pos/products/frequent`.
+- `main:src/screens/v3/SellScreenV3.tsx` never calls it.
+- Result: `Frequent` is just a selected label, not a real home-state.
+
+6. SELL grid data on `main` is still using synthetic product metadata
+- `main:src/screens/v3/SellScreenV3.tsx`
+- `main:src/stores/productsStore.ts`
+- `main:src/services/api/productsApi.ts`
+- Current root causes:
+  - generic `productsStore.loadProducts()` drives the home grid
+  - `priceTradeMinor` falls back to `Math.round(priceMinor * 0.85)`
+  - `caseSize` is hardcoded to `24`
+  - `brand` is guessed from `description?.split(" ")[0]`
+- That is not production-safe parity.
+
+7. Backend feature flags exist, but the committed POS client drops or ignores them
+- `main:backend/src/routes/v1/pos/uiStatus.ts` returns `voiceEnabled` and `categoryBrowsingEnabled`.
+- `main:src/services/api/uiStatusApi.ts` does not map those flags into the typed parsed response.
+- `main:src/services/sseClient.ts` updates `buyEnabled`, `reorderEnabled`, `creditEnabled`, `bnplEnabled`, but not `voiceEnabled` or `categoryBrowsingEnabled`.
+- `main:src/screens/v3/SellScreenV3.tsx` does not gate voice/category UI from settings state.
+
+8. Live-update wiring is conflicted on `main`
+- `main:backend/src/routes/v1/pos/syncEvents.ts` is the correct event-framed SSE implementation.
+- `main:backend/src/routes/v1/pos/syncEvents.sse.ts` is a stale duplicate with a different protocol and wrong middleware import path.
+- `main:backend/src/routes/v1/index.ts` mounts both.
+- `main:src/services/sseClient.ts` expects event-framed SSE, but its polling fallback hits `/api/v1/pos/sync/poll`, which does not exist on `main`.
+
+9. Old/conflicting scaffolding is still present
+- `main:src/screens/v3/PosRootLayoutV3.tsx` still contains unused `PlaceholderScreen` and stale "coming soon" comments.
+- `main:src/screens/v3/ROUTE_SWAP_GUIDE.md` still references non-existent `SellScanScreen`.
+- `main:src/components/v3/UniversalSearchV3.tsx` still carries demo-only fallback data in production code.
+
+10. Regression coverage is weak for the risk level
+- `main:src/__tests__/screens/sell-screen-v3.stg-553.test.ts`
+- `main:src/__tests__/screens/universal-search-v3.stg-560.test.ts`
+- Existing tests are mainly source-text checks, not runtime behavior or cross-layer contract coverage.
+
+## FIX Tickets
+
+## V3-FIX-036 - Implement the V3 welcome guide modal exactly once per store/device/session policy
+
+Priority: P0
+Layers: UI, UX, local state
+
+Issue:
+- The committed app never shows the prototype welcome guide on first entry to SELL.
+
+Root cause:
+- Neither `SellScreenV3` nor `PosRootLayoutV3` contains the `showGuide()` behavior found in the prototype.
+
+Files impacted:
+- `src/screens/v3/PosRootLayoutV3.tsx`
+- `src/screens/v3/SellScreenV3.tsx`
+- add a small local persistence helper/service if needed
+- tests under `src/__tests__/screens/`
+
+Expected outcome:
+- First successful arrival at SELL on a bound/authenticated device shows the guide with the exact V3 copy:
+  - `Welcome to SuperMandi POS`
+  - `SELL — Billing & checkout`
+  - `BUY — Order from suppliers`
+  - `STORE — Stock & inventory`
+  - `MORE — Reports, Khata, Settings`
+  - `Got it, Start Billing ->`
+- Dismissal persists locally by `device + store + guideVersion`.
+- The guide does not reappear on every tab switch or every app foreground.
+- No backend table is added for guide dismissal.
+
+## V3-FIX-037 - Restore V3 header fidelity and give SELL one authoritative online/offline state
+
+Priority: P0
+Layers: UI, wiring, navigation
+
+Issue:
+- The prototype top bar has a working kebab button and one clear status pill.
+- `main` leaves the menu button unwired and renders multiple competing connectivity indicators.
+
+Root cause:
+- `BrandedHeader` supports `onMenuPress`, but `SellScreenV3` does not pass it.
+- Connectivity is checked separately in `BrandedHeader`, `PosRootLayoutV3`, and `OfflineBanner`.
+
+Files impacted:
+- `src/components/v3/BrandedHeader.tsx`
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/screens/v3/PosRootLayoutV3.tsx`
+- `src/components/ui/OfflineBanner.tsx`
+
+Expected outcome:
+- SELL header matches the prototype behavior.
+- Kebab/menu press routes to `MORE` from SELL without dead taps.
+- Online/offline state is computed once and rendered coherently.
+- No duplicate banner/pill conflicts remain on SELL home.
+
+## V3-FIX-038 - Bring V3 search behavior to parity using real store-scoped history and real results
+
+Priority: P0
+Layers: UI, UX, local data
+
+Issue:
+- The committed search overlay still contains demo results and non-store-scoped recent searches.
+
+Root cause:
+- `UniversalSearchV3.tsx` uses `DEMO_SELL`, `DEMO_BUY`, and a global AsyncStorage key instead of the committed `searchHistory` service.
+
+Files impacted:
+- `src/components/v3/UniversalSearchV3.tsx`
+- `src/services/searchHistory.ts`
+- `src/screens/v3/SellScreenV3.tsx`
+- tests under `src/__tests__/screens/` and `src/__tests__/services/`
+
+Expected outcome:
+- SELL search uses real results only.
+- Recent searches are persisted per store, not globally across devices/stores.
+- Search presentation matches the V3 search state:
+  - typed query state
+  - results section
+  - recent searches section
+  - clean close/back behavior back to SELL
+- No demo rows appear in production paths.
+
+## V3-FIX-039 - Parse and apply V3 SELL feature flags end to end
+
+Priority: P0
+Layers: frontend, API parsing, live settings sync
+
+Issue:
+- Backend returns `voiceEnabled` and `categoryBrowsingEnabled`, but committed POS client behavior does not follow them.
+
+Root cause:
+- `uiStatusApi.ts` typed parsing drops those flags.
+- `sseClient.ts` does not refresh them on `settings_updated`.
+- `SellScreenV3.tsx` ignores them even though `settingsStore` already supports them.
+
+Files impacted:
+- `src/services/api/uiStatusApi.ts`
+- `src/services/sseClient.ts`
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/stores/settingsStore.ts`
+
+Expected outcome:
+- `voiceEnabled` hides/disables the mic affordance when false.
+- `categoryBrowsingEnabled` hides/disables the chip rail when false.
+- Initial splash/ui-status hydration and live settings refresh both keep those flags correct.
+
+## V3-FIX-040 - Add a dedicated V3 SELL-home category-group contract instead of exposing raw taxonomy labels
+
+Priority: P0
+Layers: backend API, DB contract, frontend API client
+
+Issue:
+- Raw FMCG taxonomy labels on `main` do not match the V3 SELL rail.
+
+Root cause:
+- `catalog.fmcg_taxonomy` is a merchandising taxonomy.
+- `catalog.ts` exposes that raw taxonomy directly to the POS screen.
+- The V3 prototype rail is a separate display contract.
+
+Files impacted:
+- `backend/src/routes/v1/catalog.ts`
+- `src/services/api/catalogApi.ts`
+- `src/screens/v3/SellScreenV3.tsx`
+- add forward migration(s) if a persisted mapping table/view is required
+- likely related migrations:
+  - `backend/migrations/026_fmcg_taxonomy.sql`
+  - `backend/migrations/027_store_products_taxonomy.sql`
+
+Expected outcome:
+- SELL home receives one dedicated category-group contract that returns exactly the V3 groups:
+  - `Frequent`
+  - `Beverages`
+  - `Snacks`
+  - `Dairy`
+  - `Staples`
+  - `Home Care`
+- Counts and membership are deterministic and documented.
+- The POS UI no longer displays raw taxonomy labels like `Sab` or `Atta-Dal` on the SELL rail.
+
+## V3-FIX-041 - Wire `Frequent` and category chips to real product sets
+
+Priority: P0
+Layers: frontend wiring, backend API usage
+
+Issue:
+- On `main`, chips only change styling.
+
+Root cause:
+- `selectedCategory` in `SellScreenV3.tsx` is not connected to data.
+- `/api/v1/pos/products/frequent` is unused.
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/services/api/sellSearchApi.ts` or a new SELL-home API client
+- `backend/src/routes/v1/pos/storeProducts.ts`
+- tests under `src/__tests__/screens/` and `backend/tests/`
+
+Expected outcome:
+- `Frequent` loads real frequently sold products or a correct empty state for stores with no history.
+- Every other chip filters the visible product set.
+- Chip selection survives expected back/forward interactions without stale UI state.
+
+## V3-FIX-042 - Move SELL home off synthetic grid data and onto the authoritative store-product contract
+
+Priority: P0
+Layers: frontend state, frontend API integration
+
+Issue:
+- The current SELL grid is built from a generic products cache and synthetic tile metadata.
+
+Root cause:
+- `SellScreenV3.tsx` uses `productsStore.loadProducts()` and then invents trade price, brand, and case size.
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/stores/productsStore.ts`
+- `src/services/api/productsApi.ts`
+- `src/services/api/sellSearchApi.ts`
+- add a dedicated SELL-home store/hook if needed
+
+Expected outcome:
+- The grid is driven by authoritative SELL endpoints, not synthetic derivation.
+- Product identity is stable across:
+  - grid tap-to-add
+  - search add
+  - scan add
+  - cart quantity updates
+- Tile/search payloads preserve real backend fields instead of guessed values.
+
+## DELETE Tickets
+
+## V3-DELETE-043 - Remove the stale duplicate SSE implementation and its route mount
+
+Priority: P0
+Layers: backend cleanup, routing hygiene
+
+Issue:
+- `main` ships two different SSE implementations for the same path.
+
+Root cause:
+- `backend/src/routes/v1/index.ts` mounts both `syncEvents.ts` and `syncEvents.sse.ts`.
+- `syncEvents.sse.ts` is an obsolete parallel implementation with a different protocol.
+
+Files impacted:
+- `backend/src/routes/v1/index.ts`
+- `backend/src/routes/v1/pos/syncEvents.sse.ts`
+- keep `backend/src/routes/v1/pos/syncEvents.ts` as the single source of truth
+- update affected tests/imports
+
+Expected outcome:
+- Only one SSE route exists for `/api/v1/pos/sync/events`.
+- No duplicate mount or protocol ambiguity remains.
+- The stale file is deleted, not left orphaned.
+
+## V3-DELETE-044 - Remove demo/scaffold leftovers that conflict with SELL-home V3 parity
+
+Priority: P1
+Layers: frontend cleanup, docs cleanup
+
+Issue:
+- `main` still contains production-visible scaffold code and stale migration notes for this screen family.
+
+Root cause:
+- SELL home was moved incrementally and the leftover scaffolding was not removed after mount.
+
+Files impacted:
+- `src/components/v3/UniversalSearchV3.tsx`
+- `src/screens/v3/PosRootLayoutV3.tsx`
+- `src/screens/v3/ROUTE_SWAP_GUIDE.md`
+- update tests that assert stale source strings
+
+Expected outcome:
+- Remove:
+  - `DEMO_SELL`
+  - `DEMO_BUY`
+  - global `@supermandi.recent_searches`
+  - unused `PlaceholderScreen`
+  - stale "coming soon" comments for already-mounted V3 screens
+  - stale guide/doc references to non-existent `SellScanScreen`
+- Cleanup leaves no orphan references and no runtime/build breakage.
+
+## HARDEN Tickets
+
+## V3-HARDEN-045 - Resolve `Bulk / Trade` into a real contract or disable it on SELL
+
+Priority: P0
+Layers: business rules, backend API, DB contract, frontend UX
+
+Issue:
+- `main` shows a SELL-side `Bulk / Trade` mode but computes price using invented `85%` math.
+
+Root cause:
+- No committed SELL-specific trade-price contract exists for store products.
+- Existing wholesale endpoints are supplier-purchase oriented, not a valid SELL fallback.
+
+Files impacted:
+- `src/components/v3/CustomerTypeToggle.tsx`
+- `src/components/v3/ProductTileV3.tsx`
+- `src/screens/v3/SellScreenV3.tsx`
+- if real pricing is approved: add forward migration(s) and backend route support
+
+Expected outcome:
+- One of two states is implemented, explicitly:
+  - real store-side trade pricing contract with real data
+  - or the toggle is disabled/hidden for SELL until such data exists
+- No production SELL path uses invented trade-price math.
+
+## V3-HARDEN-046 - Replace the broken polling fallback and verify Cloud Run/API-gateway SSE parity
+
+Priority: P0
+Layers: frontend live updates, backend route support, gateway parity, production readiness
+
+Issue:
+- `sseClient.ts` falls back to `/api/v1/pos/sync/poll`, but that route does not exist on `main`.
+
+Root cause:
+- The fallback path was scaffolded without a matching backend implementation.
+- `main` also still carries duplicated SSE routing, which increases deployment ambiguity.
+
+Files impacted:
+- `src/services/sseClient.ts`
+- `backend/src/routes/v1/pos/syncEvents.ts`
+- `backend/src/routes/v1/index.ts`
+- `backend/services/api-gateway/src/config.ts`
+- deployment/parity test assets if present
+
+Expected outcome:
+- Live updates use one working strategy:
+  - event-framed SSE through gateway/Cloud Run
+  - and, if needed, a real implemented polling fallback
+- No client path points to a non-existent endpoint.
+- Production parity is verified for long-lived SELL-home connections.
+
+## V3-HARDEN-047 - Add store-scoped offline/cache behavior for list, search, category, and frequent flows
+
+Priority: P1
+Layers: local state, data lifecycle, offline behavior
+
+Issue:
+- Moving SELL home to the correct contracts will regress offline use unless caching is redesigned deliberately.
+
+Root cause:
+- Current offline behavior rides on the generic `productsStore` cache.
+- There is no committed category/frequent/search cache contract for the V3 SELL home.
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/stores/productsStore.ts` or a replacement SELL-home store
+- `src/services/searchHistory.ts`
+- store-scoped storage helpers if needed
+
+Expected outcome:
+- Trusted/bound POS devices can still open SELL home and search cached products offline.
+- Frequent/category/search failures degrade cleanly without cross-store leakage.
+- Empty, offline, partial-failure, and stale-cache states are explicit and testable.
+
+## V3-HARDEN-048 - Replace source-text tests with runtime SELL-home regression coverage
+
+Priority: P1
+Layers: frontend regression, backend regression, e2e
+
+Issue:
+- Current tests mostly prove that strings exist in files, not that SELL home works.
+
+Root cause:
+- `main` test coverage for this area was written as scaffolding guards and never upgraded to behavior-level tests.
+
+Files impacted:
+- `src/__tests__/screens/sell-screen-v3.stg-553.test.ts`
+- `src/__tests__/screens/universal-search-v3.stg-560.test.ts`
+- add new frontend tests under `src/__tests__/screens/`
+- add backend tests under `backend/tests/`
+- add e2e smoke where appropriate under `e2e-tests/tests/`
+
+Expected outcome:
+- Add runtime coverage for:
+  - guide first-show and dismissal persistence
+  - header menu routing to `MORE`
+  - category/frequent data switching
+  - store-scoped recent-search behavior
+  - feature-flag gating for voice/category rail
+  - correct empty/error/offline states
+  - single mounted SSE protocol and reconnect/fallback behavior
+- Remove false confidence from pure source-text assertions.
+
+---
+
+# Main-HEAD-only Audit Override: Base SELL Home Screen (Post-Guide)
+
+Date: 2026-03-17
+Audit basis:
+- Git target: `main`
+- HEAD commit: `2fdad49f00a8cc068ea6b978d4dc49ed15853344`
+- V3 source of truth: `https://supermanditech.github.io/supermandi-pos/RELEASES/supermandi-pos-v3.html`
+- Local verification mirror used in repo: `RELEASES/supermandi-pos-v3.html`
+- Local working-tree edits were ignored. Validation was done with `git show main:...` only.
+
+Scope:
+- This section is for the base SELL home screen shown after guide dismissal:
+  - top bar
+  - search bar
+  - customer toggle
+  - category rail
+  - product grid
+  - cart-empty strip
+  - bottom nav
+- `V3-FIX-036` still owns the welcome-guide modal itself.
+- For this screen, tickets `V3-FIX-037` through `V3-HARDEN-048` are superseded by the ticket set below.
+
+## Main-only findings
+
+1. Header, menu, online status, and MORE badge are not production-faithful on `main`
+- Prototype base screen has one status pill, a working kebab that routes to `MORE`, and a visible `MORE` badge.
+- `main:src/screens/v3/SellScreenV3.tsx` mounts `<BrandedHeader />` without `onMenuPress`, so the kebab is dead.
+- `main:src/screens/v3/PosRootLayoutV3.tsx` hardcodes `moreBadge={3}` with no source contract.
+- `main` computes connectivity in three places:
+  - `src/components/v3/BrandedHeader.tsx`
+  - `src/screens/v3/PosRootLayoutV3.tsx`
+  - `src/components/ui/OfflineBanner.tsx`
+
+2. Search shell and overlay behavior still drift from V3
+- Prototype search uses the SELL shell, then a dedicated search state with:
+  - exact placeholder copy
+  - `✕` close affordance
+  - `RESULTS`
+  - `RECENT SEARCHES`
+- `main:src/components/v3/UniversalSearchV3.tsx` still uses:
+  - `Cancel` instead of `✕`
+  - recent searches only when query is empty
+  - embedded demo fallback data
+  - a global storage key `@supermandi.recent_searches`
+- `main:src/services/searchHistory.ts` already implements store-scoped history but is not used here.
+
+3. Feature-flag parity is partial, not end to end
+- Backend `main:backend/src/routes/v1/pos/uiStatus.ts` returns `voiceEnabled` and `categoryBrowsingEnabled`.
+- `main:src/services/api/uiStatusApi.ts` drops those flags in nested parsing.
+- `main:src/services/sseClient.ts` does not refresh them on `settings_updated`.
+- `main:src/screens/v3/SellScreenV3.tsx` therefore cannot trust live flag state.
+
+4. Category rail is still display-wrong and behavior-wrong
+- Prototype rail is exactly:
+  - `Frequent`
+  - `Beverages`
+  - `Snacks`
+  - `Dairy`
+  - `Staples`
+  - `Home Care`
+- `main:src/screens/v3/SellScreenV3.tsx` replaces those labels with raw FMCG taxonomy labels from `getFmcgCategories()`.
+- `main:backend/src/routes/v1/catalog.ts` exposes raw `catalog.fmcg_taxonomy` rows, whose seed labels on `main` include `Sab`, `Atta-Dal`, `Chawal`, `Masala`, `Tel-Ghee`, etc.
+- `selectedCategory` only changes selected styling; it does not change the visible product set.
+
+5. `Frequent` and the rest of the chip rail are still mostly cosmetic
+- `main:backend/src/routes/v1/pos/storeProducts.ts` already exposes `GET /api/v1/pos/products/frequent`.
+- `main:src/screens/v3/SellScreenV3.tsx` never calls it.
+- The current SELL home grid is still powered by generic `productsStore.loadProducts()`, not chip-specific datasets.
+
+6. Product tiles and the home grid still drop real backend fields and invent replacements
+- Prototype tiles show stable brand, image/icon area, stock dot, price, and `MRP · 48/pcs case` style copy.
+- `main:src/screens/v3/SellScreenV3.tsx` and `main:src/components/v3/ProductTileV3.tsx` still:
+  - guess `brand` from `description?.split(" ")[0]`
+  - hardcode `caseSize: 24`
+  - omit the literal `case` suffix in the sub-copy
+  - ignore backend `image_url` on the grid path
+  - use emoji placeholders in `ProductTileV3`
+- `main:src/stores/productsStore.ts` strips the richer store-product payload down to a generic product shape, so SELL cannot render faithful tiles even though `main:src/services/api/sellSearchApi.ts` and `main:backend/src/routes/v1/pos/storeProducts.ts` already expose richer fields.
+
+7. SELL shell states are still scaffold-level
+- `main:src/screens/v3/SellScreenV3.tsx` uses a centered full-page spinner/empty block rather than a V3 shell-preserving loading/error/empty treatment.
+- Cart-empty copy on `main` is `Cart empty — tap a product or scan barcode`, while the prototype copy is `Cart empty — tap product or scan barcode`.
+- There is no explicit screen-level treatment for:
+  - no frequent history
+  - category fetch failure with cached grid still available
+  - search failure while keeping recent searches
+  - low-width device vs wider tablet layout
+
+8. Live-update and data lifecycle are still conflict-prone on `main`
+- `main:src/services/sseClient.ts` still points polling fallback at `/api/v1/pos/sync/poll`, which does not exist.
+- `main:backend/src/routes/v1/index.ts` mounts both `syncEvents.ts` and stale `syncEvents.sse.ts`.
+- Grid/search/cart identity is still inconsistent:
+  - grid often keys by product id or barcode
+  - search results prefer `storeProductId`
+  - cart add paths mix barcode and id keys
+- That creates real duplicate-line and stale-qty risk for kirana counter use.
+
+9. Mandatory cleanup must be aggressive but safe
+- Delete conflicting scaffold and duplicate code now.
+- Do not delete `SellScanScreen` itself in this wave.
+- Reason: `App.tsx` still mounts `PosRootLayoutV3` under the `SellScan` route name, and legacy scan/payment/report surfaces are still referenced elsewhere.
+- Safe cleanup target is ambiguity and orphan code, not premature deletion of still-mounted legacy surface area.
+
+## FIX Tickets
+
+## V3-FIX-049 - Wire SELL header actions and replace the fake `MORE` badge with a real source
+
+Priority: P0
+Layers: UI fidelity, navigation, local state
+
+Issue:
+- The prototype SELL header has a working kebab action and the bottom nav shows a meaningful `MORE` badge.
+- On `main`, the kebab is dead and the badge is hardcoded.
+
+Root cause:
+- `SellScreenV3.tsx` mounts `BrandedHeader` without `onMenuPress`.
+- `PosRootLayoutV3.tsx` injects `moreBadge={3}` without any state or backend source.
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/components/v3/BrandedHeader.tsx`
+- `src/screens/v3/PosRootLayoutV3.tsx`
+- `src/components/v3/BottomNavV3.tsx`
+- any real source introduced for `MORE` actionable count
+
+Expected outcome:
+- Kebab/menu press from SELL always routes to `MORE`.
+- No hardcoded `MORE` badge remains in production code.
+- Badge value either comes from a documented real source or is hidden when no real source exists.
+- Header and bottom-nav interactions remain consistent after refresh, tab change, and app resume.
+
+## V3-FIX-050 - Restore V3 search-shell behavior with store-scoped history and exact section ordering
+
+Priority: P0
+Layers: UI fidelity, UX behavior, frontend integration
+
+Issue:
+- The base-screen search experience on `main` does not match the V3 prototype.
+
+Root cause:
+- `UniversalSearchV3.tsx` uses scaffold behavior:
+  - `Cancel` button instead of `✕`
+  - recent searches only when query is empty
+  - demo fallback rows
+  - global history key instead of the committed store-scoped history service
+
+Files impacted:
+- `src/components/v3/UniversalSearchV3.tsx`
+- `src/services/searchHistory.ts`
+- `src/screens/v3/SellScreenV3.tsx`
+- tests under `src/__tests__/screens/` and `src/__tests__/services/`
+
+Expected outcome:
+- Search entry and overlay behavior match V3:
+  - exact placeholder and close affordance
+  - `RESULTS` section for typed query
+  - `RECENT SEARCHES` visible in the same overlay state when applicable
+  - return cleanly to SELL on close
+- Recent searches are read/written through the store-scoped history service.
+- Search failures keep the overlay usable instead of dropping into demo content.
+
+## V3-FIX-051 - Hydrate and honor `voiceEnabled` and `categoryBrowsingEnabled` end to end on SELL
+
+Priority: P0
+Layers: frontend, API parsing, live settings sync
+
+Issue:
+- Backend feature flags exist, but the committed SELL home cannot reliably trust or apply them.
+
+Root cause:
+- `uiStatusApi.ts` drops these flags in nested parsing.
+- `sseClient.ts` does not refresh them on `settings_updated`.
+- `SellScreenV3.tsx` therefore runs on stale/default assumptions.
+
+Files impacted:
+- `src/services/api/uiStatusApi.ts`
+- `src/services/sseClient.ts`
+- `src/stores/settingsStore.ts`
+- `src/screens/v3/SellScreenV3.tsx`
+
+Expected outcome:
+- `voiceEnabled=false` removes or disables the mic affordance on SELL.
+- `categoryBrowsingEnabled=false` removes or disables the chip rail on SELL.
+- Initial bootstrap and live settings refresh both keep these flags correct.
+- No SELL screen path reintroduces hidden-but-tappable dead controls.
+
+## V3-FIX-052 - Replace raw taxonomy exposure with a dedicated V3 SELL category-group contract
+
+Priority: P0
+Layers: backend API, frontend API, DB contract
+
+Issue:
+- The category rail rendered from `main` backend data cannot match the V3 display contract.
+
+Root cause:
+- `catalog.ts` exposes raw `catalog.fmcg_taxonomy` labels directly to POS.
+- The V3 rail is a display-group contract, not a direct taxonomy dump.
+
+Files impacted:
+- `backend/src/routes/v1/catalog.ts`
+- `src/services/api/catalogApi.ts`
+- `src/screens/v3/SellScreenV3.tsx`
+- add forward migration(s) only if a persisted mapping table/view is required
+- likely related existing migrations:
+  - `backend/migrations/026_fmcg_taxonomy.sql`
+  - `backend/migrations/027_store_products_taxonomy.sql`
+
+Expected outcome:
+- SELL home receives exactly these groups, in this order:
+  - `Frequent`
+  - `Beverages`
+  - `Snacks`
+  - `Dairy`
+  - `Staples`
+  - `Home Care`
+- Group ids, counts, and membership rules are deterministic and documented.
+- POS no longer renders raw taxonomy labels like `Sab` or `Atta-Dal` on the SELL rail.
+
+## V3-FIX-053 - Wire `Frequent` and every category chip to authoritative product datasets
+
+Priority: P0
+Layers: frontend wiring, backend API usage, UX behavior
+
+Issue:
+- Chip selection on `main` is largely cosmetic.
+
+Root cause:
+- `selectedCategory` in `SellScreenV3.tsx` does not drive data.
+- `/api/v1/pos/products/frequent` is already available but unused.
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/services/api/sellSearchApi.ts` or a new dedicated SELL-home API client
+- `backend/src/routes/v1/pos/storeProducts.ts`
+- tests under `src/__tests__/screens/` and `backend/tests/`
+
+Expected outcome:
+- `Frequent` loads actual frequently sold products or a correct empty state for stores with no sales history.
+- Every non-`Frequent` chip changes the visible product dataset.
+- Switching chips preserves expected state through refresh, resume, and back-navigation.
+- Partial failures degrade to inline retry or cached category data, not a silent no-op.
+
+## V3-FIX-054 - Promote SELL tile/grid rendering to the authoritative store-product payload
+
+Priority: P0
+Layers: UI fidelity, frontend state, frontend-backend contract
+
+Issue:
+- The current grid cannot match V3 tile fidelity because it throws away real fields and invents replacements.
+
+Root cause:
+- `productsStore.ts` reduces rich store-product rows to a generic `Product`.
+- `SellScreenV3.tsx` and `ProductTileV3.tsx` then guess `brand`, hardcode `caseSize`, omit `case` copy, and ignore `image_url`.
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/components/v3/ProductTileV3.tsx`
+- `src/stores/productsStore.ts`
+- `src/services/api/productsApi.ts`
+- `src/services/api/sellSearchApi.ts`
+- `backend/src/routes/v1/pos/storeProducts.ts`
+
+Expected outcome:
+- SELL grid and tile rendering use real backend fields for:
+  - image
+  - brand
+  - price
+  - MRP/trade metadata
+  - case size
+  - unit
+  - product mode
+- Tile sub-copy matches V3 semantics, including the literal `case` suffix.
+- No guessed `description.split(...)` brand or hardcoded `caseSize: 24` remains in this path.
+
+## V3-FIX-055 - Match base-screen shell states for loading, empty, error, cart strip, and responsive layout
+
+Priority: P1
+Layers: UI fidelity, UX behavior, responsiveness
+
+Issue:
+- The committed SELL shell breaks parity when data is loading, empty, stale, or partially failed.
+
+Root cause:
+- Interim scaffold states were left in `SellScreenV3.tsx` instead of being replaced with a V3-faithful shell treatment.
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/components/v3/ProductTileV3.tsx`
+- tests under `src/__tests__/screens/`
+
+Expected outcome:
+- Header, search, toggle, category rail, and bottom nav remain mounted while product data is loading or retrying.
+- Cart-empty strip copy matches the prototype:
+  - `Cart empty — tap product or scan barcode`
+- SELL has explicit screen-level treatments for:
+  - no frequent history
+  - empty category
+  - inline retry on list/category/search failure
+  - offline cached data
+- Grid stays legible on narrow POS widths and wider tablet widths without clipped tiles or broken column math.
+
+## DELETE Tickets
+
+## V3-DELETE-056 - Remove demo search scaffolding and the global recent-search storage key
+
+Priority: P0
+Layers: frontend cleanup, regression safety
+
+Issue:
+- Production SELL search still ships demo-only fallback code and a cross-store storage key.
+
+Root cause:
+- `UniversalSearchV3.tsx` retained prototype scaffolding after API wiring began.
+
+Files impacted:
+- `src/components/v3/UniversalSearchV3.tsx`
+- `src/services/searchHistory.ts` if legacy migration cleanup is needed
+- tests that currently assert scaffold strings instead of runtime behavior
+
+Expected outcome:
+- Remove:
+  - `DEMO_SELL`
+  - `DEMO_BUY`
+  - global `@supermandi.recent_searches`
+- No production search path can render fake rows.
+- Cleanup leaves no orphan imports, dead constants, or stale source-text tests.
+
+## V3-DELETE-057 - Delete the stale duplicate SSE route and the dead `/sync/poll` fallback assumption
+
+Priority: P0
+Layers: backend cleanup, frontend cleanup, production consistency
+
+Issue:
+- `main` still ships conflicting live-update implementations and a client fallback to a route that does not exist.
+
+Root cause:
+- `backend/src/routes/v1/index.ts` mounts both `syncEvents.ts` and `syncEvents.sse.ts`.
+- `src/services/sseClient.ts` still points polling fallback at `/api/v1/pos/sync/poll`.
+
+Files impacted:
+- `backend/src/routes/v1/index.ts`
+- `backend/src/routes/v1/pos/syncEvents.sse.ts`
+- `src/services/sseClient.ts`
+- related tests/imports
+
+Expected outcome:
+- Only one live-update route remains mounted for SELL-home sync.
+- No client code points to `/api/v1/pos/sync/poll` unless a real endpoint is added in the same change.
+- Cleanup leaves no duplicate protocol handling, wrong middleware imports, or dead reconnect branches.
+
+## V3-DELETE-058 - Remove stale V3 SELL scaffolding and misleading swap documentation
+
+Priority: P1
+Layers: cleanup, docs, code hygiene
+
+Issue:
+- `main` still contains scaffolding that misrepresents the real SELL-home runtime.
+
+Root cause:
+- Incremental V3 migration left behind dead code and outdated route-swap guidance.
+
+Files impacted:
+- `src/screens/v3/PosRootLayoutV3.tsx`
+- `src/screens/v3/ROUTE_SWAP_GUIDE.md`
+- any additional V3-only docs/comments that still reference obsolete SELL mount assumptions
+
+Expected outcome:
+- Remove:
+  - unused `PlaceholderScreen`
+  - stale "coming soon" comments in the mounted V3 root
+  - route-swap guidance that still describes non-current SELL ownership
+- Rewrite or delete V3 docs that still claim `SellScanScreen` is the active V3 implementation.
+- Do not delete `SellScanScreen` itself in this ticket.
+
+## HARDEN Tickets
+
+## V3-HARDEN-059 - Resolve `Bulk / Trade` into a real store-side pricing contract or remove it from SELL
+
+Priority: P0
+Layers: business rules, backend API, frontend UX
+
+Issue:
+- SELL currently exposes `Bulk / Trade`, but `main` still computes trade price with invented `85%` math.
+
+Root cause:
+- There is no committed store-side SELL trade-pricing contract on `main`.
+- `SellScreenV3.tsx` and cart total logic still assume a synthetic multiplier.
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/components/v3/CustomerTypeToggle.tsx`
+- `src/components/v3/ProductTileV3.tsx`
+- backend route(s) and forward migration(s) only if real store-side trade pricing is approved
+
+Expected outcome:
+- One explicit production state exists:
+  - real trade-pricing contract with real data
+  - or `Bulk / Trade` is hidden/disabled on SELL until that data exists
+- No SELL price or total uses invented percentage math.
+
+## V3-HARDEN-060 - Define one canonical product identity across grid, search, scan, and cart
+
+Priority: P0
+Layers: data lifecycle, business logic, regression safety
+
+Issue:
+- The same physical SKU can enter the cart under different ids depending on whether it came from the grid, search, or scan path.
+
+Root cause:
+- Grid code often keys by `barcode ?? productId`.
+- Search code prefers `storeProductId ?? productId`.
+- Cart quantity lookups mix barcode and id matching.
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/stores/cartStore.ts`
+- `src/stores/productsStore.ts` or replacement SELL-home store
+- `src/services/api/sellSearchApi.ts`
+- scan/cart bridge code if required
+
+Expected outcome:
+- One canonical identity contract is documented and enforced, preferably store-product-first.
+- Adding the same SKU from grid, search, and scan increments one cart line, not duplicates.
+- Qty badges, cart sheet, and payment handoff all use the same identity rules.
+
+## V3-HARDEN-061 - Add store-scoped offline/cache lifecycle for SELL home datasets
+
+Priority: P1
+Layers: offline behavior, local state, data lifecycle
+
+Issue:
+- Correct SELL-home parity will regress offline behavior unless cache scope is redesigned deliberately.
+
+Root cause:
+- Current offline behavior depends on the generic `productsStore` cache.
+- There is no dedicated cache contract for:
+  - base grid
+  - category groups
+  - frequent products
+  - search results metadata
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/stores/productsStore.ts` or replacement SELL-home store
+- `src/services/searchHistory.ts`
+- store-scoped storage helpers if needed
+
+Expected outcome:
+- Trusted/bound POS devices can still open SELL home offline with the last known store-scoped dataset.
+- Category/frequent/search caches do not leak across stores.
+- Offline, stale-cache, and partial-refresh states are explicit and testable.
+
+## V3-HARDEN-062 - Add Cloud Run and API-gateway parity gates for the SELL-home contracts
+
+Priority: P1
+Layers: GCP parity, deployment readiness, production safety
+
+Issue:
+- The SELL-home contract changes required for parity can pass locally while still failing behind the gateway or in Cloud Run.
+
+Root cause:
+- `main` has no sell-home-specific rollout gate for:
+  - category-group contract
+  - frequent products
+  - ui-status feature flags
+  - long-lived live-update connection
+
+Files impacted:
+- `backend/services/api-gateway/src/config.ts`
+- `backend/src/startup/validateGcp.ts`
+- deployment/smoke scripts used for staging and Cloud Run
+- any parity test harness introduced for SELL-home routes
+
+Expected outcome:
+- Staging/prod parity checks prove that SELL home works through the gateway for:
+  - `GET /api/v1/pos/ui-status`
+  - category-group endpoint(s)
+  - `GET /api/v1/pos/products/frequent`
+  - live update endpoint
+- Missing route, env, or gateway config blocks rollout before production drift.
+
+## V3-HARDEN-063 - Replace source-text guards with runtime SELL-home parity and edge-case coverage
+
+Priority: P1
+Layers: regression, business edge cases, cleanup verification
+
+Issue:
+- Current SELL-home tests mostly assert file text, not behavior.
+
+Root cause:
+- Existing tests were written as scaffolding guards and were never upgraded to runtime assertions.
+
+Files impacted:
+- `src/__tests__/screens/sell-screen-v3.stg-553.test.ts`
+- `src/__tests__/screens/universal-search-v3.stg-560.test.ts`
+- add runtime frontend tests under `src/__tests__/screens/`
+- add backend tests under `backend/tests/`
+- add e2e smoke where needed under `e2e-tests/tests/`
+
+Expected outcome:
+- Runtime coverage exists for:
+  - header menu -> `MORE`
+  - exact search-shell behavior
+  - store-scoped recent-search history
+  - voice/category flag gating
+  - category-group and `Frequent` switching
+  - grid/cart identity consistency across grid/search/scan
+  - no-frequent-history and partial-failure states
+  - offline cached SELL-home open on a bound device
+  - delete-ticket verification with no orphan references or build breakage
+
+## Critical Click Map - SELL Home Completion Gate
+
+This screen is the daily cashier surface. Claude must not mark the SELL-home work complete until every visible tap target below is verified against the V3 prototype and against committed code behavior.
+
+Important:
+- Some elements are intentionally non-interactive in the prototype.
+- Those elements still require verification, because accidental press handlers and dead wrappers are regressions too.
+- "Looks close" is not acceptable for this screen. Every click path needs an explicit behavior, data source, and back-flow.
+
+### Click-by-click matrix
+
+1. Header logo / brand block
+- Prototype behavior:
+  - static branding only
+  - no navigation
+- Current `main` expectation:
+  - no accidental press target
+- Claude proof required:
+  - code reference showing no press handler
+  - runtime test or interaction assertion confirming no navigation is fired
+
+2. Online status pill
+- Prototype behavior:
+  - informational only
+  - not a button
+- Current `main` risk:
+  - duplicate online/offline surfaces can conflict with the pill state
+- Claude proof required:
+  - one authoritative online/offline state source
+  - proof the pill is informational only and does not trigger navigation/modals
+
+3. Kebab / overflow menu
+- Prototype behavior:
+  - tap routes to `MORE`
+- Current `main` gap:
+  - dead when `BrandedHeader` is mounted without `onMenuPress`
+- Claude proof required:
+  - code reference for SELL -> MORE wiring
+  - runtime test that tapping kebab changes active tab or route to `MORE`
+
+4. Search field shell
+- Prototype behavior:
+  - tapping/focusing search opens the dedicated search state
+- Current `main` expectation:
+  - opens `UniversalSearchV3`
+  - does not lose cart/chip/tab state when closed
+- Claude proof required:
+  - runtime test for open and close
+  - confirmation that search close returns to the same SELL context
+
+5. Search overlay close `X`
+- Prototype behavior:
+  - `✕` returns to SELL
+- Current `main` risk:
+  - overlay currently used `Cancel` scaffold behavior
+- Claude proof required:
+  - exact close affordance parity
+  - runtime test proving close returns to SELL without state loss
+
+6. Search result row `+ Add`
+- Prototype behavior:
+  - tapping a result adds it and returns to SELL
+- Current `main` risk:
+  - identity drift between search/grid/cart may create duplicate lines
+- Claude proof required:
+  - runtime test showing result selection increments the same cart identity as tile/scan paths
+  - code reference for canonical product identity
+
+7. Recent search chip
+- Prototype behavior:
+  - tapping a recent search should restore/search that term
+- Current `main` risk:
+  - recent history was global, not store-scoped
+- Claude proof required:
+  - runtime test proving recent-search tap populates/query-runs correctly
+  - proof storage is store-scoped
+
+8. Scan button
+- Prototype behavior:
+  - tap opens scan flow
+- Current `main` expectation:
+  - routes to `V3Scan`
+  - back/cancel returns to SELL
+  - cart and chip state survive expected return path
+- Claude proof required:
+  - route wiring proof
+  - runtime test for open -> back/close -> SELL return
+
+9. Voice button
+- Prototype behavior:
+  - tap opens voice flow
+  - add/retry/back paths are explicit
+- Current `main` risk:
+  - feature-flag gating incomplete
+  - voice overlay can exist while icon visibility is stale
+- Claude proof required:
+  - runtime test for open/close
+  - proof `voiceEnabled=false` removes or disables the entry point
+
+10. `Retail` toggle
+- Prototype behavior:
+  - switches SELL pricing/mode to retail
+- Current `main` expectation:
+  - tiles, cart, and totals stay internally consistent
+- Claude proof required:
+  - runtime test proving retail mode is selectable and reflected in tile/cart display
+
+11. `Bulk / Trade` toggle
+- Prototype behavior:
+  - toggle exists in the prototype
+- Current `main` risk:
+  - fake pricing math still exists in SELL logic
+- Claude proof required:
+  - explicit proof of one final state:
+    - real trade-price contract
+    - or hidden/disabled control
+  - do not mark complete while fake math remains in user-facing SELL totals
+
+12. `Frequent` chip
+- Prototype behavior:
+  - default active chip
+  - loads frequent/familiar products
+- Current `main` gap:
+  - visual state existed before real data wiring
+- Claude proof required:
+  - runtime test for frequent dataset load
+  - empty-state proof for stores with no sales history
+
+13. `Beverages` chip
+14. `Snacks` chip
+15. `Dairy` chip
+16. `Staples` chip
+17. `Home Care` chip
+- Prototype behavior:
+  - each chip changes the grid dataset
+- Current `main` gap:
+  - chip state was cosmetic only
+- Claude proof required:
+  - runtime coverage proving each chip changes visible products
+  - proof categories come from the dedicated V3 contract, not local hardcoding only
+
+18. Product tile tap
+- Prototype behavior:
+  - tap adds product to cart
+  - qty badge appears/increments
+  - cart strip reflects cart contents
+- Current `main` risk:
+  - grid data and cart identity drift
+- Claude proof required:
+  - runtime test showing first tap creates one line
+  - second tap increments the same line, not a duplicate
+
+19. In-cart tile visual state
+- Prototype behavior:
+  - selected/in-cart tile shows clear feedback
+- Current `main` expectation:
+  - border, badge, and qty match cart state
+- Claude proof required:
+  - runtime assertion tying tile badge to cart state
+
+20. Cart empty strip
+- Prototype behavior:
+  - informational strip only
+  - not a button
+- Current `main` expectation:
+  - exact copy:
+    - `Cart empty — tap product or scan barcode`
+- Claude proof required:
+  - proof copy matches prototype
+  - proof it is not a dead/hidden tap target
+
+21. Cart strip when cart has items
+- Prototype behavior:
+  - opens cart state
+- Current `main` expectation:
+  - opens `CartSheetV3`
+  - preserves correct totals and item count
+- Claude proof required:
+  - runtime test for strip open behavior after adding a tile/search result
+
+22. Bottom nav `SELL`
+- Prototype behavior:
+  - stays on SELL
+- Current `main` expectation:
+  - idempotent tap
+  - does not wipe scroll/cart/search context unnecessarily
+- Claude proof required:
+  - runtime proof for idempotent behavior
+
+23. Bottom nav `BUY`
+24. Bottom nav `STORE`
+25. Bottom nav `MORE`
+- Prototype behavior:
+  - each tab changes screen
+- Current `main` expectation:
+  - tab switching works
+  - returning to SELL preserves intended state
+- Claude proof required:
+  - runtime proof for each tab switch
+  - explicit statement of what SELL state is intentionally preserved vs reset
+
+### Claude completion proof for this screen
+
+When Claude claims this screen is complete, the final report must include all of the following:
+
+1. A click-path checklist covering all 25 items above.
+2. For each item:
+- code reference
+- runtime test reference or e2e proof
+- if intentionally non-interactive, proof that no handler exists
+3. A state-persistence note for:
+- search open/close
+- scan open/back
+- voice open/back
+- tab switch away and return
+- add-to-cart and cart-sheet open
+4. A cleanup note stating exactly what old code/docs/tests were deleted and what was intentionally kept.
+
+## V3-HARDEN-064 - Add runtime verification for every visible SELL-home click path
+
+Priority: P0
+Layers: UX regression, navigation, business safety
+
+Issue:
+- The SELL-home screen is the main operator surface, but current tickets do not force proof for every visible tap target.
+
+Root cause:
+- Prior coverage was organized by subsystem, not by the actual click paths a cashier uses all day.
+
+Files impacted:
+- runtime frontend tests under `src/__tests__/screens/`
+- e2e flows under `e2e-tests/tests/`
+- any small test-only helpers needed for SELL-home interaction coverage
+
+Expected outcome:
+- Add runtime coverage for every critical visible interaction on the base SELL-home screen:
+  - kebab
+  - search open/close/result/recent-search
+  - scan open/back
+  - voice open/back
+  - retail/bulk toggle
+  - each category chip
+  - tile tap/add/increment
+  - cart strip open
+  - bottom nav tab changes
+- Non-interactive elements are also asserted as non-interactive where required:
+  - logo
+  - online pill
+  - cart-empty strip
+
+## V3-DELETE-065 - Remove stale SELL route aliases, docs, and tests only after V3 click-path parity is proven
+
+Priority: P1
+Layers: cleanup, navigation hygiene, regression prevention
+
+Issue:
+- Even when the new SELL home works, stale old naming and old-screen references can keep the codebase ambiguous.
+
+Root cause:
+- The repo still carries legacy naming and documentation around `SellScan` even though the mounted V3 screen is `PosRootLayoutV3` + `SellScreenV3`.
+- The old `SellScanScreen.tsx` file is already gone from `src`, but route names, docs, and test labels still point at it.
+
+Files impacted:
+- `App.tsx`
+- gate screens and wrappers that still navigate by legacy `SellScan` route name
+- `src/screens/v3/ROUTE_SWAP_GUIDE.md`
+- tests/docs that still describe the old SELL owner incorrectly
+- examples already verified on `main`:
+  - `src/screens/EnrollDeviceScreen.tsx`
+  - `src/screens/DeviceBlockedScreen.tsx`
+  - `src/screens/PaymentSetupScreen.tsx`
+  - `src/screens/ForceUpdateScreen.tsx`
+  - `src/screens/v3/V3ScreenWrappers.tsx`
+
+Expected outcome:
+- Replace stale route aliasing and outdated docs/tests with canonical V3 naming once parity is proven.
+- Do not break valid boot/gate flows while cleaning up route names.
+- Claude must provide grep-backed proof that:
+  - stale `SellScanScreen` ownership references are removed where they are no longer true
+  - no orphan route references remain
+  - runtime navigation still works after cleanup
+
+# Main-HEAD-only Audit Extension: Downstream Sub-Screens Originating from SELL Home
+
+Pinned baseline:
+- `main@2fdad49f00a8cc068ea6b978d4dc49ed15853344`
+
+Source-of-truth screen chain from `RELEASES/supermandi-pos-v3.html`:
+- `sell -> search`
+- `sell -> cart -> payment -> cash | upi | udhar -> success`
+- `sell -> voice`
+- `sell -> scan -> newprod`
+- `sell -> buy -> compare | counter`
+- `sell -> store -> grn | reorder | stock`
+- `sell -> more -> khata | reports | settings`
+
+Main findings on `main`:
+- `UniversalSearchV3` still behaves like a scaffold, not the prototype search scene:
+  - wrong close affordance text
+  - recent searches only render when query is empty
+  - search results still carry placeholder image logic and old layout assumptions
+- `CartSheetV3` is still a full-height sheet with non-prototype sections:
+  - discount editor
+  - customer editor
+  - no WhatsApp share CTA
+  - no dedicated cart back-header screen
+- `VoiceOverlayV3` is a modal, not the prototype screen, and still shows fake matched amount:
+  - `matchedQty * 10`
+- `ScanScreenV3` is modal/context-switch driven and still uses local cache lookup instead of an authoritative scan contract for the SELL flow.
+- `NewProductScreenV3` still uses simulated master lookup and local-only save primitives:
+  - `lookupMasterDB(...)`
+  - `upsertLocalProduct(...)`
+  - `setLocalPrice(...)`
+- `PaymentScreenV3` compresses `payment`, `cash`, `upi`, and `udhar` into one implementation, while the prototype is a screen chain with separate states and back flows.
+- `SuccessScreenV3` still fabricates key business outputs:
+  - random streak
+  - random bill ref
+  - placeholder profit percentage
+- `BuyScreenV3` still carries invented wholesale assumptions:
+  - default `caseSize: 24`
+  - estimated `ptrMinor`
+  - static categories
+- `CompareScreenV3` still falls back to demo offers when API fetch fails.
+- `CounterPurchaseScreenV3` is richer than the prototype in some places but still diverges on scan contract, supplier handling, and save flow details.
+- `StoreHubScreenV3`, `GRNScreenV3`, `ReorderScreenV3`, and `StockScreenV3` are partially wired but still retain placeholder totals, fixed labels, or prototype drift in launch behavior.
+- `MoreScreenV3`, `KhataScreenV3`, `ReportsScreenV3`, and `SettingsScreenV3` still mix real APIs with placeholder copy, static values, or legacy behavior.
+
+## V3-FIX-066 - Bring SELL search sub-screen to exact V3 parity
+
+Priority: P0
+Layers: UI, UX, navigation, frontend state
+
+Issue:
+- The SELL search screen on `main` still behaves like an overlay scaffold rather than the prototype search sub-screen.
+
+Root cause:
+- `UniversalSearchV3` still carries old generic assumptions:
+  - `Cancel` text instead of prototype `✕`
+  - recent searches hidden when query is non-empty
+  - placeholder result imagery/layout
+  - old close/result-add flow assumptions
+
+Files impacted:
+- `src/components/v3/UniversalSearchV3.tsx`
+- `src/services/searchHistory.ts`
+- SELL search callers in `src/screens/v3/SellScreenV3.tsx`
+
+Expected outcome:
+- Match the prototype search sub-screen exactly for SELL:
+  - top search bar with close `✕`
+  - results block first
+  - recent-search block still visible below results
+  - selecting a result adds the item and returns to SELL cleanly
+- Preserve SELL scroll/cart state on close and on add-to-cart return.
+
+## V3-FIX-067 - Replace cart sheet behavior with the V3 cart screen contract
+
+Priority: P0
+Layers: UI, UX, navigation, sell flow
+
+Issue:
+- Current cart implementation is a sheet-like custom surface, while the prototype is a dedicated cart screen with a clear back flow and action row.
+
+Root cause:
+- `CartSheetV3` was built as a reusable overlay and accumulated extra sections not present in V3:
+  - discount editor
+  - customer editor
+  - no WhatsApp share CTA
+
+Files impacted:
+- `src/components/v3/CartSheetV3.tsx`
+- `src/screens/v3/SellScreenV3.tsx`
+- route/wrapper code that opens checkout from SELL
+
+Expected outcome:
+- The cart experience matches the prototype:
+  - header back to SELL
+  - `Clear All`
+  - item list
+  - total summary
+  - `+ Add More`
+  - `📌 Park`
+  - WhatsApp `Share`
+  - `PAY ->`
+- Any non-prototype discount/customer functionality must move behind an explicit secondary flow, not stay embedded in the cart surface.
+
+## V3-FIX-068 - Restore voice sub-screen parity and authoritative add-to-cart behavior
+
+Priority: P0
+Layers: UI, UX, frontend-backend integration
+
+Issue:
+- The current voice flow is still a modal and shows fabricated match pricing.
+
+Root cause:
+- `VoiceOverlayV3` resolves UI from voice intent only and still renders:
+  - `matchedQty * 10`
+- The confirm path is not guaranteed to hydrate product identity/price from authoritative data before add-to-cart.
+
+Files impacted:
+- `src/components/v3/VoiceOverlayV3.tsx`
+- `src/screens/v3/SellScreenV3.tsx`
+- voice/product resolution service layer if needed
+
+Expected outcome:
+- Match the prototype voice screen:
+  - full-screen dark scene
+  - back action
+  - listening state
+  - transcript
+  - matched product summary
+  - `Add`
+  - `Retry`
+- Confirm must add the resolved product with real store product metadata and real price, not a synthetic amount.
+
+## V3-FIX-069 - Bring SELL scan sub-screen to the V3 contract
+
+Priority: P0
+Layers: UI, UX, navigation, scan integration
+
+Issue:
+- The current scan implementation is a modal with extra context switching and local lookup assumptions that do not match the prototype SELL scan path.
+
+Root cause:
+- `ScanScreenV3` was built as a multipurpose scanner:
+  - `sell | stock_in | new_product`
+- The prototype SELL flow is single-purpose and result-card driven.
+
+Files impacted:
+- `src/screens/v3/ScanScreenV3.tsx`
+- `src/screens/v3/V3ScreenWrappers.tsx`
+- barcode lookup/state integration used by SELL
+
+Expected outcome:
+- SELL scan matches the prototype:
+  - full-screen dark scan scene
+  - back to SELL
+  - camera/HID/manual barcode path
+  - bottom result card
+  - `New Product`
+  - `Continue`
+- Remove the non-V3 SELL context toggle from the primary SELL scan path.
+
+## V3-FIX-070 - Replace simulated new-product flow with the V3 create-product contract
+
+Priority: P0
+Layers: UI, API, backend, DB, offline
+
+Issue:
+- New product creation still depends on simulated master lookup and local-only writes.
+
+Root cause:
+- `NewProductScreenV3` currently uses:
+  - `lookupMasterDB(...)`
+  - `upsertLocalProduct(...)`
+  - `setLocalPrice(...)`
+- The photo CTA is also non-functional in current main.
+
+Files impacted:
+- `src/screens/v3/NewProductScreenV3.tsx`
+- `src/services/api/catalogApi.ts`
+- backend catalog/store-product endpoints used for barcode enrichment or creation
+- offline queue/store-product sync path if the app must support queued creation
+
+Expected outcome:
+- Match the prototype new-product screen:
+  - barcode-led entry from scan miss
+  - working photo capture/attach flow
+  - compact required fields
+  - `Add to Store & Cart`
+- Master lookup and store-product create must use real API/backend contracts with safe offline fallback, not local simulation.
+
+## V3-FIX-071 - Split payment chooser and child screens into the exact V3 route chain
+
+Priority: P0
+Layers: navigation, UX, payment flow architecture
+
+Issue:
+- Current payment implementation collapses multiple prototype screens into one file and one mounted surface.
+
+Root cause:
+- `PaymentScreenV3` currently handles:
+  - method chooser
+  - cash UI
+  - UPI UI
+  - Udhar UI
+  - split payment modal
+
+Files impacted:
+- `src/screens/v3/PaymentScreenV3.tsx`
+- `src/screens/v3/V3ScreenWrappers.tsx`
+- `App.tsx`
+
+Expected outcome:
+- Restore the V3 screen chain:
+  - `payment`
+  - `cash`
+  - `upi`
+  - `udhar`
+  - `success`
+- Back flows must match prototype navigation exactly:
+  - method child screen back goes to payment chooser
+  - payment chooser back goes to cart
+
+## V3-FIX-072 - Implement dedicated cash payment parity
+
+Priority: P0
+Layers: UX, API integration, cashier flow
+
+Issue:
+- The cash experience on `main` is nested inside the unified payment screen instead of being its own cash scene.
+
+Root cause:
+- The current design reused one screen for all methods, which hides the prototype’s explicit cash state and back flow.
+
+Files impacted:
+- payment child screen implementation for cash
+- `src/services/api/posApi.ts` usage for cash completion
+
+Expected outcome:
+- Dedicated cash screen with:
+  - amount to collect
+  - exact preset
+  - round-up presets
+  - manual received entry
+  - change to return
+  - `✓ COMPLETE SALE`
+- Sale creation/payment recording must stay idempotent and not duplicate the sale on repeated taps.
+
+## V3-FIX-073 - Implement dedicated UPI payment parity with real QR/status handling
+
+Priority: P0
+Layers: UX, payments, backend API
+
+Issue:
+- The current UPI experience still renders a placeholder QR block inside the unified payment screen.
+
+Root cause:
+- `PaymentScreenV3` initializes UPI but does not render a dedicated V3 UPI screen with authoritative QR payload and status handling.
+
+Files impacted:
+- payment child screen implementation for UPI
+- `src/services/api/posApi.ts`
+- backend payment-init / confirm path if payload drift exists
+
+Expected outcome:
+- Dedicated UPI screen with:
+  - total amount
+  - real QR presentation from authoritative payment payload
+  - waiting state
+  - explicit received/confirm action
+  - back flow to payment chooser
+- No placeholder QR or fake receipt step remains.
+
+## V3-FIX-074 - Implement dedicated Udhar payment parity with existing-customer selection
+
+Priority: P0
+Layers: UX, khata integration, API
+
+Issue:
+- Current Udhar flow only supports free-text customer entry inside the unified payment screen.
+
+Root cause:
+- Prototype requires both:
+  - new customer details
+  - existing-customer quick selection
+- Current `main` only implements the first half.
+
+Files impacted:
+- payment child screen implementation for Udhar
+- khata/customer lookup integration
+- `src/services/api/posApi.ts` due-payment path
+
+Expected outcome:
+- Dedicated Udhar screen with:
+  - amount due
+  - customer name/phone
+  - existing-customer quick-select list
+  - `Record Udhar`
+- The sale must attach to the correct customer/khata ledger entry without duplicate credit records.
+
+## V3-FIX-075 - Bring success/receipt screen to exact V3 parity
+
+Priority: P0
+Layers: UI, UX, payment completion, backend correctness
+
+Issue:
+- Current success screen still fabricates business outputs that should come from real sale context.
+
+Root cause:
+- `SuccessScreenV3` still invents:
+  - random streak
+  - random bill ref
+  - placeholder profit percentage
+
+Files impacted:
+- `src/screens/v3/SuccessScreenV3.tsx`
+- sale completion payload passed from payment flow
+- receipt/void integration in `src/services/api/posApi.ts`
+
+Expected outcome:
+- Success screen matches the prototype:
+  - correct payment label
+  - real bill reference
+  - real receipt-print state
+  - `New Sale`
+  - `Reprint`
+  - `Send Bill`
+  - `Void`
+- No random bill ID, streak, or fake profit remains in production paths.
+
+## V3-FIX-076 - Bring BUY screen to exact V3 parity
+
+Priority: P0
+Layers: UI, API, backend contract, business logic
+
+Issue:
+- BUY still relies on generic catalog mapping and invented wholesale metadata.
+
+Root cause:
+- `BuyScreenV3` still fabricates:
+  - `caseSize: 24`
+  - estimated `ptrMinor`
+  - static category chips
+- It does not yet honor the exact prototype card terms:
+  - MRP
+  - PTS/PTR
+  - case/crate size
+  - MOQ
+  - scheme/trade discount/credit banners
+  - stock-need copy
+
+Files impacted:
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/services/api/catalogApi.ts`
+- backend catalog/wholesale contract used by BUY
+- any migration/API additions needed for supplier offer fields
+
+Expected outcome:
+- BUY matches the prototype:
+  - supplier selector
+  - category chips
+  - rich supplier cards
+  - finance banner
+  - accurate order strip
+- No invented wholesale economics remain in UI or ordering logic.
+
+## V3-FIX-077 - Bring compare-suppliers screen to exact V3 parity
+
+Priority: P1
+Layers: UI, API, pricing logic
+
+Issue:
+- Compare screen still falls back to demo supplier offers on fetch failure.
+
+Root cause:
+- `CompareScreenV3` uses a fallback demo block instead of an authoritative empty/error state.
+
+Files impacted:
+- `src/screens/v3/CompareScreenV3.tsx`
+- `src/services/api/catalogApi.ts`
+- supplier-offer backend contract if fields are missing
+
+Expected outcome:
+- Compare screen matches the prototype:
+  - product header
+  - sell price/current stock/weekly need
+  - ranked supplier cards
+  - best-price badge
+  - order CTA per supplier
+- API failure must surface as a real error/empty state, not demo suppliers.
+
+## V3-FIX-078 - Bring counter-purchase screen to exact V3 parity
+
+Priority: P1
+Layers: UI, API, inventory, supplier workflow
+
+Issue:
+- Current counter-purchase flow diverges from the prototype on scan behavior, supplier selection, and purchase confirmation details.
+
+Root cause:
+- The implementation mixed prototype goals with extra local assumptions:
+  - store-product barcode lookup only
+  - local draft bias
+  - ad hoc supplier handling
+
+Files impacted:
+- `src/screens/v3/CounterPurchaseScreenV3.tsx`
+- `src/components/v3/PurchaseItemCardV3.tsx`
+- supplier/inventory APIs used by manual inward flow
+
+Expected outcome:
+- Match the prototype counter-purchase flow:
+  - scan zone
+  - supplier/invoice strip
+  - continuously appended scanned items
+  - repeat/new item handling
+  - summary footer
+  - confirm/save path
+- Purchase confirmation must write authoritative inward records and supplier linkage.
+
+## V3-FIX-079 - Bring STORE hub and Receive-Stock launch behavior to exact V3 parity
+
+Priority: P1
+Layers: navigation, inventory UX, API integration
+
+Issue:
+- Store hub is partially correct, but its child launch behavior still drifts from the prototype store subtree.
+
+Root cause:
+- `StoreHubScreenV3` and `GRNScreenV3` still include placeholder order metadata and wrapper assumptions.
+
+Files impacted:
+- `src/screens/v3/StoreHubScreenV3.tsx`
+- `src/screens/v3/GRNScreenV3.tsx`
+- `src/screens/v3/V3ScreenWrappers.tsx`
+- relevant order/inventory APIs
+
+Expected outcome:
+- Store hub matches prototype cards and recent-order behavior.
+- Receive Stock launch/back flow matches prototype:
+  - store -> grn -> back to store
+  - scan bar + tabs + pending PO context + confirm receipt
+- Placeholder PO metadata is replaced by real order context.
+
+## V3-FIX-080 - Bring reorder and stock sub-screens to exact V3 parity
+
+Priority: P1
+Layers: UX, reorder logic, inventory data
+
+Issue:
+- Reorder and stock screens are partly wired but still retain placeholder totals, placeholder actions, and non-prototype behaviors.
+
+Root cause:
+- Current screens were implemented as partial V3 approximations:
+  - reorder send-to-supplier action is mostly toast-level
+  - stock footer actions are alert placeholders
+
+Files impacted:
+- `src/screens/v3/ReorderScreenV3.tsx`
+- `src/screens/v3/StockScreenV3.tsx`
+- reorder/inventory service APIs
+
+Expected outcome:
+- Reorder screen matches prototype urgency cards and approval/edit/dismiss behavior.
+- Stock screen matches prototype tabs, summary counters, search, and inventory row behavior.
+- Actions that remain unsupported must be explicitly disabled or completed, not left as placeholder alerts.
+
+## V3-FIX-081 - Bring MORE hub to exact V3 parity
+
+Priority: P1
+Layers: UI, UX, summary data, navigation
+
+Issue:
+- Current MORE screen still mixes real summary with placeholder greeting and hardcoded dashboard content.
+
+Root cause:
+- `MoreScreenV3` still contains fixed morning-card content and hardcoded menu assumptions.
+
+Files impacted:
+- `src/screens/v3/MoreScreenV3.tsx`
+- `src/services/api/dailySummaryApi.ts`
+- navigation wiring for MORE quick-access routes
+
+Expected outcome:
+- Match the prototype MORE hub:
+  - branded header
+  - staff/store identity
+  - online indicator
+  - yesterday brief
+  - today stats
+  - finance banner
+  - quick-access list
+- No fixed demo dashboard copy remains in production.
+
+## V3-FIX-082 - Bring Khata screen to exact V3 parity
+
+Priority: P1
+Layers: UI, API, collections workflow
+
+Issue:
+- Current Khata screen mixes live store data with hardcoded fallback customers and simplified actions.
+
+Root cause:
+- `KhataScreenV3` still injects fallback arrays and relies on alert/toast shortcuts for collection/reminder actions.
+
+Files impacted:
+- `src/screens/v3/KhataScreenV3.tsx`
+- `src/stores/khataStore.ts`
+- khata/collection APIs
+
+Expected outcome:
+- Match the prototype:
+  - outstanding/overdue summary
+  - search
+  - overdue and pending sections
+  - remind and collect actions
+  - bulk WhatsApp reminder CTA
+- Remove hardcoded customer fallback data from production paths.
+
+## V3-FIX-083 - Bring Reports screen to exact V3 parity
+
+Priority: P1
+Layers: UI, reporting API, export/print
+
+Issue:
+- Reports screen still has incomplete profit/export behavior and placeholder PDF handling.
+
+Root cause:
+- `ReportsScreenV3` only partially uses the daily summary contract and leaves PDF/export as alert placeholder.
+
+Files impacted:
+- `src/screens/v3/ReportsScreenV3.tsx`
+- `src/services/api/dailySummaryApi.ts`
+- printer/share/export integrations
+
+Expected outcome:
+- Match the prototype:
+  - Today/Week/Month tabs
+  - sales/profit cards
+  - payment split bars
+  - print/share/PDF actions
+- Unsupported export behavior must be completed or intentionally removed, not left as alert-only placeholder.
+
+## V3-FIX-084 - Bring Settings screen to exact V3 parity
+
+Priority: P1
+Layers: UI, device config, session flow
+
+Issue:
+- Current settings screen still shows placeholder store/staff/payment values and mixes new auth work with older generic settings assumptions.
+
+Root cause:
+- `SettingsScreenV3` still hardcodes fields such as:
+  - `Raju (Manager)`
+  - `store@upi`
+  - printer/HID statuses
+
+Files impacted:
+- `src/screens/v3/SettingsScreenV3.tsx`
+- device/session/settings stores and APIs that supply:
+  - active staff
+  - hardware state
+  - payment configuration
+
+Expected outcome:
+- Match the prototype:
+  - store section
+  - staff section
+  - hardware section
+  - payments section
+  - preferences section
+  - `Switch Staff`
+  - `Logout`
+- Placeholder values are replaced by real state or removed until supported.
+
+## V3-DELETE-085 - Remove downstream modal-wrapper and legacy route drift after parity is proven
+
+Priority: P1
+Layers: cleanup, navigation, regression prevention
+
+Issue:
+- Downstream V3 screens still carry wrapper-era assumptions and route aliases that no longer match the prototype screen chain.
+
+Root cause:
+- `V3ScreenWrappers.tsx` and legacy route naming still preserve modal/alias patterns from earlier migration stages.
+
+Files impacted:
+- `src/screens/v3/V3ScreenWrappers.tsx`
+- `App.tsx`
+- route docs/tests referring to old downstream ownership
+
+Expected outcome:
+- Remove stale modal-first route assumptions once downstream parity is implemented.
+- Claude must provide grep-backed proof that:
+  - legacy downstream aliases are removed where no longer needed
+  - back flows still work after cleanup
+
+## V3-DELETE-086 - Remove demo, simulated, and fallback production data from downstream screens
+
+Priority: P0
+Layers: cleanup, data integrity
+
+Issue:
+- Several downstream screens still contain demo or simulated production data.
+
+Root cause:
+- Migration left behind placeholder data sources such as:
+  - simulated master lookup in `NewProductScreenV3`
+  - demo supplier fallback in `CompareScreenV3`
+  - fallback customer arrays in `KhataScreenV3`
+  - placeholder report/help text in downstream screens
+
+Files impacted:
+- `src/screens/v3/NewProductScreenV3.tsx`
+- `src/screens/v3/CompareScreenV3.tsx`
+- `src/screens/v3/KhataScreenV3.tsx`
+- any other downstream screen still using demo fallback
+
+Expected outcome:
+- Remove demo/simulated/fallback production data from all audited downstream screens.
+- Replace with real empty/error states instead of fabricated business records.
+
+## V3-DELETE-087 - Remove non-V3 actions and dead UI states from downstream flows
+
+Priority: P1
+Layers: cleanup, UX consistency
+
+Issue:
+- Several downstream screens still expose controls or states that do not exist in the prototype and create ambiguity.
+
+Root cause:
+- Examples already confirmed on `main`:
+  - SELL scan context toggle
+  - embedded cart discount/customer panels
+  - placeholder alert-only footer actions in inventory/report flows
+
+Files impacted:
+- `src/screens/v3/ScanScreenV3.tsx`
+- `src/components/v3/CartSheetV3.tsx`
+- `src/screens/v3/StockScreenV3.tsx`
+- `src/screens/v3/ReportsScreenV3.tsx`
+- any affected child screen introduced by wrapper-era drift
+
+Expected outcome:
+- Remove or relocate non-V3 actions and dead states so the downstream flow matches the prototype without duplicate paths or confusing affordances.
+
+## V3-HARDEN-088 - Guarantee state persistence and back-stack safety across SELL child screens
+
+Priority: P0
+Layers: navigation, session state, business safety
+
+Issue:
+- The main operator journey now spans many child screens, but `main` does not yet prove safe return behavior across these branches.
+
+Root cause:
+- Child screens were implemented incrementally and do not share one explicit persistence contract for:
+  - cart
+  - current tab
+  - current search query
+  - scan return
+  - payment completion/void
+
+Files impacted:
+- SELL root/layout state
+- downstream child screens listed above
+- navigation state helpers/tests
+
+Expected outcome:
+- Define and implement explicit return-state rules for every SELL child screen.
+- Claude must provide runtime proof for:
+  - search close/add return
+  - scan continue/new-product return
+  - cart back/pay return
+  - success new-sale return
+  - buy/store/more tab switch away and back
+
+## V3-HARDEN-089 - Harden downstream backend/API contracts for idempotency and production safety
+
+Priority: P0
+Layers: backend, API, DB, production safety
+
+Issue:
+- Several child-screen flows now depend on multi-step create/update operations that remain vulnerable to partial failure or duplicate submission.
+
+Root cause:
+- High-risk examples already visible on `main`:
+  - sale creation + payment confirmation
+  - UPI initiation + manual confirmation
+  - new product create + add-to-cart
+  - manual inward confirmation
+  - reorder approve-all
+
+Files impacted:
+- backend/payment routes and services
+- product-create/catalog routes and services
+- inventory/manual-inward and reorder approval routes
+- supporting DB constraints/migrations if missing
+
+Expected outcome:
+- Idempotency, validation, and duplicate-submit protections are explicit for all downstream audited flows.
+- Claude must document any forward migrations or API schema changes required.
+
+## V3-HARDEN-090 - Add runtime regression coverage for every downstream screen reached from SELL
+
+Priority: P0
+Layers: QA, regression prevention
+
+Issue:
+- The base SELL click map is now defined, but downstream screen coverage is still too weak for production parity claims.
+
+Root cause:
+- Existing tests on this area are fragmented and do not prove the full child-screen chain from SELL.
+
+Files impacted:
+- `src/__tests__/screens/`
+- `backend/tests/`
+- `e2e-tests/tests/`
+
+Expected outcome:
+- Add runtime coverage for the downstream chain reached from SELL:
+  - search
+  - cart
+  - voice
+  - scan
+  - new product
+  - payment child screens
+  - success
+  - buy / compare / counter
+  - store / grn / reorder / stock
+  - more / khata / customers / finance / reports / stock / sales / settings / help action
+- Claude must not claim completion without runtime proof for back flow, state persistence, and error/empty states on each audited branch.
+
+# Main-HEAD-only Audit Addendum: MORE User-Journey Subtree from SELL
+
+Pinned comparison baseline:
+- source-of-truth prototype: `RELEASES/supermandi-pos-v3.html`
+- implementation comparison point: current Claude branch `feat/v3-owner-staff-auth@c90827b90db8402a281f9b597c437592673e4057`
+
+MORE user-journey subtree from this SELL screen:
+1. `SELL -> MORE` tab
+2. `MORE header gear -> Settings`
+3. `MORE Today's Sales card -> Reports`
+4. `MORE Udhar Pending card -> Khata`
+5. `MORE Finance banner -> Credit & Finance`
+6. `MORE quick access -> Khata`
+7. `MORE quick access -> Customers`
+8. `MORE quick access -> Reports`
+9. `MORE quick access -> Stock`
+10. `MORE quick access -> Sales History`
+11. `MORE quick access -> Settings`
+12. `MORE quick access -> Help`
+
+Current branch comparison against the prototype:
+- Already covered by existing pending tickets:
+  - `V3-FIX-080` shared `Stock`
+  - `V3-FIX-081` `More` hub
+  - `V3-FIX-082` `Khata`
+  - `V3-FIX-083` `Reports`
+  - `V3-FIX-084` `Settings`
+- Still missing or misrouted on the current Claude branch:
+  - `CustomersScreenV3` exists but still uses `DEMO` fallback, `Alert.prompt`, and fake WhatsApp phone derivation
+  - `FinanceScreenV3` exists but still mixes real API calls with hardcoded offers, fixed credit score, and alert-placeholder bill-discount actions
+  - `Sales History` is not mounted as a dedicated V3 screen; `PosRootLayoutV3` incorrectly routes `sales` to `V3Reports`
+  - `Help` is a dead/non-V3 route; `PosRootLayoutV3` points `help` to `Help` without a mounted V3 target
+  - `MoreScreenV3` still hardcodes the Khata badge `3`; that remains within `V3-FIX-081`
+
+## V3-FIX-091 - Bring Customers screen to exact V3 parity
+
+Priority: P1
+Layers: UI, UX, customer data, cross-platform input
+
+Issue:
+- `CustomersScreenV3` is present on the Claude branch, but it still behaves like a partial scaffold rather than the V3 customer list screen.
+
+Root cause:
+- Current implementation still uses:
+  - `DEMO` fallback customer rows
+  - `Alert.prompt` for `+ Add`
+  - synthetic WhatsApp phone derivation from customer name text
+
+Files impacted:
+- `src/screens/v3/CustomersScreenV3.tsx`
+- `src/stores/customerStore.ts`
+- customer/contact APIs if a create/list/detail contract is missing
+
+Expected outcome:
+- Match the prototype customer list:
+  - header with `+ Add`
+  - search
+  - customer rows with avatar, visit/total metadata, WhatsApp CTA, chevron
+- No demo fallback customers remain in production.
+- `+ Add` must be cross-platform and not rely on `Alert.prompt`.
+- WhatsApp action uses real stored phone/contact data only.
+
+## V3-FIX-092 - Bring Credit & Finance screen to exact V3 parity
+
+Priority: P1
+Layers: UI, API integration, finance feature gating
+
+Issue:
+- `FinanceScreenV3` exists on the Claude branch, but still mixes live API calls with hardcoded financial offers and placeholder actions.
+
+Root cause:
+- Current implementation still hardcodes:
+  - credit score `720`
+  - offer amounts and provider cards
+  - alert-only bill-discount/upload flows
+- It also renders a Finbox card outside the tab-specific flow.
+
+Files impacted:
+- `src/screens/v3/FinanceScreenV3.tsx`
+- `src/services/api/creditApi.ts`
+- any backend/feature-flag config needed for finance availability
+
+Expected outcome:
+- Match the prototype finance subtree:
+  - `Offers`
+  - `My Loans`
+  - `Bill Discount`
+  - provider cards and CTA states
+- Feature-disabled states must be explicit.
+- No fixed score/offer data or alert-placeholder completion remains in production paths.
+
+## V3-FIX-093 - Implement dedicated Sales History screen and correct MORE routing
+
+Priority: P0
+Layers: navigation, UI, sales data lifecycle
+
+Issue:
+- `Sales History` is part of the prototype MORE user journey, but the current Claude branch does not implement it as a real V3 screen.
+
+Root cause:
+- `src/screens/v3/PosRootLayoutV3.tsx` currently routes:
+  - `sales -> V3Reports`
+- There is no mounted `V3Sales` screen/wrapper in the V3 route graph.
+
+Files impacted:
+- `src/screens/v3/PosRootLayoutV3.tsx`
+- `src/screens/v3/V3ScreenWrappers.tsx`
+- `App.tsx`
+- new V3 sales-history screen file
+- sales-history API client(s) if missing
+
+Expected outcome:
+- Tapping `Sales History` from `MORE` opens a dedicated V3 sales-history screen, not `Reports`.
+- Screen matches the prototype list-style bill history:
+  - bill rows
+  - payment-type icon/state
+  - amount
+  - item/time metadata
+- Back flow returns to `MORE`, not to an incorrect parent or a blank route.
+
+## V3-HARDEN-094 - Resolve MORE `Help` into a supported V3 action or remove the dead route
+
+Priority: P0
+Layers: navigation safety, support UX, cleanup
+
+Issue:
+- `Help` is visible in the current `MORE` menu but routes to a non-V3/dead target.
+
+Root cause:
+- `src/screens/v3/PosRootLayoutV3.tsx` currently maps:
+  - `help -> Help`
+- There is no mounted V3 help destination in the current branch.
+- The prototype shows a `Help` row but does not define a downstream `help` screen, so the product contract must be made explicit.
+
+Files impacted:
+- `src/screens/v3/PosRootLayoutV3.tsx`
+- `src/screens/v3/MoreScreenV3.tsx`
+- any support/help screen or support-action handler introduced
+- route wiring if a real V3 help surface is added
+
+Expected outcome:
+- One explicit supported behavior exists:
+  - real V3 `Help & Support` screen/action
+  - or `Help` row removed until support flow is implemented
+- No visible `Help` tap target can lead to a dead route.
+
+## V3-HARDEN-095 - Add MORE subtree click-path and back-flow runtime verification
+
+Priority: P1
+Layers: QA, navigation, regression prevention
+
+Issue:
+- The downstream runtime gate currently does not force a dedicated proof for the `MORE` subtree from the main SELL journey.
+
+Root cause:
+- `MORE` has multiple overlapping paths:
+  - header gear
+  - stats cards
+  - finance banner
+  - quick-access rows
+- Current branch still has route drift in this subtree.
+
+Files impacted:
+- runtime frontend tests under `src/__tests__/screens/`
+- e2e flows under `e2e-tests/tests/`
+- any navigation test helpers needed for the MORE subtree
+
+Expected outcome:
+- Add runtime coverage for:
+  - `SELL -> MORE`
+  - header gear -> `Settings`
+  - today sales card -> `Reports`
+  - udhar pending card -> `Khata`
+  - finance banner -> `Finance`
+  - quick-access rows:
+    - `Khata`
+    - `Customers`
+    - `Reports`
+    - `Stock`
+    - `Sales History`
+    - `Settings`
+  - `Help` action or explicit absence
+- Claude must provide proof that every MORE click path either lands on the correct V3 surface or is intentionally removed.
+
+# Branch-Level Production Audit Addendum: System Readiness vs Claude Branch
+
+Pinned comparison baseline:
+- production checklist: current go-live audit request for product metadata, supplier approval, ledger integrity, auth/session, payments, WhatsApp, GCP parity, and scale
+- implementation comparison point: current Claude branch `feat/v3-owner-staff-auth@bb82b1695ff35081e9cd585e58b707fb700c7e4c`
+
+Scope note:
+- Existing owner/staff auth session work is already tracked in:
+  - `V3-OWNER-023`
+  - `V3-POS-024`
+  - `V3-SESSION-025`
+  - `V3-BIZ-026`
+  - `V3-REG-027`
+- This addendum covers the remaining production-grade system gaps that are still open after Claude's current branch work.
+
+Current high-risk branch findings:
+- POS product caching still strips metadata that retailer web and backend already store and return.
+- Supplier-catalog add and admin publish flows still bypass append-only inventory ledger guarantees in some paths.
+- Supplier approval/publish state checks still drift between `ACTIVE`, `active`, and `verified`.
+- A stale duplicate retailer product/import implementation still exists in `backend/services/platform-service`, with schema-unsafe logic that conflicts with the mounted monolith routes.
+- POS payment/checkout frontend still contains production placeholders while backend payments/WhatsApp paths are substantially more real.
+
+## V3-FIX-096 - Unify product metadata contract across retailer web, CSV import, supplier publish, and POS
+
+Priority: P0
+Layers: frontend, backend API, data contract, offline cache
+
+Issue:
+- Product metadata is not consistently preserved from creation/import/publish flows through to POS search, scan, list, and offline cache.
+
+Root cause:
+- Retailer-admin create/edit and CSV import already capture richer metadata, and POS backend endpoints already return richer fields, but the POS store cache still collapses products to a thin shape.
+- This creates drift across retailer web, POS, and offline behavior.
+
+Files impacted:
+- `src/stores/productsStore.ts`
+- `src/services/api/productsApi.ts`
+- `src/services/api/sellSearchApi.ts`
+- `backend/src/routes/v1/retailer-admin/products.ts`
+- `backend/src/routes/v1/retailer-admin/csvImport.ts`
+- `backend/src/routes/v1/pos/storeProducts.ts`
+
+Expected outcome:
+- Define one authoritative product contract that preserves, at minimum:
+  - SKU
+  - name
+  - category/taxonomy
+  - unit / sold-by / rate-unit / pack metadata
+  - sell/purchase/MRP pricing
+  - GST / HSN / tax fields
+  - supplier linkage
+  - barcode + generated SuperMandi barcode
+  - image URL / brand / manufacturer / origin / net-content fields where available
+- POS list/search/scan/offline cache must preserve the same metadata set instead of dropping fields during store hydration.
+- Claude must add regression coverage proving that inline entry, CSV import, supplier-catalog publish, and POS retrieval all expose the same contract shape.
+
+## V3-FIX-097 - Canonicalize supplier -> SuperAdmin -> retailer SKU publish flow
+
+Priority: P0
+Layers: business workflow, backend routes, retailer web UX
+
+Issue:
+- The supplier approval and retailer publish/add flow is still fragmented and not production-safe as one canonical SKU lifecycle.
+
+Root cause:
+- There are multiple overlapping flows:
+  - supplier product approval in admin
+  - retailer supplier-catalog browse/add
+  - supplier/store link discovery
+- Current retailer add flow is too thin and does not express a full metadata + stock onboarding review step.
+
+Files impacted:
+- `backend/src/routes/v1/admin/suppliers.ts`
+- `backend/src/routes/v1/retailer-admin/suppliers.ts`
+- `retailer-admin/src/pages/SupplierCatalogPage.tsx`
+- any shared supplier/catalog service extracted to remove duplicated lifecycle logic
+
+Expected outcome:
+- One explicit lifecycle exists:
+  1. supplier submits SKU with metadata
+  2. SuperAdmin reviews/edits/approves SKU
+  3. approved SKU becomes publishable to retailer stores
+  4. retailer can add/publish SKU into store catalog with explicit review of sell price, stock seed, and supplier linkage
+- Retailer web must not use a thin add flow that silently materializes incomplete store-product data.
+- Claude must document the canonical state machine and remove overlapping route behavior that violates it.
+
+## V3-FIX-098 - Centralize SuperAdmin margin control and final retailer price derivation
+
+Priority: P0
+Layers: pricing engine, admin backend, retailer catalog contracts
+
+Issue:
+- Margin application is not yet guaranteed by one canonical implementation across approval, publish, and retailer-consumed catalog data.
+
+Root cause:
+- Margin logic is currently spread across admin routes, retailer-admin supplier flows, and catalog-service support code.
+- This creates risk of percentage vs fixed margin drift and inconsistent retailer purchase price output.
+
+Files impacted:
+- `backend/src/routes/v1/admin/suppliers.ts`
+- `backend/src/routes/v1/retailer-admin/suppliers.ts`
+- `backend/services/catalog-service/src/services/catalogServiceSupport.ts`
+- `backend/services/catalog-service/src/services/catalogService.ts`
+- any shared pricing helper introduced by the fix
+
+Expected outcome:
+- One shared pricing calculator/service handles:
+  - percentage margin
+  - fixed/lumpsum margin
+  - precedence rules
+  - rounding rules
+  - final retailer-facing purchase price derivation
+- Admin approve/edit/publish flows and retailer supplier-catalog responses must all use the same implementation.
+- Claude must add tests proving identical output for all supported margin modes across all entry points.
+
+## V3-FIX-099 - Make supplier-catalog add and publish flows ledger-safe
+
+Priority: P0
+Layers: inventory, ledger integrity, backend data mutations
+
+Issue:
+- Some supplier-driven store-product onboarding paths still materialize stock state without a matching append-only ledger history.
+
+Root cause:
+- Supplier-catalog add and publish flows create store-product/catalog state, and in some cases stock-balance rows, without enforcing the same ledger-first invariant used elsewhere.
+
+Files impacted:
+- `backend/src/routes/v1/retailer-admin/suppliers.ts`
+- `backend/src/routes/v1/admin/suppliers.ts`
+- shared inventory/ledger helpers used by these routes
+
+Expected outcome:
+- Any flow that seeds opening stock, stock balance, or inventory-affecting store state must write the corresponding append-only inventory ledger entry in the same transaction.
+- Flows that only publish catalog metadata without stock movement must remain explicitly non-inventory operations.
+- Claude must add regression tests for:
+  - supplier-catalog add with opening stock
+  - admin publish with and without stock seed
+  - duplicate-submit/idempotent retry behavior
+
+## V3-DELETE-100 - Delete or quarantine stale platform-service retailer catalog routes
+
+Priority: P0
+Layers: cleanup, backend safety, deployment consistency
+
+Issue:
+- A stale duplicate retailer product/import implementation still exists in `backend/services/platform-service` and conflicts with the mounted monolith routes.
+
+Root cause:
+- The legacy `platform-service` route file still contains product/import logic with older schema assumptions, naive CSV parsing, and different mutation behavior.
+- This is dangerous because environments can drift on which implementation they actually exercise.
+
+Files impacted:
+- `backend/services/platform-service/src/routes/retailerPortal.ts`
+- `backend/services/platform-service/src/index.ts`
+- any docs/config wiring that still advertise or mount these stale paths
+
+Expected outcome:
+- Remove the stale duplicate retailer product/import routes entirely, or quarantine them behind an explicit kill-switch with no production mount path.
+- No environment may have two competing retailer product/import implementations.
+- Cleanup must include:
+  - route unmounting
+  - stale docs/config removal
+  - tests proving the canonical mounted routes are the only supported implementation
+
+## V3-HARDEN-101 - Normalize supplier/store status enums and approval checks
+
+Priority: P0
+Layers: backend logic, migrations, business invariants
+
+Issue:
+- Supplier approval and publish logic still relies on inconsistent status values and comparisons.
+
+Root cause:
+- Current code mixes `ACTIVE`, `active`, `verified`, and legacy assumptions across approval, publish, and retailer visibility checks.
+- This can cause valid suppliers/SKUs to disappear or block publish incorrectly depending on which route is hit.
+
+Files impacted:
+- `backend/src/routes/v1/admin/suppliers.ts`
+- `backend/src/routes/v1/retailer-admin/suppliers.ts`
+- `backend/src/services/supplierStateMachine.ts`
+- forward migrations normalizing persisted enum/string values if required
+
+Expected outcome:
+- One canonical status vocabulary is defined for:
+  - supplier verification
+  - supplier active/inactive lifecycle
+  - product approval/publish lifecycle
+  - store/supplier link activation
+- All routes use shared helpers/state-machine checks instead of ad hoc string comparisons.
+- Claude must include forward migration and regression coverage for old mixed-case rows already in the database.
+
+## V3-HARDEN-102 - Enforce append-only ledger invariants across every product/stock ingestion path
+
+Priority: P0
+Layers: DB integrity, backend services, auditability
+
+Issue:
+- Append-only stock/ledger rules are enforced in some ingestion flows, but not consistently across the entire system.
+
+Root cause:
+- Manual product creation, CSV import, supplier-catalog add, publish, and sync/update paths do not all share one invariant-enforcing ledger layer.
+
+Files impacted:
+- `backend/src/routes/v1/retailer-admin/products.ts`
+- `backend/src/routes/v1/retailer-admin/csvImport.ts`
+- `backend/src/routes/v1/retailer-admin/suppliers.ts`
+- `backend/src/routes/v1/admin/suppliers.ts`
+- any inventory/ledger helper or migration required to enforce the invariant
+
+Expected outcome:
+- Ledger-first rules are formalized and reused across:
+  - manual inline entry
+  - CSV upload commit
+  - supplier-catalog add/publish
+  - stock sync/update operations
+- No path may update stock balances without a matching ledger event and audit trail.
+- Claude must add DB-level or service-level safeguards strong enough to catch regression even if a new route is added later.
+
+## V3-HARDEN-103 - Productionize POS checkout, UPI, WhatsApp, and customer-share flows
+
+Priority: P0
+Layers: POS frontend, payments API, webhook/state handling, customer comms
+
+Issue:
+- Backend payment and WhatsApp capabilities exist, but the POS/frontend checkout experience still contains production placeholders and manual shortcuts.
+
+Root cause:
+- Current POS payment UI still uses placeholder QR rendering, simplified GST logic, and immediate manual UPI confirmation.
+- Customer share/WhatsApp flows still rely on mixed deep-link vs server-send behavior depending on screen.
+
+Files impacted:
+- `src/screens/v3/PaymentScreenV3.tsx`
+- `src/screens/v3/SuccessScreenV3.tsx`
+- `src/services/billing/billShare.ts`
+- `backend/src/routes/v1/pos/payments.ts`
+- `backend/src/routes/v1/pos/whatsapp.ts`
+- any webhook/status reconciliation path touched by the fix
+
+Expected outcome:
+- POS payment screen renders real payment artifacts returned by backend:
+  - actual QR payload/URI
+  - correct store-linked UPI target
+  - correct payment pending/confirmed/failed states
+- No fake GST math or manual-success shortcut remains in the primary checkout path.
+- WhatsApp/share flows must use explicit production behavior:
+  - server-backed send when configured
+  - clear fallback only when server path is unavailable
+- Claude must add integration/regression coverage for UPI init, confirmation, failure, and customer bill-share states.
+
+## V3-HARDEN-104 - Add go-live parity gates for product import, supplier publish, payments, and WhatsApp
+
+Priority: P0
+Layers: deployment, config validation, CI/CD
+
+Issue:
+- Generic environment validation exists, but there is no single go-live gate proving that the business-critical flows in this audit are actually ready in target environments.
+
+Root cause:
+- Current GCP/config validation is too generic and does not explicitly block rollout when critical dependencies for import/publish/payments/WhatsApp are misconfigured.
+
+Files impacted:
+- `backend/src/startup/validateGcp.ts`
+- `backend/services/api-gateway/src/config.ts`
+- `scripts/gates/`
+- workflow/deploy verification files under `.github/workflows/`
+
+Expected outcome:
+- Add explicit deployment/readiness gates for:
+  - retailer product import
+  - supplier publish/discovery
+  - POS payment init/confirm
+  - WhatsApp send/webhook verification
+  - any required signed-upload/storage paths for product images/imports
+- The gate must run in the real deploy/staging verification path, not just exist as an unreferenced script.
+- Claude must document fail-fast behavior and the exact env/config assumptions required for production.
+
+## V3-HARDEN-105 - Add scale and performance gates for SKU volume, scans, and user concurrency
+
+Priority: P0
+Layers: DB performance, POS responsiveness, load/stress validation
+
+Issue:
+- The repo has load/stress tooling, but there is no explicit go/no-go acceptance proving the system meets the declared production targets.
+
+Root cause:
+- Performance tooling exists in fragments, but not yet tied to the concrete targets required for launch:
+  - 5,000+ SKUs per retailer store
+  - 10,000 SKU scans/day
+  - 10,000 combined supplier/retailer users
+
+Files impacted:
+- `scripts/load-tests/`
+- `e2e-tests/stress/`
+- relevant migrations/indexes for:
+  - `catalog.store_products`
+  - product barcode mappings
+  - search queries
+  - supplier catalog queries
+- POS search/scan/cart endpoints and clients touched by resulting fixes
+
+Expected outcome:
+- Define measurable acceptance thresholds for:
+  - cold/warm store catalog load
+  - barcode lookup latency
+  - search latency at 5k+ SKUs/store
+  - scan-to-cart latency under daily scan volume
+  - publish/import throughput for 1500-3000 supplier SKUs
+- Add missing indexes, pagination, and cache invalidation rules required to meet those thresholds.
+- Claude must produce reproducible load/stress commands and a go/no-go report format tied to these exact targets.
+
+## V3-HARDEN-106 - Stand up executable React Native device/emulator e2e harness for V3 parity gates
+
+Priority: P0
+Layers: QA infrastructure, CI/CD, mobile test execution
+
+Issue:
+- V3 click-path parity tickets now depend on device-level execution, but the repo does not yet have an executable React Native e2e harness wired for those flows.
+
+Root cause:
+- Current repo state supports:
+  - Jest code-contract tests
+  - some mounted React Native screen/component tests with mocks
+  - Playwright-style web e2e specs
+- But the SELL-home and other V3 POS click-map specs cannot be executed end to end without a real RN test harness and running app target.
+
+Files impacted:
+- `package.json`
+- `e2e-tests/`
+- emulator/device runner config (Detox, Maestro, or one explicit alternative)
+- CI workflow files under `.github/workflows/`
+- app build/test scripts needed to boot the POS target for e2e
+
+Expected outcome:
+- Choose one supported RN e2e stack for the POS app and make it executable in this repo:
+  - Detox
+  - Maestro
+  - or one explicit equivalent, but not multiple half-configured options
+- Provide:
+  - local run instructions
+  - CI/emulator execution path
+  - stable testIDs/accessibility hooks for V3 screens
+- one passing smoke path proving the harness actually runs against the app
+- `V3-HARDEN-064` and downstream click-map tickets must then run on this harness instead of remaining skipped/spec-only.
+
+# Branch-Level Device-Fit Addendum: Multi-Device Responsive Parity for All V3 Screens
+
+Pinned comparison baseline:
+- source-of-truth prototype: `RELEASES/supermandi-pos-v3.html`
+- implementation comparison point: current Claude branch `feat/v3-owner-staff-auth@bb82b1695ff35081e9cd585e58b707fb700c7e4c`
+
+Production target:
+- Every V3 screen, child screen, modal, tab, card, chip, tile, cart surface, and form must fit professionally on:
+  - low-width Android phones used by retailers (`320-360dp`)
+  - mainstream Android phones (`375-393dp`)
+  - larger Android phones (`412-430dp`)
+  - Indian handheld POS devices (`480-600dp`)
+  - wider handheld POS / compact tablet devices (`600-800dp`)
+- This includes real text content, longer category labels, SKU names, Hindi/English strings, dynamic badges, and real store/staff/product data.
+
+Current branch findings already confirmed:
+- SELL category chips stretch/crop on smaller widths because chip text and padding are fixed.
+- `SellScreenV3` still hardcodes `numColumns={3}`, compressing tile content on narrow devices.
+- `ProductTileV3` still uses fixed small text and fixed name height, which causes SKU-name breakage on smaller devices and higher font scales.
+- `BrandedHeader`, bottom-nav controls, and some pills/buttons still assume one compact width profile.
+- Several modals/sheets/forms still rely on fixed width/spacing assumptions that will not fit all phones and handheld POS devices cleanly.
+
+## V3-FIX-107 - Establish supported device matrix and shared responsive layout primitives for V3
+
+Priority: P0
+Layers: design system, layout primitives, cross-screen infrastructure
+
+Issue:
+- V3 screens are still built with one assumed phone width rather than an explicit supported device matrix.
+
+Root cause:
+- Current components rely on fixed paddings, fixed text sizes, and fixed layout assumptions instead of shared responsive primitives.
+
+Files impacted:
+- shared layout/theme utilities under `src/theme/` and `src/components/ui/`
+- any new hook/util introduced for screen class / width bucket detection
+- `src/components/v3/`
+- `src/screens/v3/`
+
+Expected outcome:
+- Define one supported responsive matrix for V3:
+  - `compact-phone`
+  - `phone`
+  - `large-phone`
+  - `handheld-pos`
+  - `wide-pos`
+- Introduce shared layout primitives/tokens for:
+  - horizontal padding
+  - grid columns
+  - chip/tab sizing
+  - header action spacing
+  - modal max width
+  - bottom-nav sizing
+  - text scale limits where justified
+- Claude must not keep solving each screen with isolated magic numbers.
+
+## V3-FIX-108 - Make the entire SELL subtree device-fit across phones and handheld POS devices
+
+Priority: P0
+Layers: UI fidelity, responsive layout, POS usability
+
+Issue:
+- The main SELL operator flow still breaks visually on smaller widths and high-density handheld POS devices.
+
+Root cause:
+- Current SELL family still uses:
+  - fixed 3-column grid assumptions
+  - fixed chip paddings/font sizes
+  - fixed tile text height
+  - fixed cart-strip and header spacing
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/components/v3/ProductTileV3.tsx`
+- `src/components/v3/CartSheetV3.tsx`
+- `src/components/v3/CartItemRowV3.tsx`
+- `src/components/v3/UniversalSearchV3.tsx`
+- `src/components/v3/VoiceOverlayV3.tsx`
+- `src/screens/v3/ScanScreenV3.tsx`
+- `src/screens/v3/NewProductScreenV3.tsx`
+- `src/screens/v3/PaymentScreenV3.tsx`
+- `src/screens/v3/SuccessScreenV3.tsx`
+
+Expected outcome:
+- SELL family fits cleanly on all supported device classes:
+  - search bar/header actions never clip or overflow
+  - category chips remain readable, scrollable, and professionally sized
+  - grid column count adapts by width
+  - SKU names, brand labels, MRP/case/unit lines, and cart strip copy do not collide or truncate incorrectly
+  - cart/payment/success surfaces fit within safe viewport height without awkward overflow
+- Claude must verify SELL on real device-width snapshots for all supported classes.
+
+## V3-FIX-109 - Make BUY and STORE subtrees device-fit across phones and handheld POS devices
+
+Priority: P0
+Layers: UI fidelity, inventory workflow usability
+
+Issue:
+- BUY and STORE screens still inherit fixed chip/card/grid assumptions that will break on compact phones and wider handheld POS devices.
+
+Root cause:
+- Supplier/category chips, purchase cards, reorder rows, stock tables, and GRN quantity controls were not built against an explicit responsive matrix.
+
+Files impacted:
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/screens/v3/CompareScreenV3.tsx`
+- `src/screens/v3/CounterPurchaseScreenV3.tsx`
+- `src/screens/v3/StoreHubScreenV3.tsx`
+- `src/screens/v3/GRNScreenV3.tsx`
+- `src/screens/v3/ReorderScreenV3.tsx`
+- `src/screens/v3/StockScreenV3.tsx`
+- `src/components/v3/SupplierProductCardV3.tsx`
+- `src/components/v3/PurchaseItemCardV3.tsx`
+
+Expected outcome:
+- BUY and STORE flows remain professional and usable on all supported classes:
+  - chips do not stretch awkwardly
+  - quantity steppers remain tappable
+  - product/supplier cards do not clip metadata
+  - stock and reorder rows fit without broken text or hidden CTA controls
+- Claude must include width-aware layout decisions instead of one-size-fits-all card dimensions.
+
+## V3-FIX-110 - Make auth, MORE, finance, customers, reports, settings, and all modal-driven screens device-fit
+
+Priority: P0
+Layers: UI fidelity, forms, operational usability
+
+Issue:
+- Login/auth/settings/customers/reports/finance/MORE surfaces still risk clipped text, crushed headers, and broken form/layout states on smaller phones and handheld POS devices.
+
+Root cause:
+- These screens still mix fixed spacing, placeholder-era card sizing, and modal assumptions not validated against multiple device widths.
+
+Files impacted:
+- `src/screens/v3/SplashScreenV3.tsx`
+- `src/screens/v3/PhoneScreenV3.tsx`
+- `src/screens/v3/OTPScreenV3.tsx`
+- `src/screens/v3/StoreSelectScreenV3.tsx`
+- `src/screens/v3/StaffLoginScreenV3.tsx`
+- `src/screens/v3/MoreScreenV3.tsx`
+- `src/screens/v3/KhataScreenV3.tsx`
+- `src/screens/v3/CustomersScreenV3.tsx`
+- `src/screens/v3/FinanceScreenV3.tsx`
+- `src/screens/v3/ReportsScreenV3.tsx`
+- `src/screens/v3/Sales*Screen*.tsx`
+- `src/screens/v3/SettingsScreenV3.tsx`
+- any modal/sheet components used by these flows
+
+Expected outcome:
+- Auth and MORE-family screens fit cleanly across all supported device classes:
+  - titles/subtitles/buttons/input rows do not clip
+  - finance/report cards remain readable
+  - list rows preserve icon/text/CTA hierarchy
+  - settings rows and badges do not collapse or overlap
+  - modal-driven flows fit keyboard + safe-area constraints
+- Claude must treat this as a full subtree sweep, not piecemeal spot fixes.
+
+## V3-HARDEN-111 - Enforce text-fit rules for chips, tabs, headers, SKU cards, list rows, and bottom navigation
+
+Priority: P0
+Layers: typography, localization, responsive UX
+
+Issue:
+- Real text content is still not governed by one consistent fit strategy, causing stretched or clipped UI in category chips, tabs, card titles, and list rows.
+
+Root cause:
+- Current UI mixes fixed font sizes, fixed heights, and no explicit truncation/wrap policy for dynamic text.
+
+Files impacted:
+- `src/components/v3/BrandedHeader.tsx`
+- `src/components/v3/BottomNavV3.tsx`
+- `src/components/v3/ProductTileV3.tsx`
+- `src/components/v3/UniversalSearchV3.tsx`
+- `src/components/v3/CustomerTypeToggle.tsx`
+- chip/tab/list-row components across `src/screens/v3/`
+- `src/components/ui/AppText.tsx`
+
+Expected outcome:
+- Define and apply explicit text-fit rules:
+  - single-line ellipsis where required
+  - two-line clamp where appropriate
+  - min/max widths for pills and chips
+  - controlled font scaling for dense POS surfaces
+  - no clipped labels in English or Hindi
+- Category labels like `Frequent`, `Beverages`, `Bulk / Trade`, `Home Care`, long SKU names, and dynamic badges must remain visually professional on the smallest supported width.
+
+## V3-HARDEN-112 - Harden modal, sheet, keyboard, and safe-area behavior for phones and POS devices
+
+Priority: P0
+Layers: UX, input flows, platform/device compatibility
+
+Issue:
+- Modals, bottom sheets, and keyboard-driven forms still risk overflowing or hiding actionable controls on compact Android phones and handheld POS devices.
+
+Root cause:
+- Several V3 surfaces rely on fixed modal widths/heights and do not yet share one safe-area + keyboard handling contract.
+
+Files impacted:
+- modal/sheet components under `src/components/v3/`
+- `src/screens/v3/PaymentScreenV3.tsx`
+- `src/screens/v3/SettingsScreenV3.tsx`
+- `src/screens/v3/NewProductScreenV3.tsx`
+- auth screens and any form-heavy V3 surface
+
+Expected outcome:
+- All modal/sheet/form flows fit and remain usable with:
+  - Android keyboard open
+  - safe-area insets
+  - compact-height handheld POS devices
+  - long validation/error messages
+- No primary CTA, close action, or important field may be pushed off-screen without a reliable scroll path.
+
+## V3-DELETE-113 - Remove fixed-width, fixed-height, and fixed-column layout drift that breaks responsive parity
+
+Priority: P0
+Layers: cleanup, responsive correctness
+
+Issue:
+- The current V3 implementation still contains hardcoded width/height/column decisions that cause device-fit regressions.
+
+Root cause:
+- Migration work left behind fixed assumptions such as:
+  - `numColumns={3}` without width adaptation
+  - fixed text heights on tiles
+  - fixed chip paddings/font sizes
+  - fixed modal widths that do not derive from viewport/device class
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/components/v3/ProductTileV3.tsx`
+- `src/components/v3/BrandedHeader.tsx`
+- `src/components/v3/BottomNavV3.tsx`
+- `src/screens/v3/BuyScreenV3.tsx`
+- any other V3 screen/component still using layout magic numbers incompatible with the supported matrix
+
+Expected outcome:
+- Remove hardcoded layout drift that cannot survive the supported device matrix.
+- Replace one-off magic numbers with shared responsive tokens/helpers introduced in `V3-FIX-107`.
+- Cleanup must not regress V3 visual fidelity on the reference width while fixing smaller/larger devices.
+
+## V3-HARDEN-114 - Add screenshot and runtime regression matrix for all 26 V3 screens across supported device classes
+
+Priority: P0
+Layers: QA, regression prevention, release gating
+
+Issue:
+- Device-fit claims are not production-safe without repeatable proof across the supported width classes and the full 26-screen V3 surface.
+
+Root cause:
+- Current testing focuses on logic and partial screen behavior, but not a repeatable device-matrix UI fit gate for all V3 screens and sub-screens.
+
+Files impacted:
+- `e2e-tests/`
+- screenshot/snapshot/regression harness for RN device classes
+- CI workflow files under `.github/workflows/`
+- any helper scripts/runbooks used to capture approval snapshots
+
+Expected outcome:
+- Add a release gate that captures and verifies all V3 screens across the supported device matrix, including:
+  - auth screens
+  - SELL family
+  - BUY family
+  - STORE family
+  - MORE family
+  - all modal/sheet states that are part of the operator journey
+- Proof must include:
+  - no clipped or stretched text
+  - no hidden CTA controls
+  - no overlapping badges/icons
+  - no broken grid/list density
+- Claude must not sign off responsive parity without this matrix.
+
+# Branch-Level Auth Rollout Addendum: Phone+OTP vs Stale Enrollment Flow
+
+Pinned comparison baseline:
+- intended product flow:
+  1. retailer registers on retailer web
+  2. SuperAdmin approves retailer/store
+  3. retailer owner logs in on POS with registered phone + OTP
+  4. owner creates staff; staff logs in with PIN
+- implementation comparison point: current Claude branch `feat/v3-owner-staff-auth`
+- staging behavior observed during Maestro bring-up:
+  - `POST /api/v1/pos/auth/send-otp` returns `401 DEVICE_UNAUTHORIZED`
+  - deployed gateway/version is behind the branch auth work
+  - staging database is missing OTP auth persistence/table support
+
+Confirmed current problem:
+- The app now surfaces `PhoneScreenV3` as the normal first-time POS login path.
+- Staging backend/env is still behaving like the old enrollment-first model.
+- This creates a false product dead-end where the user sees `DEVICE_UNAUTHORIZED` on a flow that should be `phone + OTP`.
+- The old activation/enrollment flow is stale for the normal retailer-owner journey and must not be treated as the required path.
+
+## V3-FIX-115 - Make deployed POS phone+OTP auth contract match the intended retailer flow
+
+Priority: P0
+Layers: backend API, DB, deployment parity, auth
+
+Issue:
+- The deployed environment still rejects the intended POS phone+OTP flow with `DEVICE_UNAUTHORIZED`.
+
+Root cause:
+- App/auth branch work is ahead of the deployed backend and DB state.
+- The deployed backend is not yet serving the intended `/api/v1/pos/auth/*` contract for owner login.
+
+Files impacted:
+- `backend/src/routes/v1/pos/otpAuth.ts`
+- `backend/src/routes/v1/index.ts`
+- OTP-related migrations including `pos_otp` support
+- deploy/version wiring for gateway + main backend
+
+Expected outcome:
+- `POST /api/v1/pos/auth/send-otp` and follow-up OTP verification work in staging/prod for approved retailer owners without requiring prior device enrollment.
+- Required DB schema for OTP auth exists in deployed environments before the app flow is exposed.
+- Claude must provide environment-backed proof, not branch-only proof.
+
+## V3-FIX-116 - Add auth capability handshake so the app never exposes an undeployed login path
+
+Priority: P0
+Layers: app boot, API contract, rollout safety
+
+Issue:
+- The app can expose `PhoneScreenV3` even when the target backend environment is not yet ready to support owner phone+OTP login.
+
+Root cause:
+- There is no explicit compatibility/capability check gating the POS auth funnel by deployed backend readiness.
+
+Files impacted:
+- `src/screens/v3/SplashScreenV3.tsx`
+- `src/screens/v3/PhoneScreenV3.tsx`
+- `src/services/api/uiStatusApi.ts`
+- backend ui-status/capability contract if missing
+
+Expected outcome:
+- The app boot/auth flow checks explicit backend capabilities before routing into phone+OTP.
+- If the environment is not ready, the app shows an intentional rollout/incompatibility state instead of a broken `DEVICE_UNAUTHORIZED` dead-end.
+- Claude must not rely on implicit trial-and-error API failures as the capability signal.
+
+## V3-DELETE-117 - Remove stale enrollment-first assumptions from the normal owner login journey
+
+Priority: P0
+Layers: cleanup, auth UX, route ownership
+
+Issue:
+- Old enrollment-first assumptions still leak into debugging, backend behavior, and operator guidance even though they are no longer the normal product flow.
+
+Root cause:
+- Legacy device-enrollment architecture still exists in code/docs/routes and is easy to misinterpret as the required first-time owner login path.
+
+Files impacted:
+- old enrollment/deep-link docs and stale prompts
+- any routing/comments/help text that imply owner must enroll device before phone+OTP
+- auth decision points in V3 boot screens if they still preserve this assumption
+
+Expected outcome:
+- Normal retailer-owner POS login is explicitly `phone + OTP` after approval.
+- Old enrollment flow remains only for truly separate activation/recovery cases if still needed.
+- No user-facing or operator-facing guidance should tell the retailer to use stale enrollment for the standard journey.
+
+## V3-HARDEN-118 - Add deploy smoke gates for POS OTP auth route, schema, and approval-state behavior
+
+Priority: P0
+Layers: CI/CD, staging/prod verification, regression prevention
+
+Issue:
+- The app can be built and installed while staging/prod still lacks the backend route/schema needed for the surfaced auth flow.
+
+Root cause:
+- Current rollout gates did not fail fast on:
+  - missing `/api/v1/pos/auth/send-otp` behavior
+  - missing OTP schema/table support
+  - wrong fallback to stale `DEVICE_UNAUTHORIZED`
+
+Files impacted:
+- `scripts/gates/`
+- `.github/workflows/`
+- backend startup/deploy validation
+
+Expected outcome:
+- Add blocking deploy smoke checks for:
+  - `/api/v1/pos/auth/send-otp`
+  - OTP verify path
+  - approved-owner success path
+  - unapproved / unregistered / wrong-phone failure modes
+  - presence/readiness of required OTP schema
+- A rollout must fail before promotion if the app-exposed POS auth path is not actually live.
+
+## V3-HARDEN-119 - Add environment/version parity proof between app build and deployed auth backend
+
+Priority: P1
+Layers: release management, observability, go-live safety
+
+Issue:
+- The Maestro/device test exposed that the installed app and the deployed backend were on incompatible auth generations, but there was no clear parity proof before testing.
+
+Root cause:
+- Current release process does not enforce or surface one clear compatibility signal between:
+  - app build
+  - api-gateway SHA
+  - main backend SHA
+  - required migration/schema state
+
+Files impacted:
+- version/build metadata surfaces
+- deploy workflow/reporting
+- release/runbook scripts used before device QA
+
+Expected outcome:
+- Before device QA or release sign-off, there is one explicit compatibility proof showing:
+  - app build SHA/version
+  - gateway SHA/version
+  - backend SHA/version
+  - required migration/auth capability state
+- Claude must add a release/runbook check so auth failures like this are caught before manual OTP testing starts.
