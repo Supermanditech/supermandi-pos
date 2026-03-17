@@ -58,6 +58,10 @@ echo "Device: $(adb devices | grep 'device$' | head -1 | cut -f1)"
 echo "App: $APP_ID"
 echo ""
 
+echo "NOTE: SELL smoke requires the device to be past login (on SELL home)."
+echo "If the flow fails at Gate 1, log in on the device first, then re-run."
+echo ""
+
 if [ -n "$FLOW" ]; then
   FLOW_PATH="$MAESTRO_DIR/$FLOW"
   if [ ! -f "$FLOW_PATH" ]; then

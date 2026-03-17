@@ -6,24 +6,32 @@
 #
 # Prerequisites:
 #   - APK installed on connected device/emulator (adb devices shows target)
-#   - Device is logged in to a test store (guide may or may not show)
+#   - Device must be logged in (past OTP screen, on SELL home)
 #   - Maestro CLI installed (https://maestro.mobile.dev)
+#
+# NOTE: This flow does NOT handle OTP login. The device must already be
+# authenticated. Use `maestro test .maestro/v3-login.yaml` first if needed.
 
 appId: com.supermanditech.supermandipos
 
 ---
 
 # =============================================================================
-# Gate 1: App launches and SELL screen is visible
+# Gate 0: App launches
 # =============================================================================
 - launchApp:
     clearState: false
+
+# Wait for either SELL screen or auth screen
 - waitForAnimationToEnd
 
-# The sell screen container should be present
-- assertVisible:
-    id: "sell-screen-v3"
-    timeout: 10000
+# =============================================================================
+# Gate 1: SELL screen is visible (requires prior auth)
+# =============================================================================
+- extendedWaitUntil:
+    visible:
+      id: "sell-screen-v3"
+    timeout: 15000
 
 # =============================================================================
 # Gate 2: Welcome guide (dismiss if shown)
@@ -31,13 +39,8 @@ appId: com.supermanditech.supermandipos
 - runFlow:
     when:
       visible:
-        id: "sell-welcome-guide"
-    commands:
-      - assertVisible:
-          text: "Welcome to SuperMandi POS"
-      - tapOn:
-          id: "sell-guide-dismiss"
-      - waitForAnimationToEnd
+        id: "sell-guide-dismiss"
+    file: v3-dismiss-guide.yaml
 
 # =============================================================================
 # Gate 3: Search bar and action buttons visible

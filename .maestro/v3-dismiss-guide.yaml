@@ -1,0 +1,6 @@
+# Sub-flow: Dismiss the V3 welcome guide if visible
+appId: com.supermanditech.supermandipos
+---
+- tapOn:
+    id: "sell-guide-dismiss"
+- waitForAnimationToEnd
