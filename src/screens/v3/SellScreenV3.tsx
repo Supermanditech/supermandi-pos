@@ -18,7 +18,7 @@ import type { ColorPalette } from "../../theme";
 import { useProductsStore, type Product } from "../../stores/productsStore";
 import { useCartStore } from "../../stores/cartStore";
 import { searchStoreProducts } from "../../services/api/sellSearchApi";
-import { getFmcgCategories, type FmcgCategory } from "../../services/api/catalogApi";
+import { getSellCategoryGroups, type SellCategoryGroup } from "../../services/api/catalogApi";
 import { formatMoney } from "../../utils/money";
 import { showToast } from "../../utils/showToast";
 import { getDeviceStoreId } from "../../services/deviceSession";
@@ -26,7 +26,7 @@ import { useSettingsStore } from "../../stores/settingsStore";
 import { getFrequentProducts } from "../../services/api/productsApi";
 import { logger } from "../../services/logger";
 
-// V3-059: Dynamic categories from API with static fallback
+// V3-FIX-052: V3 category-group contract — loaded from backend, fallback to canonical labels
 const FALLBACK_CATEGORIES = ["Frequent", "Beverages", "Snacks", "Dairy", "Staples", "Home Care"];
 
 // V3-FIX-042: Use real backend fields, no synthetic fallbacks
@@ -42,6 +42,7 @@ function productToTileData(p: Product): ProductTileData {
     brand: (p as any).brand ?? undefined, // real brand from backend, not guessed
     caseSize: (p as any).caseSize ?? undefined, // real case size from backend, not hardcoded
     unit: (p as any).unit ?? "pcs",
+    imageUrl: (p as any).imageUrl ?? (p as any).image_url ?? undefined,
   };
 }
 
@@ -64,8 +65,16 @@ export default function SellScreenV3() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [sellMode, setSellMode] = useState<SellMode>("retail");
   const [selectedCategory, setSelectedCategory] = useState("Frequent");
-  // V3-FIX-040: Fixed V3 category-group contract — not raw taxonomy
-  const categories = FALLBACK_CATEGORIES;
+  // V3-FIX-052: Load category groups from backend contract
+  const [categories, setCategories] = useState<string[]>(FALLBACK_CATEGORIES);
+  useEffect(() => {
+    (async () => {
+      const storeId = await getDeviceStoreId();
+      if (!storeId) return;
+      const groups = await getSellCategoryGroups(storeId);
+      if (groups.length > 0) setCategories(groups.map((g) => g.label));
+    })();
+  }, []);
 
   // V3-FIX-036: Welcome guide state
   const [showGuide, setShowGuide] = useState(false);

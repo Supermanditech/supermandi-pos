@@ -32,6 +32,8 @@ export type UiStatusResponse = {
     ordersEnabled?: boolean;
     creditEnabled?: boolean; // SM-022: Credit/Loans feature flag
     bnplEnabled?: boolean; // GL-AUD-007: BNPL badge on BUY screen
+    voiceEnabled?: boolean; // V3-FIX-051: Voice assistant
+    categoryBrowsingEnabled?: boolean; // V3-FIX-051: Category chips
   };
 };
 
@@ -74,6 +76,9 @@ function parseUiStatusResponse(raw: unknown): UiStatusResponse {
         // CA-1.4-005: Credit enabled from backend
         creditEnabled: (features.creditEnabled as boolean) ?? false,
         bnplEnabled: (features.bnplEnabled as boolean) ?? false,
+        // V3-FIX-051: SELL feature flags
+        voiceEnabled: (features.voiceEnabled as boolean) ?? true,
+        categoryBrowsingEnabled: (features.categoryBrowsingEnabled as boolean) ?? true,
       },
     };
   }

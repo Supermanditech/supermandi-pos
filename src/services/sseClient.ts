@@ -89,6 +89,8 @@ async function handleEvent(event: SSEEvent): Promise<void> {
             setReorderEnabled,
             setCreditEnabled,
             setBnplEnabled,
+            setVoiceEnabled,
+            setCategoryBrowsingEnabled,
           } = useSettingsStore.getState();
           const buyFlag = status.features.buyEnabled ?? status.features.ordersEnabled ?? true;
           const reorderFlag = status.features.reorderEnabled ?? false;
@@ -98,6 +100,9 @@ async function handleEvent(event: SSEEvent): Promise<void> {
           setReorderEnabled(reorderFlag);
           setCreditEnabled(creditFlag);
           setBnplEnabled(bnplFlag);
+          // V3-FIX-051: SELL feature flags from live settings refresh
+          if (status.features.voiceEnabled !== undefined) setVoiceEnabled(status.features.voiceEnabled);
+          if (status.features.categoryBrowsingEnabled !== undefined) setCategoryBrowsingEnabled(status.features.categoryBrowsingEnabled);
         }
         if (status.storeName) {
           useSettingsStore.getState().setStoreName(status.storeName);

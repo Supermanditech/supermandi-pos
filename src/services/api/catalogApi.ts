@@ -519,3 +519,39 @@ export function getLocalizedProductBrand(product: CatalogProduct): string | unde
   }
   return product.brand;
 }
+
+// V3-FIX-052: Dedicated SELL category-group contract
+// Returns the exact V3 display groups instead of raw FMCG taxonomy
+export type SellCategoryGroup = {
+  id: string;
+  label: string;
+  count?: number;
+};
+
+const V3_SELL_GROUPS: SellCategoryGroup[] = [
+  { id: "frequent", label: "Frequent" },
+  { id: "beverages", label: "Beverages" },
+  { id: "snacks", label: "Snacks" },
+  { id: "dairy", label: "Dairy" },
+  { id: "staples", label: "Staples" },
+  { id: "home-care", label: "Home Care" },
+];
+
+export async function getSellCategoryGroups(storeId: string): Promise<SellCategoryGroup[]> {
+  // Backend contract: returns V3 groups with product counts
+  // For now, uses the canonical V3 group list. Backend can enrich counts later.
+  try {
+    const cats = await getFmcgCategories(storeId);
+    // Map backend categories to V3 groups by best-match
+    return V3_SELL_GROUPS.map((g) => {
+      if (g.id === "frequent") return { ...g, count: undefined }; // Frequent loaded separately
+      const matching = cats.filter((c) => {
+        const label = c.labelEn.toLowerCase();
+        return label.includes(g.id.replace("-", " ")) || g.label.toLowerCase().includes(label);
+      });
+      return { ...g, count: matching.reduce((s, c) => s + (c.productCount ?? 0), 0) };
+    });
+  } catch {
+    return V3_SELL_GROUPS;
+  }
+}

@@ -108,7 +108,7 @@ export default function PosRootLayoutV3() {
         activeTab={activeTab}
         onTabPress={setActiveTab}
         sellBadge={cartCount > 0 ? cartCount : undefined}
-        moreBadge={3}
+        moreBadge={undefined}
       />
     </View>
   );

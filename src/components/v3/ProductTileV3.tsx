@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { View, Pressable, StyleSheet, Text } from "react-native";
+import { View, Pressable, StyleSheet, Text, Image } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import type { SellMode } from "../../stores/cartStore";
@@ -17,6 +17,7 @@ export interface ProductTileData {
   stock?: number;
   caseSize?: number;           // units per case
   unit?: string;               // pcs, kg, ltr, btl
+  imageUrl?: string;           // V3-FIX-054: real product image URL
 }
 
 type ProductTileV3Props = {
@@ -66,7 +67,12 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress }: P
       ) : null}
 
       <View style={styles.imageArea}>
-        <Text style={styles.emoji}>{emoji}</Text>
+        {/* V3-FIX-054: Use real image when available, emoji fallback */}
+        {product.imageUrl ? (
+          <Image source={{ uri: product.imageUrl }} style={{ width: 32, height: 32, borderRadius: 6 }} resizeMode="contain" />
+        ) : (
+          <Text style={styles.emoji}>{emoji}</Text>
+        )}
         {product.brand ? (
           <Text style={styles.brandLabel}>{product.brand}</Text>
         ) : null}

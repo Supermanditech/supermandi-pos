@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 360,
+  "version": 361,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6618,7 +6618,7 @@
       "file": "src/screens/v3/PosRootLayoutV3.tsx",
       "start_line": 1,
       "end_line": 121,
-      "checksum": "cc574d9edca6e031",
+      "checksum": "b826e430464057a7",
       "description": "POS v3 root layout — 4-tab nav shell with SellScreenV3 wired",
       "test_file": "src/__tests__/screens/pos-root-v3.stg-552.test.ts",
       "depends_on": null,
@@ -6667,7 +6667,7 @@
       "file": "src/screens/v3/SellScreenV3.tsx",
       "start_line": 1,
       "end_line": 371,
-      "checksum": "bd34b568711c4861",
+      "checksum": "9fac19bd6f54b678",
       "description": "SellScreenV3 — product grid + Retail/Bulk toggle + CartSheetV3 wired",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
       "depends_on": null,
