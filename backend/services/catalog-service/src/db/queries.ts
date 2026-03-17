@@ -397,6 +397,9 @@ export async function searchSupplierProducts(
     whereClauses.push('is_active = true');
   }
 
+  // PD-020: Only show admin-approved SKUs to retailers
+  whereClauses.push('admin_approved_at IS NOT NULL');
+
   const whereClause = whereClauses.join(' AND ');
 
   // Count

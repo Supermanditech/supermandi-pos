@@ -10,6 +10,7 @@ import { showToast } from "../../utils/showToast";
 import { useProductsStore } from "../../stores/productsStore";
 import { recordManualInward } from "../../services/api/inventoryApi";
 import { getPurchaseHistory } from "../../services/api/inventoryApi";
+import { isOnline } from "../../services/networkStatus";
 
 // V3-041: Counter Purchase screen — wire real barcode lookup + createPurchase API
 
@@ -81,11 +82,13 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
     setBarcodeInput("");
   }, [items, getProductByBarcode]);
 
-  // V3-041: Confirm purchase — record manual inward via API
+  // PD-013: Confirm purchase with offline guard
   const handleConfirm = useCallback(async () => {
     if (items.length === 0) { showToast("No items to save"); return; }
     const incomplete = items.find((it) => !it.purchasePrice || parseFloat(it.purchasePrice) <= 0);
     if (incomplete) { showToast("Enter purchase price for all items"); return; }
+    const online = await isOnline();
+    if (!online) { showToast("Offline — purchase will be queued and synced when online"); }
     setSaving(true);
     try {
       const txnItems = items.map((it) => ({

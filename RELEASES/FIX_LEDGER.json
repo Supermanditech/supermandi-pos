@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 306,
+  "version": 307,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6775,8 +6775,8 @@
       "ticket": "STG-556",
       "file": "src/screens/v3/PaymentScreenV3.tsx",
       "start_line": 1,
-      "end_line": 390,
-      "checksum": "994f0173fb8b7f9e",
+      "end_line": 399,
+      "checksum": "e4323b347aa2aba5",
       "description": "Payment screen v3 — Cash/UPI/Udhar with quick amounts, GST total, Hindi labels",
       "test_file": "src/__tests__/screens/payment-v3.stg-556.test.ts",
       "depends_on": null,
@@ -7034,8 +7034,8 @@
       "ticket": "STG-563",
       "file": "src/screens/v3/CounterPurchaseScreenV3.tsx",
       "start_line": 1,
-      "end_line": 276,
-      "checksum": "e982a419df9b032d",
+      "end_line": 280,
+      "checksum": "84da3e88491111e5",
       "description": "V3-041: Counter purchase — real barcode lookup + recordManualInward API",
       "test_file": "src/__tests__/screens/counter-purchase-v3.stg-563.test.ts",
       "depends_on": null,

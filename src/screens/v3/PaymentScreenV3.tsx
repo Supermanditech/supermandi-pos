@@ -7,6 +7,7 @@ import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useCartStore, type SellMode } from "../../stores/cartStore";
 import { createSale, initUpiPayment, recordCashPayment, recordDuePayment, confirmUpiPaymentManual, createSplitPayment, type SaleItemInput, type SplitPaymentItem } from "../../services/api/posApi";
+import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import { logger } from "../../services/logger";
 
@@ -65,8 +66,16 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
   const [upiData, setUpiData] = useState<{ paymentId: string; upiVpa: string; billRef: string } | null>(null);
   const createSaleInFlight = useRef(false);
 
-  // V3-008: Step 1 — Create sale
+  // PD-012: Offline guard before sale creation
   const createSaleStep = useCallback(async (): Promise<string | null> => {
+    const online = await isOnline();
+    if (!online && selectedMethod === "UPI") {
+      showToast("UPI requires internet connection");
+      return null;
+    }
+    if (!online) {
+      showToast("Offline — sale will be queued and synced when online");
+    }
     const saleItems: SaleItemInput[] = items.map((item) => ({
       productId: item.barcode ?? item.id,
       barcode: item.barcode,
