@@ -461,6 +461,20 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
       return;
     }
 
+    // SYS-001: Check SKU capacity before INSERT
+    const capCheck = await pool.query(
+      `SELECT s.max_sku_capacity, COUNT(sp.id)::int AS current_count
+       FROM supplier.suppliers s
+       LEFT JOIN catalog.supplier_products sp ON sp.supplier_id = s.id
+       WHERE s.id = $1
+       GROUP BY s.max_sku_capacity`,
+      [supplierId]
+    );
+    if (capCheck.rows.length > 0 && capCheck.rows[0].current_count >= capCheck.rows[0].max_sku_capacity) {
+      res.status(400).json({ error: { code: "SKU_LIMIT_REACHED", message: `SKU limit reached (${capCheck.rows[0].max_sku_capacity}). Contact SuperMandi to increase capacity.` } });
+      return;
+    }
+
     // STG-080: Include image_url in INSERT
     // SCALE-A1: Include compliance fields
     // SCALE-A2: Include net_content_value and net_content_unit
@@ -955,6 +969,18 @@ router.post(
         return;
       }
 
+      // SYS-001: Check SKU capacity before CSV import
+      const csvCapCheck = await pool.query(
+        `SELECT s.max_sku_capacity, COUNT(sp.id)::int AS current_count
+         FROM supplier.suppliers s
+         LEFT JOIN catalog.supplier_products sp ON sp.supplier_id = s.id
+         WHERE s.id = $1
+         GROUP BY s.max_sku_capacity`,
+        [supplierId]
+      );
+      const skuCap = csvCapCheck.rows[0]?.max_sku_capacity ?? 3000;
+      const skuCount = csvCapCheck.rows[0]?.current_count ?? 0;
+
       // Parse CSV
       const csvContent = req.file.buffer.toString('utf-8');
       let records: Record<string, string>[];
@@ -981,6 +1007,12 @@ router.post(
 
       // T-063: Track barcodes within this CSV to detect intra-file duplicates
       const seenBarcodes = new Set<string>();
+
+      // SYS-001: Reject entire CSV if it would exceed capacity
+      if (skuCount + records.length > skuCap) {
+        res.status(400).json({ error: { code: "SKU_LIMIT_EXCEEDED", message: `CSV has ${records.length} rows but only ${skuCap - skuCount} SKU slots remaining (capacity: ${skuCap})` } });
+        return;
+      }
 
       // Process each row
       for (let i = 0; i < records.length; i++) {
