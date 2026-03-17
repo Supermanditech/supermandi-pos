@@ -9,6 +9,7 @@ import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
 import { apiClient } from "../../services/api/apiClient";
 import { saveDeviceSession } from "../../services/deviceSession";
+import { useSettingsStore } from "../../stores/settingsStore";
 
 // V3-063: Multi-store selector — shown when user has >1 ACTIVE store
 
@@ -33,6 +34,10 @@ export default function StoreSelectScreenV3() {
         storeId: result.storeId,
         deviceToken: result.token,
       });
+
+      // V3-CLIENT-003: Hydrate store metadata immediately after selection
+      if (result.storeName) useSettingsStore.getState().setStoreName(result.storeName);
+      if (result.storeCode) useSettingsStore.getState().setStoreCode(result.storeCode);
 
       showToast(`Welcome to ${result.storeName}!`);
       navigation.reset({ index: 0, routes: [{ name: "SellScan" }] });

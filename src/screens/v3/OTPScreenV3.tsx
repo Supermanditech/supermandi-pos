@@ -9,6 +9,7 @@ import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
 import { apiClient } from "../../services/api/apiClient";
 import { saveDeviceSession } from "../../services/deviceSession";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { logger } from "../../services/logger";
 
 // V3 Auth Step 2: OTP verification
@@ -71,6 +72,10 @@ export default function OTPScreenV3() {
         storeId: result.storeId,
         deviceToken: result.token,
       });
+
+      // V3-CLIENT-003: Hydrate store metadata immediately after login
+      if (result.storeName) useSettingsStore.getState().setStoreName(result.storeName);
+      if (result.storeCode) useSettingsStore.getState().setStoreCode(result.storeCode);
 
       logger.debug("OTPV3", `verified:${phone},store:${result.storeCode}`);
       showToast(`Welcome to ${result.storeName}!`);

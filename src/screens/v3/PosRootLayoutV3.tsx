@@ -14,6 +14,7 @@ import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useCartStore } from "../../stores/cartStore";
 import { isOnline } from "../../services/networkStatus";
+import { startSSEClient, stopSSEClient } from "../../services/sseClient";
 
 type Nav = NativeStackNavigationProp<any>;
 
@@ -50,6 +51,12 @@ export default function PosRootLayoutV3() {
     check();
     const interval = setInterval(check, 15000); // Check every 15s
     return () => clearInterval(interval);
+  }, []);
+
+  // V3-CLIENT-003: Start SSE client for real-time store/settings updates
+  useEffect(() => {
+    startSSEClient();
+    return () => stopSSEClient();
   }, []);
 
   // V3-001: Navigation helper for sub-screens

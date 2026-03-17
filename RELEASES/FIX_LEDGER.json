@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 344,
+  "version": 345,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -5980,7 +5980,7 @@
       "file": "src/services/deviceSession.ts",
       "start_line": 229,
       "end_line": 264,
-      "checksum": "02e9372c092dca55",
+      "checksum": "ddfa967d773b4994",
       "description": "Pre-flight JWT token validation — decode exp claim, warn on near-expiry, clear on expired",
       "test_file": "src/__tests__/screens/token-validation.stg-547.test.ts",
       "depends_on": null,
@@ -6616,7 +6616,7 @@
       "file": "src/screens/v3/PosRootLayoutV3.tsx",
       "start_line": 1,
       "end_line": 121,
-      "checksum": "6dd07bb826787c61",
+      "checksum": "cc574d9edca6e031",
       "description": "POS v3 root layout — 4-tab nav shell with SellScreenV3 wired",
       "test_file": "src/__tests__/screens/pos-root-v3.stg-552.test.ts",
       "depends_on": null,
@@ -7738,7 +7738,7 @@
       "file": "src/screens/v3/StoreSelectScreenV3.tsx",
       "start_line": 1,
       "end_line": 94,
-      "checksum": "eab3b5fb46682339",
+      "checksum": "d0326c87dd06fccf",
       "description": "V3-063 screen",
       "test_file": "N/A",
       "status": "ACTIVE",

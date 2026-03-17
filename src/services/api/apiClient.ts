@@ -392,7 +392,9 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown, 
           message = errorField.code;
         }
       }
-      if (message === "device_unauthorized") {
+      // V3-CLIENT-003: Normalize error code matching (backend sends DEVICE_UNAUTHORIZED, TOKEN_EXPIRED, TOKEN_REVOKED)
+      const normalizedCode = message?.toUpperCase?.() ?? "";
+      if (normalizedCode === "DEVICE_UNAUTHORIZED" || normalizedCode === "TOKEN_EXPIRED" || normalizedCode === "TOKEN_REVOKED") {
         // ISSUE-MICRO-077: Try token refresh before forcing re-enrollment
         // Cooldown prevents infinite retry if refreshed token is also invalid
         const now = Date.now();

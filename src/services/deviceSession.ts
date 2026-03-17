@@ -236,10 +236,15 @@ export async function isTokenValid(): Promise<boolean> {
   const session = await getDeviceSession();
   if (!session?.deviceToken) return false;
 
-  // Decode JWT payload to check exp claim without a library
+  // V3-CLIENT-003: Support both opaque tokens and JWTs.
+  // Opaque tokens (hex strings from OTP auth) are always valid locally — API handles rejection.
+  // JWTs (3 dot-separated parts) get exp claim checked.
   try {
     const parts = session.deviceToken.split(".");
-    if (parts.length !== 3) return false;
+    if (parts.length !== 3) {
+      // Opaque token — assume valid, let API handle rejection
+      return true;
+    }
     const payload = JSON.parse(atob(parts[1]));
     const exp = payload.exp;
     if (typeof exp !== "number") return true; // No exp claim — assume valid
@@ -252,7 +257,6 @@ export async function isTokenValid(): Promise<boolean> {
       return false;
     }
     if (remainingSec < 300) {
-      // Warn when less than 5 minutes remaining
       console.warn(`[STG-547] Device token expires in ${remainingSec}s — consider refreshing`);
     }
     return true;
