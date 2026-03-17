@@ -1,0 +1,111 @@
+# V3-HARDEN-106: Maestro E2E for POS App
+# Runs V3 SELL-home smoke + other Maestro flows on an Android emulator.
+# Triggered manually or on push to branches with e2e changes.
+
+name: Maestro E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      flow:
+        description: "Flow to run (sell, pos-smoke, reorder, or blank for all)"
+        required: false
+        default: "sell"
+  push:
+    branches: ["feat/*-e2e*", "fix/*-e2e*"]
+    paths:
+      - ".maestro/**"
+      - "scripts/e2e-maestro.sh"
+      - "src/screens/v3/**"
+
+concurrency:
+  group: maestro-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  maestro-android:
+    name: Maestro E2E (Android Emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Enable KVM (for Android emulator)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api-34-${{ runner.os }}
+
+      - name: Create AVD and build APK
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            echo "=== Emulator ready ==="
+            adb devices
+
+            # Build release APK
+            cd android
+            chmod +x gradlew
+            ./gradlew assembleRelease -x bundleReleaseJsAndAssets || true
+            cd ..
+
+            # Install APK (use debug if release not available)
+            APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
+            if [ ! -f "$APK_PATH" ]; then
+              echo "WARN: Release APK not found, trying debug..."
+              APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
+            fi
+
+            if [ -f "$APK_PATH" ]; then
+              adb install -r "$APK_PATH"
+            else
+              echo "ERROR: No APK found to install"
+              exit 1
+            fi
+
+            # Run Maestro
+            FLOW="${{ github.event.inputs.flow || 'sell' }}"
+            chmod +x scripts/e2e-maestro.sh
+            bash scripts/e2e-maestro.sh "$FLOW" --ci
+
+      - name: Upload Maestro report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-report
+          path: maestro-report/
+          retention-days: 14

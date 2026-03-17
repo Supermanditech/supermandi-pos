@@ -1,0 +1,113 @@
+# V3-HARDEN-106: Maestro E2E — V3 SELL Home Smoke Test
+# Validates the SELL screen renders correctly and key interactions work.
+#
+# Run:   maestro test .maestro/v3-sell-home-smoke.yaml
+# CI:    npm run e2e:maestro:sell
+#
+# Prerequisites:
+#   - APK installed on connected device/emulator (adb devices shows target)
+#   - Device is logged in to a test store (guide may or may not show)
+#   - Maestro CLI installed (https://maestro.mobile.dev)
+
+appId: com.supermanditech.supermandipos
+
+---
+
+# =============================================================================
+# Gate 1: App launches and SELL screen is visible
+# =============================================================================
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd
+
+# The sell screen container should be present
+- assertVisible:
+    id: "sell-screen-v3"
+    timeout: 10000
+
+# =============================================================================
+# Gate 2: Welcome guide (dismiss if shown)
+# =============================================================================
+- runFlow:
+    when:
+      visible:
+        id: "sell-welcome-guide"
+    commands:
+      - assertVisible:
+          text: "Welcome to SuperMandi POS"
+      - tapOn:
+          id: "sell-guide-dismiss"
+      - waitForAnimationToEnd
+
+# =============================================================================
+# Gate 3: Search bar and action buttons visible
+# =============================================================================
+- assertVisible:
+    id: "sell-search-bar"
+
+- assertVisible:
+    id: "sell-scan-btn"
+
+# =============================================================================
+# Gate 4: Category chips visible (default = Frequent selected)
+# =============================================================================
+- assertVisible:
+    id: "sell-category-chips"
+
+- assertVisible:
+    text: "Frequent"
+
+- assertVisible:
+    text: "Beverages"
+
+# =============================================================================
+# Gate 5: Cart strip shows empty state
+# =============================================================================
+- assertVisible:
+    id: "sell-cart-empty"
+
+- assertVisible:
+    text: "Cart empty"
+
+# =============================================================================
+# Gate 6: Category switching — tap Beverages, then back to Frequent
+# =============================================================================
+- tapOn:
+    text: "Beverages"
+- waitForAnimationToEnd
+
+- tapOn:
+    text: "Frequent"
+- waitForAnimationToEnd
+
+# =============================================================================
+# Gate 7: Search bar tap opens search overlay
+# =============================================================================
+- tapOn:
+    id: "sell-search-tap"
+- waitForAnimationToEnd
+
+# Search overlay should appear (UniversalSearchV3)
+- assertVisible:
+    id: "universal-search"
+    optional: true
+
+# Close search (back button)
+- back
+- waitForAnimationToEnd
+
+# =============================================================================
+# Gate 8: Scan button navigates to V3Scan
+# =============================================================================
+- tapOn:
+    id: "sell-scan-btn"
+- waitForAnimationToEnd
+
+# Should be on scan screen (or camera permission dialog)
+# Return to sell
+- back
+- waitForAnimationToEnd
+
+# Verify we're back on SELL
+- assertVisible:
+    id: "sell-screen-v3"

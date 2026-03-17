@@ -261,7 +261,7 @@ export default function SellScreenV3() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="sell-screen-v3">
       {/* V3-FIX-037: Header with working menu + unified online state (no separate OfflineBanner) */}
       <BrandedHeader onMenuPress={() => {
         // Navigate to MORE tab from SELL
@@ -270,15 +270,15 @@ export default function SellScreenV3() {
       }} />
 
       {/* Search bar */}
-      <View style={styles.searchBar}>
-        <Pressable style={styles.searchInput} onPress={() => setSearchVisible(true)}>
+      <View style={styles.searchBar} testID="sell-search-bar">
+        <Pressable style={styles.searchInput} onPress={() => setSearchVisible(true)} testID="sell-search-tap">
           <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth={2} strokeLinecap="round">
             <Circle cx={11} cy={11} r={8} />
             <Path d="M21 21l-4.35-4.35" />
           </Svg>
           <Text style={[styles.searchText, { color: colors.textTertiary }]}>{t("sell.searchProducts", "Search your products...")}</Text>
         </Pressable>
-        <Pressable style={[styles.iconButton, { backgroundColor: colors.backgroundSecondary }]} accessibilityLabel="Scan barcode" onPress={() => navigation.navigate("V3Scan")}>
+        <Pressable style={[styles.iconButton, { backgroundColor: colors.backgroundSecondary }]} accessibilityLabel="Scan barcode" testID="sell-scan-btn" onPress={() => navigation.navigate("V3Scan")}>
           <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}>
             <Rect x={3} y={3} width={18} height={18} rx={2} />
             <Path d="M7 7h.01M7 12h10M7 17h.01M12 7h5M12 17h5" />
@@ -286,7 +286,7 @@ export default function SellScreenV3() {
         </Pressable>
         {/* V3-FIX-039: Hide voice when voiceEnabled=false */}
         {voiceEnabled ? (
-          <Pressable style={[styles.iconButton, { backgroundColor: colors.primaryLight }]} accessibilityLabel="Voice input" onPress={() => setVoiceVisible(true)}>
+          <Pressable style={[styles.iconButton, { backgroundColor: colors.primaryLight }]} accessibilityLabel="Voice input" testID="sell-mic-btn" onPress={() => setVoiceVisible(true)}>
             <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth={2}>
               <Rect x={9} y={2} width={6} height={12} rx={3} />
               <Path d="M5 10a7 7 0 0014 0M12 18v4M9 22h6" />
@@ -300,7 +300,7 @@ export default function SellScreenV3() {
       {/* <CustomerTypeToggle mode={sellMode} onModeChange={setSellMode} /> */}
 
       {/* V3-FIX-039: Hide category chips when categoryBrowsingEnabled=false */}
-      {categoryBrowsingEnabled ? <View style={styles.chipRow}>
+      {categoryBrowsingEnabled ? <View style={styles.chipRow} testID="sell-category-chips">
         <FlatList
           horizontal
           data={categories}
@@ -356,7 +356,7 @@ export default function SellScreenV3() {
 
       {/* Cart strip — tap to expand sheet */}
       {cartCount > 0 ? (
-        <Pressable style={styles.cartStrip} onPress={() => setCartSheetVisible(true)} accessibilityRole="button" accessibilityLabel="View cart">
+        <Pressable style={styles.cartStrip} onPress={() => setCartSheetVisible(true)} accessibilityRole="button" accessibilityLabel="View cart" testID="sell-cart-strip">
           <View style={styles.cartLeft}>
             <Text style={styles.cartCount}>{cartCount} item{cartCount !== 1 ? "s" : ""}</Text>
             <Text style={styles.cartItems} numberOfLines={1}>
@@ -369,7 +369,7 @@ export default function SellScreenV3() {
           </Pressable>
         </Pressable>
       ) : (
-        <View style={styles.cartEmpty}>
+        <View style={styles.cartEmpty} testID="sell-cart-empty">
           <Text style={styles.cartEmptyText}>Cart empty — tap product or scan barcode</Text>
         </View>
       )}
