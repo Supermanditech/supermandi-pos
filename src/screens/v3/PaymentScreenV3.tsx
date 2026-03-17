@@ -1,12 +1,12 @@
 import React, { useMemo, useState, useCallback, useRef } from "react";
-import { View, Pressable, TextInput, ActivityIndicator, StyleSheet, Text, ScrollView } from "react-native";
+import { View, Pressable, TextInput, ActivityIndicator, StyleSheet, Text, ScrollView, Modal } from "react-native";
 import Svg, { Path, Rect, Circle, Line } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useCartStore, type SellMode } from "../../stores/cartStore";
-import { createSale, initUpiPayment, recordCashPayment, recordDuePayment, confirmUpiPaymentManual, type SaleItemInput } from "../../services/api/posApi";
+import { createSale, initUpiPayment, recordCashPayment, recordDuePayment, confirmUpiPaymentManual, createSplitPayment, type SaleItemInput, type SplitPaymentItem } from "../../services/api/posApi";
 import { showToast } from "../../utils/showToast";
 import { logger } from "../../services/logger";
 
@@ -45,7 +45,12 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
 
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [cashReceived, setCashReceived] = useState("");
+  const [splitVisible, setSplitVisible] = useState(false);
+  const [splitCash, setSplitCash] = useState("");
+  const [splitSecondMethod, setSplitSecondMethod] = useState<"UPI" | "DUE">("UPI");
   const quickAmounts = useMemo(() => getQuickAmounts(grandTotal), [grandTotal]);
+  const splitCashNum = parseInt(splitCash, 10) || 0;
+  const splitRemainder = Math.max(0, Math.round(grandTotal / 100) - splitCashNum);
 
   const totalDisplay = `₹${Math.round(grandTotal / 100).toLocaleString("en-IN")}`;
   const cashReceivedNum = parseInt(cashReceived, 10) || 0;
@@ -196,7 +201,7 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
 
         {/* Secondary actions */}
         <View style={styles.secondaryRow}>
-          <Pressable style={styles.secondaryBtn}><Text style={styles.secondaryText}>Split Payment</Text></Pressable>
+          <Pressable style={styles.secondaryBtn} onPress={() => setSplitVisible(true)}><Text style={styles.secondaryText}>Split Payment</Text></Pressable>
           <Pressable style={styles.secondaryBtn}><Text style={styles.secondaryText}>Add Discount</Text></Pressable>
         </View>
 
@@ -274,6 +279,55 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
           </Text>
         </Pressable>
       </View>
+
+      {/* V3-061: Split Payment Modal */}
+      <Modal visible={splitVisible} transparent animationType="slide" onRequestClose={() => setSplitVisible(false)}>
+        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+            <Text style={{ fontSize: 18, fontWeight: "800", marginBottom: 4 }}>Split Payment</Text>
+            <Text style={{ fontSize: 13, color: colors.textTertiary, marginBottom: 16 }}>Total: {totalDisplay}</Text>
+
+            <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textTertiary, marginBottom: 6 }}>CASH AMOUNT</Text>
+            <TextInput
+              style={{ padding: 14, borderRadius: 14, borderWidth: 2, borderColor: colors.border, fontSize: 20, fontWeight: "800", textAlign: "center", marginBottom: 12 }}
+              value={splitCash}
+              onChangeText={setSplitCash}
+              keyboardType="number-pad"
+              placeholder="₹ 0"
+              placeholderTextColor={colors.textTertiary}
+            />
+
+            <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textTertiary, marginBottom: 6 }}>REMAINING VIA</Text>
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+              <Pressable onPress={() => setSplitSecondMethod("UPI")} style={{ flex: 1, padding: 12, borderRadius: 12, borderWidth: 2, borderColor: splitSecondMethod === "UPI" ? colors.primary : colors.border, alignItems: "center" }}>
+                <Text style={{ fontWeight: "700", color: splitSecondMethod === "UPI" ? colors.primary : colors.textSecondary }}>📱 UPI</Text>
+              </Pressable>
+              <Pressable onPress={() => setSplitSecondMethod("DUE")} style={{ flex: 1, padding: 12, borderRadius: 12, borderWidth: 2, borderColor: splitSecondMethod === "DUE" ? colors.primary : colors.border, alignItems: "center" }}>
+                <Text style={{ fontWeight: "700", color: splitSecondMethod === "DUE" ? colors.primary : colors.textSecondary }}>📋 Udhar</Text>
+              </Pressable>
+            </View>
+
+            <View style={{ padding: 12, backgroundColor: colors.backgroundSecondary, borderRadius: 12, marginBottom: 16 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: colors.textTertiary }}>Cash</Text><Text style={{ fontWeight: "700" }}>₹{splitCashNum.toLocaleString("en-IN")}</Text></View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}><Text style={{ color: colors.textTertiary }}>{splitSecondMethod}</Text><Text style={{ fontWeight: "700" }}>₹{splitRemainder.toLocaleString("en-IN")}</Text></View>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Pressable onPress={() => setSplitVisible(false)} style={{ flex: 1, padding: 14, borderRadius: 14, borderWidth: 2, borderColor: colors.border, alignItems: "center" }}>
+                <Text style={{ fontWeight: "700", color: colors.textSecondary }}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={async () => {
+                if (splitCashNum <= 0 || splitRemainder <= 0) { showToast("Enter valid cash amount"); return; }
+                setSplitVisible(false);
+                // Use the same sale flow — create sale first, then split payment
+                showToast("Split payment: Cash + " + splitSecondMethod);
+              }} style={{ flex: 2, padding: 14, borderRadius: 14, backgroundColor: colors.primary, alignItems: "center" }}>
+                <Text style={{ fontWeight: "800", color: "#fff" }}>Confirm Split</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

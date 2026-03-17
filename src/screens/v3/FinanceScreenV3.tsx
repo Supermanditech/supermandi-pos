@@ -3,9 +3,10 @@ import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator } from
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
-import { getCreditOffers } from "../../services/api/creditApi";
+import { getCreditOffers, getCreditApplications } from "../../services/api/creditApi";
+import type { CreditOffersResponse, CreditApplicationsResponse } from "../../services/api/creditApi";
 
-// V3-046: Credit & Finance v3 — wire real getCreditOffers API (feature-gated)
+// V3-062: Credit & Finance v3 — full UI with offers, loans, apply flow
 
 type Props = { onClose: () => void };
 
@@ -14,15 +15,20 @@ export default function FinanceScreenV3({ onClose }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<"offers" | "loans" | "bills">("offers");
   const [loading, setLoading] = useState(true);
-  const [offersCount, setOffersCount] = useState(0);
+  const [offers, setOffers] = useState<any[]>([]);
+  const [loans, setLoans] = useState<any[]>([]);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await getCreditOffers();
-        setOffersCount(res.offers?.length ?? 0);
+        const [offersRes, loansRes] = await Promise.allSettled([
+          getCreditOffers(),
+          getCreditApplications(),
+        ]);
+        if (offersRes.status === "fulfilled") setOffers(offersRes.value.offers ?? []);
+        if (loansRes.status === "fulfilled") setLoans(loansRes.value.applications ?? []);
       } catch {
-        // Feature may be disabled — that's OK
+        // Feature may be disabled
       } finally {
         setLoading(false);
       }
