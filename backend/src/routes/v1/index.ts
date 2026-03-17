@@ -64,6 +64,7 @@ import { retailerComplianceRouter } from "./retailer-admin/compliance";
 import { retailerAdminAuthRouter } from "./retailer-admin/auth";
 import { retailerAdminSettingsRouter } from "./retailer-admin/settings";  // GL-AUD-004: Store settings
 import { retailerAdminDevicesRouter } from "./retailer-admin/devices";  // RET-WEB-002: Device activation
+import { retailerAdminStaffRouter } from "./retailer-admin/staff";  // V3-API-019: Owner staff CRUD
 import { retailerAdminVariantsRouter } from "./retailer-admin/variants";  // T-057: Retail variant CRUD
 import { retailerInvoicesRouter } from "./retailer-admin/invoices";  // T-073: Retailer invoice views
 import { retailerReorderRouter } from "./retailer-admin/reorder";  // CL-017: Retailer reorder
@@ -272,6 +273,7 @@ v1Router.use("/retailer-admin", retailerComplianceRouter);
 v1Router.use("/retailer-admin", retailerAdminAuthRouter);
 v1Router.use("/retailer-admin", retailerAdminSettingsRouter);  // GL-AUD-004: Store settings
 v1Router.use("/retailer-admin", retailerAdminDevicesRouter);  // RET-WEB-002: Device activation
+v1Router.use("/retailer-admin", retailerAdminStaffRouter);  // V3-API-019: Owner staff CRUD
 v1Router.use("/retailer-admin", retailerAdminVariantsRouter);  // T-057: Retail variant CRUD
 v1Router.use("/retailer-admin", retailerInvoicesRouter);  // T-073: Retailer invoice views
 v1Router.use("/retailer-admin", retailerReorderRouter);  // CL-017: Retailer reorder
