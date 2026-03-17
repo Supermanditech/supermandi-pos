@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { View, Pressable, TextInput, FlatList, StyleSheet, Text, ActivityIndicator } from "react-native";
+import { View, Pressable, TextInput, FlatList, StyleSheet, Text, ActivityIndicator, Alert } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -93,8 +93,19 @@ export default function StockScreenV3({ onClose }: Props) {
       />
 
       <View style={styles.footer}>
-        <Pressable style={styles.footerBtn} onPress={() => showToast("Opening stock — scan barcodes to set initial quantities")}><Text style={styles.footerBtnText}>Opening Stock</Text></Pressable>
-        <Pressable style={styles.footerBtn} onPress={() => showToast("Barcode labels — print barcode stickers for products")}><Text style={styles.footerBtnText}>Barcode Labels</Text></Pressable>
+        <Pressable style={styles.footerBtn} onPress={() => {
+          Alert.alert("Opening Stock", "Scan barcodes and enter opening quantities for initial inventory setup.", [
+            { text: "Cancel", style: "cancel" },
+            { text: "Start Scanning", onPress: () => showToast("Navigate to scan screen for opening stock") },
+          ]);
+        }}><Text style={styles.footerBtnText}>Opening Stock</Text></Pressable>
+        <Pressable style={styles.footerBtn} onPress={() => {
+          if (items.length === 0) { showToast("Add products first to print barcode labels"); return; }
+          Alert.alert("Barcode Labels", `Print barcode labels for ${items.length} products?`, [
+            { text: "Cancel", style: "cancel" },
+            { text: "Print", onPress: () => showToast(`Printing labels for ${items.length} products...`) },
+          ]);
+        }}><Text style={styles.footerBtnText}>Barcode Labels</Text></Pressable>
       </View>
     </View>
   );

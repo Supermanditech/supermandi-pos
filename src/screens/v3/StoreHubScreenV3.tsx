@@ -20,6 +20,7 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
+  const [orderError, setOrderError] = useState(false);
 
   // V3-019: Fetch real purchase history
   useEffect(() => {
@@ -41,10 +42,7 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
         setRecentOrders(orders);
       } catch (err) {
         logger.debug("StoreHubV3", `fetch_failed:${String(err)}`);
-        // Fallback
-        setRecentOrders([
-          { supplier: "No recent orders", daysAgo: 0, items: 0, total: 0, status: "Delivered" },
-        ]);
+        setOrderError(true);
       }
       setLoadingOrders(false);
     };
@@ -89,6 +87,20 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
 
         <Text style={styles.sectionTitle}>RECENT ORDERS</Text>
         {loadingOrders ? <ActivityIndicator size="small" color={colors.primary} style={{ padding: 20 }} /> : null}
+        {!loadingOrders && orderError ? (
+          <View style={{ padding: 20, alignItems: "center" }}>
+            <Text style={{ fontSize: 28, marginBottom: 6 }}>⚠</Text>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.error }}>Could not load orders</Text>
+            <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 2 }}>Check your connection and try again</Text>
+          </View>
+        ) : null}
+        {!loadingOrders && !orderError && recentOrders.length === 0 ? (
+          <View style={{ padding: 20, alignItems: "center" }}>
+            <Text style={{ fontSize: 28, marginBottom: 6 }}>📦</Text>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textSecondary }}>No recent orders</Text>
+            <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 2 }}>Place a purchase order to see it here</Text>
+          </View>
+        ) : null}
         {recentOrders.map((order, i) => (
           <View key={i} style={styles.orderCard}>
             <View style={{ flex: 1 }}>

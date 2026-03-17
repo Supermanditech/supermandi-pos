@@ -18,13 +18,16 @@ export default function ReportsScreenV3({ onClose }: Props) {
   const [activeTab, setActiveTab] = useState<"today" | "week" | "month">("today");
   const [summary, setSummary] = useState<DailySummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cache, setCache] = useState<Record<string, DailySummary>>({});
 
   useEffect(() => {
+    // DA-059: Return cached data immediately, skip refetch
+    if (cache[activeTab]) { setSummary(cache[activeTab]); setLoading(false); return; }
     (async () => {
+      setLoading(true);
       try {
         const online = await isOnline();
         if (!online) { showToast("Offline — report unavailable"); setLoading(false); return; }
-        // V3-066: Period-based date calculation
         const now = new Date();
         let dateParam: string | undefined;
         if (activeTab === "today") {
@@ -38,6 +41,7 @@ export default function ReportsScreenV3({ onClose }: Props) {
         }
         const data = await getDailySummary(dateParam);
         setSummary(data);
+        setCache((prev) => ({ ...prev, [activeTab]: data }));
       } catch (err) {
         showToast("Could not load report");
       } finally {

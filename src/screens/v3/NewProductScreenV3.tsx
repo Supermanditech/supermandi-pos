@@ -116,12 +116,10 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
         )}
 
         {/* Photo capture */}
-        <Pressable style={[styles.photoBox, photoUri ? { borderColor: colors.primary } : null]}
+        <Pressable style={[styles.photoBox, photoUri ? { borderColor: colors.primary } : { opacity: 0.6 }]}
           accessibilityLabel="Take product photo"
-          onPress={() => {
-            // V3-060: Photo capture — requires expo-image-picker (not yet installed)
-            showToast("Photo capture requires expo-image-picker — install with: npx expo install expo-image-picker");
-          }}>
+          disabled={!photoUri}
+          onPress={() => {}}>
           {photoUri ? (
             <Image source={{ uri: photoUri }} style={{ width: 64, height: 64, borderRadius: 12 }} />
           ) : (
@@ -130,7 +128,7 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
                 <Path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
                 <Circle cx={12} cy={13} r={4} />
               </Svg>
-              <Text style={styles.photoText}>Tap to photograph product</Text>
+              <Text style={styles.photoText}>Photo — coming soon</Text>
             </>
           )}
         </Pressable>

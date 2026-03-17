@@ -41,7 +41,11 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
 
   const isBulk = sellMode === "bulk";
   const subtotal = total;
-  const gstAmount = isBulk ? Math.round(subtotal * 0.18) : 0;
+  // DA-075: Per-product GST from item metadata, fallback to 18% for bulk
+  const gstAmount = isBulk ? items.reduce((sum, item) => {
+    const gstPct = (item as any).metadata?.gstPct ?? 18;
+    return sum + Math.round(item.priceMinor * item.quantity * gstPct / 100);
+  }, 0) : 0;
   const grandTotal = subtotal - discountAmount + gstAmount;
   const itemCount = items.reduce((s, i) => s + i.quantity, 0);
 

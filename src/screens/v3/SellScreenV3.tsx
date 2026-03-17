@@ -89,7 +89,7 @@ export default function SellScreenV3() {
 
   // V3-006: Search handler — queries sellSearchApi
   const handleSearchQuery = useCallback(async (query: string) => {
-    if (query.length < 2) { setSearchResults([]); return; }
+    if (query.length < 2) { setSearchResults([]); if (query.length === 1) showToast("Type at least 2 characters to search"); return; }
     setSearchLoading(true);
     try {
       const storeId = await getDeviceStoreId();

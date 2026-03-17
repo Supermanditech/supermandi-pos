@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from "react";
-import { View, FlatList, TextInput, Pressable, StyleSheet, Text, ScrollView, ActivityIndicator } from "react-native";
+import { View, FlatList, TextInput, Pressable, StyleSheet, Text, ScrollView, ActivityIndicator, Modal } from "react-native";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 
@@ -11,6 +11,7 @@ import { useProductsStore } from "../../stores/productsStore";
 import { recordManualInward } from "../../services/api/inventoryApi";
 import { getPurchaseHistory } from "../../services/api/inventoryApi";
 import { isOnline } from "../../services/networkStatus";
+import { getSuppliers } from "../../services/api/suppliersApi";
 
 // V3-041: Counter Purchase screen — wire real barcode lookup + createPurchase API
 
@@ -27,6 +28,8 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
   const [saving, setSaving] = useState(false);
   const [supplierName, setSupplierName] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
+  const [supplierPickerVisible, setSupplierPickerVisible] = useState(false);
+  const [supplierOptions, setSupplierOptions] = useState<Array<{ id: string; name: string }>>([]);
   const getProductByBarcode = useProductsStore((s) => s.getProductByBarcode);
 
   const handleQtyChange = useCallback((idx: number, qty: number) => {
@@ -164,7 +167,15 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
       <View style={styles.supplierRow}>
         <Text style={styles.supplierLabel}>SUPPLIER:</Text>
         <TextInput style={[styles.supplierSelect, { fontSize: 12, fontWeight: "600", color: colors.textPrimary }]} value={supplierName} onChangeText={setSupplierName} placeholder="Enter supplier name..." placeholderTextColor={colors.textTertiary} />
-        <Pressable style={styles.supplierAdd} onPress={() => showToast("Select supplier from your supplier list")}><Text style={styles.supplierAddText}>+</Text></Pressable>
+        <Pressable style={styles.supplierAdd} onPress={async () => {
+          const online = await isOnline();
+          if (!online) { showToast("Supplier list requires connection"); return; }
+          try {
+            const suppliers = await getSuppliers();
+            setSupplierOptions(suppliers.map((s) => ({ id: s.id, name: s.businessName ?? s.tradeName ?? "Supplier" })));
+            setSupplierPickerVisible(true);
+          } catch { showToast("Could not load suppliers"); }
+        }}><Text style={styles.supplierAddText}>+</Text></Pressable>
       </View>
       <View style={styles.invoiceRow}>
         <Text style={styles.invoiceLabel}>Invoice #:</Text>
@@ -230,6 +241,26 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
           </Pressable>
         </View>
       </View>
+
+      {/* DA-018: Supplier picker modal */}
+      <Modal visible={supplierPickerVisible} transparent animationType="slide" onRequestClose={() => setSupplierPickerVisible(false)}>
+        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: "60%" }}>
+            <Text style={{ fontSize: 16, fontWeight: "800", marginBottom: 12 }}>Select Supplier</Text>
+            <ScrollView>
+              {supplierOptions.map((s) => (
+                <Pressable key={s.id} style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: colors.border }} onPress={() => { setSupplierName(s.name); setSupplierPickerVisible(false); }}>
+                  <Text style={{ fontSize: 14, fontWeight: "600" }}>{s.name}</Text>
+                </Pressable>
+              ))}
+              {supplierOptions.length === 0 && <Text style={{ padding: 20, textAlign: "center", color: colors.textTertiary }}>No suppliers found</Text>}
+            </ScrollView>
+            <Pressable onPress={() => setSupplierPickerVisible(false)} style={{ padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, alignItems: "center", marginTop: 8 }}>
+              <Text style={{ fontWeight: "700", color: colors.textSecondary }}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

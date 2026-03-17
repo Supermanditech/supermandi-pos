@@ -135,15 +135,15 @@ export default function PurchaseItemCardV3({ item, onQtyChange, onPriceChange, o
           {/* Expandable details */}
           <ExpandableDetails title="More Details (Tax, Batch, Trade Terms)">
             <View style={styles.fieldRow}>
-              <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="HSN Code" placeholderTextColor={colors.textTertiary} defaultValue={item.hsnCode} />
-              <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="GST %" placeholderTextColor={colors.textTertiary} defaultValue={item.gstPct ? String(item.gstPct) : ""} keyboardType="numeric" />
+              <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="HSN Code" placeholderTextColor={colors.textTertiary} value={item.hsnCode ?? ""} onChangeText={(v) => onFieldChange?.("hsnCode", v)} />
+              <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="GST %" placeholderTextColor={colors.textTertiary} value={item.gstPct ? String(item.gstPct) : ""} onChangeText={(v) => onFieldChange?.("gstPct", v)} keyboardType="numeric" />
             </View>
             <View style={styles.fieldRow}>
               <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="Trade Disc %" placeholderTextColor={colors.textTertiary} keyboardType="numeric" />
               <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="Scheme (e.g. 10+1)" placeholderTextColor={colors.textTertiary} />
             </View>
             <View style={styles.fieldRow}>
-              <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="Batch No." placeholderTextColor={colors.textTertiary} />
+              <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="Batch No." placeholderTextColor={colors.textTertiary} onChangeText={(v) => onFieldChange?.("barcode", v)} />
               <TextInput style={[styles.fieldInput, { flex: 1 }]} placeholder="Expiry date" placeholderTextColor={colors.textTertiary} />
             </View>
             <View style={styles.infoBox}>
