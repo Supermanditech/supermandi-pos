@@ -46,9 +46,26 @@ export default function FinanceScreenV3({ onClose }: Props) {
         ))}
       </View>
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
-        <View style={styles.scoreCard}><Text style={styles.scoreText}>Credit Score: 720 ✓ Eligible</Text></View>
-        <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>SUPERMANDI FINANCE</Text><View style={styles.bnplBadge}><Text style={styles.bnplText}>BNPL</Text></View></View><Text style={styles.offerAmount}>₹50,000</Text><Text style={styles.offerDetail}>Buy Now Pay Later · 0% for 30 days{"\n"}3 EMIs of ₹16,667</Text><Pressable style={styles.applyBtn}><Text style={styles.applyText}>Apply Now</Text></Pressable></View>
-        <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>LENDINGKART</Text><View style={[styles.bnplBadge, { backgroundColor: colors.warningSoft }]}><Text style={[styles.bnplText, { color: colors.warning }]}>Credit Line</Text></View></View><Text style={styles.offerAmount}>₹2,00,000</Text><Text style={styles.offerDetail}>Business credit · 1.5%/month{"\n"}Draw as needed</Text><Pressable style={styles.detailBtn}><Text style={styles.detailText}>Details</Text></Pressable></View>
+        {loading && <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />}
+        {!loading && activeTab === "offers" && (
+          <>
+            <View style={styles.scoreCard}><Text style={styles.scoreText}>Credit Score: 720 ✓ Eligible · {offers.length} offers</Text></View>
+            <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>SUPERMANDI FINANCE</Text><View style={styles.bnplBadge}><Text style={styles.bnplText}>BNPL</Text></View></View><Text style={styles.offerAmount}>₹50,000</Text><Text style={styles.offerDetail}>Buy Now Pay Later · 0% for 30 days{"\n"}3 EMIs of ₹16,667</Text><Pressable style={styles.applyBtn}><Text style={styles.applyText}>Apply Now</Text></Pressable></View>
+            <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>LENDINGKART</Text><View style={[styles.bnplBadge, { backgroundColor: colors.warningSoft }]}><Text style={[styles.bnplText, { color: colors.warning }]}>Credit Line</Text></View></View><Text style={styles.offerAmount}>₹2,00,000</Text><Text style={styles.offerDetail}>Business credit · 1.5%/month{"\n"}Draw as needed</Text><Pressable style={styles.detailBtn}><Text style={styles.detailText}>Details</Text></Pressable></View>
+          </>
+        )}
+        {!loading && activeTab === "loans" && (
+          loans.length === 0 ? (
+            <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>💳</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No active loans</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Apply for credit to see your loans here</Text></View>
+          ) : (
+            loans.map((loan: any, i: number) => (
+              <View key={i} style={styles.offerCard}><Text style={styles.provider}>{loan.providerName ?? "Loan"}</Text><Text style={styles.offerAmount}>₹{Math.round((loan.principalMinor ?? 0) / 100).toLocaleString("en-IN")}</Text><Text style={styles.offerDetail}>Status: {loan.status ?? "active"}</Text></View>
+            ))
+          )
+        )}
+        {!loading && activeTab === "bills" && (
+          <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>🧾</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>Bill Discounting</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4, textAlign: "center" }}>Upload supplier invoices to get 90% value upfront</Text><Pressable style={[styles.applyBtn, { marginTop: 16, width: "100%" }]}><Text style={styles.applyText}>Upload Invoice</Text></Pressable></View>
+        )}
         <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>FINBOX</Text><View style={[styles.bnplBadge, { backgroundColor: colors.successSoft }]}><Text style={[styles.bnplText, { color: colors.success }]}>Bill Discount</Text></View></View><Text style={styles.offerAmount}>Sell Bill Discounting</Text><Text style={styles.offerDetail}>90% of invoice value upfront{"\n"}Funds in 24 hours</Text><Pressable style={styles.detailBtn}><Text style={styles.detailText}>Upload Invoice</Text></Pressable></View>
       </ScrollView>
     </View>
