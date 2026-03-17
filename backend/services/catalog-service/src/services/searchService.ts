@@ -16,6 +16,7 @@ import type { Product, SupplierProduct } from '../db/queries';
 import {
   cacheGetOrSet,
   cacheDelete,
+  cacheDeletePattern,
   searchCacheKey,
   productCacheKey,
 } from '../cache/redis';

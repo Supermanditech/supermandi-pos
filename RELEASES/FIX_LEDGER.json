@@ -6220,8 +6220,8 @@
     {
       "ticket": "STG-516",
       "file": "backend/services/catalog-service/src/services/searchService.ts",
-      "start_line": 280,
-      "end_line": 290,
+      "start_line": 281,
+      "end_line": 291,
       "checksum": "c6f64ad426bd1881",
       "description": "Real invalidateSearchCache using cacheDeletePattern",
       "test_file": "src/__tests__/screens/search-cache-invalidation.stg-516.test.ts",
@@ -6254,7 +6254,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-15T20:58:12.252Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-17T07:52:37.264Z"
     },
     {
       "ticket": "STG-515",
