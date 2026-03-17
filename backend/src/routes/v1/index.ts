@@ -123,8 +123,6 @@ import { posOtpAuthRouter } from "./pos/otpAuth";
 // V3-016: Wholesale B2B routes
 import { posWholesaleRouter } from "./pos/wholesaleFields";
 // AUDIT-013: SSE real-time sync
-// V3-DELETE-056: Stale SSE route removed — syncEvents.ts is the single source of truth
-// import { posSyncSseRouter } from "./pos/syncEvents.sse";
 import { posLastPurchaseRouter } from "./pos/lastPurchase";
 import { posMasterCatalogRouter } from "./pos/masterCatalog";
 import { posSalesVelocityRouter } from "./pos/salesVelocity";
@@ -183,8 +181,6 @@ v1Router.use("/pos", posLastPurchaseRouter);
 v1Router.use("/pos", posMasterCatalogRouter);
 v1Router.use("/pos", posSalesVelocityRouter);
 v1Router.use("/pos/translations", posTranslationsRouter);
-// V3-DELETE-056: Stale SSE route removed
-// v1Router.use("/pos", posSyncSseRouter);
 v1Router.use("/", consentRouter);  // STG-485: DPDP consent API (available to POS + portals)
 v1Router.use("/reorder", reorderRouter);
 v1Router.use("/orders", ordersRouter);
