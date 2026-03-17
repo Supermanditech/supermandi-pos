@@ -3,8 +3,9 @@ import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator } from
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
-import { getCreditOffers, getCreditApplications } from "../../services/api/creditApi";
+import { getCreditOffers, getCreditApplications, applyForCredit } from "../../services/api/creditApi";
 import type { CreditOffersResponse, CreditApplicationsResponse } from "../../services/api/creditApi";
+import { isOnline } from "../../services/networkStatus";
 
 // V3-062: Credit & Finance v3 — full UI with offers, loans, apply flow
 
@@ -50,7 +51,16 @@ export default function FinanceScreenV3({ onClose }: Props) {
         {!loading && activeTab === "offers" && (
           <>
             <View style={styles.scoreCard}><Text style={styles.scoreText}>Credit Score: 720 ✓ Eligible · {offers.length} offers</Text></View>
-            <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>SUPERMANDI FINANCE</Text><View style={styles.bnplBadge}><Text style={styles.bnplText}>BNPL</Text></View></View><Text style={styles.offerAmount}>₹50,000</Text><Text style={styles.offerDetail}>Buy Now Pay Later · 0% for 30 days{"\n"}3 EMIs of ₹16,667</Text><Pressable style={styles.applyBtn} onPress={() => showToast("Credit application submitted — review in 24 hours")}><Text style={styles.applyText}>Apply Now</Text></Pressable></View>
+            <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>SUPERMANDI FINANCE</Text><View style={styles.bnplBadge}><Text style={styles.bnplText}>BNPL</Text></View></View><Text style={styles.offerAmount}>₹50,000</Text><Text style={styles.offerDetail}>Buy Now Pay Later · 0% for 30 days{"\n"}3 EMIs of ₹16,667</Text><Pressable style={styles.applyBtn} onPress={async () => {
+              const online = await isOnline();
+              if (!online) { showToast("Apply requires internet connection"); return; }
+              try {
+                await applyForCredit("supermandi-bnpl", 5000000);
+                showToast("Credit application submitted — review in 24 hours");
+              } catch (err: any) {
+                showToast(err?.message ?? "Application failed — try again later");
+              }
+            }}><Text style={styles.applyText}>Apply Now</Text></Pressable></View>
             <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>LENDINGKART</Text><View style={[styles.bnplBadge, { backgroundColor: colors.warningSoft }]}><Text style={[styles.bnplText, { color: colors.warning }]}>Credit Line</Text></View></View><Text style={styles.offerAmount}>₹2,00,000</Text><Text style={styles.offerDetail}>Business credit · 1.5%/month{"\n"}Draw as needed</Text><Pressable style={styles.detailBtn}><Text style={styles.detailText}>Details</Text></Pressable></View>
           </>
         )}
