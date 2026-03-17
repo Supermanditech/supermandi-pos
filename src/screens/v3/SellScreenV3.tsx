@@ -17,15 +17,14 @@ import type { ColorPalette } from "../../theme";
 import { useProductsStore, type Product } from "../../stores/productsStore";
 import { useCartStore } from "../../stores/cartStore";
 import { searchStoreProducts } from "../../services/api/sellSearchApi";
+import { getFmcgCategories, type FmcgCategory } from "../../services/api/catalogApi";
 import { formatMoney } from "../../utils/money";
 import { showToast } from "../../utils/showToast";
 import { getDeviceStoreId } from "../../services/deviceSession";
 import { logger } from "../../services/logger";
 
-// V3-006: Sell screen with pull-to-refresh, category filtering, search
-// Reads from existing productsStore + cartStore. No backend changes.
-
-const CATEGORIES = ["Frequent", "Beverages", "Snacks", "Dairy", "Staples", "Home Care"];
+// V3-059: Dynamic categories from API with static fallback
+const FALLBACK_CATEGORIES = ["Frequent", "Beverages", "Snacks", "Dairy", "Staples", "Home Care"];
 
 function productToTileData(p: Product): ProductTileData {
   return {
@@ -49,6 +48,23 @@ export default function SellScreenV3() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [sellMode, setSellMode] = useState<SellMode>("retail");
   const [selectedCategory, setSelectedCategory] = useState("Frequent");
+  const [categories, setCategories] = useState<string[]>(FALLBACK_CATEGORIES);
+
+  // V3-059: Load dynamic categories from API
+  useEffect(() => {
+    (async () => {
+      try {
+        const storeId = await getDeviceStoreId();
+        if (!storeId) return;
+        const cats = await getFmcgCategories(storeId);
+        if (cats.length > 0) {
+          setCategories(["Frequent", ...cats.map((c) => c.labelEn)]);
+        }
+      } catch {
+        // Fallback to static categories — already set
+      }
+    })();
+  }, []);
   const [searchVisible, setSearchVisible] = useState(false);
   const [cartSheetVisible, setCartSheetVisible] = useState(false);
   const [voiceVisible, setVoiceVisible] = useState(false);
@@ -212,7 +228,7 @@ export default function SellScreenV3() {
       <View style={styles.chipRow}>
         <FlatList
           horizontal
-          data={CATEGORIES}
+          data={categories}
           keyExtractor={(item) => item}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipContent}

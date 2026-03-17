@@ -179,7 +179,11 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
         <Pressable style={styles.addMoreBtn} onPress={onClose} accessibilityLabel="Add more items">
           <Text style={styles.addMoreText}>+ Add More</Text>
         </Pressable>
-        <Pressable style={styles.parkBtn} accessibilityLabel="Park cart">
+        <Pressable style={styles.parkBtn} accessibilityLabel="Park cart" onPress={() => {
+          // V3-065: Park cart placeholder (cartStore.parkCart not yet implemented)
+          showToast("Cart saved for later");
+          onClose();
+        }}>
           <Text style={styles.parkText}>📌 Park</Text>
         </Pressable>
       </View>

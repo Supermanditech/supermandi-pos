@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from "react";
-import { View, TextInput, Pressable, StyleSheet, Text, ActivityIndicator } from "react-native";
+import { View, TextInput, Pressable, StyleSheet, Text, ActivityIndicator, Linking } from "react-native";
 import Svg, { Rect, Circle } from "react-native-svg";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -79,7 +79,7 @@ export default function PhoneScreenV3() {
           {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.continueText}>Continue →</Text>}
         </Pressable>
 
-        <Pressable style={styles.registerLink}>
+        <Pressable style={styles.registerLink} onPress={() => Linking.openURL("https://supermandi.tech/retailer/register")}>
           <Text style={styles.registerText}>New store? <Text style={styles.registerBold}>Register here</Text></Text>
         </Pressable>
       </View>

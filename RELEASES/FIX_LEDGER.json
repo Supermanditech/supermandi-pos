@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 292,
+  "version": 293,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6664,8 +6664,8 @@
       "ticket": "STG-553",
       "file": "src/screens/v3/SellScreenV3.tsx",
       "start_line": 1,
-      "end_line": 340,
-      "checksum": "80cc2414a9621d1e",
+      "end_line": 357,
+      "checksum": "c7d01f4a32b6fe1a",
       "description": "SellScreenV3 — product grid + Retail/Bulk toggle + CartSheetV3 wired",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
       "depends_on": null,
@@ -6701,8 +6701,8 @@
       "ticket": "STG-554",
       "file": "src/components/v3/CartSheetV3.tsx",
       "start_line": 1,
-      "end_line": 276,
-      "checksum": "8488c4358a34dce3",
+      "end_line": 281,
+      "checksum": "2d1e9f5840270a08",
       "description": "Cart sheet v3 — expanded view with items, GST summary, qty controls, pay button",
       "test_file": "src/__tests__/screens/cart-sheet-v3.stg-554.test.ts",
       "depends_on": null,
