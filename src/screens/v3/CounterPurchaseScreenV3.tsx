@@ -97,6 +97,7 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
   // PD-013: Confirm purchase with offline guard
   const handleConfirm = useCallback(async () => {
     if (items.length === 0) { showToast("No items to save"); return; }
+    if (invoiceNo && !/^[A-Za-z0-9\-\/]{2,30}$/.test(invoiceNo.trim())) { showToast("Invoice # must be 2-30 alphanumeric characters"); return; }
     const incomplete = items.find((it) => !it.purchasePrice || parseFloat(it.purchasePrice) <= 0);
     if (incomplete) { showToast("Enter purchase price for all items"); return; }
     const online = await isOnline();

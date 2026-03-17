@@ -33,11 +33,14 @@ export default function KhataScreenV3({ onClose }: Props) {
   const khataLoading = useKhataStore((s) => s.loading);
   const fetchKhataCustomers = useKhataStore((s) => s.fetchCustomers);
   useEffect(() => {
+    let mounted = true;
     (async () => {
       const online = await isOnline();
+      if (!mounted) return;
       if (!online) { showToast("Offline — showing cached khata"); return; }
       void fetchKhataCustomers();
     })();
+    return () => { mounted = false; };
   }, [fetchKhataCustomers]);
 
   // Map khata customers to display format (merge with demo fallback)

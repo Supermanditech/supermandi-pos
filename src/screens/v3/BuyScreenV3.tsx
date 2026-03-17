@@ -88,7 +88,8 @@ export default function BuyScreenV3() {
   const cartTotal = products.reduce((s, p) => s + (orderQtys[p.id] ?? 0) * p.caseSize * p.ptrMinor, 0);
 
   const handleQtyChange = useCallback((id: string, cases: number) => {
-    setOrderQtys((prev) => ({ ...prev, [id]: Math.max(0, cases) }));
+    const qty = Math.max(0, Math.round(cases));
+    setOrderQtys((prev) => ({ ...prev, [id]: qty }));
   }, []);
 
   return (

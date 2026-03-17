@@ -109,6 +109,13 @@ export default function CompareScreenV3({ visible, productName, packSize, mrpMin
 
         {/* Supplier offer cards */}
         {loading ? <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} /> : null}
+        {!loading && offers.length === 0 ? (
+          <View style={{ padding: 24, alignItems: "center" }}>
+            <Text style={{ fontSize: 28, marginBottom: 8 }}>📭</Text>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textSecondary }}>No suppliers found</Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4, textAlign: "center" }}>No supplier offers available for this product</Text>
+          </View>
+        ) : null}
         {offers.map((offer) => {
           const marginPct = Math.round((1 - offer.ptrMinor / (mrpMinor / 100)) * 100);
           const totalForNeed = weeklyNeed * offer.ptrMinor;
