@@ -2,6 +2,7 @@ import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { asError } from "../../../lib/errorUtils";
 import crypto from "crypto";
+import { sendTextMessage, isWhatsAppConfigured } from "../../../services/whatsappService";
 
 // V3 OTP Auth — Phone + OTP based authentication for POS app
 // Flow: retailer registers on web → superadmin approves → retailer enters phone on POS → gets OTP → verifies → gets device token
@@ -43,8 +44,20 @@ posOtpAuthRouter.post("/auth/send-otp", async (req, res) => {
       [phone, crypto.createHash("sha256").update(otp).digest("hex"), expiresAt]
     );
 
-    // TODO: Send OTP via SMS/WhatsApp (for now, log it)
+    // V3-057: Send OTP via WhatsApp Business API (primary) with console.log fallback
     console.log(`[OTP] Phone: ${phone}, OTP: ${otp} (expires: ${expiresAt.toISOString()})`);
+    if (isWhatsAppConfigured()) {
+      try {
+        await sendTextMessage({
+          to: `91${phone}`,
+          text: `Your SuperMandi POS verification code is: ${otp}\n\nThis code expires in 5 minutes. Do not share it with anyone.`,
+        });
+        console.log(`[OTP] WhatsApp sent to ${phone}`);
+      } catch (waErr) {
+        console.error(`[OTP] WhatsApp failed for ${phone}:`, asError(waErr).message);
+        // OTP still saved in DB — user can see it in console log as fallback
+      }
+    }
 
     res.json({ success: true, message: "OTP sent to your phone" });
   } catch (err) {
@@ -87,13 +100,13 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
       return res.status(400).json({ error: { message: "Invalid OTP" } });
     }
 
-    // OTP valid — get store info and create device token
+    // V3-063: Get ALL stores for this phone (multi-store support)
     const storeResult = await pool.query(
       `SELECT s.id, s.store_name, s.store_code
        FROM stores s
        JOIN users u ON u.id = s.owner_id
        WHERE u.phone = $1 AND s.status = 'ACTIVE'
-       LIMIT 1`,
+       ORDER BY s.created_at DESC`,
       [phone]
     );
 
@@ -101,12 +114,21 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
       return res.status(404).json({ error: { message: "Store not found" } });
     }
 
-    const store = storeResult.rows[0];
+    // If multiple stores, return list for selection (no token yet)
+    if (storeResult.rows.length > 1 && !req.body.storeId) {
+      return res.json({
+        multiStore: true,
+        stores: storeResult.rows.map((s: any) => ({ id: s.id, name: s.store_name, code: s.store_code })),
+      });
+    }
 
-    // Generate device token
+    // Single store or storeId provided — create device token
+    const store = req.body.storeId
+      ? storeResult.rows.find((s: any) => s.id === req.body.storeId) ?? storeResult.rows[0]
+      : storeResult.rows[0];
+
     const token = crypto.randomBytes(32).toString("hex");
 
-    // Register device (upsert)
     await pool.query(
       `INSERT INTO devices (token, store_id, phone, label, status, created_at)
        VALUES ($1, $2, $3, $4, 'ACTIVE', NOW())

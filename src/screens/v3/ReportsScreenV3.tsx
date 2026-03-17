@@ -21,7 +21,19 @@ export default function ReportsScreenV3({ onClose }: Props) {
   useEffect(() => {
     (async () => {
       try {
-        const data = await getDailySummary();
+        // V3-066: Period-based date calculation
+        const now = new Date();
+        let dateParam: string | undefined;
+        if (activeTab === "today") {
+          dateParam = now.toISOString().slice(0, 10);
+        } else if (activeTab === "week") {
+          const weekAgo = new Date(now.getTime() - 7 * 86400000);
+          dateParam = weekAgo.toISOString().slice(0, 10);
+        } else {
+          const monthAgo = new Date(now.getTime() - 30 * 86400000);
+          dateParam = monthAgo.toISOString().slice(0, 10);
+        }
+        const data = await getDailySummary(dateParam);
         setSummary(data);
       } catch (err) {
         showToast("Could not load report");

@@ -47,15 +47,16 @@ export default function OTPScreenV3() {
 
     setLoading(true);
     try {
-      // Verify OTP → get device token + store info
-      const result = await apiClient.post<{
-        token: string;
-        storeId: string;
-        storeName: string;
-        storeCode: string;
-      }>("/api/v1/pos/auth/verify-otp", { phone, otp: code });
+      // V3-063: Verify OTP — may return multi-store list or single session
+      const result = await apiClient.post<any>("/api/v1/pos/auth/verify-otp", { phone, otp: code });
 
-      // Save device session (same format as existing enrollment)
+      if (result.multiStore && result.stores?.length > 1) {
+        // Multi-store: navigate to store selector
+        navigation.navigate("V3StoreSelect" as any, { phone, otp: code, stores: result.stores });
+        return;
+      }
+
+      // Single store — save session directly
       await saveDeviceSession({
         deviceId: `pos-${phone}`,
         storeId: result.storeId,
@@ -65,7 +66,6 @@ export default function OTPScreenV3() {
       logger.debug("OTPV3", `verified:${phone},store:${result.storeCode}`);
       showToast(`Welcome to ${result.storeName}!`);
 
-      // Navigate to main POS
       navigation.reset({ index: 0, routes: [{ name: "SellScan" }] });
     } catch (err: any) {
       const msg = err?.response?.data?.error?.message ?? err?.message ?? "OTP verification failed";

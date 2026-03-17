@@ -31,7 +31,8 @@ function productToTileData(p: Product): ProductTileData {
     id: p.id,
     name: p.name,
     priceMrpMinor: p.priceMinor,
-    priceTradeMinor: Math.round(p.priceMinor * 0.85), // ~15% trade margin estimate
+    // V3-058: Use real trade price if available, fallback to 85% estimate
+    priceTradeMinor: (p as any).tradePriceMinor ?? Math.round(p.priceMinor * 0.85),
     barcode: p.barcode,
     category: p.category,
     stock: p.stock,

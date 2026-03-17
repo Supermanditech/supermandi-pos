@@ -32,6 +32,8 @@ import OTPScreenV3 from "./src/screens/v3/OTPScreenV3";
 
 // V3 POS root (replaces old PosRootLayout)
 import PosRootLayoutV3 from "./src/screens/v3/PosRootLayoutV3";
+// V3-063: Multi-store selector
+import StoreSelectScreenV3 from "./src/screens/v3/StoreSelectScreenV3";
 
 // V3-001: V3 sub-screen wrappers for React Navigation stack
 import {
@@ -148,6 +150,7 @@ export default function App() {
           {/* V3 auth flow */}
           <Stack.Screen name="V3Phone" component={PhoneScreenV3} />
           <Stack.Screen name="V3OTP" component={OTPScreenV3} />
+          <Stack.Screen name="V3StoreSelect" component={StoreSelectScreenV3} />
 
           {/* V3 POS root (4-tab layout: SELL / BUY / STORE / MORE) */}
           <Stack.Screen name="SellScan" component={PosRootLayoutV3} />
