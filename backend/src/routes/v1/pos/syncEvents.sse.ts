@@ -37,7 +37,7 @@ posSyncSseRouter.get("/sync/events", requireDeviceToken, async (req: Request, re
       const pool = getPool();
       if (!pool) return;
 
-      // Check for recent changes since last poll
+      // PD-023: Check for recent changes including supplier order updates
       const changes = await pool.query(
         `SELECT 'product_update' as type, COUNT(*) as count
          FROM catalog.store_products
@@ -45,6 +45,10 @@ posSyncSseRouter.get("/sync/events", requireDeviceToken, async (req: Request, re
          UNION ALL
          SELECT 'stock_change' as type, COUNT(*) as count
          FROM inventory.stock_balances
+         WHERE store_id = $1 AND updated_at > $2
+         UNION ALL
+         SELECT 'order_update' as type, COUNT(*) as count
+         FROM orders.purchase_orders
          WHERE store_id = $1 AND updated_at > $2`,
         [storeId, lastCheck.toISOString()]
       );

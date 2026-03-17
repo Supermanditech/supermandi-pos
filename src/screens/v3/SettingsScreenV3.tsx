@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { View, Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -10,6 +11,7 @@ import { showToast } from "../../utils/showToast";
 type Props = { onClose: () => void };
 
 export default function SettingsScreenV3({ onClose }: Props) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const language = useSettingsStore((s) => s.language);

@@ -135,11 +135,21 @@ export default function SellScreenV3() {
   });
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  // AUDIT-009: Map ALL products to tile data (FlatList handles virtualization)
-  const tileProducts: ProductTileData[] = useMemo(
-    () => products.map(productToTileData),
-    [products]
-  );
+  // PD-026: Sort by frequency (recently sold first), then alphabetical
+  const tileProducts: ProductTileData[] = useMemo(() => {
+    const sorted = [...products].sort((a, b) => {
+      // Products in cart first (currently being sold)
+      const aInCart = cartItems.some(c => c.id === a.id || c.barcode === a.barcode) ? 1 : 0;
+      const bInCart = cartItems.some(c => c.id === b.id || c.barcode === b.barcode) ? 1 : 0;
+      if (aInCart !== bInCart) return bInCart - aInCart;
+      // Then by stock (in-stock first)
+      const aStock = (a.stock ?? 0) > 0 ? 1 : 0;
+      const bStock = (b.stock ?? 0) > 0 ? 1 : 0;
+      if (aStock !== bStock) return bStock - aStock;
+      return a.name.localeCompare(b.name);
+    });
+    return sorted.map(productToTileData);
+  }, [products, cartItems]);
 
   // Get cart qty for a product
   const getCartQty = useCallback(

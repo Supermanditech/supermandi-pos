@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { View, Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import Svg, { Rect, Circle, Path } from "react-native-svg";
+import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -12,6 +13,7 @@ import { logger } from "../../services/logger";
 type MoreScreenV3Props = { onNavigate: (screen: string) => void };
 
 export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const storeName = useSettingsStore((s) => s.storeName) ?? "SuperMandi Store";

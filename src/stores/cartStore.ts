@@ -130,6 +130,12 @@ interface CartState {
   normalizeItemsToStock: () => { changed: boolean; adjustments: StockAdjustment[] }; // GL-CRIT-0014: Return adjustments for notification
   clearLastStockAdjustments: () => void; // GL-CRIT-0014: Clear after UI has shown notification
 
+  // PD-025: Parked carts
+  parkedCarts: Array<{ items: CartItem[]; parkedAt: number }>;
+  parkCart: () => void;
+  resumeParkedCart: (index: number) => void;
+  deleteParkedCart: (index: number) => void;
+
   // Internal
   recalculate: () => void;
 }
@@ -809,6 +815,28 @@ export const useCartStore = create<CartState>()(
       discountTotal: 0,
       total: 0
     });
+  },
+
+  // PD-025: Parked carts
+  parkedCarts: [],
+  parkCart: () => {
+    const state = get();
+    if (state.items.length === 0) return;
+    if (state.parkedCarts.length >= 3) return; // Max 3 parked
+    const parked = [...state.parkedCarts, { items: [...state.items], parkedAt: Date.now() }];
+    set({ parkedCarts: parked, items: [], discount: null, customer: null, note: null, subtotal: 0, total: 0, discountAmount: 0, cartDiscountAmount: 0, itemDiscountAmount: 0, discountTotal: 0 });
+  },
+  resumeParkedCart: (index: number) => {
+    const state = get();
+    if (index < 0 || index >= state.parkedCarts.length) return;
+    const cart = state.parkedCarts[index];
+    const remaining = state.parkedCarts.filter((_, i) => i !== index);
+    set({ items: cart.items, parkedCarts: remaining });
+    get().recalculate();
+  },
+  deleteParkedCart: (index: number) => {
+    const state = get();
+    set({ parkedCarts: state.parkedCarts.filter((_, i) => i !== index) });
   },
 
   // GL-CRIT-0014: Return adjustments so UI can notify user

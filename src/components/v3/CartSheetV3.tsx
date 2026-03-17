@@ -180,8 +180,11 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
           <Text style={styles.addMoreText}>+ Add More</Text>
         </Pressable>
         <Pressable style={styles.parkBtn} accessibilityLabel="Park cart" onPress={() => {
-          // V3-065: Park cart placeholder (cartStore.parkCart not yet implemented)
-          showToast("Cart saved for later");
+          // PD-025: Park cart with real cartStore
+          const parked = useCartStore.getState().parkedCarts ?? [];
+          if (parked.length >= 3) { showToast("Max 3 parked carts"); return; }
+          useCartStore.getState().parkCart();
+          showToast(`Cart parked (${parked.length + 1}/3)`);
           onClose();
         }}>
           <Text style={styles.parkText}>📌 Park</Text>

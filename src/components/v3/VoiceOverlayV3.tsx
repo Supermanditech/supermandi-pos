@@ -79,7 +79,10 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
       // submitVoiceCommand needs storeId — get from device session
       const { getDeviceStoreId } = require("../../services/deviceSession");
       const storeId = await getDeviceStoreId();
-      const result: VoiceCommandResult = await submitVoiceCommand(storeId ?? "");
+      // PD-027: Pass current app language locale for Hindi/English voice recognition
+      const i18nLang = require("../../i18n").default?.language ?? "en";
+      const voiceLocale = i18nLang.startsWith("hi") ? "HI" : "EN";
+      const result: VoiceCommandResult = await submitVoiceCommand(storeId ?? "", voiceLocale);
       const intent = result.intent;
       const productName = intent?.productName ?? intent?.slots?.query ?? "";
       const qty = intent?.quantity ?? intent?.slots?.quantity ?? 1;
