@@ -4,9 +4,10 @@ import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
-import { listPendingReorders, getStockDeficit, isCriticallyLow, getEstimatedTotal } from "../../services/api/reorderApi";
+import { listPendingReorders, getStockDeficit, isCriticallyLow, getEstimatedTotal, approvePendingReorders } from "../../services/api/reorderApi";
 import type { PendingReorder } from "../../services/api/reorderApi";
 import { getDeviceStoreId } from "../../services/deviceSession";
+import { isOnline } from "../../services/networkStatus";
 
 // V3-043: Reorder v3 — wire real listPendingReorders API
 
@@ -19,6 +20,7 @@ export default function ReorderScreenV3({ onClose }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [items, setItems] = useState<ReorderItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     (async () => {
       try {
@@ -80,16 +82,38 @@ export default function ReorderScreenV3({ onClose }: Props) {
               </View>
             </View>
             <View style={styles.cardActions}>
-              <Pressable style={styles.approveBtn} onPress={() => showToast(`${item.name} approved`)}><Text style={styles.approveBtnText}>✓ Approve</Text></Pressable>
+              <Pressable style={[styles.approveBtn, approvedIds.has(item.id) && { opacity: 0.5 }]} disabled={approvedIds.has(item.id)} onPress={async () => {
+                const online = await isOnline();
+                if (!online) { showToast("Approve requires connection"); return; }
+                const sid = await getDeviceStoreId();
+                if (!sid) return;
+                try {
+                  await approvePendingReorders(sid, [item.id]);
+                  setApprovedIds((prev) => new Set(prev).add(item.id));
+                  showToast(`${item.name} approved — order will be placed`);
+                } catch { showToast("Failed to approve"); }
+              }}><Text style={styles.approveBtnText}>{approvedIds.has(item.id) ? "✓ Approved" : "✓ Approve"}</Text></Pressable>
               <Pressable style={styles.editBtn} onPress={() => showToast(`Edit qty for ${item.name}`)}><Text style={styles.editBtnText}>Edit</Text></Pressable>
-              <Pressable style={styles.dismissBtn}><Text style={styles.dismissBtnText}>✕</Text></Pressable>
+              <Pressable style={styles.dismissBtn} onPress={() => setItems((prev) => prev.filter((_, j) => j !== i))}><Text style={styles.dismissBtnText}>✕</Text></Pressable>
             </View>
           </View>
         ))}
       </ScrollView>
       <View style={styles.footer}>
         <Pressable style={styles.waBtn} onPress={() => showToast("Reorder list sent to suppliers")}><Svg width={14} height={14} viewBox="0 0 24 24" fill="#fff"><Path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479c0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" /><Path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.638l4.72-1.391A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" /></Svg><Text style={styles.waBtnText}>Send to Suppliers</Text></Pressable>
-        <Pressable style={styles.approveAllBtn} onPress={() => showToast("All approved")}><Text style={styles.approveAllText}>Approve All (₹{total})</Text></Pressable>
+        <Pressable style={styles.approveAllBtn} onPress={async () => {
+          const online = await isOnline();
+          if (!online) { showToast("Approve requires connection"); return; }
+          const sid = await getDeviceStoreId();
+          if (!sid) return;
+          const unapproved = items.filter((it) => !approvedIds.has(it.id)).map((it) => it.id);
+          if (unapproved.length === 0) { showToast("All already approved"); return; }
+          try {
+            await approvePendingReorders(sid, unapproved);
+            setApprovedIds(new Set(items.map((it) => it.id)));
+            showToast(`${unapproved.length} items approved`);
+          } catch { showToast("Failed to approve all"); }
+        }}><Text style={styles.approveAllText}>Approve All (₹{total})</Text></Pressable>
       </View>
     </View>
   );
