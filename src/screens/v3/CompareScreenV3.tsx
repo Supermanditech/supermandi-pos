@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import { getProductSuppliers, type CatalogSupplier } from "../../services/api/catalogApi";
 import { getDeviceStoreId } from "../../services/deviceSession";

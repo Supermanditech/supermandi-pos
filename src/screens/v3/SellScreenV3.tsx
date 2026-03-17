@@ -269,6 +269,9 @@ export default function SellScreenV3() {
           showsVerticalScrollIndicator={false}
           removeClippedSubviews
           windowSize={5}
+          maxToRenderPerBatch={15}
+          initialNumToRender={12}
+          updateCellsBatchingPeriod={50}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[colors.primary]} />}
         />
       )}

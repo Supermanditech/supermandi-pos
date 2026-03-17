@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import ExpandableDetails from "../../components/v3/ExpandableDetails";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import * as orderApi from "../../services/api/orderApi";
 import { getDeviceStoreId } from "../../services/deviceSession";

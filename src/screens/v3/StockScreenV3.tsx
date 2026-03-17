@@ -4,6 +4,7 @@ import Svg, { Circle, Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getStockStatement } from "../../services/api/inventoryApi";
+import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 
 // V3-044: Stock screen v3 — wire real getStockStatement API

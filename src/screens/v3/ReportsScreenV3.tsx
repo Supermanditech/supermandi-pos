@@ -3,6 +3,7 @@ import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator } from
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import { getDailySummary } from "../../services/api/dailySummaryApi";
 import type { DailySummary } from "../../services/api/dailySummaryApi";

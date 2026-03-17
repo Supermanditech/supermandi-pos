@@ -8,6 +8,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import SupplierProductCardV3, { type SupplierProduct } from "../../components/v3/SupplierProductCardV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import { getCatalog, type CatalogProduct } from "../../services/api/catalogApi";
 import { getDeviceStoreId } from "../../services/deviceSession";
@@ -49,11 +50,15 @@ export default function BuyScreenV3() {
   const [products, setProducts] = useState<SupplierProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [suppliers, setSuppliers] = useState<string[]>(["All Suppliers"]);
+  const [offline, setOffline] = useState(false);
 
   // V3-013: Fetch real catalog data
   useEffect(() => {
     const fetchCatalog = async () => {
       setLoading(true);
+      const online = await isOnline();
+      setOffline(!online);
+      if (!online) { setLoading(false); showToast("Offline — catalogue unavailable"); return; }
       try {
         const storeId = await getDeviceStoreId();
         if (!storeId) { setLoading(false); return; }

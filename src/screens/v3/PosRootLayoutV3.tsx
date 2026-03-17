@@ -88,7 +88,7 @@ export default function PosRootLayoutV3() {
             <MoreScreenV3 onNavigate={(s) => {
               const map: Record<string, string> = {
                 khata: "V3Khata", customers: "V3Customers", reports: "V3Reports",
-                stock: "V3Stock", finance: "V3Finance", sales: "SalesHistory",
+                stock: "V3Stock", finance: "V3Finance", sales: "V3Reports",
                 settings: "V3Settings", help: "Help",
               };
               if (map[s]) navigateTo(map[s]);
