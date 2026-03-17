@@ -15,7 +15,7 @@ import { logger } from "../../services/logger";
 
 type PaymentScreenV3Props = {
   onBack: () => void;
-  onComplete: (method: "CASH" | "UPI" | "DUE") => void;
+  onComplete: (method: "CASH" | "UPI" | "DUE", saleId?: string) => void;
 };
 
 type PaymentMethod = "CASH" | "UPI" | "DUE";
@@ -132,7 +132,7 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
         logger.debug("V3Payment", `due_recorded:${id},customer:${customerName}`);
       }
 
-      onComplete(selectedMethod);
+      onComplete(selectedMethod, id);
     } catch (err: any) {
       const msg = err?.response?.data?.error?.message ?? err?.message ?? "Payment failed";
       showToast(msg);

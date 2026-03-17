@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { View, Pressable, StyleSheet, Text, Linking } from "react-native";
+import { View, Pressable, StyleSheet, Text, Linking, Alert } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 
@@ -11,6 +11,8 @@ import { useCartStore } from "../../stores/cartStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { printerService } from "../../services/printerService";
 import { showToast } from "../../utils/showToast";
+import { voidSale } from "../../services/api/posApi";
+import { isOnline } from "../../services/networkStatus";
 import { logger } from "../../services/logger";
 
 // STG-557: Success screen v3 — profit display, streak, confetti, WhatsApp bill, new sale
@@ -19,12 +21,13 @@ type SuccessScreenV3Props = {
   paymentMethod: "CASH" | "UPI" | "DUE";
   totalMinor: number;
   itemCount: number;
+  saleId?: string;
   onNewSale: () => void;
 };
 
 const METHOD_LABELS: Record<string, string> = { CASH: "Cash · नकद", UPI: "UPI · यूपीआई", DUE: "Udhar · उधार" };
 
-export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, onNewSale }: SuccessScreenV3Props) {
+export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, saleId, onNewSale }: SuccessScreenV3Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -119,7 +122,24 @@ export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, 
               <Text style={styles.waBtnText}>Send Bill</Text>
             </Pressable>
 
-            <Pressable style={styles.voidBtn} onPress={() => showToast("Void initiated")} accessibilityLabel="Void sale">
+            <Pressable style={styles.voidBtn} onPress={() => {
+              if (!saleId) { showToast("Cannot void — sale ID not available"); return; }
+              Alert.alert("Void Sale", `Void sale ${billRef}? This cannot be undone.`, [
+                { text: "Cancel", style: "cancel" },
+                { text: "Void", style: "destructive", onPress: async () => {
+                  const online = await isOnline();
+                  if (!online) { showToast("Void requires internet connection"); return; }
+                  try {
+                    await voidSale({ saleId, reason: "Voided from POS success screen" });
+                    showToast("Sale voided successfully");
+                    logger.debug("V3Success", `voided:${saleId}`);
+                    onNewSale();
+                  } catch (err: any) {
+                    showToast(err?.message ?? "Failed to void sale");
+                  }
+                }},
+              ]);
+            }} accessibilityLabel="Void sale">
               <Text style={styles.voidBtnText}>Void</Text>
             </Pressable>
           </View>

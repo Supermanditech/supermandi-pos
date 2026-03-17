@@ -24,18 +24,19 @@ type Nav = NativeStackNavigationProp<any>;
 
 export function V3PaymentWrapper() {
   const nav = useNavigation<Nav>();
-  return <PaymentScreenV3 onBack={() => nav.goBack()} onComplete={(method) => nav.navigate("V3Success", { method })} />;
+  return <PaymentScreenV3 onBack={() => nav.goBack()} onComplete={(method, saleId) => nav.navigate("V3Success", { method, saleId })} />;
 }
 
 export function V3SuccessWrapper({ route }: any) {
   const nav = useNavigation<Nav>();
   const method = route?.params?.method ?? "CASH";
+  const saleId = route?.params?.saleId;
   // V3-002: Read real cart total/count before clearing
   const cartStore = require("../../stores/cartStore").useCartStore;
   const total = cartStore.getState()?.total ?? 0;
   const items = cartStore.getState()?.items ?? [];
   const count = items.reduce((s: number, i: any) => s + (i?.quantity ?? 0), 0);
-  return <SuccessScreenV3 paymentMethod={method} totalMinor={total} itemCount={count} onNewSale={() => { cartStore.getState()?.clearCart?.(true); nav.navigate("SellScan"); }} />;
+  return <SuccessScreenV3 paymentMethod={method} totalMinor={total} itemCount={count} saleId={saleId} onNewSale={() => { cartStore.getState()?.clearCart?.(true); nav.navigate("SellScan"); }} />;
 }
 
 export function V3ScanWrapper() {
