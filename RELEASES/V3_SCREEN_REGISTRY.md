@@ -253,3 +253,139 @@ Prototype shows Staff Phone + PIN. Code implements Phone -> OTP (V3-035). Code i
 ### VERDICT: SCREEN 2 COMPLETE (4 minor gaps noted)
 
 ---
+
+
+## SCREEN 3: SELL (Product Grid + Checkout Entry) (LOCKED)
+
+### D1: User Interactions
+| # | Interaction | Trigger | Result |
+|---|------------|---------|--------|
+| 3.1 | Tap product tile | Tile tap | Add 1 unit to cart, show toast, cart badge appears on tile |
+| 3.2 | Tap product tile (already in cart) | Tile tap | Increment qty by 1, update badge count |
+| 3.3 | Tap search bar | Focus | Open UniversalSearchV3 overlay (sell context) |
+| 3.4 | Type in search | Keyboard | 300ms debounce -> searchStoreProducts API -> show results |
+| 3.5 | Tap search result | Result tap | Add to cart, close search overlay |
+| 3.6 | Tap barcode icon | Button | Navigate to V3Scan screen (scan context) |
+| 3.7 | Tap microphone icon | Button | Open VoiceOverlayV3 modal |
+| 3.8 | Toggle Retail/Bulk | Toggle | Switch pricing: MRP (retail) vs trade price (~85%) |
+| 3.9 | Tap category chip | Chip | Filter product grid by category |
+| 3.10 | Tap cart strip | Strip tap | Open CartSheetV3 bottom sheet |
+| 3.11 | Tap PAY button | Button | Open CartSheetV3 -> Checkout flow |
+| 3.12 | Pull to refresh | Gesture | Reload products from productsStore |
+| 3.13 | Tap online/offline pill | Header | Visual indicator only (no action) |
+| 3.14 | Tap 3-dot menu | Header | Navigate to MORE screen |
+| 3.15 | Voice command recognized | Auto | Add product to cart via voice |
+
+### D2: UI/UX States
+| State | Visual |
+|-------|--------|
+| Loading (initial) | Centered spinner + "Loading products..." |
+| Empty (no products) | Package icon + "No products yet" + guidance text |
+| Products loaded | 3-column grid with tiles (stock dot, price, cart badge) |
+| Searching | Search overlay with results list, loading spinner |
+| Cart has items | Blue gradient strip at bottom (count + total + PAY) |
+| Cart empty | Gray strip "Cart empty - tap a product or scan barcode" |
+| Offline | Yellow "Offline" banner (from PosRootLayoutV3) |
+| Refreshing | Pull-to-refresh spinner |
+| Voice active | VoiceOverlayV3 modal with mic pulse animation |
+| Bulk mode | Trade prices shown instead of MRP, toggle highlighted |
+
+### D3: Navigation
+| From | To | Trigger |
+|------|-----|---------|
+| Bottom nav SELL | SellScreenV3 | Tab tap |
+| SellScreen | V3Scan | Barcode icon tap |
+| SellScreen | V3Payment | PAY button (via CartSheetV3) |
+| SellScreen | Search overlay | Search bar focus |
+| SellScreen | Voice overlay | Mic icon tap |
+| SellScreen | MORE | 3-dot menu tap |
+
+### D4: API Contracts
+| Endpoint | Method | Purpose | Caller |
+|----------|--------|---------|--------|
+| GET /api/v1/pos/store-products | GET | Load product grid | productsStore.loadProducts() |
+| GET /api/v1/pos/store-products/search?q= | GET | Search products | sellSearchApi.searchStoreProducts() |
+| (No direct API from sell screen - cart actions are client-side via Zustand) |
+
+### D5: Backend Services
+- productsStore reads from /api/v1/pos/store-products (existing, deployed on GCP)
+- sellSearchApi reads from /api/v1/pos/store-products/search (existing, deployed)
+- Cart is Zustand state only (cartStore) - no backend until checkout
+
+### D6: Database
+- store_products table (existing): id, store_id, name, price_minor, barcode, category, stock
+- No new tables needed for sell screen
+- All data read-only from sell screen perspective
+
+### D7: Business Logic
+| Rule | Implementation |
+|------|---------------|
+| Retail price = MRP (priceMinor) | Direct from store_products |
+| Bulk/Trade price = ~85% of MRP | priceMinor * 0.85 (estimate until wholesale fields deployed) |
+| Add to cart: increment if exists, create if new | cartStore.addItem / updateQuantity |
+| Stock dot: green (>5), yellow (1-5), red (0) | ProductTileV3 stock prop |
+| Cart badge: shows qty on product tile | getCartQty(productId) |
+| Cart strip total: sum of items * qty * price | cartStore selector with sellMode multiplier |
+| Category filter: "Frequent" = all (no filter) | Static categories, future: API-driven |
+| Search debounce: 300ms, min 2 chars | handleSearchQuery with delay |
+
+### D8: Edge Cases
+| Case | Handling |
+|------|----------|
+| 0 products in store | Empty state with guidance text |
+| Product out of stock (qty=0) | Red dot, still tappable (can sell negative stock) |
+| Cart strip overflow (long product names) | numberOfLines={1} with ellipsis |
+| 100+ products | FlatList with removeClippedSubviews + windowSize=5 |
+| Search returns 0 results | "No results" in search overlay |
+| Voice recognition fails | VoiceOverlayV3 shows error, user can retry |
+| Network error on refresh | Silent fail, existing cached products shown |
+| Rapid product taps | Each tap increments, no debounce (intentional for speed) |
+
+### D9: Offline
+| Feature | Offline Behavior |
+|---------|-----------------|
+| Product grid | Shows cached products from productsStore (AsyncStorage) |
+| Search | Uses local product list (offline DB) |
+| Add to cart | Works fully offline (Zustand state) |
+| Pull to refresh | Fails silently, shows cached data |
+| Scan | Camera scan works offline, HID works offline |
+| Voice | Requires network (voice service is server-side) |
+
+### D10: GCP Parity
+- /api/v1/pos/store-products: EXISTS on staging (81c3a2a4)
+- /api/v1/pos/store-products/search: EXISTS on staging
+- No new endpoints needed for sell screen
+- All sell screen data comes from existing deployed APIs
+
+### D11: Cross-Role
+| Role | Interaction |
+|------|------------|
+| Retailer POS | Direct - this is their primary screen for billing |
+| SuperAdmin | Manages store_products catalog (affects what appears in grid) |
+| Supplier | Supplies products via catalogue (affects product availability) |
+| Retailer Web | Can add/edit store products (syncs to POS via productsStore) |
+
+### D12: Production Tickets
+| Ticket | Description | Status |
+|--------|-------------|--------|
+| STG-553 | SellScreenV3 scaffold with grid + toggle | DONE |
+| V3-002 | Wire CartSheet -> Payment -> Success | DONE |
+| V3-003 | Wire ScanScreen + VoiceOverlay | DONE |
+| V3-006 | Pull-to-refresh + category + search | DONE |
+| V3-007 | CartSheet discount + customer + parked | DONE |
+| V3-029 | Offline banner | DONE |
+| V3-051 | Empty state | DONE |
+
+### GAPS IDENTIFIED
+| # | Gap | Severity | Details |
+|---|-----|----------|---------|
+| G1 | Category filter uses static list, not API | MEDIUM | Should use getFmcgCategories API (code exists, not wired) |
+| G2 | Trade price is estimated (85% of MRP) | MEDIUM | Should use real wholesale price when wholesale fields deployed |
+| G3 | Product grid limited to 30 items | LOW | Should paginate or load all with virtualization |
+| G4 | No "Frequent" sorting algorithm | LOW | Currently shows first 30 products, not frequency-sorted |
+| G5 | Voice adds product by name only, no qty parsing | LOW | VoiceOverlayV3 receives name+qty but cart add uses qty=1 |
+
+### VERDICT: SCREEN 3 COMPLETE (5 gaps noted, all LOW/MEDIUM)
+All 12 dimensions covered. Core sell flow is production-ready. Gaps are enhancements, not blockers.
+
+---
