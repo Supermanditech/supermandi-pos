@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 370,
+  "version": 371,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -7517,8 +7517,8 @@
       "ticket": "STG-576",
       "file": "src/screens/v3/SettingsScreenV3.tsx",
       "start_line": 1,
-      "end_line": 399,
-      "checksum": "b58c6c0bc34db7cd",
+      "end_line": 402,
+      "checksum": "dc0012cd834df115",
       "description": "STG-576 v3 screen + DA-011/012 i18n.changeLanguage + Switch Staff/Logout wiring",
       "test_file": "src/__tests__/screens/more-layer5.stg-571-576.test.ts",
       "depends_on": null,

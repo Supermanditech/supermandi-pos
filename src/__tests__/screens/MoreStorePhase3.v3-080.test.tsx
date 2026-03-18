@@ -94,11 +94,13 @@ jest.mock("../../services/api/dailySummaryApi", () => ({
 
 // Settings mocks
 // V3-HARDEN-127: Mock must include upiVpa/lastSyncAt in both selector and getState
-const mockSettingsState = {
+// V3-HARDEN-129: setLastSyncAt mutates state so tests can detect incorrect overwrites
+const mockSettingsState: Record<string, any> = {
   storeName: "Test Store", storeCode: "TS-001", printerAutoPrint: false, themeMode: "light", soundEnabled: true,
   upiVpa: "test@upi", lastSyncAt: new Date(Date.now() - 180000).toISOString(),
   language: "en", setLanguage: jest.fn(), toggleTheme: jest.fn(), setPrinterAutoPrint: jest.fn(),
-  setUpiVpa: jest.fn(), setLastSyncAt: jest.fn(),
+  setUpiVpa: jest.fn((vpa: string | null) => { mockSettingsState.upiVpa = vpa; }),
+  setLastSyncAt: jest.fn((ts: string | null) => { mockSettingsState.lastSyncAt = ts; }),
 };
 jest.mock("../../stores/settingsStore", () => ({
   useSettingsStore: Object.assign(
@@ -299,6 +301,36 @@ describe("V3-FIX-084: Settings screen", () => {
     // Mock lastSyncAt is 3 minutes ago
     expect(screen.getByText("3 min ago ✓")).toBeTruthy();
     expect(screen.queryByText("2 min ago ✓")).toBeNull();
+  });
+
+  it("V3-HARDEN-127: refresh uses backend lastSyncAt, not local now", async () => {
+    // Set up: apiClient.get returns a backend timestamp from 10 minutes ago
+    const backendSyncTs = new Date(Date.now() - 600000).toISOString(); // 10 min ago
+    const { apiClient } = require("../../services/api/apiClient");
+    (apiClient.get as jest.Mock).mockResolvedValueOnce({
+      upiVpa: "backend@ybl",
+      lastSyncAt: backendSyncTs,
+    });
+
+    // Record initial lastSyncAt
+    const initialLastSync = mockSettingsState.lastSyncAt;
+
+    render(<SettingsScreenV3 onClose={jest.fn()} onSwitchStaff={jest.fn()} onLogout={jest.fn()} />);
+
+    // Wait for useEffect to fire
+    await waitFor(() => {
+      expect(mockSettingsState.setLastSyncAt).toHaveBeenCalled();
+    });
+
+    // The setter must have been called with the BACKEND timestamp, not local now
+    const calledWith = (mockSettingsState.setLastSyncAt as jest.Mock).mock.calls;
+    const lastCall = calledWith[calledWith.length - 1][0];
+    expect(lastCall).toBe(backendSyncTs);
+
+    // It must NOT have been called with a timestamp within the last second (local now)
+    const lastCallDate = new Date(lastCall).getTime();
+    const now = Date.now();
+    expect(now - lastCallDate).toBeGreaterThan(500000); // > 8 min ago, not "just now"
   });
 
   it("renders staff name from session store (not hardcoded)", () => {

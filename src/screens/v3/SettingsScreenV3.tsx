@@ -33,7 +33,7 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
   const [expressCheckout, setExpressCheckout] = React.useState(true);
   const [soundEnabled, setSoundEnabled] = React.useState(true);
 
-  // V3-HARDEN-127: Refresh store UPI from backend on mount (catches admin/web changes)
+  // V3-HARDEN-127: Refresh store UPI + lastSyncAt from backend on mount
   useEffect(() => {
     (async () => {
       const online = await isOnline();
@@ -44,7 +44,10 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
         if (status?.upiVpa !== undefined) {
           useSettingsStore.getState().setUpiVpa(status.upiVpa ?? null);
         }
-        useSettingsStore.getState().setLastSyncAt(new Date().toISOString());
+        // Use backend-provided lastSyncAt — do NOT overwrite with local now
+        if (status?.lastSyncAt) {
+          useSettingsStore.getState().setLastSyncAt(status.lastSyncAt);
+        }
       } catch { /* non-fatal — local state is still valid */ }
     })();
   }, []);
