@@ -27,8 +27,27 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
   const storeName = useSettingsStore((s) => s.storeName) ?? "SuperMandi Store";
   const autoPrint = useSettingsStore((s) => s.printerAutoPrint);
   const setAutoPrint = useSettingsStore((s) => s.setPrinterAutoPrint);
+  // V3-HARDEN-127: Subscribed selectors for UPI/lastSync — re-renders on cross-surface changes
+  const upiVpa = useSettingsStore((s) => s.upiVpa);
+  const lastSyncAt = useSettingsStore((s) => s.lastSyncAt);
   const [expressCheckout, setExpressCheckout] = React.useState(true);
   const [soundEnabled, setSoundEnabled] = React.useState(true);
+
+  // V3-HARDEN-127: Refresh store UPI from backend on mount (catches admin/web changes)
+  useEffect(() => {
+    (async () => {
+      const online = await isOnline();
+      if (!online) return;
+      try {
+        const { apiClient } = require("../../services/api/apiClient");
+        const status = await apiClient.get("/api/v1/pos/ui-status");
+        if (status?.upiVpa !== undefined) {
+          useSettingsStore.getState().setUpiVpa(status.upiVpa ?? null);
+        }
+        useSettingsStore.getState().setLastSyncAt(new Date().toISOString());
+      } catch { /* non-fatal — local state is still valid */ }
+    })();
+  }, []);
 
   // Cross-platform modal state (replaces Alert.prompt for Android compatibility)
   type ModalMode = "add-staff" | "owner-pin" | "edit-upi" | null;
@@ -56,13 +75,13 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
       { icon: "🔄", label: "Auto-Print", toggle: true, on: autoPrint, onToggle: () => setAutoPrint(!autoPrint) },
     ]},
     { title: "PAYMENTS", items: [
-      // V3-FIX-124: UPI ID — tappable to edit, gated to MANAGER role (owner-level in POS)
-      { icon: "📱", label: "UPI ID", value: useSettingsStore.getState().upiVpa ?? "Not configured", onTap: (() => {
+      // V3-FIX-124: UPI ID — tappable to edit, gated to MANAGER role
+      // V3-HARDEN-127: Uses subscribed upiVpa selector, not getState()
+      { icon: "📱", label: "UPI ID", value: upiVpa ?? "Not configured", onTap: (() => {
         const session = useStaffSessionStore.getState().session;
         if (session?.role !== "MANAGER") return undefined;
         return () => {
-          const currentVpa = useSettingsStore.getState().upiVpa ?? "";
-          setUpiVpaInput(currentVpa);
+          setUpiVpaInput(upiVpa ?? "");
           setModalMode("edit-upi");
           setModalError("");
         };
@@ -75,18 +94,16 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
       { icon: "🔊", label: "Sounds", toggle: true, on: soundEnabled, onToggle: () => setSoundEnabled(!soundEnabled) },
     ]},
     { title: "DATA", items: [
-      // V3-FIX-084: Real last sync time from settings store
+      // V3-HARDEN-127: Uses subscribed lastSyncAt selector, not getState()
       { icon: "☁️", label: "Last Sync", value: (() => {
-        const ts = useSettingsStore.getState().lastSyncAt;
-        if (!ts) return "Never";
-        const ago = Math.round((Date.now() - new Date(ts).getTime()) / 60000);
+        if (!lastSyncAt) return "Never";
+        const ago = Math.round((Date.now() - new Date(lastSyncAt).getTime()) / 60000);
         if (ago < 1) return "Just now ✓";
         if (ago < 60) return `${ago} min ago ✓`;
         return `${Math.round(ago / 60)}h ago`;
       })(), valueColor: (() => {
-        const ts = useSettingsStore.getState().lastSyncAt;
-        if (!ts) return colors.textTertiary;
-        const ago = (Date.now() - new Date(ts).getTime()) / 60000;
+        if (!lastSyncAt) return colors.textTertiary;
+        const ago = (Date.now() - new Date(lastSyncAt).getTime()) / 60000;
         return ago < 10 ? colors.success : ago < 60 ? colors.warning : colors.error;
       })() },
       { icon: "📤", label: "Pending", value: "0 items" },

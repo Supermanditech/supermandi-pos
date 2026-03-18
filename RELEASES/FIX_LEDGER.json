@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 369,
+  "version": 370,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -3657,7 +3657,7 @@
       "file": "src/stores/cartStore.ts",
       "start_line": 50,
       "end_line": 922,
-      "checksum": "e22b894a74bdc982",
+      "checksum": "a51ab32f6d4ded0f",
       "description": "CartCustomer and CartNote types + setCustomer/setNote actions",
       "test_file": "src/__tests__/stores/cartStore.unit.test.ts",
       "depends_on": null,
@@ -5602,7 +5602,7 @@
       "file": "src/stores/cartStore.ts",
       "start_line": 192,
       "end_line": 922,
-      "checksum": "d641dd4e0f4b8bff",
+      "checksum": "6b0800ea9d9b5e5d",
       "description": "Warn in __DEV__ when discount exceeds subtotal (negative total capped to 0)",
       "test_file": "src/__tests__/screens/negative-total.stg-542.test.ts",
       "depends_on": null,
@@ -7517,8 +7517,8 @@
       "ticket": "STG-576",
       "file": "src/screens/v3/SettingsScreenV3.tsx",
       "start_line": 1,
-      "end_line": 382,
-      "checksum": "78a30638a2a5c2c8",
+      "end_line": 399,
+      "checksum": "b58c6c0bc34db7cd",
       "description": "STG-576 v3 screen + DA-011/012 i18n.changeLanguage + Switch Staff/Logout wiring",
       "test_file": "src/__tests__/screens/more-layer5.stg-571-576.test.ts",
       "depends_on": null,

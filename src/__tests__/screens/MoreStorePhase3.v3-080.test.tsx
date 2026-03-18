@@ -93,10 +93,17 @@ jest.mock("../../services/api/dailySummaryApi", () => ({
 }));
 
 // Settings mocks
+// V3-HARDEN-127: Mock must include upiVpa/lastSyncAt in both selector and getState
+const mockSettingsState = {
+  storeName: "Test Store", storeCode: "TS-001", printerAutoPrint: false, themeMode: "light", soundEnabled: true,
+  upiVpa: "test@upi", lastSyncAt: new Date(Date.now() - 180000).toISOString(),
+  language: "en", setLanguage: jest.fn(), toggleTheme: jest.fn(), setPrinterAutoPrint: jest.fn(),
+  setUpiVpa: jest.fn(), setLastSyncAt: jest.fn(),
+};
 jest.mock("../../stores/settingsStore", () => ({
   useSettingsStore: Object.assign(
-    (sel: (s: any) => any) => sel({ storeName: "Test Store", storeCode: "TS-001", printerAutoPrint: false, themeMode: "light", soundEnabled: true }),
-    { getState: () => ({ storeName: "Test Store", upiVpa: "test@upi", lastSyncAt: new Date(Date.now() - 180000).toISOString() }) },
+    (sel: (s: any) => any) => sel(mockSettingsState),
+    { getState: () => mockSettingsState },
   ),
 }));
 jest.mock("../../stores/staffSessionStore", () => ({

@@ -16,6 +16,7 @@ import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import { logger } from "../../services/logger";
 import type { PaymentMethod } from "./usePaymentFlow";
+// V3-FIX-123: sellMode/grandTotal no longer used — display/complete driven by committed sale total
 
 type UpiState = "initializing" | "waiting" | "confirming" | "error";
 
@@ -29,16 +30,15 @@ export default function UpiScreenV3({ onBack, onComplete }: UpiScreenV3Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const items = useCartStore((s) => s.items);
-  const total = useCartStore((s) => s.total);
-  const sellMode = useCartStore((s) => s.sellMode);
-  const isBulk = sellMode === "bulk";
-  const gst = isBulk ? Math.round(total * 0.18) : 0;
-  const grandTotal = total + gst;
   const itemCount = items.reduce((s, i) => s + i.quantity, 0);
-  const totalDisplay = `₹${Math.round(grandTotal / 100).toLocaleString("en-IN")}`;
 
   const [upiState, setUpiState] = useState<UpiState>("initializing");
   const [saleId, setSaleId] = useState<string | null>(null);
+  // V3-FIX-123: Committed sale total — drives display, QR, and success handoff
+  const [committedTotalMinor, setCommittedTotalMinor] = useState<number>(0);
+  const totalDisplay = committedTotalMinor > 0
+    ? `₹${Math.round(committedTotalMinor / 100).toLocaleString("en-IN")}`
+    : "...";
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [upiVpa, setUpiVpa] = useState<string | null>(null);
   const [qrData, setQrData] = useState<string | null>(null);
@@ -90,10 +90,10 @@ export default function UpiScreenV3({ onBack, onComplete }: UpiScreenV3Props) {
 
         if (cancelled) return;
         setSaleId(saleResult.saleId);
-        logger.debug("V3Upi", `sale_created:${saleResult.saleId}`);
-
-        // V3-FIX-123: Use committed sale total, not client-computed grandTotal
+        // V3-FIX-123: Committed sale total drives display, QR, and success
         const committedTotal = saleResult.totals.totalMinor;
+        setCommittedTotalMinor(committedTotal);
+        logger.debug("V3Upi", `sale_created:${saleResult.saleId},total:${committedTotal}`);
 
         // Init UPI payment via canonical /payments/upi/generate — returns real qrData
         const upi = await initUpiPayment({ saleId: saleResult.saleId, amountMinor: committedTotal });
@@ -127,14 +127,15 @@ export default function UpiScreenV3({ onBack, onComplete }: UpiScreenV3Props) {
       await confirmUpiPaymentManual({ paymentId });
       logger.debug("V3Upi", `upi_confirmed:${saleId},payment:${paymentId}`);
       useCartStore.getState().unlockCart();
-      onComplete("UPI", saleId, grandTotal, itemCount);
+      // V3-FIX-123: Success handoff uses committed sale total, not client grandTotal
+      onComplete("UPI", saleId, committedTotalMinor, itemCount);
     } catch (err: any) {
       const msg = err?.response?.data?.error?.message ?? err?.message ?? "Confirmation failed";
       showToast(msg);
       setUpiState("waiting"); // Return to waiting, let operator retry
       logger.debug("V3Upi", `confirm_failed:${String(err)}`);
     }
-  }, [paymentId, saleId, grandTotal, itemCount, onComplete]);
+  }, [paymentId, saleId, committedTotalMinor, itemCount, onComplete]);
 
   const handleBack = useCallback(() => {
     useCartStore.getState().unlockCart();
@@ -153,7 +154,7 @@ export default function UpiScreenV3({ onBack, onComplete }: UpiScreenV3Props) {
 
       <View style={styles.body}>
         <Text style={styles.totalAmount}>{totalDisplay}</Text>
-        <Text style={styles.totalSub}>{itemCount} item{itemCount !== 1 ? "s" : ""}{isBulk ? " · incl. GST" : ""}</Text>
+        <Text style={styles.totalSub}>{itemCount} item{itemCount !== 1 ? "s" : ""}</Text>
 
         {/* Initializing state */}
         {upiState === "initializing" ? (
