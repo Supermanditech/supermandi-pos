@@ -137,23 +137,12 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
           </View>
         )}
 
-        {/* Photo capture */}
-        <Pressable style={[styles.photoBox, photoUri ? { borderColor: colors.primary } : { opacity: 0.6 }]}
-          accessibilityLabel="Take product photo"
-          disabled={!photoUri}
-          onPress={() => {}}>
-          {photoUri ? (
+        {/* V3-DELETE-086: Photo capture — only shown when image available (no placeholder) */}
+        {photoUri ? (
+          <View style={[styles.photoBox, { borderColor: colors.primary }]}>
             <Image source={{ uri: photoUri }} style={{ width: 64, height: 64, borderRadius: 12 }} />
-          ) : (
-            <>
-              <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth={1.5}>
-                <Path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-                <Circle cx={12} cy={13} r={4} />
-              </Svg>
-              <Text style={styles.photoText}>Photo — coming soon</Text>
-            </>
-          )}
-        </Pressable>
+          </View>
+        ) : null}
 
         {/* Barcode (read-only) */}
         <View style={styles.readonlyRow}>

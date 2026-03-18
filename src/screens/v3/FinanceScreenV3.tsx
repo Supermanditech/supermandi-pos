@@ -75,10 +75,14 @@ export default function FinanceScreenV3({ onClose }: Props) {
             ))
           )
         )}
+        {/* V3-DELETE-087: Bill discounting — real empty state, no placeholder alerts */}
         {!loading && activeTab === "bills" && (
-          <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>🧾</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>Bill Discounting</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4, textAlign: "center" }}>Upload supplier invoices to get 90% value upfront</Text><Pressable style={[styles.applyBtn, { marginTop: 16, width: "100%" }]} onPress={() => Alert.alert("Upload Invoice", "Invoice upload requires document scanner integration.\n\nThis feature will be available in the next update.", [{ text: "OK" }])}><Text style={styles.applyText}>Upload Invoice</Text></Pressable></View>
+          <View style={{ padding: 32, alignItems: "center" }}>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>🧾</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>Bill Discounting</Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4, textAlign: "center" }}>Upload supplier invoices to get 90% value upfront.{"\n"}This feature requires document scanner integration.</Text>
+          </View>
         )}
-        <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>FINBOX</Text><View style={[styles.bnplBadge, { backgroundColor: colors.successSoft }]}><Text style={[styles.bnplText, { color: colors.success }]}>Bill Discount</Text></View></View><Text style={styles.offerAmount}>Sell Bill Discounting</Text><Text style={styles.offerDetail}>90% of invoice value upfront{"\n"}Funds in 24 hours</Text><Pressable style={styles.detailBtn} onPress={() => Alert.alert("Finbox Bill Discounting", "Upload supplier invoices to get 90% value upfront.\n\nFunds disbursed within 24 hours.", [{ text: "OK" }])}><Text style={styles.detailText}>Upload Invoice</Text></Pressable></View>
       </ScrollView>
     </View>
   );

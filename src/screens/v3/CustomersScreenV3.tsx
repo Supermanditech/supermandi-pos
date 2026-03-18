@@ -8,13 +8,8 @@ import { showToast } from "../../utils/showToast";
 
 // STG-575: Customers v3 — list with WhatsApp contact, purchase history inline
 
+// V3-DELETE-086: Demo customer fallback removed — real data or empty state only
 type Customer = { name: string; initial: string; visits: number; total: number };
-const DEMO: Customer[] = [
-  { name: "Ramesh Kumar", initial: "R", visits: 32, total: 24500 },
-  { name: "Suresh Patel", initial: "S", visits: 18, total: 12800 },
-  { name: "Mohan Singh", initial: "M", visits: 45, total: 38000 },
-  { name: "Priya Sharma", initial: "P", visits: 8, total: 4200 },
-];
 
 type Props = { onClose: () => void };
 
@@ -34,7 +29,7 @@ export default function CustomersScreenV3({ onClose }: Props) {
     visits: c.visitCount ?? 0,
     total: Math.round((c.totalPurchasesMinor ?? 0) / 100),
   }));
-  const displayCustomers = realCustomers.length > 0 ? realCustomers : DEMO;
+  const displayCustomers = realCustomers;
 
   // RI-012: Controlled search with filtering
   const [searchQuery, setSearchQuery] = useState("");
