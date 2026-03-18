@@ -51,9 +51,19 @@ jobs:
           K6_DURATION: ${{ github.event.inputs.duration_override }}
           SCENARIO: ${{ github.event.inputs.test_scenario }}
         run: |
+          # V3-HARDEN-161: Map scan-stress to the approved 50k+50k harness
+          resolve_script() {
+            local name="$1"
+            if [ "$name" = "scan-stress" ]; then
+              echo "scripts/load-tests/scan-stress.js"  # V3-HARDEN-161
+            else
+              echo "e2e-tests/stress/k6/${name}.js"
+            fi
+          }
+
           run_test() {
-            local script="$1"
-            echo "=== Running: $script ==="
+            local script_path="$1"
+            echo "=== Running: $script_path ==="
             EXTRA_ARGS=""
             if [ -n "$K6_DURATION" ]; then
               EXTRA_ARGS="--duration $K6_DURATION"
@@ -61,17 +71,21 @@ jobs:
             k6 run \
               --env BASE_URL="$BASE_URL" \
               --env AUTH_TOKEN="$AUTH_TOKEN" \
-              --summary-export="results-$(basename $script .js).json" \
+              --summary-export="results-$(basename $script_path .js).json" \
               $EXTRA_ARGS \
-              "e2e-tests/stress/k6/$script" || true
+              "$script_path" || true
           }
 
           if [ "$SCENARIO" = "all" ]; then
+            # Run new scan harness + legacy k6 tests (excluding superseded scan-stress)
+            run_test "scripts/load-tests/scan-stress.js"
             for f in e2e-tests/stress/k6/*.js; do
-              run_test "$(basename $f)"
+              if [ "$(basename $f)" != "scan-stress.js" ]; then
+                run_test "$f"
+              fi
             done
           else
-            run_test "${SCENARIO}.js"
+            run_test "$(resolve_script "$SCENARIO")"
           fi
 
       - name: Upload results

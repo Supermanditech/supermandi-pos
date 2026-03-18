@@ -223,7 +223,8 @@ function buildChecks(): GoNoGoCheck[] {
   checks.push(manualCheck('INV-5: Price integrity (positive amounts)', 'TEST-051', 'Data Integrity', 'invariant-checks.ts', 'Requires seeded production DB'));
 
   // ========== H: STRESS — K6 REQUIRED (MANUAL) ==========
-  checks.push(manualCheck('Scan: 35/min x 30min, p95 < 200ms', 'TEST-040', 'Stress', 'k6/scan-stress.js', 'Requires k6 + staging'));
+  // V3-HARDEN-161: Updated to approved 50k+50k/day scan targets
+  checks.push(manualCheck('Scan: 50k SELL + 50k purchase/day, p95 < 500ms', 'V3-HARDEN-161', 'Stress', 'scripts/load-tests/scan-stress.js', 'Requires k6 + staging + device token'));
   checks.push(manualCheck('Search: 100K products, p95 < 200ms', 'TEST-041', 'Stress', 'k6/search-stress.js', 'Requires k6 + staging'));
   checks.push(manualCheck('Checkout: 500/min, p95 < 3s', 'TEST-042', 'Stress', 'k6/checkout-stress.js', 'Requires k6 + staging'));
   checks.push(manualCheck('10K concurrent users, <10% errors', 'TEST-043', 'Stress', 'k6/concurrent-users.js', 'Requires k6 cloud'));

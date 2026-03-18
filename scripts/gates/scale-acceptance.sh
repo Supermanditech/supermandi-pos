@@ -9,7 +9,7 @@
 #   - isolated test environment
 # Full load tests are run manually before go-live using:
 #   - scripts/load-tests/catalog-load.js
-#   - scripts/load-tests/scan-throughput.js
+#   - scripts/load-tests/scan-stress.js  (V3-HARDEN-161: 50k+50k/day)
 #
 # What this gate DOES verify (blocking):
 #   1. DB connectivity
