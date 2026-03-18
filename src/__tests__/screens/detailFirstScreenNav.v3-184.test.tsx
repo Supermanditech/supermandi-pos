@@ -39,6 +39,7 @@ jest.mock("../../theme", () => ({
 jest.mock("../../theme/responsive", () => ({
   getScreenPadding: () => 16, getGridColumns: () => 3,
   getChipPadding: () => ({ h: 16, v: 8 }), getChipFontSize: () => 12,
+  getNavIconSize: () => 22, getHeaderSpacing: () => 12, getModalMaxWidth: () => 400,
 }));
 
 jest.mock("../../utils/showToast", () => ({ showToast: jest.fn() }));
@@ -123,6 +124,20 @@ jest.mock("../../components/v3/UniversalSearchV3", () => {
 jest.mock("../../components/v3/CartSheetV3", () => {
   return { __esModule: true, default: () => null };
 });
+
+// ── Mocks for PosRootLayoutV3 child screens (STORE/MORE only — SELL/BUY are real) ──
+jest.mock("../../screens/v3/StoreHubScreenV3", () => {
+  const { View, Text } = require("react-native");
+  return { __esModule: true, default: () => <View testID="store-hub-stub"><Text>STORE Hub</Text></View> };
+});
+jest.mock("../../screens/v3/MoreScreenV3", () => {
+  const { View, Text } = require("react-native");
+  return { __esModule: true, default: () => <View testID="more-stub"><Text>MORE Screen</Text></View> };
+});
+jest.mock("../../components/ui/ScreenErrorBoundary", () => {
+  return { __esModule: true, default: ({ children }: { children: React.ReactNode }) => <>{children}</> };
+});
+jest.mock("../../services/sseClient", () => ({ startSSEClient: jest.fn(), stopSSEClient: jest.fn() }));
 jest.mock("../../services/cartPayload", () => ({
   buildCartItemFromTile: jest.fn((tile: any) => ({ id: tile.barcode ?? tile.id, name: tile.name, priceMinor: tile.priceMrpMinor, quantity: 1 })),
   buildCartItemFromSearch: jest.fn(),
@@ -134,6 +149,7 @@ jest.mock("../../services/cartPayload", () => ({
 
 import SellScreenV3 from "../../screens/v3/SellScreenV3";
 import BuyScreenV3 from "../../screens/v3/BuyScreenV3";
+import PosRootLayoutV3 from "../../screens/v3/PosRootLayoutV3";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SELL SCREEN: Full mounted screen proof
@@ -266,12 +282,15 @@ describe("V3-HARDEN-184: BuyScreenV3 mounted detail-first flow", () => {
     expect(screen.queryByText(/item.*case/i)).toBeNull();
   });
 
-  it("explicit Add CTA in detail updates purchase cart", async () => {
+  it("explicit Add CTA in detail updates purchase cart — visible UI proof", async () => {
     render(<BuyScreenV3 />);
 
     await waitFor(() => {
       expect(screen.getByText("Tata Tea Gold")).toBeTruthy();
     });
+
+    // Before add: no cart strip visible
+    expect(screen.queryByText(/item/i)).toBeNull();
 
     // Open detail
     fireEvent.press(screen.getByText("Tata Tea Gold"));
@@ -282,10 +301,17 @@ describe("V3-HARDEN-184: BuyScreenV3 mounted detail-first flow", () => {
     // Tap top Add CTA
     fireEvent.press(screen.getByTestId("detail-top-add"));
 
-    // Detail sheet closes and purchase cart now has items
-    // (the handleQtyChange sets orderQtys for the product)
+    // Detail sheet closes
     await waitFor(() => {
       expect(screen.queryByTestId("product-detail-sheet")).toBeNull();
+    });
+
+    // After add: purchase cart strip IS now visible with item count
+    // BuyScreenV3 shows cart strip when cartItemCount > 0
+    // The handleQtyChange sets orderQtys[id] = quantity, making cartItemCount > 0
+    await waitFor(() => {
+      // Cart strip shows item/case summary
+      expect(screen.getByText(/item/i)).toBeTruthy();
     });
   });
 
@@ -311,30 +337,68 @@ describe("V3-HARDEN-184: BuyScreenV3 mounted detail-first flow", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ROOT/TAB: PosRootLayoutV3 note
+// ROOT/TAB: PosRootLayoutV3 mounted runtime proof
 // ═══════════════════════════════════════════════════════════════════════════════
 
-describe("V3-HARDEN-184: PosRootLayoutV3 tab interaction", () => {
-  it("PosRootLayoutV3 uses bottom tab navigator (structural proof)", () => {
-    // Full PosRootLayoutV3 rendering requires @react-navigation/bottom-tabs
-    // which has native dependencies that make mounted testing impractical
-    // in Jest without a full RN test renderer.
-    //
-    // LIMITATION: Tab-switching proof deferred to Maestro/Detox e2e.
-    // What IS proven: SellScreenV3 and BuyScreenV3 each render independently
-    // with their own local state, and neither corrupts the other's cart state
-    // because they use separate state mechanisms (cartStore vs orderQtys).
-    const fs = require("fs");
-    const path = require("path");
-    const src = fs.readFileSync(
-      path.resolve(__dirname, "../../screens/v3/PosRootLayoutV3.tsx"), "utf8"
-    );
-    // Uses custom BottomNavV3 with useState-driven tab switching
-    expect(src).toContain("BottomNavV3");
-    expect(src).toContain('"SELL"');
-    expect(src).toContain('"BUY"');
-    // SELL and BUY render as separate conditional blocks — no shared state leakage
-    expect(src).toContain('activeTab === "SELL"');
-    expect(src).toContain('activeTab === "BUY"');
+describe("V3-HARDEN-184: PosRootLayoutV3 tab switching (runtime)", () => {
+  it("default tab renders SELL screen", async () => {
+    render(<PosRootLayoutV3 />);
+
+    // SELL is the default active tab — SellScreenV3 should render
+    await waitFor(() => {
+      expect(screen.getByTestId("sell-screen-v3")).toBeTruthy();
+    });
+
+    // SELL tab should be selected
+    const sellTab = screen.getByLabelText("SELL");
+    expect(sellTab).toBeTruthy();
+  });
+
+  it("switch to BUY tab renders BuyScreenV3, SELL is unmounted", async () => {
+    render(<PosRootLayoutV3 />);
+
+    // Start on SELL
+    await waitFor(() => {
+      expect(screen.getByTestId("sell-screen-v3")).toBeTruthy();
+    });
+
+    // Tap BUY tab
+    const buyTab = screen.getByLabelText("BUY");
+    fireEvent.press(buyTab);
+
+    // BUY screen should render (catalog loads)
+    await waitFor(() => {
+      expect(screen.getByText("Tata Tea Gold")).toBeTruthy();
+    });
+
+    // SELL screen should be unmounted (conditional rendering)
+    expect(screen.queryByTestId("sell-screen-v3")).toBeNull();
+  });
+
+  it("switch back to SELL from BUY — SELL re-renders, no cart corruption", async () => {
+    render(<PosRootLayoutV3 />);
+
+    // Start on SELL
+    await waitFor(() => {
+      expect(screen.getByTestId("sell-screen-v3")).toBeTruthy();
+    });
+
+    // Switch to BUY
+    fireEvent.press(screen.getByLabelText("BUY"));
+    await waitFor(() => {
+      expect(screen.getByText("Tata Tea Gold")).toBeTruthy();
+    });
+
+    // Switch back to SELL
+    fireEvent.press(screen.getByLabelText("SELL"));
+    await waitFor(() => {
+      expect(screen.getByTestId("sell-screen-v3")).toBeTruthy();
+    });
+
+    // Cart was NOT mutated by tab switching
+    expect(mockAddItem).not.toHaveBeenCalled();
+
+    // Products still render on SELL
+    expect(screen.getByText("Maggi Noodles")).toBeTruthy();
   });
 });
