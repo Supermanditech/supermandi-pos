@@ -106,7 +106,15 @@ jest.mock("../../components/v3/SupplierProductCardV3", () => {
 jest.mock("../../components/v3/PurchaseItemCardV3", () => {
   const React = require("react");
   const { View, Text } = require("react-native");
-  return { __esModule: true, default: (props: any) => React.createElement(View, { testID: `purchase-item-${props.item.barcode}` }, React.createElement(Text, null, props.item.name ?? props.item.barcode)) };
+  return {
+    __esModule: true,
+    default: (props: any) => React.createElement(View, { testID: `purchase-item-${props.item.barcode}` },
+      React.createElement(Text, null, props.item.name ?? props.item.barcode),
+      React.createElement(Text, { testID: `item-state-${props.item.barcode}` }, props.item.state),
+      // Expose onPriceChange so tests can simulate price entry
+      React.createElement(Text, { testID: `item-price-${props.item.barcode}`, onPress: () => props.onPriceChange?.("50") }, "set-price"),
+    ),
+  };
 });
 
 jest.mock("../../components/v3/ExpandableDetails", () => {
@@ -344,6 +352,47 @@ describe("V3-FIX-078: Counter Purchase confirm path", () => {
     // Picked from list → authoritative path with id
     expect(supplierPayload.id).toBe("sup-picker-001");
     expect(supplierPayload.name).toBe("Metro Distributors");
+  });
+
+  it("unknown/new product confirm payload carries barcode + isNewProduct=true", async () => {
+    render(<CounterPurchaseScreenV3 onClose={jest.fn()} />);
+    // Scan unknown barcode
+    fireEvent.changeText(screen.getByPlaceholderText(/Scan barcode/), "5555555555555");
+    fireEvent.press(screen.getByText("↵"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("purchase-item-5555555555555")).toBeTruthy();
+      // Verify item state is "new"
+      expect(screen.getByTestId("item-state-5555555555555").children[0]).toBe("new");
+    });
+
+    // Set price via mock's exposed onPriceChange trigger
+    fireEvent.press(screen.getByTestId("item-price-5555555555555"));
+
+    // Confirm
+    fireEvent.press(screen.getByText("Confirm"));
+    await waitFor(() => expect(mockRecordManualInward).toHaveBeenCalledTimes(1));
+
+    const [txnItems] = mockRecordManualInward.mock.calls[0];
+    expect(txnItems[0].productId).toBe("5555555555555"); // barcode as provisional identity
+    expect(txnItems[0].isNewProduct).toBe(true);
+  });
+
+  it("GST total uses per-item gstPct from product metadata in confirm path", async () => {
+    render(<CounterPurchaseScreenV3 onClose={jest.fn()} />);
+    // Scan known product with gstPct: 18
+    fireEvent.changeText(screen.getByPlaceholderText(/Scan barcode/), "8901234");
+    fireEvent.press(screen.getByText("↵"));
+    await waitFor(() => expect(screen.getByTestId("purchase-item-8901234")).toBeTruthy());
+
+    // The known product has priceMinor: 1000, so purchasePrice auto-fills to "10"
+    // GST for 1 case × 1 unit × ₹10 at 18% = ₹1.80
+    // Rendered footer should show GST as ₹2 (rounded)
+    await waitFor(() => {
+      // Footer renders "GST (mixed rates)" line with per-item calculated amount
+      expect(screen.getByText("GST (mixed rates)")).toBeTruthy();
+      expect(screen.getByText("₹2")).toBeTruthy(); // 10 * 18% = 1.8, rounded to 2
+    });
   });
 });
 
