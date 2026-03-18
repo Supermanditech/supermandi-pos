@@ -121,9 +121,9 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
       (p) => p.name.toLowerCase().includes(matchedProduct.toLowerCase())
     );
 
-    const addItem = useCartStore.getState().addItem;
     if (match) {
       // Full product found — use canonical builder with all metadata
+      const addItem = useCartStore.getState().addItem;
       const existing = useCartStore.getState().items.find(
         (i) => i.id === (match.barcode ?? match.id) || i.barcode === match.barcode
       );
@@ -132,22 +132,15 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
       } else {
         addItem(buildCartItemFromVoice(match, matchedQty));
       }
+      onProductMatched(matchedProduct, matchedQty);
+      showToast(`${matchedProduct} ×${matchedQty} added`);
+      onClose();
     } else {
-      // No product match in store — add with name + quantity only
-      addItem({
-        id: `voice-${Date.now()}`,
-        name: matchedProduct,
-        priceMinor: 0,
-        currency: "INR",
-        quantity: matchedQty,
-        priceResolutionError: true,
-        priceResolutionMessage: "Price not found — tap to set price",
-      });
+      // V3-FIX-120: No product match — do NOT create synthetic zero-price cart line.
+      // Show error state and let retailer retry or search manually.
+      showToast(`"${matchedProduct}" not found in store — try search instead`);
+      setState("error");
     }
-
-    onProductMatched(matchedProduct, matchedQty);
-    showToast(`${matchedProduct} ×${matchedQty} added`);
-    onClose();
   }, [matchedProduct, matchedQty, onProductMatched, onClose]);
 
   const handleRetry = useCallback(() => {

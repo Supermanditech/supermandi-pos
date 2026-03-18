@@ -20,6 +20,10 @@ type SettingsState = {
   language: SupportedLanguage;
   storeName: string | null; // GO-LIVE: Store name from SuperAdmin (read-only, persisted for offline)
   storeCode: string | null; // GO-LIVE: Human-readable store code
+  // V3-FIX-124: Canonical store UPI VPA — synced from backend, editable by owner/manager
+  upiVpa: string | null;
+  // V3-FIX-124: Last sync timestamp for UPI data freshness
+  lastSyncAt: string | null;
   // LIVE.POS.THEME: Theme preference (persisted via AsyncStorage)
   themeMode: ThemeMode;
   // T-195: Thermal printer settings
@@ -41,6 +45,9 @@ type SettingsState = {
   setLanguage: (lang: SupportedLanguage) => void;
   setStoreName: (name: string | null) => void;
   setStoreCode: (code: string | null) => void;
+  // V3-FIX-124: Canonical UPI setter — must use this, never mutate .upiVpa directly
+  setUpiVpa: (vpa: string | null) => void;
+  setLastSyncAt: (ts: string | null) => void;
   // LIVE.POS.THEME: Theme actions
   toggleTheme: () => void;
   setThemeMode: (mode: ThemeMode) => void;
@@ -61,6 +68,8 @@ export const useSettingsStore = create<SettingsState>()(
       language: 'en', // Default language
       storeName: null, // GO-LIVE: Persisted for offline display
       storeCode: null, // GO-LIVE: Human-readable store code
+      upiVpa: null, // V3-FIX-124: Canonical store UPI VPA
+      lastSyncAt: null, // V3-FIX-124: Last sync timestamp
       // LIVE.POS.THEME: Default to light mode (parity with web portals)
       themeMode: 'light' as ThemeMode,
       // T-195: Thermal printer defaults
@@ -86,6 +95,9 @@ export const useSettingsStore = create<SettingsState>()(
       },
       setStoreName: (name) => set({ storeName: name }),
       setStoreCode: (code) => set({ storeCode: code }),
+      // V3-FIX-124: Canonical UPI setter — persists via zustand middleware
+      setUpiVpa: (vpa) => set({ upiVpa: vpa }),
+      setLastSyncAt: (ts) => set({ lastSyncAt: ts }),
       // LIVE.POS.THEME: Theme toggle actions
       toggleTheme: () => set((state) => ({ themeMode: state.themeMode === 'dark' ? 'light' : 'dark' })),
       setThemeMode: (mode) => set({ themeMode: mode }),

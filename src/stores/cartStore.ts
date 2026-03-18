@@ -130,8 +130,14 @@ interface CartState {
   normalizeItemsToStock: () => { changed: boolean; adjustments: StockAdjustment[] }; // GL-CRIT-0014: Return adjustments for notification
   clearLastStockAdjustments: () => void; // GL-CRIT-0014: Clear after UI has shown notification
 
-  // PD-025: Parked carts
-  parkedCarts: Array<{ items: CartItem[]; parkedAt: number }>;
+  // PD-025: Parked carts — V3-FIX-121: preserves full draft state
+  parkedCarts: Array<{
+    items: CartItem[];
+    parkedAt: number;
+    discount: CartDiscount | null;
+    customer: CartCustomer | null;
+    note: CartNote | null;
+  }>;
   parkCart: () => void;
   resumeParkedCart: (index: number) => void;
   deleteParkedCart: (index: number) => void;
@@ -817,13 +823,20 @@ export const useCartStore = create<CartState>()(
     });
   },
 
-  // PD-025: Parked carts
+  // PD-025: Parked carts — V3-FIX-121: preserves full draft state
   parkedCarts: [],
   parkCart: () => {
     const state = get();
     if (state.items.length === 0) return;
     if (state.parkedCarts.length >= 3) return; // Max 3 parked
-    const parked = [...state.parkedCarts, { items: [...state.items], parkedAt: Date.now() }];
+    // V3-FIX-121: Save full draft commercial state (discount, customer, note)
+    const parked = [...state.parkedCarts, {
+      items: [...state.items],
+      parkedAt: Date.now(),
+      discount: state.discount ? { ...state.discount } : null,
+      customer: state.customer ? { ...state.customer } : null,
+      note: state.note,
+    }];
     set({ parkedCarts: parked, items: [], discount: null, customer: null, note: null, subtotal: 0, total: 0, discountAmount: 0, cartDiscountAmount: 0, itemDiscountAmount: 0, discountTotal: 0 });
   },
   resumeParkedCart: (index: number) => {
@@ -831,7 +844,14 @@ export const useCartStore = create<CartState>()(
     if (index < 0 || index >= state.parkedCarts.length) return;
     const cart = state.parkedCarts[index];
     const remaining = state.parkedCarts.filter((_, i) => i !== index);
-    set({ items: cart.items, parkedCarts: remaining });
+    // V3-FIX-121: Restore full draft state including discount, customer, note
+    set({
+      items: cart.items,
+      discount: cart.discount ?? null,
+      customer: cart.customer ?? null,
+      note: cart.note ?? null,
+      parkedCarts: remaining,
+    });
     get().recalculate();
   },
   deleteParkedCart: (index: number) => {

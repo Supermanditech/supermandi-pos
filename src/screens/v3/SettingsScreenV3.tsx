@@ -56,13 +56,17 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
       { icon: "🔄", label: "Auto-Print", toggle: true, on: autoPrint, onToggle: () => setAutoPrint(!autoPrint) },
     ]},
     { title: "PAYMENTS", items: [
-      // V3-FIX-124: UPI ID — tappable to edit for owner/manager
-      { icon: "📱", label: "UPI ID", value: (useSettingsStore.getState() as any).upiVpa ?? "Not configured", onTap: () => {
-        const currentVpa = (useSettingsStore.getState() as any).upiVpa ?? "";
-        setUpiVpaInput(currentVpa);
-        setModalMode("edit-upi");
-        setModalError("");
-      }},
+      // V3-FIX-124: UPI ID — tappable to edit, gated to MANAGER role (owner-level in POS)
+      { icon: "📱", label: "UPI ID", value: useSettingsStore.getState().upiVpa ?? "Not configured", onTap: (() => {
+        const session = useStaffSessionStore.getState().session;
+        if (session?.role !== "MANAGER") return undefined;
+        return () => {
+          const currentVpa = useSettingsStore.getState().upiVpa ?? "";
+          setUpiVpaInput(currentVpa);
+          setModalMode("edit-upi");
+          setModalError("");
+        };
+      })()},
       { icon: "⚡", label: "Express Checkout", toggle: true, on: expressCheckout, onToggle: () => setExpressCheckout(!expressCheckout) },
     ]},
     { title: "PREFERENCES", items: [
@@ -73,14 +77,14 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
     { title: "DATA", items: [
       // V3-FIX-084: Real last sync time from settings store
       { icon: "☁️", label: "Last Sync", value: (() => {
-        const ts = (useSettingsStore.getState() as any).lastSyncAt;
+        const ts = useSettingsStore.getState().lastSyncAt;
         if (!ts) return "Never";
         const ago = Math.round((Date.now() - new Date(ts).getTime()) / 60000);
         if (ago < 1) return "Just now ✓";
         if (ago < 60) return `${ago} min ago ✓`;
         return `${Math.round(ago / 60)}h ago`;
       })(), valueColor: (() => {
-        const ts = (useSettingsStore.getState() as any).lastSyncAt;
+        const ts = useSettingsStore.getState().lastSyncAt;
         if (!ts) return colors.textTertiary;
         const ago = (Date.now() - new Date(ts).getTime()) / 60000;
         return ago < 10 ? colors.success : ago < 60 ? colors.warning : colors.error;
@@ -278,8 +282,8 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
                     try {
                       const { apiClient } = require("../../services/api/apiClient");
                       const result = await apiClient.patch("/api/v1/pos/store/payment-settings", { upiVpa: trimmed });
-                      // Update local settings store
-                      (useSettingsStore.getState() as any).upiVpa = result.upiVpa ?? trimmed;
+                      // V3-FIX-124: Use canonical setter, not direct mutation
+                      useSettingsStore.getState().setUpiVpa(result.upiVpa ?? trimmed);
                       showToast("Store UPI saved");
                       setModalMode(null);
                     } catch (err: any) {

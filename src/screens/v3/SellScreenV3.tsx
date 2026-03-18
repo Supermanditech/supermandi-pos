@@ -136,7 +136,7 @@ export default function SellScreenV3() {
       const storeId = await getDeviceStoreId();
       if (!storeId) { setSearchResults([]); return; }
       const groups = await searchStoreProducts(storeId, query, { limit: 20 });
-      // Flatten search groups into SearchResult[]
+      // V3-FIX-120: Flatten search groups into SearchResult[] preserving all metadata
       const flat: SearchResult[] = groups.flatMap((g) =>
         (g.matches ?? []).map((sku) => ({
           id: sku.storeProductId ?? sku.productId ?? g.groupId,
@@ -145,6 +145,15 @@ export default function SellScreenV3() {
           priceMinor: sku.sellPrice ?? 0,
           stock: sku.currentStock,
           brand: g.brand,
+          storeProductId: sku.storeProductId,
+          gstRate: (sku as any).gstRate ?? (g as any).gstRate ?? undefined,
+          hsnCode: (sku as any).hsnCode ?? (g as any).hsnCode ?? undefined,
+          unit: (sku as any).unit ?? (sku as any).net_content_unit ?? undefined,
+          caseSize: (sku as any).caseSize ?? undefined,
+          category: (g as any).category ?? undefined,
+          imageUrl: (sku as any).image_url ?? (g as any).imageUrl ?? undefined,
+          mrpMinor: (sku as any).mrpMinor ?? undefined,
+          supplierName: (g as any).supplierName ?? undefined,
         }))
       );
       // DA-029: Deduplicate by barcode

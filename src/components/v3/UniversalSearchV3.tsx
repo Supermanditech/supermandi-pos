@@ -24,6 +24,15 @@ export interface SearchResult {
   supplier?: string;
   margin?: number;
   caseSize?: number;
+  // V3-FIX-120: Richer metadata preserved through canonical cart-add
+  gstRate?: number;
+  hsnCode?: string;
+  unit?: string;
+  storeProductId?: string;
+  category?: string;
+  imageUrl?: string;
+  mrpMinor?: number;
+  supplierName?: string;
 }
 
 type UniversalSearchV3Props = {
