@@ -5567,7 +5567,7 @@ The branch must not be called:
 - GCP-ready
 - production-ready
 
-until all sixteen phases above are complete and re-verified against `tickets.md`.
+until all seventeen phases above are complete and re-verified against `tickets.md`.
 
 ## Phase 12 - Supplier Catalogue as SuperMandi Principal B2B Procurement
 
