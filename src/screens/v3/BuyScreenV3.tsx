@@ -22,6 +22,7 @@ function catalogToSupplier(p: CatalogProduct): SupplierProduct {
   const raw = p as any;
   return {
     id: p.id,
+    supplierId: raw.supplierId ?? raw.supplier_id ?? "",
     name: p.name,
     brand: p.brand ?? "",
     category: p.category ?? "",
@@ -228,7 +229,9 @@ export default function BuyScreenV3() {
             if (!sid) { showToast("Store not configured"); return; }
             const selectedProducts = products.filter((p) => (orderQtys[p.id] ?? 0) > 0);
             if (selectedProducts.length === 0) { showToast("No items in order"); return; }
-            const supplierId = selectedProducts[0].supplierName ?? "default";
+            // V3-FIX-076: Use authoritative supplierId, not supplierName as identity
+            const supplierId = selectedProducts[0].supplierId;
+            if (!supplierId) { showToast("Supplier identity missing — cannot place order"); return; }
             const orderItems = selectedProducts.map((p) => ({
               supplierProductId: p.id,
               quantity: (orderQtys[p.id] ?? 0) * p.caseSize,

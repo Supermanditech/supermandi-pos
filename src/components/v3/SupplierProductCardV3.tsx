@@ -7,6 +7,7 @@ import type { ColorPalette } from "../../theme";
 
 export interface SupplierProduct {
   id: string;
+  supplierId: string;        // authoritative supplier identity for orders
   name: string;
   brand: string;
   category: string;
