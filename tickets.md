@@ -6594,6 +6594,55 @@ Expected outcome:
 - POS app, retailer web, supplier web, and SuperAdmin all derive from the same underlying event/state truth rather than separate approximations.
 - Real-time updates propagate to the involved portals when a sale, stock event, order event, dispatch event, or delivery event changes the operational state.
 
+Actor interaction contract:
+- POS app:
+  - after sale commit, the store immediately sees updated stock and any low-stock/reorder signal for the sold SKU
+  - store-facing sell-through indicators must come from the same backend event truth as SuperAdmin, not from local-only counters
+- Retailer web:
+  - retailer sees current stock, recent sales velocity, pending replenishment, open procurement state, and delivery/GRN status per SKU
+- Supplier web:
+  - supplier sees only supplier-relevant demand/order signals after SuperMandi has actually allocated or triggered procurement
+  - supplier does not receive a global retailer sales directory or unrelated store demand
+- SuperAdmin:
+  - sees cross-store, cross-SKU sell-through, low-stock pressure, pending procurement, supplier fulfillment lag, and delivery exceptions
+
+UI / navigation contract:
+- POS:
+  - `SELL -> low stock / reorder cue -> BUY / Reorder`
+  - `STORE -> stock / reorder / delivery status`
+- Retailer web:
+  - `Inventory -> sell-through / low stock -> reorder or fresh order`
+- Supplier web:
+  - `Orders / Fulfillment -> accepted / pending / dispatch-ready demand`
+- SuperAdmin:
+  - `Demand / Procurement cockpit -> store -> SKU -> supplier trigger / allocation`
+
+API / backend contract:
+- Add one canonical store-SKU signal service or equivalent shared backend layer exposing:
+  - store SKU stock snapshot
+  - sold velocity / recent movement
+  - pending reorder need
+  - linked procurement / dispatch / delivery state
+- Add real-time feed support for relevant portal updates:
+  - SSE / websocket / equivalent one chosen transport
+- Demand state must be derived from append-only sales, stock, GRN, and order events, not overwritten summary rows alone
+
+Schema / migration expectations:
+- forward migrations for:
+  - per-store SKU demand/sell-through summary state
+  - event/version timestamps used for realtime fan-out
+  - linked procurement status summary where needed
+- if summary/materialized structures are introduced, they must be explicitly rebuildable from ledger/order truth
+
+Edge cases:
+- offline POS sale replay arriving late
+- voided/cancelled/refunded sale changing the sold/unsold signal
+- duplicate event delivery
+- GRN pending while stock is ordered but not yet available
+- partial delivery and partial GRN
+- store deleted/inactive while demand signals still exist
+- supplier unlinked/inactive after demand appears but before order trigger
+
 Override requirement:
 - Claude must inspect the existing sales, stock, reorder, procurement, ledger, and live-update paths first and override conflicting live behavior in place.
 - Do not bolt on a second “dashboard-only” truth source beside the existing sales/ledger/order system.
@@ -6631,6 +6680,59 @@ Expected outcome:
 - Repeat/new purchase entry points are available in both POS and retailer web with clear navigation and state continuity.
 - Reorder suggestions are grounded in real store stock/sales truth rather than demo thresholds or isolated screen logic.
 
+Actor interaction contract:
+- POS retailer user:
+  - sees repeat-order suggestions for low-stock / fast-selling / previously procured SKUs
+  - can open a repeat-order flow with quantity prefill and prior procurement context
+  - can also start a fresh procurement flow for new supplier-catalogue SKUs
+- Retailer web user:
+  - sees the same repeat-order and fresh-purchase options from inventory, order history, and supplier catalogue
+- SuperAdmin:
+  - does not manually create retailer orders here, but can observe the resulting reorder/new-purchase lifecycle
+
+UI / navigation contract:
+- POS:
+  - `STORE -> Reorder`
+  - `SELL low-stock cue -> Reorder`
+  - `BUY -> fresh purchase`
+- Retailer web:
+  - `Inventory -> Reorder`
+  - `Order history -> Buy again`
+  - `Supplier catalogue -> New purchase`
+- Repeat order and new purchase must converge to one procurement cart / order-draft model, not separate hidden carts
+
+Business logic contract:
+- repeat purchase:
+  - sourced from prior procurement + current stock + sales movement
+  - prefill quantity suggestion may exist but must remain editable
+- fresh purchase:
+  - sourced from supplier catalogue discovery
+  - no fake “repeat” metadata should appear for first-time SKU procurement
+- reorder recommendation logic must use:
+  - current stock
+  - pending inbound stock
+  - recent sales velocity
+  - minimum reorder threshold or policy if configured
+
+API / backend contract:
+- explicit endpoints/services for:
+  - recommended repeat SKUs
+  - buy-again history
+  - fresh catalogue discovery
+  - reorder/new-purchase draft creation
+
+Schema / migration expectations:
+- if repeat-order snapshots or recommendation state are stored, they must reference canonical store product / supplier product identity
+- do not create a second unlinked reorder history table without canonical product references
+
+Edge cases:
+- repeat SKU but supplier no longer active
+- repeat SKU now unpublished or replaced
+- pending inbound stock should suppress duplicate reorder noise where appropriate
+- same SKU available from multiple suppliers
+- retailer started order in POS and resumes in retailer web
+- reorder recommendation for zero-sales new stores should produce a clean empty state, not fake suggestions
+
 Override requirement:
 - Claude must inspect current BUY, reorder, order-history, and procurement-entry flows first and override conflicting repeat/new purchase behavior in place.
 - Do not leave multiple parallel reorder entry models across POS and retailer web.
@@ -6667,6 +6769,76 @@ Expected outcome:
   - dispatch
   - delivery
   - GRN closure
+
+Actor interaction contract:
+- SuperAdmin:
+  - reviews store-level demand and/or confirmed retailer order
+  - triggers supplier procurement order manually or through approved automation rules
+  - can reassign, split, or pause supplier allocation
+- Supplier web user:
+  - receives procurement order
+  - accepts / rejects / partially accepts
+  - enters dispatch details
+  - updates shipment and delivery milestones
+- Retailer:
+  - sees linked retailer order status reflecting supplier-side progress without needing supplier-directory access
+
+UI / navigation contract:
+- SuperAdmin:
+  - `Demand / Procurement -> store demand -> supplier allocation -> procurement order`
+- Supplier web:
+  - `Procurement Orders -> accept/reject -> dispatch -> delivery update`
+- Retailer POS / web:
+  - `Orders -> track status -> receive / GRN`
+
+Business logic contract:
+- one canonical trigger path exists from:
+  - store demand signal and/or retailer procurement order
+  - to supplier allocation
+  - to supplier-facing procurement order
+- order triggering must preserve:
+  - supplier identity
+  - store identity
+  - SKU identity
+  - ordered quantity
+  - accepted quantity
+  - dispatched quantity
+  - delivered quantity
+- partial fulfillments and split suppliers must remain explicit, not hidden under one fake “fulfilled” state
+
+API / backend contract:
+- explicit procurement orchestration endpoints/services for:
+  - trigger supplier order
+  - allocate or reallocate supplier
+  - accept / reject / partial accept
+  - mark dispatched
+  - update delivery state
+  - expose linked retailer/procurement order chain
+
+Schema / migration expectations:
+- forward migrations for:
+  - linked retailer order <-> supplier procurement order
+  - supplier allocation decisions
+  - dispatch records
+  - delivery milestone records
+- state model must support:
+  - created
+  - triggered
+  - accepted
+  - partial
+  - rejected
+  - dispatched
+  - delivered
+  - GRN completed
+
+Edge cases:
+- multi-supplier split
+- supplier rejection after trigger
+- supplier partial acceptance
+- dispatch created but delivery delayed
+- delivery without full quantity
+- retailer cancels before dispatch
+- GRN mismatch against delivered quantity
 
 Override requirement:
 - Claude must inspect the current procurement-order, publish, supplier-fulfillment, dispatch, and GRN paths first and override conflicting live behavior in place.
@@ -6711,6 +6883,58 @@ Expected outcome:
 - UI states and notification states stay consistent across POS, retailer web, supplier web, and SuperAdmin.
 - Communication failures are observable and do not silently desync the lifecycle.
 
+Actor interaction contract:
+- Retailer:
+  - gets order confirmation, supplier progress, dispatch, delivery, GRN pending/completed, and repeat-order prompts where approved
+- Supplier:
+  - gets new procurement order alerts, action-required reminders, dispatch reminder/failure notifications
+- SuperAdmin:
+  - gets exception alerts, non-acceptance alerts, dispatch delay alerts, delivery/GRN exception alerts
+
+Channel contract:
+- in-product realtime update for active users
+- WhatsApp for external/actionable lifecycle events where configured
+- do not send conflicting meanings across channels
+
+UI / navigation contract:
+- POS and retailer web:
+  - order cards/status timelines update live
+- supplier web:
+  - order queue and dispatch screens update live
+- SuperAdmin:
+  - demand/procurement cockpit and exception queues update live
+
+Backend / event-delivery contract:
+- define one event fan-out contract for:
+  - order_created
+  - supplier_action_required
+  - supplier_accepted
+  - supplier_rejected
+  - partial_accept
+  - dispatched
+  - delivery_due
+  - delivered
+  - grn_completed
+  - repeat_order_prompt
+- each notification must carry canonical order/store/supplier/SKU references
+
+WhatsApp contract:
+- template/send rules must be explicit per actor and event
+- logs must record:
+  - actor
+  - target phone
+  - template/event type
+  - delivery status
+  - retry / failure status
+
+Edge cases:
+- realtime event delivered but WhatsApp failed
+- WhatsApp sent but realtime connection absent
+- duplicate event fan-out
+- supplier or retailer phone missing / invalid
+- event order inversion (dispatch arrives before acceptance in the feed)
+- user opens stale screen after long offline period
+
 Override requirement:
 - Claude must inspect the current live-update, WhatsApp, notification, and order-status flows first and override conflicting live behavior in place.
 - Do not bolt on a second notification channel while older stale communication paths still remain active.
@@ -6743,6 +6967,56 @@ Expected outcome:
   - WhatsApp/live notification delivery
 - Deploy/release gates fail if this orchestration stack is not actually live and verifiable in the target environment.
 - Claude must provide one explicit parity/readiness proof covering POS, retailer web, supplier web, SuperAdmin, backend, migrations, and runtime event delivery.
+
+API / schema contract:
+- define explicit versioned APIs for:
+  - sell-through/replenishment signals
+  - retailer reorder/new-purchase actions
+  - supplier procurement trigger and lifecycle updates
+  - delivery milestone updates
+  - realtime event subscriptions / feed bootstrap
+  - WhatsApp/notification status where surfaced
+- forward migrations must cover:
+  - demand/replenishment state
+  - linked procurement orders
+  - dispatch/delivery milestones
+  - notification/event logs
+
+GCP / runtime parity contract:
+- verify runtime readiness for:
+  - DB migrations applied
+  - async worker / queue / PubSub / Cloud Tasks paths used by this flow
+  - storage or document delivery dependencies where relevant
+  - API gateway routing for all actor portals
+  - realtime transport config
+  - WhatsApp credentials and webhook paths
+
+Release-gate contract:
+- deploy must fail if:
+  - migration version behind
+  - event transport misconfigured
+  - supplier-trigger route unavailable
+  - realtime feed unavailable
+  - WhatsApp channel unavailable where configured as required
+  - portal/API versions are incompatible for this lifecycle
+
+Readiness proof required from implementation:
+- one operator-readable parity proof showing:
+  - POS build/runtime compatibility
+  - retailer web compatibility
+  - supplier web compatibility
+  - SuperAdmin compatibility
+  - backend/API version
+  - migration level
+  - realtime transport readiness
+  - notification readiness
+
+Edge cases:
+- partial deploy where one portal is ahead of backend
+- migration applied but worker/runtime not updated
+- realtime transport down while APIs still respond
+- WhatsApp webhook configured in one env but not another
+- stale cache/version skew across portals after rollout
 
 Override requirement:
 - Claude must inspect the current migrations, APIs, realtime transport, deploy gates, and runtime config first and override conflicting live assumptions in place.
