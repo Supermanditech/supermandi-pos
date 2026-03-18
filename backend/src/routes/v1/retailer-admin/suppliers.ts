@@ -958,14 +958,15 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
     }
 
     const product = productCheck.rows[0];
-    // T-067: Calculate retailer price using either fixed margin or percentage
-    let marginAmount = 0;
-    if (product.supermandi_margin_minor && product.supermandi_margin_minor > 0) {
-      marginAmount = product.supermandi_margin_minor;
-    } else if (product.margin_percent && product.margin_percent > 0) {
-      marginAmount = Math.round(product.purchase_price * product.margin_percent / 100);
-    }
-    const retailerPrice = sellPrice || (product.purchase_price + marginAmount);
+    // V3-FIX-098: Use canonical pricing engine
+    const { calculateRetailerPrice } = require("../../../services/pricingEngine");
+    const pricingResult = calculateRetailerPrice({
+      supplierPriceMinor: product.purchase_price,
+      mrpMinor: product.mrp ? Math.round(product.mrp * 100) : undefined,
+      productMargin: product.supermandi_margin_minor > 0 ? { type: "fixed" as const, value: product.supermandi_margin_minor } : null,
+      supplierMargin: product.margin_percent > 0 ? { type: "percentage" as const, value: product.margin_percent } : null,
+    });
+    const retailerPrice = sellPrice || pricingResult.retailerPriceMinor;
 
     // T-063: Resolve the master catalog product_id via supplier_product_map
     // The approval flow creates a catalog.products entry and maps it via supplier_product_map.
@@ -1029,13 +1030,21 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
       );
     }
 
-    // Initialize stock balance using resolved catalog product_id
+    // V3-FIX-099 / V3-HARDEN-102: Ledger-first stock seeding
+    // Write inventory ledger entry BEFORE updating stock balance (append-only invariant)
     if (initialStock > 0) {
+      // 1. Append ledger entry (audit trail — never deleted)
+      await client.query(
+        `INSERT INTO inventory.inventory_ledger (store_id, product_id, change_qty, reason, reference_type, created_at)
+         VALUES ($1, $2::uuid, $3, 'supplier_catalog_add_opening_stock', 'catalog_add', NOW())`,
+        [storeId, catalogProductId, initialStock]
+      );
+      // 2. Upsert stock balance (derived from ledger)
       await client.query(
         `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, updated_at)
          VALUES ($1, $2::uuid, $3, NOW())
          ON CONFLICT (store_id, product_id) DO UPDATE SET
-           current_qty = $3,
+           current_qty = inventory.stock_balances.current_qty + $3,
            updated_at = NOW()`,
         [storeId, catalogProductId, initialStock]
       );

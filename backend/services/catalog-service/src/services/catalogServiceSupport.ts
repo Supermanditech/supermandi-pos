@@ -114,13 +114,21 @@ function resolveStockStatus(totalStock: number): CatalogProduct['stockStatus'] {
 
 function toSupplierInfo(row: SupplierDetailRow): CatalogSupplierInfo {
   const purchasePrice = parseFloat(row.purchase_price);
+  // V3-FIX-098: Use canonical pricing engine for retailer price calculation
+  const { calculateRetailerPrice } = require("../../../../src/services/pricingEngine");
+  const pricingResult = calculateRetailerPrice({
+    supplierPriceMinor: Math.round(purchasePrice * 100),
+    mrpMinor: row.mrp ? Math.round(parseFloat(row.mrp) * 100) : undefined,
+    productMargin: (row.supermandi_margin_minor ?? 0) > 0 ? { type: "fixed" as const, value: row.supermandi_margin_minor } : null,
+    supplierMargin: (row as any).margin_percent > 0 ? { type: "percentage" as const, value: (row as any).margin_percent } : null,
+  });
   const margin = row.supermandi_margin_minor ?? 0;
   return {
     supplierId: row.supplier_id,
     supplierName: row.supplier_name,
     supplierProductId: row.supplier_product_id,
     purchasePrice,
-    retailerPrice: purchasePrice + margin,
+    retailerPrice: pricingResult.retailerPriceMinor / 100,
     margin,
     mrp: row.mrp ? parseFloat(row.mrp) : undefined,
     moq: row.moq,

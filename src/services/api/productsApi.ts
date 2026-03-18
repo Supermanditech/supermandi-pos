@@ -13,16 +13,45 @@ type ApiProductVariant = {
   mrp?: number | null;
 };
 
+// V3-FIX-096: Authoritative API product type — matches backend store-products response
 export type ApiProduct = {
   id: string;
+  storeProductId?: string;
   name: string;
   barcode: string | null;
   sku: string | null;
-  price?: number | null; // minor units (legacy)
+  price?: number | null;
   currency: string;
   stock: number;
   inventory?: ApiProductInventory | null;
   variant?: ApiProductVariant | null;
+  // Rich metadata from backend
+  brand?: string | null;
+  category?: string | null;
+  categoryName?: string | null;
+  description?: string | null;
+  imageUrl?: string | null;
+  image_url?: string | null;
+  unit?: string | null;
+  hsnCode?: string | null;
+  hsn_code?: string | null;
+  gstRate?: number | null;
+  gst_rate?: number | null;
+  mrp?: number | null;
+  mrpMinor?: number | null;
+  mrp_minor?: number | null;
+  purchasePriceMinor?: number | null;
+  purchase_price_minor?: number | null;
+  netContentValue?: number | null;
+  net_content_value?: number | null;
+  netContentUnit?: string | null;
+  net_content_unit?: string | null;
+  supplierId?: string | null;
+  supplier_id?: string | null;
+  supplierName?: string | null;
+  supplier_name?: string | null;
+  metadataUpdatedAt?: string | null;
+  metadata_updated_at?: string | null;
 };
 
 type StoreProductsListItem = {

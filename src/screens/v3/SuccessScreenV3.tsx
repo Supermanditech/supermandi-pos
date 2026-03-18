@@ -55,8 +55,22 @@ export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, 
       .catch(() => { setPrintStatus("failed"); });
   }, [autoPrint, billRef, paymentMethod, itemCount, totalDisplay]);
 
-  const handleWhatsAppBill = () => {
+  // V3-HARDEN-103: Server-backed WhatsApp send with deep-link fallback
+  const handleWhatsAppBill = async () => {
     const message = `*${billRef}*\n${METHOD_LABELS[paymentMethod]}\n${itemCount} items\n*Total: ${totalDisplay}*\n\nThank you for shopping!\n— SuperMandi POS`;
+    // Try server-backed send first (WhatsApp Cloud API)
+    try {
+      const online = await isOnline();
+      if (online && saleId) {
+        const { apiClient } = require("../../services/api/apiClient");
+        await apiClient.post("/api/v1/pos/whatsapp/send-bill", { saleId, message });
+        showToast("Bill sent via WhatsApp");
+        return;
+      }
+    } catch {
+      // Server send failed — fall back to deep link
+    }
+    // Fallback: deep-link to WhatsApp app
     const encoded = encodeURIComponent(message);
     Linking.openURL(`whatsapp://send?text=${encoded}`).catch(() => showToast("WhatsApp not installed"));
   };

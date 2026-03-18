@@ -236,6 +236,13 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SA_EMAIL }}
 
+      # V3-HARDEN-104: Production audit gate — blocking pre-deploy check
+      - name: Production Audit Gate
+        run: bash scripts/gates/production-audit-gate.sh
+        env:
+          GCS_DOCUMENTS_BUCKET: ${{ secrets.GCS_DOCUMENTS_BUCKET || 'supermandi-pos-documents' }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'configured' }}
+
       # STAGE-001 + STAGE-014: Create Cloud SQL backup before any deploy
       # Non-blocking: automated daily backups are enabled (INFRA-019).
       # If WIF SA lacks cloudsql.admin, log warning and continue.

@@ -855,8 +855,9 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
       });
     }
 
-    // GO-LIVE-131: Verify supplier is ACTIVE before approving product
-    if (product.supplier_status !== 'ACTIVE') {
+    // V3-HARDEN-101: Use canonical status helper instead of raw string comparison
+    const { isSupplierActive } = require("../../../services/statusHelpers");
+    if (!isSupplierActive(product.supplier_status)) {
       await client.query("ROLLBACK");
       log.warn(`[admin/products/approve] GO-LIVE-131: Cannot approve product from non-ACTIVE supplier: ${product.supplier_name}`);
       return res.status(400).json({
@@ -1640,14 +1641,15 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
       );
     }
 
-    // Calculate retailer price
-    let marginAmount = 0;
-    if (product.supermandi_margin_minor && product.supermandi_margin_minor > 0) {
-      marginAmount = product.supermandi_margin_minor;
-    } else if (product.margin_percent && product.margin_percent > 0) {
-      marginAmount = Math.round(product.purchase_price * product.margin_percent / 100);
-    }
-    const retailerPrice = product.purchase_price + marginAmount;
+    // V3-FIX-098: Use canonical pricing engine instead of inline margin math
+    const { calculateRetailerPrice } = require("../../../services/pricingEngine");
+    const pricingResult = calculateRetailerPrice({
+      supplierPriceMinor: product.purchase_price,
+      mrpMinor: product.mrp ? Math.round(product.mrp * 100) : undefined,
+      productMargin: product.supermandi_margin_minor > 0 ? { type: "fixed" as const, value: product.supermandi_margin_minor } : null,
+      supplierMargin: product.margin_percent > 0 ? { type: "percentage" as const, value: product.margin_percent } : null,
+    });
+    const retailerPrice = pricingResult.retailerPriceMinor;
 
     // Find all stores linked to this supplier that don't already have the product
     const linkedStores = await client.query(

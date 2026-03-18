@@ -1,29 +1,51 @@
 #!/usr/bin/env bash
-# V3-HARDEN-105: Scale acceptance thresholds
-# Documents the declared production targets and verifies critical indexes exist.
+# V3-HARDEN-105: Scale acceptance gate — executable index verification
+# Requires DATABASE_URL or PGHOST+PGDATABASE to be set for DB checks.
 set -euo pipefail
 
 echo "=== Scale Acceptance Gate ==="
 echo ""
-echo "Declared production targets:"
-echo "  - 5,000+ SKUs per retailer store"
-echo "  - 10,000 barcode scans per day"
-echo "  - 10,000 combined supplier/retailer users"
+echo "Targets: 5k SKUs/store, 10k scans/day, 10k users"
 echo ""
-echo "Critical index verification (requires DB access):"
-echo "  - catalog.store_products(store_id, is_active)"
-echo "  - catalog.store_product_barcodes(barcode)"
-echo "  - catalog.store_products(store_id) + GIN(name)"
-echo "  - inventory.stock_balances(store_id, product_id)"
-echo "  - payments.sell_payments(sale_id, store_id)"
+
+ERRORS=0
+WARNINGS=0
+
+# Check if we can connect to DB
+if [ -z "${DATABASE_URL:-}" ] && [ -z "${PGHOST:-}" ]; then
+  echo "SKIP: No DATABASE_URL or PGHOST — index verification requires DB access"
+  echo "GATE: SKIP (manual verification required)"
+  exit 0
+fi
+
+DB_CMD="psql ${DATABASE_URL:-} -t -A -c"
+
+# Verify critical indexes exist
+echo "Checking critical indexes..."
+
+check_index() {
+  local table=$1
+  local desc=$2
+  local count
+  count=$($DB_CMD "SELECT COUNT(*) FROM pg_indexes WHERE tablename = '$table';" 2>/dev/null || echo "0")
+  if [ "$count" -gt 0 ]; then
+    echo "  OK: $table has $count index(es) — $desc"
+  else
+    echo "  FAIL: $table has NO indexes — $desc"
+    ERRORS=$((ERRORS+1))
+  fi
+}
+
+check_index "store_products" "catalog.store_products (store_id, barcode, name search)"
+check_index "store_product_barcodes" "barcode lookup"
+check_index "stock_balances" "inventory.stock_balances (store_id, product_id)"
+check_index "sell_payments" "payments.sell_payments (sale_id)"
+check_index "sales" "public.sales (store_id)"
+
 echo ""
-echo "Run the following SQL to verify indexes exist:"
-echo "  SELECT indexname FROM pg_indexes WHERE tablename = 'store_products';"
-echo "  SELECT indexname FROM pg_indexes WHERE tablename = 'store_product_barcodes';"
-echo "  SELECT indexname FROM pg_indexes WHERE tablename = 'stock_balances';"
-echo ""
-echo "Load test commands:"
-echo "  node scripts/load-tests/catalog-load.js --skus=5000 --stores=10"
-echo "  node scripts/load-tests/scan-throughput.js --scans=10000"
-echo ""
-echo "GATE: Manual — operator must verify index presence and run load tests"
+if [ $ERRORS -gt 0 ]; then
+  echo "GATE FAILED: $ERRORS missing index group(s)"
+  exit 1
+else
+  echo "GATE PASSED: All critical index groups present"
+fi

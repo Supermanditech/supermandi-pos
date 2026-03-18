@@ -31,10 +31,29 @@ export async function shareBillText(snapshot: BillSnapshot): Promise<void> {
   });
 }
 
+// V3-HARDEN-103: Server-backed WhatsApp send with deep-link fallback
 export async function shareBillWhatsApp(snapshot: BillSnapshot, phone?: string): Promise<void> {
   const text = buildBillText(snapshot);
-  const encodedText = encodeURIComponent(text);
 
+  // Try server-backed send first
+  try {
+    const { isOnline } = require("../networkStatus");
+    const { apiClient } = require("../api/apiClient");
+    const online = await isOnline();
+    if (online && snapshot.saleId) {
+      await apiClient.post("/api/v1/pos/whatsapp/send-bill", {
+        saleId: snapshot.saleId,
+        message: text,
+        phone: phone ?? undefined,
+      });
+      return; // Server send succeeded
+    }
+  } catch {
+    // Server unavailable — fall back to deep link
+  }
+
+  // Fallback: deep-link to WhatsApp app
+  const encodedText = encodeURIComponent(text);
   let url: string;
   if (phone) {
     const cleanPhone = phone.replace(/\D/g, "");
