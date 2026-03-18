@@ -6756,6 +6756,21 @@ Override requirement:
 - Existing lower-capacity scan gates, stress assumptions, and observability paths must be updated, replaced, or deleted where needed so production readiness is measured against the approved volumes only.
 - Do not keep conflicting capacity gates that could let a weaker legacy threshold pass while the real scanner workload still fails in production.
 
+Implemented scope:
+- Canonical scan capacity contract (scanCapacity.ts): 50k SELL + 50k purchase = 100k/day, peak ~208/min, latency budgets (client <200ms, backend p95 <500ms, HID <100ms, dedup 300ms), correctness thresholds (100% dedup, 0 double-add, 0 crashes)
+- k6 scan stress harness (scripts/load-tests/scan-stress.js): SELL + purchase scenarios at 20/sec burst, barcode lookup with known/unknown mix, p95 <500ms threshold, HID burst simulation
+- Release gate (scripts/gates/scan-capacity-gate.sh): wired into deploy.yml, verifies scan infrastructure exists
+- Legacy scale-acceptance.sh updated: targets now say 50k+50k/day (was 10k), manual test instruction points to new k6 harness
+- Legacy e2e-tests/stress/k6/scan-stress.js marked SUPERSEDED with pointer to new harness
+- 21 executable tests: capacity targets, latency budgets, correctness thresholds, 1000-scan duplicate suppression proof, HID normalization, infrastructure checks
+- Client-side duplicate suppression: 300ms debounce, proven 100% correct over 1000 rapid scans
+
+Deferred scope:
+- CI does not auto-execute the k6 scan stress harness — it requires a running staging environment with device tokens. The gate checks infrastructure readiness; runtime load execution is manual via `k6 run scripts/load-tests/scan-stress.js`
+- Full client-side crash/memory/sustained-session testing requires device/emulator testing (Maestro/Detox) — not feasible in Jest
+- Cart/inward double-add drift under load requires integration tests with real cart store under concurrent scan simulation
+- HID vs camera path parity is proven by unified processScan() pipeline but not by separate hardware-level tests
+
 ## Phase 15 - HID and Camera Scan Governance for Procurement and SELL at Production Throughput
 
 Tickets:

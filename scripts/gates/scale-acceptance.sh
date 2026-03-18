@@ -18,14 +18,14 @@
 #   4. Current store product scale
 #
 # Declared production targets (for manual load-test acceptance):
-#   - 5,000+ SKUs per retailer store
-#   - 10,000 barcode scans/day (< 50ms per lookup)
+#   - 10,000+ SKUs per retailer store
+#   - 50,000 SELL scans/day + 50,000 purchase scans/day (V3-HARDEN-161)
 #   - 10,000 combined supplier/retailer users
 #   - publish/import throughput: 1500-3000 SKUs per batch
 set -euo pipefail
 
 echo "=== Scale Acceptance Gate ==="
-echo "Declared targets: 5k SKUs/store, 10k scans/day, 10k users"
+echo "Declared targets: 10k SKUs/store, 50k+50k scans/day, 10k users"
 echo ""
 
 ERRORS=0
@@ -88,6 +88,6 @@ else
   echo ""
   echo "NOTE: Full load/stress acceptance requires manual execution of:"
   echo "  node scripts/load-tests/catalog-load.js --skus=5000 --stores=10"
-  echo "  node scripts/load-tests/scan-throughput.js --scans=10000"
+  echo "  k6 run scripts/load-tests/scan-stress.js  # V3-HARDEN-161: 50k+50k/day target"
   echo "Operator must run these before declaring go-live acceptance."
 fi

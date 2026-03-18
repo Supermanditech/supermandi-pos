@@ -1,8 +1,10 @@
 /**
- * TEST-040: Scan Stress Test
+ * TEST-040: Scan Stress Test (SUPERSEDED by V3-HARDEN-161)
  *
- * Simulates sustained barcode scanning at 35 scans/min for 30 minutes.
- * Target: p95 < 200ms response time.
+ * Legacy target: 35 scans/min for 30 minutes.
+ * New approved target: 50k SELL + 50k purchase scans/day (~208/min peak).
+ * See: scripts/load-tests/scan-stress.js for the V3-HARDEN-161 harness.
+ * Target: p95 < 500ms response time (V3-HARDEN-161 budget).
  *
  * Usage:
  *   k6 run --env BASE_URL=https://staging.supermandi.tech \
