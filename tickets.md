@@ -4630,3 +4630,283 @@ Expected outcome:
   - backend SHA/version
   - required migration/auth capability state
 - Claude must add a release/runbook check so auth failures like this are caught before manual OTP testing starts.
+
+# Zero-Drift Execution Order: Remaining Pending Tickets After `a1dfb153`
+
+Pinned implementation point:
+- current branch checkpoint: `feat/v3-owner-staff-auth@a1dfb153`
+
+Completed immediately before this plan:
+- `V3-API-005`
+- `V3-FIX-066`
+- `V3-FIX-067`
+- `V3-FIX-068`
+- `V3-FIX-069`
+- `V3-FIX-070`
+- `V3-FIX-075`
+
+Hard rule for the remaining queue:
+- No merge
+- No push for release purposes
+- No APK release/rebuild for rollout
+- No GCP/staging/prod deployment work
+- No cleanup tickets before the replacement parity work for that subtree is fully landed
+- No cross-cutting hardening ticket may reopen already-accepted auth funnel behavior unless a regression is proven
+
+Current remaining queue size from this checkpoint:
+- `47` tickets
+
+Execution principle:
+- Finish user-facing parity before cleanup.
+- Finish cleanup before global hardening.
+- Finish functional contracts before responsive/device-fit sweep.
+- Finish auth rollout safety last, once the branch behavior is internally complete, but before any future release readiness claim.
+
+## Phase 1 - Payment Route Chain Without Regressing SELL Root
+
+Tickets:
+- `V3-FIX-071`
+- `V3-FIX-072`
+- `V3-FIX-073`
+- `V3-FIX-074`
+
+Why first:
+- `V3-FIX-075` is already done, so the remaining payment child-chain must be completed now while SELL context is still fresh.
+- This phase has the highest user-journey impact and blocks clean downstream parity.
+
+Write scope:
+- payment chooser + child payment screens
+- payment navigation chain
+- payment APIs only where required by UI parity
+
+Guard rails:
+- Do not reopen completed SELL search/voice/scan work.
+- Do not mix cleanup here.
+- Keep sale identity and payment confirmation behavior stable while splitting screens.
+
+Exit gate:
+- `SELL -> payment -> cash | upi | udhar -> success` matches the V3 chain with preserved back flow and sale continuity.
+
+## Phase 2 - BUY and STORE Core Screen Parity
+
+Tickets:
+- `V3-FIX-076`
+- `V3-FIX-077`
+- `V3-FIX-078`
+- `V3-FIX-079`
+
+Why second:
+- BUY and STORE are separate subtrees with limited overlap with MORE and lower risk of colliding with the auth/session work.
+
+Write scope:
+- `BuyScreenV3`
+- `CompareScreenV3`
+- `CounterPurchaseScreenV3`
+- `StoreHubScreenV3`
+- `GRNScreenV3`
+- `ReorderScreenV3`
+
+Guard rails:
+- Do not start delete tickets yet.
+- Do not fold stock/report/settings work into this phase unless directly required by these tickets.
+- Preserve already-accepted SELL root behavior.
+
+Exit gate:
+- BUY and STORE primary navigation paths match V3 without demo fallbacks or route drift.
+
+## Phase 3 - MORE Core and Remaining MORE Subtree Parity
+
+Tickets:
+- `V3-FIX-080`
+- `V3-FIX-081`
+- `V3-FIX-082`
+- `V3-FIX-083`
+- `V3-FIX-084`
+- `V3-FIX-091`
+- `V3-FIX-092`
+- `V3-FIX-093`
+- `V3-HARDEN-094`
+- `V3-HARDEN-095`
+
+Why third:
+- MORE is the most route-dense subtree.
+- It should be completed as one contiguous batch to avoid partial navigation drift.
+
+Write scope:
+- `MoreScreenV3`
+- `KhataScreenV3`
+- `ReportsScreenV3`
+- `SettingsScreenV3`
+- `CustomersScreenV3`
+- `FinanceScreenV3`
+- sales-history routing/screen
+- help action resolution
+
+Guard rails:
+- Keep MORE subtree changes isolated from system-audit tickets.
+- Resolve route ownership before cleanup.
+- Add runtime proof for MORE click paths before any delete work touches dead routes.
+
+Exit gate:
+- Every MORE entry point from SELL lands on a correct V3 target or is intentionally removed with proof.
+
+## Phase 4 - Safe Cleanup Only After Replacement Parity Is In Place
+
+Tickets:
+- `V3-DELETE-085`
+- `V3-DELETE-086`
+- `V3-DELETE-087`
+
+Why fourth:
+- These tickets remove wrapper-era drift and demo/legacy data.
+- Doing them earlier would create regression risk while downstream screens are still moving.
+
+Write scope:
+- route aliases
+- wrapper drift
+- demo/fallback data
+- non-V3 actions/states
+
+Guard rails:
+- No delete-first behavior.
+- Every deletion must point to the now-landed replacement path.
+- Provide grep-backed proof and runtime verification after each delete commit.
+
+Exit gate:
+- No orphan route, demo source, or non-V3 downstream action remains in the completed subtrees.
+
+## Phase 5 - Cross-Screen Hardening for State, Idempotency, and Downstream Runtime Safety
+
+Tickets:
+- `V3-HARDEN-088`
+- `V3-HARDEN-089`
+- `V3-HARDEN-090`
+
+Why fifth:
+- These depend on the downstream screens already being stable.
+
+Write scope:
+- navigation persistence
+- backend/API idempotency for audited child flows
+- runtime regression coverage for downstream screens
+
+Guard rails:
+- No new user-facing flow changes unless required to close a verified edge case.
+- Harden existing flows; do not redesign them.
+
+Exit gate:
+- Downstream screen chain has explicit persistence/back-flow rules, idempotent APIs, and runtime regression proof.
+
+## Phase 6 - Production System Audit Block
+
+Tickets:
+- `V3-FIX-096`
+- `V3-FIX-097`
+- `V3-FIX-098`
+- `V3-FIX-099`
+- `V3-DELETE-100`
+- `V3-HARDEN-101`
+- `V3-HARDEN-102`
+- `V3-HARDEN-103`
+- `V3-HARDEN-104`
+- `V3-HARDEN-105`
+
+Why sixth:
+- This is the first branch-wide production contract sweep.
+- It should not run while screen parity work is still shifting.
+
+Write scope:
+- product metadata contract
+- supplier/SuperAdmin/retailer SKU lifecycle
+- pricing engine
+- ledger invariants
+- stale platform-service removal
+- checkout/payments/WhatsApp
+- deploy readiness gates
+- scale/perf acceptance
+
+Guard rails:
+- One subsystem at a time; do not mix unrelated migrations and UI work in the same commit.
+- Prefer shared service extraction over route-by-route duplication.
+
+Exit gate:
+- Product, supplier, ledger, payment, and scale contracts are canonicalized and no stale duplicate implementation remains.
+
+## Phase 7 - Device-Fit and Responsive Sweep Across the Full V3 Surface
+
+Tickets:
+- `V3-FIX-107`
+- `V3-FIX-108`
+- `V3-FIX-109`
+- `V3-FIX-110`
+- `V3-HARDEN-111`
+- `V3-HARDEN-112`
+- `V3-DELETE-113`
+- `V3-HARDEN-114`
+
+Why seventh:
+- Responsive work should happen after functional parity is stable, otherwise layout churn masks real product drift.
+
+Write scope:
+- shared responsive primitives
+- SELL/BUY/STORE/MORE/auth screen fit
+- chip/text/tab/header sizing
+- modal/keyboard/safe-area behavior
+- screenshot/device-matrix regression gates
+
+Guard rails:
+- No new business logic changes here unless required to unblock fit.
+- Preserve accepted V3 visual hierarchy while adapting for device classes.
+
+Exit gate:
+- All 26 V3 screens and required modal states fit the supported device matrix without clipped or stretched text.
+
+## Phase 8 - Auth Rollout Safety and Release-Parity Guards
+
+Tickets:
+- `V3-FIX-115`
+- `V3-FIX-116`
+- `V3-DELETE-117`
+- `V3-HARDEN-118`
+- `V3-HARDEN-119`
+
+Why last:
+- These tickets are specifically about preventing undeployed auth behavior from being exposed.
+- They should be finalized after branch behavior is otherwise stable, but before any future release readiness summary.
+
+Write scope:
+- POS owner phone+OTP contract
+- capability handshake
+- stale enrollment-first cleanup
+- deploy smoke gates
+- version/build/backend parity proof
+
+Guard rails:
+- No deployment execution in this phase.
+- This phase is code + gates + proof only.
+- Do not claim release readiness on completion; it only makes future rollout safe.
+
+Exit gate:
+- The branch can no longer surface a broken phone+OTP path without explicit capability mismatch handling and release parity proof.
+
+## Commit Strategy Across All Remaining Phases
+
+Rule set:
+- Prefer one ticket per commit.
+- Allow tightly coupled pairs only when they share one write set and one user-visible surface.
+- Never combine:
+  - cleanup + new feature
+  - responsive sweep + backend/migration work
+  - auth rollout safety + unrelated UI parity
+- Run the smallest relevant tests before each commit where practical.
+
+## Regression-Proof Completion Rule
+
+The branch must not be called:
+- merge-ready
+- deploy-ready
+- APK-ready
+- GCP-ready
+- production-ready
+
+until all eight phases above are complete and re-verified against `tickets.md`.
