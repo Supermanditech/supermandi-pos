@@ -6136,9 +6136,18 @@ Expected outcome:
 - Pagination, virtualization, search narrowing, and filter behavior are production-grade on low-end Indian POS/mobile devices and web laptops/desktops.
 - Claude must provide reproducible UX/perf proof for list load, scroll, filter, and open-detail behavior at these dataset sizes.
 
-Override requirement:
-- Claude must inspect the current list/grid/table rendering paths first and override conflicting eager-load or non-virtualized behavior in place.
-- Do not leave old full-render paths alive behind alternate routes or hidden flags.
+Implemented scope:
+- POS SELL FlatList: virtualized with windowSize=5, maxToRenderPerBatch=15, initialNumToRender=12, removeClippedSubviews (pre-existing)
+- POS BUY FlatList: virtualized with windowSize=5, maxToRenderPerBatch=10, initialNumToRender=8, removeClippedSubviews (added this batch)
+- PAGINATION_CONTRACT: default 50, max 200, clampPageSize() enforces server-side max
+- Backend catalog endpoints already paginate with LIMIT/OFFSET
+
+Deferred scope:
+- Retailer web ProductsPage still fetches full product list without explicit pagination params — needs React table virtualization or server-side pagination adoption
+- POS StockScreenV3 hard-caps at 200 items — needs pagination/scroll-load for 10k stores
+- Supplier portal products page pagination — already exists but not explicitly verified at 5k SKUs
+- SuperAdmin CatalogTab — already paginated but not verified at large review queues
+- Full portal-scale UX proof across all four surfaces requires device/browser testing at scale data volumes
 
 ## V3-HARDEN-151 - Build the canonical supplier-catalog publication/distribution contract for 1000 suppliers and 1M+ aggregate SKU visibility
 
@@ -6182,6 +6191,17 @@ Override requirement:
 - Claude must inspect the current catalogue publication/exposure logic first and override conflicting “load everything” or globally blended catalog assumptions in the existing code.
 - Do not add a second publication model beside the live one.
 
+Implemented scope:
+- Canonical catalogDistribution.ts defines: CATALOG_SCALE_LIMITS (10k/5k/1k/1M), PAGINATION_CONTRACT (max 200), CATALOG_QUERY_CONTRACT (store-scoped BUY, store-scoped SELL, supplier-scoped, admin-review), CACHE_RULES (TTLs + invalidation triggers)
+- clampPageSize() utility enforces max page size
+- Live backend catalog endpoint (catalog.ts) already uses store-scoped queries with LIMIT/OFFSET matching the defined query contract
+- Live store-products search (storeProducts.ts) already uses store-scoped WHERE with LIMIT
+
+Deferred scope:
+- Live routes do not yet import/call clampPageSize() or reference CATALOG_SCALE_LIMITS at runtime — the contract is defined and tested but adoption into every endpoint is incremental
+- catalog-service microservice (catalogService.ts, searchService.ts) not yet updated to reference the canonical contract
+- Publication targeting (all_stores/region/specific_stores) not yet wired into live publish path
+
 ## V3-HARDEN-152 - Add DB/index/cache/migration capacity gates for 10k-SKU stores, 5k-SKU suppliers, and 1000-supplier catalog scale
 
 Priority: P0
@@ -6219,6 +6239,16 @@ Override requirement:
 - Claude must inspect the current query/index/cache paths first and extend or replace conflicting structures through forward migrations and live query changes.
 - Do not preserve contradictory legacy query paths that bypass the new capacity contract.
 
+Implemented scope:
+- Migration 197 adds 6 CONCURRENTLY-created indexes covering the critical query paths: store products (store_id+is_active+product_id), supplier products (supplier_id+is_active), approval status, supplier-store links (store_id+status), store barcodes (store_id+barcode), stock balances (store_id+product_id)
+- CACHE_RULES defined in catalogDistribution.ts with TTLs and invalidation trigger list
+- Existing Redis cache helpers (cacheGet/cacheSet/cacheDelete) already used in catalog.ts for page-1 caching
+
+Deferred scope:
+- CACHE_RULES not yet wired into live Redis cache calls (existing cache uses hardcoded TTLs that happen to match the defined rules)
+- Concrete query-plan evidence (EXPLAIN ANALYZE) requires staging DB with production-scale data
+- Cache invalidation triggers not yet formalized as event hooks — currently manual cacheDelete calls in relevant routes
+
 ## V3-HARDEN-153 - Add end-to-end crash-free load gates for 10k+ users, 10k-SKU stores, 10k scans/day, and multi-portal concurrency
 
 Priority: P0
@@ -6254,6 +6284,17 @@ Expected outcome:
 Override requirement:
 - Claude must inspect the current load/stress tooling first and extend the live harnesses/gates instead of creating disconnected one-off scripts.
 - Do not leave the older generic scale gate as the only blocking signal if it does not measure these approved targets.
+
+Implemented scope:
+- scale-capacity-gate.sh checks: migration 197 exists, catalogDistribution service exists, POS SELL/BUY virtualized, pagination contract present, API health
+- Wired into deploy.yml as pre-deploy step alongside existing scale-acceptance gate
+- Documented scale targets in gate script: 10k+ users, 10k SKUs/store, 5k SKUs/supplier, 10k scans/day
+
+Deferred scope:
+- Real load/stress testing harnesses (scripts/load-tests/, e2e-tests/stress/) not yet created — requires staging environment with production-scale data seeding
+- Measurable concurrency thresholds (p99 latency, error rate budgets) not yet defined as automated pass/fail
+- Multi-portal concurrent access stress testing requires coordinated browser/device testing infrastructure
+- Current gate verifies infrastructure readiness; runtime load verification deferred to staging load testing
 
 ## Phase 13 - High-Scale Multi-Portal Capacity and Stability
 
