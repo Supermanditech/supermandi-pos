@@ -5561,7 +5561,7 @@ The branch must not be called:
 - GCP-ready
 - production-ready
 
-until all thirteen phases above are complete and re-verified against `tickets.md`.
+until all fourteen phases above are complete and re-verified against `tickets.md`.
 
 ## Phase 12 - Supplier Catalogue as SuperMandi Principal B2B Procurement
 
@@ -6157,3 +6157,142 @@ Guard rails:
 - Do not treat partial backend benchmarks as a full-platform capacity sign-off.
 - Do not certify portal scale until POS, retailer web, supplier portal, and SuperAdmin each have explicit acceptance evidence.
 - Do not rely on local-only dev performance; all final acceptance must include deploy/GCP-ready capacity gates.
+
+## V3-FIX-154 - Canonicalize automatic category formation into one taxonomy-assignment contract for store digitisation, manual product create, and supplier-catalog add/publish
+
+Priority: P0
+Layers: taxonomy logic, retailer web, POS/store onboarding, supplier publish flow, backend API
+
+Issue:
+- Automatic category formation exists only in fragments today, so the same product reaches store catalog through different paths with inconsistent category outcomes.
+
+Root cause:
+- Store digitisation already assigns `taxonomy_id` using `catalog.assign_taxonomy_by_name(...)` with an application fallback in `autoCategorization.ts`.
+- Manual retailer product create accepts a `categoryId` override.
+- But supplier-catalog add/publish flows still rely on raw text `sp.category` and currently insert `catalog.store_products` without a canonical `taxonomy_id` assignment.
+
+Files impacted:
+- `backend/src/services/storeProductDigitisationService.ts`
+- `backend/src/utils/autoCategorization.ts`
+- `backend/src/routes/v1/retailer-admin/products.ts`
+- `backend/src/routes/v1/retailer-admin/suppliers.ts`
+- `backend/src/routes/v1/admin/suppliers.ts`
+- `backend/src/routes/v1/catalog.ts`
+- `backend/migrations/027_store_products_taxonomy.sql`
+- any new shared taxonomy-assignment helper introduced by the fix
+
+Expected outcome:
+- One canonical category-formation contract is used for all store-entry paths:
+  - store digitisation / onboarding
+  - retailer manual product create
+  - supplier-catalog add to store
+  - admin publish of supplier products to stores
+- The contract must resolve to one explicit outcome:
+  - matched `taxonomy_id`
+  - or explicit uncategorized state
+- Raw supplier text categories can inform mapping, but store-facing category truth must be `taxonomy_id`, not free-form strings.
+
+Override requirement:
+- Claude must inspect the existing category/taxonomy logic first and override conflicting text-category-only behavior in the current add/publish flows.
+- Do not leave supplier-catalog add/publish as a second uncategorized path beside digitisation.
+
+## V3-HARDEN-155 - Preserve category identity correctly for repeated purchase of the same item while assigning category safely for true new SKUs
+
+Priority: P0
+Layers: product identity, store-product mapping, supplier-product mapping, repeat procurement safety
+
+Issue:
+- The system does not yet explicitly define how category behaves when the retailer repeatedly buys the same item versus when a genuinely new SKU enters the store.
+
+Root cause:
+- Repeated procurement currently resolves through a mix of:
+  - `supplier_product_map`
+  - store barcode bindings
+  - existing `catalog.products` linkage
+- But there is no explicit rule proving:
+  - same mapped item keeps its existing store category/taxonomy
+  - manual store override is preserved
+  - truly new SKU gets a fresh category assignment
+  - near-duplicate name/barcode cases do not silently fork category identity
+
+Files impacted:
+- `backend/src/routes/v1/retailer-admin/suppliers.ts`
+- `backend/src/routes/v1/admin/suppliers.ts`
+- `backend/src/services/storeProductDigitisationService.ts`
+- `backend/services/catalog-service/src/services/mappingService.ts`
+- `backend/src/routes/v1/retailer-admin/products.ts`
+- any product-identity or taxonomy-reconciliation helper introduced by the fix
+
+Expected outcome:
+- Repeated purchase of the same mapped store item preserves the existing `taxonomy_id`.
+- If the retailer manually changed category earlier, repeated supplier procurement must not silently overwrite that override.
+- A truly new SKU gets category assignment through the canonical contract from `V3-FIX-154`.
+- Duplicate/near-duplicate identity paths must be explicit:
+  - same SKU/barcode/master-product -> preserve category
+  - new SKU/variant -> assign category anew
+
+Override requirement:
+- Claude must inspect the current repeated-add and publish identity paths first and override conflicting “always insert / always remap” behavior in place.
+- Do not let repeated purchases keep re-deciding category for already-classified store items.
+
+## V3-HARDEN-156 - Propagate category truth end to end across retailer web, POS, SuperAdmin, supplier metadata, and category chips with uncategorized governance
+
+Priority: P0
+Layers: UI consistency, API contracts, admin governance, sync, taxonomy UX
+
+Issue:
+- Even with automatic assignment, category will still drift unless all surfaces agree on how category truth is stored, shown, and corrected.
+
+Root cause:
+- Current code mixes:
+  - supplier text `category`
+  - store `taxonomy_id`
+  - manual `categoryId` overrides
+  - POS category-chip rendering from `catalog.fmcg_taxonomy`
+- There is no explicit governance ticket for:
+  - how uncategorized items are surfaced
+  - how SuperAdmin or retailer corrects bad category assignment
+  - how those corrections sync back without breaking store-specific overrides
+
+Files impacted:
+- `backend/src/routes/v1/catalog.ts`
+- `backend/src/routes/v1/retailer-admin/products.ts`
+- `backend/src/routes/v1/admin/catalog.ts`
+- `src/services/api/catalogApi.ts`
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/screens/v3/BuyScreenV3.tsx`
+- `retailer-admin/src/pages/ProductsPage.tsx`
+- `supermandi-superadmin/src/tabs/CatalogTab.tsx`
+- any uncategorized review/correction flow or migration introduced by the fix
+
+Expected outcome:
+- Category truth is consistent across:
+  - retailer web product tables/forms
+  - POS category chips and product filters
+  - SuperAdmin review/edit surfaces
+  - supplier-catalog published products
+- Uncategorized items are visible through an explicit review bucket, not silently buried.
+- Correction rules are explicit:
+  - store-local override where allowed
+  - global/admin correction where required
+  - sync behavior back to published/store views without clobbering legitimate store-local overrides
+
+Override requirement:
+- Claude must inspect the existing category display/filter/edit flows first and override conflicting raw-text or mixed-source category behavior in the live paths.
+- Do not leave one surface using taxonomy and another using stale text categories as parallel truths.
+
+## Phase 14 - Automatic Category Formation and Repeated-Procurement Taxonomy Governance
+
+Tickets:
+- `V3-FIX-154`
+- `V3-HARDEN-155`
+- `V3-HARDEN-156`
+
+Why fourteenth:
+- Automatic category formation is now a distinct cross-layer business rule with repeat-procurement implications.
+- This phase closes the gap between store digitisation, supplier catalogue publish/add, repeated purchase identity, and POS/web/admin category presentation.
+
+Guard rails:
+- Do not let supplier-catalog add/publish create uncategorized store products when a canonical mapping path exists.
+- Do not overwrite retailer/store category overrides on repeated purchase of the same item.
+- Do not treat raw supplier text category as the final POS/store category truth.
