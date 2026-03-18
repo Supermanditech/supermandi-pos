@@ -70,9 +70,11 @@ export function V3SuccessWrapper({ route }: any) {
   return <SuccessScreenV3 paymentMethod={method} totalMinor={total} itemCount={count} saleId={saleId} onNewSale={() => { cartStore.getState()?.clearCart?.(true); nav.navigate("SellScan"); }} />;
 }
 
-export function V3ScanWrapper() {
+export function V3ScanWrapper({ route }: any) {
   const nav = useNavigation<Nav>();
-  return <ScanScreenV3 visible={true} onClose={() => nav.goBack()} onProductFound={() => nav.goBack()} onNewProduct={(barcode) => nav.navigate("V3NewProduct", { barcode })} />;
+  // V3-FIX-080: Pass defaultContext from route params so Opening Stock enters stock_in mode
+  const context = route?.params?.context ?? "sell";
+  return <ScanScreenV3 visible={true} defaultContext={context} onClose={() => nav.goBack()} onProductFound={() => nav.goBack()} onNewProduct={(barcode) => nav.navigate("V3NewProduct", { barcode })} />;
 }
 
 export function V3NewProductWrapper({ route }: any) {
@@ -104,7 +106,8 @@ export function V3ReorderWrapper() {
 
 export function V3StockWrapper() {
   const nav = useNavigation<Nav>();
-  return <StockScreenV3 onClose={() => nav.goBack()} onOpeningStock={() => { nav.goBack(); nav.navigate("V3Scan" as any); }} />;
+  // V3-FIX-080: Opening Stock navigates to scan in stock_in context
+  return <StockScreenV3 onClose={() => nav.goBack()} onOpeningStock={() => { nav.goBack(); nav.navigate("V3Scan" as any, { context: "stock_in" }); }} />;
 }
 
 export function V3KhataWrapper() {

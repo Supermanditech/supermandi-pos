@@ -31,6 +31,9 @@ jest.mock("../../theme", () => ({
   }),
 }));
 
+jest.mock("../../config/api", () => ({ API_BASE_URL: "http://test", BUILD_INFO: { gitSha: "test" } }));
+jest.mock("../../services/api/apiClient", () => ({ apiClient: { get: jest.fn().mockResolvedValue({}), post: jest.fn().mockResolvedValue({}) } }));
+jest.mock("../../services/api/staffApi", () => ({ staffLogin: jest.fn(), staffMe: jest.fn() }));
 jest.mock("../../services/networkStatus", () => ({ isOnline: jest.fn().mockResolvedValue(true) }));
 jest.mock("../../utils/showToast", () => ({ showToast: jest.fn() }));
 jest.mock("../../services/logger", () => ({ logger: { debug: jest.fn(), error: jest.fn() } }));
@@ -51,7 +54,9 @@ jest.mock("../../services/api/reorderApi", () => ({
 
 // Stock mocks
 jest.mock("../../services/api/inventoryApi", () => ({
-  getStockSummary: jest.fn().mockResolvedValue({ items: [{ name: "Coke", barcode: "123", stock: 10, priceMinor: 2000 }], totalProducts: 1, totalValue: 2000 }),
+  getStockStatement: jest.fn().mockResolvedValue({
+    data: [{ name: "Coke", barcode: "123", quantity: 10, unitPriceMinor: 2000, unitCostMinor: 1500 }],
+  }),
   getPurchaseHistory: jest.fn().mockResolvedValue({ entries: [] }),
   recordManualInward: jest.fn(),
 }));
@@ -99,8 +104,11 @@ jest.mock("../../services/hidScannerService", () => ({ isHidActive: () => false,
 // ── Imports ────────────────────────────────────────────────────────────────
 
 import ReorderScreenV3 from "../../screens/v3/ReorderScreenV3";
+import StockScreenV3 from "../../screens/v3/StockScreenV3";
 import MoreScreenV3 from "../../screens/v3/MoreScreenV3";
 import KhataScreenV3 from "../../screens/v3/KhataScreenV3";
+import ReportsScreenV3 from "../../screens/v3/ReportsScreenV3";
+import SettingsScreenV3 from "../../screens/v3/SettingsScreenV3";
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
@@ -182,5 +190,87 @@ describe("V3-FIX-082: Khata screen", () => {
       expect(screen.getByText("Suresh")).toBeTruthy();
       expect(screen.queryByText("Ramesh")).toBeNull();
     });
+  });
+});
+
+describe("V3-FIX-080: Stock screen", () => {
+  it("Opening Stock calls onOpeningStock prop (routes to stock_in scan)", () => {
+    const onOpeningStock = jest.fn();
+    render(<StockScreenV3 onClose={jest.fn()} onOpeningStock={onOpeningStock} />);
+    fireEvent.press(screen.getByLabelText("Opening stock entry"));
+    expect(onOpeningStock).toHaveBeenCalledTimes(1);
+  });
+
+  it("Barcode Labels calls printer when items exist (not alert placeholder)", async () => {
+    const mockPrint = require("../../services/printerService").printerService.printReceipt;
+    mockPrint.mockClear();
+    render(<StockScreenV3 onClose={jest.fn()} />);
+    // Wait for stock items to load from API
+    await waitFor(() => {
+      expect(screen.getByText("Coke")).toBeTruthy();
+    });
+    fireEvent.press(screen.getByLabelText("Print barcode labels"));
+    await waitFor(() => {
+      expect(mockPrint).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("V3StockWrapper passes stock_in context to scan navigation", () => {
+    // Verify the source wiring — V3StockWrapper navigates with { context: "stock_in" }
+    const src = require("fs").readFileSync(
+      require("path").resolve(__dirname, "../../screens/v3/V3ScreenWrappers.tsx"), "utf8"
+    );
+    expect(src).toContain('context: "stock_in"');
+  });
+
+  it("V3ScanWrapper reads defaultContext from route params", () => {
+    const src = require("fs").readFileSync(
+      require("path").resolve(__dirname, "../../screens/v3/V3ScreenWrappers.tsx"), "utf8"
+    );
+    expect(src).toContain("route?.params?.context");
+    expect(src).toContain("defaultContext={context}");
+  });
+});
+
+describe("V3-FIX-083: Reports screen", () => {
+  it("does not render a dead disabled PDF button", () => {
+    render(<ReportsScreenV3 onClose={jest.fn()} />);
+    // PDF button should not exist at all (removed, not disabled)
+    expect(screen.queryByText("📄 PDF")).toBeNull();
+  });
+
+  it("renders print and WhatsApp share actions", () => {
+    render(<ReportsScreenV3 onClose={jest.fn()} />);
+    expect(screen.getByText("🖨️ Print")).toBeTruthy();
+    expect(screen.getByText("Share")).toBeTruthy();
+  });
+
+  it("renders profit from summary API (not dash placeholder)", async () => {
+    render(<ReportsScreenV3 onClose={jest.fn()} />);
+    await waitFor(() => {
+      // summary.profit = 2310 from mock
+      expect(screen.getByText(/2,310/)).toBeTruthy();
+      expect(screen.getByText(/margin/)).toBeTruthy();
+    });
+  });
+});
+
+describe("V3-FIX-084: Settings screen", () => {
+  it("renders real UPI ID from settings store (not store@upi)", () => {
+    render(<SettingsScreenV3 onClose={jest.fn()} onSwitchStaff={jest.fn()} onLogout={jest.fn()} />);
+    expect(screen.getByText("test@upi")).toBeTruthy();
+    expect(screen.queryByText("store@upi")).toBeNull();
+  });
+
+  it("renders real last sync time (not 2 min ago)", () => {
+    render(<SettingsScreenV3 onClose={jest.fn()} onSwitchStaff={jest.fn()} onLogout={jest.fn()} />);
+    // Mock lastSyncAt is 3 minutes ago
+    expect(screen.getByText("3 min ago ✓")).toBeTruthy();
+    expect(screen.queryByText("2 min ago ✓")).toBeNull();
+  });
+
+  it("renders staff name from session store (not hardcoded)", () => {
+    render(<SettingsScreenV3 onClose={jest.fn()} onSwitchStaff={jest.fn()} onLogout={jest.fn()} />);
+    expect(screen.getByText("Raju (MANAGER)")).toBeTruthy();
   });
 });
