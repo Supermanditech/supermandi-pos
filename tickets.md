@@ -5561,7 +5561,7 @@ The branch must not be called:
 - GCP-ready
 - production-ready
 
-until all twelve phases above are complete and re-verified against `tickets.md`.
+until all thirteen phases above are complete and re-verified against `tickets.md`.
 
 ## Phase 12 - Supplier Catalogue as SuperMandi Principal B2B Procurement
 
@@ -5987,3 +5987,173 @@ Guard rails:
 - Do not allow supplier-catalogue SKUs to bypass SuperMandi as seller of record in this phase.
 - Do not break Counter Purchase direct inward while cleaning up catalogue assumptions.
 - Do not mix catalogue-principal and counter-purchase-direct carts, orders, invoices, or ledger identities.
+
+## V3-HARDEN-150 - Prove portal-scale UX and interaction stability at 10k-SKU retailer stores and 5k-SKU supplier catalogs
+
+Priority: P0
+Layers: POS UI/UX, retailer web UX, supplier portal UX, SuperAdmin UX, responsive performance
+
+Issue:
+- The current scale tickets do not explicitly prove that all operator-facing surfaces remain usable and crash-free when catalog sizes reach the approved business targets.
+
+Root cause:
+- Existing performance tickets focus on backend/load thresholds, but not on end-to-end UI behavior across:
+  - POS app with 10,000+ store SKUs
+  - retailer web with 10,000+ store SKUs
+  - supplier portal with 5,000+ supplier SKUs
+  - SuperAdmin review/publish screens across very large SKU queues
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/screens/v3/StockScreenV3.tsx`
+- `src/components/v3/ProductTileV3.tsx`
+- `retailer-admin/src/pages/ProductsPage.tsx`
+- `retailer-admin/src/pages/SupplierCatalogPage.tsx`
+- `supplier-portal/src/app/(dashboard)/products/page.tsx`
+- `supermandi-superadmin/src/tabs/CatalogTab.tsx`
+- any shared pagination/virtualization/search helper introduced by the fix
+
+Expected outcome:
+- All four operator surfaces remain usable with:
+  - 10,000+ SKUs in a retailer store
+  - 5,000+ SKUs in one supplier catalog
+- No surface tries to eagerly render the full dataset at once.
+- Pagination, virtualization, search narrowing, and filter behavior are production-grade on low-end Indian POS/mobile devices and web laptops/desktops.
+- Claude must provide reproducible UX/perf proof for list load, scroll, filter, and open-detail behavior at these dataset sizes.
+
+Override requirement:
+- Claude must inspect the current list/grid/table rendering paths first and override conflicting eager-load or non-virtualized behavior in place.
+- Do not leave old full-render paths alive behind alternate routes or hidden flags.
+
+## V3-HARDEN-151 - Build the canonical supplier-catalog publication/distribution contract for 1000 suppliers and 1M+ aggregate SKU visibility
+
+Priority: P0
+Layers: catalog publication logic, SuperAdmin controls, supplier-catalog distribution, API design
+
+Issue:
+- The repo does not yet explicitly define how SuperMandi will publish and expose catalogue SKUs when supplier count and aggregate SKU volume become very large.
+
+Root cause:
+- Existing tickets cover individual supplier SKU approval and principal-sale publication, but not the large-scale distribution model where:
+  - each supplier may have ~1,000 SKUs
+  - total supplier count may approach ~1,000
+  - retailer-visible procurement catalog may need to expose 10,000+ published SKUs safely
+
+Files impacted:
+- `backend/src/routes/v1/admin/catalog.ts`
+- `backend/src/routes/v1/catalog.ts`
+- `backend/services/catalog-service/src/services/catalogService.ts`
+- `backend/services/catalog-service/src/services/searchService.ts`
+- `backend/services/catalog-service/src/routes/catalog.ts`
+- `supermandi-superadmin/src/tabs/CatalogTab.tsx`
+- `src/services/api/catalogApi.ts`
+- `src/services/api/suppliersApi.ts`
+- any publication-indexing/distribution helper or migration introduced by the fix
+
+Expected outcome:
+- One explicit publication/distribution contract exists for:
+  - supplier submission
+  - SuperAdmin approval
+  - principal-sale publication
+  - retailer-store-targeted catalogue exposure
+- Retailer POS/retailer web do not load a naive global mega-catalog.
+- Publication to stores is targetable, indexable, and queryable without full-table scans.
+- Claude must document and implement the scaling model for:
+  - per-supplier SKU volumes
+  - per-store published SKU subsets
+  - aggregate supplier catalogue growth
+
+Override requirement:
+- Claude must inspect the current catalogue publication/exposure logic first and override conflicting “load everything” or globally blended catalog assumptions in the existing code.
+- Do not add a second publication model beside the live one.
+
+## V3-HARDEN-152 - Add DB/index/cache/migration capacity gates for 10k-SKU stores, 5k-SKU suppliers, and 1000-supplier catalog scale
+
+Priority: P0
+Layers: DB schema, indexes, query planning, cache design, forward migrations
+
+Issue:
+- Current schema and index tickets do not yet form one explicit capacity contract for the approved SKU and supplier scale.
+
+Root cause:
+- Individual migrations exist for catalog growth, but the system still lacks a single production-grade audit/fix ticket covering:
+  - store-product lookup at 10k+ SKUs/store
+  - supplier SKU lookup at 5k+ SKUs/supplier
+  - published-catalog search across large supplier aggregates
+  - GRN/order/invoice joins under catalogue growth
+
+Files impacted:
+- `backend/migrations/132_t065_catalog_scalability_indexes.sql`
+- `backend/migrations/194_supplier_sku_capacity.sql`
+- `backend/services/catalog-service/src/db/queries.ts`
+- `backend/services/catalog-service/src/cache/redis.ts`
+- `backend/src/routes/v1/pos/storeProducts.ts`
+- `backend/src/routes/v1/pos/suppliers.ts`
+- `backend/src/routes/v1/admin/catalog.ts`
+- any new forward migration, materialized index, cache table, or query helper introduced by the fix
+
+Expected outcome:
+- Query/index/cache design is explicitly proven for:
+  - 10,000+ SKUs per retailer store
+  - 5,000+ SKUs per supplier
+  - 1,000 suppliers with large aggregate catalog volume
+- Required indexes, pagination cursors, cache keys, invalidation rules, and migration-safe constraints are defined and implemented.
+- Claude must provide concrete query-plan/load evidence, not just code changes.
+
+Override requirement:
+- Claude must inspect the current query/index/cache paths first and extend or replace conflicting structures through forward migrations and live query changes.
+- Do not preserve contradictory legacy query paths that bypass the new capacity contract.
+
+## V3-HARDEN-153 - Add end-to-end crash-free load gates for 10k+ users, 10k-SKU stores, 10k scans/day, and multi-portal concurrency
+
+Priority: P0
+Layers: load testing, concurrency, API stability, mobile/web crash resistance, observability
+
+Issue:
+- The repo still lacks one end-to-end go/no-go gate proving that the full platform remains stable under the combined business targets across portals and POS flows.
+
+Root cause:
+- Existing scale ticket `V3-HARDEN-105` is too general for the now-approved combined target model:
+  - 10,000+ users across supplier + retailer operations
+  - 10,000+ SKUs/store in retailer operational surfaces
+  - 10,000 scans/day on POS
+  - large-scale catalogue browsing/publishing across supplier, SuperAdmin, retailer web, and POS
+
+Files impacted:
+- `scripts/load-tests/`
+- `e2e-tests/stress/`
+- `.github/workflows/`
+- `backend/src/startup/validateGcp.ts`
+- cloud dashboards/alert config checked via repo automation if present
+- any portal/POS stress harness introduced by the fix
+
+Expected outcome:
+- One reproducible end-to-end stress/capacity suite proves:
+  - POS does not crash or hang under high SKU count and scan volume
+  - retailer web handles 10k+ store SKUs
+  - supplier portal handles 5k+ supplier SKUs
+  - SuperAdmin can review/publish large queues without unusable latency
+  - backend and GCP services remain within defined error/latency budgets at 10k+ user concurrency targets
+- Claude must produce a go/no-go checklist with measurable thresholds and fail conditions.
+
+Override requirement:
+- Claude must inspect the current load/stress tooling first and extend the live harnesses/gates instead of creating disconnected one-off scripts.
+- Do not leave the older generic scale gate as the only blocking signal if it does not measure these approved targets.
+
+## Phase 13 - High-Scale Multi-Portal Capacity and Stability
+
+Tickets:
+- `V3-HARDEN-150`
+- `V3-HARDEN-151`
+- `V3-HARDEN-152`
+- `V3-HARDEN-153`
+
+Why thirteenth:
+- The business now explicitly requires multi-portal scale safety, not just single-surface parity.
+- This phase proves that retailer POS, retailer web, supplier portal, SuperAdmin, DB, and GCP can all sustain the approved SKU/user/catalog volumes without crashes or silent degradation.
+
+Guard rails:
+- Do not treat partial backend benchmarks as a full-platform capacity sign-off.
+- Do not certify portal scale until POS, retailer web, supplier portal, and SuperAdmin each have explicit acceptance evidence.
+- Do not rely on local-only dev performance; all final acceptance must include deploy/GCP-ready capacity gates.
