@@ -172,7 +172,8 @@ export default function SellScreenV3() {
       useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
       showToast(`${result.name} ×${existing.quantity + 1}`);
     } else {
-      addItem({ id: result.barcode ?? result.id, name: result.name, priceMinor: result.priceMinor, barcode: result.barcode, currency: "INR" });
+      // V3-FIX-120: Use canonical cart payload builder
+      addItem(require("../../services/cartPayload").buildCartItemFromSearch(result));
       showToast(`${result.name} added`);
     }
     setSearchVisible(false);

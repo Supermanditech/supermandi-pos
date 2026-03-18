@@ -67,7 +67,9 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
           useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
           showToast(`${product.name} ×${existing.quantity + 1}`);
         } else {
-          addItem({ id: code, name: product.name, priceMinor: product.priceMinor, barcode: code, currency: "INR" });
+          // V3-FIX-120: Use canonical cart payload
+          const { buildCartItem } = require("../../services/cartPayload");
+          addItem(buildCartItem(product));
           showToast(`${product.name} added to cart`);
         }
         onProductFound(code, context);
@@ -101,7 +103,9 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
               useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
               showToast(`${product.name} ×${existing.quantity + 1}`);
             } else {
-              addItem({ id: code, name: product.name, priceMinor: product.priceMinor, barcode: code, currency: "INR" });
+              // V3-FIX-120: Use canonical cart payload
+              const { buildCartItem: buildCartItemHid } = require("../../services/cartPayload");
+              addItem(buildCartItemHid(product));
               showToast(`${product.name} added to cart`);
             }
             onProductFound(code, context);
