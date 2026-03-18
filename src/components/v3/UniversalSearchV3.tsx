@@ -113,13 +113,47 @@ export default function UniversalSearchV3({ context, visible, onClose, onSelect,
             </Pressable>
           ) : null}
         </View>
-        <Pressable style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close search">
-          <Text style={styles.closeBtnText}>Cancel</Text>
+        <Pressable style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close search" testID="search-close">
+          <Text style={styles.closeBtnText}>✕</Text>
         </Pressable>
       </View>
 
-      {/* Recent searches — shown when query empty */}
-      {query.length === 0 ? (
+      {/* V3-FIX-066: Results first, then recent searches always visible below */}
+      {query.length > 0 ? (
+        <View style={styles.resultsSection}>
+          <Text style={styles.sectionTitle}>RESULTS</Text>
+          {loading ? (
+            <Text style={styles.loadingText}>Searching...</Text>
+          ) : displayResults.length > 0 ? (
+            <FlatList
+              data={displayResults}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <Pressable style={styles.resultRow} onPress={() => { handleSaveSearch(query); onSelect(item); showToast(`${item.name} ${isSell ? "added" : "selected"}`); }} accessibilityRole="button">
+                  <View style={styles.resultImg}><Text style={{ fontSize: 18 }}>{item.brand?.match(/dairy|milk|curd/i) ? "🥛" : item.brand?.match(/tea|coffee/i) ? "☕" : item.brand?.match(/oil|ghee/i) ? "🫗" : "📦"}</Text></View>
+                  <View style={styles.resultInfo}>
+                    <Text style={styles.resultName} numberOfLines={1}>{item.name}</Text>
+                    <Text style={styles.resultDetail}>
+                      ₹{(item.priceMinor / 100).toFixed(0)}
+                      {item.stock != null ? ` · Stock: ${item.stock}` : ""}
+                      {item.supplier ? ` · ${item.supplier}` : ""}
+                      {item.margin ? ` · ${item.margin}% margin` : ""}
+                    </Text>
+                  </View>
+                  <Text style={styles.resultAction}>{isSell ? "+ Add" : "Select"}</Text>
+                </Pressable>
+              )}
+              showsVerticalScrollIndicator={false}
+              style={styles.resultsList}
+            />
+          ) : (
+            <Text style={styles.emptyText}>No results for "{query}"</Text>
+          )}
+        </View>
+      ) : null}
+
+      {/* V3-FIX-066: Recent searches always visible below results */}
+      {recentSearches.length > 0 ? (
         <View style={styles.recentSection}>
           <Text style={styles.sectionTitle}>RECENT SEARCHES</Text>
           <View style={styles.chipRow}>
@@ -129,35 +163,6 @@ export default function UniversalSearchV3({ context, visible, onClose, onSelect,
               </Pressable>
             ))}
           </View>
-        </View>
-      ) : null}
-
-      {/* Results */}
-      {query.length > 0 ? (
-        <View style={styles.resultsSection}>
-          <Text style={styles.sectionTitle}>
-            {isSell ? "STORE PRODUCTS" : "SUPPLIER CATALOGUE"}
-          </Text>
-          <FlatList
-            data={displayResults}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <Pressable style={styles.resultRow} onPress={() => { handleSaveSearch(query); onSelect(item); showToast(`${item.name} ${isSell ? "added" : "selected"}`); }} accessibilityRole="button">
-                <View style={styles.resultImg}><Text style={{ fontSize: 18 }}>{item.brand?.match(/dairy|milk|curd/i) ? "🥛" : item.brand?.match(/tea|coffee/i) ? "☕" : item.brand?.match(/oil|ghee/i) ? "🫗" : "📦"}</Text></View>
-                <View style={styles.resultInfo}>
-                  <Text style={styles.resultName} numberOfLines={1}>{item.name}</Text>
-                  <Text style={styles.resultDetail}>
-                    ₹{(item.priceMinor / 100).toFixed(0)}
-                    {item.stock != null ? ` · Stock: ${item.stock}` : ""}
-                    {item.supplier ? ` · ${item.supplier}` : ""}
-                    {item.margin ? ` · ${item.margin}% margin` : ""}
-                  </Text>
-                </View>
-                <Text style={styles.resultAction}>{isSell ? "+ Add" : "Select"}</Text>
-              </Pressable>
-            )}
-            showsVerticalScrollIndicator={false}
-          />
         </View>
       ) : null}
     </View>
@@ -173,13 +178,16 @@ function createStyles(colors: ColorPalette) {
     input: { flex: 1, fontSize: 14, fontWeight: "500", color: colors.textPrimary },
     clearBtn: { fontSize: 14, fontWeight: "700", color: colors.textTertiary, padding: 4 },
     closeBtn: { justifyContent: "center", paddingHorizontal: 8 },
-    closeBtnText: { fontSize: 14, fontWeight: "600", color: colors.primary },
+    closeBtnText: { fontSize: 18, fontWeight: "700", color: colors.textTertiary },
     recentSection: { paddingHorizontal: 16, paddingTop: 8 },
     sectionTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, marginBottom: 8 },
     chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
     chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 18, backgroundColor: colors.backgroundSecondary, borderWidth: 1.5, borderColor: colors.border },
     chipText: { fontSize: 12, fontWeight: "600", color: colors.textSecondary },
-    resultsSection: { flex: 1, paddingHorizontal: 16, paddingTop: 8 },
+    resultsSection: { paddingHorizontal: 16, paddingTop: 8, maxHeight: "60%" },
+    resultsList: { flexGrow: 0 },
+    loadingText: { fontSize: 13, color: colors.textTertiary, fontWeight: "500", paddingVertical: 16, textAlign: "center" },
+    emptyText: { fontSize: 13, color: colors.textTertiary, fontWeight: "500", paddingVertical: 16, textAlign: "center" },
     resultRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.backgroundSecondary },
     resultImg: { width: 40, height: 40, borderRadius: 10, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center" },
     resultInfo: { flex: 1, minWidth: 0 },
