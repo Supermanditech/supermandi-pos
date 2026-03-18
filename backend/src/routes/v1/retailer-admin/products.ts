@@ -20,6 +20,8 @@ import {
 } from "@supermandi/common";
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
+// V3-FIX-154: Canonical taxonomy assignment
+import { assignTaxonomy } from "../../../services/taxonomyAssignment";
 import {
   validateProductName as validateProductNameUnified,
   validateBarcode as validateBarcodeUnified,
@@ -373,19 +375,14 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     );
     const productId = productResult.rows[0].id;
 
-    // T-054: Auto-assign taxonomy if not explicitly provided (matches POS digitisation behavior)
-    let resolvedCategoryId = categoryId || null;
-    if (!resolvedCategoryId) {
-      try {
-        const taxonomyResult = await client.query(
-          `SELECT catalog.assign_taxonomy_by_name($1) AS taxonomy_id`,
-          [sanitizedName]
-        );
-        resolvedCategoryId = taxonomyResult.rows[0]?.taxonomy_id || null;
-      } catch {
-        // Taxonomy function may not exist — safe to ignore, product gets "Baaki" (Others)
-      }
-    }
+    // V3-FIX-154: Use canonical taxonomy assignment contract
+    const taxonomyResult = await assignTaxonomy(client, {
+      productName: sanitizedName,
+      rawCategory: null,
+      explicitTaxonomyId: categoryId || null,
+      entryPath: "RETAILER_MANUAL_CREATE",
+    });
+    const resolvedCategoryId = taxonomyResult.taxonomyId;
 
     // 2. Create the store_product mapping
     // RCAT-CAT-002: Include taxonomy_id for category assignment (store override)

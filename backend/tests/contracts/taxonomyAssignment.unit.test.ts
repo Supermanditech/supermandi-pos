@@ -42,14 +42,17 @@ describe("V3-FIX-154: Canonical taxonomy assignment (executable)", () => {
     expect(result.method).toBe("keyword_match");
   });
 
-  it("raw category used when keyword matching fails", async () => {
+  it("raw supplier text is NOT used as taxonomyId — falls to UNCATEGORIZED", async () => {
     const result = await assignTaxonomy(mockPool, {
       productName: "XYZ Unknown Product 123",
       rawCategory: "Misc Items",
       entryPath: "SUPPLIER_CATALOG_ADD",
     });
-    expect(result.taxonomyId).toBe("Misc Items");
-    expect(result.method).toBe("raw_category");
+    // Raw text must NOT become taxonomyId — store truth must be real taxonomy or UNCATEGORIZED
+    expect(result.taxonomyId).toBe(UNCATEGORIZED);
+    expect(result.method).toBe("uncategorized");
+    // rawCategory preserved as metadata
+    expect(result.rawCategory).toBe("Misc Items");
   });
 
   it("returns UNCATEGORIZED when no method resolves", async () => {
@@ -64,6 +67,45 @@ describe("V3-FIX-154: Canonical taxonomy assignment (executable)", () => {
   it("UNCATEGORIZED constant is explicit string, not null", () => {
     expect(UNCATEGORIZED).toBe("Uncategorized");
     expect(typeof UNCATEGORIZED).toBe("string");
+  });
+});
+
+describe("V3-FIX-154: Live wiring verification (static — narrowly scoped)", () => {
+  it("retailer-admin products.ts imports and calls assignTaxonomy", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/routes/v1/retailer-admin/products.ts"), "utf8"
+    );
+    expect(src).toContain('import { assignTaxonomy }');
+    expect(src).toContain("assignTaxonomy(client,");
+    expect(src).toContain('"RETAILER_MANUAL_CREATE"');
+    // Must NOT have old inline DB call for taxonomy
+    expect(src).not.toContain('SELECT catalog.assign_taxonomy_by_name');
+  });
+
+  it("storeProductDigitisationService imports and calls assignTaxonomy", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/services/storeProductDigitisationService.ts"), "utf8"
+    );
+    expect(src).toContain('import { assignTaxonomy }');
+    expect(src).toContain("assignTaxonomy(client,");
+    expect(src).toContain('"STORE_DIGITISATION"');
+    // Must NOT have old inline DB call
+    expect(src).not.toContain('SELECT catalog.assign_taxonomy_by_name');
+  });
+
+  it("getExistingStoreTaxonomy queries taxonomy_id not category", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/services/taxonomyAssignment.ts"), "utf8"
+    );
+    expect(src).toContain("SELECT taxonomy_id FROM catalog.store_products");
+    expect(src).toContain("taxonomy_id");
+    expect(src).not.toContain("SELECT category FROM catalog.store_products");
   });
 });
 
@@ -100,10 +142,10 @@ describe("V3-FIX-154: suggestCategory keyword matching (executable)", () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("V3-HARDEN-155: Repeated purchase category preservation (executable)", () => {
-  it("preserves existing store category for known product", async () => {
+  it("preserves existing store taxonomy_id for known product", async () => {
     const mockPool = {
       query: jest.fn()
-        .mockResolvedValueOnce({ rows: [{ category: "Dairy" }] }) // getExistingStoreTaxonomy
+        .mockResolvedValueOnce({ rows: [{ taxonomy_id: "Dairy" }] }) // getExistingStoreTaxonomy
         .mockRejectedValue(new Error("should not reach")),
     } as any;
 

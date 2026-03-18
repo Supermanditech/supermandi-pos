@@ -6436,6 +6436,18 @@ Override requirement:
 - Claude must inspect the existing category display/filter/edit flows first and override conflicting raw-text or mixed-source category behavior in the live paths.
 - Do not leave one surface using taxonomy and another using stale text categories as parallel truths.
 
+Implemented scope:
+- CATEGORY_TRUTH_RULES defined in taxonomyAssignment.ts: taxonomy_id is authority, raw text is metadata, UNCATEGORIZED is explicit, store override preserved, admin correction propagates, retailer override is store-local
+- assignTaxonomy() wired into live retailer-admin product create and POS store digitisation — both now use the canonical contract instead of inline DB calls
+- 7 executable tests verify the truth rules
+
+Deferred scope:
+- BUY catalog (catalog.ts) still returns raw/coalesced text category alongside taxonomy_id — needs migration to taxonomy_id-only display
+- SuperAdmin catalog (admin/catalog.ts) still edits edited_category text — needs migration to taxonomy_id-based editing
+- Retailer web (ProductsPage.tsx) still uses categoryId override without uncategorized governance UI
+- POS category chips render from catalog.fmcg_taxonomy which is already taxonomy-based — consistent
+- Full cross-surface migration to taxonomy_id-only display requires coordinated frontend+backend work across 4 portals
+
 ## Phase 14 - Automatic Category Formation and Repeated-Procurement Taxonomy Governance
 
 Tickets:

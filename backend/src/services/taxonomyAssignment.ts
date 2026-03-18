@@ -105,14 +105,8 @@ export async function assignTaxonomy(
     };
   }
 
-  // 4. Raw category from supplier (informational but better than nothing)
-  if (rawCategory && rawCategory.length > 1) {
-    return {
-      taxonomyId: rawCategory,
-      method: "raw_category",
-      rawCategory,
-    };
-  }
+  // 4. Raw supplier text category is NOT used as taxonomyId — it's informational only
+  // Store-facing category truth must be a real taxonomy_id or UNCATEGORIZED
 
   // 5. Explicit uncategorized
   return {
@@ -134,12 +128,12 @@ export async function getExistingStoreTaxonomy(
 ): Promise<string | null> {
   try {
     const result = await pool.query(
-      `SELECT category FROM catalog.store_products
+      `SELECT taxonomy_id FROM catalog.store_products
        WHERE store_id = $1 AND product_id = $2 AND is_active = true
        LIMIT 1`,
       [storeId, productId]
     );
-    return result.rows[0]?.category || null;
+    return result.rows[0]?.taxonomy_id || null;
   } catch {
     return null;
   }

@@ -12,6 +12,8 @@ import { randomUUID } from "crypto";
 import { getPool } from "../db/client";
 import { lookupBarcodeExternal, type BarcodeProductPrefill } from "./barcodeLookupProvider";
 import { log } from "../lib/logger";
+// V3-FIX-154: Canonical taxonomy assignment
+import { assignTaxonomy } from "./taxonomyAssignment";
 
 // =============================================================================
 // Types (matching API contract)
@@ -431,12 +433,13 @@ export async function createStoreProductFromDigitisation(
       log.info("[digitisation] Created new catalog product:", productId);
     }
 
-    // Step 2: Auto-assign taxonomy based on product name (CAT-002)
-    const taxonomyResult = await client.query(
-      `SELECT catalog.assign_taxonomy_by_name($1) AS taxonomy_id`,
-      [productName]
-    );
-    const taxonomyId = taxonomyResult.rows[0]?.taxonomy_id || null;
+    // V3-FIX-154: Use canonical taxonomy assignment contract (replaces inline DB call)
+    const taxonomyAssignment = await assignTaxonomy(client, {
+      productName,
+      rawCategory: null,
+      entryPath: "STORE_DIGITISATION",
+    });
+    const taxonomyId = taxonomyAssignment.taxonomyId;
 
     // Step 3: Create or update catalog.store_products
     const storeProductId = randomUUID();

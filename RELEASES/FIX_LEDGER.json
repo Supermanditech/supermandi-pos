@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 392,
+  "version": 393,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6327,7 +6327,7 @@
       "file": "backend/src/routes/v1/retailer-admin/products.ts",
       "start_line": 30,
       "end_line": 53,
-      "checksum": "c12116aa09520d48",
+      "checksum": "1d1e9bbb44fefebf",
       "description": "Search cache invalidation wired into product CRUD",
       "test_file": "src/__tests__/screens/search-cache-invalidation.stg-516.test.ts",
       "depends_on": null,
