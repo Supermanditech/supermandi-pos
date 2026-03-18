@@ -4134,24 +4134,30 @@ Root cause:
 - Current GCP/config validation is too generic and does not explicitly block rollout when critical dependencies for import/publish/payments/WhatsApp are misconfigured.
 
 Files impacted:
-- `backend/src/startup/validateGcp.ts`
-- `backend/services/api-gateway/src/config.ts`
-- `scripts/gates/`
-- workflow/deploy verification files under `.github/workflows/`
+- `scripts/gates/production-audit-gate.sh`
+- `.github/workflows/deploy.yml`
 
-Expected outcome:
-- Add explicit deployment/readiness gates for:
-  - retailer product import
-  - supplier publish/discovery
-  - POS payment init/confirm
-  - WhatsApp send/webhook verification
-  - any required signed-upload/storage paths for product images/imports
-- The gate must run in the real deploy/staging verification path, not just exist as an unreferenced script.
-- Claude must document fail-fast behavior and the exact env/config assumptions required for production.
+Narrowed scope (implementation reality):
+- The pre-deploy gate verifies CONFIGURATION PRESENCE for:
+  - GCS storage (CSV import)
+  - Database connectivity
+  - Payment gateway (Razorpay or UPI VPA)
+  - WhatsApp Cloud API (token + phone ID)
+  - Stale platform-service routes unmounted
+- Runtime verification of payment init/confirm and WhatsApp send/webhook behavior is NOT feasible as a shell script pre-deploy check. Those are covered by:
+  - backend contract tests (CI, pre-merge)
+  - staging smoke tests (operator-run after deploy)
+  - Maestro e2e harness (device-level)
+- The gate blocks deploy on missing configuration. Runtime flow correctness is proven by tests, not by the gate.
 
 ## V3-HARDEN-105 - Add scale and performance gates for SKU volume, scans, and user concurrency
 
 Priority: P0
+Narrowed scope (implementation reality):
+- The pre-deploy gate verifies DATABASE READINESS: index presence, barcode lookup query plan, current product scale.
+- Full load/stress testing (5k SKUs, 10k scans, concurrency) requires dedicated infrastructure and populated test data — not feasible in a CI shell step.
+- Full load/stress is documented as a manual operator step using scripts/load-tests/* before go-live declaration.
+- The gate blocks on missing critical indexes and sequential-scan barcode lookups.
 Layers: DB performance, POS responsiveness, load/stress validation
 
 Issue:

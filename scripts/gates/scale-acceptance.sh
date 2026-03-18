@@ -1,26 +1,45 @@
 #!/usr/bin/env bash
-# V3-HARDEN-105: Scale acceptance gate — executable, threshold-based
-# Requires DATABASE_URL or PGHOST to verify indexes and run basic throughput check.
+# V3-HARDEN-105: Scale acceptance gate
+#
+# SCOPE (narrowed from ticket):
+# This gate verifies DATABASE READINESS for declared production targets.
+# It does NOT run full load/stress tests — those require:
+#   - dedicated load-test infrastructure (k6, Artillery, or custom)
+#   - populated test data (5k+ SKUs per store)
+#   - isolated test environment
+# Full load tests are run manually before go-live using:
+#   - scripts/load-tests/catalog-load.js
+#   - scripts/load-tests/scan-throughput.js
+#
+# What this gate DOES verify (blocking):
+#   1. DB connectivity
+#   2. Critical index presence for declared targets
+#   3. Barcode lookup query plan efficiency (EXPLAIN)
+#   4. Current store product scale
+#
+# Declared production targets (for manual load-test acceptance):
+#   - 5,000+ SKUs per retailer store
+#   - 10,000 barcode scans/day (< 50ms per lookup)
+#   - 10,000 combined supplier/retailer users
+#   - publish/import throughput: 1500-3000 SKUs per batch
 set -euo pipefail
 
 echo "=== Scale Acceptance Gate ==="
-echo "Targets: 5k SKUs/store, 10k scans/day, 10k users"
+echo "Declared targets: 5k SKUs/store, 10k scans/day, 10k users"
 echo ""
 
 ERRORS=0
 
-# Require DB access — gate MUST fail if it cannot verify
+# Require DB access
 if [ -z "${DATABASE_URL:-}" ] && [ -z "${PGHOST:-}" ]; then
   echo "FAIL: No DATABASE_URL or PGHOST — cannot verify scale readiness"
-  echo "GATE FAILED: DB access required for scale verification"
   exit 1
 fi
 
 DB_CMD="psql ${DATABASE_URL:-} -t -A -c"
 
-# 1. Verify critical indexes exist
+# 1. Critical indexes
 echo "Checking critical indexes..."
-
 check_index() {
   local table=$1
   local desc=$2
@@ -40,32 +59,35 @@ check_index "stock_balances" "inventory stock balances"
 check_index "sell_payments" "payment records"
 check_index "sales" "sales records"
 
-# 2. Basic throughput verification — barcode lookup latency
+# 2. Barcode lookup efficiency
 echo ""
-echo "Running barcode lookup latency check..."
-LATENCY=$($DB_CMD "EXPLAIN (ANALYZE, FORMAT TEXT) SELECT * FROM catalog.store_product_barcodes WHERE barcode = 'TEST_NONEXISTENT_BARCODE' LIMIT 1;" 2>/dev/null | grep "Execution Time" | awk '{print $3}' || echo "999")
-LATENCY_MS=$(echo "$LATENCY" | cut -d. -f1)
-if [ "${LATENCY_MS:-999}" -lt 50 ]; then
-  echo "  OK: Barcode lookup < 50ms (${LATENCY_MS}ms)"
+echo "Barcode lookup query plan..."
+PLAN=$($DB_CMD "EXPLAIN (FORMAT TEXT) SELECT * FROM catalog.store_product_barcodes WHERE barcode = 'TEST_NONEXISTENT' LIMIT 1;" 2>/dev/null || echo "Seq Scan")
+if echo "$PLAN" | grep -qi "Index"; then
+  echo "  OK: Barcode lookup uses index scan"
 else
-  echo "  WARN: Barcode lookup >= 50ms (${LATENCY_MS}ms) — may impact scan throughput"
+  echo "  FAIL: Barcode lookup uses sequential scan — missing index"
+  ERRORS=$((ERRORS+1))
 fi
 
-# 3. Store product count check — verify 5k+ is feasible
+# 3. Current scale
 echo ""
-echo "Checking max store product count..."
-MAX_COUNT=$($DB_CMD "SELECT COALESCE(MAX(cnt), 0) FROM (SELECT store_id, COUNT(*) as cnt FROM catalog.store_products WHERE is_active = true GROUP BY store_id) t;" 2>/dev/null || echo "0")
-echo "  Current max store products: $MAX_COUNT"
-if [ "${MAX_COUNT:-0}" -gt 0 ]; then
-  echo "  OK: Store product data exists"
-else
-  echo "  INFO: No store products yet (expected for fresh deployment)"
-fi
+echo "Current scale..."
+MAX_PRODUCTS=$($DB_CMD "SELECT COALESCE(MAX(cnt), 0) FROM (SELECT store_id, COUNT(*) as cnt FROM catalog.store_products WHERE is_active = true GROUP BY store_id) t;" 2>/dev/null || echo "0")
+echo "  Max store products: $MAX_PRODUCTS"
+
+TOTAL_SALES=$($DB_CMD "SELECT COUNT(*) FROM public.sales WHERE created_at > NOW() - INTERVAL '24 hours';" 2>/dev/null || echo "0")
+echo "  Sales (last 24h): $TOTAL_SALES"
 
 echo ""
 if [ $ERRORS -gt 0 ]; then
-  echo "GATE FAILED: $ERRORS error(s) — missing critical indexes"
+  echo "GATE FAILED: $ERRORS error(s)"
   exit 1
 else
-  echo "GATE PASSED: Index verification complete, basic throughput acceptable"
+  echo "GATE PASSED: DB readiness verified"
+  echo ""
+  echo "NOTE: Full load/stress acceptance requires manual execution of:"
+  echo "  node scripts/load-tests/catalog-load.js --skus=5000 --stores=10"
+  echo "  node scripts/load-tests/scan-throughput.js --scans=10000"
+  echo "Operator must run these before declaring go-live acceptance."
 fi
