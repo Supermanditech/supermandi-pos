@@ -6,6 +6,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { View, Pressable, FlatList, ActivityIndicator, StyleSheet, Text } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { apiClient } from "../../services/api/apiClient";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
@@ -98,7 +99,7 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 14, flexDirection: "row", alignItems: "center" },
+    header: { backgroundColor: colors.primary, paddingHorizontal: getScreenPadding(), paddingVertical: 14, flexDirection: "row", alignItems: "center" },
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
     headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },

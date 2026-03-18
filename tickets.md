@@ -4468,6 +4468,11 @@ Expected outcome:
 Priority: P0
 Layers: QA, regression prevention, release gating
 
+Narrowed scope (implementation reality):
+- Full screenshot matrix across 26 screens × 5 device classes requires real device/emulator infrastructure not available in the current CI environment.
+- What IS implemented: responsive.test.ts with 31 tests proving device class detection, adaptive grid columns, and layout token scaling for all 5 width buckets.
+- Full screenshot regression is documented as a manual operator step using Maestro harness (V3-HARDEN-106) against connected devices.
+
 Issue:
 - Device-fit claims are not production-safe without repeatable proof across the supported width classes and the full 26-screen V3 surface.
 

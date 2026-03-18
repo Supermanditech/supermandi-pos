@@ -3,6 +3,7 @@ import { View, Pressable, TextInput, FlatList, StyleSheet, Text, ActivityIndicat
 import Svg, { Circle, Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding, getChipFontSize } from "../../theme/responsive";
 import { getStockStatement } from "../../services/api/inventoryApi";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
@@ -130,22 +131,22 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 14, flexDirection: "row", alignItems: "center" },
+    header: { backgroundColor: colors.primary, paddingHorizontal: getScreenPadding(), paddingVertical: 14, flexDirection: "row", alignItems: "center" },
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
     headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
     tabs: { flexDirection: "row", backgroundColor: colors.surface },
     tab: { flex: 1, padding: 10, alignItems: "center", borderBottomWidth: 3, borderBottomColor: "transparent" },
     tabActive: { borderBottomColor: colors.primary },
-    tabText: { fontSize: 12, fontWeight: "700", color: colors.textTertiary },
+    tabText: { fontSize: getChipFontSize(), fontWeight: "700", color: colors.textTertiary },
     tabTextActive: { color: colors.primary },
-    statsRow: { flexDirection: "row", gap: 6, padding: 10, paddingHorizontal: 14 },
+    statsRow: { flexDirection: "row", gap: 6, padding: 10, paddingHorizontal: getScreenPadding() },
     stat: { flex: 1, padding: 10, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, alignItems: "center" },
     statLabel: { fontSize: 10, fontWeight: "700", color: colors.textTertiary },
     statVal: { fontSize: 18, fontWeight: "900", marginTop: 2 },
-    searchBar: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 14, marginBottom: 8, padding: 10, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border },
+    searchBar: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: getScreenPadding(), marginBottom: 8, padding: 10, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border },
     searchInput: { flex: 1, fontSize: 13, fontWeight: "500", color: colors.textPrimary },
-    itemRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.backgroundSecondary },
+    itemRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: getScreenPadding(), paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.backgroundSecondary },
     itemImg: { width: 40, height: 40, borderRadius: 10, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center" },
     itemName: { fontSize: 14, fontWeight: "700" },
     itemMeta: { fontSize: 11, color: colors.textTertiary },

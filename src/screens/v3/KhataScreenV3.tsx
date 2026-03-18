@@ -3,6 +3,7 @@ import { View, Pressable, TextInput, ScrollView, ActivityIndicator, StyleSheet, 
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import { recordCollectionCash } from "../../services/api/posApi";
@@ -123,16 +124,16 @@ export default function KhataScreenV3({ onClose }: Props) {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 14, flexDirection: "row", alignItems: "center" },
+    header: { backgroundColor: colors.primary, paddingHorizontal: getScreenPadding(), paddingVertical: 14, flexDirection: "row", alignItems: "center" },
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
     headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
     addBtn: { backgroundColor: "#fff", paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10 },
     addBtnText: { color: colors.primary, fontSize: 11, fontWeight: "700" },
-    summaryBar: { flexDirection: "row", justifyContent: "space-between", padding: 10, paddingHorizontal: 14, backgroundColor: colors.errorSoft },
+    summaryBar: { flexDirection: "row", justifyContent: "space-between", padding: 10, paddingHorizontal: getScreenPadding(), backgroundColor: colors.errorSoft },
     sumLabel: { fontSize: 10, fontWeight: "700", color: "#991B1B" },
     sumVal: { fontSize: 18, fontWeight: "900", color: colors.error },
-    searchBar: { padding: 10, paddingHorizontal: 14, backgroundColor: colors.surface },
+    searchBar: { padding: 10, paddingHorizontal: getScreenPadding(), backgroundColor: colors.surface },
     searchInput: { padding: 10, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border, fontSize: 13, fontWeight: "500", color: colors.textPrimary },
     body: { flex: 1, padding: 14 },
     section: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, marginBottom: 6, marginTop: 4 },

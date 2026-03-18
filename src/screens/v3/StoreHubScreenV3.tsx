@@ -3,6 +3,7 @@ import { View, Pressable, ScrollView, ActivityIndicator, StyleSheet, Text } from
 import Svg, { Rect, Path, Circle, Line } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { getPurchaseHistory } from "../../services/api/inventoryApi";
 import { isOnline } from "../../services/networkStatus";
 import { logger } from "../../services/logger";
@@ -132,16 +133,16 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 14, flexDirection: "row", alignItems: "center", gap: 8 },
+    header: { backgroundColor: colors.primary, paddingHorizontal: getScreenPadding(), paddingVertical: 14, flexDirection: "row", alignItems: "center", gap: 8 },
     headerTitle: { color: "#fff", fontSize: 16, fontWeight: "700" },
     body: { flex: 1 },
-    grid: { flexDirection: "row", flexWrap: "wrap", padding: 14, gap: 12 },
+    grid: { flexDirection: "row", flexWrap: "wrap", padding: getScreenPadding(), gap: 12 },
     card: { width: "47%", backgroundColor: colors.surface, borderRadius: 18, padding: 20, alignItems: "center", borderWidth: 1.5, borderColor: colors.border },
     cardWarning: { borderColor: colors.warning },
     cardTitle: { fontSize: 15, fontWeight: "800", color: colors.textPrimary, marginTop: 8, letterSpacing: -0.3 },
     cardSub: { fontSize: 11, color: colors.textTertiary, marginTop: 4 },
-    sectionTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, paddingHorizontal: 14, marginTop: 8, marginBottom: 8 },
-    orderCard: { flexDirection: "row", alignItems: "center", marginHorizontal: 14, marginBottom: 8, padding: 14, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border },
+    sectionTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, paddingHorizontal: getScreenPadding(), marginTop: 8, marginBottom: 8 },
+    orderCard: { flexDirection: "row", alignItems: "center", marginHorizontal: getScreenPadding(), marginBottom: 8, padding: 14, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border },
     orderSupplier: { fontSize: 13, fontWeight: "700", color: colors.textPrimary },
     orderMeta: { fontSize: 11, color: colors.textTertiary, marginTop: 1 },
     orderTotal: { fontSize: 14, fontWeight: "800", color: colors.textPrimary },

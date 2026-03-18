@@ -4,6 +4,7 @@ import Svg, { Rect, Circle, Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding, getChipFontSize } from "../../theme/responsive";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { getDailySummary, type DailySummary } from "../../services/api/dailySummaryApi";
 import { isOnline } from "../../services/networkStatus";
@@ -108,24 +109,24 @@ function createStyles(colors: ColorPalette) {
     settingsBtn: { width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     settingsIcon: { fontSize: 18 },
     body: { flex: 1 },
-    morningCard: { margin: 14, padding: 18, borderRadius: 20, backgroundColor: colors.primary, overflow: "hidden" },
+    morningCard: { margin: getScreenPadding(), padding: 18, borderRadius: 20, backgroundColor: colors.primary, overflow: "hidden" },
     morningTitle: { color: "#fff", fontSize: 15, fontWeight: "700", marginBottom: 8 },
     morningRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
     morningKey: { color: "rgba(255,255,255,0.8)", fontSize: 13 },
     morningVal: { color: "#fff", fontSize: 13, fontWeight: "700" },
-    statsRow: { flexDirection: "row", gap: 8, paddingHorizontal: 14 },
+    statsRow: { flexDirection: "row", gap: 8, paddingHorizontal: getScreenPadding() },
     statCard: { flex: 1, padding: 14, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border },
     statLabel: { fontSize: 10, fontWeight: "700", color: colors.textTertiary, textTransform: "uppercase", letterSpacing: 0.5 },
     statVal: { fontSize: 22, fontWeight: "900", marginTop: 4, letterSpacing: -0.5 },
     statSub: { fontSize: 11, color: colors.textTertiary, marginTop: 2 },
-    financeBanner: { marginHorizontal: 14, marginTop: 10, padding: 14, borderRadius: 16, backgroundColor: "#7C3AED", flexDirection: "row", alignItems: "center", gap: 12 },
+    financeBanner: { marginHorizontal: getScreenPadding(), marginTop: 10, padding: 14, borderRadius: 16, backgroundColor: "#7C3AED", flexDirection: "row", alignItems: "center", gap: 12 },
     financeIcon: { fontSize: 28 },
     financeTitle: { color: "#fff", fontSize: 14, fontWeight: "800" },
-    financeSub: { color: "rgba(255,255,255,0.85)", fontSize: 12 },
+    financeSub: { color: "rgba(255,255,255,0.85)", fontSize: getChipFontSize() },
     financeArrow: { backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10 },
-    financeArrowText: { color: "#fff", fontSize: 12, fontWeight: "700" },
-    sectionTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, paddingHorizontal: 14, marginTop: 14, marginBottom: 8 },
-    menuCard: { marginHorizontal: 14, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
+    financeArrowText: { color: "#fff", fontSize: getChipFontSize(), fontWeight: "700" },
+    sectionTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, paddingHorizontal: getScreenPadding(), marginTop: 14, marginBottom: 8 },
+    menuCard: { marginHorizontal: getScreenPadding(), backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
     menuItem: { flexDirection: "row", alignItems: "center", gap: 14, padding: 14, borderBottomWidth: 1, borderBottomColor: colors.backgroundSecondary },
     menuIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
     menuLabel: { flex: 1, fontSize: 14, fontWeight: "600" },

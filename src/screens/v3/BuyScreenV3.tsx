@@ -3,6 +3,7 @@ import { View, FlatList, Pressable, ActivityIndicator, TextInput, StyleSheet, Te
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
+import { getScreenPadding, getChipPadding, getChipFontSize } from "../../theme/responsive";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import SupplierProductCardV3, { type SupplierProduct } from "../../components/v3/SupplierProductCardV3";
@@ -268,8 +269,9 @@ export default function BuyScreenV3() {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    searchBar: { flexDirection: "row", gap: 8, padding: 10, paddingHorizontal: 14, backgroundColor: colors.surface },
-    searchInput: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: colors.background, borderRadius: 14, borderWidth: 2, borderColor: colors.border },
+    // V3-FIX-109: Responsive padding
+    searchBar: { flexDirection: "row", gap: 8, padding: 10, paddingHorizontal: getScreenPadding(), backgroundColor: colors.surface },
+    searchInput: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: getScreenPadding(), paddingVertical: 10, backgroundColor: colors.background, borderRadius: 14, borderWidth: 2, borderColor: colors.border },
     searchTextInput: { flex: 1, fontSize: 14, fontWeight: "500", color: colors.textPrimary },
     scanBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center" },
     supplierRow: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 4, backgroundColor: colors.surface },
@@ -277,9 +279,10 @@ function createStyles(colors: ColorPalette) {
     supplierChips: { gap: 8 },
     categoryRow: { backgroundColor: colors.surface },
     categoryChips: { paddingHorizontal: 14, paddingVertical: 10, gap: 8 },
-    chip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border },
+    // V3-FIX-109: Responsive chip sizing
+    chip: { paddingHorizontal: getChipPadding(), paddingVertical: 8, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border },
     chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-    chipText: { fontSize: 12, fontWeight: "700", color: colors.textSecondary },
+    chipText: { fontSize: getChipFontSize(), fontWeight: "700", color: colors.textSecondary },
     chipTextActive: { color: "#fff" },
     financeBanner: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 14, marginTop: 8, padding: 12, backgroundColor: "#F5F3FF", borderRadius: 12, borderWidth: 1, borderColor: "#DDD6FE" },
     financeIcon: { fontSize: 20 },

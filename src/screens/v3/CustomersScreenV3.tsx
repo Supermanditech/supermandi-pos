@@ -3,6 +3,7 @@ import { View, Pressable, TextInput, FlatList, ActivityIndicator, Modal, StyleSh
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { useCustomerStore } from "../../stores/customerStore";
 import { showToast } from "../../utils/showToast";
 
@@ -101,13 +102,13 @@ export default function CustomersScreenV3({ onClose }: Props) {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 14, flexDirection: "row", alignItems: "center" },
+    header: { backgroundColor: colors.primary, paddingHorizontal: getScreenPadding(), paddingVertical: 14, flexDirection: "row", alignItems: "center" },
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
     headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
     addBtn: { backgroundColor: "#fff", paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10 },
     addBtnText: { color: colors.primary, fontSize: 11, fontWeight: "700" },
-    searchBar: { padding: 10, paddingHorizontal: 14, backgroundColor: colors.surface },
+    searchBar: { padding: 10, paddingHorizontal: getScreenPadding(), backgroundColor: colors.surface },
     searchInput: { padding: 10, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border, fontSize: 13, fontWeight: "500" },
     card: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 8 },
     avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primaryLight, alignItems: "center", justifyContent: "center" },

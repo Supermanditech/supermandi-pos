@@ -3,6 +3,7 @@ import { View, Pressable, ScrollView, StyleSheet, Text, Alert, TextInput, Modal 
 import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useStaffSessionStore } from "../../stores/staffSessionStore";
 import { clearDeviceSession } from "../../services/deviceSession";
@@ -285,12 +286,12 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 14, flexDirection: "row", alignItems: "center" },
+    header: { backgroundColor: colors.primary, paddingHorizontal: getScreenPadding(), paddingVertical: 14, flexDirection: "row", alignItems: "center" },
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
     headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
     body: { flex: 1 },
-    sectionTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, paddingHorizontal: 14, marginTop: 14, marginBottom: 6 },
+    sectionTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, paddingHorizontal: getScreenPadding(), marginTop: 14, marginBottom: 6 },
     sectionCard: { backgroundColor: colors.surface, marginHorizontal: 0 },
     row: { flexDirection: "row", alignItems: "center", padding: 14, paddingHorizontal: 18, borderBottomWidth: 1, borderBottomColor: colors.backgroundSecondary, gap: 14 },
     rowIcon: { fontSize: 18, width: 20, textAlign: "center" },

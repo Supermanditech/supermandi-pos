@@ -3,6 +3,7 @@ import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator, Linki
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding, getChipFontSize } from "../../theme/responsive";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import { printerService } from "../../services/printerService";
@@ -121,14 +122,14 @@ export default function ReportsScreenV3({ onClose }: Props) {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 14, flexDirection: "row", alignItems: "center" },
+    header: { backgroundColor: colors.primary, paddingHorizontal: getScreenPadding(), paddingVertical: 14, flexDirection: "row", alignItems: "center" },
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
     headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
     tabs: { flexDirection: "row", backgroundColor: colors.surface },
     tab: { flex: 1, padding: 10, alignItems: "center", borderBottomWidth: 3, borderBottomColor: "transparent" },
     tabActive: { borderBottomColor: colors.primary },
-    tabText: { fontSize: 12, fontWeight: "700", color: colors.textTertiary },
+    tabText: { fontSize: getChipFontSize(), fontWeight: "700", color: colors.textTertiary },
     tabTextActive: { color: colors.primary },
     body: { flex: 1, padding: 14 },
     statsRow: { flexDirection: "row", gap: 8, marginBottom: 12 },

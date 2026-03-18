@@ -164,13 +164,14 @@ function createStyles(colors: ColorPalette) {
       letterSpacing: 0.3,
       marginTop: 2,
     },
+    // V3-FIX-108: Removed fixed height:28 — use minHeight for flexible text fit
     name: {
       fontSize: 11,
       fontWeight: "600",
       color: colors.textPrimary,
       lineHeight: 14,
       textAlign: "center",
-      height: 28,
+      minHeight: 28,
     },
     price: {
       fontSize: 15,
