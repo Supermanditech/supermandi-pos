@@ -5561,4 +5561,429 @@ The branch must not be called:
 - GCP-ready
 - production-ready
 
-until all eleven phases above are complete and re-verified against `tickets.md`.
+until all twelve phases above are complete and re-verified against `tickets.md`.
+
+## Phase 12 - Supplier Catalogue as SuperMandi Principal B2B Procurement
+
+Scope lock approved by operator:
+- All supplier-catalogue purchases must run as:
+  - `supplier -> SuperMandi -> retailer`
+- Retailer-facing BUY catalogue must behave as a SuperMandi procurement lane, not direct supplier checkout.
+- Counter Purchase remains open as a separate direct-local procurement lane for retailer-entered/manual inward.
+- No mixed cart, invoice, ledger, or settlement contract may cross these two lanes.
+
+## V3-FIX-139 - Gate supplier catalogue participation behind KYC, GST, bank, and fulfillment readiness in supplier portal
+
+Priority: P0
+Layers: supplier portal UX, supplier auth/compliance API, backend readiness rules
+
+Issue:
+- Supplier catalogue participation is not yet explicitly gated by one production-grade readiness contract before supplier SKUs can enter the SuperMandi principal procurement lane.
+
+Root cause:
+- Supplier onboarding, KYC, GST, bank details, dispatch address, and operational readiness are spread across existing supplier flows, but there is no single approved gate that blocks:
+  - SKU submission
+  - publish eligibility
+  - procurement-order acceptance
+until the supplier can legally and operationally sell to SuperMandi.
+
+Files impacted:
+- `supplier-portal/src/app/(dashboard)/kyc/page.tsx`
+- `supplier-portal/src/app/(dashboard)/dashboard/page.tsx`
+- `supplier-portal/src/lib/api.ts`
+- `backend/src/routes/v1/supplier/kyc.ts`
+- `backend/src/routes/v1/supplier/profile.ts`
+- `backend/src/routes/v1/supplier/dashboard.ts`
+- `backend/src/routes/v1/admin/suppliers.ts`
+- `backend/migrations/060_supplier_bank_kyc.sql`
+- any new supplier-readiness helper/service touched by the fix
+
+Expected outcome:
+- Supplier cannot submit/publish catalogue SKUs or fulfill procurement orders until KYC, GSTIN, bank/payout details, dispatch address, and agreement acceptance are complete.
+- Supplier portal clearly shows readiness blockers and approval state.
+- SuperAdmin sees the same readiness truth before approving catalogue participation.
+
+Override requirement:
+- Claude must first inspect the existing supplier readiness/KYC flows in code, then override or replace conflicting readiness logic in place.
+- Do not add a parallel readiness path beside the current one.
+
+## V3-FIX-140 - Implement supplier SKU intake lifecycle with mandatory GST/wholesale metadata and review states
+
+Priority: P0
+Layers: supplier portal UX, CSV/import API, backend validation, catalog intake
+
+Issue:
+- Supplier product intake still needs one explicit principal-procurement contract for inline and CSV listing with the metadata needed for SuperMandi resale and GST compliance.
+
+Root cause:
+- Existing supplier listing flows are present, but the approved operating model now requires every catalogue SKU to carry a complete wholesale metadata packet before SuperAdmin review:
+  - supplier SKU
+  - product name / brand / category
+  - HSN
+  - GST %
+  - unit / pack / case / MOQ
+  - barcode
+  - image
+  - supplier base price
+  - stock / lead time
+
+Files impacted:
+- `supplier-portal/src/app/(dashboard)/products/page.tsx`
+- `supplier-portal/src/__tests__/pages/dashboard/products.test.tsx`
+- `backend/src/routes/v1/supplier/products.ts`
+- `backend/services/supplier-service/src/routes/products.ts`
+- `backend/services/catalog-service/src/services/mappingService.ts`
+- `backend/migrations/032_supplier_extended_fields.sql`
+- `backend/migrations/131_t063_supplier_product_barcode_unique.sql`
+- `backend/migrations/194_supplier_sku_capacity.sql`
+- any CSV/import helper touched by the fix
+
+Expected outcome:
+- Supplier can add/edit SKUs inline or via CSV only with the mandatory wholesale/GST metadata required for resale by SuperMandi.
+- SKU lifecycle states are explicit:
+  - `Draft`
+  - `Submitted`
+  - `Changes Requested`
+  - `Approved`
+  - `Published`
+  - `Paused`
+- Missing GST/HSN/pack/MOQ/barcode-critical fields block submission.
+
+Override requirement:
+- Claude must inspect the current supplier inline/CSV listing paths first and override conflicting schema, validation, and lifecycle behavior in the existing flow.
+- Do not create a second SKU-submission contract that coexists with the old one.
+
+## V3-FIX-141 - Add SuperAdmin review, metadata override, principal-sale pricing, and publish controls for supplier catalogue SKUs
+
+Priority: P0
+Layers: SuperAdmin UI, admin API, pricing/publish service, business rules
+
+Issue:
+- SuperAdmin still needs one canonical commercialization surface for converting approved supplier SKUs into SuperMandi principal-sale catalogue entries.
+
+Root cause:
+- Review/edit/approve flows exist in parts, but the approved model now requires SuperAdmin to decide and persist:
+  - `billing_model = SUPERMANDI_PRINCIPAL`
+  - supplier visible / hidden
+  - margin mode `%`, fixed, or both
+  - margin basis per unit / pack / case
+  - publish targets by store/region
+
+Files impacted:
+- `supermandi-superadmin/src/tabs/CatalogTab.tsx`
+- `supermandi-superadmin/src/api/catalog.ts`
+- `backend/src/routes/v1/admin/catalog.ts`
+- `backend/src/routes/v1/admin/suppliers.ts`
+- `backend/src/routes/v1/catalog.ts`
+- `backend/migrations/192_admin_margin_control.sql`
+- any pricing-rule/publish helper touched by the fix
+
+Expected outcome:
+- SuperAdmin can review, fully edit, approve, price, and publish supplier SKUs as SuperMandi-sold catalogue entries.
+- Supplier-catalogue SKUs cannot publish in this lane without `SUPERMANDI_PRINCIPAL`.
+- Publish targets, pricing rules, supplier visibility, and audit history are stored explicitly.
+
+Override requirement:
+- Claude must inspect the current SuperAdmin catalog/review/publish code first and override conflicting commercialization logic in the existing path.
+- Do not layer a new publish model beside older direct-supplier assumptions.
+
+## V3-FIX-142 - Make retailer BUY catalogue a SuperMandi-principal procurement lane isolated from Counter Purchase
+
+Priority: P0
+Layers: POS BUY UX, retailer-admin order UX, navigation, purchase-cart behavior
+
+Issue:
+- Retailer procurement UX still risks blending supplier-catalogue ordering with direct/local counter purchase behavior.
+
+Root cause:
+- BUY, Compare, Counter Purchase, and store inward flows have been evolving independently, but the approved operating model now requires:
+  - supplier-catalogue buying to be presented as buying from SuperMandi
+  - Counter Purchase to remain a separate direct-local inward lane
+  - no mixed cart/order semantics across the two
+
+Files impacted:
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/screens/v3/CompareScreenV3.tsx`
+- `src/screens/v3/CounterPurchaseScreenV3.tsx`
+- `src/stores/purchaseCartStore.ts`
+- `src/stores/purchaseDraftStore.ts`
+- `src/services/api/catalogApi.ts`
+- `src/services/api/suppliersApi.ts`
+- `retailer-admin/src/pages/PurchaseOrdersPage.tsx`
+- any shared purchase-lane helper introduced by the fix
+
+Expected outcome:
+- Retailer BUY catalogue clearly shows the SuperMandi principal procurement lane.
+- Catalogue detail/cart/checkout flow never behaves like direct supplier checkout.
+- Counter Purchase stays available for direct local/manual inward only.
+- No mixed purchase cart can contain both catalogue-principal items and counter-purchase direct items.
+
+Override requirement:
+- Claude must inspect the current BUY, Compare, Counter Purchase, and purchase-cart code first and override conflicting interaction/order-lane behavior in place.
+- Do not leave an alternate direct-supplier catalogue checkout path live after the change.
+
+## V3-FIX-143 - Build supplier fulfillment UX around SuperMandi procurement orders with staged retailer disclosure and no retailer-directory access
+
+Priority: P0
+Layers: supplier portal UX, supplier orders API, privacy/operational controls
+
+Issue:
+- Supplier still needs a trustworthy fulfillment surface that proves orders are genuine without giving broad retailer-directory access.
+
+Root cause:
+- The principal-sale catalogue model requires supplier interaction to be anchored around SuperMandi procurement orders, not unrestricted retailer discovery.
+
+Files impacted:
+- `supplier-portal/src/app/(dashboard)/orders/page.tsx`
+- `supplier-portal/src/app/(dashboard)/invoices/page.tsx`
+- `supplier-portal/src/lib/api.ts`
+- `backend/src/routes/v1/supplier/orders.ts`
+- `backend/src/routes/v1/supplier/invoices.ts`
+- `backend/src/routes/v1/admin/documents.ts`
+- any supplier-order visibility helper touched by the fix
+
+Expected outcome:
+- Supplier sees SuperMandi procurement orders, not a browseable retailer/customer list.
+- Pre-acceptance view shows only operationally necessary order details.
+- Post-acceptance disclosure is limited to what is needed for dispatch/invoicing into SuperMandi, not free-form retailer contact harvesting.
+- Supplier can accept, reject, part-accept, upload invoice, and mark dispatch from one production-grade flow.
+
+Override requirement:
+- Claude must inspect the current supplier order/invoice visibility flows first and override any broader retailer-disclosure behavior in the existing implementation.
+- Do not add a new restricted view while leaving the old unrestricted access path available.
+
+## V3-FIX-144 - Orchestrate retailer purchase checkout into linked SuperMandi sales orders and supplier procurement orders
+
+Priority: P0
+Layers: checkout API, backend orchestration, order state machine, retailer/supplier/admin visibility
+
+Issue:
+- The approved principal-sale catalogue lane needs one canonical order-orchestration contract linking retailer checkout to upstream supplier procurement without manual drift.
+
+Root cause:
+- Current procurement/order behavior is spread across BUY/cart/GRN flows and older supplier routes, but there is no explicit end-to-end linkage rule for:
+  - retailer order to SuperMandi
+  - upstream procurement order to supplier
+  - shared order state/event history
+
+Files impacted:
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/services/api/suppliersApi.ts`
+- `backend/src/routes/v1/pos/suppliers.ts`
+- `backend/src/routes/v1/supplier/orders.ts`
+- `backend/src/routes/v1/admin/suppliers.ts`
+- `backend/services/order-service/src/services/grnService.ts`
+- any purchase-order orchestration service/state-machine helper introduced by the fix
+
+Expected outcome:
+- Retailer checkout from BUY creates a SuperMandi retailer-facing purchase order and a linked supplier-facing procurement order.
+- SuperAdmin, supplier portal, retailer POS, and retailer web all see the same linked order truth with stable references.
+- Order splitting by supplier/region/fulfillment constraints is handled centrally and audibly.
+
+Override requirement:
+- Claude must inspect the current checkout/order-creation/orchestration path first and override conflicting order-linking behavior in the existing code.
+- Do not introduce a parallel procurement-order generator beside the live path.
+
+## V3-FIX-145 - Generate, store, download, and WhatsApp the dual-document chain: supplier invoice to SuperMandi and SuperMandi tax invoice to retailer
+
+Priority: P0
+Layers: invoice UX, document API, PDF generation, WhatsApp dispatch, storage
+
+Issue:
+- The approved model requires two document chains for catalogue purchases, but invoice/document behavior is not yet explicitly locked to that principal-sale flow.
+
+Root cause:
+- Existing invoice services and screens exist, but the end-to-end B2B principal model requires:
+  - supplier invoice `supplier -> SuperMandi`
+  - retailer tax invoice `SuperMandi -> retailer`
+  - immutable storage
+  - POS/web download
+  - automatic WhatsApp dispatch logs
+
+Files impacted:
+- `backend/src/services/invoiceService.ts`
+- `backend/src/services/invoicePdfService.ts`
+- `backend/src/routes/v1/supplier/invoices.ts`
+- `backend/src/routes/v1/admin/invoices.ts`
+- `backend/src/routes/v1/admin/whatsapp.ts`
+- `retailer-admin/src/__tests__/InvoicesPage.test.tsx`
+- `supplier-portal/src/app/(dashboard)/invoices/page.tsx`
+- `src/screens/v3/StoreHubScreenV3.tsx`
+- any document download/share helper introduced by the fix
+
+Expected outcome:
+- For every completed catalogue procurement transaction:
+  - supplier can upload/view the supplier invoice to SuperMandi
+  - SuperMandi generates the retailer invoice
+  - retailer can download the retailer invoice from POS and retailer web
+  - WhatsApp dispatch to the right parties is logged and retry-safe
+- Invoice PDF and JSON artifacts are immutable and versioned.
+
+Override requirement:
+- Claude must inspect the current invoice/document/WhatsApp flow first and override conflicting document ownership or dispatch behavior in the existing code.
+- Do not leave an older direct-supplier retailer-invoice path active for catalogue purchases.
+
+## V3-HARDEN-146 - Enforce append-only ledger, GRN gating, and event-state truth for the principal procurement lane
+
+Priority: P0
+Layers: stock ledger, procurement ledger, GRN, sync, auditability
+
+Issue:
+- Principal-sale catalogue procurement must not mutate stock or financial truth at the wrong event boundary.
+
+Root cause:
+- The approved model now requires one explicit event contract:
+  - retailer stock increases only on `GRN_CONFIRMED`
+  - catalogue checkout does not directly increase stock
+  - procurement/invoice/dispatch/grn/settlement states must remain append-only and auditable
+
+Files impacted:
+- `src/screens/v3/GRNScreenV3.tsx`
+- `src/stores/inwardStore.ts`
+- `backend/src/routes/v1/pos/sales.ts`
+- `backend/src/routes/v1/pos/sync.ts`
+- `backend/src/routes/v1/admin/grnAlerts.ts`
+- `backend/src/services/grnAlertNotificationService.ts`
+- `backend/services/order-service/src/services/grnService.ts`
+- `backend/migrations/186_sup_pos_grn_tables.sql`
+- any procurement-ledger helper touched by the fix
+
+Expected outcome:
+- Principal-lane stock enters retailer inventory only after GRN confirmation.
+- Procurement, invoice, dispatch, GRN, and settlement events are append-only and reconstructable.
+- Counter Purchase direct inward remains isolated and does not share ledger identity with catalogue-principal procurement.
+
+Override requirement:
+- Claude must inspect the current GRN, stock-ledger, inward, and procurement event flows first and override conflicting event timing or mixed-ledger behavior in place.
+- Do not add a second ledger interpretation beside the existing one.
+
+## V3-HARDEN-147 - Add schema, migration, and data-governance support for principal procurement, dual invoices, and document dispatch
+
+Priority: P0
+Layers: DB schema, migrations, data integrity, audit governance
+
+Issue:
+- The approved principal-sale catalogue lane needs an explicit schema/migration ticket so order, invoice, and document behavior does not remain implicit or partially reused from older flows.
+
+Root cause:
+- Existing migrations cover pieces of suppliers, GRN, margin control, and invoices, but there is no single ticket guaranteeing the final schema for:
+  - supplier readiness
+  - principal-sale publish state
+  - linked retailer/procurement orders
+  - dual invoices
+  - immutable document storage refs
+  - dispatch logs
+
+Files impacted:
+- `backend/migrations/134_t069_invoice_system_schema.sql`
+- `backend/migrations/135_t070_product_invoice_config.sql`
+- `backend/migrations/186_sup_pos_grn_tables.sql`
+- `backend/migrations/192_admin_margin_control.sql`
+- any new forward migration added for principal-procurement linkage/document storage
+- `backend/packages/common/src/types/catalog.types.ts`
+- `backend/packages/common/src/types/supplier.types.ts`
+
+Expected outcome:
+- Schema supports the approved business flow without overloading legacy direct-supplier catalogue assumptions.
+- All new tables/columns/constraints/indexes are forward migrations only.
+- Types and DB constraints enforce:
+  - linked order references
+  - invoice ownership
+  - immutable document pointers
+  - publish/commercial model integrity
+
+Override requirement:
+- Claude must inspect the existing supplier/catalog/invoice/GRN schema first and extend or replace conflicting structures deliberately through forward migrations.
+- Do not preserve contradictory legacy schema semantics if they block the approved principal-sale flow.
+
+## V3-HARDEN-148 - Add GCP parity, worker/storage readiness, and release gates for principal procurement and B2B document delivery
+
+Priority: P0
+Layers: deployment, cloud config, async workers, release gating, observability
+
+Issue:
+- This principal-sale catalogue lane is not production-safe unless cloud/runtime readiness proves that order orchestration, PDFs, and WhatsApp delivery are actually live in the deployed environment.
+
+Root cause:
+- Current parity gating does not yet explicitly fail deployment when:
+  - published catalogue checkout cannot create the linked upstream/downstream orders
+  - invoice PDF generation is down
+  - document storage bucket is misconfigured
+  - WhatsApp dispatch/webhook is broken
+  - GRN cannot close the principal procurement loop
+
+Files impacted:
+- `.github/workflows/deploy.yml`
+- `scripts/gates/`
+- `backend/src/startup/validateGcp.ts`
+- supplier/superadmin/retailer env examples touched by the fix
+- any async worker or storage config path used by invoice/document delivery
+
+Expected outcome:
+- Deployment is blocked unless the principal procurement lane passes environment and post-deploy smoke gates.
+- GCP/runtime readiness proves:
+  - catalogue SKU visible to retailer
+  - retailer checkout creates linked orders
+  - supplier invoice upload works
+  - retailer invoice generation works
+  - PDF/doc storage works
+  - WhatsApp dispatch works
+  - GRN completes the stock event safely
+
+Override requirement:
+- Claude must inspect the current deploy gates, env validation, and worker/storage setup first and override conflicting readiness assumptions in the live release path.
+- Do not bolt on optional checks while older permissive gates still allow a broken principal-procurement deployment through.
+
+## V3-DELETE-149 - Remove direct-supplier catalogue checkout assumptions while preserving Counter Purchase direct procurement
+
+Priority: P1
+Layers: cleanup, navigation safety, business-rule consistency
+
+Issue:
+- Legacy or partial code paths can still make supplier-catalogue buying behave like direct supplier checkout, which now conflicts with the approved principal-sale model.
+
+Root cause:
+- Older supplier/discovery/procurement flows evolved before the current scope lock:
+  - supplier-catalogue purchase must be principal-sale
+  - direct supplier purchase remains only in Counter Purchase
+
+Files impacted:
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/screens/v3/CounterPurchaseScreenV3.tsx`
+- `src/services/api/suppliersApi.ts`
+- `backend/src/routes/v1/pos/suppliers.ts`
+- `backend/src/routes/v1/catalog.ts`
+- supplier/admin docs or tests that still describe catalogue purchase as direct supplier checkout
+
+Expected outcome:
+- No live catalogue purchase path still behaves or documents itself as direct supplier checkout.
+- Counter Purchase direct procurement remains available and clearly separated.
+- Cleanup lands only after the replacement principal-sale flow is working end to end.
+
+Override requirement:
+- Claude must inspect the existing direct-supplier catalogue assumptions first and remove or replace them only after verifying the principal-sale replacement path.
+- Do not keep hidden fallback routes, stale docs, or dormant API branches that preserve the old model.
+
+## Phase 12 - Ticket Set
+
+Tickets:
+- `V3-FIX-139`
+- `V3-FIX-140`
+- `V3-FIX-141`
+- `V3-FIX-142`
+- `V3-FIX-143`
+- `V3-FIX-144`
+- `V3-FIX-145`
+- `V3-HARDEN-146`
+- `V3-HARDEN-147`
+- `V3-HARDEN-148`
+- `V3-DELETE-149`
+
+Why twelfth:
+- This is an operator-approved business-model lock for supplier-catalogue procurement.
+- It converts catalogue purchase into a principal-sale B2B lane while preserving Counter Purchase as the only direct-local retailer procurement path.
+
+Guard rails:
+- Do not allow supplier-catalogue SKUs to bypass SuperMandi as seller of record in this phase.
+- Do not break Counter Purchase direct inward while cleaning up catalogue assumptions.
+- Do not mix catalogue-principal and counter-purchase-direct carts, orders, invoices, or ledger identities.
