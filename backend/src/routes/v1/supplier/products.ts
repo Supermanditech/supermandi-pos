@@ -13,6 +13,8 @@ import { parse } from "csv-parse/sync";
 import { validateMoq, validatePrice } from "@supermandi/common";
 import type { Pool } from "pg";
 import { log } from "../../../lib/logger";
+// V3-FIX-139: Supplier readiness gate for catalogue participation
+import { checkSupplierReadiness } from "../../../services/supplierReadiness";
 
 // SUPPLIER-IMPORT-NO-RATE-LIMIT: Limit CSV imports to 5 per supplier per hour.
 // CSV parsing is CPU-intensive; unbounded rate allows a single supplier to spike CPU.
@@ -383,6 +385,20 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
  */
 router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
+    // V3-FIX-139: Supplier readiness gate — block SKU submission until all requirements met
+    const pool = getPool();
+    if (pool && req.supplierId) {
+      const readiness = await checkSupplierReadiness(pool, req.supplierId);
+      if (!readiness.ready) {
+        return res.status(403).json({
+          error: "SUPPLIER_NOT_READY",
+          message: "Complete KYC, bank verification, and profile before submitting products",
+          blockers: readiness.blockers,
+          checks: readiness.checks,
+        });
+      }
+    }
+
     // STG-080: Added imageUrl to destructuring for product image persistence
     const {
       name,
