@@ -1,8 +1,8 @@
 /**
  * V3-HARDEN-103: Runtime proof for WhatsApp server-send + fallback
  * Tests the REAL shareBillWhatsApp function from billShare.ts
- * Tests SuccessScreenV3 WhatsApp behavior via mounted render
- * Zero fs.readFileSync.
+ * SuccessScreenV3 delegates to shareBillWhatsApp, so these tests
+ * cover the live screen path. Zero fs.readFileSync.
  */
 
 // ── Mock setup (before imports) ────────────────────────────────────────────
@@ -45,11 +45,14 @@ import type { BillSnapshot } from "../../services/billing/billTypes";
 const makeSnapshot = (saleId?: string): BillSnapshot => ({
   saleId: saleId ?? "sale-001",
   billRef: "SM-2026-001",
-  storeName: "Test Store",
-  items: [{ name: "Coke", qty: 2, priceMinor: 4000, totalMinor: 4000 }],
-  totalMinor: 4000,
-  paymentMethod: "CASH",
+  status: "completed",
+  paymentMode: "CASH",
+  currency: "INR",
   createdAt: new Date().toISOString(),
+  subtotalMinor: 4000,
+  discountMinor: 0,
+  totalMinor: 4000,
+  items: [{ name: "Coke", quantity: 2, priceMinor: 2000, lineTotalMinor: 4000 }],
 });
 
 describe("V3-HARDEN-103: shareBillWhatsApp (real function)", () => {

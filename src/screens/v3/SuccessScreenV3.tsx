@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { View, Pressable, StyleSheet, Text, Linking, Alert } from "react-native";
+import { View, Pressable, StyleSheet, Text, Alert } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 
@@ -12,6 +12,7 @@ import { printerService } from "../../services/printerService";
 import { showToast } from "../../utils/showToast";
 import { voidSale } from "../../services/api/posApi";
 import { isOnline } from "../../services/networkStatus";
+import { shareBillWhatsApp } from "../../services/billing/billShare";
 import { logger } from "../../services/logger";
 
 // STG-557: Success screen v3 — profit display, streak, confetti, WhatsApp bill, new sale
@@ -56,26 +57,26 @@ export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, 
       .catch(() => { setPrintStatus("failed"); });
   }, [autoPrint, billRef, paymentMethod, itemCount, totalDisplay]);
 
-  // V3-HARDEN-103: Server-backed WhatsApp send with deep-link fallback
+  // V3-HARDEN-103: Delegate to shareBillWhatsApp (server-backed + fallback)
+  // This ensures SuccessScreen uses the SAME tested code path as billShare.ts
   const handleWhatsAppBill = async (recipientPhone?: string) => {
-    const message = `*${billRef}*\n${METHOD_LABELS[paymentMethod]}\n${itemCount} items\n*Total: ${totalDisplay}*\n\nThank you for shopping!\n— SuperMandi POS`;
-    // Try server-backed send when phone is available and online
-    if (recipientPhone && saleId) {
-      try {
-        const online = await isOnline();
-        if (online) {
-          const { apiClient } = require("../../services/api/apiClient");
-          await apiClient.post("/api/v1/pos/whatsapp/send-bill", { saleId, recipientPhone });
-          showToast("Bill sent via WhatsApp");
-          return;
-        }
-      } catch {
-        // Server send failed — fall through to deep link
-      }
+    try {
+      await shareBillWhatsApp({
+        saleId: saleId ?? "",
+        billRef,
+        status: "completed",
+        paymentMode: paymentMethod as any,
+        currency: "INR",
+        createdAt: new Date().toISOString(),
+        subtotalMinor: totalMinor,
+        discountMinor: 0,
+        totalMinor,
+        items: [],
+      }, recipientPhone);
+      if (recipientPhone) showToast("Bill sent via WhatsApp");
+    } catch {
+      showToast("WhatsApp not available");
     }
-    // Fallback: deep-link to WhatsApp app (no phone required)
-    const encoded = encodeURIComponent(message);
-    Linking.openURL(`whatsapp://send?text=${encoded}`).catch(() => showToast("WhatsApp not installed"));
   };
 
   const handleNewSale = () => {
