@@ -35,6 +35,7 @@ jest.mock("../../utils/showToast", () => ({ showToast: jest.fn() }));
 jest.mock("../../services/logger", () => ({ logger: { debug: jest.fn(), error: jest.fn() } }));
 jest.mock("../../services/deviceSession", () => ({ getDeviceStoreId: jest.fn().mockResolvedValue("store-1") }));
 jest.mock("../../services/api/staffApi", () => ({ staffLogin: jest.fn(), staffMe: jest.fn() }));
+jest.mock("../../services/offline/scan", () => ({ upsertLocalProduct: jest.fn(), setLocalPrice: jest.fn() }));
 jest.mock("../../services/voice", () => ({ startRecording: jest.fn(), stopRecording: jest.fn(), cancelRecording: jest.fn(), submitVoiceCommand: jest.fn(), VoiceRateLimitError: class extends Error {}, VoiceTimeoutError: class extends Error {} }));
 jest.mock("expo-av", () => ({ Audio: { Recording: { createAsync: jest.fn() }, requestPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }) } }));
 jest.mock("../../services/sseClient", () => ({ startSSEClient: jest.fn(), stopSSEClient: jest.fn() }));
@@ -199,7 +200,8 @@ describe("V3-DELETE-085: No stale route references", () => {
 
   it("MORE_ROUTE_MAP maps 'sales' to 'V3Reports'", () => {
     const { MORE_ROUTE_MAP } = require("../../screens/v3/PosRootLayoutV3");
-    expect(MORE_ROUTE_MAP.sales).toBe("V3Reports");
+    // V3-FIX-093: Sales History now has its own route
+    expect(MORE_ROUTE_MAP.sales).toBe("V3SalesHistory");
   });
 
   it("MORE_ROUTE_MAP does not contain a 'help' mapping", () => {
@@ -213,7 +215,8 @@ describe("V3-DELETE-085: No stale route references", () => {
     const registeredRoutes = new Set([
       "V3Payment", "V3Cash", "V3Upi", "V3Udhar", "V3Success", "V3Scan",
       "V3NewProduct", "V3Compare", "V3CounterPurchase", "V3GRN", "V3Reorder",
-      "V3Stock", "V3Khata", "V3Finance", "V3Reports", "V3Customers", "V3Settings",
+      "V3Stock", "V3Khata", "V3Finance", "V3Reports", "V3Customers",
+      "V3SalesHistory", "V3Settings",
       "V3Phone", "V3OTP", "V3StoreSelect", "V3StaffLogin",
     ]);
     for (const target of Object.values(MORE_ROUTE_MAP)) {

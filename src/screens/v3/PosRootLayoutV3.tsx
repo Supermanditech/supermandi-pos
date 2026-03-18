@@ -19,9 +19,10 @@ import { startSSEClient, stopSSEClient } from "../../services/sseClient";
 type Nav = NativeStackNavigationProp<any>;
 
 // V3-DELETE-085 / V3-HARDEN-090: Exported for testability — maps MORE menu keys to registered route names
+// V3-FIX-093: Sales History now has its own route instead of aliasing to Reports
 export const MORE_ROUTE_MAP: Record<string, string> = {
   khata: "V3Khata", customers: "V3Customers", reports: "V3Reports",
-  stock: "V3Stock", finance: "V3Finance", sales: "V3Reports",
+  stock: "V3Stock", finance: "V3Finance", sales: "V3SalesHistory",
   settings: "V3Settings",
 };
 

@@ -18,6 +18,7 @@ import GRNScreenV3 from "./GRNScreenV3";
 import ReorderScreenV3 from "./ReorderScreenV3";
 import StockScreenV3 from "./StockScreenV3";
 import KhataScreenV3 from "./KhataScreenV3";
+import SalesHistoryScreenV3 from "./SalesHistoryScreenV3";
 import FinanceScreenV3 from "./FinanceScreenV3";
 import ReportsScreenV3 from "./ReportsScreenV3";
 import CustomersScreenV3 from "./CustomersScreenV3";
@@ -128,6 +129,12 @@ export function V3ReportsWrapper() {
 export function V3CustomersWrapper() {
   const nav = useNavigation<Nav>();
   return <CustomersScreenV3 onClose={() => nav.goBack()} />;
+}
+
+// V3-FIX-093: Sales History screen
+export function V3SalesHistoryWrapper() {
+  const nav = useNavigation<Nav>();
+  return <SalesHistoryScreenV3 onClose={() => nav.goBack()} />;
 }
 
 export function V3SettingsWrapper() {

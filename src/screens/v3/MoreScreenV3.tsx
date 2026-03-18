@@ -48,7 +48,7 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
           <Text style={styles.greeting}>{(() => { const h = new Date().getHours(); return h < 12 ? "Good Morning" : h < 18 ? "Good Afternoon" : "Good Evening"; })()} 👋</Text>
           <Text style={styles.storeInfo}>{storeName} · Online</Text>
         </View>
-        <Pressable style={styles.settingsBtn} onPress={() => onNavigate("settings")}><Text style={styles.settingsIcon}>⚙️</Text></Pressable>
+        <Pressable style={styles.settingsBtn} onPress={() => onNavigate("settings")} accessibilityLabel="Settings" testID="more-settings-gear"><Text style={styles.settingsIcon}>⚙️</Text></Pressable>
       </View>
 
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
