@@ -31,12 +31,12 @@ export interface SupplierProduct {
   bnplAvailable?: boolean;    // Buy Now Pay Later eligibility
 }
 
+// V3-FIX-136: Card is browse-only — no inline qty/add controls
+// Add-to-purchase-cart happens only inside the detail surface
 type SupplierProductCardV3Props = {
   product: SupplierProduct;
-  orderQtyCases: number;
-  onQtyChange: (cases: number) => void;
-  onAddToCart: () => void;
-  onPress?: () => void;
+  orderQtyCases?: number; // Optional — for display badge only, not inline editing
+  onPress: () => void;
 };
 
 function getStockUrgency(days?: number): "urgent" | "low" | "ok" | "unknown" {
@@ -46,12 +46,10 @@ function getStockUrgency(days?: number): "urgent" | "low" | "ok" | "unknown" {
   return "ok";
 }
 
-export default function SupplierProductCardV3({ product, orderQtyCases, onQtyChange, onAddToCart, onPress }: SupplierProductCardV3Props) {
+export default function SupplierProductCardV3({ product, orderQtyCases, onPress }: SupplierProductCardV3Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const marginPct = Math.round((1 - product.ptrMinor / product.mrpMinor) * 100);
-  const totalUnits = orderQtyCases * product.caseSize;
-  const totalPaise = orderQtyCases * product.caseSize * product.ptrMinor;
+  const marginPct = product.mrpMinor > 0 ? Math.round((1 - product.ptrMinor / product.mrpMinor) * 100) : 0;
   const urgency = getStockUrgency(product.daysOfStock);
 
   return (
@@ -89,7 +87,7 @@ export default function SupplierProductCardV3({ product, orderQtyCases, onQtyCha
             </View>
           ) : null}
 
-          {/* Stock + Qty + Add */}
+          {/* V3-FIX-136: Browse-only — no inline qty/add. Tap card for details. */}
           <View style={styles.bottomRow}>
             <Text style={[
               styles.stockLabel,
@@ -101,28 +99,12 @@ export default function SupplierProductCardV3({ product, orderQtyCases, onQtyCha
                 ? `Stock: ${product.currentStock}${product.daysOfStock != null ? ` (${urgency === "urgent" ? "runs out today!" : urgency === "low" ? `${product.daysOfStock}d left` : `${product.daysOfStock}d`})` : ""}`
                 : "Stock: —"}
             </Text>
-            <View style={styles.qtyRow}>
-              <View style={styles.qtyBox}>
-                <Pressable style={styles.qtyBtn} onPress={() => onQtyChange(Math.max(product.moq, orderQtyCases - 1))} accessibilityLabel="Decrease">
-                  <Text style={styles.qtyBtnText}>−</Text>
-                </Pressable>
-                <Text style={styles.qtyVal}>{orderQtyCases}</Text>
-                <Pressable style={styles.qtyBtn} onPress={() => onQtyChange(orderQtyCases + 1)} accessibilityLabel="Increase">
-                  <Text style={styles.qtyBtnText}>+</Text>
-                </Pressable>
-              </View>
-              <Text style={styles.casesLabel}>cases</Text>
-              <Pressable style={styles.addBtn} onPress={onAddToCart} accessibilityLabel="Add to cart">
-                <Text style={styles.addBtnText}>+ Cart</Text>
-              </Pressable>
-            </View>
+            {(orderQtyCases ?? 0) > 0 ? (
+              <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{orderQtyCases} in cart</Text></View>
+            ) : (
+              <Text style={styles.tapHint}>Tap for details →</Text>
+            )}
           </View>
-
-          {/* Auto-calculated line */}
-          <Text style={styles.calcLine}>
-            {orderQtyCases} case{orderQtyCases > 1 ? "s" : ""} = {totalUnits} {product.unit} · ₹{Math.round(totalPaise / 100).toLocaleString("en-IN")} + GST
-            {product.deliveryDays ? ` · ${product.deliveryDays}d delivery` : ""}
-          </Text>
         </View>
       </View>
     </Pressable>
@@ -170,5 +152,9 @@ function createStyles(colors: ColorPalette) {
     addBtn: { backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
     addBtnText: { color: "#fff", fontSize: 11, fontWeight: "700" },
     calcLine: { fontSize: 9, color: colors.textTertiary, marginTop: 4 },
+    // V3-FIX-136: Browse-only card styles
+    cartBadge: { backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+    cartBadgeText: { color: "#fff", fontSize: 10, fontWeight: "700" },
+    tapHint: { fontSize: 11, color: colors.textTertiary, fontWeight: "500" },
   });
 }

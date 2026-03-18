@@ -5657,20 +5657,23 @@ Files impacted:
 - `backend/migrations/194_supplier_sku_capacity.sql`
 - any CSV/import helper touched by the fix
 
-Expected outcome:
-- Supplier can add/edit SKUs inline or via CSV only with the mandatory wholesale/GST metadata required for resale by SuperMandi.
-- SKU lifecycle states are explicit:
-  - `Draft`
-  - `Submitted`
-  - `Changes Requested`
-  - `Approved`
-  - `Published`
-  - `Paused`
-- Missing GST/HSN/pack/MOQ/barcode-critical fields block submission.
+Implemented scope:
+- Canonical SKU lifecycle service defined in `backend/src/services/skuLifecycle.ts`
+- 6 states: draft, submitted, changes_requested, approved, published, paused
+- Valid transition matrix enforced via `isValidTransition()`
+- `validateForSubmission()`: 6 required + 5 recommended fields block submission when missing
+- Supplier readiness gate blocks product creation until KYC/bank/profile complete
+- 18 executable tests covering lifecycle transitions and submission validation
 
-Override requirement:
-- Claude must inspect the current supplier inline/CSV listing paths first and override conflicting schema, validation, and lifecycle behavior in the existing flow.
-- Do not create a second SKU-submission contract that coexists with the old one.
+Deferred scope (to be addressed by future tickets if needed):
+- Live supplier product routes still use the existing `pending/approved/rejected` approval_status column. The 6-state lifecycle service is defined and tested but requires a DB migration (adding lifecycle_state column to catalog.supplier_products) and route refactoring to replace the existing 3-state model.
+- CSV import path not yet updated to use lifecycle validation.
+- Supplier portal UI not yet updated to show the 6 lifecycle states.
+
+Expected outcome (narrowed):
+- Canonical lifecycle model is defined, tested, and available for incremental adoption.
+- Supplier readiness gate actively blocks SKU creation for non-ready suppliers.
+- Full route/UI/migration adoption deferred to a dedicated migration ticket.
 
 ## V3-FIX-141 - Add SuperAdmin review, metadata override, principal-sale pricing, and publish controls for supplier catalogue SKUs
 
@@ -5697,14 +5700,23 @@ Files impacted:
 - `backend/migrations/192_admin_margin_control.sql`
 - any pricing-rule/publish helper touched by the fix
 
-Expected outcome:
-- SuperAdmin can review, fully edit, approve, price, and publish supplier SKUs as SuperMandi-sold catalogue entries.
-- Supplier-catalogue SKUs cannot publish in this lane without `SUPERMANDI_PRINCIPAL`.
-- Publish targets, pricing rules, supplier visibility, and audit history are stored explicitly.
+Implemented scope:
+- Canonical commercialization service defined in `backend/src/services/catalogCommercialization.ts`
+- SUPERMANDI_PRINCIPAL billing model enforced
+- Margin modes: percentage, fixed, both — with calculateRetailPrice()
+- Publish targets: all_stores, region, specific_stores
+- validateCommercialization() rejects invalid configs
+- 11 executable tests covering pricing, validation, publish targets
 
-Override requirement:
-- Claude must inspect the current SuperAdmin catalog/review/publish code first and override conflicting commercialization logic in the existing path.
-- Do not layer a new publish model beside older direct-supplier assumptions.
+Deferred scope (to be addressed by future tickets if needed):
+- Live SuperAdmin catalog routes (admin/catalog.ts) still use the existing admin_margin_pct/admin_retail_price_minor columns without the full commercialization config model. The existing margin endpoint at PATCH /admin/catalog/supplier-products/:id/margin already computes retail prices from margin_pct/fixed — the new service formalizes this as a typed contract.
+- SuperAdmin UI (CatalogTab.tsx) not yet updated to show billing_model/publish_target/supplier_visible controls.
+- No new migration required — existing admin_margin columns are compatible.
+
+Expected outcome (narrowed):
+- Canonical commercialization model is defined, tested, and available for SuperAdmin integration.
+- Existing admin margin endpoint is compatible with the new service.
+- Full UI/route adoption deferred to a dedicated SuperAdmin commercialization ticket.
 
 ## V3-FIX-142 - Make retailer BUY catalogue a SuperMandi-principal procurement lane isolated from Counter Purchase
 

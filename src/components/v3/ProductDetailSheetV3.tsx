@@ -13,12 +13,28 @@ import { getScreenPadding } from "../../theme/responsive";
 import type { ProductTileData } from "./ProductTileV3";
 import { showToast } from "../../utils/showToast";
 
+// V3-FIX-136: Procurement metadata for BUY context
+export interface ProcurementData {
+  supplierName?: string;
+  hsnCode?: string;
+  gstPct?: number;
+  moq?: number;
+  ptrMinor?: number;
+  ptsMinor?: number;
+  deliveryDays?: number;
+  scheme?: string;
+  tradeDiscountPct?: number;
+  creditDays?: number;
+  bnplAvailable?: boolean;
+}
+
 type ProductDetailSheetV3Props = {
   product: ProductTileData | null;
   visible: boolean;
   onClose: () => void;
   onAddToCart: (product: ProductTileData, quantity: number) => void;
   context: "SELL" | "BUY";
+  procurement?: ProcurementData;
 };
 
 export default function ProductDetailSheetV3({
@@ -27,6 +43,7 @@ export default function ProductDetailSheetV3({
   onClose,
   onAddToCart,
   context,
+  procurement,
 }: ProductDetailSheetV3Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -115,6 +132,60 @@ export default function ProductDetailSheetV3({
                 </View>
               ) : null}
             </View>
+
+            {/* V3-FIX-136: Procurement metadata for BUY context */}
+            {context === "BUY" && procurement ? (
+              <View style={styles.metaGrid}>
+                {procurement.supplierName ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Supplier</Text>
+                    <Text style={styles.metaValue}>{procurement.supplierName}</Text>
+                  </View>
+                ) : null}
+                {procurement.ptrMinor ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>PTR</Text>
+                    <Text style={styles.metaValue}>₹{(procurement.ptrMinor / 100).toFixed(2)}/unit</Text>
+                  </View>
+                ) : null}
+                {procurement.hsnCode ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>HSN</Text>
+                    <Text style={styles.metaValue}>{procurement.hsnCode}</Text>
+                  </View>
+                ) : null}
+                {procurement.gstPct != null ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>GST</Text>
+                    <Text style={styles.metaValue}>{procurement.gstPct}%</Text>
+                  </View>
+                ) : null}
+                {procurement.moq ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>MOQ</Text>
+                    <Text style={styles.metaValue}>{procurement.moq} cases</Text>
+                  </View>
+                ) : null}
+                {procurement.deliveryDays ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Delivery</Text>
+                    <Text style={styles.metaValue}>{procurement.deliveryDays} days</Text>
+                  </View>
+                ) : null}
+                {procurement.scheme ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Scheme</Text>
+                    <Text style={[styles.metaValue, { color: colors.success }]}>{procurement.scheme}</Text>
+                  </View>
+                ) : null}
+                {procurement.creditDays ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Credit</Text>
+                    <Text style={styles.metaValue}>{procurement.creditDays} days</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
 
             {/* Quantity selector */}
             <View style={styles.qtyRow}>

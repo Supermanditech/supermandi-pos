@@ -81,10 +81,8 @@ export default function BuyScreenV3() {
         // Extract unique suppliers
         const uniqueSuppliers = [...new Set(mapped.map((p) => p.supplierName).filter(Boolean))];
         setSuppliers(["All Suppliers", ...uniqueSuppliers]);
-        // Set default order qtys (MOQ for each)
-        const defaultQtys: Record<string, number> = {};
-        mapped.forEach((p) => { defaultQtys[p.id] = p.moq; });
-        setOrderQtys(defaultQtys);
+        // V3-FIX-136: Do NOT pre-seed purchase cart with MOQ on load
+        // Cart only changes via explicit CTA inside detail surface
         logger.debug("BuyV3", `loaded:${mapped.length} products from ${uniqueSuppliers.length} suppliers`);
       } catch (err) {
         logger.debug("BuyV3", `fetch_failed:${String(err)}`);
@@ -198,9 +196,7 @@ export default function BuyScreenV3() {
         renderItem={({ item }) => (
           <SupplierProductCardV3
             product={item}
-            orderQtyCases={orderQtys[item.id] ?? item.moq}
-            onQtyChange={(c) => handleQtyChange(item.id, c)}
-            onAddToCart={() => showToast(`${item.name} ×${orderQtys[item.id] ?? item.moq} cases added`)}
+            orderQtyCases={orderQtys[item.id]}
             onPress={() => setDetailProduct(item)}
           />
         )}
@@ -219,7 +215,7 @@ export default function BuyScreenV3() {
         }
       /> : null}
 
-      {/* V3-FIX-136: Product detail-first sheet for BUY */}
+      {/* V3-FIX-136: Product detail-first sheet for BUY with procurement metadata */}
       {detailProduct ? (
         <ProductDetailSheetV3
           product={{
@@ -230,7 +226,7 @@ export default function BuyScreenV3() {
             barcode: undefined,
             brand: detailProduct.brand,
             category: detailProduct.category,
-            stock: undefined,
+            stock: detailProduct.currentStock,
             caseSize: detailProduct.caseSize,
             unit: detailProduct.unit,
           }}
@@ -244,6 +240,19 @@ export default function BuyScreenV3() {
             setDetailProduct(null);
           }}
           context="BUY"
+          procurement={{
+            supplierName: detailProduct.supplierName,
+            hsnCode: detailProduct.hsnCode,
+            gstPct: detailProduct.gstPct,
+            moq: detailProduct.moq,
+            ptrMinor: detailProduct.ptrMinor,
+            ptsMinor: detailProduct.ptsMinor,
+            deliveryDays: detailProduct.deliveryDays,
+            scheme: detailProduct.scheme,
+            tradeDiscountPct: detailProduct.tradeDiscountPct,
+            creditDays: detailProduct.creditDays,
+            bnplAvailable: detailProduct.bnplAvailable,
+          }}
         />
       ) : null}
 

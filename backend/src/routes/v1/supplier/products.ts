@@ -386,9 +386,9 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
 router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
     // V3-FIX-139: Supplier readiness gate — block SKU submission until all requirements met
-    const pool = getPool();
-    if (pool && req.supplierId) {
-      const readiness = await checkSupplierReadiness(pool, req.supplierId);
+    const readinessPool = getPool();
+    if (readinessPool && req.supplierId) {
+      const readiness = await checkSupplierReadiness(readinessPool, req.supplierId);
       if (!readiness.ready) {
         return res.status(403).json({
           error: "SUPPLIER_NOT_READY",
@@ -484,7 +484,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
        LEFT JOIN catalog.supplier_products sp ON sp.supplier_id = s.id
        WHERE s.id = $1
        GROUP BY s.max_sku_capacity`,
-      [supplierId]
+      [req.supplierId]
     );
     if (capCheck.rows.length > 0 && capCheck.rows[0].current_count >= capCheck.rows[0].max_sku_capacity) {
       res.status(400).json({ error: { code: "SKU_LIMIT_REACHED", message: `SKU limit reached (${capCheck.rows[0].max_sku_capacity}). Contact SuperMandi to increase capacity.` } });
