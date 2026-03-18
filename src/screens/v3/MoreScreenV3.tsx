@@ -44,7 +44,7 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
       {/* Branded header */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.greeting}>Good Morning 👋</Text>
+          <Text style={styles.greeting}>{(() => { const h = new Date().getHours(); return h < 12 ? "Good Morning" : h < 18 ? "Good Afternoon" : "Good Evening"; })()} 👋</Text>
           <Text style={styles.storeInfo}>{storeName} · Online</Text>
         </View>
         <Pressable style={styles.settingsBtn} onPress={() => onNavigate("settings")}><Text style={styles.settingsIcon}>⚙️</Text></Pressable>
@@ -52,11 +52,20 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
 
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
         {/* Morning brief */}
+        {/* V3-FIX-081: Real yesterday data from summary API */}
         <View style={styles.morningCard}>
           <Text style={styles.morningTitle}>📊 Yesterday</Text>
-          {[["Sales", "₹15,400 (↑12%)"], ["Profit", "₹2,310"], ["Top Item", "Parle-G (47 sold)"]].map(([k, v]) => (
-            <View key={k} style={styles.morningRow}><Text style={styles.morningKey}>{k}</Text><Text style={styles.morningVal}>{v}</Text></View>
-          ))}
+          {summary ? (
+            [
+              ["Sales", `₹${Math.round((summary as any).yesterdaySales ?? 0).toLocaleString("en-IN")}`],
+              ["Bills", `${(summary as any).yesterdayBills ?? 0}`],
+              ["Top Item", (summary as any).topItem ?? "—"],
+            ].map(([k, v]) => (
+              <View key={k} style={styles.morningRow}><Text style={styles.morningKey}>{k}</Text><Text style={styles.morningVal}>{v}</Text></View>
+            ))
+          ) : (
+            <Text style={styles.morningVal}>Loading...</Text>
+          )}
         </View>
 
         {/* Stats cards */}

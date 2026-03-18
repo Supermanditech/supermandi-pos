@@ -46,12 +46,14 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
       { icon: "👤", label: "Staff", value: (() => { const s = useStaffSessionStore.getState().session; return s ? `${s.name} (${s.role})` : "Not logged in"; })() },
     ]},
     { title: "HARDWARE", items: [
-      { icon: "🖨️", label: "Printer", value: "Connected ✓", valueColor: colors.success },
-      { icon: "📟", label: "HID Scanner", value: "Active ✓", valueColor: colors.success },
+      // V3-FIX-084: Real hardware status from services, not hardcoded
+      { icon: "🖨️", label: "Printer", value: (() => { try { const ps = require("../../services/printerService").printerService; return ps.isConnected?.() ? "Connected ✓" : "Not connected"; } catch { return "Unknown"; } })(), valueColor: (() => { try { return require("../../services/printerService").printerService.isConnected?.() ? colors.success : colors.textTertiary; } catch { return colors.textTertiary; } })() },
+      { icon: "📟", label: "HID Scanner", value: (() => { try { const h = require("../../services/hidScannerService"); return h.isHidActive?.() ? "Active ✓" : "Inactive"; } catch { return "Unknown"; } })(), valueColor: (() => { try { return require("../../services/hidScannerService").isHidActive?.() ? colors.success : colors.textTertiary; } catch { return colors.textTertiary; } })() },
       { icon: "🔄", label: "Auto-Print", toggle: true, on: autoPrint, onToggle: () => setAutoPrint(!autoPrint) },
     ]},
     { title: "PAYMENTS", items: [
-      { icon: "📱", label: "UPI ID", value: "store@upi" },
+      // V3-FIX-084: Real UPI ID from settings store
+      { icon: "📱", label: "UPI ID", value: (useSettingsStore.getState() as any).upiVpa ?? "Not configured" },
       { icon: "⚡", label: "Express Checkout", toggle: true, on: expressCheckout, onToggle: () => setExpressCheckout(!expressCheckout) },
     ]},
     { title: "PREFERENCES", items: [
@@ -60,7 +62,20 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
       { icon: "🔊", label: "Sounds", toggle: true, on: soundEnabled, onToggle: () => setSoundEnabled(!soundEnabled) },
     ]},
     { title: "DATA", items: [
-      { icon: "☁️", label: "Last Sync", value: "2 min ago ✓", valueColor: colors.success },
+      // V3-FIX-084: Real last sync time from settings store
+      { icon: "☁️", label: "Last Sync", value: (() => {
+        const ts = (useSettingsStore.getState() as any).lastSyncAt;
+        if (!ts) return "Never";
+        const ago = Math.round((Date.now() - new Date(ts).getTime()) / 60000);
+        if (ago < 1) return "Just now ✓";
+        if (ago < 60) return `${ago} min ago ✓`;
+        return `${Math.round(ago / 60)}h ago`;
+      })(), valueColor: (() => {
+        const ts = (useSettingsStore.getState() as any).lastSyncAt;
+        if (!ts) return colors.textTertiary;
+        const ago = (Date.now() - new Date(ts).getTime()) / 60000;
+        return ago < 10 ? colors.success : ago < 60 ? colors.warning : colors.error;
+      })() },
       { icon: "📤", label: "Pending", value: "0 items" },
     ]},
   ];

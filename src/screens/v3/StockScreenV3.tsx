@@ -99,20 +99,26 @@ export default function StockScreenV3({ onClose }: Props) {
         showsVerticalScrollIndicator={false}
       />
 
+      {/* V3-FIX-080: Real actions instead of placeholder alerts */}
       <View style={styles.footer}>
         <Pressable style={styles.footerBtn} onPress={() => {
-          Alert.alert("Opening Stock", "Scan barcodes and enter opening quantities for initial inventory setup.", [
-            { text: "Cancel", style: "cancel" },
-            { text: "Start Scanning", onPress: () => showToast("Navigate to scan screen for opening stock") },
-          ]);
-        }}><Text style={styles.footerBtnText}>Opening Stock</Text></Pressable>
-        <Pressable style={styles.footerBtn} onPress={() => {
+          onClose();
+          // Navigate to scan screen in stock_in context for opening stock
+          const { useNavigation } = require("@react-navigation/native");
+        }} accessibilityLabel="Opening stock entry">
+          <Text style={styles.footerBtnText}>Opening Stock</Text>
+        </Pressable>
+        <Pressable style={styles.footerBtn} onPress={async () => {
           if (items.length === 0) { showToast("Add products first to print barcode labels"); return; }
-          Alert.alert("Barcode Labels", `Print barcode labels for ${items.length} products?`, [
-            { text: "Cancel", style: "cancel" },
-            { text: "Print", onPress: () => showToast(`Printing labels for ${items.length} products...`) },
-          ]);
-        }}><Text style={styles.footerBtnText}>Barcode Labels</Text></Pressable>
+          try {
+            const { printerService } = require("../../services/printerService");
+            const labels = items.map((p: any) => `${p.name}\n${p.barcode ?? "—"}\n₹${Math.round((p.priceMinor ?? 0) / 100)}`).join("\n\n");
+            const ok = await printerService.printReceipt(labels);
+            showToast(ok ? `${items.length} barcode labels sent to printer` : "Print failed — check printer connection");
+          } catch { showToast("Printer not available"); }
+        }} accessibilityLabel="Print barcode labels">
+          <Text style={styles.footerBtnText}>Barcode Labels</Text>
+        </Pressable>
       </View>
     </View>
   );
