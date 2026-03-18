@@ -3,6 +3,7 @@ import { View, Pressable, StyleSheet, Text } from "react-native";
 import Svg, { Rect, Circle } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding, getHeaderSpacing, getNavIconSize } from "../../theme/responsive";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { isOnline as checkOnline } from "../../services/networkStatus";
 
@@ -58,9 +59,10 @@ export default function BrandedHeader({ onMenuPress }: BrandedHeaderProps) {
 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
+    // V3-HARDEN-111: Responsive header spacing
     container: {
       backgroundColor: colors.primary,
-      paddingHorizontal: 16,
+      paddingHorizontal: getScreenPadding(),
       paddingVertical: 10,
       flexDirection: "row",
       alignItems: "center",
@@ -69,7 +71,7 @@ function createStyles(colors: ColorPalette) {
     left: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 8,
+      gap: getHeaderSpacing(),
     },
     brandText: {
       color: "#FFFFFF",
@@ -80,7 +82,7 @@ function createStyles(colors: ColorPalette) {
     right: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 6,
+      gap: getHeaderSpacing(),
     },
     statusPill: {
       flexDirection: "row",
@@ -107,10 +109,11 @@ function createStyles(colors: ColorPalette) {
       fontSize: 10,
       fontWeight: "600",
     },
+    // V3-HARDEN-111: Responsive menu button size
     menuButton: {
       backgroundColor: "rgba(255,255,255,0.15)",
-      width: 32,
-      height: 32,
+      width: getNavIconSize() + 8,
+      height: getNavIconSize() + 8,
       borderRadius: 10,
       alignItems: "center",
       justifyContent: "center",

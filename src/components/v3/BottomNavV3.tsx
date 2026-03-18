@@ -3,6 +3,7 @@ import { View, Pressable, StyleSheet, Text } from "react-native";
 import Svg, { Path, Circle, Line } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getNavIconSize } from "../../theme/responsive";
 
 // STG-552: POS v3 4-tab bottom navigation — SELL / BUY / STORE / MORE
 export type V3Tab = "SELL" | "BUY" | "STORE" | "MORE";
@@ -127,9 +128,10 @@ function createStyles(colors: ColorPalette) {
       paddingBottom: 4,
       gap: 3,
     },
+    // V3-HARDEN-111: Responsive icon pill sizing
     iconPill: {
-      width: 56,
-      height: 32,
+      width: getNavIconSize() * 2.3,
+      height: getNavIconSize() + 8,
       borderRadius: 16,
       alignItems: "center",
       justifyContent: "center",

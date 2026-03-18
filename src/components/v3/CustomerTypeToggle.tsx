@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { View, Pressable, StyleSheet, Text } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding, getChipPadding, getChipFontSize } from "../../theme/responsive";
 import type { SellMode } from "../../stores/cartStore";
 
 // STG-553: Retail / Bulk trade toggle for sell screen
@@ -44,18 +45,19 @@ export default function CustomerTypeToggle({ mode, onModeChange }: CustomerTypeT
 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
+    // V3-HARDEN-111: Responsive toggle sizing
     container: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingHorizontal: 14,
+      paddingHorizontal: getScreenPadding(),
       paddingVertical: 6,
       backgroundColor: colors.surface,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
     label: {
-      fontSize: 11,
+      fontSize: getChipFontSize(),
       fontWeight: "700",
       color: colors.textTertiary,
       letterSpacing: 0.3,
@@ -67,7 +69,7 @@ function createStyles(colors: ColorPalette) {
       overflow: "hidden",
     },
     option: {
-      paddingHorizontal: 16,
+      paddingHorizontal: getChipPadding(),
       paddingVertical: 6,
       borderRadius: 10,
     },
@@ -78,7 +80,7 @@ function createStyles(colors: ColorPalette) {
       backgroundColor: colors.accent,
     },
     optionText: {
-      fontSize: 11,
+      fontSize: getChipFontSize(),
       fontWeight: "700",
       color: colors.textTertiary,
     },

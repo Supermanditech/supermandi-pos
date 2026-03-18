@@ -4,7 +4,7 @@
  * Back flow: child → chooser → cart
  */
 import React, { useMemo, useState, useCallback, useRef } from "react";
-import { View, Pressable, TextInput, StyleSheet, Text, ScrollView, Modal, Alert } from "react-native";
+import { View, Pressable, TextInput, KeyboardAvoidingView, Platform, StyleSheet, Text, ScrollView, Modal, Alert } from "react-native";
 import Svg, { Path, Rect, Circle, Line } from "react-native-svg";
 
 import { useThemeColors } from "../../theme";

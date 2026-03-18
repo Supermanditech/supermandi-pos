@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from "react";
-import { View, FlatList, TextInput, Pressable, StyleSheet, Text, ScrollView, ActivityIndicator, Modal, Linking } from "react-native";
+import { View, FlatList, TextInput, Pressable, KeyboardAvoidingView, Platform, StyleSheet, Text, ScrollView, ActivityIndicator, Modal, Linking } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
