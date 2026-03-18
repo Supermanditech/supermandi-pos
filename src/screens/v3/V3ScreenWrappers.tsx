@@ -26,10 +26,8 @@ import SettingsScreenV3 from "./SettingsScreenV3";
 
 type Nav = NativeStackNavigationProp<any>;
 
-// V3-FIX-157: Shared scan result for intent-specific routing
-// BuyScreenV3 and CounterPurchaseScreenV3 read these on mount/focus
-export const BuyScreenV3ScanResult = { barcode: null as string | null, timestamp: 0 };
-export const CounterPurchaseScanResult = { barcode: null as string | null, timestamp: 0 };
+// V3-FIX-157: Reactive scan result store for intent-specific routing
+import { useScanResultStore } from "../../stores/scanResultStore";
 
 // V3-FIX-071: Payment chooser navigates to child screens
 export function V3PaymentWrapper() {
@@ -88,20 +86,11 @@ export function V3ScanWrapper({ route }: any) {
     defaultContext={context}
     onClose={() => nav.goBack()}
     onProductFound={(barcode, scanContext) => {
-      // V3-FIX-157: Intent-specific routing on product found
-      if (scanContext === "procurement") {
-        // V3-FIX-157: Set scanned barcode for BUY to consume on return
-        BuyScreenV3ScanResult.barcode = barcode;
-        BuyScreenV3ScanResult.timestamp = Date.now();
-        nav.goBack(); // Returns to BUY tab which reads the result
-      } else if (scanContext === "counter_purchase") {
-        CounterPurchaseScanResult.barcode = barcode;
-        CounterPurchaseScanResult.timestamp = Date.now();
-        nav.goBack();
-      } else {
-        // SELL: scan already added to cart, just go back
-        nav.goBack();
+      // V3-FIX-157: Intent-specific routing via reactive store
+      if (scanContext === "procurement" || scanContext === "counter_purchase") {
+        useScanResultStore.getState().setScanResult(barcode, scanContext);
       }
+      nav.goBack();
     }}
     onNewProduct={(barcode) => nav.navigate("V3NewProduct", { barcode })}
   />;

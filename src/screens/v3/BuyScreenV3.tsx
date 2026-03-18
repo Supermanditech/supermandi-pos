@@ -17,8 +17,8 @@ import { getCatalog, type CatalogProduct } from "../../services/api/catalogApi";
 import { createOrder, submitOrder, type CreateOrderParams } from "../../services/api/orderApi";
 import { getDeviceStoreId } from "../../services/deviceSession";
 import { logger } from "../../services/logger";
-// V3-FIX-157: Consume scan result from procurement scan
-import { BuyScreenV3ScanResult } from "./V3ScreenWrappers";
+// V3-FIX-157: Reactive scan result store for procurement scan handoff
+import { useScanResultStore } from "../../stores/scanResultStore";
 
 // V3-FIX-076: BUY tab — no fabricated wholesale metadata
 
@@ -28,6 +28,7 @@ function catalogToSupplier(p: CatalogProduct): SupplierProduct {
   return {
     id: p.id,
     supplierId: raw.supplierId ?? raw.supplier_id ?? "",
+    barcode: raw.barcode ?? raw.primary_barcode ?? undefined, // V3-FIX-157: carry barcode for scan matching
     name: p.name,
     brand: p.brand ?? "",
     category: p.category ?? "",
@@ -95,15 +96,18 @@ export default function BuyScreenV3() {
     void fetchCatalog();
   }, []);
 
-  // V3-FIX-157: Consume scanned barcode from procurement scan and auto-open detail
+  // V3-FIX-157: Reactive subscription to scan result store
+  const scanBarcode = useScanResultStore((s) => s.barcode);
+  const scanIntent = useScanResultStore((s) => s.intent);
+  const scanTimestamp = useScanResultStore((s) => s.timestamp);
+
   useEffect(() => {
-    if (!loading && products.length > 0 && BuyScreenV3ScanResult.barcode) {
-      const scannedBarcode = BuyScreenV3ScanResult.barcode;
-      // Clear the result so it doesn't re-trigger
-      BuyScreenV3ScanResult.barcode = null;
-      // Find the matching product and open its detail
+    if (!loading && products.length > 0 && scanBarcode && scanIntent === "procurement") {
+      // Clear immediately to prevent re-trigger
+      useScanResultStore.getState().clearScanResult();
+      // Find matching product by barcode or ID
       const match = products.find((p) =>
-        p.id === scannedBarcode || (p as any).barcode === scannedBarcode
+        p.barcode === scanBarcode || p.id === scanBarcode
       );
       if (match) {
         setDetailProduct(match);
@@ -112,7 +116,7 @@ export default function BuyScreenV3() {
         showToast(`Scanned product not found in catalogue`);
       }
     }
-  }, [loading, products]);
+  }, [loading, products, scanBarcode, scanTimestamp]);
 
   // V3-FIX-076: Filter products by supplier, category, and search query
   const filteredProducts = useMemo(() => {

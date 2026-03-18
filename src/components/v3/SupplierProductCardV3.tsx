@@ -9,6 +9,7 @@ import { getScreenPadding } from "../../theme/responsive";
 export interface SupplierProduct {
   id: string;
   supplierId: string;        // authoritative supplier identity for orders
+  barcode?: string;           // V3-FIX-157: product barcode for scan matching
   name: string;
   brand: string;
   category: string;

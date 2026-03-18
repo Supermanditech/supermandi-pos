@@ -150,29 +150,28 @@ describe("V3-FIX-157: V3ScanWrapper mounted routing (runtime)", () => {
     expect(screen.getByText("Scan Barcode")).toBeTruthy();
   });
 
-  it("procurement found sets BuyScreenV3ScanResult and goes back", () => {
-    const { BuyScreenV3ScanResult } = require("../../screens/v3/V3ScreenWrappers");
-    BuyScreenV3ScanResult.barcode = null;
-    BuyScreenV3ScanResult.timestamp = 0;
+  it("procurement found sets reactive scan result store and goes back", () => {
+    const { useScanResultStore } = require("../../stores/scanResultStore");
+    useScanResultStore.getState().clearScanResult();
 
     const route = { params: { defaultContext: "procurement" } };
     render(<V3ScanWrapper route={route} />);
 
-    // Scan a known barcode
     const input = screen.getByPlaceholderText(/Type barcode/);
     fireEvent.changeText(input, "890100001");
     fireEvent(input, "submitEditing");
 
-    // Procurement success should set the scan result for BUY to consume
-    expect(BuyScreenV3ScanResult.barcode).toBe("890100001");
-    expect(BuyScreenV3ScanResult.timestamp).toBeGreaterThan(0);
-    // And go back to BUY tab
+    // Procurement success should set the reactive store
+    const state = useScanResultStore.getState();
+    expect(state.barcode).toBe("890100001");
+    expect(state.intent).toBe("procurement");
+    expect(state.timestamp).toBeGreaterThan(0);
     expect(mockGoBack).toHaveBeenCalled();
   });
 
-  it("sell found does NOT set BuyScreenV3ScanResult", () => {
-    const { BuyScreenV3ScanResult } = require("../../screens/v3/V3ScreenWrappers");
-    BuyScreenV3ScanResult.barcode = null;
+  it("sell found does NOT set scan result store", () => {
+    const { useScanResultStore } = require("../../stores/scanResultStore");
+    useScanResultStore.getState().clearScanResult();
 
     const route = { params: { defaultContext: "sell" } };
     render(<V3ScanWrapper route={route} />);
@@ -182,7 +181,57 @@ describe("V3-FIX-157: V3ScanWrapper mounted routing (runtime)", () => {
     fireEvent(input, "submitEditing");
 
     // SELL success should NOT set procurement scan result
-    expect(BuyScreenV3ScanResult.barcode).toBeNull();
+    expect(useScanResultStore.getState().barcode).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// V3-FIX-157: BuyScreenV3 destination consumption proof
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// BuyScreenV3 needs additional mocks
+jest.mock("../../services/networkStatus", () => ({ isOnline: jest.fn().mockResolvedValue(true) }));
+jest.mock("../../services/deviceSession", () => ({ getDeviceStoreId: jest.fn().mockResolvedValue("store-001") }));
+jest.mock("../../services/api/catalogApi", () => ({
+  getSellCategoryGroups: jest.fn().mockResolvedValue([]),
+  getCatalog: jest.fn().mockResolvedValue({
+    data: [{ id: "sp1", name: "Tata Tea Gold", brand: "Tata", category: "Tea", unit: "pcs",
+      barcode: "890200001", supplierId: "s1", supplierName: "Tata", moq: 2, caseSize: 12,
+      hsnCode: "0902", gstRate: 5, mrpMinor: 28000, ptrMinor: 22400, deliveryDays: 3 }],
+    total: 1,
+  }),
+}));
+jest.mock("../../services/api/orderApi", () => ({ createOrder: jest.fn(), submitOrder: jest.fn() }));
+jest.mock("../../components/v3/ProductDetailSheetV3", () => {
+  const { View, Text } = require("react-native");
+  return { __esModule: true, default: ({ product, visible }: any) =>
+    visible && product ? <View testID="buy-detail-opened"><Text>{product.name}</Text></View> : null
+  };
+});
+
+import BuyScreenV3 from "../../screens/v3/BuyScreenV3";
+
+describe("V3-FIX-157: BuyScreenV3 consumes scan result (runtime)", () => {
+  beforeEach(() => { resetDuplicateState(); });
+
+  it("opens detail for scanned barcode via reactive store", async () => {
+    const { useScanResultStore } = require("../../stores/scanResultStore");
+    useScanResultStore.getState().clearScanResult();
+
+    render(<BuyScreenV3 />);
+
+    // Wait for catalog to load
+    await waitFor(() => {
+      expect(screen.getByText("Tata Tea Gold")).toBeTruthy();
+    });
+
+    // Simulate: scan result arrives from wrapper
+    useScanResultStore.getState().setScanResult("890200001", "procurement");
+
+    // BuyScreenV3 should consume the result and open detail
+    await waitFor(() => {
+      expect(screen.getByTestId("buy-detail-opened")).toBeTruthy();
+    });
   });
 });
 
