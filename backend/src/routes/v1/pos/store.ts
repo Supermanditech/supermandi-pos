@@ -11,7 +11,8 @@ export const posStoreRouter = Router();
 // POS device sets UPI VPA + optional bank details after activation
 // Auth: requireDeviceToken (x-device-token header)
 // =============================================================================
-function isValidUpiVpa(vpa: string): boolean {
+// V3-HARDEN-127: Exported for canonical validation + test coverage
+export function isValidUpiVpa(vpa: string): boolean {
   const vpaRegex = /^[a-zA-Z0-9._-]{3,}@[a-zA-Z0-9]{2,}$/;
   return vpaRegex.test(vpa) && vpa.length >= 6 && vpa.length <= 100;
 }

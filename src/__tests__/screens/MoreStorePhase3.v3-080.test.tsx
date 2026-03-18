@@ -282,8 +282,9 @@ describe("V3-FIX-083: Reports screen", () => {
 describe("V3-FIX-084: Settings screen", () => {
   it("renders real UPI ID from settings store (not store@upi)", () => {
     render(<SettingsScreenV3 onClose={jest.fn()} onSwitchStaff={jest.fn()} onLogout={jest.fn()} />);
-    expect(screen.getByText("test@upi")).toBeTruthy();
-    expect(screen.queryByText("store@upi")).toBeNull();
+    // V3-FIX-124: UPI row now shows edit pencil icon, so use partial match
+    expect(screen.getByText(/test@upi/)).toBeTruthy();
+    expect(screen.queryByText(/^store@upi/)).toBeNull();
   });
 
   it("renders real last sync time (not 2 min ago)", () => {

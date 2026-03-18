@@ -55,8 +55,9 @@ interface UpiInitResponse {
 /**
  * Generate UPI intent string for QR code
  * Format: upi://pay?pa={vpa}&pn={name}&am={amount}&cu=INR&tr={txn_ref}&tn={note}
+ * V3-HARDEN-127: Exported for canonical contract testing
  */
-function generateUpiIntentString(params: {
+export function generateUpiIntentString(params: {
   vpa: string;
   payeeName: string;
   amountRupees: number;
@@ -171,6 +172,19 @@ posPaymentsRouter.post(
         return res.status(400).json({ error: "Sale is already paid" });
       }
 
+      // V3-FIX-123: Verify amountMinor matches committed sale total
+      // The QR amount MUST come from the committed sale, not client-computed math
+      const saleTotal = Number(sale.total_minor);
+      if (saleTotal > 0 && amountMinor !== saleTotal) {
+        await client.query("ROLLBACK");
+        log.warn(`[V3-FIX-123] UPI amount mismatch: client=${amountMinor} sale=${saleTotal} saleId=${saleId}`);
+        return res.status(400).json({
+          error: "Payment amount does not match sale total",
+          code: "AMOUNT_MISMATCH",
+          expected: saleTotal,
+        });
+      }
+
       // 2. Get store's UPI VPA
       const storeResult = await client.query(
         `SELECT s.id, s.name, s.upi_vpa
@@ -241,7 +255,7 @@ posPaymentsRouter.post(
         const rzpOrder = await createRazorpayOrder({
           amountPaise: amountMinor,
           receipt: `sale_${saleId.substring(0, 8)}_${Date.now().toString(36)}`,
-          notes: { saleId, storeId, deviceId },
+          notes: { saleId, storeId: storeId!, deviceId },
         });
 
         if (rzpOrder) {
@@ -600,7 +614,7 @@ posPaymentsRouter.post(
             const rzpOrder = await createRazorpayOrder({
               amountPaise: p.amountMinor,
               receipt: `split_${saleId.substring(0, 8)}_${Date.now().toString(36)}`,
-              notes: { saleId, storeId, type: 'split' },
+              notes: { saleId, storeId: storeId!, type: 'split' },
             });
             orderId = rzpOrder?.id || generateOrderId();
             qrData = generateUpiIntentString({
@@ -852,7 +866,7 @@ posPaymentsRouter.post(
         if (deductionItems.length > 0) {
           await applyBulkDeductions({
             client,
-            storeId,
+            storeId: storeId!,
             items: deductionItems,
           });
           log.info(`[SM-013] STG-106: Stock deducted for split sale ${payment.sale_id}, ${deductionItems.length} items`);

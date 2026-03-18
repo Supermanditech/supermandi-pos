@@ -1,9 +1,9 @@
-import React, { useMemo, useCallback } from "react";
-import { View, FlatList, Pressable, StyleSheet, Text, Share } from "react-native";
+import React, { useMemo, useCallback, useState } from "react";
+import { View, FlatList, Pressable, StyleSheet, Text, Share, Modal, TextInput, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
-import { useCartStore, type CartItem } from "../../stores/cartStore";
+import { useCartStore, type CartItem, type ItemDiscount } from "../../stores/cartStore";
 import CartItemRowV3 from "./CartItemRowV3";
 import { showToast } from "../../utils/showToast";
 
@@ -26,8 +26,61 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
   const discountAmount = useCartStore((s) => s.discountAmount);
   const clearCart = useCartStore((s) => s.clearCart);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
+  const updatePrice = useCartStore((s) => s.updatePrice);
+  const applyItemDiscount = useCartStore((s) => s.applyItemDiscount);
+  const removeItemDiscount = useCartStore((s) => s.removeItemDiscount);
   const removeItem = useCartStore((s) => s.removeItem);
   const removeDiscount = useCartStore((s) => s.removeDiscount);
+
+  // V3-FIX-121: Cart line edit state
+  const [editingItem, setEditingItem] = useState<CartItem | null>(null);
+  const [editPrice, setEditPrice] = useState("");
+  const [editDiscountType, setEditDiscountType] = useState<"percentage" | "fixed">("percentage");
+  const [editDiscountValue, setEditDiscountValue] = useState("");
+  const [editDiscountReason, setEditDiscountReason] = useState("");
+
+  const openEditModal = useCallback((item: CartItem) => {
+    setEditingItem(item);
+    setEditPrice(String(item.priceMinor / 100));
+    if (item.itemDiscount) {
+      setEditDiscountType(item.itemDiscount.type);
+      setEditDiscountValue(String(item.itemDiscount.type === "fixed" ? item.itemDiscount.value / 100 : item.itemDiscount.value));
+      setEditDiscountReason(item.itemDiscount.reason ?? "");
+    } else {
+      setEditDiscountType("percentage");
+      setEditDiscountValue("");
+      setEditDiscountReason("");
+    }
+  }, []);
+
+  const handleSaveEdit = useCallback(() => {
+    if (!editingItem) return;
+    // Update price if changed
+    const newPriceRupees = parseFloat(editPrice);
+    if (!isNaN(newPriceRupees) && newPriceRupees > 0) {
+      const newPriceMinor = Math.round(newPriceRupees * 100);
+      if (newPriceMinor !== editingItem.priceMinor) {
+        updatePrice(editingItem.id, newPriceMinor);
+      }
+    }
+    // Update item discount
+    const discVal = parseFloat(editDiscountValue);
+    if (!isNaN(discVal) && discVal > 0) {
+      const discountPayload: ItemDiscount = {
+        type: editDiscountType,
+        value: editDiscountType === "fixed" ? Math.round(discVal * 100) : discVal,
+        reason: editDiscountReason.trim() || undefined,
+      };
+      applyItemDiscount(editingItem.id, discountPayload);
+    } else {
+      // Remove discount if value cleared
+      if (editingItem.itemDiscount) {
+        removeItemDiscount(editingItem.id);
+      }
+    }
+    showToast(`${editingItem.name} updated`);
+    setEditingItem(null);
+  }, [editingItem, editPrice, editDiscountType, editDiscountValue, editDiscountReason, updatePrice, applyItemDiscount, removeItemDiscount]);
 
   const isBulk = sellMode === "bulk";
   const subtotal = total;
@@ -54,8 +107,9 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
       onIncrement={() => handleIncrement(item.id, item.quantity)}
       onDecrement={() => handleDecrement(item.id, item.quantity)}
       onRemove={() => removeItem(item.id)}
+      onEdit={() => openEditModal(item)}
     />
-  ), [handleIncrement, handleDecrement, removeItem]);
+  ), [handleIncrement, handleDecrement, removeItem, openEditModal]);
 
   if (!visible || items.length === 0) return null;
 
@@ -140,6 +194,72 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
           <Text style={styles.payText}>PAY ₹{Math.round(grandTotal / 100).toLocaleString("en-IN")} →</Text>
         </Pressable>
       </View>
+
+      {/* V3-FIX-121: Cart line edit modal — price override + item discount */}
+      <Modal visible={editingItem !== null} transparent animationType="slide" onRequestClose={() => setEditingItem(null)} testID="cart-edit-modal">
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+          <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
+            <ScrollView style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "80%" }} contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled">
+              <Text style={{ fontSize: 18, fontWeight: "800", color: colors.textPrimary, marginBottom: 4 }}>Edit Line</Text>
+              <Text style={{ fontSize: 14, color: colors.textTertiary, marginBottom: 16 }}>{editingItem?.name}</Text>
+
+              {/* Price override */}
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textTertiary, letterSpacing: 0.5, marginBottom: 4 }}>PRICE (₹)</Text>
+              <TextInput
+                style={{ padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, fontSize: 18, fontWeight: "700", color: colors.textPrimary }}
+                value={editPrice}
+                onChangeText={setEditPrice}
+                keyboardType="decimal-pad"
+                testID="cart-edit-price"
+              />
+
+              {/* Discount */}
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textTertiary, letterSpacing: 0.5, marginTop: 16, marginBottom: 4 }}>ITEM DISCOUNT</Text>
+              <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+                <Pressable
+                  style={{ flex: 1, padding: 10, borderRadius: 10, backgroundColor: editDiscountType === "percentage" ? colors.primary : colors.backgroundSecondary, alignItems: "center" }}
+                  onPress={() => setEditDiscountType("percentage")}
+                >
+                  <Text style={{ fontWeight: "700", color: editDiscountType === "percentage" ? "#fff" : colors.textSecondary }}>% Off</Text>
+                </Pressable>
+                <Pressable
+                  style={{ flex: 1, padding: 10, borderRadius: 10, backgroundColor: editDiscountType === "fixed" ? colors.primary : colors.backgroundSecondary, alignItems: "center" }}
+                  onPress={() => setEditDiscountType("fixed")}
+                >
+                  <Text style={{ fontWeight: "700", color: editDiscountType === "fixed" ? "#fff" : colors.textSecondary }}>₹ Off</Text>
+                </Pressable>
+              </View>
+              <TextInput
+                style={{ padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, fontSize: 16, fontWeight: "600", color: colors.textPrimary }}
+                value={editDiscountValue}
+                onChangeText={setEditDiscountValue}
+                keyboardType="decimal-pad"
+                placeholder={editDiscountType === "percentage" ? "e.g. 10" : "e.g. 50"}
+                placeholderTextColor={colors.textTertiary}
+                testID="cart-edit-discount-value"
+              />
+              <TextInput
+                style={{ padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, fontSize: 14, color: colors.textPrimary, marginTop: 8 }}
+                value={editDiscountReason}
+                onChangeText={setEditDiscountReason}
+                placeholder="Reason (optional)"
+                placeholderTextColor={colors.textTertiary}
+                testID="cart-edit-discount-reason"
+              />
+
+              {/* Actions */}
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 20 }}>
+                <Pressable onPress={() => setEditingItem(null)} style={{ flex: 1, padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, alignItems: "center" }}>
+                  <Text style={{ fontWeight: "700", color: colors.textSecondary }}>Cancel</Text>
+                </Pressable>
+                <Pressable onPress={handleSaveEdit} style={{ flex: 2, padding: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: "center" }} testID="cart-edit-save">
+                  <Text style={{ fontWeight: "800", color: "#fff" }}>Save</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }

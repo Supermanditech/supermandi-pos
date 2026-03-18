@@ -31,15 +31,18 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
   const [soundEnabled, setSoundEnabled] = React.useState(true);
 
   // Cross-platform modal state (replaces Alert.prompt for Android compatibility)
-  type ModalMode = "add-staff" | "owner-pin" | null;
+  type ModalMode = "add-staff" | "owner-pin" | "edit-upi" | null;
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [modalStep, setModalStep] = useState(0); // 0=name, 1=pin for add-staff; 0=pin, 1=confirm for owner-pin
   const [modalName, setModalName] = useState("");
   const [modalPin, setModalPin] = useState("");
   const [modalConfirmPin, setModalConfirmPin] = useState("");
   const [modalError, setModalError] = useState("");
+  // V3-FIX-124: UPI edit state
+  const [upiVpaInput, setUpiVpaInput] = useState("");
+  const [upiSaving, setUpiSaving] = useState(false);
 
-  type SettingsItem = { icon: string; label: string; value?: string; valueColor?: string; toggle?: boolean; on?: boolean; onToggle?: () => void; langToggle?: boolean };
+  type SettingsItem = { icon: string; label: string; value?: string; valueColor?: string; toggle?: boolean; on?: boolean; onToggle?: () => void; langToggle?: boolean; onTap?: () => void };
   type SettingsSection = { title: string; items: SettingsItem[] };
   const SECTIONS: SettingsSection[] = [
     { title: "STORE", items: [
@@ -53,8 +56,13 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
       { icon: "🔄", label: "Auto-Print", toggle: true, on: autoPrint, onToggle: () => setAutoPrint(!autoPrint) },
     ]},
     { title: "PAYMENTS", items: [
-      // V3-FIX-084: Real UPI ID from settings store
-      { icon: "📱", label: "UPI ID", value: (useSettingsStore.getState() as any).upiVpa ?? "Not configured" },
+      // V3-FIX-124: UPI ID — tappable to edit for owner/manager
+      { icon: "📱", label: "UPI ID", value: (useSettingsStore.getState() as any).upiVpa ?? "Not configured", onTap: () => {
+        const currentVpa = (useSettingsStore.getState() as any).upiVpa ?? "";
+        setUpiVpaInput(currentVpa);
+        setModalMode("edit-upi");
+        setModalError("");
+      }},
       { icon: "⚡", label: "Express Checkout", toggle: true, on: expressCheckout, onToggle: () => setExpressCheckout(!expressCheckout) },
     ]},
     { title: "PREFERENCES", items: [
@@ -90,10 +98,10 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
             <Text style={styles.sectionTitle}>{sec.title}</Text>
             <View style={styles.sectionCard}>
               {sec.items.map((item) => (
-                <View key={item.label} style={styles.row}>
+                <Pressable key={item.label} style={styles.row} onPress={item.onTap} disabled={!item.onTap}>
                   <Text style={styles.rowIcon}>{item.icon}</Text>
                   <Text style={styles.rowLabel}>{item.label}</Text>
-                  {item.value ? <Text style={[styles.rowValue, item.valueColor ? { color: item.valueColor, fontWeight: "600" } : {}]}>{item.value}</Text> : null}
+                  {item.value ? <Text style={[styles.rowValue, item.valueColor ? { color: item.valueColor, fontWeight: "600" } : {}]}>{item.value}{item.onTap ? " ✎" : ""}</Text> : null}
                   {item.toggle ? (
                     <Pressable style={[styles.toggle, item.on && styles.toggleOn]} onPress={item.onToggle}>
                       <View style={[styles.toggleThumb, item.on && styles.toggleThumbOn]} />
@@ -109,7 +117,7 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
                       </Pressable>
                     </View>
                   ) : null}
-                </View>
+                </Pressable>
               ))}
             </View>
           </View>
@@ -232,6 +240,57 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
                     </View>
                   </>
                 )}
+              </>
+            )}
+
+            {/* V3-FIX-124: UPI VPA edit modal */}
+            {modalMode === "edit-upi" && (
+              <>
+                <Text style={{ fontSize: 18, fontWeight: "800", marginBottom: 4 }}>Store UPI Address</Text>
+                <Text style={{ fontSize: 13, color: colors.textTertiary, marginBottom: 12 }}>Enter your store's UPI VPA (e.g., store@ybl)</Text>
+                <TextInput
+                  style={{ padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, fontSize: 16, fontWeight: "600" }}
+                  value={upiVpaInput}
+                  onChangeText={setUpiVpaInput}
+                  placeholder="yourstore@ybl"
+                  placeholderTextColor={colors.textTertiary}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoFocus
+                  testID="modal-upi-vpa"
+                />
+                {modalError ? <Text style={{ color: colors.error, fontSize: 12, marginTop: 6 }}>{modalError}</Text> : null}
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>
+                  <Pressable onPress={() => setModalMode(null)} style={{ flex: 1, padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, alignItems: "center" }}>
+                    <Text style={{ fontWeight: "700", color: colors.textSecondary }}>Cancel</Text>
+                  </Pressable>
+                  <Pressable onPress={async () => {
+                    const trimmed = upiVpaInput.trim().toLowerCase();
+                    // Client-side validation matching backend
+                    const vpaRegex = /^[a-zA-Z0-9._-]{3,}@[a-zA-Z0-9]{2,}$/;
+                    if (!trimmed || !vpaRegex.test(trimmed) || trimmed.length < 6) {
+                      setModalError("Invalid UPI VPA format. Expected: name@bank (e.g., store@ybl)");
+                      return;
+                    }
+                    const online = await isOnline();
+                    if (!online) { setModalError("Saving UPI requires internet"); return; }
+                    setUpiSaving(true);
+                    try {
+                      const { apiClient } = require("../../services/api/apiClient");
+                      const result = await apiClient.patch("/api/v1/pos/store/payment-settings", { upiVpa: trimmed });
+                      // Update local settings store
+                      (useSettingsStore.getState() as any).upiVpa = result.upiVpa ?? trimmed;
+                      showToast("Store UPI saved");
+                      setModalMode(null);
+                    } catch (err: any) {
+                      const msg = err?.response?.data?.error?.message ?? err?.response?.data?.error ?? err?.message ?? "Failed to save UPI";
+                      setModalError(typeof msg === "string" ? msg : JSON.stringify(msg));
+                    }
+                    setUpiSaving(false);
+                  }} disabled={upiSaving} style={{ flex: 2, padding: 14, borderRadius: 12, backgroundColor: upiSaving ? colors.border : colors.primary, alignItems: "center" }} testID="modal-upi-save">
+                    <Text style={{ fontWeight: "800", color: "#fff" }}>{upiSaving ? "Saving..." : "Save UPI"}</Text>
+                  </Pressable>
+                </View>
               </>
             )}
 

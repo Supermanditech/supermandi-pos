@@ -20,6 +20,7 @@ import { useProductsStore, type Product } from "../../stores/productsStore";
 import { useCartStore } from "../../stores/cartStore";
 import { searchStoreProducts } from "../../services/api/sellSearchApi";
 import { getSellCategoryGroups, type SellCategoryGroup } from "../../services/api/catalogApi";
+import { buildCartItemFromTile, buildCartItemFromSearch } from "../../services/cartPayload";
 import { formatMoney } from "../../utils/money";
 import { showToast } from "../../utils/showToast";
 import { getDeviceStoreId } from "../../services/deviceSession";
@@ -173,7 +174,7 @@ export default function SellScreenV3() {
       showToast(`${result.name} ×${existing.quantity + 1}`);
     } else {
       // V3-FIX-120: Use canonical cart payload builder
-      addItem(require("../../services/cartPayload").buildCartItemFromSearch(result));
+      addItem(buildCartItemFromSearch(result));
       showToast(`${result.name} added`);
     }
     setSearchVisible(false);
@@ -220,30 +221,15 @@ export default function SellScreenV3() {
     [cartItems]
   );
 
-  // Add product to cart
+  // V3-FIX-120: Tile tap uses canonical cart payload builder
   const handleAddProduct = useCallback(
     (product: ProductTileData) => {
-      const existing = cartItems.find((i) => i.id === product.id || i.barcode === product.barcode);
+      const existing = cartItems.find((i) => i.id === (product.barcode ?? product.id) || i.barcode === product.barcode);
       if (existing) {
         useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
         showToast(`${product.name} ×${existing.quantity + 1}`);
       } else {
-        const price = sellMode === "bulk" && product.priceTradeMinor
-          ? product.priceTradeMinor
-          : product.priceMrpMinor;
-        addItem({
-          id: product.barcode ?? product.id,
-          name: product.name,
-          priceMinor: price,
-          currency: "INR",
-          barcode: product.barcode,
-          metadata: {
-            brand: product.brand,
-            caseSize: product.caseSize,
-            unit: product.unit,
-            sellMode,
-          },
-        });
+        addItem(buildCartItemFromTile(product, sellMode));
         showToast(`${product.name} added`);
       }
     },

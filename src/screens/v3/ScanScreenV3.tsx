@@ -10,6 +10,7 @@ import { showToast } from "../../utils/showToast";
 import { useProductsStore } from "../../stores/productsStore";
 import { useCartStore } from "../../stores/cartStore";
 import { setHidScanHandler } from "../../services/hidScannerService";
+import { buildCartItem } from "../../services/cartPayload";
 import { logger } from "../../services/logger";
 
 // V3-003: Context-aware barcode scan — wired to real productsStore + cartStore
@@ -68,7 +69,6 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
           showToast(`${product.name} ×${existing.quantity + 1}`);
         } else {
           // V3-FIX-120: Use canonical cart payload
-          const { buildCartItem } = require("../../services/cartPayload");
           addItem(buildCartItem(product));
           showToast(`${product.name} added to cart`);
         }
@@ -104,8 +104,7 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
               showToast(`${product.name} ×${existing.quantity + 1}`);
             } else {
               // V3-FIX-120: Use canonical cart payload
-              const { buildCartItem: buildCartItemHid } = require("../../services/cartPayload");
-              addItem(buildCartItemHid(product));
+              addItem(buildCartItem(product));
               showToast(`${product.name} added to cart`);
             }
             onProductFound(code, context);

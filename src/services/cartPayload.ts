@@ -36,7 +36,9 @@ export function buildCartItem(product: Product, overrides?: Partial<CartItem>): 
 }
 
 /**
- * Build a CartItem from a search result (lighter shape).
+ * Build a CartItem from a search result.
+ * Preserves all available metadata from the search response so that
+ * search-added items carry the same fields as tap/scan-added items.
  */
 export function buildCartItemFromSearch(result: {
   id: string;
@@ -45,6 +47,15 @@ export function buildCartItemFromSearch(result: {
   barcode?: string;
   brand?: string;
   stock?: number;
+  gstRate?: number;
+  hsnCode?: string;
+  unit?: string;
+  caseSize?: number;
+  storeProductId?: string;
+  category?: string;
+  imageUrl?: string;
+  supplierName?: string;
+  mrpMinor?: number;
 }): CartItem {
   return {
     id: result.barcode ?? result.id,
@@ -53,6 +64,66 @@ export function buildCartItemFromSearch(result: {
     currency: "INR",
     quantity: 1,
     barcode: result.barcode,
-    metadata: { brand: result.brand },
+    mrpMinor: result.mrpMinor,
+    gstPct: result.gstRate,
+    hsnCode: result.hsnCode,
+    unitLabel: result.unit,
+    caseSize: result.caseSize,
+    supplierName: result.supplierName,
+    metadata: {
+      storeProductId: result.storeProductId,
+      brand: result.brand,
+      category: result.category,
+      imageUrl: result.imageUrl,
+    },
+  };
+}
+
+/**
+ * Build a CartItem from a ProductTileData (tap path).
+ * Ensures tile taps use the same canonical contract as scan/search/voice.
+ */
+export function buildCartItemFromTile(tile: {
+  id: string;
+  name: string;
+  priceMrpMinor: number;
+  priceTradeMinor?: number;
+  barcode?: string;
+  brand?: string;
+  caseSize?: number;
+  unit?: string;
+  category?: string;
+  imageUrl?: string;
+}, sellMode: "retail" | "bulk"): CartItem {
+  const price = sellMode === "bulk" && tile.priceTradeMinor
+    ? tile.priceTradeMinor
+    : tile.priceMrpMinor;
+  return {
+    id: tile.barcode ?? tile.id,
+    name: tile.name,
+    priceMinor: price,
+    currency: "INR",
+    quantity: 1,
+    barcode: tile.barcode,
+    unitLabel: tile.unit,
+    caseSize: tile.caseSize,
+    metadata: {
+      brand: tile.brand,
+      category: tile.category,
+      imageUrl: tile.imageUrl,
+      sellMode,
+    },
+  };
+}
+
+/**
+ * Build a CartItem from a voice match result.
+ * Voice results carry product name + quantity; we look up full product
+ * data from the products store when available.
+ */
+export function buildCartItemFromVoice(product: Product, quantity: number): CartItem {
+  return {
+    ...buildCartItem(product),
+    quantity,
   };
 }

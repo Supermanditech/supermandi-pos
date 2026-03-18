@@ -12,9 +12,13 @@ import {
   submitVoiceCommand, type VoiceCommandResult,
   VoiceRateLimitError, VoiceTimeoutError,
 } from "../../services/voice";
+import { useProductsStore } from "../../stores/productsStore";
+import { useCartStore } from "../../stores/cartStore";
+import { buildCartItemFromVoice, buildCartItem } from "../../services/cartPayload";
 import { logger } from "../../services/logger";
 
 // V3-003: Voice overlay wired to real voice services
+// V3-FIX-120: Voice confirm now adds to cart through canonical builder
 
 type VoiceOverlayV3Props = {
   visible: boolean;
@@ -107,7 +111,40 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
     }
   }, []);
 
+  // V3-FIX-120: Voice confirm adds to cart through canonical builder
   const handleConfirm = useCallback(() => {
+    // Look up product by name in products store for full metadata
+    const products = useProductsStore.getState().products;
+    const match = products.find(
+      (p) => p.name.toLowerCase() === matchedProduct.toLowerCase()
+    ) ?? products.find(
+      (p) => p.name.toLowerCase().includes(matchedProduct.toLowerCase())
+    );
+
+    const addItem = useCartStore.getState().addItem;
+    if (match) {
+      // Full product found — use canonical builder with all metadata
+      const existing = useCartStore.getState().items.find(
+        (i) => i.id === (match.barcode ?? match.id) || i.barcode === match.barcode
+      );
+      if (existing) {
+        useCartStore.getState().updateQuantity(existing.id, existing.quantity + matchedQty);
+      } else {
+        addItem(buildCartItemFromVoice(match, matchedQty));
+      }
+    } else {
+      // No product match in store — add with name + quantity only
+      addItem({
+        id: `voice-${Date.now()}`,
+        name: matchedProduct,
+        priceMinor: 0,
+        currency: "INR",
+        quantity: matchedQty,
+        priceResolutionError: true,
+        priceResolutionMessage: "Price not found — tap to set price",
+      });
+    }
+
     onProductMatched(matchedProduct, matchedQty);
     showToast(`${matchedProduct} ×${matchedQty} added`);
     onClose();

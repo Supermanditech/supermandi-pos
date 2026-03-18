@@ -92,8 +92,11 @@ export default function UpiScreenV3({ onBack, onComplete }: UpiScreenV3Props) {
         setSaleId(saleResult.saleId);
         logger.debug("V3Upi", `sale_created:${saleResult.saleId}`);
 
+        // V3-FIX-123: Use committed sale total, not client-computed grandTotal
+        const committedTotal = saleResult.totals.totalMinor;
+
         // Init UPI payment via canonical /payments/upi/generate — returns real qrData
-        const upi = await initUpiPayment({ saleId: saleResult.saleId, amountMinor: grandTotal });
+        const upi = await initUpiPayment({ saleId: saleResult.saleId, amountMinor: committedTotal });
         if (cancelled) return;
 
         setPaymentId(upi.paymentId);

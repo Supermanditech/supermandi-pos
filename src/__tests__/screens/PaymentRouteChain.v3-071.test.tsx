@@ -74,7 +74,8 @@ jest.mock("../../services/networkStatus", () => ({ isOnline: jest.fn().mockResol
 jest.mock("../../utils/showToast", () => ({ showToast: jest.fn() }));
 jest.mock("../../services/logger", () => ({ logger: { debug: jest.fn(), error: jest.fn() } }));
 
-const mockCreateSale = jest.fn().mockResolvedValue({ saleId: "sale-001", billRef: "SM-001" });
+// V3-FIX-123: Mock must include totals.totalMinor — UPI screen uses committed sale total
+const mockCreateSale = jest.fn().mockResolvedValue({ saleId: "sale-001", billRef: "SM-001", totals: { subtotalMinor: 4000, discountMinor: 0, totalMinor: 4000 } });
 // V3-FIX-073: Mock matches canonical /payments/upi/generate response shape
 const mockInitUpi = jest.fn().mockResolvedValue({ paymentId: "pay-001", orderId: "order_abc123", qrData: "upi://pay?pa=store@upi&pn=TestStore&am=40.00&tr=order_abc123&tn=Sale", upiVpa: "store@upi", expiresAt: new Date(Date.now() + 300000).toISOString() });
 const mockConfirmUpi = jest.fn().mockResolvedValue({ status: "confirmed" });
