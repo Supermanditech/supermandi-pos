@@ -42,9 +42,11 @@ echo ""
 
 if [ "$APP_SHA" = "${BACKEND_SHA:-}" ]; then
   echo "MATCH: App and backend are on the same SHA"
-elif [ "$BACKEND_SHA" = "unknown" ]; then
-  echo "WARN: Backend SHA not available — manual verification required"
-  echo "GATE: WARN (non-blocking — backend health may not expose SHA)"
+elif [ "${BACKEND_SHA:-unknown}" = "unknown" ]; then
+  echo "FAIL: Backend SHA not available — cannot verify parity"
+  echo "Ensure backend health endpoint exposes SHA before device QA."
+  echo "GATE FAILED: Backend SHA unknown"
+  exit 1
 else
   echo "MISMATCH: App ($APP_SHA) != Backend ($BACKEND_SHA)"
   echo "This may cause auth/feature incompatibility."

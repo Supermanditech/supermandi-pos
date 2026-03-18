@@ -67,25 +67,29 @@ export default function SplashScreenV3() {
       const session = await Promise.race([getDeviceSession(), timeoutPromise]);
 
       if (!session) {
-        // V3-FIX-116: Explicit backend capability check via public config-status
+        // V3-FIX-116: Explicit backend capability check — fail closed
+        // App must NOT expose V3Phone without confirmed otpAuthEnabled
         setStatusText("Checking capabilities...");
         try {
           const res = await Promise.race([
             fetch(`${require("../../config/api").API_BASE_URL}/api/v1/config-status`).then((r) => r.json()),
             new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 5000)),
           ]) as any;
-          if (res?.otpAuthEnabled !== true) {
-            setStatusText("Update required");
-            setErrorState("POS phone+OTP login is not yet available on this server. Contact your administrator.");
+          if (res?.otpAuthEnabled === true) {
+            setStatusText("Welcome!");
+            safeNavigate("V3Phone");
             return;
           }
+          // Backend responded but OTP not enabled
+          setStatusText("Update required");
+          setErrorState("POS phone+OTP login is not yet available on this server. Contact your administrator.");
+          return;
         } catch {
-          // Capability check failed (offline/timeout) — proceed to phone screen,
-          // it will handle errors at the API call level
+          // Capability check failed (offline/timeout) — fail closed, show retry
+          setStatusText("Cannot verify server");
+          setErrorState("Could not confirm server capabilities. Check your connection and try again.");
+          return;
         }
-        setStatusText("Welcome!");
-        safeNavigate("V3Phone");
-        return;
       }
 
       // Check device status (blocked / force update / auth failure)

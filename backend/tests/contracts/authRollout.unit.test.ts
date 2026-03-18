@@ -1,6 +1,18 @@
 /**
- * V3-FIX-115/116 + V3-HARDEN-118/119: Auth rollout executable tests
- * Tests real code imports — zero fs.readFileSync, zero stand-in logic.
+ * V3-FIX-115/116 + V3-HARDEN-118/119: Auth rollout contract tests
+ *
+ * Real code proof:
+ *   - configStatusRouter imported and tested (route metadata, async handler)
+ *   - Handler shape proves DB-backed otpAuthEnabled, not hardcoded
+ *
+ * Shell script proof (uses fs.readFileSync — unavoidable for .sh files):
+ *   - auth-rollout-gate.sh: verifies it checks send-otp, schema, config-status
+ *   - version-parity-check.sh: verifies it exits non-zero on mismatch/unknown
+ *
+ * NOT tested here (requires running DB/backend):
+ *   - Real OTP handler request/response behavior
+ *   - Real DB query for pos_otp table
+ *   These are covered by the deploy gate scripts and staging operator smoke.
  */
 
 // ── V3-FIX-116: Real configStatusRouter handler ────────────────────────────
@@ -111,6 +123,10 @@ describe("V3-HARDEN-119: Version parity script", () => {
   it("exits non-zero on SHA mismatch", () => {
     expect(paritySrc).toContain("GATE FAILED: Version mismatch");
     expect(paritySrc).toContain("exit 1");
+  });
+
+  it("exits non-zero when backend SHA is unknown", () => {
+    expect(paritySrc).toContain("GATE FAILED: Backend SHA unknown");
   });
 
   it("reports app, backend, and gateway SHAs", () => {
