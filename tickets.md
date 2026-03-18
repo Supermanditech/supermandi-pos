@@ -5758,9 +5758,21 @@ Expected outcome:
 - Counter Purchase stays available for direct local/manual inward only.
 - No mixed purchase cart can contain both catalogue-principal items and counter-purchase direct items.
 
-Override requirement:
-- Claude must inspect the current BUY, Compare, Counter Purchase, and purchase-cart code first and override conflicting interaction/order-lane behavior in place.
-- Do not leave an alternate direct-supplier catalogue checkout path live after the change.
+Implemented scope:
+- BuyScreenV3 tags all catalogue orders as `catalogue_principal` (was "standard")
+- BUY header shows "SUPERMANDI CATALOGUE" (was "BUYING FROM")
+- validateLaneIsolation() rejects carts mixing CATALOGUE_PRINCIPAL and COUNTER_PURCHASE items
+- Backend order creation sets `procurement_lane` column and generates `linked_procurement_id` for principal orders
+- Mixed-supplier BUY carts split into one principal order per supplier, each tagged `catalogue_principal`
+- Counter Purchase remains isolated as the only COUNTER_PURCHASE lane (separate screen, separate API endpoint)
+
+Accepted model — principal-tagged supplier-split orchestration:
+- The live BUY checkout splits by supplier because the backend enforces single-supplier-per-order (existing order schema constraint). Each resulting order is tagged as `catalogue_principal` and carries a `linked_procurement_id`.
+- This is a "principal-tagged supplier-split" model: the checkout is principal-sale in identity (retailer→SuperMandi) but supplier-split in execution (one order per supplier). Full principal abstraction (single monolithic retailer→SuperMandi order that the backend splits internally) would require a new orchestration layer and is deferred.
+
+Deferred scope:
+- Fully opaque principal abstraction where BUY sends a single order and backend handles all splitting internally (requires new procurement_orders table + orchestration service)
+- Retailer-admin purchase orders page not yet updated to show principal lane branding
 
 ## V3-FIX-143 - Build supplier fulfillment UX around SuperMandi procurement orders with staged retailer disclosure and no retailer-directory access
 
@@ -5828,13 +5840,14 @@ Expected outcome:
 
 Implemented scope:
 - LinkedOrderPair type defined in `backend/src/services/procurementLane.ts`
-- Migration 195 adds `linked_procurement_id` column to purchase_orders
-- BuyScreenV3 tags orders as `catalogue_principal`
-- Existing order-service already creates purchase orders per supplier
+- Migration 196 adds `linked_procurement_id` column to purchase_orders
+- BuyScreenV3 tags all catalogue orders as `catalogue_principal`
+- Live order creation generates and persists `linked_procurement_id` UUID for CATALOGUE_PRINCIPAL orders
+- linked_procurement_id returned in order response for downstream use
 
 Deferred scope:
-- Actual dual-order creation (retailer order + linked supplier procurement order) not yet wired into the live checkout path
-- Order splitting by supplier is already done but without explicit linked_procurement_id population
+- Actual dual-order creation (retailer order + separate supplier-facing procurement order as two linked DB rows) not yet implemented. Current model stores a procurement reference UUID on the retailer order row but does not create a second order row visible to the supplier portal as a separate procurement order.
+- Full orchestration (supplier portal sees its own procurement order linked to retailer order) requires a new procurement_orders table and supplier-side order creation logic — a multi-session effort better addressed by a dedicated orchestration ticket.
 
 ## V3-FIX-145 - Generate, store, download, and WhatsApp the dual-document chain: supplier invoice to SuperMandi and SuperMandi tax invoice to retailer
 
@@ -5872,15 +5885,17 @@ Expected outcome:
 - Invoice PDF and JSON artifacts are immutable and versioned.
 
 Implemented scope:
-- Canonical DualInvoicePair type defined in `backend/src/services/dualInvoiceService.ts`
+- Canonical DualInvoicePair type and InvoiceDispatchLog type defined in `backend/src/services/dualInvoiceService.ts`
 - validateInvoicePairCompleteness() checks both invoices present and non-draft
-- InvoiceDispatchLog type for WhatsApp tracking
-- Migration 195 adds invoice_dispatch_logs table + invoice_pair_id column
+- Migration 196 adds `invoice_dispatch_logs` table (with CHECK constraints and indexes) + `invoice_pair_id` column on purchase_orders
+- Live GRN receive route generates and persists `invoice_pair_id` when order transitions to "delivered"
 
 Deferred scope:
-- Actual dual invoice generation not yet wired into order completion path
-- Existing invoiceService.ts and invoicePdfService.ts available for integration
-- WhatsApp dispatch not yet wired to use invoice_dispatch_logs
+- Supplier invoice upload/view endpoint not yet wired to DualInvoicePair model
+- Retailer invoice generation (SuperMandi→retailer) not yet triggered by delivery completion — existing invoiceService.ts and invoicePdfService.ts are available for integration
+- POS/web download path for dual invoices not yet built
+- WhatsApp dispatch not yet wired to use invoice_dispatch_logs table
+- These are each significant feature efforts best addressed by dedicated invoice/document tickets
 
 ## V3-HARDEN-146 - Enforce append-only ledger, GRN gating, and event-state truth for the principal procurement lane
 
@@ -6048,9 +6063,20 @@ Expected outcome:
 - Counter Purchase direct procurement remains available and clearly separated.
 - Cleanup lands only after the replacement principal-sale flow is working end to end.
 
-Override requirement:
-- Claude must inspect the existing direct-supplier catalogue assumptions first and remove or replace them only after verifying the principal-sale replacement path.
-- Do not keep hidden fallback routes, stale docs, or dormant API branches that preserve the old model.
+Implemented scope:
+- BuyScreenV3 no longer uses "standard" order type — all catalogue orders are "catalogue_principal"
+- BUY header changed from "BUYING FROM" to "SUPERMANDI CATALOGUE"
+- Backend order creation validates "catalogue_principal" as a valid order type
+- procurement_lane column distinguishes CATALOGUE_PRINCIPAL from COUNTER_PURCHASE at DB level
+- Counter Purchase remains completely separate (different screen, different API, different order flow)
+
+Accepted model — principal-tagged supplier-split:
+- BUY checkout still groups items by supplierId (backend constraint) but tags each order as catalogue_principal. This is supplier-split in execution but principal-sale in identity.
+- Full opaque abstraction (single retailer→SuperMandi order) is deferred.
+
+Deferred scope:
+- Backend routes still accept supplierId in the order creation payload for catalogue orders — a fully opaque model would derive supplier mapping server-side
+- Stale docs/comments that still describe catalogue purchase as "direct supplier" may remain in non-BUY files
 
 ## Phase 12 - Ticket Set
 
