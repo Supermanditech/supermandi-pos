@@ -15,6 +15,8 @@ import { getDeviceStoreId } from "../../services/deviceSession";
 // V3-042: GRN v3 — wire real pending PO items from orderApi
 
 type GRNItem = { barcode: string; name: string; ordered: number; received: number; checked: boolean; productId?: string };
+type POContext = { poNumber: string; supplierName: string; totalMinor: number } | null;
+type ScanFeedback = { productName: string; qty: number } | null;
 
 type GRNScreenV3Props = { onClose: () => void };
 
@@ -26,6 +28,8 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [activeTab, setActiveTab] = useState<"po" | "adhoc">("po");
+  const [poContext, setPoContext] = useState<POContext>(null);
+  const [lastScan, setLastScan] = useState<ScanFeedback>(null);
   // V3-042: Load pending PO items on mount
   useEffect(() => {
     let mounted = true;
@@ -50,7 +54,18 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
             });
           }
         }
-        if (mounted) setItems(allItems);
+        if (mounted) {
+          setItems(allItems);
+          // V3-FIX-079: Extract real PO context from first order
+          if ((res.data ?? []).length > 0) {
+            const firstOrder = res.data[0];
+            setPoContext({
+              poNumber: firstOrder.orderNumber ?? firstOrder.id?.substring(0, 8) ?? "—",
+              supplierName: firstOrder.supplierName ?? "Supplier",
+              totalMinor: Math.round((firstOrder.totalAmount ?? 0) * 100),
+            });
+          }
+        }
       } catch (err) {
         if (mounted) { setLoadError(true); showToast("Could not load pending orders"); }
       } finally {
@@ -97,7 +112,15 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
         <Pressable style={[styles.tab, activeTab === "adhoc" && styles.tabActive]} onPress={() => setActiveTab("adhoc")}><Text style={[styles.tabText, activeTab === "adhoc" && styles.tabTextActive]}>Ad-hoc Inward</Text></Pressable>
       </View>
 
-      <View style={styles.poInfo}><Text style={styles.poText}>PO #1234 · Supplier ABC</Text><Text style={styles.poTotal}>₹4,500</Text></View>
+      {/* V3-FIX-079: Real PO context from loaded orders */}
+      {poContext ? (
+        <View style={styles.poInfo}>
+          <Text style={styles.poText}>PO #{poContext.poNumber} · {poContext.supplierName}</Text>
+          <Text style={styles.poTotal}>{poContext.totalMinor > 0 ? `₹${Math.round(poContext.totalMinor / 100).toLocaleString("en-IN")}` : ""}</Text>
+        </View>
+      ) : !loading ? (
+        <View style={styles.poInfo}><Text style={styles.poText}>No pending PO</Text><Text style={styles.poTotal} /></View>
+      ) : null}
 
       <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
         {loading && <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />}
@@ -136,12 +159,17 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
           </View>
         ))}
 
-        {/* Scan feedback */}
-        <View style={styles.scanResult}>
-          <Text style={styles.scanResultIcon}>📟</Text>
-          <View style={{ flex: 1 }}><Text style={styles.scanResultTitle}>Last scan: Parle-G 100g</Text><Text style={styles.scanResultSub}>Auto-matched · Qty 48</Text></View>
-          <Text>✓</Text>
-        </View>
+        {/* V3-FIX-079: Real scan feedback — only shown after actual scan */}
+        {lastScan ? (
+          <View style={styles.scanResult}>
+            <Text style={styles.scanResultIcon}>📟</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.scanResultTitle}>Last scan: {lastScan.productName}</Text>
+              <Text style={styles.scanResultSub}>Auto-matched · Qty {lastScan.qty}</Text>
+            </View>
+            <Text>✓</Text>
+          </View>
+        ) : null}
       </ScrollView>
 
       <View style={styles.footer}>

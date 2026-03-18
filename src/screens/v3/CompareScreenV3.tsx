@@ -58,17 +58,23 @@ export default function CompareScreenV3({ visible, productName, packSize, mrpMin
         if (!online) { showToast("Offline — comparison unavailable"); setLoading(false); return; }
         const storeId = await getDeviceStoreId();
         if (!storeId) return;
-        // Use productName as lookup — in production, pass productId
+        // V3-FIX-077: Use productName for lookup; map authoritative fields only
         const suppliers = await getProductSuppliers(storeId, productName);
-        const mapped: SupplierOffer[] = suppliers.map((s, i) => ({
+        // Sort by price ascending — lowest price is best
+        const sorted = [...suppliers].sort((a, b) => a.purchasePrice - b.purchasePrice);
+        const bestPrice = sorted.length > 0 ? sorted[0].purchasePrice : 0;
+        const mapped: SupplierOffer[] = sorted.map((s) => ({
           id: s.supplierId,
           supplierName: s.supplierName,
           ptrMinor: s.purchasePrice,
           moq: s.moq,
-          moqUnit: "pcs",
-          deliveryDays: 2,
+          moqUnit: (s as any).moqUnit ?? (s as any).unit ?? "units",
+          deliveryDays: (s as any).expectedDeliveryDays ?? (s as any).deliveryDays ?? 0,
           bnplAvailable: s.bnplEligible,
-          isBestPrice: i === 0,
+          tradeDiscountPct: (s as any).tradeDiscountPct,
+          creditDays: (s as any).creditDays,
+          freeDelivery: (s as any).freeDelivery,
+          isBestPrice: s.purchasePrice === bestPrice,
         }));
         setOffers(mapped);
       } catch (err) {

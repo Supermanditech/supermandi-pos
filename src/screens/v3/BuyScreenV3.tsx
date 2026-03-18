@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect } from "react";
-import { View, FlatList, Pressable, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { View, FlatList, Pressable, ActivityIndicator, TextInput, StyleSheet, Text } from "react-native";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
@@ -50,6 +50,7 @@ export default function BuyScreenV3() {
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [categories, setCategories] = useState<string[]>(["All"]);
   const [orderQtys, setOrderQtys] = useState<Record<string, number>>({});
+  const [searchQuery, setSearchQuery] = useState("");
   const [products, setProducts] = useState<SupplierProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [suppliers, setSuppliers] = useState<string[]>(["All Suppliers"]);
@@ -88,7 +89,7 @@ export default function BuyScreenV3() {
     void fetchCatalog();
   }, []);
 
-  // V3-FIX-076: Filter products by selected supplier and category
+  // V3-FIX-076: Filter products by supplier, category, and search query
   const filteredProducts = useMemo(() => {
     let list = products;
     if (selectedSupplier > 0) {
@@ -99,8 +100,12 @@ export default function BuyScreenV3() {
       const cat = categories[selectedCategory];
       list = list.filter((p) => p.category === cat);
     }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter((p) => p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q));
+    }
     return list;
-  }, [products, selectedSupplier, suppliers, selectedCategory, categories]);
+  }, [products, selectedSupplier, suppliers, selectedCategory, categories, searchQuery]);
 
   const cartItemCount = Object.values(orderQtys).reduce((s, v) => s + (v > 0 ? 1 : 0), 0);
   const cartTotal = products.reduce((s, p) => s + (orderQtys[p.id] ?? 0) * p.caseSize * p.ptrMinor, 0);
@@ -112,11 +117,11 @@ export default function BuyScreenV3() {
 
   return (
     <View style={styles.container}>
-      {/* Search bar */}
+      {/* V3-FIX-076: Real search input */}
       <View style={styles.searchBar}>
         <View style={styles.searchInput}>
           <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth={2}><Circle cx={11} cy={11} r={8} /><Path d="M21 21l-4.35-4.35" /></Svg>
-          <Text style={styles.searchPlaceholder}>Search supplier products...</Text>
+          <TextInput style={styles.searchTextInput} value={searchQuery} onChangeText={setSearchQuery} placeholder="Search supplier products..." placeholderTextColor={colors.textTertiary} />
         </View>
         <Pressable style={styles.scanBtn} accessibilityLabel="Scan barcode" onPress={() => navigation.navigate("V3Scan")}>
           <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}><Rect x={3} y={3} width={18} height={18} rx={2} /><Path d="M7 7h.01M7 12h10M7 17h.01" /></Svg>
@@ -154,6 +159,15 @@ export default function BuyScreenV3() {
           </Pressable>
         )}
       />
+
+      {/* V3-FIX-076: Finance banner per prototype */}
+      <View style={styles.financeBanner}>
+        <Text style={styles.financeIcon}>💳</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.financeTitle}>Buy Now, Pay Later</Text>
+          <Text style={styles.financeSub}>Credit available on eligible orders</Text>
+        </View>
+      </View>
 
       {/* Product list */}
       {loading ? (
@@ -242,7 +256,7 @@ function createStyles(colors: ColorPalette) {
     container: { flex: 1, backgroundColor: colors.background },
     searchBar: { flexDirection: "row", gap: 8, padding: 10, paddingHorizontal: 14, backgroundColor: colors.surface },
     searchInput: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: colors.background, borderRadius: 14, borderWidth: 2, borderColor: colors.border },
-    searchPlaceholder: { fontSize: 14, color: colors.textTertiary, fontWeight: "500" },
+    searchTextInput: { flex: 1, fontSize: 14, fontWeight: "500", color: colors.textPrimary },
     scanBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center" },
     supplierRow: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 4, backgroundColor: colors.surface },
     supplierLabel: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.5, marginBottom: 6 },
@@ -253,6 +267,10 @@ function createStyles(colors: ColorPalette) {
     chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
     chipText: { fontSize: 12, fontWeight: "700", color: colors.textSecondary },
     chipTextActive: { color: "#fff" },
+    financeBanner: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 14, marginTop: 8, padding: 12, backgroundColor: "#F5F3FF", borderRadius: 12, borderWidth: 1, borderColor: "#DDD6FE" },
+    financeIcon: { fontSize: 20 },
+    financeTitle: { fontSize: 13, fontWeight: "700", color: "#7C3AED" },
+    financeSub: { fontSize: 11, color: "#6D28D9" },
     list: { paddingHorizontal: 14, paddingTop: 8 },
     // Counter CTA
     counterCta: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 14, borderWidth: 2, borderStyle: "dashed", borderColor: colors.primary, backgroundColor: colors.primaryLight, marginBottom: 8 },

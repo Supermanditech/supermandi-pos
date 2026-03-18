@@ -66,7 +66,7 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
     }
     const product = getProductByBarcode(barcode.trim());
     if (product) {
-      // Known product — existing in store inventory
+      // V3-FIX-078: Known product — carry real productId for authoritative inward record
       const newItem: PurchaseItemData = {
         barcode: product.barcode ?? barcode.trim(),
         name: product.name,
@@ -76,7 +76,9 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
         purchasePrice: product.priceMinor ? String(product.priceMinor / 100) : "",
         sellPrice: product.priceMinor ? String(product.priceMinor / 100) : "",
         caseSize: 1,
-      };
+        productId: (product as any).id ?? (product as any).storeProductId,
+        gstPct: (product as any).gstPct ?? (product as any).gstRate,
+      } as PurchaseItemData & { productId?: string; gstPct?: number };
       setItems((prev) => [newItem, ...prev]);
       showToast(`Added: ${product.name}`);
     } else {
@@ -108,15 +110,18 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
     if (!online) { showToast("Offline — purchase will be queued and synced when online"); }
     setSaving(true);
     try {
+      // V3-FIX-078: Use real product identity when known, barcode only for new products
       const txnItems = items.map((it) => ({
-        productId: it.barcode, // Uses barcode as productId for new products
+        productId: (it as any).productId ?? it.barcode,
         quantity: it.qtyCases * (it.caseSize ?? 1),
-        unitCost: Math.round(parseFloat(it.purchasePrice) * 100), // Convert to minor units
+        unitCost: Math.round(parseFloat(it.purchasePrice) * 100),
       }));
+      // V3-FIX-078: Pass real supplier identity (id when selected from picker, name as fallback)
+      const selectedSupplier = supplierOptions.find((s) => s.name === supplierName);
       await recordManualInward(
         txnItems,
         invoiceNo ? `Invoice: ${invoiceNo}` : undefined,
-        supplierName ? { name: supplierName } : null,
+        supplierName ? { id: selectedSupplier?.id, name: supplierName } : null,
       );
       showToast("Purchase confirmed! Stock updated.");
       setTimeout(onClose, 1200);
@@ -127,12 +132,17 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
     }
   }, [items, invoiceNo, supplierName, onClose]);
 
-  // V3-FIX-078: Use actual caseSize, no fabricated fallback to 24
+  // V3-FIX-078: Real per-item totals and GST from product metadata
   const totalAmount = items.reduce((s, it) => {
     const price = parseFloat(it.purchasePrice) || 0;
     return s + it.qtyCases * (it.caseSize ?? 1) * price;
   }, 0);
-  const gstAmount = Math.round(totalAmount * 0.18 * 100) / 100;
+  const gstAmount = items.reduce((s, it) => {
+    const price = parseFloat(it.purchasePrice) || 0;
+    const lineTotal = it.qtyCases * (it.caseSize ?? 1) * price;
+    const gstPct = (it as any).gstPct ?? 0; // 0 if unknown — no fabricated 18%
+    return s + Math.round(lineTotal * gstPct / 100 * 100) / 100;
+  }, 0);
 
   return (
     <View style={styles.container}>
