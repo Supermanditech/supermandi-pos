@@ -5561,7 +5561,7 @@ The branch must not be called:
 - GCP-ready
 - production-ready
 
-until all fourteen phases above are complete and re-verified against `tickets.md`.
+until all fifteen phases above are complete and re-verified against `tickets.md`.
 
 ## Phase 12 - Supplier Catalogue as SuperMandi Principal B2B Procurement
 
@@ -6296,3 +6296,251 @@ Guard rails:
 - Do not let supplier-catalog add/publish create uncategorized store products when a canonical mapping path exists.
 - Do not overwrite retailer/store category overrides on repeated purchase of the same item.
 - Do not treat raw supplier text category as the final POS/store category truth.
+
+## V3-FIX-157 - Canonicalize HID scanner, mobile camera, and manual barcode entry into one scan-intent contract across SELL, supplier-catalog procurement, and Counter Purchase
+
+Priority: P0
+Layers: POS scan UX, device input handling, navigation, scan intent routing, barcode identity
+
+Issue:
+- The current code still treats scan mostly as a thin barcode-entry helper, so HID scanner, mobile camera, and manual entry do not yet share one explicit business contract across the three approved scan intents:
+  - SELL
+  - supplier-catalog procurement
+  - Counter Purchase direct inward
+
+Root cause:
+- `ScanScreenV3` currently acts as a modal entry layer with `sell`, `stock_in`, and `new_product` contexts, but it does not yet express:
+  - supplier-catalog procurement scan intent as a first-class path
+  - camera vs HID parity guarantees
+  - one canonical duplicate/terminator/debounce/error policy for all scan devices
+- `CounterPurchaseScreenV3` and SELL still keep separate barcode-entry assumptions outside one unified scan-intent contract.
+
+Files impacted:
+- `src/screens/v3/ScanScreenV3.tsx`
+- `src/screens/v3/V3ScreenWrappers.tsx`
+- `src/screens/v3/CounterPurchaseScreenV3.tsx`
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/services/hidScannerService.ts`
+- any new shared scan-intent/router helper introduced by the fix
+
+Expected outcome:
+- One canonical scan-intent contract exists for:
+  - `sell_scan`
+  - `supplier_catalog_procurement_scan`
+  - `counter_purchase_scan`
+- HID scanner, mobile camera, and manual barcode entry resolve through the same intent pipeline:
+  - normalized barcode
+  - resolved product identity
+  - duplicate suppression
+  - success/failure side effect
+  - explicit next action
+- Edge cases are explicitly handled:
+  - partial scans
+  - duplicate same-barcode bursts
+  - scan terminators / trailing newline / tab
+  - wrong active context
+  - product found vs not found
+  - offline scan behavior
+
+Override requirement:
+- Claude must inspect the current scan entry points first and override conflicting live scan behavior in place.
+- Do not leave separate ad hoc HID and camera rules spread across SELL, Counter Purchase, and wrapper code.
+
+## V3-HARDEN-158 - Define repeated-vs-new supplier-catalog scan behavior with edited product-field propagation for procurement lane
+
+Priority: P0
+Layers: procurement identity, product metadata, edit persistence, principal procurement UX, backend contracts
+
+Issue:
+- The approved supplier-catalog procurement lane still lacks one precise scan business rule for what happens when the retailer scans a product for purchase and the product is:
+  - already repeatedly procured before
+  - newly procured for the first time
+  - edited by the retailer/operator before confirming purchase
+
+Root cause:
+- Phase 12 principal procurement locks the business model, but the scan contract is not yet explicit for:
+  - repeated supplier-catalog SKU purchase via scan
+  - true new SKU purchase via scan
+  - which editable fields are local/store-specific vs catalog-derived
+  - whether edited fields update draft only, order line only, store product only, or catalog truth
+
+Files impacted:
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/screens/v3/CompareScreenV3.tsx`
+- `src/stores/purchaseCartStore.ts`
+- `src/stores/purchaseDraftStore.ts`
+- `backend/src/routes/v1/pos/suppliers.ts`
+- `backend/src/routes/v1/admin/suppliers.ts`
+- `backend/services/catalog-service/src/services/mappingService.ts`
+- any procurement-scan helper, mutation contract, or migration introduced by the fix
+
+Expected outcome:
+- Supplier-catalog procurement scan explicitly distinguishes:
+  - repeated mapped store/catalog item
+  - new-to-store but known catalog SKU
+  - genuinely new/unmapped SKU edge case
+- Edited fields have explicit propagation rules:
+  - draft-only
+  - order-line snapshot
+  - store-local override
+  - catalog/admin truth
+- Repeated purchase of the same supplier-catalog SKU does not silently fork product identity or metadata.
+- Procurement scan never mutates canonical catalog truth from POS-side edits without an approved override flow.
+
+Override requirement:
+- Claude must inspect the current procurement, mapping, and edit-persistence logic first and override conflicting repeated/new scan assumptions in place.
+- Do not leave a parallel “scan purchase” identity model beside the approved procurement lane.
+
+## V3-HARDEN-159 - Define repeated-vs-new Counter Purchase scan behavior with edited product-field persistence and ledger-safe manual inward semantics
+
+Priority: P0
+Layers: Counter Purchase UX, manual inward identity, metadata edits, ledger sync, supplier linkage
+
+Issue:
+- Counter Purchase still needs one explicit scan business rule for:
+  - repeated local/direct purchases of known items
+  - first-time local/direct purchases of new items
+  - operator-edited product fields before inward confirmation
+
+Root cause:
+- `CounterPurchaseScreenV3` now handles known vs new items better, but the business contract is still not fully locked for:
+  - when a repeated barcode should hydrate prior purchase/store metadata
+  - which edits become permanent store metadata
+  - which edits remain invoice/draft snapshot only
+  - how supplier linkage and inward ledger truth are preserved after edits
+
+Files impacted:
+- `src/screens/v3/CounterPurchaseScreenV3.tsx`
+- `src/components/v3/PurchaseItemCardV3.tsx`
+- `src/services/api/inventoryApi.ts`
+- `backend/src/routes/v1/retailer-admin/suppliers.ts`
+- `backend/src/routes/v1/retailer-admin/products.ts`
+- `backend/src/services/storeProductDigitisationService.ts`
+- any inward-mutation, repeat-hydration, or field-governance helper introduced by the fix
+
+Expected outcome:
+- Counter Purchase scan explicitly distinguishes:
+  - repeated known store product
+  - known product with no prior purchase history
+  - true new/manual product
+- Edited fields are governed explicitly:
+  - purchase-only snapshot fields
+  - store-product master fields
+  - ledger snapshot fields
+  - tax/invoice fields
+- Repeated Counter Purchase does not create silent duplicate store products when barcode/product identity already exists.
+- Manual edits before confirm do not break ledger, tax, or supplier linkage semantics.
+
+Override requirement:
+- Claude must inspect the existing Counter Purchase scan, edit, and inward-save paths first and override conflicting live behavior in place.
+- Do not keep a second silent fallback path that treats edited new items as if they were authoritative existing products.
+
+## V3-FIX-160 - Canonicalize SELL HID and camera scan-to-cart behavior for printed store barcodes and physically picked store products
+
+Priority: P0
+Layers: SELL scan UX, cart identity, barcode lookup, in-store sales behavior, scanner hardware
+
+Issue:
+- SELL scanning still lacks one explicit production-grade rule for the two real sales cases:
+  - scanning printed store/PDF barcodes tied to store SKUs
+  - scanning physical products already present in store inventory
+
+Root cause:
+- `ScanScreenV3`, `SellScreenV3`, `productsStore`, and cart identity work were improved in earlier tickets, but the SELL business logic is still not fully locked for:
+  - store-generated PDF/label barcode scan
+  - manufacturer/product barcode scan on physical stock
+  - canonical matching when both exist
+  - repeat scans rapidly incrementing the same cart line
+  - scan miss behavior that must not drift into procurement or new-product flows incorrectly
+
+Files impacted:
+- `src/screens/v3/ScanScreenV3.tsx`
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/stores/productsStore.ts`
+- `src/stores/cartStore.ts`
+- `src/services/hidScannerService.ts`
+- `backend/src/routes/v1/catalog.ts`
+- `backend/src/routes/v1/pos/storeProducts.ts`
+- any store-barcode resolution helper or migration introduced by the fix
+
+Expected outcome:
+- SELL scan-to-cart handles both:
+  - store label / PDF barcode
+  - physical product barcode
+- Both resolution paths converge to the same canonical store-product/cart identity when they refer to the same sellable item.
+- Repeated HID or camera scans increment one cart line, not duplicates.
+- SELL scan miss does not silently mutate into purchase/new-product behavior unless the operator explicitly chooses that route.
+- Barcode precedence/conflict rules are explicit:
+  - store override barcode
+  - manufacturer barcode
+  - generated SuperMandi/store label barcode
+
+Override requirement:
+- Claude must inspect the current SELL scan/cart identity code first and override conflicting barcode-resolution behavior in place.
+- Do not leave PDF/store-label scan and physical-product scan as parallel cart identity models.
+
+## V3-HARDEN-161 - Add 50k purchase scans/day and 50k sales scans/day capacity, latency, duplicate-suppression, and crash-resistance gates across HID and camera paths
+
+Priority: P0
+Layers: scale, device input throughput, mobile stability, API latency, offline resilience, observability
+
+Issue:
+- Existing scan-scale tickets only gate around 10k scans/day, which is below the now-approved operational target for:
+  - 50,000 procurement scans/day
+  - 50,000 SELL scans/day
+
+Root cause:
+- Current scale tickets are too generic and do not separately prove:
+  - HID burst behavior
+  - camera scan churn
+  - duplicate suppression under rapid repeat scans
+  - scan-to-cart / scan-to-inward latency budgets
+  - mobile memory/crash behavior under prolonged scanner sessions
+
+Files impacted:
+- `src/services/hidScannerService.ts`
+- `src/screens/v3/ScanScreenV3.tsx`
+- `src/screens/v3/CounterPurchaseScreenV3.tsx`
+- `scripts/load-tests/`
+- `e2e-tests/stress/`
+- `.github/workflows/`
+- `backend/src/startup/validateGcp.ts`
+- any scan stress harness, telemetry hook, or capacity gate introduced by the fix
+
+Expected outcome:
+- One reproducible load/stress suite proves scan safety for:
+  - 50,000 purchase-side scans/day
+  - 50,000 sales-side scans/day
+  - HID scanner and camera scan paths
+- Acceptance evidence includes:
+  - duplicate suppression correctness
+  - no cart/inward double-add drift
+  - bounded scan-to-action latency
+  - no POS crash/hang/memory blow-up during sustained scanning
+  - backend lookup/query/cache paths remain within approved budgets
+
+Override requirement:
+- Claude must inspect the current scan throughput tooling first and extend or replace the live harnesses/gates instead of adding disconnected synthetic scripts.
+- Do not rely on the older 10k/day scan gates as final acceptance for this approved volume.
+
+## Phase 15 - HID and Camera Scan Governance for Procurement and SELL at Production Throughput
+
+Tickets:
+- `V3-FIX-157`
+- `V3-HARDEN-158`
+- `V3-HARDEN-159`
+- `V3-FIX-160`
+- `V3-HARDEN-161`
+
+Why fifteenth:
+- Scan is now approved as a first-class operational workflow across procurement and SELL, with distinct business semantics for:
+  - supplier-catalog procurement
+  - Counter Purchase direct inward
+  - in-store retail sale
+- This phase locks device-mode behavior, edited-field propagation, repeated/new identity handling, and very high scan-volume safety into one explicit cross-layer contract.
+
+Guard rails:
+- Do not reopen completed scan UI work only to re-skin it; this phase is about business logic, identity, and throughput correctness.
+- Do not mix procurement scan semantics with SELL scan semantics.
+- Do not let HID and camera paths diverge into different product-identity or side-effect outcomes for the same barcode.
+- Do not certify scanner scale until purchase-side and sales-side throughput are both proven at the approved daily volumes.
