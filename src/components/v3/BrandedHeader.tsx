@@ -93,10 +93,11 @@ function createStyles(colors: ColorPalette) {
       paddingVertical: 4,
       borderRadius: 8,
     },
+    // V3-DELETE-113: Responsive status dot
     statusDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
+      width: getHeaderSpacing() - 2,
+      height: getHeaderSpacing() - 2,
+      borderRadius: (getHeaderSpacing() - 2) / 2,
     },
     dotOnline: {
       backgroundColor: "#4ADE80",

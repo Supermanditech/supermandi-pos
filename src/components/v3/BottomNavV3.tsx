@@ -155,14 +155,15 @@ function createStyles(colors: ColorPalette) {
       color: colors.primary,
       fontWeight: "800",
     },
+    // V3-DELETE-113: Responsive badge sizing
     badge: {
       position: "absolute",
       top: -2,
       right: 2,
       backgroundColor: colors.error,
-      borderRadius: 8,
-      minWidth: 16,
-      height: 16,
+      borderRadius: getNavIconSize() / 3,
+      minWidth: getNavIconSize() * 0.67,
+      height: getNavIconSize() * 0.67,
       alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: 4,

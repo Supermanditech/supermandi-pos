@@ -144,7 +144,7 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
       <Modal visible={splitVisible} transparent animationType="slide" onRequestClose={() => setSplitVisible(false)}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+          <ScrollView style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "80%" }} contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
             <Text style={{ fontSize: 18, fontWeight: "800", marginBottom: 4 }}>Split Payment</Text>
             <Text style={{ fontSize: 13, color: colors.textTertiary, marginBottom: 16 }}>Total: {totalDisplay}</Text>
 
@@ -206,7 +206,7 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
                 <Text style={{ fontWeight: "800", color: "#fff" }}>Confirm Split</Text>
               </Pressable>
             </View>
-          </View>
+          </ScrollView>
         </View>
         </KeyboardAvoidingView>
       </Modal>

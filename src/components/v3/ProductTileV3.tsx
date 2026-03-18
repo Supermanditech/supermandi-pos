@@ -115,14 +115,15 @@ function createStyles(colors: ColorPalette) {
       borderColor: colors.primary,
       backgroundColor: colors.primaryLight,
     },
+    // V3-DELETE-113: Responsive badge dimensions
     cartBadge: {
       position: "absolute",
       top: -6,
       left: -6,
       backgroundColor: colors.primary,
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      width: getChipFontSize() * 2,
+      height: getChipFontSize() * 2,
+      borderRadius: getChipFontSize(),
       alignItems: "center",
       justifyContent: "center",
       zIndex: 2,
@@ -133,13 +134,14 @@ function createStyles(colors: ColorPalette) {
       fontSize: getChipFontSize(),
       fontWeight: "800",
     },
+    // V3-DELETE-113: Responsive stock dot
     stockDot: {
       position: "absolute",
       top: 7,
       right: 7,
-      width: 10,
-      height: 10,
-      borderRadius: 5,
+      width: getChipFontSize() - 1,
+      height: getChipFontSize() - 1,
+      borderRadius: (getChipFontSize() - 1) / 2,
       borderWidth: 2,
       borderColor: colors.surface,
       zIndex: 1,
@@ -159,8 +161,9 @@ function createStyles(colors: ColorPalette) {
     emoji: {
       fontSize: 34,
     },
+    // V3-HARDEN-111: Responsive brand label
     brandLabel: {
-      fontSize: 8,
+      fontSize: getChipFontSize() - 3,
       fontWeight: "700",
       color: colors.textTertiary,
       letterSpacing: 0.3,
@@ -175,14 +178,16 @@ function createStyles(colors: ColorPalette) {
       textAlign: "center",
       minHeight: (getChipFontSize() + 3) * 2,
     },
+    // V3-HARDEN-111: Responsive price text
     price: {
-      fontSize: 15,
+      fontSize: getChipFontSize() + 3,
       fontWeight: "800",
       color: colors.primary,
       marginTop: 2,
     },
+    // V3-HARDEN-111: Responsive case info
     caseInfo: {
-      fontSize: 8,
+      fontSize: getChipFontSize() - 3,
       color: colors.textTertiary,
       marginTop: 1,
     },

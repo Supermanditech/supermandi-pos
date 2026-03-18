@@ -178,7 +178,7 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
       <Modal visible={modalMode !== null} transparent animationType="slide" onRequestClose={() => setModalMode(null)} testID="settings-modal">
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
+          <ScrollView style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "80%" }} contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled">
             {modalMode === "add-staff" && (
               <>
                 <Text style={{ fontSize: 18, fontWeight: "800", marginBottom: 4 }}>
@@ -278,7 +278,7 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
                 </View>
               </>
             )}
-          </View>
+          </ScrollView>
         </View>
         </KeyboardAvoidingView>
       </Modal>
