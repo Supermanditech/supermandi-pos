@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 395,
+  "version": 396,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6888,8 +6888,8 @@
       "ticket": "STG-559",
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 1,
-      "end_line": 305,
-      "checksum": "95ab9740e99b0730",
+      "end_line": 309,
+      "checksum": "0dbf73f366d52026",
       "description": "Scan screen v3 — context-aware barcode scan (Sell/Stock-In/New Product), HID+camera, result panel",
       "test_file": "src/__tests__/screens/scan-v3.stg-559.test.ts",
       "depends_on": null,

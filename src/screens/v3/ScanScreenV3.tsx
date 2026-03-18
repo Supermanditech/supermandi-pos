@@ -13,9 +13,11 @@ import { setHidScanHandler } from "../../services/hidScannerService";
 import { buildCartItem } from "../../services/cartPayload";
 import { logger } from "../../services/logger";
 
-// V3-003: Context-aware barcode scan — wired to real productsStore + cartStore
+// V3-FIX-157: Canonical scan-intent contract — all scan paths go through here
+import { normalizeBarcode, isDuplicateScan, type ScanIntent } from "../../services/scanIntent";
 
-export type ScanContext = "sell" | "stock_in" | "new_product";
+// V3-FIX-157: Extended scan context to include procurement and counter purchase
+export type ScanContext = "sell" | "stock_in" | "new_product" | "procurement" | "counter_purchase";
 
 type ScanScreenV3Props = {
   visible: boolean;
@@ -46,8 +48,10 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
   const addItem = useCartStore((s) => s.addItem);
 
   const handleScanSubmit = useCallback(() => {
-    const code = barcodeInput.trim();
+    // V3-FIX-157: Normalize barcode + suppress duplicate bursts
+    const code = normalizeBarcode(barcodeInput);
     if (!code) return;
+    if (isDuplicateScan(code)) return;
 
     // Look up barcode in store's product database
     const product = getProductByBarcode(code);
