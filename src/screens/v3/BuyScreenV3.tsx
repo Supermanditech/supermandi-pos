@@ -160,14 +160,15 @@ export default function BuyScreenV3() {
         )}
       />
 
-      {/* V3-FIX-076: Finance banner per prototype */}
-      <View style={styles.financeBanner}>
+      {/* V3-FIX-076: Finance banner — navigates to finance/BNPL screen */}
+      <Pressable style={styles.financeBanner} onPress={() => navigation.navigate("V3Finance" as any)} accessibilityRole="button" testID="buy-finance-banner">
         <Text style={styles.financeIcon}>💳</Text>
         <View style={{ flex: 1 }}>
           <Text style={styles.financeTitle}>Buy Now, Pay Later</Text>
           <Text style={styles.financeSub}>Credit available on eligible orders</Text>
         </View>
-      </View>
+        <Text style={styles.financeArrow}>→</Text>
+      </Pressable>
 
       {/* Product list */}
       {loading ? (
@@ -271,6 +272,7 @@ function createStyles(colors: ColorPalette) {
     financeIcon: { fontSize: 20 },
     financeTitle: { fontSize: 13, fontWeight: "700", color: "#7C3AED" },
     financeSub: { fontSize: 11, color: "#6D28D9" },
+    financeArrow: { fontSize: 16, color: "#7C3AED", fontWeight: "700" },
     list: { paddingHorizontal: 14, paddingTop: 8 },
     // Counter CTA
     counterCta: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 14, borderWidth: 2, borderStyle: "dashed", borderColor: colors.primary, backgroundColor: colors.primaryLight, marginBottom: 8 },

@@ -110,18 +110,30 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
     if (!online) { showToast("Offline — purchase will be queued and synced when online"); }
     setSaving(true);
     try {
-      // V3-FIX-078: Use real product identity when known, barcode only for new products
+      // V3-FIX-078: Explicit product identity semantics
+      //   - Known products (state==="existing"): use real productId — required, not barcode fallback
+      //   - New/manual products (state==="new"): use barcode as provisional identity with explicit flag
       const txnItems = items.map((it) => ({
-        productId: (it as any).productId ?? it.barcode,
+        productId: it.state === "existing" && (it as any).productId
+          ? (it as any).productId
+          : it.barcode, // New products: barcode is the provisional identity until master-cataloged
         quantity: it.qtyCases * (it.caseSize ?? 1),
         unitCost: Math.round(parseFloat(it.purchasePrice) * 100),
+        isNewProduct: it.state === "new",
       }));
-      // V3-FIX-078: Pass real supplier identity (id when selected from picker, name as fallback)
-      const selectedSupplier = supplierOptions.find((s) => s.name === supplierName);
+      // V3-FIX-078: Supplier linkage — two distinct paths:
+      //   - Known supplier (picked from list): carry id + name (authoritative)
+      //   - Ad-hoc supplier (free-text only): carry name only (manual entry)
+      const pickedSupplier = supplierOptions.find((s) => s.name === supplierName);
+      const supplierPayload = supplierName
+        ? pickedSupplier
+          ? { id: pickedSupplier.id, name: pickedSupplier.name } // Authoritative
+          : { name: supplierName } // Ad-hoc free-text
+        : null;
       await recordManualInward(
         txnItems,
         invoiceNo ? `Invoice: ${invoiceNo}` : undefined,
-        supplierName ? { id: selectedSupplier?.id, name: supplierName } : null,
+        supplierPayload,
       );
       showToast("Purchase confirmed! Stock updated.");
       setTimeout(onClose, 1200);

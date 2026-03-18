@@ -155,7 +155,7 @@ export default function CompareScreenV3({ visible, productName, packSize, mrpMin
                 onPress={() => { onOrder(offer.id, weeklyNeed); showToast(`Order placed with ${offer.supplierName}`); }}
                 accessibilityRole="button"
               >
-                <Text style={[styles.orderBtnText, offer.isBestPrice && styles.orderBtnTextBest]}>Order from {offer.supplierName.split(" ")[1]}</Text>
+                <Text style={[styles.orderBtnText, offer.isBestPrice && styles.orderBtnTextBest]}>Order from {offer.supplierName}</Text>
               </Pressable>
             </View>
           );

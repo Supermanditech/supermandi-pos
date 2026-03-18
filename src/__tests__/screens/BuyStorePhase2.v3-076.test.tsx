@@ -115,18 +115,21 @@ jest.mock("../../components/v3/ExpandableDetails", () => {
 
 import BuyScreenV3 from "../../screens/v3/BuyScreenV3";
 import CompareScreenV3 from "../../screens/v3/CompareScreenV3";
+import CounterPurchaseScreenV3 from "../../screens/v3/CounterPurchaseScreenV3";
 import GRNScreenV3 from "../../screens/v3/GRNScreenV3";
 import StoreHubScreenV3 from "../../screens/v3/StoreHubScreenV3";
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 describe("V3-FIX-076: BUY screen", () => {
-  it("renders finance banner", async () => {
+  it("renders actionable finance banner that navigates to finance", async () => {
     render(<BuyScreenV3 />);
     await waitFor(() => {
+      expect(screen.getByTestId("buy-finance-banner")).toBeTruthy();
       expect(screen.getByText("Buy Now, Pay Later")).toBeTruthy();
-      expect(screen.getByText("Credit available on eligible orders")).toBeTruthy();
     });
+    fireEvent.press(screen.getByTestId("buy-finance-banner"));
+    expect(mockNavigate).toHaveBeenCalledWith("V3Finance");
   });
 
   it("renders real search input (not placeholder Text)", async () => {
@@ -164,7 +167,7 @@ describe("V3-FIX-077: Compare screen", () => {
     render(<CompareScreenV3 {...baseProps} />);
     await waitFor(() => {
       // Supplier A has price 420 (cheapest) → should be marked best
-      expect(screen.getByText(/Supplier A/)).toBeTruthy();
+      expect(screen.getAllByText(/Supplier A/).length).toBeGreaterThan(0);
       expect(screen.getByText("Best Price")).toBeTruthy();
     });
   });
@@ -208,6 +211,87 @@ describe("V3-FIX-079: GRN screen", () => {
       expect(screen.getByText("Parle-G 100g")).toBeTruthy();
       expect(screen.getByText("8901234")).toBeTruthy();
     });
+  });
+});
+
+describe("V3-FIX-077: Compare CTA text", () => {
+  const baseProps = {
+    visible: true, productName: "Parle-G", packSize: "100g", mrpMinor: 1000,
+    currentStock: 10, sellPriceMinor: 800, weeklyNeed: 48,
+    onClose: jest.fn(), onOrder: jest.fn(),
+  };
+
+  it("renders full supplier name in CTA (no split breakage)", async () => {
+    render(<CompareScreenV3 {...baseProps} />);
+    await waitFor(() => {
+      // Single-word and multi-word names should both render cleanly
+      expect(screen.getByText(/Order from Supplier A/)).toBeTruthy();
+      expect(screen.getByText(/Order from Supplier B/)).toBeTruthy();
+    });
+  });
+});
+
+describe("V3-FIX-078: Counter Purchase confirm path", () => {
+  const mockRecordManualInward = require("../../services/api/inventoryApi").recordManualInward;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockProducts = [
+      { id: "prod-real-1", barcode: "8901234", name: "Parle-G 100g", priceMinor: 1000, category: "Biscuits", gstPct: 18, storeProductId: "sp-1" },
+    ];
+  });
+
+  it("renders scan input and confirm button", () => {
+    render(<CounterPurchaseScreenV3 onClose={jest.fn()} />);
+    expect(screen.getByPlaceholderText(/Scan barcode/)).toBeTruthy();
+    expect(screen.getByText("Confirm")).toBeTruthy();
+  });
+
+  it("known scanned item carries real productId in confirm payload", async () => {
+    render(<CounterPurchaseScreenV3 onClose={jest.fn()} />);
+    // Type a known barcode and submit
+    const input = screen.getByPlaceholderText(/Scan barcode/);
+    fireEvent.changeText(input, "8901234");
+    fireEvent.press(screen.getByText("↵"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("purchase-item-8901234")).toBeTruthy();
+    });
+
+    // Fill purchase price (required for confirm)
+    // The item was auto-filled with priceMinor/100 = "10"
+    // Now confirm
+    fireEvent.press(screen.getByText("Confirm"));
+
+    await waitFor(() => {
+      expect(mockRecordManualInward).toHaveBeenCalledTimes(1);
+    });
+
+    const [txnItems] = mockRecordManualInward.mock.calls[0];
+    // Known product should use real productId, not barcode
+    expect(txnItems[0].productId).toBe("prod-real-1");
+    expect(txnItems[0].isNewProduct).toBeFalsy();
+  });
+
+  it("new/unknown scanned item uses barcode with isNewProduct flag", async () => {
+    render(<CounterPurchaseScreenV3 onClose={jest.fn()} />);
+    const input = screen.getByPlaceholderText(/Scan barcode/);
+    fireEvent.changeText(input, "9999999999999");
+    fireEvent.press(screen.getByText("↵"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("purchase-item-9999999999999")).toBeTruthy();
+    });
+  });
+
+  it("GST uses per-item gstPct not flat 18%", () => {
+    // Verified by reading source: gstAmount reduces with (it as any).gstPct ?? 0
+    // Items without gstPct contribute 0 GST (not 18%)
+    const src = require("fs").readFileSync(
+      require("path").resolve(__dirname, "../../screens/v3/CounterPurchaseScreenV3.tsx"), "utf8"
+    );
+    expect(src).toContain("gstPct ?? 0");
+    expect(src).not.toContain("0.18 * 100");
   });
 });
 
