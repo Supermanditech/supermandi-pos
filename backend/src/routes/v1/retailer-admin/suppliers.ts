@@ -3,6 +3,8 @@
 // Store-scoped via JWT (x-actor-id header from gateway)
 
 import { Router, Request, Response } from "express";
+// V3-HARDEN-101: Shared status helpers
+import { SQL_SUPPLIER_IS_ACTIVE, SQL_LINK_IS_ACTIVE, SQL_SUPPLIER_VERIFIED, SQL_STATUS_IS_ACTIVE, STATUS } from "../../../services/statusHelpers";
 import { getPool } from "../../../db/client";
 import { validatePan, validatePinCode, validatePhone, validateEmail } from "@supermandi/common";
 import { log } from "../../../lib/logger";
@@ -37,7 +39,7 @@ retailerAdminSuppliersRouter.get("/suppliers", async (req: Request, res: Respons
   const { query } = req.query;
 
   try {
-    let whereClause = "WHERE ssl.store_id = $1 AND UPPER(ssl.status) = 'ACTIVE'";
+    let whereClause = "WHERE ssl.store_id = $1 AND ${SQL_LINK_IS_ACTIVE}";
     const params: any[] = [storeId];
     let paramIndex = 2;
 
@@ -76,7 +78,7 @@ retailerAdminSuppliersRouter.get("/suppliers", async (req: Request, res: Respons
         s.pincode,
         COALESCE(s.address_line1, '') || CASE WHEN s.city IS NOT NULL THEN ', ' || s.city ELSE '' END as "address",
         s.verification_status as "verificationStatus",
-        CASE WHEN UPPER(s.verification_status) IN ('VERIFIED','ACTIVE') THEN true ELSE false END as "isSupermandi",
+        CASE WHEN ${SQL_SUPPLIER_VERIFIED} THEN true ELSE false END as "isSupermandi",
         -- Store-link fields (Section C & D)
         ssl.payment_terms as "paymentTerms",
         ssl.credit_days as "creditDays",
@@ -155,8 +157,8 @@ retailerAdminSuppliersRouter.get("/suppliers/available", async (req: Request, re
 
   try {
     let whereClause = `
-      WHERE UPPER(s.verification_status) IN ('VERIFIED','ACTIVE')
-        AND UPPER(s.status) = 'ACTIVE'
+      WHERE ${SQL_SUPPLIER_VERIFIED}
+        AND ${SQL_STATUS_IS_ACTIVE}
         AND s.id NOT IN (
           SELECT supplier_id FROM supplier.supplier_store_links
           WHERE store_id = $1 AND UPPER(status) = 'ACTIVE'
@@ -617,7 +619,7 @@ retailerAdminSuppliersRouter.patch("/suppliers/:id", async (req: Request, res: R
       `SELECT s.id, s.verification_status
        FROM supplier.suppliers s
        INNER JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
-       WHERE s.id = $1 AND ssl.store_id = $2 AND UPPER(ssl.status) = 'ACTIVE'`,
+       WHERE s.id = $1 AND ssl.store_id = $2 AND ${SQL_LINK_IS_ACTIVE}`,
       [id, storeId]
     );
 
@@ -772,7 +774,7 @@ retailerAdminSuppliersRouter.get("/supplier-catalog", async (req: Request, res: 
     const storeState = storeResult.rows[0]?.state || null;
 
     // STG-062: Added sp.is_active = true to exclude deactivated supplier products from catalog
-    let whereClause = `WHERE sp.approval_status = 'approved' AND UPPER(s.verification_status) IN ('VERIFIED','ACTIVE') AND UPPER(s.status) = 'ACTIVE' AND sp.is_active = true`;
+    let whereClause = `WHERE sp.approval_status = 'approved' AND ${SQL_SUPPLIER_VERIFIED} AND ${SQL_STATUS_IS_ACTIVE} AND sp.is_active = true`;
     const params: any[] = [];
     let paramIndex = 1;
 
@@ -946,7 +948,7 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
        JOIN supplier.suppliers s ON s.id = sp.supplier_id
        WHERE sp.id = $1::uuid
          AND sp.approval_status = 'approved'
-         AND UPPER(s.verification_status) IN ('VERIFIED','ACTIVE')`,
+         AND ${SQL_SUPPLIER_VERIFIED}`,
       [productId]
     );
 

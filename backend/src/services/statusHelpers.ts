@@ -31,3 +31,27 @@ export function normalizeSupplierStatus(status: string | null | undefined): stri
   if (!status) return "UNKNOWN";
   return status.toUpperCase();
 }
+
+// ── SQL helpers for WHERE clauses ──────────────────────────────────────────
+// Use these in query builders to eliminate raw status comparisons in routes.
+
+/** SQL fragment: supplier is verified/active (case-insensitive) */
+export const SQL_SUPPLIER_IS_ACTIVE = "UPPER(s.verification_status) IN ('VERIFIED','ACTIVE') OR UPPER(s.status) IN ('ACTIVE','VERIFIED')";
+
+/** SQL fragment: store-supplier link is active (case-insensitive) */
+export const SQL_LINK_IS_ACTIVE = "UPPER(ssl.status) = 'ACTIVE'";
+
+/** SQL fragment: supplier status is active (s. alias, case-insensitive) */
+export const SQL_STATUS_IS_ACTIVE = "UPPER(s.status) = 'ACTIVE'";
+
+/** SQL fragment: supplier verified for product operations */
+export const SQL_SUPPLIER_VERIFIED = "UPPER(s.verification_status) IN ('VERIFIED','ACTIVE')";
+
+/** Canonical status values for INSERT/UPDATE writes */
+export const STATUS = {
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+  REJECTED: "REJECTED",
+  UNVERIFIED: "UNVERIFIED",
+  SUSPENDED: "SUSPENDED",
+} as const;

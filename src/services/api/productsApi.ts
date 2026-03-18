@@ -176,7 +176,9 @@ export async function listProducts(params?: { barcode?: string; q?: string; stor
     if (trimmedQuery && trimmedQuery.length >= 2) {
       const searchParams = new URLSearchParams({ q: trimmedQuery, limit: "100", includeZeroStock: "true" });
       try {
-        const res = await apiClient.get<{ success: boolean; data?: Array<{ displayName?: string; matches?: Array<{ productId: string; displayName?: string; barcode?: string; sellPrice?: number; currentStock?: number }> }> }>(`${STORE_PRODUCTS_BASE}/search?${searchParams.toString()}`);
+        // V3-FIX-096: Typed search match with full metadata
+        type SearchMatch = StoreProductsListItem & { displayName?: string; store_product_id?: string; image_url?: string; hsn_code?: string; gst_rate?: number; supplier_id?: string; supplier_name?: string };
+        const res = await apiClient.get<{ success: boolean; data?: Array<{ displayName?: string; matches?: SearchMatch[] }> }>(`${STORE_PRODUCTS_BASE}/search?${searchParams.toString()}`);
         const groups = Array.isArray(res?.data) ? res.data : [];
         const byProductId = new Map<string, ApiProduct>();
         for (const group of groups) {
@@ -184,24 +186,25 @@ export async function listProducts(params?: { barcode?: string; q?: string; stor
           for (const match of matches) {
             const productId = match?.productId;
             if (!productId || byProductId.has(productId)) continue;
-            // V3-FIX-096: Preserve all metadata from search match
-            byProductId.set(productId, mapStoreProductToApiProduct({
+            // V3-FIX-096: Map search match using typed contract
+            const typed: StoreProductsListItem = {
               productId,
+              storeProductId: match?.storeProductId ?? match?.store_product_id,
               name: match?.displayName || group?.displayName || "",
               barcode: match?.barcode ?? null,
               sellPrice: match?.sellPrice ?? null,
               currentStock: match?.currentStock ?? null,
-              brand: (match as any)?.brand,
-              category: (match as any)?.category,
-              imageUrl: (match as any)?.imageUrl ?? (match as any)?.image_url,
-              unit: (match as any)?.unit,
-              hsnCode: (match as any)?.hsnCode ?? (match as any)?.hsn_code,
-              gstRate: (match as any)?.gstRate ?? (match as any)?.gst_rate,
-              mrp: (match as any)?.mrp,
-              supplierId: (match as any)?.supplierId ?? (match as any)?.supplier_id,
-              supplierName: (match as any)?.supplierName ?? (match as any)?.supplier_name,
-              storeProductId: (match as any)?.storeProductId ?? (match as any)?.store_product_id,
-            } as StoreProductsListItem));
+              brand: match?.brand,
+              category: match?.category,
+              imageUrl: match?.imageUrl ?? match?.image_url,
+              unit: match?.unit,
+              hsnCode: match?.hsnCode ?? match?.hsn_code,
+              gstRate: match?.gstRate ?? match?.gst_rate,
+              mrp: match?.mrp,
+              supplierId: match?.supplierId ?? match?.supplier_id,
+              supplierName: match?.supplierName ?? match?.supplier_name,
+            };
+            byProductId.set(productId, mapStoreProductToApiProduct(typed));
           }
         }
         return Array.from(byProductId.values());

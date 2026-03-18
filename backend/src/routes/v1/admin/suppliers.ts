@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
+// V3-HARDEN-101: Shared status helpers
+import { isSupplierActive, SQL_SUPPLIER_IS_ACTIVE, SQL_LINK_IS_ACTIVE, SQL_SUPPLIER_VERIFIED, STATUS } from "../../../services/statusHelpers";
 import { validateBnplMaxDays, validateMargin, validateMoq } from "@supermandi/common";
 // GO-LIVE-185: Import rate limiter for approval operations
 import { supplierApprovalRateLimiter } from "../../../middleware/posRateLimiter";
@@ -131,8 +133,8 @@ adminSuppliersRouter.get("/verified-suppliers", requireAdminToken, requirePermis
   const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
 
   try {
-    // V3-HARDEN-101: Case-insensitive status check for mixed legacy data
-    let whereClause = "WHERE (UPPER(s.verification_status) IN ('VERIFIED','ACTIVE') OR UPPER(s.status) IN ('ACTIVE','VERIFIED'))";
+    // V3-HARDEN-101: Shared status SQL constant
+    let whereClause = `WHERE (${SQL_SUPPLIER_IS_ACTIVE})`;
     const params: any[] = [];
     let paramIdx = 1;
 
@@ -859,7 +861,7 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
     }
 
     // V3-HARDEN-101: Use canonical status helper instead of raw string comparison
-    const { isSupplierActive } = require("../../../services/statusHelpers");
+    // V3-HARDEN-101: isSupplierActive imported at top
     if (!isSupplierActive(product.supplier_status)) {
       await client.query("ROLLBACK");
       log.warn(`[admin/products/approve] GO-LIVE-131: Cannot approve product from non-ACTIVE supplier: ${product.supplier_name}`);
@@ -1658,7 +1660,7 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
     const linkedStores = await client.query(
       `SELECT ssl.store_id
        FROM supplier.supplier_store_links ssl
-       WHERE ssl.supplier_id = $1::uuid AND UPPER(ssl.status) = 'ACTIVE'
+       WHERE ssl.supplier_id = $1::uuid AND ${SQL_LINK_IS_ACTIVE}
          AND ssl.store_id NOT IN (
            SELECT store_id FROM catalog.store_products
            WHERE product_id = $2::uuid
@@ -1789,7 +1791,7 @@ adminSuppliersRouter.post("/products/publish-bulk", requireAdminToken, requirePe
         // Find stores that don't have it yet
         const stores = await client.query(
           `SELECT ssl.store_id FROM supplier.supplier_store_links ssl
-           WHERE ssl.supplier_id = $1::uuid AND UPPER(ssl.status) = 'ACTIVE'
+           WHERE ssl.supplier_id = $1::uuid AND ${SQL_LINK_IS_ACTIVE}
              AND ssl.store_id NOT IN (
                SELECT store_id FROM catalog.store_products WHERE product_id = $2::uuid
              )`,
@@ -2309,14 +2311,14 @@ adminSuppliersRouter.post("/suppliers/:supplierId/bank-verify", requireAdminToke
     if (action === "approve") {
       await pool.query(
         `UPDATE supplier.suppliers
-         SET bank_verification_status = 'verified', bank_verified_at = NOW(), updated_at = NOW()
+         SET bank_verification_status = 'VERIFIED', bank_verified_at = NOW(), updated_at = NOW()
          WHERE id = $1::uuid`,
         [supplierId]
       );
     } else {
       await pool.query(
         `UPDATE supplier.suppliers
-         SET bank_verification_status = 'rejected', updated_at = NOW()
+         SET bank_verification_status = 'REJECTED', updated_at = NOW()
          WHERE id = $1::uuid`,
         [supplierId]
       );
