@@ -102,7 +102,7 @@ export default function BuyScreenV3() {
   const scanTimestamp = useScanResultStore((s) => s.timestamp);
 
   useEffect(() => {
-    if (!loading && products.length > 0 && scanBarcode && scanIntent === "procurement") {
+    if (!loading && products.length > 0 && scanBarcode && scanIntent === "supplier_catalog_procurement_scan") {
       // Clear immediately to prevent re-trigger
       useScanResultStore.getState().clearScanResult();
       // Find matching product by barcode or ID
@@ -152,7 +152,7 @@ export default function BuyScreenV3() {
           <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth={2}><Circle cx={11} cy={11} r={8} /><Path d="M21 21l-4.35-4.35" /></Svg>
           <TextInput style={styles.searchTextInput} value={searchQuery} onChangeText={setSearchQuery} placeholder="Search supplier products..." placeholderTextColor={colors.textTertiary} />
         </View>
-        <Pressable style={styles.scanBtn} accessibilityLabel="Scan barcode" onPress={() => navigation.navigate("V3Scan", { defaultContext: "procurement" })}>
+        <Pressable style={styles.scanBtn} accessibilityLabel="Scan barcode" onPress={() => navigation.navigate("V3Scan", { defaultContext: "supplier_catalog_procurement_scan" })}>
           <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}><Rect x={3} y={3} width={18} height={18} rx={2} /><Path d="M7 7h.01M7 12h10M7 17h.01" /></Svg>
         </Pressable>
       </View>

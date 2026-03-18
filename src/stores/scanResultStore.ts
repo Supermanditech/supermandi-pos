@@ -5,16 +5,17 @@
  * via useEffect on the reactive state and consumes the result.
  */
 import { create } from "zustand";
+import type { ScanIntent } from "../services/scanIntent";
 
 interface ScanResultState {
   /** Barcode from the last scan, or null if consumed/cleared */
   barcode: string | null;
-  /** Which intent produced this result */
-  intent: string | null;
+  /** Which intent produced this result — typed to canonical ScanIntent */
+  intent: ScanIntent | null;
   /** Monotonic timestamp for change detection */
   timestamp: number;
   /** Set a new scan result (called by V3ScanWrapper) */
-  setScanResult: (barcode: string, intent: string) => void;
+  setScanResult: (barcode: string, intent: ScanIntent) => void;
   /** Clear the result after consumption (called by destination screen) */
   clearScanResult: () => void;
 }

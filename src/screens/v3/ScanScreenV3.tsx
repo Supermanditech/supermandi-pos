@@ -16,8 +16,17 @@ import { logger } from "../../services/logger";
 // V3-FIX-157: Canonical scan-intent contract — all scan paths go through here
 import { normalizeBarcode, isDuplicateScan, type ScanIntent } from "../../services/scanIntent";
 
-// V3-FIX-157: Extended scan context to include procurement and counter purchase
-export type ScanContext = "sell" | "stock_in" | "new_product" | "procurement" | "counter_purchase";
+// V3-FIX-157: ScanContext uses the canonical ScanIntent type plus legacy stock_in/new_product
+export type ScanContext = ScanIntent | "new_product";
+
+// V3-FIX-157: Map between canonical ScanIntent names and display labels
+const SCAN_CONTEXT_LABELS: Record<ScanContext, string> = {
+  sell_scan: "Sell",
+  stock_in: "Stock In",
+  supplier_catalog_procurement_scan: "Procurement",
+  counter_purchase_scan: "Counter",
+  new_product: "New Product",
+};
 
 type ScanScreenV3Props = {
   visible: boolean;
@@ -35,7 +44,7 @@ type ScanResult = {
   isNew: boolean;
 };
 
-export default function ScanScreenV3({ visible, defaultContext = "sell", onClose, onProductFound, onNewProduct }: ScanScreenV3Props) {
+export default function ScanScreenV3({ visible, defaultContext = "sell_scan", onClose, onProductFound, onNewProduct }: ScanScreenV3Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -60,7 +69,7 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
         price: product.priceMinor, stock: product.stock ?? undefined, isNew: false,
       });
 
-      if (context === "sell") {
+      if (context === "sell_scan") {
         // V3-FIX-160: SELL scan — add/increment cart through canonical path
         const existing = useCartStore.getState().items.find((i) => i.barcode === code);
         if (existing) {
@@ -71,10 +80,10 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
           showToast(`${product.name} added to cart`);
         }
         onProductFound(code, context);
-      } else if (context === "stock_in" || context === "counter_purchase") {
-        showToast(`${product.name} — ready for ${context === "counter_purchase" ? "counter purchase" : "stock inward"}`);
+      } else if (context === "stock_in" || context === "counter_purchase_scan") {
+        showToast(`${product.name} — ready for ${context === "counter_purchase_scan" ? "counter purchase" : "stock inward"}`);
         onProductFound(code, context);
-      } else if (context === "procurement") {
+      } else if (context === "supplier_catalog_procurement_scan") {
         // V3-HARDEN-158: Procurement scan found — route to detail
         showToast(`${product.name} — found in store`);
         onProductFound(code, context);
@@ -163,12 +172,12 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
         </View>
 
         {/* V3-FIX-069: Context toggle only visible for non-sell entry points */}
-        {defaultContext !== "sell" ? (
+        {defaultContext !== "sell_scan" ? (
           <View style={styles.contextRow}>
             <Text style={styles.contextLabel}>SCAN MODE</Text>
             <View style={styles.contextToggle}>
-              {/* V3-FIX-157: All scan intents available in mode toggle */}
-              {(["sell", "stock_in", "procurement", "counter_purchase", "new_product"] as ScanContext[]).map((ctx) => (
+              {/* V3-FIX-157: All scan intents available in mode toggle — canonical names */}
+              {(["sell_scan", "stock_in", "supplier_catalog_procurement_scan", "counter_purchase_scan", "new_product"] as ScanContext[]).map((ctx) => (
                 <Pressable
                   key={ctx}
                   style={[styles.contextBtn, context === ctx && styles.contextBtnActive]}
@@ -178,7 +187,7 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
                   testID={`scan-mode-${ctx}`}
                 >
                   <Text style={[styles.contextText, context === ctx && styles.contextTextActive]}>
-                    {ctx === "sell" ? "Sell" : ctx === "stock_in" ? "Stock In" : ctx === "procurement" ? "Procurement" : ctx === "counter_purchase" ? "Counter" : "New Product"}
+                    {SCAN_CONTEXT_LABELS[ctx] ?? ctx}
                   </Text>
                 </Pressable>
               ))}
@@ -209,7 +218,7 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
                   <Text style={styles.resultBarcode}>{lastResult.barcode}</Text>
                 </View>
                 {/* V3-HARDEN-158: Procurement scan miss MUST NOT offer New Product */}
-                {context !== "procurement" ? (
+                {context !== "supplier_catalog_procurement_scan" ? (
                   <Pressable
                     style={styles.createBtn}
                     onPress={() => { onNewProduct(lastResult.barcode); onClose(); }}
@@ -224,8 +233,8 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
             <View style={styles.resultAction}>
               <Text style={styles.resultActionText}>
                 {!lastResult.isNew
-                  ? (context === "sell" ? "✓ Added to cart!" : context === "stock_in" ? "✓ Stock recorded!" : context === "counter_purchase" ? "✓ Ready for inward!" : "✓ Product found")
-                  : context === "procurement" ? "Product not available in supplier catalogue" : "Tap Create to add this product to your store"}
+                  ? (context === "sell_scan" ? "✓ Added to cart!" : context === "stock_in" ? "✓ Stock recorded!" : context === "counter_purchase_scan" ? "✓ Ready for inward!" : context === "supplier_catalog_procurement_scan" ? "✓ Found in catalogue" : "✓ Product found")
+                  : context === "supplier_catalog_procurement_scan" ? "Product not available in supplier catalogue" : "Tap Create to add this product to your store"}
               </Text>
             </View>
           </View>

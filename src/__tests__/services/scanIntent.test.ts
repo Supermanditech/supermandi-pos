@@ -207,7 +207,7 @@ describe("V3-FIX-157: Live wiring (static — narrowly scoped)", () => {
     const src = fs.readFileSync(
       path.resolve(__dirname, "../../screens/v3/ScanScreenV3.tsx"), "utf8"
     );
-    expect(src).toContain('context !== "procurement"');
+    expect(src).toContain('context !== "supplier_catalog_procurement_scan"');
     expect(src).toContain("not available in supplier catalogue");
   });
 
@@ -217,7 +217,7 @@ describe("V3-FIX-157: Live wiring (static — narrowly scoped)", () => {
     const src = fs.readFileSync(
       path.resolve(__dirname, "../../screens/v3/BuyScreenV3.tsx"), "utf8"
     );
-    expect(src).toContain('defaultContext: "procurement"');
+    expect(src).toContain('defaultContext: "supplier_catalog_procurement_scan"');
   });
 
   it("CounterPurchaseScreenV3 uses canonical normalizeBarcode + isDuplicateScan", () => {

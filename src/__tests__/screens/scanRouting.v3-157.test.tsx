@@ -109,7 +109,7 @@ describe("V3-FIX-157+160: ScanScreenV3 mounted SELL scan (runtime)", () => {
 
   it("found barcode adds to cart in sell mode", () => {
     const onProductFound = jest.fn();
-    render(<ScanScreenV3 visible={true} defaultContext="sell" onClose={jest.fn()} onProductFound={onProductFound} onNewProduct={jest.fn()} />);
+    render(<ScanScreenV3 visible={true} defaultContext="sell_scan" onClose={jest.fn()} onProductFound={onProductFound} onNewProduct={jest.fn()} />);
 
     // Type a known barcode
     const input = screen.getByPlaceholderText(/Type barcode/);
@@ -118,11 +118,11 @@ describe("V3-FIX-157+160: ScanScreenV3 mounted SELL scan (runtime)", () => {
 
     // Product found — addItem called
     expect(mockAddItem).toHaveBeenCalledTimes(1);
-    expect(onProductFound).toHaveBeenCalledWith("890100001", "sell");
+    expect(onProductFound).toHaveBeenCalledWith("890100001", "sell_scan");
   });
 
   it("unknown barcode shows not-found result", () => {
-    render(<ScanScreenV3 visible={true} defaultContext="sell" onClose={jest.fn()} onProductFound={jest.fn()} onNewProduct={jest.fn()} />);
+    render(<ScanScreenV3 visible={true} defaultContext="sell_scan" onClose={jest.fn()} onProductFound={jest.fn()} onNewProduct={jest.fn()} />);
 
     const input = screen.getByPlaceholderText(/Type barcode/);
     fireEvent.changeText(input, "999999999");
@@ -144,7 +144,7 @@ describe("V3-FIX-157: V3ScanWrapper mounted routing (runtime)", () => {
   beforeEach(() => { resetDuplicateState(); mockNavigate.mockClear(); });
 
   it("wrapper reads defaultContext param for procurement mode", () => {
-    const route = { params: { defaultContext: "procurement" } };
+    const route = { params: { defaultContext: "supplier_catalog_procurement_scan" } };
     render(<V3ScanWrapper route={route} />);
     // Should render scan screen (visible=true)
     expect(screen.getByText("Scan Barcode")).toBeTruthy();
@@ -154,7 +154,7 @@ describe("V3-FIX-157: V3ScanWrapper mounted routing (runtime)", () => {
     const { useScanResultStore } = require("../../stores/scanResultStore");
     useScanResultStore.getState().clearScanResult();
 
-    const route = { params: { defaultContext: "procurement" } };
+    const route = { params: { defaultContext: "supplier_catalog_procurement_scan" } };
     render(<V3ScanWrapper route={route} />);
 
     const input = screen.getByPlaceholderText(/Type barcode/);
@@ -164,7 +164,7 @@ describe("V3-FIX-157: V3ScanWrapper mounted routing (runtime)", () => {
     // Procurement success should set the reactive store
     const state = useScanResultStore.getState();
     expect(state.barcode).toBe("890100001");
-    expect(state.intent).toBe("procurement");
+    expect(state.intent).toBe("supplier_catalog_procurement_scan");
     expect(state.timestamp).toBeGreaterThan(0);
     expect(mockGoBack).toHaveBeenCalled();
   });
@@ -173,7 +173,7 @@ describe("V3-FIX-157: V3ScanWrapper mounted routing (runtime)", () => {
     const { useScanResultStore } = require("../../stores/scanResultStore");
     useScanResultStore.getState().clearScanResult();
 
-    const route = { params: { defaultContext: "sell" } };
+    const route = { params: { defaultContext: "sell_scan" } };
     render(<V3ScanWrapper route={route} />);
 
     const input = screen.getByPlaceholderText(/Type barcode/);
@@ -226,7 +226,7 @@ describe("V3-FIX-157: BuyScreenV3 consumes scan result (runtime)", () => {
     });
 
     // Simulate: scan result arrives from wrapper
-    useScanResultStore.getState().setScanResult("890200001", "procurement");
+    useScanResultStore.getState().setScanResult("890200001", "supplier_catalog_procurement_scan");
 
     // BuyScreenV3 should consume the result and open detail
     await waitFor(() => {
@@ -238,7 +238,7 @@ describe("V3-FIX-157: BuyScreenV3 consumes scan result (runtime)", () => {
 describe("V3-HARDEN-158: ScanScreenV3 mounted procurement scan (runtime)", () => {
   beforeEach(() => { resetDuplicateState(); });
   it("renders in procurement mode and hides New Product on miss", () => {
-    render(<ScanScreenV3 visible={true} defaultContext="procurement" onClose={jest.fn()} onProductFound={jest.fn()} onNewProduct={jest.fn()} />);
+    render(<ScanScreenV3 visible={true} defaultContext="supplier_catalog_procurement_scan" onClose={jest.fn()} onProductFound={jest.fn()} onNewProduct={jest.fn()} />);
 
     // Scan unknown barcode
     const input = screen.getByPlaceholderText(/Type barcode/);

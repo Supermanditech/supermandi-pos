@@ -80,14 +80,19 @@ export function V3SuccessWrapper({ route }: any) {
 export function V3ScanWrapper({ route }: any) {
   const nav = useNavigation<Nav>();
   // V3-FIX-157: Read both "context" and "defaultContext" params for scan intent routing
-  const context = route?.params?.defaultContext ?? route?.params?.context ?? "sell";
+  // V3-FIX-157: Canonical intent names — map legacy short names to canonical
+  const rawContext = route?.params?.defaultContext ?? route?.params?.context ?? "sell_scan";
+  const context = rawContext === "sell" ? "sell_scan"
+    : rawContext === "procurement" ? "supplier_catalog_procurement_scan"
+    : rawContext === "counter_purchase" ? "counter_purchase_scan"
+    : rawContext;
   return <ScanScreenV3
     visible={true}
     defaultContext={context}
     onClose={() => nav.goBack()}
     onProductFound={(barcode, scanContext) => {
-      // V3-FIX-157: Intent-specific routing via reactive store
-      if (scanContext === "procurement" || scanContext === "counter_purchase") {
+      // V3-FIX-157: Intent-specific routing via reactive store — canonical names
+      if (scanContext === "supplier_catalog_procurement_scan" || scanContext === "counter_purchase_scan") {
         useScanResultStore.getState().setScanResult(barcode, scanContext);
       }
       nav.goBack();
