@@ -35,21 +35,23 @@ export async function shareBillText(snapshot: BillSnapshot): Promise<void> {
 export async function shareBillWhatsApp(snapshot: BillSnapshot, phone?: string): Promise<void> {
   const text = buildBillText(snapshot);
 
-  // Try server-backed send first
-  try {
-    const { isOnline } = require("../networkStatus");
-    const { apiClient } = require("../api/apiClient");
-    const online = await isOnline();
-    if (online && snapshot.saleId) {
-      await apiClient.post("/api/v1/pos/whatsapp/send-bill", {
-        saleId: snapshot.saleId,
-        message: text,
-        phone: phone ?? undefined,
-      });
-      return; // Server send succeeded
+  // V3-HARDEN-103: Server-backed send requires recipientPhone (backend contract)
+  if (phone && snapshot.saleId) {
+    try {
+      const { isOnline } = require("../networkStatus");
+      const { apiClient } = require("../api/apiClient");
+      const online = await isOnline();
+      if (online) {
+        const cleanPhone = phone.replace(/\D/g, "");
+        await apiClient.post("/api/v1/pos/whatsapp/send-bill", {
+          saleId: snapshot.saleId,
+          recipientPhone: cleanPhone,
+        });
+        return; // Server send succeeded
+      }
+    } catch {
+      // Server unavailable — fall through to deep link
     }
-  } catch {
-    // Server unavailable — fall back to deep link
   }
 
   // Fallback: deep-link to WhatsApp app

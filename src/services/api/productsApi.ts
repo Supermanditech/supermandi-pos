@@ -54,14 +54,34 @@ export type ApiProduct = {
   metadata_updated_at?: string | null;
 };
 
+// V3-FIX-096: Authoritative list item type matching backend response
 type StoreProductsListItem = {
   productId: string;
+  storeProductId?: string;
   name: string;
   barcode?: string | null;
   sellPrice?: number | null;
   currentStock?: number | null;
   brand?: string | null;
+  category?: string | null;
   unit?: string | null;
+  imageUrl?: string | null;
+  image_url?: string | null;
+  hsnCode?: string | null;
+  hsn_code?: string | null;
+  gstRate?: number | null;
+  gst_rate?: number | null;
+  mrp?: number | null;
+  netContentValue?: number | null;
+  net_content_value?: number | null;
+  netContentUnit?: string | null;
+  net_content_unit?: string | null;
+  supplierId?: string | null;
+  supplier_id?: string | null;
+  supplierName?: string | null;
+  supplier_name?: string | null;
+  metadataUpdatedAt?: string | null;
+  metadata_updated_at?: string | null;
 };
 
 export type StoreLookupProduct = {
@@ -97,18 +117,31 @@ export type PriceResolution = {
   mrp: number | null;
 };
 
+// V3-FIX-096: Preserve all metadata from backend through to productsStore
 const mapStoreProductToApiProduct = (item: StoreProductsListItem): ApiProduct => {
   const price = typeof item.sellPrice === "number" ? item.sellPrice : null;
   return {
     id: item.productId,
+    storeProductId: item.storeProductId,
     name: item.name,
     barcode: item.barcode ?? null,
     sku: null,
     price,
     currency: "INR",
-    // BLK-SP1: Parse stock defensively (NUMERIC may arrive as string)
     stock: (item.currentStock != null && !isNaN(Number(item.currentStock))) ? Number(item.currentStock) : 0,
-    inventory: price !== null ? { selling_price: price } : null
+    inventory: price !== null ? { selling_price: price } : null,
+    brand: item.brand,
+    category: item.category,
+    imageUrl: item.imageUrl ?? item.image_url,
+    unit: item.unit,
+    hsnCode: item.hsnCode ?? item.hsn_code,
+    gstRate: item.gstRate ?? item.gst_rate,
+    mrp: item.mrp,
+    netContentValue: item.netContentValue ?? item.net_content_value,
+    netContentUnit: item.netContentUnit ?? item.net_content_unit,
+    supplierId: item.supplierId ?? item.supplier_id,
+    supplierName: item.supplierName ?? item.supplier_name,
+    metadataUpdatedAt: item.metadataUpdatedAt ?? item.metadata_updated_at,
   };
 };
 
@@ -127,13 +160,8 @@ export async function listProducts(params?: { barcode?: string; q?: string; stor
       try {
         const res = await apiClient.get<{ success: boolean; data?: StoreProductsListItem }>(`${STORE_PRODUCTS_BASE}/lookup?${lookup.toString()}`);
         if (!res?.data) return [];
-        return [mapStoreProductToApiProduct({
-          productId: res.data.productId,
-          name: res.data.name,
-          barcode: res.data.barcode ?? null,
-          sellPrice: res.data.sellPrice ?? null,
-          currentStock: res.data.currentStock ?? null
-        })];
+        // V3-FIX-096: Pass through all available metadata from lookup response
+        return [mapStoreProductToApiProduct(res.data as StoreProductsListItem)];
       } catch (error) {
         // Return empty array on 404 or DEVICE_SESSION_MISSING
         if (error instanceof ApiError && (error.status === 404 || error.message === "DEVICE_SESSION_MISSING")) {

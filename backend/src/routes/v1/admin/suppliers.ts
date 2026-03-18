@@ -262,9 +262,10 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
     if (verifySupplier && !linkedSupplierId) {
       // GSTIN fallback: truncate to 15 chars (VARCHAR(15) constraint)
       const gstin = request.requested_gstin || ('PND-' + supplierId.substring(0, 11));
+      // V3-HARDEN-101: Canonical status vocabulary — both fields use uppercase ACTIVE
       const supplierResult = await client.query(
         `INSERT INTO supplier.suppliers (gstin, business_name, primary_phone, primary_email, verification_status, status, application_id)
-         VALUES ($1, $2, $3, $4, 'ACTIVE', 'active', $5::uuid)
+         VALUES ($1, $2, $3, $4, 'ACTIVE', 'ACTIVE', $5::uuid)
          RETURNING id`,
         [
           gstin,

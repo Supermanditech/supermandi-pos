@@ -14,16 +14,18 @@ else
   echo "OK: GCS_DOCUMENTS_BUCKET=$GCS_DOCUMENTS_BUCKET"
 fi
 
-# 2. Payments
+# 2. Payments — blocking for production
 if [ -z "${RAZORPAY_KEY_ID:-}" ] && [ -z "${DEFAULT_UPI_VPA:-}" ]; then
-  echo "WARN: Neither RAZORPAY_KEY_ID nor DEFAULT_UPI_VPA set"
+  echo "FAIL: Neither RAZORPAY_KEY_ID nor DEFAULT_UPI_VPA set (UPI payments will fail)"
+  ERRORS=$((ERRORS+1))
 else
   echo "OK: Payment config present"
 fi
 
-# 3. WhatsApp
+# 3. WhatsApp — blocking for production bill sharing
 if [ -z "${WHATSAPP_API_TOKEN:-}" ] && [ -z "${WHATSAPP_BUSINESS_PHONE_ID:-}" ]; then
-  echo "WARN: WhatsApp Cloud API not configured"
+  echo "FAIL: WhatsApp Cloud API not configured (server-backed bill sharing will fail)"
+  ERRORS=$((ERRORS+1))
 else
   echo "OK: WhatsApp config present"
 fi
