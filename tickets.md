@@ -6351,6 +6351,18 @@ Override requirement:
 - Claude must inspect the existing category/taxonomy logic first and override conflicting text-category-only behavior in the current add/publish flows.
 - Do not leave supplier-catalog add/publish as a second uncategorized path beside digitisation.
 
+Implemented scope:
+- Canonical assignTaxonomy() resolves through: explicit override → DB function → keyword matching → Baaki UUID fallback
+- UNCATEGORIZED_TAXONOMY_ID uses real Baaki UUID (f0000000-0000-0000-0000-000000000015) matching fmcg_taxonomy FK
+- Live wiring into: retailer-admin manual product create (RETAILER_MANUAL_CREATE) and POS store digitisation (STORE_DIGITISATION)
+- Raw supplier text is never returned as taxonomy_id — falls to Baaki UUID instead
+- 29 executable tests including keyword matching for 9 products, override priority, UUID validation
+
+Deferred scope:
+- Supplier-catalog add to store (retailer-admin/suppliers.ts) still uses raw text category — needs wiring into assignTaxonomy with SUPPLIER_CATALOG_ADD entry path
+- Admin publish of supplier products (admin/suppliers.ts, admin/catalog.ts) still uses edited_category text — needs wiring with ADMIN_PUBLISH entry path
+- These paths require careful inspection of the existing add-to-store SQL to correctly insert taxonomy_id alongside the existing fields
+
 ## V3-HARDEN-155 - Preserve category identity correctly for repeated purchase of the same item while assigning category safely for true new SKUs
 
 Priority: P0
@@ -6389,6 +6401,16 @@ Expected outcome:
 Override requirement:
 - Claude must inspect the current repeated-add and publish identity paths first and override conflicting “always insert / always remap” behavior in place.
 - Do not let repeated purchases keep re-deciding category for already-classified store items.
+
+Implemented scope:
+- resolveStoreTaxonomy() checks existing store_product.taxonomy_id before assigning fresh — preserves on repeat
+- getExistingStoreTaxonomy() queries the real taxonomy_id column (UUID-backed with FK)
+- 3 executable tests: preserves existing taxonomy for known product, assigns fresh for new, assigns fresh for null productId
+
+Deferred scope:
+- resolveStoreTaxonomy is not yet called from the live supplier add/publish paths (retailer-admin/suppliers.ts, admin/suppliers.ts)
+- Those paths still insert/update without checking existing store taxonomy_id
+- Wiring requires coordinating with the supplier-catalog add SQL which currently uses ON CONFLICT upsert patterns
 
 ## V3-HARDEN-156 - Propagate category truth end to end across retailer web, POS, SuperAdmin, supplier metadata, and category chips with uncategorized governance
 
@@ -6437,7 +6459,7 @@ Override requirement:
 - Do not leave one surface using taxonomy and another using stale text categories as parallel truths.
 
 Implemented scope:
-- CATEGORY_TRUTH_RULES defined in taxonomyAssignment.ts: taxonomy_id is authority, raw text is metadata, UNCATEGORIZED is explicit, store override preserved, admin correction propagates, retailer override is store-local
+- CATEGORY_TRUTH_RULES defined in taxonomyAssignment.ts: taxonomy_id (UUID) is authority, raw text is metadata, uncategorized uses real Baaki UUID (f0000000-0000-0000-0000-000000000015), store override preserved, admin correction propagates, retailer override is store-local
 - assignTaxonomy() wired into live retailer-admin product create and POS store digitisation — both now use the canonical contract instead of inline DB calls
 - 7 executable tests verify the truth rules
 

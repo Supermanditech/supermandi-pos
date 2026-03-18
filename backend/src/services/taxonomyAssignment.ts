@@ -27,7 +27,13 @@
 import type { PoolClient, Pool } from "pg";
 import { suggestCategory } from "../utils/autoCategorization";
 
-/** The canonical uncategorized taxonomy value */
+/**
+ * The canonical uncategorized taxonomy UUID — matches the Baaki/Others entry
+ * in catalog.fmcg_taxonomy seeded by migration 027.
+ * taxonomy_id is UUID-typed with FK to fmcg_taxonomy, so we MUST use a real UUID.
+ */
+export const UNCATEGORIZED_TAXONOMY_ID = "f0000000-0000-0000-0000-000000000015" as const;
+/** Human-readable label for uncategorized */
 export const UNCATEGORIZED = "Uncategorized" as const;
 
 /** Entry path that triggered the taxonomy assignment */
@@ -106,11 +112,11 @@ export async function assignTaxonomy(
   }
 
   // 4. Raw supplier text category is NOT used as taxonomyId — it's informational only
-  // Store-facing category truth must be a real taxonomy_id or UNCATEGORIZED
+  // Store-facing category truth must be a real taxonomy UUID or Baaki fallback
 
-  // 5. Explicit uncategorized
+  // 5. Explicit uncategorized — use the real Baaki UUID from fmcg_taxonomy
   return {
-    taxonomyId: UNCATEGORIZED,
+    taxonomyId: UNCATEGORIZED_TAXONOMY_ID,
     method: "uncategorized",
     rawCategory,
   };
@@ -173,8 +179,8 @@ export const CATEGORY_TRUTH_RULES = {
   AUTHORITY: "taxonomy_id" as const,
   /** Raw text category is informational metadata only */
   RAW_CATEGORY_ROLE: "informational_metadata" as const,
-  /** Uncategorized items use explicit UNCATEGORIZED value */
-  UNCATEGORIZED_VALUE: UNCATEGORIZED,
+  /** Uncategorized items use the Baaki taxonomy UUID */
+  UNCATEGORIZED_VALUE: UNCATEGORIZED_TAXONOMY_ID,
   /** Correction precedence: admin > retailer > automatic */
   CORRECTION_PRECEDENCE: ["admin", "retailer", "automatic"] as const,
   /** Store-local override is preserved on repeat procurement */

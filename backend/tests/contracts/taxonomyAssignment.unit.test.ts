@@ -7,6 +7,7 @@ import {
   assignTaxonomy,
   resolveStoreTaxonomy,
   UNCATEGORIZED,
+  UNCATEGORIZED_TAXONOMY_ID,
   CATEGORY_TRUTH_RULES,
   type TaxonomyAssignmentInput,
 } from "../../src/services/taxonomyAssignment";
@@ -42,31 +43,30 @@ describe("V3-FIX-154: Canonical taxonomy assignment (executable)", () => {
     expect(result.method).toBe("keyword_match");
   });
 
-  it("raw supplier text is NOT used as taxonomyId — falls to UNCATEGORIZED", async () => {
+  it("raw supplier text is NOT used as taxonomyId — falls to Baaki UUID", async () => {
     const result = await assignTaxonomy(mockPool, {
       productName: "XYZ Unknown Product 123",
       rawCategory: "Misc Items",
       entryPath: "SUPPLIER_CATALOG_ADD",
     });
-    // Raw text must NOT become taxonomyId — store truth must be real taxonomy or UNCATEGORIZED
-    expect(result.taxonomyId).toBe(UNCATEGORIZED);
+    // Raw text must NOT become taxonomyId — must be real Baaki UUID
+    expect(result.taxonomyId).toBe(UNCATEGORIZED_TAXONOMY_ID);
     expect(result.method).toBe("uncategorized");
-    // rawCategory preserved as metadata
     expect(result.rawCategory).toBe("Misc Items");
   });
 
-  it("returns UNCATEGORIZED when no method resolves", async () => {
+  it("returns Baaki UUID when no method resolves", async () => {
     const result = await assignTaxonomy(mockPool, {
       productName: "ABC123",
       entryPath: "CSV_IMPORT",
     });
-    expect(result.taxonomyId).toBe(UNCATEGORIZED);
+    expect(result.taxonomyId).toBe(UNCATEGORIZED_TAXONOMY_ID);
     expect(result.method).toBe("uncategorized");
   });
 
-  it("UNCATEGORIZED constant is explicit string, not null", () => {
-    expect(UNCATEGORIZED).toBe("Uncategorized");
-    expect(typeof UNCATEGORIZED).toBe("string");
+  it("UNCATEGORIZED_TAXONOMY_ID is a valid UUID matching Baaki entry", () => {
+    expect(UNCATEGORIZED_TAXONOMY_ID).toBe("f0000000-0000-0000-0000-000000000015");
+    expect(UNCATEGORIZED_TAXONOMY_ID).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
   });
 });
 
@@ -203,8 +203,8 @@ describe("V3-HARDEN-156: Category truth propagation rules (executable)", () => {
     expect(CATEGORY_TRUTH_RULES.RAW_CATEGORY_ROLE).toBe("informational_metadata");
   });
 
-  it("uncategorized items use explicit UNCATEGORIZED value", () => {
-    expect(CATEGORY_TRUTH_RULES.UNCATEGORIZED_VALUE).toBe("Uncategorized");
+  it("uncategorized items use Baaki taxonomy UUID", () => {
+    expect(CATEGORY_TRUTH_RULES.UNCATEGORIZED_VALUE).toBe(UNCATEGORIZED_TAXONOMY_ID);
   });
 
   it("store-local override is preserved on repeat procurement", () => {
