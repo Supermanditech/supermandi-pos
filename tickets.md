@@ -6345,6 +6345,8 @@ Expected outcome:
 Override requirement:
 - Claude must inspect the current scan entry points first and override conflicting live scan behavior in place.
 - Do not leave separate ad hoc HID and camera rules spread across SELL, Counter Purchase, and wrapper code.
+- Existing conflicting scan code must be updated, replaced, or deleted so production has one live behavior only.
+- Do not keep legacy scanner branches, hidden fallback handlers, or duplicate scan side-effect paths that can conflict after release.
 
 ## V3-HARDEN-158 - Define repeated-vs-new supplier-catalog scan behavior with edited product-field propagation for procurement lane
 
@@ -6390,6 +6392,8 @@ Expected outcome:
 Override requirement:
 - Claude must inspect the current procurement, mapping, and edit-persistence logic first and override conflicting repeated/new scan assumptions in place.
 - Do not leave a parallel “scan purchase” identity model beside the approved procurement lane.
+- Existing procurement-scan code must be updated, replaced, or deleted where needed so production does not contain two conflicting repeated/new purchase models.
+- Do not preserve silent legacy metadata-write paths that can diverge from the approved edited-field propagation contract.
 
 ## V3-HARDEN-159 - Define repeated-vs-new Counter Purchase scan behavior with edited product-field persistence and ledger-safe manual inward semantics
 
@@ -6434,6 +6438,8 @@ Expected outcome:
 Override requirement:
 - Claude must inspect the existing Counter Purchase scan, edit, and inward-save paths first and override conflicting live behavior in place.
 - Do not keep a second silent fallback path that treats edited new items as if they were authoritative existing products.
+- Existing Counter Purchase scan and inward-save code must be updated, replaced, or deleted where needed so production has one authoritative direct-inward behavior.
+- Do not leave old save paths, duplicate barcode resolution rules, or hidden edit-persistence branches that can conflict after deployment.
 
 ## V3-FIX-160 - Canonicalize SELL HID and camera scan-to-cart behavior for printed store barcodes and physically picked store products
 
@@ -6478,6 +6484,8 @@ Expected outcome:
 Override requirement:
 - Claude must inspect the current SELL scan/cart identity code first and override conflicting barcode-resolution behavior in place.
 - Do not leave PDF/store-label scan and physical-product scan as parallel cart identity models.
+- Existing SELL scan/cart code must be updated, replaced, or deleted where needed so production has one authoritative scan-to-cart contract.
+- Do not preserve older barcode fallback branches that can create duplicate cart identities or conflicting scan outcomes in live use.
 
 ## V3-HARDEN-161 - Add 50k purchase scans/day and 50k sales scans/day capacity, latency, duplicate-suppression, and crash-resistance gates across HID and camera paths
 
@@ -6522,6 +6530,8 @@ Expected outcome:
 Override requirement:
 - Claude must inspect the current scan throughput tooling first and extend or replace the live harnesses/gates instead of adding disconnected synthetic scripts.
 - Do not rely on the older 10k/day scan gates as final acceptance for this approved volume.
+- Existing lower-capacity scan gates, stress assumptions, and observability paths must be updated, replaced, or deleted where needed so production readiness is measured against the approved volumes only.
+- Do not keep conflicting capacity gates that could let a weaker legacy threshold pass while the real scanner workload still fails in production.
 
 ## Phase 15 - HID and Camera Scan Governance for Procurement and SELL at Production Throughput
 
@@ -6544,3 +6554,4 @@ Guard rails:
 - Do not mix procurement scan semantics with SELL scan semantics.
 - Do not let HID and camera paths diverge into different product-identity or side-effect outcomes for the same barcode.
 - Do not certify scanner scale until purchase-side and sales-side throughput are both proven at the approved daily volumes.
+- Existing conflicting scanner code, duplicate handlers, fallback branches, stale tests, and weaker legacy gates must be updated, replaced, or deleted so the production path is singular and non-conflicting.
