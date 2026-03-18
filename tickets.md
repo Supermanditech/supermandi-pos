@@ -5181,6 +5181,366 @@ Guard rails:
 - No new fake QR, placeholder payment values, or local-only settings writes.
 - Do not let draft cart edits mutate stock/ledger before final sale commit.
 
+## V3-HARDEN-130 - Enforce store isolation across store catalog, supplier catalog, ledger, settings, and search surfaces
+
+Priority: P0
+Layers: UI/UX, navigation, API authz, backend queries, DB constraints, migrations, GCP parity
+
+Issue:
+- The repo still lacks one explicit production ticket that proves store-scoped data isolation across:
+  - POS store products
+  - digitized onboarding products
+  - supplier catalog exposure
+  - store search
+  - settings/payment state
+  - store ledger and sales history
+
+Root cause:
+- Several parity tickets already harden individual flows, but there is no single isolation audit/fix ticket ensuring one store never sees or mutates another store’s operational data, and that supplier/global catalog data does not leak into store-owned search/results/contracts by accident.
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/components/v3/UniversalSearchV3.tsx`
+- `src/services/api/sellSearchApi.ts`
+- `src/services/api/suppliersApi.ts`
+- `backend/src/routes/v1/pos/storeProducts.ts`
+- `backend/src/routes/v1/pos/sales.ts`
+- `backend/src/routes/v1/retailer-admin/products.ts`
+- `backend/src/routes/v1/retailer-admin/suppliers.ts`
+- any shared authz/store helper or forward migration needed to enforce store scoping
+- deploy/readiness checks touched by the fix
+
+Expected outcome:
+- Store-owned operational data is always store-scoped.
+- Supplier/global catalog data is exposed only through explicitly separated supplier/discovery surfaces.
+- No cross-store, cross-catalog, or cross-tenant leakage remains in UI, navigation, API responses, ledger state, or cached/offline datasets.
+
+## V3-FIX-131 - Separate store-product search and supplier-catalog search into isolated UX and API contracts
+
+Priority: P0
+Layers: search UX, navigation, API design
+
+Issue:
+- Store digitized products and supplier-listed catalog products can still collide conceptually in search, making retailer search results ambiguous and operationally risky.
+
+Root cause:
+- Search flows are still being improved for parity, but there is not yet one explicit contract that says:
+  - store search is for sellable/in-stock/store-owned products
+  - supplier catalog search is for procurement/discovery products
+  - the two result sets must never be mixed into one ambiguous operator list
+
+Files impacted:
+- `src/components/v3/UniversalSearchV3.tsx`
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/services/api/sellSearchApi.ts`
+- `src/services/api/suppliersApi.ts`
+- `backend/src/routes/v1/pos/storeProducts.ts`
+- `backend/src/routes/v1/pos/suppliers.ts`
+- `backend/src/routes/v1/retailer-admin/suppliers.ts`
+
+Expected outcome:
+- Store-product search and supplier-catalog search are fully isolated in UI, routing intent, and API response shape.
+- A retailer searching store inventory sees only store products.
+- A retailer searching procurement/supplier catalog sees only supplier/discovery results.
+- No ambiguous blended result list remains in production paths.
+
+## V3-FIX-132 - Add multilingual multi-key search support for SKU, barcode, product, supplier, brand, and quantity terms
+
+Priority: P0
+Layers: search UX, indexing, API query behavior, localization
+
+Issue:
+- Search still is not explicitly ticketed to support the full set of retailer lookup behaviors required for kirana operations.
+
+Root cause:
+- Existing search parity tickets focus on screen fidelity and result wiring, but not on one production-grade search contract for:
+  - SKU
+  - barcode
+  - product name
+  - supplier name
+  - brand
+  - Hindi / English terms
+  - quantity / pack-size / unit cues
+
+Files impacted:
+- `src/components/v3/UniversalSearchV3.tsx`
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/services/api/sellSearchApi.ts`
+- `src/services/api/suppliersApi.ts`
+- `backend/src/routes/v1/pos/storeProducts.ts`
+- `backend/src/routes/v1/pos/suppliers.ts`
+- any search/index helper or forward migration needed for performant lookup
+
+Expected outcome:
+- Both store search and supplier-catalog search support easier lookup by the real operator parameters above.
+- Hindi/English and barcode/SKU/brand/supplier queries behave predictably.
+- Search remains fast at the SKU volumes already covered by scale tickets.
+
+## V3-HARDEN-133 - Define and enforce the inventory ledger event matrix for stock credit, debit, sold, unsold, and delivery states
+
+Priority: P0
+Layers: ledger logic, backend business rules, DB auditability, retailer/POS sync
+
+Issue:
+- The system still needs one explicit production ticket defining exactly when stock is credited or debited and how that maps to payment and delivery states.
+
+Root cause:
+- Ledger invariants are already ticketed broadly, but the business event timing is not yet expressed as one auditable matrix across:
+  - inline product creation
+  - CSV import
+  - supplier publish/add
+  - GRN / delivered stock
+  - opening stock
+  - sale completion
+  - payment modes cash / UPI / udhar
+  - void/refund/cancel behavior
+
+Files impacted:
+- `backend/src/routes/v1/pos/sales.ts`
+- `backend/src/routes/v1/pos/sync.ts`
+- `backend/src/routes/v1/retailer-admin/products.ts`
+- `backend/src/routes/v1/retailer-admin/csvImport.ts`
+- `backend/src/routes/v1/retailer-admin/suppliers.ts`
+- `backend/src/routes/v1/admin/suppliers.ts`
+- any shared inventory/ledger service and forward migration touched by the fix
+
+Expected outcome:
+- One canonical event matrix defines:
+  - when stock is added
+  - when stock is reserved vs not reserved
+  - when stock is debited
+  - when a sale is considered sold for ledger purposes
+  - how cash/UPI/udhar affect commercial state vs stock movement
+  - how unsold/cancelled/voided/refunded states reverse or preserve ledger entries
+- Retailer web and POS reflect the same stock/ledger truth after sync.
+
+## V3-HARDEN-134 - Define product metadata ownership and bidirectional sync rules across retailer web, POS, CSV, supplier publish, and SuperAdmin edits
+
+Priority: P0
+Layers: product data governance, sync, API contracts, UI consistency
+
+Issue:
+- Product metadata consistency is already ticketed, but the repo still lacks one explicit ownership/sync ticket for who is allowed to edit which metadata and how those edits propagate across all surfaces.
+
+Root cause:
+- Metadata can originate from:
+  - retailer web inline entry
+  - retailer web CSV import
+  - supplier catalog listing
+  - SuperAdmin review/edit
+  - POS edits
+- Without one canonical ownership/sync rule, the same field can drift or be overwritten unexpectedly.
+
+Files impacted:
+- `backend/src/routes/v1/retailer-admin/products.ts`
+- `backend/src/routes/v1/retailer-admin/csvImport.ts`
+- `backend/src/routes/v1/retailer-admin/suppliers.ts`
+- `backend/src/routes/v1/admin/suppliers.ts`
+- `backend/src/routes/v1/pos/storeProducts.ts`
+- `src/stores/productsStore.ts`
+- `retailer-admin/src/pages/SupplierCatalogPage.tsx`
+- any metadata-sync helper/service introduced by the fix
+
+Expected outcome:
+- One field-ownership matrix defines:
+  - which metadata is supplier-owned
+  - which metadata SuperAdmin can override
+  - which metadata retailer can edit locally
+  - which metadata POS can edit and sync back to retailer web
+- Retailer web and POS always converge on the same final store-product metadata after edits/imports/sync.
+- SuperAdmin edits and publish actions propagate cleanly without silent field regression.
+
+## Phase 10 - Store Isolation, Search Semantics, and Ledger Event Governance
+
+Tickets:
+- `V3-HARDEN-130`
+- `V3-FIX-131`
+- `V3-FIX-132`
+- `V3-HARDEN-133`
+- `V3-HARDEN-134`
+
+Why tenth:
+- These are system-governance tickets that sit above individual screens.
+- They close the remaining production gaps around tenant isolation, search correctness, and ledger timing that are not fully covered by the earlier parity and scale blocks.
+
+Write scope:
+- store/catalog isolation
+- store search vs supplier search separation
+- multilingual/multi-key search semantics
+- inventory ledger event timing
+- metadata ownership and bidirectional sync governance
+
+Guard rails:
+- No deployment execution in this phase.
+- No new blended search experience that mixes store and supplier results.
+- No metadata overwrite path without an explicit ownership rule.
+
+## V3-FIX-135 - Change SELL in-store SKU tiles from one-tap add to one-tap detail-first with explicit add
+
+Priority: P0
+Layers: SELL UX, navigation, cart behavior, screen density
+
+Operator-approved behavior:
+- Single tap on an in-store SKU tile must open a compact detail-first surface.
+- The tile tap must no longer add directly to the sell cart.
+- Add-to-cart must happen only from an explicit CTA inside the detail surface.
+
+Issue:
+- The current SELL operator flow still binds tile tap directly to `handleAddProduct(...)`, which causes accidental cart adds and prevents the retailer from reviewing full product details first.
+
+Root cause:
+- `SellScreenV3` currently optimizes for direct tile add instead of a dense-grid + detail-first workflow.
+- `ProductTileV3` accessibility and interaction still describe tile tap as add-to-cart behavior.
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/components/v3/ProductTileV3.tsx`
+- any new `SellProductDetail*` surface introduced for this flow
+- `src/stores/cartStore.ts`
+- SELL click-path/runtime tests
+
+Expected outcome:
+- SELL home keeps maximum SKU density on screen.
+- Single tap on a tile opens a product detail screen/sheet/modal with:
+  - top-level fast `Add to Cart` CTA for repeated/familiar purchases
+  - product image/icon
+  - full product name
+  - brand
+  - SKU / barcode
+  - unit / pack / MRP / sell price / tax metadata
+  - stock context where appropriate
+  - explicit `Add to Cart` again after the detailed metadata/action section
+  - explicit close/back
+- No accidental add occurs on tile tap.
+- Return from detail preserves SELL scroll/chip/search/cart state.
+
+## V3-FIX-136 - Change supplier-catalog SKU cards to detail-first add flow with explicit add-to-purchase-cart
+
+Priority: P0
+Layers: BUY UX, supplier discovery, procurement cart behavior
+
+Operator-approved behavior:
+- Retailer must see supplier product details before adding to purchase cart.
+- Single tap on a supplier SKU card must open the detail surface.
+- Add-to-purchase-cart must happen only from an explicit CTA inside the detail surface.
+
+Issue:
+- Supplier discovery currently still exposes inline add behavior on supplier SKU cards, which lets a retailer add to purchase cart without reviewing full procurement details first.
+
+Root cause:
+- `SupplierProductCardV3` still keeps inline quantity/add controls on the card while also supporting card tap navigation.
+- The current card shape mixes browse, compare, and add behaviors into one dense card contract.
+
+Files impacted:
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/components/v3/SupplierProductCardV3.tsx`
+- `src/screens/v3/CompareScreenV3.tsx` or a replacement detail surface if compare becomes the canonical detail page
+- procurement cart/order state touched by the fix
+- BUY runtime tests
+
+Expected outcome:
+- Supplier catalog keeps maximum SKU visibility on screen.
+- Single tap on supplier SKU card opens the detail-first procurement surface showing:
+  - top-level fast `Add to Purchase Cart` CTA for repeated/familiar procurement
+  - supplier/product metadata
+  - pricing / PTR / PTS / case / MOQ / margin / schemes
+  - stock/suggested quantity context
+  - explicit quantity selection
+  - explicit `Add to Purchase Cart` / order CTA again after the detailed metadata/action section
+- Inline add from the list card is removed from the main browsing surface.
+- No accidental procurement-cart add occurs from a list-card tap.
+
+## V3-HARDEN-137 - Unify detail-first product-discovery contract across SELL and BUY without reducing SKU density or breaking back flows
+
+Priority: P0
+Layers: UX architecture, navigation, responsive behavior, regression safety
+
+Issue:
+- SELL and BUY now need one explicit operator-safe contract for dense browsing + detail-first review, otherwise the app will drift into inconsistent list interactions and regressions.
+
+Root cause:
+- Current code mixes:
+  - direct add on SELL tile tap
+  - detail + inline add on BUY cards
+  - compare-specific procurement flows
+- There is no explicit rule for when a card tap should open detail vs add vs compare.
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/components/v3/ProductTileV3.tsx`
+- `src/components/v3/SupplierProductCardV3.tsx`
+- `src/screens/v3/CompareScreenV3.tsx`
+- any new shared product-detail surface or navigation helper
+- responsive/device-fit tests under the V3 matrix
+
+Expected outcome:
+- Dense SKU browsing remains intact on both SELL and BUY.
+- Card/tile tap semantics are consistent:
+  - tap = open details
+  - explicit CTA inside details = add
+- Detail surfaces must support both:
+  - a top fast-add CTA for low-friction repeat purchase
+  - a bottom/post-details CTA for operators who review full metadata first
+- Back/close from details returns to the same list context without losing:
+  - scroll position
+  - selected supplier/category/chip
+  - search state
+  - cart/purchase-cart state
+- Detail surfaces fit the supported phone/POS device matrix.
+
+## V3-DELETE-138 - Remove stale one-tap-add assumptions, labels, and tests after detail-first flow lands
+
+Priority: P1
+Layers: cleanup, accessibility, regression prevention
+
+Issue:
+- After detail-first behavior is implemented, stale text, labels, and tests that still describe tile/card tap as direct add will become a regression risk.
+
+Root cause:
+- Current code and tests still encode direct-add assumptions such as:
+  - SELL tile accessibility copy
+  - old click-path assertions
+  - BUY card inline-add main-list assumptions
+
+Files impacted:
+- `src/components/v3/ProductTileV3.tsx`
+- `src/components/v3/SupplierProductCardV3.tsx`
+- SELL/BUY runtime tests
+- any docs or comments that still state tile tap directly adds to cart
+
+Expected outcome:
+- No live code, accessibility label, runtime test, or doc still claims:
+  - SELL tile tap directly adds to cart
+  - supplier list-card tap directly adds to purchase cart
+- Cleanup happens only after the replacement detail-first behavior is proven.
+
+## Phase 11 - Detail-First Dense SKU Browsing for SELL and BUY
+
+Tickets:
+- `V3-FIX-135`
+- `V3-FIX-136`
+- `V3-HARDEN-137`
+- `V3-DELETE-138`
+
+Why eleventh:
+- This is an operator-approved interaction change that cuts across SELL and BUY browsing behavior.
+- It should land after the current parity/governance blocks are understood, because it changes tap semantics on the two highest-frequency product discovery surfaces.
+
+Write scope:
+- SELL in-store product details before add
+- BUY supplier product details before add
+- dense SKU visibility preservation
+- back-flow and state-persistence safety
+- cleanup of old one-tap-add assumptions
+
+Guard rails:
+- Do not reduce SKU density by permanently expanding cards inline.
+- Do not allow implicit add on tile/card tap after this phase lands.
+- Keep add explicit inside the detail surface only.
+
 ## Commit Strategy Across All Remaining Phases
 
 Rule set:
@@ -5201,4 +5561,4 @@ The branch must not be called:
 - GCP-ready
 - production-ready
 
-until all nine phases above are complete and re-verified against `tickets.md`.
+until all eleven phases above are complete and re-verified against `tickets.md`.
