@@ -1,38 +1,29 @@
+/**
+ * V3-FIX-071: Payment chooser screen — navigates to dedicated child screens
+ * Prototype route chain: payment (chooser) → cash | upi | udhar → success
+ * Back flow: child → chooser → cart
+ */
 import React, { useMemo, useState, useCallback, useRef } from "react";
-import { View, Pressable, TextInput, ActivityIndicator, StyleSheet, Text, ScrollView, Modal, Alert } from "react-native";
+import { View, Pressable, TextInput, StyleSheet, Text, ScrollView, Modal, Alert } from "react-native";
 import Svg, { Path, Rect, Circle, Line } from "react-native-svg";
-import { useTranslation } from "react-i18next";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
-import { useCartStore, type SellMode } from "../../stores/cartStore";
-import { createSale, initUpiPayment, recordCashPayment, recordDuePayment, confirmUpiPaymentManual, createSplitPayment, type SaleItemInput, type SplitPaymentItem } from "../../services/api/posApi";
+import { useCartStore } from "../../stores/cartStore";
+import { createSale, createSplitPayment, type SaleItemInput, type SplitPaymentItem } from "../../services/api/posApi";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import { logger } from "../../services/logger";
 
-// V3-002: Payment screen v3 — wired to real createSale API
-
 type PaymentScreenV3Props = {
   onBack: () => void;
+  onCash: () => void;
+  onUpi: () => void;
+  onUdhar: () => void;
   onComplete: (method: "CASH" | "UPI" | "DUE", saleId?: string, totalMinor?: number, itemCount?: number) => void;
 };
 
-type PaymentMethod = "CASH" | "UPI" | "DUE";
-
-// Quick cash amount presets relative to total
-function getQuickAmounts(totalPaise: number): number[] {
-  const t = Math.round(totalPaise / 100);
-  const presets = [t]; // exact
-  const roundUps = [50, 100, 200, 500, 1000, 2000, 5000];
-  for (const r of roundUps) {
-    if (r > t && presets.length < 5) presets.push(r);
-  }
-  return presets;
-}
-
-export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3Props) {
-  const { t } = useTranslation();
+export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComplete }: PaymentScreenV3Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -43,43 +34,23 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
   const gst = isBulk ? Math.round(total * 0.18) : 0;
   const grandTotal = total + gst;
   const itemCount = items.reduce((s, i) => s + i.quantity, 0);
+  const totalDisplay = `₹${Math.round(grandTotal / 100).toLocaleString("en-IN")}`;
 
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
-  const [cashReceived, setCashReceived] = useState("");
+  // Split payment state (stays in chooser since it's a combined flow)
   const [splitVisible, setSplitVisible] = useState(false);
   const [splitCash, setSplitCash] = useState("");
   const [splitSecondMethod, setSplitSecondMethod] = useState<"UPI" | "DUE">("UPI");
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const quickAmounts = useMemo(() => getQuickAmounts(grandTotal), [grandTotal]);
+  const [processing, setProcessing] = useState(false);
+  const [saleId, setSaleId] = useState<string | null>(null);
+  const createSaleInFlight = useRef(false);
+
   const splitCashNum = parseInt(splitCash, 10) || 0;
   const splitRemainder = Math.max(0, Math.round(grandTotal / 100) - splitCashNum);
 
-  const totalDisplay = `₹${Math.round(grandTotal / 100).toLocaleString("en-IN")}`;
-  const cashReceivedNum = parseInt(cashReceived, 10) || 0;
-  const changeAmount = cashReceivedNum > 0 ? Math.max(0, cashReceivedNum - Math.round(grandTotal / 100)) : 0;
-
-  const handleQuickAmount = useCallback((amt: number) => {
-    setCashReceived(String(amt));
-  }, []);
-
-  const [processing, setProcessing] = useState(false);
-  const [saleId, setSaleId] = useState<string | null>(null);
-  const [upiData, setUpiData] = useState<{ paymentId: string; upiVpa: string; billRef: string } | null>(null);
-  const createSaleInFlight = useRef(false);
-
-  // PD-012: Offline guard before sale creation
-  // RI-011: Guard against empty items
   const createSaleStep = useCallback(async (): Promise<string | null> => {
     if (items.length === 0) { showToast("Cart is empty"); return null; }
     const online = await isOnline();
-    if (!online && selectedMethod === "UPI") {
-      showToast("UPI requires internet connection");
-      return null;
-    }
-    if (!online) {
-      showToast("Offline — sale will be queued and synced when online");
-    }
+    if (!online) { showToast("Offline — sale will be queued and synced when online"); }
     const saleItems: SaleItemInput[] = items.map((item) => ({
       productId: item.barcode ?? item.id,
       barcode: item.barcode,
@@ -96,61 +67,16 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
       cartDiscount: discount ?? undefined,
       currency: "INR",
     });
-    logger.debug("V3Payment", `sale_created:${result.saleId},billRef:${result.billRef}`);
+    logger.debug("V3Payment", `sale_created:${result.saleId}`);
     setSaleId(result.saleId);
     return result.saleId;
   }, [items]);
-
-  // V3-008: Step 2 — Record payment by method
-  const handleComplete = useCallback(async () => {
-    if (!selectedMethod) { showToast("Select payment method"); return; }
-    if (createSaleInFlight.current) return;
-
-    // Lock cart during payment
-    useCartStore.getState().lockCart();
-    createSaleInFlight.current = true;
-    setProcessing(true);
-
-    try {
-      // Create sale first (if not already created)
-      const id = saleId ?? await createSaleStep();
-      if (!id) throw new Error("Failed to create sale");
-
-      // Record payment based on method
-      if (selectedMethod === "CASH") {
-        await recordCashPayment({ saleId: id });
-        logger.debug("V3Payment", `cash_recorded:${id}`);
-      } else if (selectedMethod === "UPI") {
-        // Init UPI → get QR data → for now user confirms manually
-        const upi = await initUpiPayment({ saleId: id });
-        setUpiData({ paymentId: upi.paymentId, upiVpa: upi.upiVpa, billRef: upi.billRef });
-        logger.debug("V3Payment", `upi_initiated:${upi.paymentId}`);
-        // Manual confirmation — user taps "Payment Received"
-        await confirmUpiPaymentManual({ paymentId: upi.paymentId });
-        logger.debug("V3Payment", `upi_confirmed:${id}`);
-      } else if (selectedMethod === "DUE") {
-        if (!customerName.trim()) { showToast("Add customer name for Udhar"); useCartStore.getState().unlockCart(); setProcessing(false); createSaleInFlight.current = false; return; }
-        await recordDuePayment({ saleId: id, customerName: customerName.trim(), customerPhone: customerPhone.trim() || undefined });
-        logger.debug("V3Payment", `due_recorded:${id},customer:${customerName}`);
-      }
-
-      onComplete(selectedMethod, id, grandTotal, itemCount);
-    } catch (err: any) {
-      const msg = err?.response?.data?.error?.message ?? err?.message ?? "Payment failed";
-      showToast(msg);
-      logger.debug("V3Payment", `payment_failed:${String(err)}`);
-    } finally {
-      useCartStore.getState().unlockCart();
-      createSaleInFlight.current = false;
-      setProcessing(false);
-    }
-  }, [selectedMethod, saleId, createSaleStep, onComplete, customerName, customerPhone]);
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={onBack} accessibilityLabel="Back">
+        <Pressable style={styles.backBtn} onPress={onBack} accessibilityLabel="Back to cart">
           <Text style={styles.backText}>←</Text>
         </Pressable>
         <Text style={styles.headerTitle}>Payment</Text>
@@ -162,142 +88,48 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
         <Text style={styles.totalAmount}>{totalDisplay}</Text>
         <Text style={styles.totalSub}>{itemCount} item{itemCount !== 1 ? "s" : ""}{isBulk ? " · incl. GST" : ""}</Text>
 
-        {/* Payment method buttons */}
+        {/* V3-FIX-071: Method buttons navigate to child screens */}
         <View style={styles.methodGrid}>
-          <Pressable
-            style={[styles.methodBtn, selectedMethod === "CASH" && styles.methodBtnActive]}
-            onPress={() => setSelectedMethod("CASH")}
-            accessibilityRole="button"
-            accessibilityState={{ selected: selectedMethod === "CASH" }}
-          >
-            <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={selectedMethod === "CASH" ? colors.primary : colors.textSecondary} strokeWidth={1.5}>
+          <Pressable style={styles.methodBtn} onPress={onCash} accessibilityRole="button">
+            <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={1.5}>
               <Rect x={2} y={6} width={20} height={12} rx={2} />
               <Circle cx={12} cy={12} r={3} />
               <Path d="M6 12h.01M18 12h.01" />
             </Svg>
-            <Text style={[styles.methodLabel, selectedMethod === "CASH" && styles.methodLabelActive]}>CASH</Text>
+            <Text style={styles.methodLabel}>CASH</Text>
             <Text style={styles.methodHint}>नकद</Text>
           </Pressable>
 
-          <Pressable
-            style={[styles.methodBtn, selectedMethod === "UPI" && styles.methodBtnActive]}
-            onPress={() => setSelectedMethod("UPI")}
-            accessibilityRole="button"
-            accessibilityState={{ selected: selectedMethod === "UPI" }}
-          >
-            <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={selectedMethod === "UPI" ? colors.primary : colors.textSecondary} strokeWidth={1.5}>
+          <Pressable style={styles.methodBtn} onPress={onUpi} accessibilityRole="button">
+            <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={1.5}>
               <Rect x={5} y={2} width={14} height={20} rx={2} />
               <Line x1={12} y1={18} x2={12} y2={18.01} strokeWidth={2} />
               <Path d="M9 6h6" />
             </Svg>
-            <Text style={[styles.methodLabel, selectedMethod === "UPI" && styles.methodLabelActive]}>UPI</Text>
+            <Text style={styles.methodLabel}>UPI</Text>
             <Text style={styles.methodHint}>यूपीआई</Text>
           </Pressable>
 
-          <Pressable
-            style={[styles.methodBtn, selectedMethod === "DUE" && styles.methodBtnActive]}
-            onPress={() => setSelectedMethod("DUE")}
-            accessibilityRole="button"
-            accessibilityState={{ selected: selectedMethod === "DUE" }}
-          >
-            <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={selectedMethod === "DUE" ? colors.primary : colors.textSecondary} strokeWidth={1.5}>
+          <Pressable style={styles.methodBtn} onPress={onUdhar} accessibilityRole="button">
+            <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={1.5}>
               <Path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
               <Path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
               <Path d="M8 7h8M8 11h6" />
             </Svg>
-            <Text style={[styles.methodLabel, selectedMethod === "DUE" && styles.methodLabelActive]}>UDHAR</Text>
+            <Text style={styles.methodLabel}>UDHAR</Text>
             <Text style={styles.methodHint}>उधार</Text>
           </Pressable>
         </View>
 
         {/* Secondary actions */}
         <View style={styles.secondaryRow}>
-          <Pressable style={styles.secondaryBtn} onPress={() => setSplitVisible(true)}><Text style={styles.secondaryText}>Split Payment</Text></Pressable>
-          <Pressable style={styles.secondaryBtn} onPress={() => {
-            Alert.alert("Add Discount", "Choose discount type:", [
-              { text: "Cancel", style: "cancel" },
-              { text: "10%", onPress: () => { useCartStore.getState().applyDiscount({ type: "percentage", value: 10 }); showToast("10% discount applied"); } },
-              { text: "₹50 off", onPress: () => { useCartStore.getState().applyDiscount({ type: "fixed", value: 5000 }); showToast("₹50 discount applied"); } },
-            ]);
-          }}><Text style={styles.secondaryText}>Add Discount</Text></Pressable>
+          <Pressable style={styles.secondaryBtn} onPress={() => setSplitVisible(true)}>
+            <Text style={styles.secondaryText}>Split Payment</Text>
+          </Pressable>
         </View>
-
-        {/* Cash section — shown when CASH selected */}
-        {selectedMethod === "CASH" ? (
-          <View style={styles.cashSection}>
-            <Text style={styles.cashTitle}>Amount Received</Text>
-            <View style={styles.quickRow}>
-              {quickAmounts.map((amt, i) => (
-                <Pressable
-                  key={amt}
-                  style={[styles.quickBtn, i === 0 && styles.quickBtnExact, cashReceivedNum === amt && styles.quickBtnSelected]}
-                  onPress={() => handleQuickAmount(amt)}
-                >
-                  <Text style={[styles.quickText, i === 0 && styles.quickTextExact, cashReceivedNum === amt && styles.quickTextSelected]}>
-                    {i === 0 ? `EXACT ₹${amt}` : `₹${amt}`}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <TextInput
-              style={styles.cashInput}
-              value={cashReceived}
-              onChangeText={setCashReceived}
-              placeholder="₹"
-              placeholderTextColor={colors.textTertiary}
-              keyboardType="numeric"
-              textAlign="center"
-            />
-            <View style={styles.changeBox}>
-              <Text style={styles.changeLabel}>Change to return</Text>
-              <Text style={styles.changeAmount}>₹{changeAmount.toLocaleString("en-IN")}</Text>
-            </View>
-          </View>
-        ) : null}
-
-        {/* UPI section */}
-        {selectedMethod === "UPI" ? (
-          <View style={styles.upiSection}>
-            <View style={styles.qrPlaceholder}>
-              <Text style={styles.qrText}>QR Code</Text>
-              <Text style={styles.qrSub}>Customer scans to pay {totalDisplay}</Text>
-            </View>
-            <View style={styles.waitingRow}>
-              <View style={styles.waitingDot} />
-              <Text style={styles.waitingText}>Waiting for payment...</Text>
-            </View>
-          </View>
-        ) : null}
-
-        {/* Udhar section */}
-        {selectedMethod === "DUE" ? (
-          <View style={styles.udharSection}>
-            <Text style={styles.udharTitle}>Record as customer due</Text>
-            <TextInput style={styles.udharInput} placeholder="Customer name" placeholderTextColor={colors.textTertiary} value={customerName} onChangeText={setCustomerName} />
-            <TextInput style={styles.udharInput} placeholder="+91 phone number" placeholderTextColor={colors.textTertiary} keyboardType="phone-pad" value={customerPhone} onChangeText={setCustomerPhone} maxLength={10} />
-          </View>
-        ) : null}
       </ScrollView>
 
-      {/* Complete button */}
-      <View style={styles.footer}>
-        <Pressable
-          style={[styles.completeBtn, (!selectedMethod || processing) && styles.completeBtnDisabled]}
-          onPress={handleComplete}
-          disabled={!selectedMethod}
-          accessibilityRole="button"
-        >
-          <Text style={styles.completeBtnText}>
-            {processing ? "Processing..." :
-             selectedMethod === "CASH" ? `✓ COMPLETE SALE` :
-             selectedMethod === "UPI" ? `✓ Payment Received` :
-             selectedMethod === "DUE" ? `Record Udhar ${totalDisplay}` :
-             `Select Payment Method`}
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* V3-061: Split Payment Modal */}
+      {/* Split Payment Modal — stays in chooser */}
       <Modal visible={splitVisible} transparent animationType="slide" onRequestClose={() => setSplitVisible(false)}>
         <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
@@ -336,7 +168,7 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
               <Pressable onPress={async () => {
                 const totalRupees = Math.round(grandTotal / 100);
                 if (splitCashNum <= 0 || splitRemainder <= 0) { showToast("Enter valid cash amount"); return; }
-                if (splitCashNum + splitRemainder !== totalRupees) { showToast(`Cash ₹${splitCashNum} + ${splitSecondMethod} ₹${splitRemainder} must equal total ₹${totalRupees}`); return; }
+                if (splitCashNum + splitRemainder !== totalRupees) { showToast(`Must equal total ₹${totalRupees}`); return; }
                 setSplitVisible(false);
                 useCartStore.getState().lockCart();
                 setProcessing(true);
@@ -349,8 +181,8 @@ export default function PaymentScreenV3({ onBack, onComplete }: PaymentScreenV3P
                     { mode: splitSecondMethod, amountMinor: splitRemainder * 100 },
                   ];
                   await createSplitPayment({ saleId: id, payments });
-                  logger.debug("V3Payment", `split_done:${id},cash:${splitCashNum},${splitSecondMethod}:${splitRemainder}`);
-                  onComplete("CASH");
+                  logger.debug("V3Payment", `split_done:${id}`);
+                  onComplete("CASH", id, grandTotal, itemCount);
                 } catch (err: any) {
                   showToast(err?.message ?? "Split payment failed");
                 } finally {
@@ -380,47 +212,12 @@ function createStyles(colors: ColorPalette) {
     bodyContent: { padding: 20, alignItems: "center" },
     totalAmount: { fontSize: 44, fontWeight: "900", color: colors.textPrimary, letterSpacing: -1, marginTop: 16 },
     totalSub: { fontSize: 14, color: colors.textTertiary, fontWeight: "500", marginTop: 4 },
-    // Method grid
     methodGrid: { flexDirection: "row", gap: 12, marginTop: 28, width: "100%" },
     methodBtn: { flex: 1, padding: 24, borderRadius: 20, borderWidth: 2, borderColor: colors.border, alignItems: "center", backgroundColor: colors.surface },
-    methodBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
     methodLabel: { fontSize: 17, fontWeight: "800", color: colors.textSecondary, marginTop: 8, letterSpacing: -0.3 },
-    methodLabelActive: { color: colors.primary },
     methodHint: { fontSize: 10, color: colors.textTertiary, marginTop: 2 },
-    // Secondary
     secondaryRow: { flexDirection: "row", gap: 10, marginTop: 12, width: "100%" },
     secondaryBtn: { flex: 1, paddingVertical: 10, alignItems: "center" },
     secondaryText: { fontSize: 13, fontWeight: "600", color: colors.textTertiary },
-    // Cash
-    cashSection: { width: "100%", marginTop: 20 },
-    cashTitle: { fontSize: 13, fontWeight: "700", color: colors.textTertiary, marginBottom: 10, textAlign: "center" },
-    quickRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" },
-    quickBtn: { paddingHorizontal: 22, paddingVertical: 14, borderRadius: 14, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
-    quickBtnExact: { backgroundColor: colors.success, borderColor: colors.success },
-    quickBtnSelected: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
-    quickText: { fontSize: 16, fontWeight: "800", color: colors.textPrimary, letterSpacing: -0.3 },
-    quickTextExact: { color: "#fff" },
-    quickTextSelected: { color: colors.primary },
-    cashInput: { marginTop: 16, padding: 16, borderRadius: 14, borderWidth: 2, borderColor: colors.border, fontSize: 24, fontWeight: "800", color: colors.textPrimary, backgroundColor: colors.surface, textAlign: "center" },
-    changeBox: { marginTop: 14, padding: 16, borderRadius: 14, backgroundColor: colors.backgroundSecondary, alignItems: "center" },
-    changeLabel: { fontSize: 13, color: colors.textTertiary, fontWeight: "500" },
-    changeAmount: { fontSize: 28, fontWeight: "900", color: colors.textPrimary, letterSpacing: -0.5, marginTop: 2 },
-    // UPI
-    upiSection: { width: "100%", marginTop: 20, alignItems: "center" },
-    qrPlaceholder: { width: 200, height: 200, borderRadius: 18, borderWidth: 3, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
-    qrText: { fontSize: 16, fontWeight: "700", color: colors.textTertiary },
-    qrSub: { fontSize: 11, color: colors.textTertiary, marginTop: 4 },
-    waitingRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 16, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: colors.warningSoft, borderRadius: 12 },
-    waitingDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: colors.warning },
-    waitingText: { fontSize: 13, color: "#92400E", fontWeight: "600" },
-    // Udhar
-    udharSection: { width: "100%", marginTop: 20 },
-    udharTitle: { fontSize: 13, fontWeight: "700", color: colors.textTertiary, marginBottom: 10, textAlign: "center" },
-    udharInput: { padding: 14, borderRadius: 14, borderWidth: 2, borderColor: colors.border, fontSize: 15, fontWeight: "500", color: colors.textPrimary, backgroundColor: colors.surface, marginBottom: 10 },
-    // Footer
-    footer: { paddingHorizontal: 16, paddingBottom: 16, paddingTop: 8 },
-    completeBtn: { backgroundColor: colors.success, paddingVertical: 16, borderRadius: 16, alignItems: "center" },
-    completeBtnDisabled: { backgroundColor: colors.disabled, opacity: 0.6 },
-    completeBtnText: { fontSize: 17, fontWeight: "800", color: "#fff", letterSpacing: -0.2 },
   });
 }

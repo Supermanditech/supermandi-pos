@@ -41,7 +41,8 @@ import StaffLoginScreenV3 from "./src/screens/v3/StaffLoginScreenV3";
 
 // V3-001: V3 sub-screen wrappers for React Navigation stack
 import {
-  V3PaymentWrapper, V3SuccessWrapper, V3ScanWrapper, V3NewProductWrapper,
+  V3PaymentWrapper, V3CashWrapper, V3UpiWrapper, V3UdharWrapper,
+  V3SuccessWrapper, V3ScanWrapper, V3NewProductWrapper,
   V3CompareWrapper, V3CounterPurchaseWrapper, V3GRNWrapper, V3ReorderWrapper,
   V3StockWrapper, V3KhataWrapper, V3FinanceWrapper, V3ReportsWrapper,
   V3CustomersWrapper, V3SettingsWrapper,
@@ -162,6 +163,9 @@ export default function App() {
 
           {/* V3 sub-screens */}
           <Stack.Screen name="V3Payment" component={V3PaymentWrapper} />
+          <Stack.Screen name="V3Cash" component={V3CashWrapper} />
+          <Stack.Screen name="V3Upi" component={V3UpiWrapper} />
+          <Stack.Screen name="V3Udhar" component={V3UdharWrapper} />
           <Stack.Screen name="V3Success" component={V3SuccessWrapper} />
           <Stack.Screen name="V3Scan" component={V3ScanWrapper} />
           <Stack.Screen name="V3NewProduct" component={V3NewProductWrapper} />

@@ -6,6 +6,9 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 // Each wrapper passes navigation.goBack() as onClose and navigation params as props
 
 import PaymentScreenV3 from "./PaymentScreenV3";
+import CashScreenV3 from "./CashScreenV3";
+import UpiScreenV3 from "./UpiScreenV3";
+import UdharScreenV3 from "./UdharScreenV3";
 import SuccessScreenV3 from "./SuccessScreenV3";
 import ScanScreenV3 from "./ScanScreenV3";
 import NewProductScreenV3 from "./NewProductScreenV3";
@@ -22,9 +25,38 @@ import SettingsScreenV3 from "./SettingsScreenV3";
 
 type Nav = NativeStackNavigationProp<any>;
 
+// V3-FIX-071: Payment chooser navigates to child screens
 export function V3PaymentWrapper() {
   const nav = useNavigation<Nav>();
-  return <PaymentScreenV3 onBack={() => nav.goBack()} onComplete={(method, saleId, totalMinor, itemCount) => nav.navigate("V3Success", { method, saleId, totalMinor, itemCount })} />;
+  const toSuccess = (method: string, saleId?: string, totalMinor?: number, itemCount?: number) =>
+    nav.navigate("V3Success", { method, saleId, totalMinor, itemCount });
+  return (
+    <PaymentScreenV3
+      onBack={() => nav.goBack()}
+      onCash={() => nav.navigate("V3Cash" as any)}
+      onUpi={() => nav.navigate("V3Upi" as any)}
+      onUdhar={() => nav.navigate("V3Udhar" as any)}
+      onComplete={toSuccess}
+    />
+  );
+}
+
+// V3-FIX-072: Dedicated cash payment screen
+export function V3CashWrapper() {
+  const nav = useNavigation<Nav>();
+  return <CashScreenV3 onBack={() => nav.goBack()} onComplete={(method, saleId, totalMinor, itemCount) => nav.navigate("V3Success", { method, saleId, totalMinor, itemCount })} />;
+}
+
+// V3-FIX-073: Dedicated UPI payment screen
+export function V3UpiWrapper() {
+  const nav = useNavigation<Nav>();
+  return <UpiScreenV3 onBack={() => nav.goBack()} onComplete={(method, saleId, totalMinor, itemCount) => nav.navigate("V3Success", { method, saleId, totalMinor, itemCount })} />;
+}
+
+// V3-FIX-074: Dedicated Udhar payment screen
+export function V3UdharWrapper() {
+  const nav = useNavigation<Nav>();
+  return <UdharScreenV3 onBack={() => nav.goBack()} onComplete={(method, saleId, totalMinor, itemCount) => nav.navigate("V3Success", { method, saleId, totalMinor, itemCount })} />;
 }
 
 export function V3SuccessWrapper({ route }: any) {
