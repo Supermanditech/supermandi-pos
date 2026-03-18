@@ -7306,6 +7306,21 @@ Override requirement:
 - Do not add optional scripts or sidecar checks while older permissive gates can still allow a broken orchestration stack through.
 - Existing conflicting schema paths, event-delivery assumptions, stale env validation, and weaker release checks must be updated, replaced, or deleted so production has one enforceable readiness contract.
 
+Implemented scope:
+- Migration 198: supplier_demand_allocations table (8-state CHECK, 3 indexes), lifecycle_event_log table (10-type CHECK, 3 indexes), allocation_status column on purchase_orders
+- demand-signal-gate.sh: checks migration, service, lifecycle rules, allocation CHECK — wired into deploy.yml
+- storeDemandSignal.ts service contract: types, lifecycle, communication rules
+- 11 executable tests covering reorder calculation, allocation states, communication rules, infrastructure checks
+
+Deferred scope:
+- API parity: no new API endpoints for sell-through signals, reorder recommendations, or allocation lifecycle yet
+- Realtime parity: SSE/websocket event transport for demand signals not yet wired
+- GCP/runtime readiness: worker/PubSub/Cloud Tasks paths for lifecycle event fan-out not yet configured
+- WhatsApp/notification readiness: lifecycle events not yet triggering WhatsApp sends
+- Cross-portal compatibility proof: no explicit portal version compatibility check exists
+- Stronger relational integrity (FK constraints for retailer_order_id, supplier_id, store_id) deferred — tables accept UUIDs but do not enforce FK to canonical entities
+- Full deploy-gate that fails on event transport / supplier-trigger route / realtime feed / WhatsApp unavailability requires staging environment runtime checks
+
 ## Phase 16 - Real-Time Store Sell-Through, Replenishment, Supplier Triggering, and Delivery Orchestration
 
 Tickets:
