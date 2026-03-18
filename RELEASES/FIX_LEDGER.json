@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 377,
+  "version": 378,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6666,8 +6666,8 @@
       "ticket": "STG-553",
       "file": "src/screens/v3/SellScreenV3.tsx",
       "start_line": 1,
-      "end_line": 463,
-      "checksum": "aa4cc5f3cc4b8470",
+      "end_line": 482,
+      "checksum": "2a1f3a15b2710576",
       "description": "SellScreenV3 — product grid + Retail/Bulk toggle + CartSheetV3 wired + V3-HARDEN-106 testIDs",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
       "depends_on": null,
@@ -6962,8 +6962,8 @@
       "ticket": "STG-561",
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 1,
-      "end_line": 309,
-      "checksum": "427f98575ae71657",
+      "end_line": 341,
+      "checksum": "fb0be201f64b4d6a",
       "description": "BUY tab v3 — supplier catalogue with wholesale metadata, supplier filter, categories, counter purchase CTA",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,

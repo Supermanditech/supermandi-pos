@@ -7,6 +7,8 @@ import { getScreenPadding, getChipPadding, getChipFontSize } from "../../theme/r
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import SupplierProductCardV3, { type SupplierProduct } from "../../components/v3/SupplierProductCardV3";
+import ProductDetailSheetV3 from "../../components/v3/ProductDetailSheetV3";
+import type { ProductTileData } from "../../components/v3/ProductTileV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { isOnline } from "../../services/networkStatus";
@@ -54,6 +56,8 @@ export default function BuyScreenV3() {
   const [orderQtys, setOrderQtys] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [products, setProducts] = useState<SupplierProduct[]>([]);
+  // V3-FIX-136: Detail-first product sheet state
+  const [detailProduct, setDetailProduct] = useState<SupplierProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const [suppliers, setSuppliers] = useState<string[]>(["All Suppliers"]);
   const [offline, setOffline] = useState(false);
@@ -197,7 +201,7 @@ export default function BuyScreenV3() {
             orderQtyCases={orderQtys[item.id] ?? item.moq}
             onQtyChange={(c) => handleQtyChange(item.id, c)}
             onAddToCart={() => showToast(`${item.name} ×${orderQtys[item.id] ?? item.moq} cases added`)}
-            onPress={() => navigation.navigate("V3Compare", { productName: item.name, packSize: item.packSize, mrpMinor: item.mrpMinor, currentStock: 0, sellPriceMinor: item.ptrMinor, weeklyNeed: Math.max(1, item.moq) })}
+            onPress={() => setDetailProduct(item)}
           />
         )}
         ListFooterComponent={
@@ -214,6 +218,34 @@ export default function BuyScreenV3() {
           </Pressable>
         }
       /> : null}
+
+      {/* V3-FIX-136: Product detail-first sheet for BUY */}
+      {detailProduct ? (
+        <ProductDetailSheetV3
+          product={{
+            id: detailProduct.id,
+            name: detailProduct.name,
+            priceMrpMinor: detailProduct.mrpMinor,
+            priceTradeMinor: detailProduct.ptrMinor,
+            barcode: undefined,
+            brand: detailProduct.brand,
+            category: detailProduct.category,
+            stock: undefined,
+            caseSize: detailProduct.caseSize,
+            unit: detailProduct.unit,
+          }}
+          visible={true}
+          onClose={() => setDetailProduct(null)}
+          onAddToCart={(_, quantity) => {
+            if (detailProduct) {
+              handleQtyChange(detailProduct.id, quantity);
+              showToast(`${detailProduct.name} ×${quantity} cases added`);
+            }
+            setDetailProduct(null);
+          }}
+          context="BUY"
+        />
+      ) : null}
 
       {/* Purchase cart strip */}
       {cartItemCount > 0 ? (

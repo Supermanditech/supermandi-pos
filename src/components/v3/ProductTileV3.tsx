@@ -50,7 +50,7 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress }: P
       style={[styles.tile, cartQty > 0 && styles.tileInCart]}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${product.name}, ${priceLabel}, tap to add to cart`}
+      accessibilityLabel={`${product.name}, ${priceLabel}, tap for details`}
     >
       {cartQty > 0 ? (
         <View style={styles.cartBadge}>

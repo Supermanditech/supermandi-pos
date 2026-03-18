@@ -11,6 +11,7 @@ import BrandedHeader from "../../components/v3/BrandedHeader";
 import CustomerTypeToggle, { type SellMode } from "../../components/v3/CustomerTypeToggle";
 import ProductTileV3, { type ProductTileData } from "../../components/v3/ProductTileV3";
 import CartSheetV3 from "../../components/v3/CartSheetV3";
+import ProductDetailSheetV3 from "../../components/v3/ProductDetailSheetV3";
 import VoiceOverlayV3 from "../../components/v3/VoiceOverlayV3";
 import UniversalSearchV3, { type SearchResult } from "../../components/v3/UniversalSearchV3";
 import { OfflineBanner } from "../../components/ui/OfflineBanner";
@@ -101,6 +102,8 @@ export default function SellScreenV3() {
   const [searchVisible, setSearchVisible] = useState(false);
   const [cartSheetVisible, setCartSheetVisible] = useState(false);
   const [voiceVisible, setVoiceVisible] = useState(false);
+  // V3-FIX-135: Detail-first product sheet state
+  const [detailProduct, setDetailProduct] = useState<ProductTileData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -230,31 +233,38 @@ export default function SellScreenV3() {
     [cartItems]
   );
 
-  // V3-FIX-120: Tile tap uses canonical cart payload builder
-  const handleAddProduct = useCallback(
+  // V3-FIX-135: Tile tap opens detail sheet (detail-first, no direct add)
+  const handleTilePress = useCallback(
     (product: ProductTileData) => {
+      setDetailProduct(product);
+    },
+    []
+  );
+
+  // V3-FIX-135: Add-to-cart only from explicit CTA inside detail sheet
+  const handleDetailAdd = useCallback(
+    (product: ProductTileData, quantity: number) => {
       const existing = cartItems.find((i) => i.id === (product.barcode ?? product.id) || i.barcode === product.barcode);
       if (existing) {
-        useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
-        showToast(`${product.name} ×${existing.quantity + 1}`);
+        useCartStore.getState().updateQuantity(existing.id, existing.quantity + quantity);
       } else {
-        addItem(buildCartItemFromTile(product, sellMode));
-        showToast(`${product.name} added`);
+        addItem({ ...buildCartItemFromTile(product, sellMode), quantity });
       }
     },
     [cartItems, addItem, sellMode]
   );
 
+  // V3-FIX-135: Tile tap opens detail, not direct add
   const renderTile = useCallback(
     ({ item }: { item: ProductTileData }) => (
       <ProductTileV3
         product={item}
         sellMode={sellMode}
         cartQty={getCartQty(item.barcode ?? item.id)}
-        onPress={() => handleAddProduct(item)}
+        onPress={() => handleTilePress(item)}
       />
     ),
-    [sellMode, getCartQty, handleAddProduct]
+    [sellMode, getCartQty, handleTilePress]
   );
 
   return (
@@ -370,6 +380,15 @@ export default function SellScreenV3() {
           <Text style={styles.cartEmptyText}>Cart empty — tap product or scan barcode</Text>
         </View>
       )}
+
+      {/* V3-FIX-135: Product detail-first sheet */}
+      <ProductDetailSheetV3
+        product={detailProduct}
+        visible={detailProduct !== null}
+        onClose={() => setDetailProduct(null)}
+        onAddToCart={handleDetailAdd}
+        context="SELL"
+      />
 
       {/* STG-554: Cart sheet overlay */}
       <CartSheetV3
