@@ -26,6 +26,7 @@ export interface SupplierProduct {
   creditDays?: number;        // payment credit period
   currentStock?: number;      // retailer's current stock
   daysOfStock?: number;       // estimated days until stockout
+  bnplAvailable?: boolean;    // Buy Now Pay Later eligibility
 }
 
 type SupplierProductCardV3Props = {

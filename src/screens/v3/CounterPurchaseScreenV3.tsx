@@ -127,9 +127,10 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
     }
   }, [items, invoiceNo, supplierName, onClose]);
 
+  // V3-FIX-078: Use actual caseSize, no fabricated fallback to 24
   const totalAmount = items.reduce((s, it) => {
     const price = parseFloat(it.purchasePrice) || 0;
-    return s + it.qtyCases * (it.caseSize ?? 24) * price;
+    return s + it.qtyCases * (it.caseSize ?? 1) * price;
   }, 0);
   const gstAmount = Math.round(totalAmount * 0.18 * 100) / 100;
 
@@ -181,7 +182,7 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
       <View style={styles.invoiceRow}>
         <Text style={styles.invoiceLabel}>Invoice #:</Text>
         <TextInput style={styles.invoiceInput} placeholder="Enter invoice no." value={invoiceNo} onChangeText={setInvoiceNo} placeholderTextColor={colors.textTertiary} />
-        <Text style={styles.invoiceDate}>16 Mar 2026</Text>
+        <Text style={styles.invoiceDate}>{new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</Text>
       </View>
 
       {/* Items list */}

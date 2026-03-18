@@ -21,6 +21,7 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [orderError, setOrderError] = useState(false);
+  const [lowStockCount, setLowStockCount] = useState<number | null>(null);
 
   // V3-019: Fetch real purchase history
   useEffect(() => {
@@ -40,6 +41,13 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
           };
         });
         setRecentOrders(orders);
+
+        // V3-FIX-079: Fetch real low-stock count instead of hardcoded "5 items low"
+        try {
+          const { apiClient } = require("../../services/api/apiClient");
+          const stockRes = await apiClient.get("/api/v1/pos/inventory/low-stock-count");
+          if (typeof stockRes?.count === "number") setLowStockCount(stockRes.count);
+        } catch { /* non-critical */ }
       } catch (err) {
         logger.debug("StoreHubV3", `fetch_failed:${String(err)}`);
         setOrderError(true);
@@ -66,10 +74,13 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
             <Text style={styles.cardSub}>Scan & receive goods</Text>
           </Pressable>
 
-          <Pressable style={[styles.card, styles.cardWarning]} onPress={() => onNavigate("reorder")} accessibilityRole="button">
+          {/* V3-FIX-079: Real low-stock count instead of hardcoded "5 items low" */}
+          <Pressable style={[styles.card, lowStockCount && lowStockCount > 0 ? styles.cardWarning : null]} onPress={() => onNavigate("reorder")} accessibilityRole="button">
             <Svg width={36} height={36} viewBox="0 0 48 48" fill="none"><Rect x="10" y="6" width="28" height="36" rx="3" fill={colors.primaryLight} stroke={colors.primary} strokeWidth="1.5" /><Path d="M16 14h16M16 20h12M16 26h14" stroke={colors.primary} strokeWidth="1.5" strokeLinecap="round" opacity=".5" /><Circle cx="36" cy="36" r="8" fill={colors.warning} /><Path d="M36 32v4h-4" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></Svg>
             <Text style={styles.cardTitle}>Reorder</Text>
-            <Text style={[styles.cardSub, { color: colors.warning, fontWeight: "700" }]}>5 items low</Text>
+            <Text style={[styles.cardSub, lowStockCount && lowStockCount > 0 ? { color: colors.warning, fontWeight: "700" } : null]}>
+              {lowStockCount != null ? `${lowStockCount} item${lowStockCount !== 1 ? "s" : ""} low` : "Smart reorder"}
+            </Text>
           </Pressable>
 
           <Pressable style={styles.card} onPress={() => onNavigate("stock")} accessibilityRole="button">

@@ -73,11 +73,8 @@ export default function CompareScreenV3({ visible, productName, packSize, mrpMin
         setOffers(mapped);
       } catch (err) {
         logger.debug("CompareV3", `fetch_failed:${String(err)}`);
-        // Fallback to demo data if API fails
-        setOffers([
-          { id: "a", supplierName: "Supplier A", ptrMinor: 520, moq: 48, moqUnit: "pcs", deliveryDays: 2, isBestPrice: true },
-          { id: "b", supplierName: "Supplier B", ptrMinor: 550, moq: 24, moqUnit: "pcs", deliveryDays: 1, freeDelivery: true },
-        ]);
+        // V3-FIX-077: No demo fallback — show real error state
+        showToast("Could not load supplier offers");
       }
       setLoading(false);
     };

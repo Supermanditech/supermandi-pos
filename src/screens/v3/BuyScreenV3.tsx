@@ -15,29 +15,29 @@ import { createOrder, submitOrder, type CreateOrderParams } from "../../services
 import { getDeviceStoreId } from "../../services/deviceSession";
 import { logger } from "../../services/logger";
 
-// V3-013: BUY tab wired to real catalogApi
+// V3-FIX-076: BUY tab — no fabricated wholesale metadata
 
-const DEFAULT_CATEGORIES = ["All", "Biscuits", "Tea & Coffee", "Noodles", "Oil & Ghee", "Dairy", "Cleaning"];
-
-// Map CatalogProduct → SupplierProduct for the card
+// Map CatalogProduct → SupplierProduct using real backend fields only
 function catalogToSupplier(p: CatalogProduct): SupplierProduct {
+  const raw = p as any;
   return {
     id: p.id,
     name: p.name,
     brand: p.brand ?? "",
     category: p.category ?? "",
     packSize: p.netContentValue ? `${p.netContentValue}${p.netContentUnit ?? ""}` : "",
-    caseSize: 24, // Default — real case size from wholesale API (V3-017)
+    caseSize: raw.caseSize ?? raw.case_size ?? 1,
     unit: p.unit ?? "pcs",
-    mrpMinor: (p as any).bestPrice ? Math.round((p as any).bestPrice * 100) : 0,
-    // PD-022: Use admin-approved retail price if available, else estimate
-    ptrMinor: (p as any).adminRetailPriceMinor ?? ((p as any).bestPrice ? Math.round((p as any).bestPrice * 85) : 0),
+    mrpMinor: raw.mrpMinor ?? (raw.bestPrice ? Math.round(raw.bestPrice * 100) : 0),
+    ptrMinor: raw.ptrMinor ?? raw.adminRetailPriceMinor ?? raw.purchasePrice ?? 0,
     hsnCode: p.hsnCode ?? "",
     gstPct: p.gstRate ?? p.defaultGstRate ?? 18,
-    moq: 1,
-    supplierName: (p as any).supplierName ?? "Supplier",
-    deliveryDays: 2,
-    // bnplAvailable will come from wholesale API (V3-017)
+    moq: raw.moq ?? 1,
+    supplierName: raw.supplierName ?? "",
+    deliveryDays: raw.deliveryDays ?? 0,
+    bnplAvailable: raw.bnplAvailable ?? false,
+    tradeDiscountPct: raw.tradeDiscountPct,
+    creditDays: raw.creditDays,
   };
 }
 
@@ -48,6 +48,7 @@ export default function BuyScreenV3() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [selectedSupplier, setSelectedSupplier] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState(0);
+  const [categories, setCategories] = useState<string[]>(["All"]);
   const [orderQtys, setOrderQtys] = useState<Record<string, number>>({});
   const [products, setProducts] = useState<SupplierProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,6 +68,9 @@ export default function BuyScreenV3() {
         const result = await getCatalog(storeId, { limit: 50 });
         const mapped = result.data.map(catalogToSupplier);
         setProducts(mapped);
+        // V3-FIX-076: Extract real categories from loaded data
+        const uniqueCategories = [...new Set(mapped.map((p) => p.category).filter(Boolean))];
+        setCategories(["All", ...uniqueCategories]);
         // Extract unique suppliers
         const uniqueSuppliers = [...new Set(mapped.map((p) => p.supplierName).filter(Boolean))];
         setSuppliers(["All Suppliers", ...uniqueSuppliers]);
@@ -83,6 +87,20 @@ export default function BuyScreenV3() {
     };
     void fetchCatalog();
   }, []);
+
+  // V3-FIX-076: Filter products by selected supplier and category
+  const filteredProducts = useMemo(() => {
+    let list = products;
+    if (selectedSupplier > 0) {
+      const supplierName = suppliers[selectedSupplier];
+      list = list.filter((p) => p.supplierName === supplierName);
+    }
+    if (selectedCategory > 0) {
+      const cat = categories[selectedCategory];
+      list = list.filter((p) => p.category === cat);
+    }
+    return list;
+  }, [products, selectedSupplier, suppliers, selectedCategory, categories]);
 
   const cartItemCount = Object.values(orderQtys).reduce((s, v) => s + (v > 0 ? 1 : 0), 0);
   const cartTotal = products.reduce((s, p) => s + (orderQtys[p.id] ?? 0) * p.caseSize * p.ptrMinor, 0);
@@ -122,10 +140,10 @@ export default function BuyScreenV3() {
         />
       </View>
 
-      {/* Category chips */}
+      {/* V3-FIX-076: Dynamic category chips from real catalog data */}
       <FlatList
         horizontal
-        data={DEFAULT_CATEGORIES}
+        data={categories}
         keyExtractor={(c) => c}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.categoryChips}
@@ -145,7 +163,7 @@ export default function BuyScreenV3() {
         </View>
       ) : null}
       {!loading ? <FlatList
-        data={products}
+        data={filteredProducts}
         keyExtractor={(p) => p.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
