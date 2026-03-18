@@ -47,85 +47,62 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
   const getProductByBarcode = useProductsStore((s) => s.getProductByBarcode);
   const addItem = useCartStore((s) => s.addItem);
 
-  const handleScanSubmit = useCallback(() => {
-    // V3-FIX-157: Normalize barcode + suppress duplicate bursts
-    const code = normalizeBarcode(barcodeInput);
+  // V3-FIX-157 + V3-FIX-160: One canonical scan pipeline for HID, camera, and manual entry
+  const processScan = useCallback((rawBarcode: string) => {
+    const code = normalizeBarcode(rawBarcode);
     if (!code) return;
     if (isDuplicateScan(code)) return;
 
-    // Look up barcode in store's product database
     const product = getProductByBarcode(code);
     if (product) {
-      const result: ScanResult = {
-        barcode: code,
-        productName: product.name,
-        price: product.priceMinor,
-        stock: product.stock ?? undefined,
-        isNew: false,
-      };
-      setLastResult(result);
+      setLastResult({
+        barcode: code, productName: product.name,
+        price: product.priceMinor, stock: product.stock ?? undefined, isNew: false,
+      });
 
       if (context === "sell") {
-        // Add to cart
+        // V3-FIX-160: SELL scan — add/increment cart through canonical path
         const existing = useCartStore.getState().items.find((i) => i.barcode === code);
         if (existing) {
           useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
           showToast(`${product.name} ×${existing.quantity + 1}`);
         } else {
-          // V3-FIX-120: Use canonical cart payload
           addItem(buildCartItem(product));
           showToast(`${product.name} added to cart`);
         }
         onProductFound(code, context);
-      } else if (context === "stock_in") {
-        showToast(`${product.name} — ready for stock inward`);
+      } else if (context === "stock_in" || context === "counter_purchase") {
+        showToast(`${product.name} — ready for ${context === "counter_purchase" ? "counter purchase" : "stock inward"}`);
+        onProductFound(code, context);
+      } else if (context === "procurement") {
+        // V3-HARDEN-158: Procurement scan found — route to detail
+        showToast(`${product.name} — found in store`);
         onProductFound(code, context);
       }
       logger.debug("V3Scan", `found:${code},product:${product.name},context:${context}`);
     } else {
-      // Product not found — show new product prompt
+      // Not found — intent-specific behavior
       setLastResult({ barcode: code, isNew: true });
-      logger.debug("V3Scan", `not_found:${code}`);
+      logger.debug("V3Scan", `not_found:${code},context:${context}`);
     }
     setBarcodeInput("");
-  }, [barcodeInput, context, getProductByBarcode, addItem, onProductFound]);
+  }, [context, getProductByBarcode, addItem, onProductFound]);
 
-  // DA-028: Wire HID scanner service — hardware barcodes auto-submit
+  // Manual submit and camera use the same pipeline
+  const handleScanSubmit = useCallback(() => {
+    processScan(barcodeInput);
+  }, [barcodeInput, processScan]);
+
+  // V3-FIX-160: HID scanner uses the SAME canonical pipeline (no duplicate logic)
   useEffect(() => {
     if (!visible) return;
     const handler = (barcode: string) => {
       setBarcodeInput(barcode);
-      // Auto-submit after short delay for HID scanner
-      setTimeout(() => {
-        const code = barcode.trim();
-        if (!code) return;
-        const product = getProductByBarcode(code);
-        if (product) {
-          if (context === "sell") {
-            const existing = useCartStore.getState().items.find((i) => i.barcode === code);
-            if (existing) {
-              useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
-              showToast(`${product.name} ×${existing.quantity + 1}`);
-            } else {
-              // V3-FIX-120: Use canonical cart payload
-              addItem(buildCartItem(product));
-              showToast(`${product.name} added to cart`);
-            }
-            onProductFound(code, context);
-          } else {
-            showToast(`${product.name} — ${context}`);
-            onProductFound(code, context);
-          }
-          setLastResult({ barcode: code, productName: product.name, price: product.priceMinor, stock: product.stock ?? undefined, isNew: false });
-        } else {
-          setLastResult({ barcode: code, isNew: true });
-        }
-        setBarcodeInput("");
-      }, 50);
+      setTimeout(() => processScan(barcode), 50);
     };
     setHidScanHandler(handler);
     return () => setHidScanHandler(null);
-  }, [visible, context, getProductByBarcode, addItem, onProductFound]);
+  }, [visible, processScan]);
 
   if (!visible) return null;
 
@@ -190,16 +167,18 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
           <View style={styles.contextRow}>
             <Text style={styles.contextLabel}>SCAN MODE</Text>
             <View style={styles.contextToggle}>
-              {(["sell", "stock_in", "new_product"] as ScanContext[]).map((ctx) => (
+              {/* V3-FIX-157: All scan intents available in mode toggle */}
+              {(["sell", "stock_in", "procurement", "counter_purchase", "new_product"] as ScanContext[]).map((ctx) => (
                 <Pressable
                   key={ctx}
                   style={[styles.contextBtn, context === ctx && styles.contextBtnActive]}
                   onPress={() => setContext(ctx)}
                   accessibilityRole="button"
                   accessibilityState={{ selected: context === ctx }}
+                  testID={`scan-mode-${ctx}`}
                 >
                   <Text style={[styles.contextText, context === ctx && styles.contextTextActive]}>
-                    {ctx === "sell" ? "Sell" : ctx === "stock_in" ? "Stock In" : "New Product"}
+                    {ctx === "sell" ? "Sell" : ctx === "stock_in" ? "Stock In" : ctx === "procurement" ? "Procurement" : ctx === "counter_purchase" ? "Counter" : "New Product"}
                   </Text>
                 </Pressable>
               ))}
@@ -229,20 +208,24 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
                   <Text style={styles.resultNewTitle}>Product Not Found</Text>
                   <Text style={styles.resultBarcode}>{lastResult.barcode}</Text>
                 </View>
-                <Pressable
-                  style={styles.createBtn}
-                  onPress={() => { onNewProduct(lastResult.barcode); onClose(); }}
-                  accessibilityLabel="Create new product"
-                >
-                  <Text style={styles.createBtnText}>New Product</Text>
-                </Pressable>
+                {/* V3-HARDEN-158: Procurement scan miss MUST NOT offer New Product */}
+                {context !== "procurement" ? (
+                  <Pressable
+                    style={styles.createBtn}
+                    onPress={() => { onNewProduct(lastResult.barcode); onClose(); }}
+                    accessibilityLabel="Create new product"
+                    testID="scan-new-product-btn"
+                  >
+                    <Text style={styles.createBtnText}>New Product</Text>
+                  </Pressable>
+                ) : null}
               </View>
             )}
             <View style={styles.resultAction}>
               <Text style={styles.resultActionText}>
                 {!lastResult.isNew
-                  ? (context === "sell" ? "✓ Added to cart!" : context === "stock_in" ? "✓ Stock recorded!" : "✓ Product found")
-                  : "Tap Create to add this product to your store"}
+                  ? (context === "sell" ? "✓ Added to cart!" : context === "stock_in" ? "✓ Stock recorded!" : context === "counter_purchase" ? "✓ Ready for inward!" : "✓ Product found")
+                  : context === "procurement" ? "Product not available in supplier catalogue" : "Tap Create to add this product to your store"}
               </Text>
             </View>
           </View>

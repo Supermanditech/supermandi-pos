@@ -123,7 +123,7 @@ describe("V3-HARDEN-158: Procurement scan identity (executable)", () => {
     });
     expect(action.type).toBe("show_not_found");
     if (action.type === "show_not_found") {
-      expect(action.intent).toBe("procurement_scan");
+      expect(action.intent).toBe("supplier_catalog_procurement_scan");
     }
   });
 
@@ -178,25 +178,56 @@ describe("V3-HARDEN-159: Counter Purchase scan identity (executable)", () => {
 // V3-FIX-157: ScanScreenV3 uses canonical contract (static)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-describe("V3-FIX-157: ScanScreenV3 wiring (static — narrowly scoped)", () => {
-  it("ScanScreenV3 imports and uses normalizeBarcode + isDuplicateScan", () => {
+// ═══════════════════════════════════════════════════════════════════════════════
+// Live wiring verification (static — narrowly scoped)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("V3-FIX-157: Live wiring (static — narrowly scoped)", () => {
+  it("ScanScreenV3 uses one processScan pipeline for HID + manual", () => {
     const fs = require("fs");
     const path = require("path");
     const src = fs.readFileSync(
       path.resolve(__dirname, "../../screens/v3/ScanScreenV3.tsx"), "utf8"
+    );
+    // One canonical pipeline
+    expect(src).toContain("processScan");
+    expect(src).toContain("normalizeBarcode");
+    expect(src).toContain("isDuplicateScan");
+    // Manual submit calls processScan
+    expect(src).toContain("processScan(barcodeInput)");
+    // HID handler calls processScan
+    expect(src).toContain("processScan(barcode)");
+    // No duplicate HID-only business logic
+    expect(src).not.toContain("const code = barcode.trim()");
+  });
+
+  it("procurement scan miss hides New Product button", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../screens/v3/ScanScreenV3.tsx"), "utf8"
+    );
+    expect(src).toContain('context !== "procurement"');
+    expect(src).toContain("not available in supplier catalogue");
+  });
+
+  it("BUY opens scan in procurement context", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../screens/v3/BuyScreenV3.tsx"), "utf8"
+    );
+    expect(src).toContain('defaultContext: "procurement"');
+  });
+
+  it("CounterPurchaseScreenV3 uses canonical normalizeBarcode + isDuplicateScan", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../screens/v3/CounterPurchaseScreenV3.tsx"), "utf8"
     );
     expect(src).toContain("normalizeBarcode");
     expect(src).toContain("isDuplicateScan");
     expect(src).toContain("scanIntent");
-  });
-
-  it("ScanContext includes procurement and counter_purchase intents", () => {
-    const fs = require("fs");
-    const path = require("path");
-    const src = fs.readFileSync(
-      path.resolve(__dirname, "../../screens/v3/ScanScreenV3.tsx"), "utf8"
-    );
-    expect(src).toContain('"procurement"');
-    expect(src).toContain('"counter_purchase"');
   });
 });

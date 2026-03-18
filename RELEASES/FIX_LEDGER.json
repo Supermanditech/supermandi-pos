@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 396,
+  "version": 397,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6889,7 +6889,7 @@
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 1,
       "end_line": 309,
-      "checksum": "0dbf73f366d52026",
+      "checksum": "f003547c1973d8de",
       "description": "Scan screen v3 — context-aware barcode scan (Sell/Stock-In/New Product), HID+camera, result panel",
       "test_file": "src/__tests__/screens/scan-v3.stg-559.test.ts",
       "depends_on": null,
@@ -6963,7 +6963,7 @@
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 1,
       "end_line": 357,
-      "checksum": "1067782646e6a4e3",
+      "checksum": "b7181f8cbd5312e6",
       "description": "BUY tab v3 — supplier catalogue with wholesale metadata, supplier filter, categories, counter purchase CTA",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,
@@ -7036,8 +7036,8 @@
       "ticket": "STG-563",
       "file": "src/screens/v3/CounterPurchaseScreenV3.tsx",
       "start_line": 1,
-      "end_line": 364,
-      "checksum": "0a6a1af7f73ce612",
+      "end_line": 368,
+      "checksum": "b2eb16c2b35decc6",
       "description": "V3-041: Counter purchase — real barcode lookup + recordManualInward API + DA-008 field change wiring",
       "test_file": "src/__tests__/screens/counter-purchase-v3.stg-563.test.ts",
       "depends_on": null,

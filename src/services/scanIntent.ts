@@ -21,7 +21,7 @@
  */
 export type ScanIntent =
   | "sell_scan"
-  | "procurement_scan"
+  | "supplier_catalog_procurement_scan"
   | "counter_purchase_scan"
   | "stock_in";
 
@@ -134,7 +134,7 @@ export function resolveProcurementScanAction(resolution: ScanResolution): ScanAc
   if (resolution.status === "found_supplier_sku") {
     return { type: "open_procurement_detail", supplierProductId: resolution.supplierProductId };
   }
-  return { type: "show_not_found", barcode: resolution.barcode, intent: "procurement_scan" };
+  return { type: "show_not_found", barcode: resolution.barcode, intent: "supplier_catalog_procurement_scan" };
 }
 
 /**

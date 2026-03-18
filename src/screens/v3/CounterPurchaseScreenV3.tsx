@@ -10,6 +10,8 @@ import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
 import { showToast } from "../../utils/showToast";
 import { useProductsStore } from "../../stores/productsStore";
+// V3-HARDEN-159: Use canonical scan contract
+import { normalizeBarcode, isDuplicateScan } from "../../services/scanIntent";
 import { recordManualInward } from "../../services/api/inventoryApi";
 import { getPurchaseHistory } from "../../services/api/inventoryApi";
 import { isOnline } from "../../services/networkStatus";
@@ -55,17 +57,19 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
     }));
   }, []);
 
-  // V3-041: Real barcode lookup — checks productsStore first, then marks as new
+  // V3-HARDEN-159: Counter Purchase uses canonical scan contract
   const handleBarcodeScan = useCallback(async (barcode: string) => {
-    if (!barcode.trim()) return;
+    const code = normalizeBarcode(barcode);
+    if (!code) return;
+    if (isDuplicateScan(code)) return;
     try {
-    // Prevent duplicate scan
-    if (items.some((it) => it.barcode === barcode.trim())) {
+    // Prevent duplicate in current session
+    if (items.some((it) => it.barcode === code)) {
       showToast("Already scanned");
       setBarcodeInput("");
       return;
     }
-    const product = getProductByBarcode(barcode.trim());
+    const product = getProductByBarcode(code);
     if (product) {
       // V3-FIX-078: Known product — carry real productId for authoritative inward record
       const newItem: PurchaseItemData = {
