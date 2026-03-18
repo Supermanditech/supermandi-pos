@@ -10,8 +10,19 @@ import {
 } from "../../../middleware/posRateLimiter";
 // SEC-001: Import store status gate for ACTIVE store enforcement
 import { requireActiveStore, requireOperationalStore } from "../../../middleware/storeStatusGate";
-// V3-HARDEN-130: Store isolation enforcement
+// V3-HARDEN-130: Store isolation enforcement — every route goes through this
 import { assertStoreId } from "../../../services/storeIsolation";
+import type { Request as ExpressRequest } from "express";
+function getStoreIdFromPosDevice(req: ExpressRequest, operation: string): string {
+  const storeId = (req as any).posDevice?.storeId as string | null | undefined;
+  assertStoreId(storeId, operation);
+  return storeId;
+}
+function getDeviceContextFromPosDevice(req: ExpressRequest, operation: string): { storeId: string; deviceId: string } {
+  const posDevice = (req as any).posDevice as { storeId: string; deviceId: string } | undefined;
+  assertStoreId(posDevice?.storeId, operation);
+  return { storeId: posDevice!.storeId, deviceId: posDevice!.deviceId };
+}
 import {
   applyBulkDeductions,
   ensureSaleAvailability,
@@ -614,7 +625,7 @@ posSalesRouter.get("/daily-summary", requireDeviceToken, async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/sales");
   const dateParam = typeof req.query.date === "string" ? req.query.date.trim() : null;
 
   // Use provided date or default to today (store timezone assumed UTC for now)
@@ -712,7 +723,7 @@ posSalesRouter.get("/bills", requireDeviceToken, async (req, res) => {
   const limit = Number.isFinite(limitRaw) ? Math.min(200, Math.max(1, Math.floor(limitRaw))) : 50;
   const offset = Number.isFinite(offsetRaw) ? Math.max(0, Math.floor(offsetRaw)) : 0;
 
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/sales");
 
   try {
     const rows = await pool.query(
@@ -752,7 +763,7 @@ posSalesRouter.get("/bills/:saleId", requireDeviceToken, async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/sales");
 
   try {
     const saleRes = await pool.query(
@@ -957,9 +968,7 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
-  // V3-HARDEN-130: Fail-closed store isolation on createSale
-  assertStoreId(storeId, "pos/sales/create");
+  const { storeId, deviceId } = getDeviceContextFromPosDevice(req, "pos/sales");
   const store = await getStore(storeId);
   if (!store) {
     return res.status(404).json({ error: "store not found" });
@@ -1351,7 +1360,7 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/sales");
 
   const client = await pool.connect();
   try {
@@ -1560,7 +1569,7 @@ posSalesRouter.post("/sales/:saleId/cancel", requireDeviceToken, requireActiveSt
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/sales");
 
   const client = await pool.connect();
   try {
@@ -1633,7 +1642,7 @@ posSalesRouter.post("/sales/:saleId/return", requireDeviceToken, requireActiveSt
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/sales");
 
   const client = await pool.connect();
   try {
@@ -1760,7 +1769,7 @@ posSalesRouter.post("/sales/:saleId/void", requireDeviceToken, requireActiveStor
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
+  const { storeId, deviceId } = getDeviceContextFromPosDevice(req, "pos/sales");
   // STG-489: Staff ID from header (set by POS app on staff login)
   const staffId = req.header("x-staff-id")?.trim() || null;
 
@@ -1901,7 +1910,7 @@ posSalesRouter.post("/payments/upi/init", requireDeviceToken, requireActiveStore
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
+  const { storeId, deviceId } = getDeviceContextFromPosDevice(req, "pos/sales");
   const store = await getStore(storeId);
   if (!store) {
     return res.status(404).json({ error: "store not found" });
@@ -1958,7 +1967,7 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, requireA
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
+  const { storeId, deviceId } = getDeviceContextFromPosDevice(req, "pos/sales");
   const paymentStatus = await getPaymentStoreStatus(storeId, paymentId);
   if (!paymentStatus) {
     return res.status(404).json({ error: "payment not found" });
@@ -2136,7 +2145,7 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, requireActiveStore, fi
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
+  const { storeId, deviceId } = getDeviceContextFromPosDevice(req, "pos/sales");
   const store = await getStore(storeId);
   if (!store) {
     return res.status(404).json({ error: "store not found" });
@@ -2286,7 +2295,7 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
+  const { storeId, deviceId } = getDeviceContextFromPosDevice(req, "pos/sales");
   const store = await getStore(storeId);
   if (!store) {
     return res.status(404).json({ error: "store not found" });
@@ -2495,7 +2504,7 @@ posSalesRouter.post("/collections/upi/init", requireDeviceToken, requireActiveSt
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
+  const { storeId, deviceId } = getDeviceContextFromPosDevice(req, "pos/sales");
   const store = await getStore(storeId);
   if (!store) {
     return res.status(404).json({ error: "store not found" });
@@ -2544,7 +2553,7 @@ posSalesRouter.post("/collections/upi/confirm-manual", requireDeviceToken, requi
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
+  const { storeId, deviceId } = getDeviceContextFromPosDevice(req, "pos/sales");
   const collectionStatus = await getCollectionStoreStatus(storeId, collectionId);
   if (!collectionStatus) {
     return res.status(404).json({ error: "collection not found" });
@@ -2587,7 +2596,7 @@ posSalesRouter.post("/collections/cash", requireDeviceToken, requireActiveStore,
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
+  const { storeId, deviceId } = getDeviceContextFromPosDevice(req, "pos/sales");
   const store = await getStore(storeId);
   if (!store) {
     return res.status(404).json({ error: "store not found" });
@@ -2622,7 +2631,7 @@ posSalesRouter.post("/collections/due", requireDeviceToken, requireActiveStore, 
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
+  const { storeId, deviceId } = getDeviceContextFromPosDevice(req, "pos/sales");
   const store = await getStore(storeId);
   if (!store) {
     return res.status(404).json({ error: "store not found" });
@@ -2669,7 +2678,7 @@ posSalesRouter.get("/sales/:saleId/payment-status", requireDeviceToken, async (r
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/sales");
 
   try {
     // Get sale status
@@ -2737,7 +2746,7 @@ posSalesRouter.get("/payments/:paymentId/status", requireDeviceToken, async (req
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/sales");
 
   try {
     const paymentRes = await pool.query(

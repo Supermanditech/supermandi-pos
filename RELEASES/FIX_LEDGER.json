@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 375,
+  "version": 376,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6447,7 +6447,7 @@
       "file": "backend/src/routes/v1/pos/sales.ts",
       "start_line": 794,
       "end_line": 795,
-      "checksum": "38d2d23708a34fd2",
+      "checksum": "a282116f572237b9",
       "description": "instanceof Date check for TIMESTAMPTZ in bill detail",
       "test_file": "src/__tests__/screens/date-timezone.stg-515.test.ts",
       "depends_on": null,

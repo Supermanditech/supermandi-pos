@@ -68,13 +68,25 @@ describe("V3-HARDEN-130: Store isolation (executable)", () => {
     expect(src).toContain("STORE_ISOLATION_VIOLATION: catalog route requires valid storeId");
   });
 
-  it("pos/sales createSale uses assertStoreId (static — narrowly scoped)", () => {
+  it("ALL pos/sales routes use fail-closed storeId extraction (static — narrowly scoped)", () => {
     const fs = require("fs");
     const path = require("path");
     const src = fs.readFileSync(
       path.resolve(__dirname, "../../src/routes/v1/pos/sales.ts"), "utf8"
     );
-    expect(src).toContain('assertStoreId(storeId, "pos/sales/create")');
+    // Must define fail-closed helpers that call assertStoreId
+    expect(src).toContain("function getStoreIdFromPosDevice(");
+    expect(src).toContain("function getDeviceContextFromPosDevice(");
+    expect(src).toContain('assertStoreId(storeId, operation)');
+    expect(src).toContain('assertStoreId(posDevice?.storeId, operation)');
+    // Must NOT have any raw posDevice.storeId extraction
+    expect(src).not.toMatch(/const \{ storeId \} = \(req as any\)\.posDevice/);
+    expect(src).not.toMatch(/const \{ storeId, deviceId \} = \(req as any\)\.posDevice/);
+    // Must use the helpers for all routes
+    const helperCalls = src.match(/getStoreIdFromPosDevice\(|getDeviceContextFromPosDevice\(/g);
+    expect(helperCalls).not.toBeNull();
+    // At least 15 routes use these helpers (18 extraction points total)
+    expect(helperCalls!.length).toBeGreaterThanOrEqual(15);
   });
 
   it("pos/store payment-settings and status use assertStoreId (static — narrowly scoped)", () => {
