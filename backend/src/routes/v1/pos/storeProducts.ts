@@ -8,6 +8,10 @@ import {
   type CreateStoreProductResult
 } from "../../../services/storeProductDigitisationService";
 import { log } from "../../../lib/logger";
+// V3-HARDEN-130: Store isolation enforcement
+import { assertStoreId } from "../../../services/storeIsolation";
+// V3-FIX-132: Multilingual search support
+import { expandHindiSearchTokens, normalizeQuantityTokens } from "../../../services/searchLocalization";
 import {
   validateProductName as validateProductNameUnified,
   validateBarcode as validateBarcodeUnified,
@@ -288,6 +292,8 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, requireActive
  */
 posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
+  // V3-HARDEN-130: Fail-closed store isolation assertion
+  assertStoreId(storeId, "store-products/search");
   const q = String(req.query.q || "").trim();
   const limit = Math.min(Math.max(parseInt(String(req.query.limit || "30"), 10) || 30, 1), 100);
   const includeZeroStock = req.query.includeZeroStock !== "false";
@@ -309,8 +315,9 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
   try {
     const stockFilter = includeZeroStock ? "" : "AND COALESCE(sb.current_qty, sp.current_stock, 0) > 0";
 
-    // Tokenize query: split by whitespace, keep tokens >= 2 chars, cap at 5
-    const tokens = q.split(/\s+/).filter(t => t.length >= 2).slice(0, 5);
+    // V3-FIX-132: Tokenize with quantity normalization + Hindi alias expansion
+    const rawTokens = normalizeQuantityTokens(q).filter(t => t.length >= 2).slice(0, 5);
+    const tokens = expandHindiSearchTokens(rawTokens).slice(0, 8);
     if (tokens.length === 0) {
       return res.json({ success: true, data: [], total: 0, context: "SELL" });
     }
@@ -470,6 +477,8 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
  */
 posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
+  // V3-HARDEN-130: Fail-closed store isolation assertion
+  assertStoreId(storeId, "store-products/lookup");
   const barcode = String(req.query.barcode || "").trim();
 
   if (!barcode) {

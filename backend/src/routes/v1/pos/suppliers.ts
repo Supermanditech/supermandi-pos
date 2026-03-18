@@ -8,6 +8,8 @@ import { requireDeviceToken } from "../../../middleware/deviceToken";
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
+// V3-HARDEN-130: Store isolation enforcement
+import { assertStoreId } from "../../../services/storeIsolation";
 
 export const posSuppliersRouter = Router();
 
@@ -59,6 +61,8 @@ posSuppliersRouter.get("/suppliers", requireDeviceToken, async (req, res) => {
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const { storeId } = (req as any).posDevice as { storeId: string };
+  // V3-HARDEN-130: Fail-closed store isolation assertion
+  assertStoreId(storeId, "pos/suppliers");
 
   try {
     // Only fetch verified suppliers
