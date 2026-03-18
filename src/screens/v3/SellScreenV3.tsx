@@ -3,6 +3,7 @@ import { View, FlatList, TextInput, Pressable, ActivityIndicator, RefreshControl
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
+import { getGridColumns, getScreenPadding, getChipPadding, getChipFontSize } from "../../theme/responsive";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
@@ -340,7 +341,7 @@ export default function SellScreenV3() {
         <FlatList
           data={tileProducts}
           keyExtractor={(item) => item.id}
-          numColumns={3}
+          numColumns={getGridColumns()}
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={styles.gridContainer}
           renderItem={renderTile}
