@@ -3,6 +3,8 @@ import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
 import { requireEnrolledStore } from "../../../middleware/storeStatusGate";
 import { logger } from "../../../lib/logger";
+// V3-HARDEN-130: Store isolation enforcement
+import { assertStoreId } from "../../../services/storeIsolation";
 
 export const posStoreRouter = Router();
 
@@ -22,6 +24,8 @@ posStoreRouter.patch("/store/payment-settings", requireDeviceToken, requireEnrol
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const { storeId } = (req as any).posDevice as { storeId: string };
+  // V3-HARDEN-130: Fail-closed store isolation on payment-settings
+  assertStoreId(storeId, "pos/store/payment-settings");
 
   const { upiVpa, bankAccountNumber, bankIfsc } = req.body as {
     upiVpa?: string;
@@ -121,6 +125,8 @@ posStoreRouter.get("/stores/:storeId/status", requireDeviceToken, async (req, re
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const { storeId } = (req as any).posDevice as { storeId: string };
+  // V3-HARDEN-130: Fail-closed store isolation on store status
+  assertStoreId(storeId, "pos/stores/status");
 
   // SA-P0-001: Return raw status and suspension reason alongside active boolean
   const result = await pool.query(

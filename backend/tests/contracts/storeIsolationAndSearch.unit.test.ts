@@ -76,6 +76,16 @@ describe("V3-HARDEN-130: Store isolation (executable)", () => {
     );
     expect(src).toContain('assertStoreId(storeId, "pos/sales/create")');
   });
+
+  it("pos/store payment-settings and status use assertStoreId (static — narrowly scoped)", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/routes/v1/pos/store.ts"), "utf8"
+    );
+    expect(src).toContain('assertStoreId(storeId, "pos/store/payment-settings")');
+    expect(src).toContain('assertStoreId(storeId, "pos/stores/status")');
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -195,7 +205,7 @@ describe("V3-FIX-132: Multilingual search (executable)", () => {
     expect(src).toContain("normalizeQuantityTokens");
   });
 
-  it("BUY catalog search supports multilingual + brand + supplier name (static — narrowly scoped)", () => {
+  it("BUY catalog search supports multilingual + brand + supplier name + numeric pack (static — narrowly scoped)", () => {
     const fs = require("fs");
     const path = require("path");
     const src = fs.readFileSync(
@@ -208,6 +218,11 @@ describe("V3-FIX-132: Multilingual search (executable)", () => {
     expect(src).toContain("sp.brand");
     expect(src).toContain("s.business_name");
     expect(src).toContain("s.trade_name");
+    // BUY search must match numeric pack/content fields
+    expect(src).toContain("sp.pack_size");
+    expect(src).toContain("sp.moq");
+    // Numeric and text tokens handled separately
+    expect(src).toContain("numericTokens");
   });
 });
 

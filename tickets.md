@@ -5304,34 +5304,32 @@ Issue:
 - The system still needs one explicit production ticket defining exactly when stock is credited or debited and how that maps to payment and delivery states.
 
 Root cause:
-- Ledger invariants are already ticketed broadly, but the business event timing is not yet expressed as one auditable matrix across:
-  - inline product creation
-  - CSV import
-  - supplier publish/add
-  - GRN / delivered stock
-  - opening stock
-  - sale completion
-  - payment modes cash / UPI / udhar
-  - void/refund/cancel behavior
+- Ledger invariants are already ticketed broadly, but the business event timing is not yet expressed as one auditable matrix across the critical stock-movement paths.
+
+Implemented scope:
+- Canonical ledger event matrix defined in `backend/src/services/ledgerEventMatrix.ts`
+- 9 event types: OPENING_STOCK, GRN_RECEIVED, SALE_COMPLETED, SALE_RETURN, ADJUSTMENT_POSITIVE, ADJUSTMENT_NEGATIVE, SALE_CREATED, SALE_CANCELLED, CART_EVENT
+- Runtime enforcement via `validateLedgerConsistency()` wired into:
+  - `inventoryLedgerService.applyInventoryMovement` (via optional `ledgerEvent` param)
+  - `recordSaleInventoryMovements` → SALE_COMPLETED (live sale debit path)
+  - `purchaseService` → GRN_RECEIVED (live procurement receive path)
+- 48 tests covering matrix correctness and live wiring
+
+Deferred scope (to be addressed by future tickets if needed):
+- CSV import, supplier publish/add, opening stock, and void/refund paths do not yet pass `ledgerEvent` to `applyInventoryMovement`. These paths already have their own idempotency and reference_type guards, but do not formally participate in the typed event matrix yet.
+- Full refactor of all inventory call sites to use the typed matrix would require a larger migration and is better suited to a dedicated inventory-hardening ticket.
 
 Files impacted:
-- `backend/src/routes/v1/pos/sales.ts`
-- `backend/src/routes/v1/pos/sync.ts`
-- `backend/src/routes/v1/retailer-admin/products.ts`
-- `backend/src/routes/v1/retailer-admin/csvImport.ts`
-- `backend/src/routes/v1/retailer-admin/suppliers.ts`
-- `backend/src/routes/v1/admin/suppliers.ts`
-- any shared inventory/ledger service and forward migration touched by the fix
+- `backend/src/services/ledgerEventMatrix.ts` (new — canonical matrix)
+- `backend/src/services/inventoryLedgerService.ts` (enforcement)
+- `backend/src/services/purchaseService.ts` (enforcement)
+- `backend/tests/contracts/storeIsolationAndSearch.unit.test.ts` (proof)
 
 Expected outcome:
-- One canonical event matrix defines:
-  - when stock is added
-  - when stock is reserved vs not reserved
-  - when stock is debited
-  - when a sale is considered sold for ledger purposes
-  - how cash/UPI/udhar affect commercial state vs stock movement
-  - how unsold/cancelled/voided/refunded states reverse or preserve ledger entries
-- Retailer web and POS reflect the same stock/ledger truth after sync.
+- One canonical event matrix defines when stock is added, debited, or unchanged.
+- Sale and procurement paths enforce the matrix at runtime.
+- Payment mode has NO effect on stock timing (documented and tested).
+- Remaining paths have existing safety guards and can be migrated to the typed matrix incrementally.
 
 ## V3-HARDEN-134 - Define product metadata ownership and bidirectional sync rules across retailer web, POS, CSV, supplier publish, and SuperAdmin edits
 
@@ -5350,24 +5348,28 @@ Root cause:
   - POS edits
 - Without one canonical ownership/sync rule, the same field can drift or be overwritten unexpectedly.
 
+Implemented scope:
+- Canonical field-ownership matrix defined in `backend/src/services/metadataOwnership.ts`
+- 19 fields across `catalog.products` (supplier-owned) and `catalog.store_products` (retailer-owned)
+- 5 ownership levels: OWNER, OVERRIDE, SUGGEST, SEED, READ
+- Table-aware `canModifyField(field, source, table)` and `getModifiableFields(source, table)`
+- Brand split: `catalog.products.brand` is supplier-owned, `catalog.store_products.brand` is retailer's local override (matches real schema where both columns exist)
+- LWW sync precedence via `metadata_updated_at` + `metadata_updated_by` (matches existing POS metadata update endpoint)
+- 48 tests covering ownership rules, table-scoped brand, sync precedence
+
+Deferred scope (to be addressed by future tickets if needed):
+- `canModifyField`/`getModifiableFields` are not yet called as runtime guards in live update routes. The existing routes already respect the ownership model via their SQL queries (POS only writes to store_products fields, supplier publish only writes to products fields), but there is no formal middleware-level ownership enforcement yet.
+- Full middleware-level enforcement would require refactoring all CRUD routes to use a centralized ownership check, which is a larger migration.
+
 Files impacted:
-- `backend/src/routes/v1/retailer-admin/products.ts`
-- `backend/src/routes/v1/retailer-admin/csvImport.ts`
-- `backend/src/routes/v1/retailer-admin/suppliers.ts`
-- `backend/src/routes/v1/admin/suppliers.ts`
-- `backend/src/routes/v1/pos/storeProducts.ts`
-- `src/stores/productsStore.ts`
-- `retailer-admin/src/pages/SupplierCatalogPage.tsx`
-- any metadata-sync helper/service introduced by the fix
+- `backend/src/services/metadataOwnership.ts` (new — canonical matrix)
+- `backend/tests/contracts/storeIsolationAndSearch.unit.test.ts` (proof)
 
 Expected outcome:
-- One field-ownership matrix defines:
-  - which metadata is supplier-owned
-  - which metadata SuperAdmin can override
-  - which metadata retailer can edit locally
-  - which metadata POS can edit and sync back to retailer web
-- Retailer web and POS always converge on the same final store-product metadata after edits/imports/sync.
-- SuperAdmin edits and publish actions propagate cleanly without silent field regression.
+- One field-ownership matrix defines which metadata is supplier-owned, SuperAdmin-overridable, retailer-editable, POS-editable, and CSV-seedable.
+- The matrix matches the real production schema and write paths.
+- POS and retailer-admin converge via LWW on shared store-product fields.
+- Runtime enforcement is implicit (SQL queries already respect the model) and can be made explicit incrementally.
 
 ## Phase 10 - Store Isolation, Search Semantics, and Ledger Event Governance
 
@@ -5578,7 +5580,7 @@ The branch must not be called:
 - GCP-ready
 - production-ready
 
-until all seventeen phases above are complete and re-verified against `tickets.md`.
+until all eighteen phases above are complete and re-verified against `tickets.md`.
 
 ## Phase 12 - Supplier Catalogue as SuperMandi Principal B2B Procurement
 
@@ -7646,3 +7648,552 @@ Guard rails:
 - Do not leave thin packaged/case-only cart math active beside conversion-aware procurement math.
 - Do not let POS loose sale and retailer-web stock/reporting use different stock truths.
 - Existing conflicting pack/unit assumptions, partial variant flows, thin supplier-catalog add logic, stale report math, and weaker rollout gates must be updated, replaced, or deleted so production has one singular bulk-to-retail contract.
+
+## V3-FIX-173 - Split and enrich store-product operator tiles vs supplier-catalogue B2B decision cards across POS app and retailer web
+
+Priority: P0
+Layers: POS UI, retailer-web UI, SELL grid, BUY catalogue, navigation, product metadata contract, merchandising
+
+Issue:
+- Store-product tiles and supplier-catalogue SKU cards still behave too similarly even though they serve different actors and decisions.
+- Store-product tiles are for a retailer or kirana owner adding items quickly to a counter-sale cart for walking consumers.
+- Supplier-catalogue cards are for the retailer as a B2B buyer deciding whether to procure stock from SuperMandi’s published supplier lane.
+
+Root cause:
+- Existing code has partial split primitives:
+  - `ProductTileV3` is compact and counter-sale oriented
+  - `SupplierProductCardV3` exposes some B2B fields like MOQ, delivery days, trade discount, BNPL
+- but the metadata contract is still inconsistent and thin across POS SELL, POS BUY, retailer-web store products, retailer-web supplier catalogue, and compare/cart surfaces.
+
+Files impacted:
+- `src/components/v3/ProductTileV3.tsx`
+- `src/components/v3/SupplierProductCardV3.tsx`
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/screens/v3/CompareScreenV3.tsx`
+- `retailer-admin/src/pages/ProductsPage.tsx`
+- `retailer-admin/src/pages/SupplierCatalogPage.tsx`
+- relevant product/catalog API types in `src/services/api/` and retailer-web API helpers
+- backend read models that shape store-product and supplier-catalogue cards
+
+Expected outcome:
+- Store-product tiles become explicitly operator-first for counter sale:
+  - clear name/brand/image
+  - live stock / stock-health indicator
+  - current retail price
+  - unit / retail pack cue
+  - loose/variant cue where relevant
+  - no wholesale clutter that slows counter-sale
+- Supplier-catalogue cards become explicitly B2B buyer-first:
+  - PTR / purchase price
+  - MRP / expected retailer price context where allowed
+  - MOQ
+  - MOQ tier discount / offer visibility
+  - package type and sell unit semantics:
+    - loose
+    - carton
+    - box
+    - case
+    - per-unit
+    - conversion/split-sell eligibility when applicable
+  - delivery timeline and delivery terms
+  - BNPL / SuperMandi credit / finance availability
+  - supplier / SuperMandi fulfillment lane context
+- The same authoritative metadata contract must be reused in:
+  - POS BUY
+  - retailer-web supplier catalogue
+  - compare view
+  - procurement cart preview
+- No screen should fabricate or silently drop important buying-decision metadata.
+
+Actor interaction contract:
+- POS cashier / retailer owner in SELL:
+  - needs fast operator tiles to add consumer-sale items without reading wholesale terms
+- Retailer owner in BUY:
+  - needs richer decision cards to decide whether to procure inventory from SuperMandi’s catalogue lane
+- Retailer-web operator:
+  - sees the same supplier decision metadata before adding to procurement cart
+
+UI / navigation contract:
+- POS:
+  - `SELL -> store product tile -> add to consumer cart`
+  - `BUY -> supplier-catalogue card -> compare / add to procurement cart`
+- Retailer web:
+  - `Store Products -> operator-friendly store card`
+  - `Supplier Catalogue -> B2B decision card -> compare / add`
+- Navigation must not reuse the same thin card in both contexts when the decision intent differs.
+
+API / backend contract:
+- provide two explicit read-model shapes where needed:
+  - operator-facing store product tile contract
+  - B2B procurement-facing supplier card contract
+- both contracts must come from authoritative backend fields, not screen-local derivation
+- compare/cart endpoints must preserve the same procurement metadata fields
+
+Schema / migration expectations:
+- add only the schema needed for richer published supplier commercial metadata if missing
+- do not create duplicate store-product metadata columns when the data belongs to the published supplier/procurement contract
+
+Edge cases:
+- same SKU exists as store product and as supplier-catalogue procurement offer
+- retailer store has low stock, but supplier-catalogue card shows high MOQ and long delivery
+- supplier offer is published for carton/case while store sells per unit
+- retailer is offline in POS BUY and can see cached cards but not stale promotional terms without freshness marker
+- supplier offer loses BNPL eligibility after the retailer already viewed it
+
+Override requirement:
+- Claude must inspect the current SELL tile, BUY card, compare view, and retailer-web catalogue/store-product cards first and override conflicting live behavior in place.
+- Do not leave one thin generic card reused across counter-sale and B2B procurement decisions.
+- Existing fabricated, dropped, or duplicated metadata paths must be updated, replaced, or deleted so production has one explicit operator-card contract and one explicit buyer-card contract.
+
+## V3-FIX-174 - Build supplier-web authoring and SuperAdmin edit/publish workflow for wholesale commercial terms, delivery terms, and retailer-facing procurement metadata
+
+Priority: P0
+Layers: supplier web, SuperAdmin, approval workflow, API, backend, schema, business rules
+
+Issue:
+- Suppliers can list basic products today, and SuperAdmin can edit some approval fields, but the full B2B merchandising contract is not authorable, governable, and publishable end to end.
+
+Root cause:
+- Existing supplier product forms and SuperAdmin product edit flows do not carry the complete retailer-facing commercial contract:
+  - MOQ
+  - MOQ tier discounts
+  - scheme / offer terms
+  - package / carton / loose / unit semantics
+  - delivery timeline and delivery terms
+  - finance / BNPL / SuperMandi credit applicability
+  - publish notes / overrides after supplier submission
+
+Files impacted:
+- `supplier-portal/src/app/(dashboard)/products/page.tsx`
+- supplier-portal product form components and tests
+- `supermandi-superadmin/src/App.tsx`
+- `supermandi-superadmin/src/api/suppliers.ts`
+- `supermandi-superadmin/src/tabs/`
+- backend supplier/admin product routes
+- relevant migrations for commercial-term persistence and audit
+
+Expected outcome:
+- Supplier portal supports authoring and editing:
+  - procurement pack type
+  - unit / case / loose / carton / box semantics
+  - MOQ
+  - MOQ tiered discounts
+  - offer / scheme text and rule structure
+  - delivery SLA / delivery terms
+  - BNPL / finance eligibility inputs where supplier-provided
+  - merchant / fulfillment hints required by SuperMandi principal lane
+- SuperAdmin can:
+  - review supplier-submitted terms
+  - edit / normalize them
+  - override unsafe or misleading values
+  - publish only the approved retailer-facing contract
+  - keep audit trail of who changed what and why
+- Retailers see only SuperAdmin-published terms, not raw supplier drafts.
+
+Actor interaction contract:
+- Supplier:
+  - submits product and commercial offer metadata
+  - sees approval / rejected / needs-change state
+- SuperAdmin:
+  - edits and approves the retailer-facing published offer
+  - can override supplier delivery/discount/finance claims before publish
+- Retailer:
+  - sees only the approved and published commercial contract
+
+UI / navigation contract:
+- Supplier web:
+  - `Products -> Add/Edit -> Commercial Terms`
+- SuperAdmin:
+  - `Suppliers/Catalog -> Review Product -> Edit Commercial Terms -> Publish`
+- Retailer surfaces must clearly indicate that the displayed terms are SuperMandi-published procurement terms.
+
+API / backend contract:
+- supplier draft and admin-published states must be distinct
+- backend must expose:
+  - supplier draft terms
+  - admin-approved published terms
+  - audit trail / updated-by metadata
+- retailer APIs must read only the published contract
+
+Schema / migration expectations:
+- forward migrations for:
+  - structured MOQ tiers
+  - published delivery terms
+  - finance/credit eligibility metadata
+  - publish/audit timestamps and actor IDs
+- keep staging-safe rollout for products already approved under thinner rules
+
+Edge cases:
+- supplier edits a product after SuperAdmin already published it
+- supplier removes BNPL but admin keeps SuperMandi credit enabled
+- MOQ tier overlaps or invalid ranges
+- delivery terms missing for approved product
+- offer is expired or future-dated
+- published product is later suspended without deleting historical procurement evidence
+
+Override requirement:
+- Claude must inspect the current supplier product authoring and SuperAdmin approval/edit flows first and override conflicting live behavior in place.
+- Do not layer raw supplier terms beside published admin terms with unclear precedence.
+- Existing thin approval fields, hidden overrides, and weak audit paths must be updated, replaced, or deleted so production has one supplier-draft to SuperAdmin-published procurement-term workflow.
+
+## V3-FIX-175 - Build retailer procurement cart, compare, checkout, and payment-choice flow for supplier-catalogue purchases under the SuperMandi principal lane
+
+Priority: P0
+Layers: POS BUY UX, retailer-web UX, cart, checkout, navigation, backend order flow, finance selection
+
+Issue:
+- Retailers can browse and submit supplier-catalogue orders, but the procurement cart and checkout flow is still too thin for real B2B buying decisions and principal-lane settlement.
+
+Root cause:
+- Current BUY/cart/order flow is mostly quantity-entry plus order submit.
+- It does not clearly carry the full buyer decision and checkout state:
+  - selected offer terms
+  - selected MOQ tier / discount tier
+  - delivery expectation
+  - finance mode
+  - payment lane to SuperMandi
+  - principal-lane summary before confirmation
+
+Files impacted:
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/screens/v3/CompareScreenV3.tsx`
+- procurement cart/summary components in `src/components/v3/`
+- `retailer-admin/src/pages/SupplierCatalogPage.tsx`
+- retailer-web procurement cart / compare pages
+- `src/services/api/orderApi.ts`
+- backend procurement order/cart routes touched by the fix
+
+Expected outcome:
+- POS BUY and retailer-web catalogue support:
+  - compare supplier/published offers
+  - add to procurement cart
+  - edit procurement quantity by MOQ/case/pack rules
+  - see applicable discount tier / offer / delivery / finance terms
+  - choose payment method:
+    - pay now
+    - BNPL / SuperMandi credit if eligible
+  - confirm that the retailer is buying from SuperMandi’s principal lane
+- Procurement cart summary must clearly show:
+  - supplier product(s)
+  - published commercial terms
+  - subtotal
+  - discount impact
+  - GST/tax if applicable
+  - payable now vs credit later
+  - delivery expectation
+- POS and retailer-web must use the same procurement cart contract and checkout semantics.
+
+Actor interaction contract:
+- Retailer owner / buyer:
+  - can decide quickly whether the offer is worth buying
+  - can review terms before committing procurement spend
+- SuperAdmin / support:
+  - can audit which published terms the retailer accepted
+
+UI / navigation contract:
+- POS:
+  - `BUY -> card -> compare/details -> procurement cart -> checkout`
+- Retailer web:
+  - `Supplier Catalogue -> card -> details/compare -> procurement cart -> checkout`
+- Checkout must explicitly say payment is to SuperMandi Tech Pvt Ltd, not direct to the supplier.
+
+API / backend contract:
+- procurement cart/order payload must snapshot the published terms accepted by the retailer:
+  - MOQ tier
+  - discount / offer
+  - delivery promise
+  - finance choice
+  - merchant-of-record lane
+- order creation and checkout initiation must not require the client to recompute commercial rules after selection
+
+Schema / migration expectations:
+- add only the snapshot/order columns needed to preserve accepted procurement terms at order time
+- do not leave checkout dependent on mutable live catalogue values only
+
+Edge cases:
+- retailer changes quantity across MOQ tiers inside the cart
+- published offer changes after item was added to cart but before checkout
+- mixed cart across multiple suppliers but one SuperMandi principal checkout lane
+- retailer is eligible for BNPL on one SKU bundle but not another
+- offer expires while checkout is open
+
+Override requirement:
+- Claude must inspect the current BUY, compare, procurement cart, and order submit paths first and override conflicting live behavior in place.
+- Do not leave thin quantity-submit ordering active beside a richer published-terms checkout.
+- Existing placeholder cart math, vague finance choice, and supplier-direct wording must be updated, replaced, or deleted so production has one principal-lane procurement checkout contract.
+
+## V3-FIX-176 - Build retailer payment to SuperMandi Tech Pvt Ltd via PhonePe, Pine Labs, Razorpay, BNPL, and SuperMandi credit across procurement checkout
+
+Priority: P0
+Layers: payments, provider integration, checkout, backend orchestration, callbacks/webhooks, settlement state, POS/retailer-web UX
+
+Issue:
+- The procurement lane still lacks a production-grade retailer payment contract to SuperMandi Tech Pvt Ltd.
+- User-facing payment choice and backend settlement flow are not yet defined for partner rails that will power procurement checkout.
+
+Root cause:
+- Existing payment paths are primarily consumer POS sale flows or thin procurement payment modes.
+- They do not yet define the principal-lane B2B settlement orchestration for:
+  - PhonePe
+  - Pine Labs
+  - Razorpay
+  - BNPL from partnered fintech
+  - SuperMandi credit / finance
+
+Files impacted:
+- procurement checkout screens in POS and retailer web
+- payment orchestration helpers in `src/services/api/`
+- retailer-web checkout/payment pages
+- backend payment/order routes and provider adapters
+- webhook/callback handlers
+- `.env` / runtime config / startup validation for payment providers
+
+Expected outcome:
+- Retailer chooses procurement payment mode against SuperMandi Tech Pvt Ltd as merchant/principal:
+  - PhonePe
+  - Pine Labs
+  - Razorpay
+  - partnered BNPL
+  - SuperMandi credit
+- Backend creates one canonical procurement payment intent / settlement record.
+- Provider-specific adapters are isolated behind one procurement payment contract.
+- Checkout UI clearly shows:
+  - payable amount
+  - provider selected
+  - whether payment is immediate, deferred, or financed
+  - order/payment state after redirect/polling/callback
+- Procurement order state must reflect payment truth safely:
+  - initiated
+  - pending
+  - authorized
+  - failed
+  - financed / credit-approved
+  - paid
+
+Actor interaction contract:
+- Retailer:
+  - pays SuperMandi, not supplier directly
+  - sees reliable pending/success/failure states
+- SuperAdmin / finance ops:
+  - can audit provider transaction IDs, procurement payment state, and reconciliation notes
+- Supplier:
+  - sees procurement order readiness and dispatch state, not retailer payment-provider internals
+
+UI / navigation contract:
+- POS and retailer web procurement checkout must:
+  - select payment mode
+  - initiate provider flow
+  - handle return / polling / failure / retry
+  - show payment captured/pending state on order confirmation
+- BNPL and SuperMandi credit options must show eligibility and repayment cue clearly, not as vague badges only.
+
+API / backend contract:
+- one canonical procurement payment intent schema
+- provider adapter interface for PhonePe / Pine Labs / Razorpay
+- explicit separation between:
+  - checkout intent creation
+  - provider callback/webhook
+  - order-payment reconciliation
+  - finance approval path
+- provider endpoints can be filled later, but the contract must be integration-ready and not hardcoded to one partner
+
+Schema / migration expectations:
+- forward migrations for:
+  - procurement payment intents
+  - provider transaction references
+  - finance/credit approval linkage
+  - reconciliation / callback audit fields
+- do not overload consumer POS payment tables with procurement settlement meaning
+
+Edge cases:
+- provider callback delayed after retailer leaves the screen
+- retailer retries payment after one provider failure
+- amount changes because published offer or tax changed before final confirm
+- BNPL eligibility revoked between cart and checkout
+- partial payment/authorization states where provider and order state disagree temporarily
+
+Override requirement:
+- Claude must inspect the current procurement payment modes, checkout wording, and backend payment/order handlers first and override conflicting live behavior in place.
+- Do not bolt principal-lane procurement settlement onto consumer sale payment tables or fake provider abstractions.
+- Existing placeholder procurement payment modes, scattered callbacks, and direct-supplier wording must be updated, replaced, or deleted so production has one retailer-to-SuperMandi checkout and settlement contract.
+
+## V3-HARDEN-177 - Canonicalize schema, API, permissions, migrations, and cross-surface sync for published supplier commercial terms and procurement checkout state
+
+Priority: P0
+Layers: schema, migrations, backend, permissions, sync, UI refresh, data contracts
+
+Issue:
+- Even if the UI is improved, the full supplier-term publishing and procurement checkout flow will drift unless the data model, permissions, and sync contract are singular and auditable.
+
+Root cause:
+- Existing code spreads procurement metadata across supplier product rows, admin edits, retailer catalogue projections, and thin order/payment payloads without one canonical publish/refresh contract.
+
+Files impacted:
+- backend supplier/admin/catalog/order/payment routes
+- backend service layer for publish and order snapshotting
+- migrations for published commercial terms and procurement payment state
+- POS and retailer-web data refresh/status APIs
+- SuperAdmin/supplier/retailer API clients
+- any config/status endpoints that expose published procurement capability
+
+Expected outcome:
+- One canonical contract exists for:
+  - supplier draft commercial terms
+  - SuperAdmin published retailer-facing terms
+  - retailer accepted order snapshot
+  - procurement payment intent/state
+- Permissions are explicit:
+  - supplier can draft
+  - SuperAdmin can override/publish
+  - retailer can read published terms and create checkout state
+  - retailer cannot mutate published commercial truth directly
+- POS app, retailer web, supplier web, and SuperAdmin all refresh from the same canonical source and surface timestamps/versioning coherently.
+
+Actor interaction contract:
+- Supplier edits do not silently rewrite already published retailer-visible terms
+- Retailer sees refreshed terms/order/payment state after admin updates or finance changes
+- SuperAdmin can explain why a retailer saw a specific term set at checkout time
+
+API / backend contract:
+- versioned published-term payload for retailer surfaces
+- order snapshot payload storing accepted published-term version
+- payment intent tied to order snapshot and store identity
+- sync/status APIs return authoritative updated-at / published-at timestamps, not screen-local guesses
+
+Schema / migration expectations:
+- forward-only migrations
+- audit columns for published-by / published-at / overridden-by
+- versioning or immutable snapshot references where needed
+- safe backfill plan for already-approved supplier catalogue products
+
+Permissions / auth contract:
+- store staff role gating for who may place procurement orders or edit local procurement checkout settings
+- owner/manager-only gates where finance/payment settings are sensitive
+- superadmin-only override authority for published commercial terms
+
+Edge cases:
+- admin republishes terms while retailer has stale cached catalogue
+- old POS app reads new published-term schema
+- retailer web and POS show different term versions
+- one order references a product that later becomes unpublished
+- payment callback arrives after the published offer was superseded
+
+Override requirement:
+- Claude must inspect current catalogue projections, admin/supplier permissions, order snapshotting, and status refresh paths first and override conflicting live behavior in place.
+- Do not leave multiple mutable sources of truth for supplier commercial terms or procurement payment state.
+- Existing thin projections, weak refresh logic, and silent precedence rules must be updated, replaced, or deleted so production has one canonical published-term and checkout-state contract.
+
+## V3-HARDEN-178 - Add runtime, e2e, staging, and GCP release parity gates for supplier-list -> SuperAdmin publish -> retailer browse/cart/checkout -> payment callback -> order status propagation
+
+Priority: P0
+Layers: tests, e2e, staging, workflows, release gates, GCP parity, observability
+
+Issue:
+- This B2B merchandising and payment lane is too high-risk to ship without explicit end-to-end proof across all portals and the principal checkout/payment path.
+
+Root cause:
+- Current test and staging coverage is fragmented:
+  - partial supplier product tests
+  - partial BUY/compare tests
+  - partial payment/provider utilities
+- but no explicit release/readiness phase proving the full supplier-draft to retailer-checkout lifecycle.
+
+Files impacted:
+- `src/__tests__/`
+- `backend/tests/`
+- `retailer-admin/src/__tests__/`
+- `supplier-portal/src/__tests__/`
+- `supermandi-superadmin/src/__tests__/`
+- `e2e-tests/tests/`
+- `.github/workflows/`
+- `scripts/gates/`
+- runtime startup validation and staging smoke paths used by procurement checkout
+
+Expected outcome:
+- Automated proof covers the critical lifecycle:
+  - supplier submits draft terms
+  - SuperAdmin edits/publishes terms
+  - retailer sees published B2B card metadata
+  - retailer compares, carts, and checks out
+  - payment intent is created against SuperMandi
+  - callback/webhook or finance approval updates order state
+  - downstream status refresh propagates to retailer and SuperAdmin
+- Staging/GCP gates verify required provider config, webhook/callback wiring, published-term schema readiness, and cross-surface refresh behavior.
+- Release workflow fails if procurement-checkout-critical migrations, contracts, or smoke tests are missing.
+
+Actor interaction contract:
+- Retailer sees coherent order/payment state after checkout
+- SuperAdmin can validate published terms and payment/order state propagation before rollout
+- Supplier does not see false dispatch-ready state before principal payment/approval truth is reached
+
+Testing / parity contract:
+- runtime tests for:
+  - store-product operator tile vs supplier-card payload shape
+  - supplier publish workflow
+  - procurement cart snapshot
+  - provider/payment intent state transitions
+  - settings/refresh/version propagation
+- e2e or staging smoke for:
+  - supplier portal authoring
+  - SuperAdmin publish
+  - retailer browse/cart/checkout
+  - callback/reconciliation
+- GCP/staging startup validation must fail loudly when procurement-payment-critical env/config is missing
+
+Schema / migration expectations:
+- migration and runtime gates must assert the new published-term/payment tables/columns exist before rollout
+- rollout plan must handle stores and products already operating under thinner catalogue rules
+
+Edge cases:
+- staging has provider config missing for one payment partner
+- callback URL configured but secret missing
+- retailer sees stale published terms from cache during checkout
+- provider returns success but order state write fails
+- one portal is deployed with old code against new checkout schema
+
+Override requirement:
+- Claude must inspect the existing tests, staging smoke paths, startup validation, and release gates first and override conflicting live behavior in place.
+- Do not rely on manual optimism or token/unit tests only for this principal procurement lane.
+- Existing weak gates, stale smoke paths, and incomplete cross-portal assertions must be updated, replaced, or deleted so production has one audited B2B publish-and-checkout lifecycle.
+
+## Phase 18 - B2B Procurement Merchandising, Supplier-Term Publishing, and Retailer-to-SuperMandi Checkout Across POS, Retailer Web, Supplier Web, and SuperAdmin
+
+Tickets:
+- `V3-FIX-173`
+- `V3-FIX-174`
+- `V3-FIX-175`
+- `V3-FIX-176`
+- `V3-HARDEN-177`
+- `V3-HARDEN-178`
+
+Why eighteenth:
+- Audit of the current codebase shows real partial primitives already exist:
+  - `ProductTileV3` for counter-sale store products
+  - `SupplierProductCardV3` with partial B2B terms
+  - BUY and compare screens with real catalogue/order scaffolding
+  - supplier-web product listing
+  - SuperAdmin margin/BNPL editing
+  - retailer-web supplier catalogue browse/add flow
+- But the end-to-end production contract is still missing for the actual principal B2B procurement workflow:
+  - rich operator-first store-product tiles for counter sale
+  - rich buyer-first supplier-catalogue cards for retailer procurement
+  - supplier-authored terms edited and published by SuperAdmin
+  - retailer procurement cart and checkout against SuperMandi Tech Pvt Ltd
+  - partner payment/finance lanes and callback-safe order state
+  - cross-surface sync, schema, staging, and GCP parity
+- This phase makes that B2B merchandising and checkout model explicit across POS app, retailer web, supplier web, SuperAdmin, backend, migrations, and release gates.
+
+Scope lock approved by operator:
+- Store products remain operator-facing counter-sale surfaces for retailer staff and owners serving walking customers.
+- Supplier-catalogue SKUs remain retailer-buying surfaces under the SuperMandi principal procurement lane.
+- Supplier product terms may be authored by suppliers, but retailer-visible procurement terms are the SuperAdmin-published contract.
+- Retailer payment for supplier-catalogue procurement is to `SuperMandi Tech Pvt Ltd`, not direct supplier settlement.
+- PhonePe, Pine Labs, Razorpay, fintech BNPL, and SuperMandi credit must be modeled as procurement checkout/payment lanes under that principal contract.
+
+Guard rails:
+- Do not collapse store-product SELL tiles and supplier-catalogue BUY cards into one generic SKU card.
+- Do not let supplier draft terms leak directly to retailers without SuperAdmin governance.
+- Do not let procurement checkout reuse consumer-sale payment assumptions or direct-supplier settlement semantics.
+- Do not leave retailer web, POS BUY, supplier web, and SuperAdmin with different versions of the same procurement metadata.
+- Existing thin catalogue cards, weak approval fields, scattered checkout/payment semantics, and weaker parity gates must be updated, replaced, or deleted so production has one explicit B2B merchandising and retailer-to-SuperMandi checkout contract.

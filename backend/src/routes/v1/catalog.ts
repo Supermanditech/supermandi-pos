@@ -385,23 +385,36 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
     // V3-FIX-132: Multilingual multi-key search for BUY catalog
     if (q && q.trim().length >= 2) {
       const rawTokens = normalizeQuantityTokens(q.trim()).filter(t => t.length >= 1).slice(0, 5);
+      const numericTokens = rawTokens.filter(t => /^\d+$/.test(t));
       const textTokens = rawTokens.filter(t => !/^\d+$/.test(t) && t.length >= 2);
       const expandedTokens = expandHindiSearchTokens(textTokens).slice(0, 8);
-      const searchTokens = [...new Set([...expandedTokens, ...rawTokens.filter(t => t.length >= 2)])];
+      // Recombine: text tokens for name/brand, numeric tokens for pack_size/moq
+      const allTokens = [...new Set([...expandedTokens, ...numericTokens])];
 
-      if (searchTokens.length > 0) {
+      if (allTokens.length > 0) {
         const tokenClauses: string[] = [];
-        for (const token of searchTokens) {
-          params.push(`%${token}%`);
-          tokenClauses.push(`(
-            COALESCE(sp.edited_name, sp.name) ILIKE $${paramIndex}
-            OR sp.barcode ILIKE $${paramIndex}
-            OR sp.supplier_sku ILIKE $${paramIndex}
-            OR COALESCE(sp.brand, '') ILIKE $${paramIndex}
-            OR COALESCE(sp.unit, '') ILIKE $${paramIndex}
-            OR COALESCE(s.business_name, '') ILIKE $${paramIndex}
-            OR COALESCE(s.trade_name, '') ILIKE $${paramIndex}
-          )`);
+        for (const token of allTokens) {
+          const isNumeric = /^\d+$/.test(token);
+          if (isNumeric) {
+            // Numeric token: match pack_size, moq, or content values
+            params.push(token);
+            tokenClauses.push(`(
+              CAST(COALESCE(sp.pack_size, 0) AS TEXT) = $${paramIndex}
+              OR CAST(COALESCE(sp.moq, 0) AS TEXT) = $${paramIndex}
+            )`);
+          } else {
+            // Text token: match name, barcode, SKU, brand, unit, supplier name
+            params.push(`%${token}%`);
+            tokenClauses.push(`(
+              COALESCE(sp.edited_name, sp.name) ILIKE $${paramIndex}
+              OR sp.barcode ILIKE $${paramIndex}
+              OR sp.supplier_sku ILIKE $${paramIndex}
+              OR COALESCE(sp.brand, '') ILIKE $${paramIndex}
+              OR COALESCE(sp.unit, '') ILIKE $${paramIndex}
+              OR COALESCE(s.business_name, '') ILIKE $${paramIndex}
+              OR COALESCE(s.trade_name, '') ILIKE $${paramIndex}
+            )`);
+          }
           paramIndex++;
         }
         whereClause += ` AND (${tokenClauses.join(" OR ")})`;
