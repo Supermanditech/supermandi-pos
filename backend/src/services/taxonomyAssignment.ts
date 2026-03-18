@@ -31,8 +31,36 @@ import { suggestCategory } from "../utils/autoCategorization";
  * The canonical uncategorized taxonomy UUID — matches the Baaki/Others entry
  * in catalog.fmcg_taxonomy seeded by migration 027.
  * taxonomy_id is UUID-typed with FK to fmcg_taxonomy, so we MUST use a real UUID.
+ * NOTE: Declared early so it can be used in CATEGORY_LABEL_TO_UUID below.
  */
 export const UNCATEGORIZED_TAXONOMY_ID = "f0000000-0000-0000-0000-000000000015" as const;
+
+/**
+ * Map from autoCategorization label → real fmcg_taxonomy UUID.
+ * Seeded from migration 027_store_products_taxonomy.sql.
+ */
+const CATEGORY_LABEL_TO_UUID: Record<string, string> = {
+  "Staples & Grains": "f0000000-0000-0000-0000-000000000002",
+  "Pulses & Lentils": "f0000000-0000-0000-0000-000000000002", // shares Atta-Dal taxonomy
+  "Cooking Oil & Ghee": "f0000000-0000-0000-0000-000000000005",
+  "Spices & Masala": "f0000000-0000-0000-0000-000000000004",
+  "Salt & Sugar": "f0000000-0000-0000-0000-000000000002", // staples bucket
+  "Tea & Coffee": "f0000000-0000-0000-0000-000000000008",
+  "Biscuits & Snacks": "f0000000-0000-0000-0000-000000000007",
+  "Beverages": "f0000000-0000-0000-0000-000000000009",
+  "Dairy": "f0000000-0000-0000-0000-000000000010",
+  "Instant & Ready-to-Eat": "f0000000-0000-0000-0000-000000000007", // biscuit/snack bucket
+  "Personal Care": "f0000000-0000-0000-0000-000000000011",
+  "Cleaning & Household": "f0000000-0000-0000-0000-000000000012",
+  "Dry Fruits & Nuts": "f0000000-0000-0000-0000-000000000006", // namkeen bucket
+  "Eggs & Poultry": UNCATEGORIZED_TAXONOMY_ID, // no dedicated taxonomy
+  "Fruits & Vegetables": UNCATEGORIZED_TAXONOMY_ID, // no dedicated taxonomy
+  "Sweets & Confectionery": "f0000000-0000-0000-0000-000000000007", // biscuit/snack bucket
+  "Pickles & Chutneys": "f0000000-0000-0000-0000-000000000004", // masala bucket
+  "Baby Products": "f0000000-0000-0000-0000-000000000013",
+  "Puja & Worship": "f0000000-0000-0000-0000-000000000014", // paan-supari bucket
+};
+
 /** Human-readable label for uncategorized */
 export const UNCATEGORIZED = "Uncategorized" as const;
 
@@ -101,11 +129,12 @@ export async function assignTaxonomy(
     // DB function doesn't exist — fall through to application logic
   }
 
-  // 3. Application-level keyword matching
+  // 3. Application-level keyword matching → resolve to real taxonomy UUID
   const suggested = suggestCategory(input.productName);
   if (suggested) {
+    const taxonomyUuid = CATEGORY_LABEL_TO_UUID[suggested] ?? UNCATEGORIZED_TAXONOMY_ID;
     return {
-      taxonomyId: suggested,
+      taxonomyId: taxonomyUuid,
       method: "keyword_match",
       rawCategory,
     };

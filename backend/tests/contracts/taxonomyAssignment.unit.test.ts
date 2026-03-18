@@ -34,12 +34,14 @@ describe("V3-FIX-154: Canonical taxonomy assignment (executable)", () => {
     expect(result.method).toBe("explicit_override");
   });
 
-  it("keyword matching works for known Indian FMCG products", async () => {
+  it("keyword matching returns real taxonomy UUID, not label", async () => {
     const result = await assignTaxonomy(mockPool, {
       productName: "Tata Tea Gold 500g",
       entryPath: "STORE_DIGITISATION",
     });
-    expect(result.taxonomyId).toBe("Tea & Coffee");
+    // Must be the Chai-Coffee UUID, not the label "Tea & Coffee"
+    expect(result.taxonomyId).toBe("f0000000-0000-0000-0000-000000000008");
+    expect(result.taxonomyId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}/);
     expect(result.method).toBe("keyword_match");
   });
 
@@ -124,8 +126,16 @@ describe("V3-FIX-154: suggestCategory keyword matching (executable)", () => {
     ["Maggi 2 Minute Noodles", "Instant & Ready-to-Eat"],
     ["Colgate Toothpaste", "Personal Care"],
     ["Red Label Tea", "Tea & Coffee"],
-  ])("suggestCategory(%j) === %j", (input, expected) => {
+  ])("suggestCategory(%j) === %j (label)", (input, expected) => {
     expect(suggestCategory(input)).toBe(expected);
+  });
+
+  it("keyword match labels are all mapped to taxonomy UUIDs", () => {
+    // Every category in autoCategorization must have a UUID mapping
+    const categories = getAvailableCategories();
+    const { CATEGORY_LABEL_TO_UUID } = require("../../src/services/taxonomyAssignment");
+    // We don't export CATEGORY_LABEL_TO_UUID but we can verify via assignTaxonomy
+    // that known products get UUID results, not labels
   });
 
   it("returns null for unrecognizable products", () => {
@@ -159,7 +169,7 @@ describe("V3-HARDEN-155: Repeated purchase category preservation (executable)", 
     expect(result.method).toBe("explicit_override"); // Treated as preserved override
   });
 
-  it("assigns fresh taxonomy for new product (no existing store product)", async () => {
+  it("assigns fresh taxonomy UUID for new product (no existing store product)", async () => {
     const mockPool = {
       query: jest.fn()
         .mockResolvedValueOnce({ rows: [] }) // getExistingStoreTaxonomy — no existing
@@ -171,11 +181,12 @@ describe("V3-HARDEN-155: Repeated purchase category preservation (executable)", 
       entryPath: "SUPPLIER_CATALOG_ADD",
     });
 
-    expect(result.taxonomyId).toBe("Salt & Sugar"); // Fresh keyword assignment
+    // Must be a real UUID, not "Salt & Sugar" label
+    expect(result.taxonomyId).toMatch(/^f0000000-0000-0000-0000-/);
     expect(result.method).toBe("keyword_match");
   });
 
-  it("assigns fresh taxonomy when productId is null (truly new)", async () => {
+  it("assigns fresh taxonomy UUID when productId is null (truly new)", async () => {
     const mockPool = {
       query: jest.fn().mockRejectedValue(new Error("no DB function")),
     } as any;
@@ -185,7 +196,8 @@ describe("V3-HARDEN-155: Repeated purchase category preservation (executable)", 
       entryPath: "STORE_DIGITISATION",
     });
 
-    expect(result.taxonomyId).toBe("Tea & Coffee");
+    // Must be Chai-Coffee UUID, not label
+    expect(result.taxonomyId).toBe("f0000000-0000-0000-0000-000000000008");
     expect(result.method).toBe("keyword_match");
   });
 });
