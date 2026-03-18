@@ -131,7 +131,8 @@ adminSuppliersRouter.get("/verified-suppliers", requireAdminToken, requirePermis
   const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
 
   try {
-    let whereClause = "WHERE (s.verification_status = 'verified' OR s.status = 'active')";
+    // V3-HARDEN-101: Case-insensitive status check for mixed legacy data
+    let whereClause = "WHERE (UPPER(s.verification_status) IN ('VERIFIED','ACTIVE') OR UPPER(s.status) IN ('ACTIVE','VERIFIED'))";
     const params: any[] = [];
     let paramIdx = 1;
 
@@ -541,7 +542,8 @@ adminSuppliersRouter.post("/suppliers/:supplierId/auto-approve", requireAdminTok
       return res.status(404).json({ error: "Supplier not found" });
     }
 
-    if (enabled && check.rows[0].verification_status !== 'verified') {
+    // V3-HARDEN-101: Use canonical status helper
+    if (enabled && !isSupplierActive(check.rows[0].verification_status)) {
       return res.status(400).json({
         error: "supplier_not_verified",
         message: "Cannot enable auto-approval for non-verified suppliers"
@@ -621,7 +623,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, r
     // Update supplier to ACTIVE
     const updateResult = await client.query(
       `UPDATE supplier.suppliers
-       SET verification_status = 'verified', verified_at = NOW(), status = 'active'
+       SET verification_status = 'ACTIVE', verified_at = NOW(), status = 'ACTIVE'
        WHERE id = $1::uuid
        RETURNING id, verification_status as "status", verified_at as "verifiedAt"`,
       [supplierId]
@@ -699,7 +701,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, re
     // Update supplier to rejected
     const updateResult = await client.query(
       `UPDATE supplier.suppliers
-       SET verification_status = 'rejected', status = 'inactive'
+       SET verification_status = 'REJECTED', status = 'INACTIVE'
        WHERE id = $1::uuid
        RETURNING id, verification_status as "status"`,
       [supplierId]
@@ -1656,7 +1658,7 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
     const linkedStores = await client.query(
       `SELECT ssl.store_id
        FROM supplier.supplier_store_links ssl
-       WHERE ssl.supplier_id = $1::uuid AND ssl.status = 'active'
+       WHERE ssl.supplier_id = $1::uuid AND UPPER(ssl.status) = 'ACTIVE'
          AND ssl.store_id NOT IN (
            SELECT store_id FROM catalog.store_products
            WHERE product_id = $2::uuid
@@ -1787,7 +1789,7 @@ adminSuppliersRouter.post("/products/publish-bulk", requireAdminToken, requirePe
         // Find stores that don't have it yet
         const stores = await client.query(
           `SELECT ssl.store_id FROM supplier.supplier_store_links ssl
-           WHERE ssl.supplier_id = $1::uuid AND ssl.status = 'active'
+           WHERE ssl.supplier_id = $1::uuid AND UPPER(ssl.status) = 'ACTIVE'
              AND ssl.store_id NOT IN (
                SELECT store_id FROM catalog.store_products WHERE product_id = $2::uuid
              )`,

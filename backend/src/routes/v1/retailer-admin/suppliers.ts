@@ -37,7 +37,7 @@ retailerAdminSuppliersRouter.get("/suppliers", async (req: Request, res: Respons
   const { query } = req.query;
 
   try {
-    let whereClause = "WHERE ssl.store_id = $1 AND ssl.status = 'active'";
+    let whereClause = "WHERE ssl.store_id = $1 AND UPPER(ssl.status) = 'ACTIVE'";
     const params: any[] = [storeId];
     let paramIndex = 2;
 
@@ -76,7 +76,7 @@ retailerAdminSuppliersRouter.get("/suppliers", async (req: Request, res: Respons
         s.pincode,
         COALESCE(s.address_line1, '') || CASE WHEN s.city IS NOT NULL THEN ', ' || s.city ELSE '' END as "address",
         s.verification_status as "verificationStatus",
-        CASE WHEN s.verification_status = 'verified' THEN true ELSE false END as "isSupermandi",
+        CASE WHEN UPPER(s.verification_status) IN ('VERIFIED','ACTIVE') THEN true ELSE false END as "isSupermandi",
         -- Store-link fields (Section C & D)
         ssl.payment_terms as "paymentTerms",
         ssl.credit_days as "creditDays",
@@ -98,7 +98,7 @@ retailerAdminSuppliersRouter.get("/suppliers", async (req: Request, res: Respons
       ${whereClause}
       ORDER BY
         CASE s.verification_status
-          WHEN 'verified' THEN 1
+          WHEN 'verified' THEN 1 WHEN 'VERIFIED' THEN 1 WHEN 'ACTIVE' THEN 1
           WHEN 'pending' THEN 2
           ELSE 3
         END,
@@ -155,11 +155,11 @@ retailerAdminSuppliersRouter.get("/suppliers/available", async (req: Request, re
 
   try {
     let whereClause = `
-      WHERE s.verification_status = 'verified'
-        AND s.status = 'active'
+      WHERE UPPER(s.verification_status) IN ('VERIFIED','ACTIVE')
+        AND UPPER(s.status) = 'ACTIVE'
         AND s.id NOT IN (
           SELECT supplier_id FROM supplier.supplier_store_links
-          WHERE store_id = $1 AND status = 'active'
+          WHERE store_id = $1 AND UPPER(status) = 'ACTIVE'
         )
     `;
     const params: any[] = [storeId];
@@ -249,7 +249,7 @@ retailerAdminSuppliersRouter.post("/suppliers/:supplierId/link", async (req: Req
   try {
     // Verify supplier exists and is verified
     const supplierCheck = await pool.query(
-      `SELECT id FROM supplier.suppliers WHERE id = $1 AND verification_status = 'verified' AND status = 'active'`,
+      `SELECT id FROM supplier.suppliers WHERE id = $1 AND UPPER(verification_status) IN ('VERIFIED','ACTIVE') AND UPPER(status) = 'ACTIVE'`,
       [supplierId]
     );
 
@@ -266,7 +266,7 @@ retailerAdminSuppliersRouter.post("/suppliers/:supplierId/link", async (req: Req
     );
 
     if (existingLink.rows.length > 0) {
-      if (existingLink.rows[0].status === 'active') {
+      if (existingLink.rows[0].status?.toUpperCase() === 'ACTIVE') {
         return res.status(409).json({
           error: { code: "CONFLICT", message: "Supplier is already linked to your store" },
         });
@@ -274,14 +274,14 @@ retailerAdminSuppliersRouter.post("/suppliers/:supplierId/link", async (req: Req
       // Reactivate inactive link
       await pool.query(
         `UPDATE supplier.supplier_store_links
-         SET status = 'active', is_preferred = $3, credit_days = $4, min_order_value = $5, updated_at = NOW()
+         SET status = 'ACTIVE', is_preferred = $3, credit_days = $4, min_order_value = $5, updated_at = NOW()
          WHERE supplier_id = $1 AND store_id = $2`,
         [supplierId, storeId, isPreferred || false, creditDays || 0, minOrderValue || 0]
       );
     } else {
       await pool.query(
         `INSERT INTO supplier.supplier_store_links (supplier_id, store_id, is_preferred, credit_days, min_order_value, status)
-         VALUES ($1, $2, $3, $4, $5, 'active')`,
+         VALUES ($1, $2, $3, $4, $5, 'ACTIVE')`,
         [supplierId, storeId, isPreferred || false, creditDays || 0, minOrderValue || 0]
       );
     }
@@ -452,8 +452,8 @@ retailerAdminSuppliersRouter.post("/suppliers", async (req: Request, res: Respon
           city?.trim() || null,
           state?.trim() || null,
           pincode?.trim() || null,
-          'unverified', // Local suppliers are unverified
-          'active',
+          'UNVERIFIED', // Local suppliers are unverified
+          'ACTIVE',
         ]
       );
       supplierId = insertResult.rows[0].id;
@@ -487,7 +487,7 @@ retailerAdminSuppliersRouter.post("/suppliers", async (req: Request, res: Respon
         brandsSupplied?.trim() || null,
         orderingChannel || null,
         notes?.trim() || null,
-        'active',
+        'ACTIVE',
       ]
     );
 
@@ -617,7 +617,7 @@ retailerAdminSuppliersRouter.patch("/suppliers/:id", async (req: Request, res: R
       `SELECT s.id, s.verification_status
        FROM supplier.suppliers s
        INNER JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
-       WHERE s.id = $1 AND ssl.store_id = $2 AND ssl.status = 'active'`,
+       WHERE s.id = $1 AND ssl.store_id = $2 AND UPPER(ssl.status) = 'ACTIVE'`,
       [id, storeId]
     );
 
@@ -772,7 +772,7 @@ retailerAdminSuppliersRouter.get("/supplier-catalog", async (req: Request, res: 
     const storeState = storeResult.rows[0]?.state || null;
 
     // STG-062: Added sp.is_active = true to exclude deactivated supplier products from catalog
-    let whereClause = `WHERE sp.approval_status = 'approved' AND s.verification_status = 'verified' AND s.status = 'active' AND sp.is_active = true`;
+    let whereClause = `WHERE sp.approval_status = 'approved' AND UPPER(s.verification_status) IN ('VERIFIED','ACTIVE') AND UPPER(s.status) = 'ACTIVE' AND sp.is_active = true`;
     const params: any[] = [];
     let paramIndex = 1;
 
@@ -946,7 +946,7 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
        JOIN supplier.suppliers s ON s.id = sp.supplier_id
        WHERE sp.id = $1::uuid
          AND sp.approval_status = 'approved'
-         AND s.verification_status = 'verified'`,
+         AND UPPER(s.verification_status) IN ('VERIFIED','ACTIVE')`,
       [productId]
     );
 
@@ -1092,7 +1092,7 @@ retailerAdminSuppliersRouter.delete("/suppliers/:id", async (req: Request, res: 
     const result = await pool.query(
       `UPDATE supplier.supplier_store_links
        SET status = 'inactive', updated_at = NOW()
-       WHERE supplier_id = $1 AND store_id = $2 AND status = 'active'
+       WHERE supplier_id = $1 AND store_id = $2 AND UPPER(status) = 'ACTIVE'
        RETURNING id`,
       [id, storeId]
     );

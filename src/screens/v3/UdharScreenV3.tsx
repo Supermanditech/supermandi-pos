@@ -16,7 +16,7 @@ type Customer = { id: string; name: string; phone?: string };
 
 type UdharScreenV3Props = {
   onBack: () => void;
-  onComplete: (method: PaymentMethod, saleId: string, totalMinor: number, itemCount: number) => void;
+  onComplete: (method: PaymentMethod, saleId: string, totalMinor: number, itemCount: number, customerPhone?: string) => void;
 };
 
 export default function UdharScreenV3({ onBack, onComplete }: UdharScreenV3Props) {
@@ -45,10 +45,12 @@ export default function UdharScreenV3({ onBack, onComplete }: UdharScreenV3Props
 
   const handleComplete = useCallback(() => {
     if (!customerName.trim()) { showToast("Add customer name for Udhar"); return; }
+    // V3-HARDEN-103: Pass customerPhone to onComplete for server-backed WhatsApp
+    const phone = customerPhone.trim() || undefined;
     executePayment("DUE", async (saleId) => {
-      await recordDuePayment({ saleId, customerName: customerName.trim(), customerPhone: customerPhone.trim() || undefined });
+      await recordDuePayment({ saleId, customerName: customerName.trim(), customerPhone: phone });
       logger.debug("V3Udhar", `due_recorded:${saleId},customer:${customerName}`);
-    }, onComplete);
+    }, (method, saleId, totalMinor, itemCount) => onComplete(method, saleId, totalMinor, itemCount, phone));
   }, [executePayment, onComplete, customerName, customerPhone]);
 
   return (

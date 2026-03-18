@@ -57,7 +57,8 @@ export function V3UpiWrapper() {
 // V3-FIX-074: Dedicated Udhar payment screen
 export function V3UdharWrapper() {
   const nav = useNavigation<Nav>();
-  return <UdharScreenV3 onBack={() => nav.goBack()} onComplete={(method, saleId, totalMinor, itemCount) => nav.navigate("V3Success", { method, saleId, totalMinor, itemCount })} />;
+  // V3-HARDEN-103: Pass customerPhone to success for server-backed WhatsApp
+  return <UdharScreenV3 onBack={() => nav.goBack()} onComplete={(method, saleId, totalMinor, itemCount, customerPhone) => nav.navigate("V3Success", { method, saleId, totalMinor, itemCount, customerPhone })} />;
 }
 
 export function V3SuccessWrapper({ route }: any) {
@@ -68,7 +69,9 @@ export function V3SuccessWrapper({ route }: any) {
   const total = route?.params?.totalMinor ?? 0;
   const count = route?.params?.itemCount ?? 0;
   const cartStore = require("../../stores/cartStore").useCartStore;
-  return <SuccessScreenV3 paymentMethod={method} totalMinor={total} itemCount={count} saleId={saleId} onNewSale={() => { cartStore.getState()?.clearCart?.(true); nav.navigate("SellScan"); }} />;
+  // V3-HARDEN-103: Pass customerPhone for server-backed WhatsApp send
+  const customerPhone = route?.params?.customerPhone;
+  return <SuccessScreenV3 paymentMethod={method} totalMinor={total} itemCount={count} saleId={saleId} customerPhone={customerPhone} onNewSale={() => { cartStore.getState()?.clearCart?.(true); nav.navigate("SellScan"); }} />;
 }
 
 export function V3ScanWrapper({ route }: any) {
