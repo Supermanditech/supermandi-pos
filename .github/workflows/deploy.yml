@@ -273,6 +273,12 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
+      # V3-HARDEN-153: Scale capacity gate for 10k-SKU/5k-supplier/1000-supplier targets
+      - name: Scale Capacity Gate
+        run: bash scripts/gates/scale-capacity-gate.sh
+        env:
+          STAGING_URL: https://staging.supermandi.tech
+
       # STAGE-001 + STAGE-014: Create Cloud SQL backup before any deploy
       # Non-blocking: automated daily backups are enabled (INFRA-019).
       # If WIF SA lacks cloudsql.admin, log warning and continue.

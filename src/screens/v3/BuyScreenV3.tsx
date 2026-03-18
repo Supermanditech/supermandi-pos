@@ -181,11 +181,17 @@ export default function BuyScreenV3() {
           <Text style={{ color: colors.textTertiary, fontSize: 13, marginTop: 12 }}>Loading catalogue...</Text>
         </View>
       ) : null}
+      {/* V3-HARDEN-150: Virtualized list for 5k+ supplier SKUs */}
       {!loading ? <FlatList
         data={filteredProducts}
         keyExtractor={(p) => p.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews
+        windowSize={5}
+        maxToRenderPerBatch={10}
+        initialNumToRender={8}
+        updateCellsBatchingPeriod={50}
         ListEmptyComponent={
           <View style={{ padding: 32, alignItems: "center" }}>
             <Text style={{ fontSize: 36, marginBottom: 8 }}>📦</Text>
