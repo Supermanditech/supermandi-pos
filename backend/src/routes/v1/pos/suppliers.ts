@@ -165,6 +165,8 @@ posSuppliersRouter.get("/suppliers/:supplierId", requireDeviceToken, async (req,
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const { storeId } = (req as any).posDevice as { storeId: string };
+  // V3-HARDEN-130: Fail-closed store isolation assertion
+  assertStoreId(storeId, "pos/suppliers/:supplierId");
   const { supplierId } = req.params;
 
   try {
@@ -267,6 +269,8 @@ posSuppliersRouter.get("/suppliers/:supplierId/products", requireDeviceToken, as
   if (!pool) return res.status(503).json({ success: false, error: "database unavailable" });
 
   const { storeId } = (req as any).posDevice as { storeId: string };
+  // V3-HARDEN-130: Fail-closed store isolation assertion
+  assertStoreId(storeId, "pos/suppliers/:supplierId/products");
   const { supplierId } = req.params;
   const { limit = "100", offset = "0" } = req.query;
 
@@ -360,6 +364,8 @@ posSuppliersRouter.get("/suppliers/browse/available", requireDeviceToken, async 
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const { storeId } = (req as any).posDevice as { storeId: string };
+  // V3-HARDEN-130: Fail-closed store isolation assertion
+  assertStoreId(storeId, "pos/suppliers/browse/available");
   const { search, limit = "50", offset = "0" } = req.query;
 
   const limitNum = Math.min(parseInt(limit as string, 10) || 50, 100);
@@ -415,6 +421,8 @@ posSuppliersRouter.post("/suppliers/:supplierId/request-link", requireDeviceToke
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const { storeId } = (req as any).posDevice as { storeId: string };
+  // V3-HARDEN-130: Fail-closed store isolation assertion
+  assertStoreId(storeId, "pos/suppliers/:supplierId/request-link");
   const { supplierId } = req.params;
   const { message } = req.body as { message?: string };
 

@@ -316,9 +316,15 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
     const stockFilter = includeZeroStock ? "" : "AND COALESCE(sb.current_qty, sp.current_stock, 0) > 0";
 
     // V3-FIX-132: Tokenize with quantity normalization + Hindi alias expansion
-    const rawTokens = normalizeQuantityTokens(q).filter(t => t.length >= 2).slice(0, 5);
-    const tokens = expandHindiSearchTokens(rawTokens).slice(0, 8);
-    if (tokens.length === 0) {
+    // Keep tokens >= 1 char (numbers from "1kg" are 1+ char), filter empties, cap at 5 raw
+    const rawTokens = normalizeQuantityTokens(q).filter(t => t.length >= 1).slice(0, 5);
+    // Separate numeric tokens (for unit/content matching) and text tokens (for name/brand)
+    const numericTokens = rawTokens.filter(t => /^\d+$/.test(t));
+    const textTokens = rawTokens.filter(t => !/^\d+$/.test(t) && t.length >= 2);
+    const expandedTextTokens = expandHindiSearchTokens(textTokens).slice(0, 8);
+    // Recombine: text tokens for name/brand search, numeric tokens for unit/content matching
+    const tokens = [...expandedTextTokens, ...numericTokens].slice(0, 10);
+    if (tokens.filter(t => t.length >= 2).length === 0 && numericTokens.length === 0) {
       return res.json({ success: true, data: [], total: 0, context: "SELL" });
     }
 
@@ -333,13 +339,16 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
       params.push(token);
       const idx = params.length; // $idx references this token
 
-      // T-132: Fuzzy/typo-tolerant search via pg_trgm on name, display_name, and brand
+      // T-132 + V3-FIX-132: Fuzzy/typo-tolerant search + unit/content matching
       tokenWhereClauses.push(`(
         p.primary_barcode = $${idx}
         OR spb.barcode = $${idx}
         OR p.name ILIKE '%' || $${idx} || '%'
         OR COALESCE(sp.display_name, '') ILIKE '%' || $${idx} || '%'
         OR COALESCE(p.brand, '') ILIKE '%' || $${idx} || '%'
+        OR COALESCE(p.unit, '') ILIKE $${idx}
+        OR COALESCE(p.net_content_unit, '') ILIKE $${idx}
+        OR CAST(COALESCE(p.net_content_value, 0) AS TEXT) = $${idx}
         OR similarity(p.name, $${idx}) > 0.3
         OR similarity(COALESCE(sp.display_name, ''), $${idx}) > 0.3
         OR similarity(COALESCE(p.brand, ''), $${idx}) > 0.3

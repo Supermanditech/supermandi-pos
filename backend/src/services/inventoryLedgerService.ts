@@ -1,6 +1,8 @@
 import { randomUUID } from "crypto";
 import type { PoolClient } from "pg";
 import { log } from "../lib/logger";
+// V3-HARDEN-133: Import ledger event matrix for enforcement
+import { validateLedgerConsistency, type LedgerEventType } from "./ledgerEventMatrix";
 
 export type InventoryMovementType = "RECEIVE" | "SELL" | "ADJUSTMENT";
 
@@ -28,6 +30,9 @@ export type InventoryMovementInput = {
   reason?: string | null;
   referenceType?: string | null;
   referenceId?: string | null;
+  // V3-HARDEN-133: Optional ledger event type for matrix enforcement
+  // When provided, validateLedgerConsistency checks movementType matches the event
+  ledgerEvent?: LedgerEventType;
 };
 
 export type LedgerSaleItem = {
@@ -117,6 +122,11 @@ export async function applyInventoryMovement(
   const globalProductId = input.globalProductId.trim();
   if (!storeId || !globalProductId) {
     throw new Error("store_or_product_missing");
+  }
+
+  // V3-HARDEN-133: Enforce ledger event matrix when ledgerEvent is provided
+  if (input.ledgerEvent) {
+    validateLedgerConsistency(input.ledgerEvent, input.movementType);
   }
 
   // GO-LIVE-121: Idempotency check - prevent duplicate ledger entries for same reference
@@ -436,7 +446,9 @@ export async function recordSaleInventoryMovements(params: {
       quantity: item.quantity,
       unitSellMinor: item.unitSellMinor,
       referenceType: "sale",
-      referenceId: params.saleId
+      referenceId: params.saleId,
+      // V3-HARDEN-133: Enforce ledger event matrix — sale movements must use SELL type
+      ledgerEvent: "SALE_COMPLETED",
     });
   }
 }

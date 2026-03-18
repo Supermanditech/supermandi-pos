@@ -10,7 +10,8 @@
  * ├────────────────────┼───────────┼──────────┼──────────┼──────────┼──────────┤
  * │ name               │ OWNER     │ OVERRIDE │ READ     │ READ     │ READ     │
  * │ primary_barcode    │ OWNER     │ OVERRIDE │ READ     │ READ     │ SEED     │
- * │ brand              │ OWNER     │ OVERRIDE │ OVERRIDE │ OVERRIDE │ SEED     │
+ * │ brand              │ OWNER     │ OVERRIDE │ READ     │ READ     │ SEED     │
+ * │ brand_override     │ READ      │ READ     │ OWNER    │ OWNER    │ SEED     │
  * │ category           │ OWNER     │ OVERRIDE │ READ     │ READ     │ SEED     │
  * │ image_url          │ OWNER     │ OVERRIDE │ READ     │ READ     │ READ     │
  * │ default_gst_rate   │ OWNER     │ OVERRIDE │ READ     │ READ     │ SEED     │
@@ -74,7 +75,7 @@ export const FIELD_OWNERSHIP: FieldOwnership[] = [
   // === Global product fields (supplier-owned) ===
   { field: "name",              table: "catalog.products",        supplier: "OWNER",   superAdmin: "OVERRIDE", retailer: "READ",  pos: "READ",  csv: "READ"  },
   { field: "primary_barcode",   table: "catalog.products",        supplier: "OWNER",   superAdmin: "OVERRIDE", retailer: "READ",  pos: "READ",  csv: "SEED"  },
-  { field: "brand",             table: "catalog.products",        supplier: "OWNER",   superAdmin: "OVERRIDE", retailer: "OVERRIDE", pos: "OVERRIDE", csv: "SEED" },
+  { field: "brand",             table: "catalog.products",        supplier: "OWNER",   superAdmin: "OVERRIDE", retailer: "READ",     pos: "READ",     csv: "SEED" },
   { field: "category",          table: "catalog.products",        supplier: "OWNER",   superAdmin: "OVERRIDE", retailer: "READ",  pos: "READ",  csv: "SEED"  },
   { field: "image_url",         table: "catalog.products",        supplier: "OWNER",   superAdmin: "OVERRIDE", retailer: "READ",  pos: "READ",  csv: "READ"  },
   { field: "default_gst_rate",  table: "catalog.products",        supplier: "OWNER",   superAdmin: "OVERRIDE", retailer: "READ",  pos: "READ",  csv: "SEED"  },
@@ -85,6 +86,7 @@ export const FIELD_OWNERSHIP: FieldOwnership[] = [
   { field: "description",       table: "catalog.products",        supplier: "OWNER",   superAdmin: "OVERRIDE", retailer: "READ",  pos: "READ",  csv: "READ"  },
 
   // === Store product fields (retailer-owned) ===
+  { field: "brand_override",    table: "catalog.store_products",  supplier: "READ",    superAdmin: "READ",     retailer: "OWNER", pos: "OWNER", csv: "SEED"  },
   { field: "display_name",      table: "catalog.store_products",  supplier: "READ",    superAdmin: "READ",     retailer: "OWNER", pos: "OWNER", csv: "SEED"  },
   { field: "sell_price",        table: "catalog.store_products",  supplier: "READ",    superAdmin: "READ",     retailer: "OWNER", pos: "OWNER", csv: "SEED"  },
   { field: "purchase_price",    table: "catalog.store_products",  supplier: "READ",    superAdmin: "READ",     retailer: "OWNER", pos: "OWNER", csv: "SEED"  },

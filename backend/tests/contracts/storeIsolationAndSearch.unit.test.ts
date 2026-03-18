@@ -44,13 +44,22 @@ describe("V3-HARDEN-130: Store isolation (executable)", () => {
     expect(src).toContain('assertStoreId(storeId, "store-products/lookup")');
   });
 
-  it("backend suppliers endpoint uses assertStoreId (static — narrowly scoped)", () => {
+  it("ALL pos/suppliers routes use assertStoreId (static — narrowly scoped)", () => {
     const fs = require("fs");
     const path = require("path");
     const src = fs.readFileSync(
       path.resolve(__dirname, "../../src/routes/v1/pos/suppliers.ts"), "utf8"
     );
+    // Every store-scoped route must have fail-closed assertion
     expect(src).toContain('assertStoreId(storeId, "pos/suppliers")');
+    expect(src).toContain('assertStoreId(storeId, "pos/suppliers/:supplierId")');
+    expect(src).toContain('assertStoreId(storeId, "pos/suppliers/:supplierId/products")');
+    expect(src).toContain('assertStoreId(storeId, "pos/suppliers/browse/available")');
+    expect(src).toContain('assertStoreId(storeId, "pos/suppliers/:supplierId/request-link")');
+    // Count total assertStoreId calls — must be 5 (one per route)
+    const matches = src.match(/assertStoreId\(/g);
+    expect(matches).not.toBeNull();
+    expect(matches!.length).toBe(5);
   });
 });
 
@@ -256,6 +265,28 @@ describe("V3-HARDEN-133: Ledger event matrix (executable)", () => {
     const rule = getLedgerEventRule("SALE_COMPLETED");
     expect(rule.description).toContain("regardless of payment mode");
   });
+
+  it("applyInventoryMovement accepts ledgerEvent param (static — narrowly scoped)", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/services/inventoryLedgerService.ts"), "utf8"
+    );
+    // InventoryMovementInput has ledgerEvent field
+    expect(src).toContain("ledgerEvent?: LedgerEventType");
+    // applyInventoryMovement enforces the matrix
+    expect(src).toContain("validateLedgerConsistency(input.ledgerEvent, input.movementType)");
+  });
+
+  it("recordSaleInventoryMovements passes SALE_COMPLETED event (static — narrowly scoped)", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/services/inventoryLedgerService.ts"), "utf8"
+    );
+    // The live sale path must pass ledgerEvent: "SALE_COMPLETED"
+    expect(src).toContain('ledgerEvent: "SALE_COMPLETED"');
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -291,13 +322,30 @@ describe("V3-HARDEN-134: Metadata ownership (executable)", () => {
     expect(canModifyField("image_url", "CSV_IMPORT")).toBe(false); // READ
   });
 
+  it("global brand is supplier-owned, not retailer/POS editable", () => {
+    // catalog.products.brand is supplier-owned
+    expect(canModifyField("brand", "SUPPLIER_PUBLISH")).toBe(true);
+    expect(canModifyField("brand", "SUPERADMIN_EDIT")).toBe(true);
+    expect(canModifyField("brand", "RETAILER_WEB")).toBe(false);
+    expect(canModifyField("brand", "POS_APP")).toBe(false);
+  });
+
+  it("store-level brand_override is retailer/POS editable", () => {
+    // catalog.store_products.brand_override is retailer-owned
+    expect(canModifyField("brand_override", "RETAILER_WEB")).toBe(true);
+    expect(canModifyField("brand_override", "POS_APP")).toBe(true);
+    expect(canModifyField("brand_override", "SUPPLIER_PUBLISH")).toBe(false);
+  });
+
   it("POS and retailer can both edit store-level fields", () => {
     const posFields = getModifiableFields("POS_APP");
     const retailerFields = getModifiableFields("RETAILER_WEB");
     expect(posFields).toContain("display_name");
     expect(posFields).toContain("sell_price");
     expect(posFields).toContain("mrp");
-    expect(posFields).toContain("brand"); // OVERRIDE level
+    expect(posFields).toContain("brand_override");
+    // Global brand is NOT in POS modifiable fields
+    expect(posFields).not.toContain("brand");
     expect(retailerFields).toContain("display_name");
     expect(retailerFields).toContain("sell_price");
   });
@@ -306,13 +354,14 @@ describe("V3-HARDEN-134: Metadata ownership (executable)", () => {
     expect(canModifyField("display_name", "SUPPLIER_PUBLISH")).toBe(false);
     expect(canModifyField("sell_price", "SUPPLIER_PUBLISH")).toBe(false);
     expect(canModifyField("current_stock", "SUPPLIER_PUBLISH")).toBe(false);
+    expect(canModifyField("brand_override", "SUPPLIER_PUBLISH")).toBe(false);
   });
 
   it("FIELD_OWNERSHIP covers both global and store tables", () => {
     const globalFields = FIELD_OWNERSHIP.filter((f) => f.table === "catalog.products");
     const storeFields = FIELD_OWNERSHIP.filter((f) => f.table === "catalog.store_products");
     expect(globalFields.length).toBeGreaterThanOrEqual(10);
-    expect(storeFields.length).toBeGreaterThanOrEqual(6);
+    expect(storeFields.length).toBeGreaterThanOrEqual(7); // includes brand_override
   });
 
   it("sync precedence uses LWW with metadata_updated_at", () => {
