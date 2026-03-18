@@ -4,7 +4,6 @@ import Svg, { Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 
 import Confetti from "../../components/v3/Confetti";
-import ProfitBadge from "../../components/v3/ProfitBadge";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useCartStore } from "../../stores/cartStore";
@@ -33,15 +32,8 @@ export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, 
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [showConfetti, setShowConfetti] = useState(true);
 
-  // Estimated profit (15% margin placeholder — real calculation from cartStore in production)
-  const profitMinor = Math.round(totalMinor * 0.15);
-  const marginPct = 15;
-
-  // Streak counter (placeholder — would be stored in AsyncStorage in production)
-  const [streak] = useState(Math.floor(Math.random() * 20) + 5);
-
-  // Bill ref
-  const billRef = `SM-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}${String(new Date().getDate()).padStart(2, "0")}-${String(Math.floor(Math.random() * 999) + 1).padStart(4, "0")}`;
+  // V3-FIX-075: Use real sale ID as bill ref, no random streak/profit
+  const billRef = saleId ?? `PENDING-${Date.now()}`;
   const timeStr = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 
   const totalDisplay = `₹${Math.round(totalMinor / 100).toLocaleString("en-IN")}`;
@@ -88,14 +80,9 @@ export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, 
         <Text style={styles.amount}>{totalDisplay}</Text>
         <Text style={styles.subtitle}>{METHOD_LABELS[paymentMethod]} · {itemCount} item{itemCount !== 1 ? "s" : ""}</Text>
 
-        {/* Profit badge */}
-        <View style={{ marginTop: 12 }}>
-          <ProfitBadge profitMinor={profitMinor} marginPct={marginPct} />
-        </View>
-
-        {/* Streak */}
-        <View style={styles.streakBadge}>
-          <Text style={styles.streakText}>🔥 {streak} sales today — keep going!</Text>
+        {/* V3-FIX-075: Bill ref display */}
+        <View style={styles.billRefRow}>
+          <Text style={styles.billRefText}>{billRef} · {timeStr}</Text>
         </View>
 
         {/* Print status */}
@@ -160,8 +147,8 @@ function createStyles(colors: ColorPalette) {
     title: { fontSize: 24, fontWeight: "900", color: colors.textPrimary, marginTop: 20, letterSpacing: -0.5 },
     amount: { fontSize: 36, fontWeight: "900", color: colors.textPrimary, marginTop: 8, letterSpacing: -1 },
     subtitle: { fontSize: 14, color: colors.textTertiary, fontWeight: "500", marginTop: 4 },
-    streakBadge: { marginTop: 8, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: "#FEF3C7" },
-    streakText: { fontSize: 11, fontWeight: "800", color: "#92400E" },
+    billRefRow: { marginTop: 12, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.backgroundSecondary },
+    billRefText: { fontSize: 11, fontWeight: "600", color: colors.textTertiary, textAlign: "center" },
     printStatus: { marginTop: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, backgroundColor: colors.backgroundSecondary },
     printText: { fontSize: 12, color: colors.textTertiary, fontWeight: "500" },
     actions: { width: "100%", marginTop: 28, gap: 8 },

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { View, TextInput, Pressable, ScrollView, StyleSheet, Text, Image } from "react-native";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
@@ -8,12 +8,12 @@ import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
 import { upsertLocalProduct, setLocalPrice } from "../../services/offline/scan";
 import { useCartStore } from "../../stores/cartStore";
+import { apiClient } from "../../services/api/apiClient";
 import { logger } from "../../services/logger";
 
-// V3-012: New product digitization — wired to upsertLocalProduct + cartStore
-// If barcode is in SuperMandi master DB → auto-fill name/brand/MRP, retailer only sets sell price
+// V3-FIX-070: New product digitization — real master DB lookup via API
+// GET /api/v1/pos/catalog/master/:barcode → auto-fill if found
 // If not in master DB → full form with photo
-// Reuses existing upsertLocalProduct (connected in production wiring)
 
 type NewProductScreenV3Props = {
   barcode: string;
@@ -21,33 +21,55 @@ type NewProductScreenV3Props = {
   onProductAdded: (barcode: string, name: string) => void;
 };
 
-// Simulate master DB lookup (in production: GET /api/v1/catalog/master/:barcode)
-function lookupMasterDB(barcode: string): { found: boolean; name?: string; brand?: string; category?: string; packSize?: string; mrpMinor?: number; hsnCode?: string; gstPct?: number } {
-  if (barcode.startsWith("890123")) {
-    return { found: true, name: "Parle-G Gold Biscuit", brand: "Parle", category: "Biscuits", packSize: "100g", mrpMinor: 1000, hsnCode: "1905", gstPct: 18 };
-  }
-  return { found: false };
-}
+type MasterResult = { found: boolean; name?: string; brand?: string; category?: string; packSize?: string; mrpMinor?: number; hsnCode?: string; gstPct?: number };
 
 export default function NewProductScreenV3({ barcode, onClose, onProductAdded }: NewProductScreenV3Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const masterResult = useMemo(() => lookupMasterDB(barcode), [barcode]);
+  // V3-FIX-070: Real master DB lookup via API
+  const [masterResult, setMasterResult] = useState<MasterResult>({ found: false });
+  const [masterLoading, setMasterLoading] = useState(true);
   const isAutoFilled = masterResult.found;
 
+  useEffect(() => {
+    let cancelled = false;
+    setMasterLoading(true);
+    apiClient.get<any>(`/api/v1/pos/catalog/master/${encodeURIComponent(barcode)}`)
+      .then((res) => {
+        if (cancelled) return;
+        if (res?.found) {
+          const m: MasterResult = { found: true, name: res.name, brand: res.brand, category: res.category, packSize: res.packSize, mrpMinor: res.mrpMinor, hsnCode: res.hsnCode, gstPct: res.gstPct };
+          setMasterResult(m);
+          // Auto-fill form fields from master
+          if (res.name) setName(res.name);
+          if (res.brand) setBrand(res.brand);
+          if (res.category) setCategory(res.category);
+          if (res.packSize) setPackSize(res.packSize);
+          if (res.mrpMinor) setMrp(String(res.mrpMinor / 100));
+          if (res.hsnCode) setHsnCode(res.hsnCode);
+          if (res.gstPct != null) setGstPct(String(res.gstPct));
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) logger.debug("NewProductV3", `master_lookup_failed:${barcode}:${String(err)}`);
+      })
+      .finally(() => { if (!cancelled) setMasterLoading(false); });
+    return () => { cancelled = true; };
+  }, [barcode]);
+
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [name, setName] = useState(masterResult.name ?? "");
-  const [brand, setBrand] = useState(masterResult.brand ?? "");
-  const [category, setCategory] = useState(masterResult.category ?? "");
-  const [packSize, setPackSize] = useState(masterResult.packSize ?? "");
-  const [mrp, setMrp] = useState(masterResult.mrpMinor ? String(masterResult.mrpMinor / 100) : "");
+  const [name, setName] = useState("");
+  const [brand, setBrand] = useState("");
+  const [category, setCategory] = useState("");
+  const [packSize, setPackSize] = useState("");
+  const [mrp, setMrp] = useState("");
   const [sellPrice, setSellPrice] = useState("");
   const [costPrice, setCostPrice] = useState("");
   const [openingStock, setOpeningStock] = useState("0");
-  const [hsnCode, setHsnCode] = useState(masterResult.hsnCode ?? "");
-  const [gstPct, setGstPct] = useState(masterResult.gstPct ? String(masterResult.gstPct) : "18");
+  const [hsnCode, setHsnCode] = useState("");
+  const [gstPct, setGstPct] = useState("18");
   const [unit, setUnit] = useState("pcs");
   const [caseQty, setCaseQty] = useState("24");
 
