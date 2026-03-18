@@ -291,6 +291,8 @@ export async function requireDeviceToken(req: Request, res: Response, next: Next
 }
 
 // Allows read-only POS endpoints to return status even if store/device are inactive.
+// V3-API-005: Still enforces token expiry/revocation — "allow inactive" means
+// inactive store/device, NOT expired/revoked tokens.
 export async function requireDeviceTokenAllowInactive(
   req: Request,
   res: Response,
@@ -299,6 +301,25 @@ export async function requireDeviceTokenAllowInactive(
   const status = await resolveDeviceFromToken(req, res);
   if (!status) return;
   if (!enforceStoreBinding(req, res, status)) return;
+
+  // V3-API-005: Expired/revoked tokens must be rejected even for read-only status endpoints.
+  // Without this, a revoked device could still poll ui-status and appear "connected".
+  if (status.tokenExpired) {
+    res.status(401).json({
+      error: "token_expired",
+      message: "Device token has expired. Please re-enroll the device.",
+      code: "TOKEN_EXPIRED"
+    });
+    return;
+  }
+  if (status.tokenRevoked) {
+    res.status(401).json({
+      error: "token_revoked",
+      message: "Device token has been revoked. Please re-enroll the device.",
+      code: "TOKEN_REVOKED"
+    });
+    return;
+  }
 
   (req as any).posDeviceStatus = status satisfies PosDeviceStatusContext;
   (req as any).posDevice = {

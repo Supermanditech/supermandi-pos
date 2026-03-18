@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 364,
+  "version": 365,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -7835,6 +7835,53 @@
         "single_commit": true,
         "ticket_parked": true,
         "operator_approved": true
+      }
+    },
+    {
+      "ticket": "V3-API-005",
+      "file": "backend/src/middleware/deviceToken.ts",
+      "start_line": 293,
+      "end_line": 329,
+      "checksum": "f0083176bbb4e1d4",
+      "description": "Enforce token expiry/revocation in requireDeviceTokenAllowInactive — prevents revoked devices from polling ui-status",
+      "test_file": "backend/tests/contracts/deviceToken.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": false,
+        "regression_check": false,
+        "test_guard": false,
+        "single_commit": false,
+        "ticket_parked": false
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-18T07:45:37.632Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "requireDeviceTokenAllowInactive now enforces TOKEN_EXPIRED/TOKEN_REVOKED 401 before next()",
+        "api_errors": "Expired=401 TOKEN_EXPIRED, Revoked=401 TOKEN_REVOKED — same as requireDeviceToken",
+        "store_isolation": "N/A — enforceStoreBinding called before token checks",
+        "business_logic": "Revoked devices can no longer poll ui-status — closes remote-revocation gap",
+        "business_behaviour": "SuperAdmin revoke → device 401 on ui-status → session clear → re-auth required",
+        "db_schema": "No change — reads existing token_expires_at/token_revoked_at from pos_devices",
+        "impacted_files": "backend/src/middleware/deviceToken.ts + retailer-admin/src/pages/StaffPage.tsx (unused import)",
+        "fix_ledger_check": "107 fixes intact, zero drift — registered V3-API-005 at lines 293-329",
+        "no_agent_conflict": "Solo change, no parallel agents active"
       }
     }
   ],

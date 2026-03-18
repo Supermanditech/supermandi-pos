@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch, API_GATEWAY_BASE } from '../lib/api';
+import { authFetch } from '../lib/api';
 
 type StaffMember = {
   id: string;
