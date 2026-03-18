@@ -67,6 +67,27 @@ export default function SplashScreenV3() {
       const session = await Promise.race([getDeviceSession(), timeoutPromise]);
 
       if (!session) {
+        // V3-FIX-116: Check backend capability before routing to phone+OTP
+        setStatusText("Checking capabilities...");
+        try {
+          const { apiClient } = require("../../services/api/apiClient");
+          const capRes = await Promise.race([
+            apiClient.get("/api/v1/pos/auth/send-otp").catch((e: any) => e),
+            new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 5000)),
+          ]);
+          // If we get a 400 (missing phone param), the route exists → OTP auth is deployed
+          // If we get 401 DEVICE_UNAUTHORIZED or 404, the route is not deployed
+          const isOtpAvailable = capRes?.status === 400 || capRes?.response?.status === 400
+            || (capRes?.message && !capRes.message.includes("DEVICE_UNAUTHORIZED"));
+          if (!isOtpAvailable && capRes?.message?.includes("DEVICE_UNAUTHORIZED")) {
+            setStatusText("Update required");
+            setErrorState("This app version requires a backend update. Contact your administrator.");
+            return;
+          }
+        } catch {
+          // Capability check failed (offline/timeout) — proceed to phone screen,
+          // it will handle errors at the API call level
+        }
         setStatusText("Welcome!");
         safeNavigate("V3Phone");
         return;

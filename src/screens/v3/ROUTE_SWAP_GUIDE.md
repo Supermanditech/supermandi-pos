@@ -14,10 +14,12 @@ Edit `src/stores/settingsStore.ts` line:
 posV3Enabled: true, // STG-552: Changed from false to true
 ```
 
-### Option 3: Per-device activation
-Add to EnrollDeviceScreen success callback:
+### Option 3: Per-device activation (V3-DELETE-117: deprecated)
+V3 is now the default layout. Device enrollment is NOT the normal
+owner login path — use phone+OTP instead.
 ```typescript
-useSettingsStore.getState().setPosV3Enabled(true);
+// Enrollment-based activation is deprecated for the normal flow.
+// V3 activates automatically after phone+OTP login.
 ```
 
 ## What changes when v3 is enabled

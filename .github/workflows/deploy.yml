@@ -247,6 +247,13 @@ jobs:
           WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN }}
           WHATSAPP_BUSINESS_PHONE_ID: ${{ secrets.WHATSAPP_BUSINESS_PHONE_ID }}
 
+      # V3-HARDEN-118: Auth rollout gate — verifies OTP auth is deployed
+      - name: Auth Rollout Gate
+        run: bash scripts/gates/auth-rollout-gate.sh
+        env:
+          STAGING_URL: https://staging.supermandi.tech
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       # V3-HARDEN-105: Scale acceptance gate — blocking index + throughput verification
       - name: Scale Acceptance Gate
         run: bash scripts/gates/scale-acceptance.sh
