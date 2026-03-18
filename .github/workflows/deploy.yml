@@ -279,6 +279,10 @@ jobs:
         env:
           STAGING_URL: https://staging.supermandi.tech
 
+      # V3-HARDEN-161: Scan capacity gate — 50k+50k/day scan infrastructure
+      - name: Scan Capacity Gate
+        run: bash scripts/gates/scan-capacity-gate.sh
+
       # STAGE-001 + STAGE-014: Create Cloud SQL backup before any deploy
       # Non-blocking: automated daily backups are enabled (INFRA-019).
       # If WIF SA lacks cloudsql.admin, log warning and continue.
