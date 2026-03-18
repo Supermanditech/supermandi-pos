@@ -12,7 +12,8 @@ import flagRoutes from './routes/flags';
 import internalRoutes from './routes/internal';
 import adminRoutes from './routes/admin';
 import retailerAdminRoutes from './routes/retailerAdmin';
-import retailerPortalRoutes from './routes/retailerPortal';
+// V3-DELETE-100: Stale retailerPortal routes unmounted — canonical implementation is in main-backend monolith
+// import retailerPortalRoutes from './routes/retailerPortal';
 
 const app = express();
 
@@ -108,8 +109,9 @@ app.use('/api/v1/admin/flags', flagRoutes); // Versioned alias
 
 // Retailer portal routes (JWT auth with store_id - enforced by gateway)
 // Routes are mounted at root because gateway strips /api/v1/retailer-admin prefix
-app.use('/', retailerPortalRoutes);
-app.use('/api/v1/retailer-admin', retailerPortalRoutes); // Versioned alias
+// V3-DELETE-100: Stale retailerPortal routes unmounted
+// app.use('/', retailerPortalRoutes);
+// app.use('/api/v1/retailer-admin', retailerPortalRoutes);
 
 // Internal routes (service-to-service)
 app.use('/internal', internalRoutes);

@@ -8,15 +8,29 @@ import { getDeviceToken } from "../services/deviceSession";
 
 const PRODUCTS_CACHE_KEY = 'supermandi.cache.products.v1';
 
+// V3-FIX-096: Authoritative product contract — preserves all metadata from backend
 export interface Product {
   id: string;
+  storeProductId?: string;
   name: string;
-  priceMinor: number;
+  priceMinor: number;        // sell price in minor units
+  mrpMinor?: number;         // MRP in minor units
+  purchasePriceMinor?: number;
   currency: string;
   barcode?: string;
   category?: string;
   stock?: number;
   description?: string;
+  brand?: string;
+  imageUrl?: string;
+  unit?: string;
+  hsnCode?: string;
+  gstRate?: number;
+  netContentValue?: number;
+  netContentUnit?: string;
+  supplierId?: string;
+  supplierName?: string;
+  metadataUpdatedAt?: string;
 }
 
 interface ProductsState {
@@ -49,16 +63,33 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     try {
       // 1) Try backend first
       const remote = await productsApi.listProducts();
+      // V3-FIX-096: Preserve all product metadata from backend
       const productsData: Product[] = remote.map((p) => {
         const priceSources = productsApi.getProductPriceSources(p);
         const resolved = productsApi.resolvePriceMinorFromSources(priceSources);
+        const raw = p as any;
         return {
           id: p.id,
+          storeProductId: raw.storeProductId ?? raw.store_product_id,
           name: p.name,
           priceMinor: resolved.priceMinor,
+          mrpMinor: raw.mrpMinor ?? raw.mrp_minor ?? (raw.mrp ? Math.round(raw.mrp * 100) : undefined),
+          purchasePriceMinor: raw.purchasePriceMinor ?? raw.purchase_price_minor,
           currency: p.currency,
           barcode: p.barcode ?? undefined,
-          stock: p.stock
+          category: raw.category ?? raw.categoryName,
+          stock: p.stock,
+          description: raw.description,
+          brand: raw.brand,
+          imageUrl: raw.imageUrl ?? raw.image_url,
+          unit: raw.unit,
+          hsnCode: raw.hsnCode ?? raw.hsn_code,
+          gstRate: raw.gstRate ?? raw.gst_rate,
+          netContentValue: raw.netContentValue ?? raw.net_content_value,
+          netContentUnit: raw.netContentUnit ?? raw.net_content_unit,
+          supplierId: raw.supplierId ?? raw.supplier_id,
+          supplierName: raw.supplierName ?? raw.supplier_name,
+          metadataUpdatedAt: raw.metadataUpdatedAt ?? raw.metadata_updated_at,
         };
       });
 
