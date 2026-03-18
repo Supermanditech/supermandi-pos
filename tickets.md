@@ -5580,7 +5580,7 @@ The branch must not be called:
 - GCP-ready
 - production-ready
 
-until all twenty phases above are complete and re-verified against `tickets.md`.
+until all twenty-one phases above are complete and re-verified against `tickets.md`.
 
 ## Phase 12 - Supplier Catalogue as SuperMandi Principal B2B Procurement
 
@@ -8858,3 +8858,191 @@ Guard rails:
 - Do not close navigation-grade interaction tickets on component proof alone.
 - Do not rely on static source inspection for primary interaction semantics.
 - Do not call a flow production-grade until mounted screen navigation and state-preservation behavior are proven.
+
+## V3-HARDEN-185 - Build the live canonical store-SKU demand signal service and cross-portal read model from real sales, stock, GRN, and order truth
+
+Priority: P0
+Layers: backend aggregation, API, POS, retailer web, supplier web, SuperAdmin, read models
+
+Issue:
+- `V3-HARDEN-162` defined the demand snapshot contract, but the live system still does not compute or expose one canonical per-store, per-SKU demand signal from real events.
+
+Root cause:
+- The current branch has type/helper groundwork only.
+- Portal surfaces still rely on separate stock, reorder, order-history, and summary queries instead of one shared demand signal service.
+
+Files impacted:
+- backend sales / stock / GRN / order services and routes
+- POS stock / reorder surfaces
+- retailer web inventory / reorder surfaces
+- supplier web demand-facing surfaces
+- SuperAdmin demand / procurement views
+- migrations or summary structures introduced by the fix
+
+Expected outcome:
+- One live backend service derives store-SKU demand from append-only sales, stock, GRN, and procurement truth.
+- One versioned API/read-model contract exposes:
+  - current stock
+  - recent sell-through
+  - days of cover
+  - pending inbound
+  - reorder pressure
+  - linked procurement / delivery state
+- POS, retailer web, supplier web, and SuperAdmin consume that same underlying demand truth instead of local approximations.
+
+Override requirement:
+- Claude must inspect the existing sales, stock, reorder, GRN, and procurement summary paths first and override conflicting live logic in place.
+- Do not add a dashboard-only sidecar truth beside the existing ledger/order system.
+
+## V3-FIX-186 - Build the live retailer reorder recommendation, buy-again, and fresh-purchase flow across POS and retailer web from the canonical demand signal
+
+Priority: P0
+Layers: retailer UX, reorder API, POS BUY/Reorder, retailer web reorder/buy-again, procurement draft state
+
+Issue:
+- `V3-FIX-163` defined recommendation structure only.
+- Retailers still lack one live repeat-order vs fresh-purchase flow that is grounded in real demand and works consistently across POS and retailer web.
+
+Root cause:
+- Existing reorder entry points are fragmented and are not yet backed by one canonical recommendation endpoint or shared draft/prefill contract.
+
+Files impacted:
+- `src/screens/v3/ReorderScreenV3.tsx`
+- `src/screens/v3/BuyScreenV3.tsx`
+- retailer-admin reorder / inventory / order-history screens
+- backend reorder recommendation and draft routes/services
+- shared procurement cart/order-draft logic
+
+Expected outcome:
+- Backend exposes live reorder recommendations and buy-again history from canonical demand truth.
+- POS and retailer web both support:
+  - repeat procurement with quantity prefill
+  - fresh purchase for new SKUs
+  - one shared draft/cart contract
+- Pending inbound and supplier availability suppress bad reorder noise.
+
+Override requirement:
+- Claude must inspect the current POS reorder, BUY, retailer-web reorder, and buy-again flows first and override conflicting live behavior in place.
+- Do not keep multiple hidden reorder entry models alive.
+
+## V3-FIX-187 - Build the live SuperMandi-to-supplier allocation, supplier-trigger, dispatch, delivery, and retailer-status orchestration flow from store demand
+
+Priority: P0
+Layers: procurement orchestration, supplier allocation, supplier portal, SuperAdmin, retailer status tracking
+
+Issue:
+- `V3-FIX-164` added allocation schema/type groundwork only.
+- The live system still does not convert store demand or retailer procurement into auditable supplier allocation records and supplier-facing workflow.
+
+Root cause:
+- Existing order creation, supplier fulfillment, and GRN paths are still not wired into one canonical allocation-trigger lifecycle.
+
+Files impacted:
+- backend order / procurement / dispatch / delivery / GRN services and routes
+- SuperAdmin demand / procurement / allocation surfaces
+- supplier portal order acceptance / dispatch / delivery surfaces
+- retailer POS / web order-tracking surfaces
+- migrations and linked-order state introduced by the fix
+
+Expected outcome:
+- One canonical live path exists from retailer/store demand to supplier allocation to supplier-facing workflow.
+- Allocation rows are created and updated from live order transitions.
+- Supplier can accept, part-accept, reject, dispatch, and mark delivery against that same allocation truth.
+- Retailer and SuperAdmin see linked progress without supplier-directory leakage.
+
+Override requirement:
+- Claude must inspect the current procurement-order, supplier-order, dispatch, delivery, and GRN flows first and override conflicting live logic in place.
+- Do not leave silent supplier-selection or sidecar dispatch-state logic alive.
+
+## V3-HARDEN-188 - Build the live lifecycle-event fan-out, realtime delivery, and WhatsApp integration for the replenishment and supplier-trigger lifecycle
+
+Priority: P0
+Layers: realtime transport, notification fan-out, WhatsApp, observability, portal status sync
+
+Issue:
+- `V3-HARDEN-165` defined lifecycle event types and communication rules only.
+- The live system still does not emit, deliver, or observe those events across retailer, supplier, and SuperAdmin portals.
+
+Root cause:
+- Existing notification, live-update, and WhatsApp code paths are fragmented and not yet anchored to the canonical lifecycle event log for this flow.
+
+Files impacted:
+- backend event emission/fan-out services
+- SSE/websocket/bootstrap routes actually used by the portals
+- WhatsApp send/template/logging flows
+- POS / retailer web / supplier web / SuperAdmin status consumers
+- runtime observability paths for failed or duplicate delivery
+
+Expected outcome:
+- Order/dispatch/delivery/GRN/repeat-order transitions emit canonical lifecycle events.
+- Active users receive live in-app status updates through one chosen transport.
+- WhatsApp sends are triggered only from the canonical lifecycle rules and logged against the event chain.
+- Failures, retries, and duplicate protection are explicit and observable.
+
+Override requirement:
+- Claude must inspect the current SSE/live-update/WhatsApp/notification flows first and override conflicting behavior in place.
+- Do not bolt on a second notification meaning or sidecar fan-out path.
+
+## V3-HARDEN-189 - Add full runtime parity gates, relational integrity, and deploy-readiness proof for the live demand, allocation, realtime, and communication stack
+
+Priority: P0
+Layers: schema integrity, API parity, realtime/runtime readiness, workers, GCP release gates, compatibility proof
+
+Issue:
+- `V3-HARDEN-166` was narrowed to schema groundwork plus a shallow gate.
+- The full live demand/allocation/comms stack still lacks one enforceable runtime go/no-go contract.
+
+Root cause:
+- Current deploy checks do not yet verify live APIs, event transport, worker/runtime config, or portal compatibility for this lifecycle.
+
+Files impacted:
+- migrations and schema constraints for demand/allocation/event tables
+- `.github/workflows/`
+- `scripts/gates/`
+- runtime env validation
+- API/realtime readiness checks
+- operator-readable parity/reporting surfaces
+
+Expected outcome:
+- Schema enforces canonical references strongly enough for live allocation/event truth.
+- Release gates fail when:
+  - required migrations are missing
+  - demand/allocation APIs are unavailable
+  - realtime transport is unavailable
+  - worker/PubSub/Cloud Tasks/runtime config is incomplete
+  - WhatsApp channel is required but unavailable
+  - portal/backend versions are incompatible for this lifecycle
+- One explicit parity proof covers POS, retailer web, supplier web, SuperAdmin, backend, migration level, realtime transport, and notification readiness.
+
+Override requirement:
+- Claude must inspect the current gates, migrations, env validation, realtime transport, and runtime config first and replace permissive assumptions in place.
+- Do not leave shallow grep/file-existence gates as the only readiness bar for this stack.
+
+## Phase 21 - Full Live Closure of Store-Demand, Reorder, Supplier-Allocation, Realtime, and Communication Stack Deferred from Phase 16
+
+Tickets:
+- `V3-HARDEN-185`
+- `V3-FIX-186`
+- `V3-FIX-187`
+- `V3-HARDEN-188`
+- `V3-HARDEN-189`
+
+Why twenty-first:
+- `V3-HARDEN-162..166` were accepted only to narrowed groundwork scope:
+  - contract types
+  - helper logic
+  - schema groundwork
+  - shallow deploy gating
+- The operator explicitly wants the deferred live cross-portal scope tracked as first-class tickets rather than left implicit.
+- This phase closes the gap between:
+  - defined contract
+  - live production behavior
+
+Scope lock approved by operator:
+- This phase exists specifically to deliver the deferred live scope from `V3-HARDEN-162..166`.
+- Do not silently re-expand `162..166`; use this follow-on phase as the authoritative live-closure batch.
+
+Guard rails:
+- Do not count helper-only or schema-only groundwork as live orchestration completion.
+- Do not split demand, reorder, allocation, realtime, and WhatsApp state into separate portal truths.
+- Do not ship permissive deploy gates that can pass while the live lifecycle is broken.
