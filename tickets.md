@@ -4889,6 +4889,298 @@ Guard rails:
 Exit gate:
 - The branch can no longer surface a broken phone+OTP path without explicit capability mismatch handling and release parity proof.
 
+## V3-FIX-120 - Canonicalize add-to-cart payloads from tap, search, voice, and scan into one editable SELL cart contract
+
+Priority: P0
+Layers: SELL UX, cart state, API payload integrity
+
+Issue:
+- Products can enter the SELL cart from multiple paths, but the branch still risks entry-point drift in what product metadata is preserved once the item reaches cart and checkout.
+
+Root cause:
+- Tile tap, search selection, voice confirm, and scan continue paths do not all guarantee the same canonical cart-line payload for:
+  - product identity
+  - barcode
+  - unit / pack size
+  - brand
+  - price
+  - tax / GST context
+  - variant/global/store product references
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/components/v3/UniversalSearchV3.tsx`
+- `src/components/v3/VoiceOverlayV3.tsx`
+- `src/screens/v3/ScanScreenV3.tsx`
+- `src/stores/cartStore.ts`
+- any shared cart-add helper introduced by the fix
+
+Expected outcome:
+- `tap -> add`
+- `search -> select -> add`
+- `voice -> add`
+- `scan -> continue -> add`
+all create the same canonical editable cart line with the same authoritative product metadata and stable identity.
+
+## V3-FIX-121 - Implement production-grade cart line edit/hold flow for qty, price, discount, and product metadata
+
+Priority: P0
+Layers: cart UX, SELL flow, pricing controls
+
+Issue:
+- The SELL cart still lacks one production-grade edit contract for a retailer to inspect and adjust a cart line before payment.
+
+Root cause:
+- Cart editing remains fragmented between line-level quantity controls, older discount assumptions, and screen-specific shortcuts.
+- There is no single V3-safe edit surface for:
+  - quantity
+  - price override where allowed
+  - discount
+  - product notes / batch / product-linked metadata shown in cart
+  - hold / resume-safe draft preservation
+
+Files impacted:
+- `src/components/v3/CartSheetV3.tsx`
+- `src/stores/cartStore.ts`
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/screens/v3/PaymentScreenV3.tsx`
+- any draft/hold helper touched by the fix
+
+Expected outcome:
+- Retailer can edit a cart line safely before payment.
+- Draft cart state preserves edits on hold/resume/back flows.
+- Every visible edit stays consistent across SELL, cart, payment, and success handoff.
+
+## V3-HARDEN-122 - Make cart edits flow into final sale, ledger, and sync contracts without draft/commit corruption
+
+Priority: P0
+Layers: POS backend, sales API, ledger integrity, offline/sync
+
+Issue:
+- Cart edits are only useful if the exact edited commercial state is what gets committed into the final sale and append-only audit trail.
+
+Root cause:
+- Draft cart state, sale creation payloads, offline sale queueing, and downstream ledger events are not yet explicitly hardened around edited line data.
+- There is still risk that:
+  - edited price/discount metadata is lost at checkout
+  - draft edits mutate inventory/ledger too early
+  - synced sales commit a different commercial payload than the retailer saw
+
+Files impacted:
+- `src/stores/cartStore.ts`
+- `src/services/api/posApi.ts`
+- offline sale helpers under `src/services/offline/`
+- `backend/src/routes/v1/pos/sales.ts`
+- `backend/src/routes/v1/pos/sync.ts`
+- any inventory/sale-item ledger helper touched by the fix
+
+Expected outcome:
+- Draft cart edits remain draft-only until sale commit.
+- On payment completion, final sale rows, sale items, stock effects, khata entries, and append-only ledger/audit artifacts reflect the exact edited cart state.
+- Offline sync preserves the same committed result without duplication or silent normalization.
+
+## V3-FIX-123 - Make POS UPI checkout generate the consumer QR from the exact retailer store UPI address
+
+Priority: P0
+Layers: POS checkout UX, payments API, backend payment init
+
+Issue:
+- UPI checkout still risks placeholder QR behavior and contract drift between what the store configured and what the consumer scans.
+
+Root cause:
+- Current POS UPI path still needs one canonical store-linked contract proving that:
+  - the QR is built from the retailer store’s exact active UPI address
+  - the amount matches the committed sale total
+  - the displayed target and backend payment payload are the same source of truth
+
+Files impacted:
+- `src/screens/v3/UpiScreenV3.tsx`
+- `src/services/api/posApi.ts`
+- `backend/src/routes/v1/pos/sales.ts`
+- `backend/src/routes/v1/pos/payments.ts`
+- any payment-service helper used to build the UPI intent / QR payload
+
+Expected outcome:
+- Once a product reaches cart and the retailer selects UPI, the consumer-facing QR is generated from the exact active store UPI address and exact payable amount.
+- No placeholder QR, stale UPI target, or mismatched payment amount remains.
+
+## V3-FIX-124 - Add POS Settings parity for retailer-owned store UPI address management
+
+Priority: P0
+Layers: POS settings UI, owner permissions, store settings API
+
+Issue:
+- Retailer owner must be able to view/add/update the store UPI address directly from the POS app.
+
+Root cause:
+- POS settings still mixes placeholder payment configuration with partial store-settings behavior.
+
+Files impacted:
+- `src/screens/v3/SettingsScreenV3.tsx`
+- `src/services/api/uiStatusApi.ts`
+- `src/services/api/apiClient.ts`
+- `backend/src/routes/v1/pos/store.ts`
+- any POS settings state/store touched by the fix
+
+Expected outcome:
+- POS owner can add/update the store UPI address from POS settings.
+- Validation, save state, permission handling, and post-save refresh are production-grade.
+- The saved UPI address is the same one consumed by POS UPI checkout.
+
+## V3-FIX-125 - Add retailer-web parity for owner-managed store UPI address configuration
+
+Priority: P0
+Layers: retailer-admin UI, settings API, owner permissions
+
+Issue:
+- Retailer web must expose the same production-grade store UPI configuration path as POS.
+
+Root cause:
+- Store settings parity across surfaces is still uneven, and UPI configuration cannot rely on only one entry surface.
+
+Files impacted:
+- `retailer-admin/src/pages/SettingsPage.tsx`
+- retailer-admin settings API helpers/hooks used by that page
+- `backend/src/routes/v1/retailer-admin/settings.ts`
+
+Expected outcome:
+- Retailer owner can add/update the active store UPI address from retailer web settings.
+- The value, validation rules, error states, and persisted result stay aligned with POS settings and checkout.
+
+## V3-FIX-126 - Add SuperAdmin store-level UPI address management parity with proper override/audit behavior
+
+Priority: P1
+Layers: SuperAdmin UI, admin API, store governance
+
+Issue:
+- SuperAdmin also needs a production-grade store UPI management path for support, correction, and activation workflows.
+
+Root cause:
+- Admin store/settings surfaces exist, but UPI ownership/edit behavior is not yet normalized across owner and admin flows.
+
+Files impacted:
+- `supermandi-superadmin/src/tabs/StoresTab.tsx`
+- `supermandi-superadmin/src/api/stores.ts`
+- `backend/src/routes/v1/admin/stores.ts`
+- `backend/src/routes/v1/admin/settings.ts`
+
+Expected outcome:
+- SuperAdmin can view/add/update a store UPI address with explicit audit-safe behavior.
+- Admin edits do not create a second conflicting source of truth.
+- Owner-facing surfaces reflect the same canonical store UPI value after refresh/sync.
+
+## V3-HARDEN-127 - Canonicalize store UPI schema, validation, permissions, migrations, and cross-surface sync
+
+Priority: P0
+Layers: DB, migrations, API contracts, authz, sync
+
+Issue:
+- POS, retailer web, SuperAdmin, and checkout cannot be production-grade unless one canonical store UPI contract governs schema, validation, and propagation.
+
+Root cause:
+- UPI data currently risks being treated as a settings field in multiple places without one explicit lifecycle for:
+  - source-of-truth storage
+  - validation format
+  - permission boundaries
+  - audit timestamps / actor attribution
+  - sync to POS runtime state
+
+Files impacted:
+- `backend/src/routes/v1/pos/store.ts`
+- `backend/src/routes/v1/retailer-admin/settings.ts`
+- `backend/src/routes/v1/admin/stores.ts`
+- `backend/src/routes/v1/admin/settings.ts`
+- any shared settings/store helper
+- forward migrations if required
+
+Expected outcome:
+- One canonical store UPI schema and validation contract exists.
+- POS owner, retailer owner, and SuperAdmin edit the same underlying store UPI record under correct permission rules.
+- POS runtime state refreshes cleanly after changes from any surface.
+
+## V3-DELETE-128 - Remove duplicate placeholder payment-config and scattered store-UPI write paths after canonical UPI contract lands
+
+Priority: P1
+Layers: cleanup, settings drift, payments drift
+
+Issue:
+- Once the canonical store UPI contract is implemented, stale placeholder fields and duplicate write paths will become regression risks.
+
+Root cause:
+- Legacy/placeholder payment settings code still exists across POS and admin surfaces.
+
+Files impacted:
+- any old placeholder payment-config UI in POS settings
+- any duplicate retailer-admin/admin store-UPI write helper superseded by the canonical contract
+- stale docs/tests that still describe conflicting UPI ownership behavior
+
+Expected outcome:
+- Only one production write path per surface remains.
+- No placeholder `store@upi` style state or conflicting helper remains in live code.
+
+## V3-HARDEN-129 - Add end-to-end regression coverage for cart edits, ledger commit, store UPI settings, and UPI checkout routing
+
+Priority: P0
+Layers: runtime tests, backend tests, e2e, release safety
+
+Issue:
+- The new cart-edit and store-UPI cross-surface work is too high-risk to leave covered only by shallow contract tests.
+
+Root cause:
+- This flow spans:
+  - SELL add-to-cart entry points
+  - cart edit state
+  - sale commit
+  - ledger/audit output
+  - UPI settings mutation
+  - UPI checkout generation
+
+Files impacted:
+- `src/__tests__/`
+- `backend/tests/`
+- `retailer-admin/src/__tests__/`
+- `supermandi-superadmin/src/__tests__/`
+- `e2e-tests/tests/`
+
+Expected outcome:
+- Runtime and contract coverage prove:
+  - add-to-cart metadata is consistent across tap/search/voice/scan
+  - cart edits survive hold/resume and commit correctly
+  - final sale/ledger state matches edited cart state
+  - changing store UPI from POS, retailer web, or SuperAdmin updates the same canonical value
+  - consumer-facing UPI checkout always uses the exact active retailer store UPI address
+
+## Phase 9 - Cart Edit Integrity and Store UPI Address Parity
+
+Tickets:
+- `V3-FIX-120`
+- `V3-FIX-121`
+- `V3-HARDEN-122`
+- `V3-FIX-123`
+- `V3-FIX-124`
+- `V3-FIX-125`
+- `V3-FIX-126`
+- `V3-HARDEN-127`
+- `V3-DELETE-128`
+- `V3-HARDEN-129`
+
+Why ninth:
+- This block cuts across SELL, cart, checkout, ledger, POS settings, retailer web, SuperAdmin, and payment routing.
+- It must come after the payment-route split is stable, but before any production-readiness claim.
+
+Write scope:
+- SELL add-to-cart contract across all entry paths
+- cart edit/hold flow
+- sale/ledger commit integrity for edited cart lines
+- store UPI configuration across POS, retailer-admin, and SuperAdmin
+- UPI QR/payment routing from canonical store UPI data
+- regression coverage for the full path
+
+Guard rails:
+- No deployment work in this phase.
+- No new fake QR, placeholder payment values, or local-only settings writes.
+- Do not let draft cart edits mutate stock/ledger before final sale commit.
+
 ## Commit Strategy Across All Remaining Phases
 
 Rule set:
@@ -4909,4 +5201,4 @@ The branch must not be called:
 - GCP-ready
 - production-ready
 
-until all eight phases above are complete and re-verified against `tickets.md`.
+until all nine phases above are complete and re-verified against `tickets.md`.
