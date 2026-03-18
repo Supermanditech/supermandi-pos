@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator, Alert } from "react-native";
+import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
@@ -48,23 +48,39 @@ export default function FinanceScreenV3({ onClose }: Props) {
       </View>
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
         {loading && <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />}
+        {/* V3-DELETE-086: Real offers from API, no hardcoded cards */}
         {!loading && activeTab === "offers" && (
-          <>
-            <View style={styles.scoreCard}><Text style={styles.scoreText}>Credit Score: 720 ✓ Eligible · {offers.length} offers</Text></View>
-            <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>SUPERMANDI FINANCE</Text><View style={styles.bnplBadge}><Text style={styles.bnplText}>BNPL</Text></View></View><Text style={styles.offerAmount}>₹50,000</Text><Text style={styles.offerDetail}>Buy Now Pay Later · 0% for 30 days{"\n"}3 EMIs of ₹16,667</Text><Pressable style={styles.applyBtn} onPress={async () => {
-              const online = await isOnline();
-              if (!online) { showToast("Apply requires internet connection"); return; }
-              try {
-                await applyForCredit("supermandi-bnpl", 5000000);
-                showToast("Credit application submitted — review in 24 hours");
-              } catch (err: any) {
-                showToast(err?.message ?? "Application failed — try again later");
-              }
-            }}><Text style={styles.applyText}>Apply Now</Text></Pressable></View>
-            <View style={styles.offerCard}><View style={styles.offerTop}><Text style={styles.provider}>LENDINGKART</Text><View style={[styles.bnplBadge, { backgroundColor: colors.warningSoft }]}><Text style={[styles.bnplText, { color: colors.warning }]}>Credit Line</Text></View></View><Text style={styles.offerAmount}>₹2,00,000</Text><Text style={styles.offerDetail}>Business credit · 1.5%/month{"\n"}Draw as needed</Text><Pressable style={styles.detailBtn} onPress={() => {
-              Alert.alert("LendingKart Credit Line", "₹2,00,000 credit line at 1.5%/month.\n\nDraw funds as needed, pay interest only on what you use.\n\nContact: support@lendingkart.com", [{ text: "OK" }]);
-            }}><Text style={styles.detailText}>Details</Text></Pressable></View>
-          </>
+          offers.length > 0 ? (
+            <>
+              <View style={styles.scoreCard}><Text style={styles.scoreText}>{offers.length} offer{offers.length !== 1 ? "s" : ""} available</Text></View>
+              {offers.map((offer: any, i: number) => (
+                <View key={offer.id ?? i} style={styles.offerCard}>
+                  <View style={styles.offerTop}>
+                    <Text style={styles.provider}>{offer.providerName ?? offer.provider ?? "Provider"}</Text>
+                    <View style={styles.bnplBadge}><Text style={styles.bnplText}>{offer.type ?? "Credit"}</Text></View>
+                  </View>
+                  <Text style={styles.offerAmount}>₹{Math.round((offer.amountMinor ?? offer.maxAmountMinor ?? 0) / 100).toLocaleString("en-IN")}</Text>
+                  <Text style={styles.offerDetail}>{offer.description ?? offer.terms ?? ""}</Text>
+                  <Pressable style={styles.applyBtn} onPress={async () => {
+                    const online = await isOnline();
+                    if (!online) { showToast("Apply requires internet connection"); return; }
+                    try {
+                      await applyForCredit(offer.id ?? offer.providerId, offer.amountMinor ?? offer.maxAmountMinor ?? 0);
+                      showToast("Credit application submitted");
+                    } catch (err: any) {
+                      showToast(err?.message ?? "Application failed");
+                    }
+                  }}><Text style={styles.applyText}>Apply</Text></Pressable>
+                </View>
+              ))}
+            </>
+          ) : (
+            <View style={{ padding: 32, alignItems: "center" }}>
+              <Text style={{ fontSize: 36, marginBottom: 8 }}>💳</Text>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No credit offers</Text>
+              <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4, textAlign: "center" }}>Credit offers will appear here when available for your store</Text>
+            </View>
+          )
         )}
         {!loading && activeTab === "loans" && (
           loans.length === 0 ? (

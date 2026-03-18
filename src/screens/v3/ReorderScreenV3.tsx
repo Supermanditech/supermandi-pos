@@ -25,6 +25,7 @@ export default function ReorderScreenV3({ onClose }: Props) {
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   // V3-HARDEN-089: Prevent double-submit on approve actions
   const [approving, setApproving] = useState(false);
+  const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
 
   const handleQtyEdit = useCallback((idx: number, newQty: string) => {
     const qty = parseInt(newQty, 10);
@@ -100,17 +101,22 @@ export default function ReorderScreenV3({ onClose }: Props) {
               </View>
             </View>
             <View style={styles.cardActions}>
-              <Pressable style={[styles.approveBtn, (approvedIds.has(item.id) || approving) && { opacity: 0.5 }]} disabled={approvedIds.has(item.id) || approving} onPress={async () => {
+              {/* V3-HARDEN-089: Per-item in-flight guard */}
+              <Pressable style={[styles.approveBtn, (approvedIds.has(item.id) || approving || approvingIds.has(item.id)) && { opacity: 0.5 }]} disabled={approvedIds.has(item.id) || approving || approvingIds.has(item.id)} onPress={async () => {
+                if (approvingIds.has(item.id)) return;
                 const online = await isOnline();
                 if (!online) { showToast("Approve requires connection"); return; }
                 const sid = await getDeviceStoreId();
                 if (!sid) return;
+                setApprovingIds((prev) => new Set(prev).add(item.id));
                 try {
                   await approvePendingReorders(sid, [item.id]);
                   setApprovedIds((prev) => new Set(prev).add(item.id));
                   showToast(`${item.name} approved — order will be placed`);
-                } catch { showToast("Failed to approve"); }
-              }}><Text style={styles.approveBtnText}>{approvedIds.has(item.id) ? "✓ Approved" : "✓ Approve"}</Text></Pressable>
+                } catch { showToast("Failed to approve"); } finally {
+                  setApprovingIds((prev) => { const next = new Set(prev); next.delete(item.id); return next; });
+                }
+              }}><Text style={styles.approveBtnText}>{approvedIds.has(item.id) ? "✓ Approved" : approvingIds.has(item.id) ? "Approving..." : "✓ Approve"}</Text></Pressable>
               <Pressable style={styles.editBtn} onPress={() => setEditingIdx(editingIdx === i ? null : i)}><Text style={styles.editBtnText}>{editingIdx === i ? "Done" : "Edit"}</Text></Pressable>
               <Pressable style={styles.dismissBtn} onPress={() => setItems((prev) => prev.filter((_, j) => j !== i))}><Text style={styles.dismissBtnText}>✕</Text></Pressable>
             </View>
