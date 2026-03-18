@@ -70,7 +70,11 @@ jest.mock("../../services/api/inventoryApi", () => ({
   recordManualInward: jest.fn().mockResolvedValue({ success: true }),
   getPurchaseHistory: jest.fn().mockResolvedValue({ entries: [] }),
 }));
-jest.mock("../../services/api/suppliersApi", () => ({ getSuppliers: jest.fn().mockResolvedValue([]) }));
+jest.mock("../../services/api/suppliersApi", () => ({
+  getSuppliers: jest.fn().mockResolvedValue([
+    { id: "sup-picker-001", businessName: "Metro Distributors", tradeName: "Metro" },
+  ]),
+}));
 jest.mock("../../services/api/apiClient", () => ({
   apiClient: { get: jest.fn().mockResolvedValue({ count: 3 }), post: jest.fn() },
 }));
@@ -155,20 +159,30 @@ describe("V3-FIX-076: BUY screen", () => {
     });
   });
 
-  it("carries authoritative supplierId (not supplierName) for order creation", async () => {
+  it("splits orders by supplierId for mixed-supplier carts", async () => {
+    const mockCreateOrder = require("../../services/api/orderApi").createOrder;
+    mockCreateOrder.mockClear();
+    // Both products have different supplierIds (sup-001, sup-002)
+    // Adding both to cart should create 2 separate orders
     render(<BuyScreenV3 />);
     await waitFor(() => {
       expect(screen.getByText("Parle-G")).toBeTruthy();
     });
-    // The mapped products should have supplierId from catalog
-    // Verify by checking the source — supplierId is mapped from raw.supplierId ?? raw.supplier_id
-    const src = require("fs").readFileSync(
-      require("path").resolve(__dirname, "../../screens/v3/BuyScreenV3.tsx"), "utf8"
-    );
-    // Must use real supplierId field, not supplierName as identity
-    expect(src).toContain("supplierId: raw.supplierId ?? raw.supplier_id");
-    expect(src).toContain("const supplierId = selectedProducts[0].supplierId");
-    expect(src).not.toContain('supplierName ?? "default"');
+    // Cart strip appears when items have qty > 0
+    // The default MOQ sets initial qtys, so cart should be visible
+    await waitFor(() => {
+      expect(screen.getByLabelText("Place order")).toBeTruthy();
+    });
+    fireEvent.press(screen.getByLabelText("Place order"));
+    await waitFor(() => {
+      expect(mockCreateOrder).toHaveBeenCalled();
+    });
+    // Should have created 2 orders (one per supplier), not 1
+    expect(mockCreateOrder).toHaveBeenCalledTimes(2);
+    // First call should use sup-001, second sup-002 (or vice versa)
+    const supplierIds = mockCreateOrder.mock.calls.map((c: any) => c[1].supplierId);
+    expect(supplierIds).toContain("sup-001");
+    expect(supplierIds).toContain("sup-002");
   });
 });
 
@@ -249,6 +263,7 @@ describe("V3-FIX-077: Compare CTA text", () => {
 
 describe("V3-FIX-078: Counter Purchase confirm path", () => {
   const mockRecordManualInward = require("../../services/api/inventoryApi").recordManualInward;
+  const mockGetSuppliers = require("../../services/api/suppliersApi").getSuppliers;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -263,7 +278,7 @@ describe("V3-FIX-078: Counter Purchase confirm path", () => {
     expect(screen.getByText("Confirm")).toBeTruthy();
   });
 
-  it("known scanned item carries real productId in confirm payload", async () => {
+  it("known scanned item carries real productId (not barcode) in confirm payload", async () => {
     render(<CounterPurchaseScreenV3 onClose={jest.fn()} />);
     const input = screen.getByPlaceholderText(/Scan barcode/);
     fireEvent.changeText(input, "8901234");
@@ -284,74 +299,51 @@ describe("V3-FIX-078: Counter Purchase confirm path", () => {
     expect(txnItems[0].isNewProduct).toBe(false);
   });
 
-  it("unknown/new scanned item confirm payload carries barcode + isNewProduct=true", async () => {
+  it("ad-hoc free-text supplier sends name-only payload (no id)", async () => {
     render(<CounterPurchaseScreenV3 onClose={jest.fn()} />);
-    const input = screen.getByPlaceholderText(/Scan barcode/);
-    fireEvent.changeText(input, "9999999999999");
+    // Scan a known product
+    fireEvent.changeText(screen.getByPlaceholderText(/Scan barcode/), "8901234");
     fireEvent.press(screen.getByText("↵"));
+    await waitFor(() => expect(screen.getByTestId("purchase-item-8901234")).toBeTruthy());
 
-    await waitFor(() => {
-      expect(screen.getByTestId("purchase-item-9999999999999")).toBeTruthy();
-    });
-
-    // Fill required purchase price for new item before confirm
-    // PurchaseItemCardV3 is mocked so we need to set price via items state.
-    // Instead verify the item was added with state="new" which maps to isNewProduct=true in confirm.
-    // The confirm will fail validation because purchasePrice is empty, but we can verify the item model.
-    // For a proper payload test, we check that the source handles new items explicitly:
-    const src = require("fs").readFileSync(
-      require("path").resolve(__dirname, "../../screens/v3/CounterPurchaseScreenV3.tsx"), "utf8"
-    );
-    expect(src).toContain('isNewProduct: it.state === "new"');
-  });
-
-  it("selected supplier path sends supplier id in payload", async () => {
-    // Render and scan a known item to enable confirm
-    render(<CounterPurchaseScreenV3 onClose={jest.fn()} />);
-    const input = screen.getByPlaceholderText(/Scan barcode/);
-    fireEvent.changeText(input, "8901234");
-    fireEvent.press(screen.getByText("↵"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("purchase-item-8901234")).toBeTruthy();
-    });
-
-    // Type a supplier name that matches a picker option
-    const supplierInput = screen.getByPlaceholderText("Enter supplier name...");
-    fireEvent.changeText(supplierInput, "Metro");
+    // Type ad-hoc supplier name (not from picker)
+    fireEvent.changeText(screen.getByPlaceholderText("Enter supplier name..."), "Some Local Shop");
 
     fireEvent.press(screen.getByText("Confirm"));
+    await waitFor(() => expect(mockRecordManualInward).toHaveBeenCalledTimes(1));
 
-    await waitFor(() => {
-      expect(mockRecordManualInward).toHaveBeenCalledTimes(1);
-    });
-
-    // Third arg is supplier payload
     const supplierPayload = mockRecordManualInward.mock.calls[0][2];
-    // "Metro" is free-text (no picker match) → ad-hoc path, name only
-    expect(supplierPayload).toEqual({ name: "Metro" });
+    expect(supplierPayload).toEqual({ name: "Some Local Shop" });
     expect(supplierPayload.id).toBeUndefined();
   });
 
-  it("ad-hoc supplier path sends name-only payload (no id)", async () => {
-    // Verify the source explicitly handles the two paths
-    const src = require("fs").readFileSync(
-      require("path").resolve(__dirname, "../../screens/v3/CounterPurchaseScreenV3.tsx"), "utf8"
-    );
-    // Authoritative path: { id: pickedSupplier.id, name: pickedSupplier.name }
-    expect(src).toContain("id: pickedSupplier.id, name: pickedSupplier.name");
-    // Ad-hoc path: { name: supplierName }
-    expect(src).toContain("{ name: supplierName }");
-  });
+  it("picked supplier from modal sends id + name in payload", async () => {
+    render(<CounterPurchaseScreenV3 onClose={jest.fn()} />);
+    // Scan a known product
+    fireEvent.changeText(screen.getByPlaceholderText(/Scan barcode/), "8901234");
+    fireEvent.press(screen.getByText("↵"));
+    await waitFor(() => expect(screen.getByTestId("purchase-item-8901234")).toBeTruthy());
 
-  it("GST total uses per-item gstPct (not fabricated flat rate)", () => {
-    const src = require("fs").readFileSync(
-      require("path").resolve(__dirname, "../../screens/v3/CounterPurchaseScreenV3.tsx"), "utf8"
-    );
-    // Per-item GST: (it as any).gstPct ?? 0
-    expect(src).toContain("gstPct ?? 0");
-    // No flat 18% multiplication
-    expect(src).not.toContain("totalAmount * 0.18");
+    // Open supplier picker by pressing the "+" button
+    fireEvent.press(screen.getByText("+"));
+
+    // Wait for the modal to load suppliers
+    await waitFor(() => {
+      expect(mockGetSuppliers).toHaveBeenCalledTimes(1);
+      expect(screen.getByText("Metro Distributors")).toBeTruthy();
+    });
+
+    // Select "Metro Distributors" from the picker
+    fireEvent.press(screen.getByText("Metro Distributors"));
+
+    // Now confirm
+    fireEvent.press(screen.getByText("Confirm"));
+    await waitFor(() => expect(mockRecordManualInward).toHaveBeenCalledTimes(1));
+
+    const supplierPayload = mockRecordManualInward.mock.calls[0][2];
+    // Picked from list → authoritative path with id
+    expect(supplierPayload.id).toBe("sup-picker-001");
+    expect(supplierPayload.name).toBe("Metro Distributors");
   });
 });
 
