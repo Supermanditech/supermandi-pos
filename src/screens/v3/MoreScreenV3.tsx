@@ -37,7 +37,7 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
     { icon: "💳", label: t("more.finance", "Credit & Finance"), bg: "#F5F3FF", screen: "finance" },
     { icon: "🧾", label: t("more.salesHistory", "Sales History"), bg: colors.primaryLight, screen: "sales" },
     { icon: "⚙️", label: t("more.settings", "Settings"), bg: colors.backgroundSecondary, screen: "settings" },
-    { icon: "❓", label: t("more.help", "Help"), bg: colors.backgroundSecondary, screen: "help" },
+    // V3-DELETE-085: Help removed — no V3 Help screen exists. Will be added when V3-HARDEN-094 is implemented.
   ];
 
   return (

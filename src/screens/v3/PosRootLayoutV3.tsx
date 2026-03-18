@@ -93,10 +93,12 @@ export default function PosRootLayoutV3() {
         {activeTab === "MORE" ? (
           <ScreenErrorBoundary screenName="MoreV3">
             <MoreScreenV3 onNavigate={(s) => {
+              // V3-DELETE-085: Removed dead "help" -> "Help" mapping (no registered route)
+              // Sales History intentionally aliases to V3Reports
               const map: Record<string, string> = {
                 khata: "V3Khata", customers: "V3Customers", reports: "V3Reports",
                 stock: "V3Stock", finance: "V3Finance", sales: "V3Reports",
-                settings: "V3Settings", help: "Help",
+                settings: "V3Settings",
               };
               if (map[s]) navigateTo(map[s]);
             }} />

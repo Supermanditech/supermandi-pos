@@ -157,11 +157,41 @@ describe("V3-HARDEN-089: Double-submit guards", () => {
 
 // ── V3-DELETE-085: Route hygiene — runtime proof ───────────────────────────
 
-describe("V3-DELETE-085: No stale route references from V3 screens", () => {
-  it("no V3 screen navigates to PhoneLogin, EnrollDevice, or PaymentSetup", () => {
-    // Verified by grep: only SellScan and Splash are referenced from V3 screens
-    // Both are valid current routes (POS root and logout target)
-    // This test documents the verification result
-    expect(true).toBe(true); // Placeholder — grep proof provided in commit message
+describe("V3-DELETE-085: No stale route references", () => {
+  it("MORE menu does not expose a Help action (no registered Help route)", async () => {
+    const mockNav = jest.fn();
+    const MoreScreenV3 = require("../../screens/v3/MoreScreenV3").default;
+    render(<MoreScreenV3 onNavigate={mockNav} />);
+    await waitFor(() => expect(screen.getByText("Settings")).toBeTruthy());
+    // Help should NOT be in the menu
+    expect(screen.queryByText("Help")).toBeNull();
+  });
+
+  it("MORE Sales History navigates to V3Reports (accepted alias)", async () => {
+    // PosRootLayoutV3 maps "sales" -> "V3Reports"
+    // Verify by reading the route map from source (the only non-runtime check left,
+    // justified because PosRootLayoutV3 requires full tab infrastructure to mount)
+    const src = require("fs").readFileSync(
+      require("path").resolve(__dirname, "../../screens/v3/PosRootLayoutV3.tsx"), "utf8"
+    );
+    // sales maps to V3Reports
+    expect(src).toContain('sales: "V3Reports"');
+    // help mapping is removed
+    expect(src).not.toContain('help: "Help"');
+  });
+
+  it("PosRootLayoutV3 route map has no unregistered route targets", () => {
+    const src = require("fs").readFileSync(
+      require("path").resolve(__dirname, "../../screens/v3/PosRootLayoutV3.tsx"), "utf8"
+    );
+    // Extract all V3* route targets from the MORE navigation map
+    const targets = [...src.matchAll(/"(V3\w+)"/g)].map((m) => m[1]);
+    // All registered V3 routes from App.tsx
+    const appSrc = require("fs").readFileSync(
+      require("path").resolve(__dirname, "../../../App.tsx"), "utf8"
+    );
+    for (const target of targets) {
+      expect(appSrc).toContain(`name="${target}"`);
+    }
   });
 });
