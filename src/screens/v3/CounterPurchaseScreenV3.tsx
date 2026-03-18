@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import PurchaseItemCardV3, { type PurchaseItemData } from "../../components/v3/PurchaseItemCardV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { showToast } from "../../utils/showToast";
 import { useProductsStore } from "../../stores/productsStore";
 import { recordManualInward } from "../../services/api/inventoryApi";
@@ -302,12 +303,12 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 14, flexDirection: "row", alignItems: "center" },
+    header: { backgroundColor: colors.primary, paddingHorizontal: getScreenPadding(), paddingVertical: 14, flexDirection: "row", alignItems: "center" },
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
     headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
     // Scan
-    scanZone: { padding: 12, backgroundColor: colors.primaryLight },
+    scanZone: { padding: getScreenPadding(), backgroundColor: colors.primaryLight },
     scanBtns: { flexDirection: "row", gap: 8, marginBottom: 8 },
     cameraScanBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, padding: 12, backgroundColor: colors.primary, borderRadius: 14 },
     scanBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
@@ -321,18 +322,18 @@ function createStyles(colors: ColorPalette) {
     scanSubmitText: { color: "#fff", fontSize: 14, fontWeight: "800" },
     scanHint: { fontSize: 9, color: colors.textTertiary, textAlign: "center", marginTop: 4 },
     // Supplier
-    supplierRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingTop: 6, backgroundColor: colors.surface },
+    supplierRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: getScreenPadding(), paddingTop: 6, backgroundColor: colors.surface },
     supplierLabel: { fontSize: 10, fontWeight: "700", color: colors.textTertiary },
     supplierSelect: { flex: 1, padding: 8, borderRadius: 8, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface },
     supplierText: { fontSize: 12, fontWeight: "600", color: colors.textPrimary },
     supplierAdd: { width: 32, height: 32, borderRadius: 10, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
     supplierAddText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-    invoiceRow: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 14, paddingBottom: 6, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+    invoiceRow: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: getScreenPadding(), paddingBottom: 6, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
     invoiceLabel: { fontSize: 9, color: colors.textTertiary },
     invoiceInput: { fontSize: 9, fontWeight: "600", borderBottomWidth: 1, borderBottomColor: colors.border, width: 100 },
     invoiceDate: { fontSize: 9, color: colors.textTertiary, marginLeft: "auto" },
     // Items
-    itemsList: { flex: 1, padding: 14 },
+    itemsList: { flex: 1, padding: getScreenPadding() },
     itemsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
     itemsTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8 },
     addManual: { fontSize: 10, fontWeight: "700", color: colors.primary, backgroundColor: colors.primaryLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
@@ -341,7 +342,7 @@ function createStyles(colors: ColorPalette) {
     whyTitle: { fontSize: 11, fontWeight: "700", color: colors.primary, marginBottom: 4 },
     whyItem: { fontSize: 10, color: colors.textSecondary, paddingVertical: 2 },
     // Footer
-    footer: { padding: 12, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
+    footer: { padding: getScreenPadding(), backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
     footerTop: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
     footerMeta: { fontSize: 11, color: colors.textTertiary },
     footerCount: { fontSize: 11, color: colors.success, fontWeight: "700" },

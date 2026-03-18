@@ -2,6 +2,7 @@ import React, { useMemo, useCallback } from "react";
 import { View, FlatList, Pressable, StyleSheet, Text, Share } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { useCartStore, type CartItem } from "../../stores/cartStore";
 import CartItemRowV3 from "./CartItemRowV3";
 import { showToast } from "../../utils/showToast";
@@ -160,7 +161,7 @@ function createStyles(colors: ColorPalette) {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      paddingHorizontal: 18,
+      paddingHorizontal: getScreenPadding(),
       paddingVertical: 12,
     },
     backBtn: { paddingRight: 8 },
@@ -169,7 +170,7 @@ function createStyles(colors: ColorPalette) {
     clearText: { fontSize: 12, fontWeight: "600", color: colors.textTertiary },
     list: { flex: 1 },
     summary: {
-      paddingHorizontal: 18,
+      paddingHorizontal: getScreenPadding(),
       paddingVertical: 10,
       borderTopWidth: 1,
       borderTopColor: colors.border,
@@ -189,7 +190,7 @@ function createStyles(colors: ColorPalette) {
     actions: {
       flexDirection: "row",
       gap: 8,
-      paddingHorizontal: 16,
+      paddingHorizontal: getScreenPadding(),
       paddingTop: 6,
     },
     addMoreBtn: {
@@ -219,10 +220,10 @@ function createStyles(colors: ColorPalette) {
       alignItems: "center",
     },
     shareText: { fontSize: 12, fontWeight: "700", color: colors.primary },
-    discountRow: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 18, paddingVertical: 4 },
+    discountRow: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: getScreenPadding(), paddingVertical: 4 },
     discountText: { fontSize: 12, color: colors.success },
     discountRemove: { fontSize: 12, color: colors.error, fontWeight: "600" },
-    payRow: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 },
+    payRow: { paddingHorizontal: getScreenPadding(), paddingTop: 8, paddingBottom: 16 },
     payBtn: {
       backgroundColor: colors.primary,
       paddingVertical: 16,

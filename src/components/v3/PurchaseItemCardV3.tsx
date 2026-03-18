@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { View, TextInput, Pressable, StyleSheet, Text } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import ExpandableDetails from "./ExpandableDetails";
 
 // STG-563: Purchase item card — 3 states: repeat (blue), existing (green), new (yellow)
@@ -158,7 +159,7 @@ export default function PurchaseItemCardV3({ item, onQtyChange, onPriceChange, o
 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    card: { backgroundColor: colors.surface, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: colors.border, borderLeftWidth: 3, marginBottom: 8 },
+    card: { backgroundColor: colors.surface, borderRadius: 14, padding: getScreenPadding(), borderWidth: 1, borderColor: colors.border, borderLeftWidth: 3, marginBottom: 8 },
     topRow: { flexDirection: "row", gap: 10 },
     imgBox: { width: 44, height: 44, borderRadius: 10, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center" },
     emoji: { fontSize: 20 },

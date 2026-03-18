@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import Confetti from "../../components/v3/Confetti";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { useCartStore } from "../../stores/cartStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { printerService } from "../../services/printerService";
@@ -159,7 +160,7 @@ export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.surface, position: "relative" },
-    body: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 },
+    body: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: getScreenPadding() * 2 },
     checkCircle: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.successSoft, alignItems: "center", justifyContent: "center" },
     checkIcon: { fontSize: 48, color: colors.success },
     title: { fontSize: 24, fontWeight: "900", color: colors.textPrimary, marginTop: 20, letterSpacing: -0.5 },

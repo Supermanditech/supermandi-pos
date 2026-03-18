@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { showToast } from "../../utils/showToast";
 import {
   startRecording, stopRecording, cancelRecording,
@@ -191,7 +192,7 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     backdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.85)", justifyContent: "center", padding: 20 },
-    sheet: { backgroundColor: "rgba(15,23,42,0.95)", borderRadius: 24, padding: 36, alignItems: "center" },
+    sheet: { backgroundColor: "rgba(15,23,42,0.95)", borderRadius: 24, padding: getScreenPadding() * 2, alignItems: "center" },
     closeBtn: { position: "absolute", top: 12, right: 16 },
     closeText: { color: "rgba(255,255,255,0.5)", fontSize: 18, fontWeight: "700" },
     micCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", marginBottom: 16 },

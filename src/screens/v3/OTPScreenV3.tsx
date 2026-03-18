@@ -1,11 +1,12 @@
 import React, { useMemo, useState, useCallback, useRef } from "react";
-import { View, TextInput, Pressable, StyleSheet, Text, ActivityIndicator } from "react-native";
+import { View, TextInput, Pressable, StyleSheet, Text, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
 import Svg, { Rect, Circle } from "react-native-svg";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { showToast } from "../../utils/showToast";
 import { apiClient } from "../../services/api/apiClient";
 import { saveDeviceSession } from "../../services/deviceSession";
@@ -107,7 +108,7 @@ export default function OTPScreenV3() {
   }, [resendTimer]);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={styles.body}>
         <Text style={styles.icon}>🔐</Text>
         <Text style={styles.title}>Verify OTP</Text>
@@ -143,20 +144,20 @@ export default function OTPScreenV3() {
           </Text>
         </Pressable>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: "#fff" },
-    body: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
+    body: { flex: 1, alignItems: "center", justifyContent: "center", padding: getScreenPadding() * 2 },
     icon: { fontSize: 48, marginBottom: 16 },
     title: { fontSize: 26, fontWeight: "900", color: colors.textPrimary, letterSpacing: -0.5 },
     subtitle: { fontSize: 14, color: colors.textTertiary, marginTop: 8, textAlign: "center", lineHeight: 20 },
     phoneBold: { fontWeight: "800", color: colors.textPrimary },
     otpRow: { flexDirection: "row", gap: 10, marginTop: 24 },
-    otpBox: { width: 48, height: 56, borderRadius: 14, borderWidth: 2, borderColor: colors.border, textAlign: "center", fontSize: 24, fontWeight: "700", color: colors.textPrimary },
+    otpBox: { width: getScreenPadding() * 3, height: getScreenPadding() * 3.5, borderRadius: 14, borderWidth: 2, borderColor: colors.border, textAlign: "center", fontSize: 24, fontWeight: "700", color: colors.textPrimary },
     otpBoxFilled: { borderColor: colors.primary },
     verifyBtn: { width: "100%", backgroundColor: colors.primary, paddingVertical: 16, borderRadius: 16, alignItems: "center", marginTop: 24 },
     btnDisabled: { opacity: 0.6 },

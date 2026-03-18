@@ -9,6 +9,7 @@ import Svg, { Path, Rect, Circle, Line } from "react-native-svg";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { useCartStore } from "../../stores/cartStore";
 import { createSale, createSplitPayment, type SaleItemInput, type SplitPaymentItem } from "../../services/api/posApi";
 import { isOnline } from "../../services/networkStatus";
@@ -213,12 +214,12 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 14, flexDirection: "row", alignItems: "center" },
+    header: { backgroundColor: colors.primary, paddingHorizontal: getScreenPadding(), paddingVertical: 14, flexDirection: "row", alignItems: "center" },
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
     headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
     body: { flex: 1 },
-    bodyContent: { padding: 20, alignItems: "center" },
+    bodyContent: { padding: getScreenPadding(), alignItems: "center" },
     totalAmount: { fontSize: 44, fontWeight: "900", color: colors.textPrimary, letterSpacing: -1, marginTop: 16 },
     totalSub: { fontSize: 14, color: colors.textTertiary, fontWeight: "500", marginTop: 4 },
     methodGrid: { flexDirection: "row", gap: 12, marginTop: 28, width: "100%" },

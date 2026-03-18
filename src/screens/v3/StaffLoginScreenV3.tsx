@@ -5,13 +5,14 @@
  */
 
 import React, { useMemo, useState, useCallback } from "react";
-import { View, TextInput, Pressable, StyleSheet, Text, ActivityIndicator } from "react-native";
+import { View, TextInput, Pressable, StyleSheet, Text, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
 import Svg, { Rect, Circle } from "react-native-svg";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { showToast } from "../../utils/showToast";
 import { staffLogin } from "../../services/api/staffApi";
 import { useStaffSessionStore } from "../../stores/staffSessionStore";
@@ -98,7 +99,7 @@ export default function StaffLoginScreenV3() {
   }, [navigation]);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       {/* SuperMandi mark */}
       <Svg width={48} height={48} viewBox="0 0 32 32">
         <Rect x={2} y={2} width={28} height={28} rx={8} fill="#2563EB" />
@@ -155,13 +156,13 @@ export default function StaffLoginScreenV3() {
       >
         <Text style={styles.switchBtnText}>Switch Store ↗</Text>
       </Pressable>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#fff", alignItems: "center", justifyContent: "center", padding: 32 },
+    container: { flex: 1, backgroundColor: "#fff", alignItems: "center", justifyContent: "center", padding: getScreenPadding() * 2 },
     title: { fontSize: 22, fontWeight: "900", color: colors.textPrimary, marginTop: 16, letterSpacing: -0.5 },
     subtitle: { fontSize: 13, color: colors.textTertiary, marginTop: 4, fontWeight: "500" },
     form: { width: "100%", marginTop: 32 },

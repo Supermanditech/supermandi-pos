@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { showToast } from "../../utils/showToast";
 import { apiClient } from "../../services/api/apiClient";
 import { saveDeviceSession } from "../../services/deviceSession";
@@ -88,7 +89,7 @@ function createStyles(colors: ColorPalette) {
     header: { alignItems: "center", paddingTop: 60, paddingBottom: 24 },
     title: { fontSize: 22, fontWeight: "900", color: colors.textPrimary, marginTop: 16, letterSpacing: -0.5 },
     subtitle: { fontSize: 14, color: colors.textTertiary, marginTop: 4 },
-    list: { padding: 16 },
+    list: { padding: getScreenPadding() },
     card: { flexDirection: "row", alignItems: "center", padding: 16, backgroundColor: colors.background, borderRadius: 16, borderWidth: 2, borderColor: colors.border, marginBottom: 10, gap: 12 },
     storeIcon: { width: 48, height: 48, borderRadius: 14, backgroundColor: colors.primaryLight, alignItems: "center", justifyContent: "center" },
     storeInitial: { fontSize: 20, fontWeight: "800", color: colors.primary },

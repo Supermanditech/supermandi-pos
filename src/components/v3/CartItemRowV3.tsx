@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { View, Pressable, StyleSheet, Text } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import type { CartItem } from "../../stores/cartStore";
 
 // STG-554: Cart item row for v3 — qty stepper, case conversion, HSN, swipe hint
@@ -77,7 +78,7 @@ function createStyles(colors: ColorPalette) {
     row: {
       flexDirection: "row",
       alignItems: "center",
-      paddingHorizontal: 16,
+      paddingHorizontal: getScreenPadding(),
       paddingVertical: 12,
       gap: 12,
       borderBottomWidth: 1,

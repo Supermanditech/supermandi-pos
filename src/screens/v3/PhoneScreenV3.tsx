@@ -1,11 +1,12 @@
 import React, { useMemo, useState, useCallback } from "react";
-import { View, TextInput, Pressable, StyleSheet, Text, ActivityIndicator, Linking } from "react-native";
+import { View, TextInput, Pressable, StyleSheet, Text, ActivityIndicator, Linking, KeyboardAvoidingView, Platform } from "react-native";
 import Svg, { Rect, Circle } from "react-native-svg";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { showToast } from "../../utils/showToast";
 import { apiClient } from "../../services/api/apiClient";
 import { logger } from "../../services/logger";
@@ -39,7 +40,7 @@ export default function PhoneScreenV3() {
   }, [phone, navigation]);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={styles.body}>
         {/* Logo */}
         <Svg width={64} height={64} viewBox="0 0 32 32">
@@ -83,14 +84,14 @@ export default function PhoneScreenV3() {
           <Text style={styles.registerText}>New store? <Text style={styles.registerBold}>Register here</Text></Text>
         </Pressable>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: "#fff" },
-    body: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
+    body: { flex: 1, alignItems: "center", justifyContent: "center", padding: getScreenPadding() * 2 },
     title: { fontSize: 26, fontWeight: "900", color: colors.textPrimary, marginTop: 24, letterSpacing: -0.5 },
     subtitle: { fontSize: 14, color: colors.textTertiary, marginTop: 8, textAlign: "center", lineHeight: 20 },
     form: { width: "100%", marginTop: 32 },

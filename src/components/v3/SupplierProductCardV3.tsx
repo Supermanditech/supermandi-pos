@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { View, Pressable, StyleSheet, Text } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 
 // STG-561: Supplier product card with full wholesale B2B metadata
 
@@ -130,7 +131,7 @@ export default function SupplierProductCardV3({ product, orderQtyCases, onQtyCha
 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    card: { backgroundColor: colors.surface, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: colors.border, marginBottom: 8 },
+    card: { backgroundColor: colors.surface, borderRadius: 16, padding: getScreenPadding(), borderWidth: 1, borderColor: colors.border, marginBottom: 8 },
     cardUrgent: { borderLeftWidth: 3, borderLeftColor: colors.error },
     row: { flexDirection: "row", gap: 12 },
     imgBox: { width: 56, height: 56, borderRadius: 12, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center" },

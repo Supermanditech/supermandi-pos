@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { showToast } from "../../utils/showToast";
 import { useProductsStore } from "../../stores/productsStore";
 import { useCartStore } from "../../stores/cartStore";
@@ -247,7 +248,7 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: "#0F172A" },
-    header: { flexDirection: "row", alignItems: "center", padding: 16, paddingTop: 48 },
+    header: { flexDirection: "row", alignItems: "center", padding: getScreenPadding(), paddingTop: 48 },
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
     headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
@@ -265,13 +266,13 @@ function createStyles(colors: ColorPalette) {
     hidDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#4ADE80" },
     hidText: { color: "#4ADE80", fontSize: 12, fontWeight: "600" },
     // Input
-    inputArea: { paddingHorizontal: 16, paddingBottom: 8 },
-    inputRow: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#1E293B", borderRadius: 14, paddingHorizontal: 14, borderWidth: 2, borderColor: colors.primary },
+    inputArea: { paddingHorizontal: getScreenPadding(), paddingBottom: 8 },
+    inputRow: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#1E293B", borderRadius: 14, paddingHorizontal: getScreenPadding(), borderWidth: 2, borderColor: colors.primary },
     barcodeInput: { flex: 1, paddingVertical: 12, fontSize: 14, fontWeight: "600", color: "#fff" },
     submitBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
     submitText: { color: "#fff", fontSize: 16, fontWeight: "800" },
     // Context
-    contextRow: { paddingHorizontal: 16, paddingVertical: 10 },
+    contextRow: { paddingHorizontal: getScreenPadding(), paddingVertical: 10 },
     contextLabel: { fontSize: 10, fontWeight: "800", color: "rgba(255,255,255,0.4)", letterSpacing: 0.5, marginBottom: 6 },
     contextToggle: { flexDirection: "row", gap: 8 },
     contextBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.08)" },
@@ -280,7 +281,7 @@ function createStyles(colors: ColorPalette) {
     contextTextActive: { color: "#fff" },
     contextHint: { fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 4 },
     // Result
-    resultPanel: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18 },
+    resultPanel: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: getScreenPadding() },
     resultFound: { flexDirection: "row", alignItems: "center", gap: 12 },
     resultEmoji: { width: 48, height: 48, borderRadius: 12, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center" },
     resultInfo: { flex: 1 },

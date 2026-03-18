@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { showToast } from "../../utils/showToast";
 import { upsertLocalProduct, setLocalPrice } from "../../services/offline/scan";
 import { useCartStore } from "../../stores/cartStore";
@@ -245,11 +246,11 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 14, flexDirection: "row", alignItems: "center" },
+    header: { backgroundColor: colors.primary, paddingHorizontal: getScreenPadding(), paddingVertical: 14, flexDirection: "row", alignItems: "center" },
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
     headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
-    body: { flex: 1, padding: 14 },
+    body: { flex: 1, padding: getScreenPadding() },
     // Banners
     autoFillBanner: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, backgroundColor: colors.successSoft, borderRadius: 12, borderWidth: 1, borderColor: colors.success, marginBottom: 12 },
     autoFillIcon: { fontSize: 20, color: colors.success },
@@ -281,7 +282,7 @@ function createStyles(colors: ColorPalette) {
     marginPreview: { padding: 10, backgroundColor: colors.successSoft, borderRadius: 10, alignItems: "center" },
     marginText: { fontSize: 13, fontWeight: "800", color: colors.success },
     // Footer
-    footer: { padding: 14, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
+    footer: { padding: getScreenPadding(), backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
     submitBtn: { backgroundColor: colors.primary, paddingVertical: 16, borderRadius: 16, alignItems: "center" },
     submitBtnDisabled: { backgroundColor: colors.disabled, opacity: 0.6 },
     submitText: { fontSize: 17, fontWeight: "800", color: "#fff", letterSpacing: -0.2 },

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding } from "../../theme/responsive";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import { getProductSuppliers, type CatalogSupplier } from "../../services/api/catalogApi";
@@ -168,18 +169,18 @@ export default function CompareScreenV3({ visible, productName, packSize, mrpMin
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 14, flexDirection: "row", alignItems: "center" },
+    header: { backgroundColor: colors.primary, paddingHorizontal: getScreenPadding(), paddingVertical: 14, flexDirection: "row", alignItems: "center" },
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
     headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
-    body: { flex: 1, padding: 14 },
-    infoCard: { backgroundColor: colors.primaryLight, borderRadius: 14, padding: 14, marginBottom: 12, alignItems: "center" },
+    body: { flex: 1, padding: getScreenPadding() },
+    infoCard: { backgroundColor: colors.primaryLight, borderRadius: 14, padding: getScreenPadding(), marginBottom: 12, alignItems: "center" },
     infoLine: { fontSize: 12, color: colors.textTertiary },
     infoBold: { fontWeight: "800", color: colors.textPrimary },
     needLine: { fontSize: 12, color: colors.primary, fontWeight: "700", marginTop: 2 },
     sectionTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, marginBottom: 8 },
     // Offer cards
-    offerCard: { backgroundColor: colors.surface, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 8 },
+    offerCard: { backgroundColor: colors.surface, borderRadius: 16, padding: getScreenPadding(), borderWidth: 1, borderColor: colors.border, marginBottom: 8 },
     offerCardBest: { borderWidth: 2, borderColor: colors.success },
     offerTop: { flexDirection: "row", justifyContent: "space-between" },
     offerName: { fontSize: 14, fontWeight: "800", color: colors.textPrimary },

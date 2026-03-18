@@ -4,6 +4,7 @@ import Svg, { Circle, Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getScreenPadding, getChipPadding, getChipFontSize } from "../../theme/responsive";
 import { showToast } from "../../utils/showToast";
 
 // STG-560: Context-aware universal search — one component, different data source per tab
@@ -172,19 +173,19 @@ export default function UniversalSearchV3({ context, visible, onClose, onSelect,
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { position: "absolute", inset: 0, backgroundColor: colors.surface, zIndex: 20 },
-    searchBar: { flexDirection: "row", gap: 8, padding: 10, paddingHorizontal: 14, backgroundColor: colors.surface },
-    inputBox: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: colors.background, borderRadius: 14, borderWidth: 2, borderColor: colors.border },
+    searchBar: { flexDirection: "row", gap: 8, padding: 10, paddingHorizontal: getScreenPadding(), backgroundColor: colors.surface },
+    inputBox: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: getScreenPadding(), paddingVertical: 10, backgroundColor: colors.background, borderRadius: 14, borderWidth: 2, borderColor: colors.border },
     inputBoxFocused: { borderColor: colors.primary, backgroundColor: colors.surface },
     input: { flex: 1, fontSize: 14, fontWeight: "500", color: colors.textPrimary },
     clearBtn: { fontSize: 14, fontWeight: "700", color: colors.textTertiary, padding: 4 },
     closeBtn: { justifyContent: "center", paddingHorizontal: 8 },
     closeBtnText: { fontSize: 18, fontWeight: "700", color: colors.textTertiary },
-    recentSection: { paddingHorizontal: 16, paddingTop: 8 },
+    recentSection: { paddingHorizontal: getScreenPadding(), paddingTop: 8 },
     sectionTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, marginBottom: 8 },
     chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-    chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 18, backgroundColor: colors.backgroundSecondary, borderWidth: 1.5, borderColor: colors.border },
-    chipText: { fontSize: 12, fontWeight: "600", color: colors.textSecondary },
-    resultsSection: { paddingHorizontal: 16, paddingTop: 8, maxHeight: "60%" },
+    chip: { paddingHorizontal: getChipPadding(), paddingVertical: 6, borderRadius: 18, backgroundColor: colors.backgroundSecondary, borderWidth: 1.5, borderColor: colors.border },
+    chipText: { fontSize: getChipFontSize(), fontWeight: "600", color: colors.textSecondary },
+    resultsSection: { paddingHorizontal: getScreenPadding(), paddingTop: 8, maxHeight: "60%" },
     resultsList: { flexGrow: 0 },
     loadingText: { fontSize: 13, color: colors.textTertiary, fontWeight: "500", paddingVertical: 16, textAlign: "center" },
     emptyText: { fontSize: 13, color: colors.textTertiary, fontWeight: "500", paddingVertical: 16, textAlign: "center" },
