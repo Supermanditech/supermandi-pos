@@ -160,3 +160,77 @@ describe("V3-HARDEN-095: MORE click-path proof", () => {
     }
   });
 });
+
+// ── V3-FIX-091: Customer WhatsApp CTA with real phone ──────────────────────
+
+describe("V3-FIX-091: Customer WhatsApp CTA", () => {
+  // Need customerStore mock with phone data
+  jest.mock("../../stores/customerStore", () => ({
+    useCustomerStore: (sel: (s: any) => any) => sel({
+      customers: [
+        { name: "Ramesh", phone: "9876543210", visitCount: 5, totalPurchasesMinor: 100000 },
+        { name: "NoPhone", visitCount: 2, totalPurchasesMinor: 5000 },
+      ],
+      loading: false,
+      fetchCustomers: jest.fn().mockResolvedValue([]),
+    }),
+  }));
+
+  it("renders WhatsApp CTA for customer with phone", async () => {
+    const CustomersScreenV3 = require("../../screens/v3/CustomersScreenV3").default;
+    render(<CustomersScreenV3 onClose={jest.fn()} />);
+    await waitFor(() => expect(screen.getByText("Ramesh")).toBeTruthy());
+    // Customer with phone should have WhatsApp button
+    expect(screen.getByTestId("wa-Ramesh")).toBeTruthy();
+  });
+
+  it("does NOT render WhatsApp CTA for customer without phone", async () => {
+    const CustomersScreenV3 = require("../../screens/v3/CustomersScreenV3").default;
+    render(<CustomersScreenV3 onClose={jest.fn()} />);
+    await waitFor(() => expect(screen.getByText("NoPhone")).toBeTruthy());
+    expect(screen.queryByTestId("wa-NoPhone")).toBeNull();
+  });
+});
+
+// ── V3-HARDEN-095: Back-flow proof for MORE subtree ────────────────────────
+
+describe("V3-HARDEN-095: MORE subtree back-flow", () => {
+  const mockGoBack = jest.fn();
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Re-mock navigation with trackable goBack
+    jest.spyOn(require("@react-navigation/native"), "useNavigation").mockReturnValue({
+      navigate: jest.fn(), goBack: mockGoBack, reset: jest.fn(),
+    });
+  });
+
+  it("SalesHistory back button calls goBack", () => {
+    const SalesHistoryScreenV3 = require("../../screens/v3/SalesHistoryScreenV3").default;
+    render(<SalesHistoryScreenV3 onClose={mockGoBack} />);
+    fireEvent.press(screen.getByText("←"));
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("Customers back button calls goBack", () => {
+    const CustomersScreenV3 = require("../../screens/v3/CustomersScreenV3").default;
+    render(<CustomersScreenV3 onClose={mockGoBack} />);
+    fireEvent.press(screen.getByText("←"));
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("Finance back button calls goBack", () => {
+    const FinanceScreenV3 = require("../../screens/v3/FinanceScreenV3").default;
+    render(<FinanceScreenV3 onClose={mockGoBack} />);
+    fireEvent.press(screen.getByText("←"));
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("V3SalesHistoryWrapper wires onClose to nav.goBack", () => {
+    const { V3SalesHistoryWrapper } = require("../../screens/v3/V3ScreenWrappers");
+    render(<V3SalesHistoryWrapper />);
+    // The wrapper passes onClose={() => nav.goBack()} to the screen
+    // Pressing back calls that prop which calls goBack
+    fireEvent.press(screen.getByText("←"));
+    expect(mockGoBack).toHaveBeenCalled();
+  });
+});
