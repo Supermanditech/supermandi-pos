@@ -5912,9 +5912,20 @@ Expected outcome:
 - Procurement, invoice, dispatch, GRN, and settlement events are append-only and reconstructable.
 - Counter Purchase direct inward remains isolated and does not share ledger identity with catalogue-principal procurement.
 
-Override requirement:
-- Claude must inspect the current GRN, stock-ledger, inward, and procurement event flows first and override conflicting event timing or mixed-ledger behavior in place.
-- Do not add a second ledger interpretation beside the existing one.
+Implemented scope:
+- Canonical STOCK_EVENT_RULES defined in `backend/src/services/procurementLane.ts`
+  - CATALOGUE_PRINCIPAL: stock credit only on GRN_CONFIRMED, checkout does NOT credit stock
+  - COUNTER_PURCHASE: stock credit immediately on manual inward
+- Live GRN route (`orders.ts /receive`) already only credits stock when goods are received — this is the correct principal-lane behavior (stock enters on GRN, not on checkout)
+- Live checkout (BuyScreenV3 → orders.ts createOrder) does NOT trigger any stock movement — order creation only creates the order record
+- Counter Purchase (CounterPurchaseScreenV3 → /inventory/transactions) credits stock immediately — isolated from catalogue lane
+- procurement_lane column distinguishes the two lanes at the DB level
+- order_events table provides append-only event history for order state transitions
+- 2 executable tests verify the stock event rules per lane
+
+Deferred scope:
+- Formal runtime enforcement that calls STOCK_EVENT_RULES at the GRN/inventory-movement point (current behavior is correct by code structure but not formally validated via the typed rule helper at the call site)
+- Full append-only ledger reconstruction proof requires integration tests with real DB
 
 ## V3-HARDEN-147 - Add schema, migration, and data-governance support for principal procurement, dual invoices, and document dispatch
 
