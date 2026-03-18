@@ -444,8 +444,9 @@ router.get("/orders/:id", requireSupplierAuth, requireRegisteredSupplier, async 
         shipmentDate: o.shipment_date,
         expectedDeliveryDate: o.expected_delivery_date,
         actualDeliveryDate: o.actual_delivery_date,
-        paymentTerms: o.payment_terms || null,
-        storeNotes: o.store_notes,
+        // V3-FIX-143: Payment terms visible post-acceptance only
+        paymentTerms: isAccepted ? (o.payment_terms || null) : undefined,
+        storeNotes: isAccepted ? o.store_notes : undefined,
         items: o.items || [],
         createdAt: o.created_at,
         updatedAt: o.updated_at,

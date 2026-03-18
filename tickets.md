@@ -5795,8 +5795,8 @@ Implemented scope:
 - Existing supplier/orders.ts already returns limited store info per order
 
 Deferred scope:
-- Supplier portal orders page not yet updated to use SUPPLIER_VISIBILITY_RULES for field-level filtering
-- Existing supplier order endpoint returns store contact info post-acceptance but does not yet formally gate fields by acceptance phase
+- Supplier portal UI (orders page) not yet updated to reflect the new field gating in its display
+- Full test coverage of disclosure gating per-field requires integration tests with real DB
 
 ## V3-FIX-144 - Orchestrate retailer purchase checkout into linked SuperMandi sales orders and supplier procurement orders
 
@@ -5955,6 +5955,16 @@ Override requirement:
 - Claude must inspect the existing supplier/catalog/invoice/GRN schema first and extend or replace conflicting structures deliberately through forward migrations.
 - Do not preserve contradictory legacy schema semantics if they block the approved principal-sale flow.
 
+Implemented scope:
+- Migration 196 adds: procurement_lane (with CHECK constraint), linked_procurement_id, billing_model, invoice_pair_id, invoice_dispatch_logs table
+- CHECK constraints enforce allowed values for procurement_lane, invoice_type, dispatch_status
+- Indexes on invoice_dispatch_logs (invoice_id, status) and purchase_orders (procurement_lane)
+
+Deferred scope:
+- FK constraints linking invoice_pair_id to a formal invoices table (invoices table schema varies across existing services)
+- Immutable document pointer constraints (requires GCS document metadata table not yet created)
+- Full referential integrity between linked_procurement_id and a formal procurement_orders table
+
 ## V3-HARDEN-148 - Add GCP parity, worker/storage readiness, and release gates for principal procurement and B2B document delivery
 
 Priority: P0
@@ -5992,6 +6002,14 @@ Expected outcome:
 Override requirement:
 - Claude must inspect the current deploy gates, env validation, and worker/storage setup first and override conflicting readiness assumptions in the live release path.
 - Do not bolt on optional checks while older permissive gates still allow a broken principal-procurement deployment through.
+
+Implemented scope:
+- principal-procurement-gate.sh checks: health, migration 196, service files, BUY tagging
+- Wired into deploy.yml as pre-deploy step
+
+Deferred scope:
+- Runtime smoke checks (linked orders, invoice PDF, storage, WhatsApp, GRN close) require a running staging environment and are better suited to post-deploy smoke gates
+- Current gate ensures infrastructure readiness; runtime behavior verification deferred to staging smoke
 
 ## V3-DELETE-149 - Remove direct-supplier catalogue checkout assumptions while preserving Counter Purchase direct procurement
 

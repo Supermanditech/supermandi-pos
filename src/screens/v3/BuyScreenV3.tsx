@@ -271,30 +271,23 @@ export default function BuyScreenV3() {
             if (!sid) { showToast("Store not configured"); return; }
             const selectedProducts = products.filter((p) => (orderQtys[p.id] ?? 0) > 0);
             if (selectedProducts.length === 0) { showToast("No items in order"); return; }
-            // V3-FIX-076: Group by supplierId — one order per supplier
-            const bySupplier = new Map<string, typeof selectedProducts>();
-            for (const p of selectedProducts) {
-              if (!p.supplierId) { showToast(`${p.name}: supplier identity missing`); return; }
-              const list = bySupplier.get(p.supplierId) ?? [];
-              list.push(p);
-              bySupplier.set(p.supplierId, list);
-            }
+            // V3-FIX-142: Principal-sale — single order to SuperMandi
+            // Backend handles upstream supplier procurement splitting internally
+            const allItems = selectedProducts.map((p) => ({
+              supplierProductId: p.id,
+              quantity: (orderQtys[p.id] ?? 0) * p.caseSize,
+              unitPrice: p.ptrMinor,
+            }));
             try {
-              let totalItems = 0;
-              for (const [supplierId, supplierProducts] of bySupplier) {
-                const orderItems = supplierProducts.map((p) => ({
-                  supplierProductId: p.id,
-                  quantity: (orderQtys[p.id] ?? 0) * p.caseSize,
-                  unitPrice: p.ptrMinor,
-                }));
-                // V3-FIX-142: Tag as principal lane — catalogue purchases go through SuperMandi
-                const order = await createOrder(sid, { supplierId, orderType: "catalogue_principal" as any, items: orderItems });
-                await submitOrder(sid, order.id);
-                totalItems += orderItems.length;
-                logger.debug("BuyV3", `order_submitted:${order.id},supplier:${supplierId},items:${orderItems.length}`);
-              }
-              const supplierCount = bySupplier.size;
-              showToast(`${supplierCount > 1 ? `${supplierCount} orders` : "Order"} placed: ${totalItems} items · ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")}`);
+              // Single principal order — supplierId is "supermandi" (backend resolves actual suppliers)
+              const order = await createOrder(sid, {
+                supplierId: selectedProducts[0]?.supplierId ?? "supermandi",
+                orderType: "catalogue_principal" as any,
+                items: allItems,
+              });
+              await submitOrder(sid, order.id);
+              logger.debug("BuyV3", `principal_order_submitted:${order.id},items:${allItems.length}`);
+              showToast(`Order placed: ${allItems.length} items · ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")}`);
               setOrderQtys({});
             } catch (err: any) {
               showToast(err?.message ?? "Failed to place order");

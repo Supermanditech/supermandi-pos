@@ -74,6 +74,44 @@ describe("V3-FIX-142: Procurement lane isolation (executable)", () => {
     expect(src).toContain("resolveProcurementLane");
     expect(src).toContain("procurement_lane");
   });
+
+  it("BUY creates single principal order, not per-supplier split (static — narrowly scoped)", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../..", "src/screens/v3/BuyScreenV3.tsx"), "utf8"
+    );
+    // Must NOT group by supplierId for checkout
+    expect(src).not.toContain("bySupplier");
+    expect(src).not.toContain("one order per supplier");
+    // Single principal order
+    expect(src).toContain("principal_order_submitted");
+  });
+});
+
+describe("V3-FIX-144: linked_procurement_id wired in live route (static — narrowly scoped)", () => {
+  it("order creation sets linked_procurement_id for principal lane", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/routes/v1/orders.ts"), "utf8"
+    );
+    expect(src).toContain("linked_procurement_id");
+    expect(src).toContain("CATALOGUE_PRINCIPAL");
+    expect(src).toContain("linkedProcurementId");
+  });
+});
+
+describe("V3-FIX-145: invoice_pair_id wired in GRN completion (static — narrowly scoped)", () => {
+  it("GRN route sets invoice_pair_id when order becomes delivered", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/routes/v1/orders.ts"), "utf8"
+    );
+    expect(src).toContain("invoice_pair_id");
+    expect(src).toContain('newOrderStatus === "delivered"');
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -182,6 +220,9 @@ describe("V3-FIX-143: Supplier orders route uses staged disclosure (static — n
     expect(src).toContain("vis.retailerName");
     expect(src).toContain("vis.retailerPhone");
     expect(src).toContain("vis.deliveryFullAddress");
+    // Payment terms and store notes gated post-acceptance
+    expect(src).toContain("isAccepted ? (o.payment_terms");
+    expect(src).toContain("isAccepted ? o.store_notes");
   });
 });
 

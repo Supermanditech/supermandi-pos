@@ -226,6 +226,16 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
 
     const order = orderResult.rows[0];
 
+    // V3-FIX-144: For principal lane, generate linked procurement reference
+    if (procurementLane === "CATALOGUE_PRINCIPAL") {
+      const linkedProcurementId = randomUUID();
+      await client.query(
+        `UPDATE orders.purchase_orders SET linked_procurement_id = $1 WHERE id = $2`,
+        [linkedProcurementId, orderId]
+      );
+      order.linkedProcurementId = linkedProcurementId;
+    }
+
     // 6. Insert order items
     const insertedItems: Array<Record<string, unknown>> = [];
     for (const item of validatedItems) {
@@ -1771,11 +1781,13 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
       const newOrderStatus = remainingItems === 0 ? "delivered" : "partial_received";
 
       // Update order status
+      // V3-FIX-145: Generate invoice_pair_id when order becomes delivered (GRN complete)
+      const invoicePairId = newOrderStatus === "delivered" ? randomUUID() : null;
       await client.query(
         `UPDATE orders.purchase_orders
-         SET status = $1, updated_at = NOW()
+         SET status = $1, updated_at = NOW()${invoicePairId ? ", invoice_pair_id = $3" : ""}
          WHERE id = $2`,
-        [newOrderStatus, orderId]
+        invoicePairId ? [newOrderStatus, orderId, invoicePairId] : [newOrderStatus, orderId]
       );
 
       // Log the receive event
