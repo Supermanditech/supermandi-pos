@@ -177,30 +177,27 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
           </View>
         </View>
 
-        {/* Context toggle */}
-        <View style={styles.contextRow}>
-          <Text style={styles.contextLabel}>SCAN MODE</Text>
-          <View style={styles.contextToggle}>
-            {(["sell", "stock_in", "new_product"] as ScanContext[]).map((ctx) => (
-              <Pressable
-                key={ctx}
-                style={[styles.contextBtn, context === ctx && styles.contextBtnActive]}
-                onPress={() => setContext(ctx)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: context === ctx }}
-              >
-                <Text style={[styles.contextText, context === ctx && styles.contextTextActive]}>
-                  {ctx === "sell" ? "Sell" : ctx === "stock_in" ? "Stock In" : "New Product"}
-                </Text>
-              </Pressable>
-            ))}
+        {/* V3-FIX-069: Context toggle only visible for non-sell entry points */}
+        {defaultContext !== "sell" ? (
+          <View style={styles.contextRow}>
+            <Text style={styles.contextLabel}>SCAN MODE</Text>
+            <View style={styles.contextToggle}>
+              {(["sell", "stock_in", "new_product"] as ScanContext[]).map((ctx) => (
+                <Pressable
+                  key={ctx}
+                  style={[styles.contextBtn, context === ctx && styles.contextBtnActive]}
+                  onPress={() => setContext(ctx)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: context === ctx }}
+                >
+                  <Text style={[styles.contextText, context === ctx && styles.contextTextActive]}>
+                    {ctx === "sell" ? "Sell" : ctx === "stock_in" ? "Stock In" : "New Product"}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
-          <Text style={styles.contextHint}>
-            {context === "sell" ? "Adds scanned product to sell cart" :
-             context === "stock_in" ? "Records inward stock for inventory" :
-             "Creates new product if barcode not found"}
-          </Text>
-        </View>
+        ) : null}
 
         {/* Last scan result */}
         {lastResult ? (
@@ -229,7 +226,7 @@ export default function ScanScreenV3({ visible, defaultContext = "sell", onClose
                   onPress={() => { onNewProduct(lastResult.barcode); onClose(); }}
                   accessibilityLabel="Create new product"
                 >
-                  <Text style={styles.createBtnText}>+ Create</Text>
+                  <Text style={styles.createBtnText}>New Product</Text>
                 </Pressable>
               </View>
             )}

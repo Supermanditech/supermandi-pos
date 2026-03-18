@@ -150,32 +150,33 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
             <Text style={styles.transcript}>{transcript}</Text>
           ) : null}
 
-          {/* Match result */}
+          {/* V3-FIX-068: Match result — real product name + qty only, no synthetic pricing */}
           {state === "matched" ? (
             <View style={styles.matchBox}>
-              <Text style={styles.matchText}>✓ {matchedProduct} × {matchedQty} — ₹{matchedQty * 10}</Text>
+              <Text style={styles.matchText}>✓ {matchedProduct} × {matchedQty}</Text>
             </View>
           ) : null}
 
           {/* Action buttons */}
+          {/* V3-FIX-068: Action buttons matching prototype — Add, Retry */}
           {state === "listening" ? (
             <Pressable style={styles.confirmBtn} onPress={handleStopAndSubmit}>
-              <Text style={styles.confirmText}>Done Speaking — Submit</Text>
+              <Text style={styles.confirmText}>Done</Text>
             </Pressable>
           ) : null}
           {state === "matched" ? (
             <View style={styles.actionRow}>
               <Pressable style={styles.confirmBtn} onPress={handleConfirm}>
-                <Text style={styles.confirmText}>✓ Add to Cart</Text>
+                <Text style={styles.confirmText}>Add</Text>
               </Pressable>
               <Pressable style={styles.retryBtn} onPress={handleRetry}>
-                <Text style={styles.retryText}>Try Again</Text>
+                <Text style={styles.retryText}>Retry</Text>
               </Pressable>
             </View>
           ) : null}
           {state === "error" ? (
             <Pressable style={styles.retryBtn} onPress={handleRetry}>
-              <Text style={styles.retryText}>Try Again</Text>
+              <Text style={styles.retryText}>Retry</Text>
             </Pressable>
           ) : null}
 
