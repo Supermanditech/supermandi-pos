@@ -121,10 +121,19 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
           </Pressable>
         </View>
 
-        {/* Secondary actions */}
+        {/* Secondary actions — both Split Payment and Add Discount per prototype */}
         <View style={styles.secondaryRow}>
           <Pressable style={styles.secondaryBtn} onPress={() => setSplitVisible(true)}>
             <Text style={styles.secondaryText}>Split Payment</Text>
+          </Pressable>
+          <Pressable style={styles.secondaryBtn} onPress={() => {
+            Alert.alert("Add Discount", "Choose discount type:", [
+              { text: "Cancel", style: "cancel" },
+              { text: "10%", onPress: () => { useCartStore.getState().applyDiscount({ type: "percentage", value: 10 }); showToast("10% discount applied"); } },
+              { text: "₹50 off", onPress: () => { useCartStore.getState().applyDiscount({ type: "fixed", value: 5000 }); showToast("₹50 discount applied"); } },
+            ]);
+          }}>
+            <Text style={styles.secondaryText}>Add Discount</Text>
           </Pressable>
         </View>
       </ScrollView>
