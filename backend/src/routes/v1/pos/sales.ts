@@ -10,6 +10,8 @@ import {
 } from "../../../middleware/posRateLimiter";
 // SEC-001: Import store status gate for ACTIVE store enforcement
 import { requireActiveStore, requireOperationalStore } from "../../../middleware/storeStatusGate";
+// V3-HARDEN-130: Store isolation enforcement
+import { assertStoreId } from "../../../services/storeIsolation";
 import {
   applyBulkDeductions,
   ensureSaleAvailability,
@@ -956,6 +958,8 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
+  // V3-HARDEN-130: Fail-closed store isolation on createSale
+  assertStoreId(storeId, "pos/sales/create");
   const store = await getStore(storeId);
   if (!store) {
     return res.status(404).json({ error: "store not found" });

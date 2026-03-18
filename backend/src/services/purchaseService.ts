@@ -374,7 +374,9 @@ async function applyStorePurchaseUpdates(params: {
       quantity: item.quantity,
       unitCostMinor: item.unitCostMinor,
       referenceType: "PURCHASE",
-      referenceId: params.purchaseId
+      referenceId: params.purchaseId,
+      // V3-HARDEN-133: Enforce ledger event matrix — purchase receive must use RECEIVE type
+      ledgerEvent: "GRN_RECEIVED",
     });
     purchasePriceByGlobal.set(inventoryProductId, {
       price: item.unitCostMinor,

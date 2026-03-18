@@ -11,6 +11,10 @@ import { log } from "../../lib/logger";
 import { asError } from "../../lib/errorUtils";
 // SCALE-D4: Redis cache helpers for page-1 catalog listing
 import { cacheGet, cacheSet, cacheDelete } from "../../db/redis";
+// V3-FIX-132: Multilingual search for BUY catalog
+import { expandHindiSearchTokens, normalizeQuantityTokens } from "../../services/searchLocalization";
+// V3-HARDEN-130: Store isolation
+import { assertStoreId } from "../../services/storeIsolation";
 
 // SCALE-D4: Cache key builder for store catalog page 1
 const CATALOG_PAGE1_TTL = 300; // 5 minutes
@@ -24,9 +28,14 @@ export const catalogRouter = Router();
  * GO-LIVE: Get store ID from device token (set by requireDeviceToken middleware)
  * The middleware already validates store isolation via enforceStoreBinding
  */
+// V3-HARDEN-130: Fail-closed store isolation — every catalog route goes through this
 function getStoreIdFromDevice(req: Request): string {
   const posDevice = (req as any).posDevice as PosDeviceContext;
-  return posDevice.storeId!;
+  const storeId = posDevice.storeId;
+  if (!storeId || typeof storeId !== "string" || storeId.trim().length === 0) {
+    throw new Error(`STORE_ISOLATION_VIOLATION: catalog route requires valid storeId from JWT, got: ${String(storeId)}`);
+  }
+  return storeId;
 }
 
 // =============================================================================
@@ -346,6 +355,8 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const storeId = getStoreIdFromDevice(req);
+  // V3-HARDEN-130: Fail-closed store isolation assertion
+  assertStoreId(storeId, "buy-catalog");
   const q = req.query.q as string | undefined;
   const category = req.query.category as string | undefined;
   const supplierId = req.query.supplierId as string | undefined;
@@ -371,15 +382,30 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
     const params: any[] = [storeId];
     let paramIndex = 2;
 
-    // Search filter
+    // V3-FIX-132: Multilingual multi-key search for BUY catalog
     if (q && q.trim().length >= 2) {
-      whereClause += ` AND (
-        COALESCE(sp.edited_name, sp.name) ILIKE $${paramIndex}
-        OR sp.barcode ILIKE $${paramIndex}
-        OR sp.supplier_sku ILIKE $${paramIndex}
-      )`;
-      params.push(`%${q.trim()}%`);
-      paramIndex++;
+      const rawTokens = normalizeQuantityTokens(q.trim()).filter(t => t.length >= 1).slice(0, 5);
+      const textTokens = rawTokens.filter(t => !/^\d+$/.test(t) && t.length >= 2);
+      const expandedTokens = expandHindiSearchTokens(textTokens).slice(0, 8);
+      const searchTokens = [...new Set([...expandedTokens, ...rawTokens.filter(t => t.length >= 2)])];
+
+      if (searchTokens.length > 0) {
+        const tokenClauses: string[] = [];
+        for (const token of searchTokens) {
+          params.push(`%${token}%`);
+          tokenClauses.push(`(
+            COALESCE(sp.edited_name, sp.name) ILIKE $${paramIndex}
+            OR sp.barcode ILIKE $${paramIndex}
+            OR sp.supplier_sku ILIKE $${paramIndex}
+            OR COALESCE(sp.brand, '') ILIKE $${paramIndex}
+            OR COALESCE(sp.unit, '') ILIKE $${paramIndex}
+            OR COALESCE(s.business_name, '') ILIKE $${paramIndex}
+            OR COALESCE(s.trade_name, '') ILIKE $${paramIndex}
+          )`);
+          paramIndex++;
+        }
+        whereClause += ` AND (${tokenClauses.join(" OR ")})`;
+      }
     }
 
     // Category filter

@@ -50,16 +50,31 @@ describe("V3-HARDEN-130: Store isolation (executable)", () => {
     const src = fs.readFileSync(
       path.resolve(__dirname, "../../src/routes/v1/pos/suppliers.ts"), "utf8"
     );
-    // Every store-scoped route must have fail-closed assertion
     expect(src).toContain('assertStoreId(storeId, "pos/suppliers")');
     expect(src).toContain('assertStoreId(storeId, "pos/suppliers/:supplierId")');
     expect(src).toContain('assertStoreId(storeId, "pos/suppliers/:supplierId/products")');
     expect(src).toContain('assertStoreId(storeId, "pos/suppliers/browse/available")');
     expect(src).toContain('assertStoreId(storeId, "pos/suppliers/:supplierId/request-link")');
-    // Count total assertStoreId calls — must be 5 (one per route)
     const matches = src.match(/assertStoreId\(/g);
-    expect(matches).not.toBeNull();
     expect(matches!.length).toBe(5);
+  });
+
+  it("catalog.ts getStoreIdFromDevice is fail-closed (static — narrowly scoped)", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/routes/v1/catalog.ts"), "utf8"
+    );
+    expect(src).toContain("STORE_ISOLATION_VIOLATION: catalog route requires valid storeId");
+  });
+
+  it("pos/sales createSale uses assertStoreId (static — narrowly scoped)", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/routes/v1/pos/sales.ts"), "utf8"
+    );
+    expect(src).toContain('assertStoreId(storeId, "pos/sales/create")');
   });
 });
 
@@ -170,7 +185,7 @@ describe("V3-FIX-132: Multilingual search (executable)", () => {
     expect(Object.keys(HINDI_PRODUCT_ALIASES).length).toBeGreaterThanOrEqual(30);
   });
 
-  it("search endpoint uses expandHindiSearchTokens (static — narrowly scoped)", () => {
+  it("SELL search endpoint uses Hindi expansion (static — narrowly scoped)", () => {
     const fs = require("fs");
     const path = require("path");
     const src = fs.readFileSync(
@@ -178,6 +193,21 @@ describe("V3-FIX-132: Multilingual search (executable)", () => {
     );
     expect(src).toContain("expandHindiSearchTokens");
     expect(src).toContain("normalizeQuantityTokens");
+  });
+
+  it("BUY catalog search supports multilingual + brand + supplier name (static — narrowly scoped)", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/routes/v1/catalog.ts"), "utf8"
+    );
+    // Must import Hindi expansion
+    expect(src).toContain("expandHindiSearchTokens");
+    expect(src).toContain("normalizeQuantityTokens");
+    // BUY search must match brand and supplier name
+    expect(src).toContain("sp.brand");
+    expect(src).toContain("s.business_name");
+    expect(src).toContain("s.trade_name");
   });
 });
 
@@ -284,8 +314,16 @@ describe("V3-HARDEN-133: Ledger event matrix (executable)", () => {
     const src = fs.readFileSync(
       path.resolve(__dirname, "../../src/services/inventoryLedgerService.ts"), "utf8"
     );
-    // The live sale path must pass ledgerEvent: "SALE_COMPLETED"
     expect(src).toContain('ledgerEvent: "SALE_COMPLETED"');
+  });
+
+  it("purchaseService passes GRN_RECEIVED event (static — narrowly scoped)", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/services/purchaseService.ts"), "utf8"
+    );
+    expect(src).toContain('ledgerEvent: "GRN_RECEIVED"');
   });
 });
 
@@ -322,19 +360,18 @@ describe("V3-HARDEN-134: Metadata ownership (executable)", () => {
     expect(canModifyField("image_url", "CSV_IMPORT")).toBe(false); // READ
   });
 
-  it("global brand is supplier-owned, not retailer/POS editable", () => {
-    // catalog.products.brand is supplier-owned
-    expect(canModifyField("brand", "SUPPLIER_PUBLISH")).toBe(true);
-    expect(canModifyField("brand", "SUPERADMIN_EDIT")).toBe(true);
-    expect(canModifyField("brand", "RETAILER_WEB")).toBe(false);
-    expect(canModifyField("brand", "POS_APP")).toBe(false);
+  it("global brand (catalog.products) is supplier-owned", () => {
+    expect(canModifyField("brand", "SUPPLIER_PUBLISH", "catalog.products")).toBe(true);
+    expect(canModifyField("brand", "SUPERADMIN_EDIT", "catalog.products")).toBe(true);
+    expect(canModifyField("brand", "RETAILER_WEB", "catalog.products")).toBe(false);
+    expect(canModifyField("brand", "POS_APP", "catalog.products")).toBe(false);
   });
 
-  it("store-level brand_override is retailer/POS editable", () => {
-    // catalog.store_products.brand_override is retailer-owned
-    expect(canModifyField("brand_override", "RETAILER_WEB")).toBe(true);
-    expect(canModifyField("brand_override", "POS_APP")).toBe(true);
-    expect(canModifyField("brand_override", "SUPPLIER_PUBLISH")).toBe(false);
+  it("store-level brand (catalog.store_products) is retailer/POS editable", () => {
+    // store_products.brand is the retailer's local override column
+    expect(canModifyField("brand", "RETAILER_WEB", "catalog.store_products")).toBe(true);
+    expect(canModifyField("brand", "POS_APP", "catalog.store_products")).toBe(true);
+    expect(canModifyField("brand", "SUPPLIER_PUBLISH", "catalog.store_products")).toBe(false);
   });
 
   it("POS and retailer can both edit store-level fields", () => {
@@ -343,9 +380,12 @@ describe("V3-HARDEN-134: Metadata ownership (executable)", () => {
     expect(posFields).toContain("display_name");
     expect(posFields).toContain("sell_price");
     expect(posFields).toContain("mrp");
-    expect(posFields).toContain("brand_override");
-    // Global brand is NOT in POS modifiable fields
-    expect(posFields).not.toContain("brand");
+    // POS can modify store-level brand (store_products table)
+    const posStoreFields = getModifiableFields("POS_APP", "catalog.store_products");
+    expect(posStoreFields).toContain("brand");
+    // POS cannot modify global brand (products table)
+    const posGlobalFields = getModifiableFields("POS_APP", "catalog.products");
+    expect(posGlobalFields).not.toContain("brand");
     expect(retailerFields).toContain("display_name");
     expect(retailerFields).toContain("sell_price");
   });
@@ -354,7 +394,7 @@ describe("V3-HARDEN-134: Metadata ownership (executable)", () => {
     expect(canModifyField("display_name", "SUPPLIER_PUBLISH")).toBe(false);
     expect(canModifyField("sell_price", "SUPPLIER_PUBLISH")).toBe(false);
     expect(canModifyField("current_stock", "SUPPLIER_PUBLISH")).toBe(false);
-    expect(canModifyField("brand_override", "SUPPLIER_PUBLISH")).toBe(false);
+    expect(canModifyField("brand", "SUPPLIER_PUBLISH", "catalog.store_products")).toBe(false);
   });
 
   it("FIELD_OWNERSHIP covers both global and store tables", () => {

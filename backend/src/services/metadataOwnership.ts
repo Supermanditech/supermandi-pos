@@ -10,8 +10,8 @@
  * ├────────────────────┼───────────┼──────────┼──────────┼──────────┼──────────┤
  * │ name               │ OWNER     │ OVERRIDE │ READ     │ READ     │ READ     │
  * │ primary_barcode    │ OWNER     │ OVERRIDE │ READ     │ READ     │ SEED     │
- * │ brand              │ OWNER     │ OVERRIDE │ READ     │ READ     │ SEED     │
- * │ brand_override     │ READ      │ READ     │ OWNER    │ OWNER    │ SEED     │
+ * │ brand (global)     │ OWNER     │ OVERRIDE │ READ     │ READ     │ SEED     │
+ * │ brand (store)      │ READ      │ READ     │ OWNER    │ OWNER    │ SEED     │
  * │ category           │ OWNER     │ OVERRIDE │ READ     │ READ     │ SEED     │
  * │ image_url          │ OWNER     │ OVERRIDE │ READ     │ READ     │ READ     │
  * │ default_gst_rate   │ OWNER     │ OVERRIDE │ READ     │ READ     │ SEED     │
@@ -86,7 +86,9 @@ export const FIELD_OWNERSHIP: FieldOwnership[] = [
   { field: "description",       table: "catalog.products",        supplier: "OWNER",   superAdmin: "OVERRIDE", retailer: "READ",  pos: "READ",  csv: "READ"  },
 
   // === Store product fields (retailer-owned) ===
-  { field: "brand_override",    table: "catalog.store_products",  supplier: "READ",    superAdmin: "READ",     retailer: "OWNER", pos: "OWNER", csv: "SEED"  },
+  // Note: store_products.brand is the retailer's local override of the global products.brand
+  // Both columns are named "brand" but live in different tables with different ownership
+  { field: "brand",             table: "catalog.store_products",  supplier: "READ",    superAdmin: "READ",     retailer: "OWNER", pos: "OWNER", csv: "SEED"  },
   { field: "display_name",      table: "catalog.store_products",  supplier: "READ",    superAdmin: "READ",     retailer: "OWNER", pos: "OWNER", csv: "SEED"  },
   { field: "sell_price",        table: "catalog.store_products",  supplier: "READ",    superAdmin: "READ",     retailer: "OWNER", pos: "OWNER", csv: "SEED"  },
   { field: "purchase_price",    table: "catalog.store_products",  supplier: "READ",    superAdmin: "READ",     retailer: "OWNER", pos: "OWNER", csv: "SEED"  },
@@ -98,33 +100,37 @@ export const FIELD_OWNERSHIP: FieldOwnership[] = [
 
 /**
  * Check if a source is allowed to modify a field.
+ * For fields that exist in both tables (e.g., "brand"), specify the table
+ * to disambiguate. Without table, returns true if ANY matching entry allows.
  */
-export function canModifyField(field: string, source: MetadataSource): boolean {
-  const ownership = FIELD_OWNERSHIP.find((f) => f.field === field);
-  if (!ownership) return false;
-
-  switch (source) {
-    case "SUPPLIER_PUBLISH":
-      return ownership.supplier === "OWNER" || ownership.supplier === "OVERRIDE" || ownership.supplier === "SUGGEST";
-    case "SUPERADMIN_EDIT":
-      return ownership.superAdmin === "OWNER" || ownership.superAdmin === "OVERRIDE";
-    case "RETAILER_WEB":
-      return ownership.retailer === "OWNER" || ownership.retailer === "OVERRIDE";
-    case "POS_APP":
-      return ownership.pos === "OWNER" || ownership.pos === "OVERRIDE";
-    case "CSV_IMPORT":
-      return ownership.csv === "OWNER" || ownership.csv === "SEED";
-    default:
-      return false;
-  }
+export function canModifyField(field: string, source: MetadataSource, table?: "catalog.products" | "catalog.store_products"): boolean {
+  const entries = FIELD_OWNERSHIP.filter((f) => f.field === field && (!table || f.table === table));
+  if (entries.length === 0) return false;
+  // If no table specified, return true if ANY table allows modification
+  return entries.some((ownership) => {
+    switch (source) {
+      case "SUPPLIER_PUBLISH":
+        return ownership.supplier === "OWNER" || ownership.supplier === "OVERRIDE" || ownership.supplier === "SUGGEST";
+      case "SUPERADMIN_EDIT":
+        return ownership.superAdmin === "OWNER" || ownership.superAdmin === "OVERRIDE";
+      case "RETAILER_WEB":
+        return ownership.retailer === "OWNER" || ownership.retailer === "OVERRIDE";
+      case "POS_APP":
+        return ownership.pos === "OWNER" || ownership.pos === "OVERRIDE";
+      case "CSV_IMPORT":
+        return ownership.csv === "OWNER" || ownership.csv === "SEED";
+      default:
+        return false;
+    }
+  });
 }
 
 /**
  * Get all fields a source is allowed to modify.
  */
-export function getModifiableFields(source: MetadataSource): string[] {
+export function getModifiableFields(source: MetadataSource, table?: "catalog.products" | "catalog.store_products"): string[] {
   return FIELD_OWNERSHIP
-    .filter((f) => canModifyField(f.field, source))
+    .filter((f) => (!table || f.table === table) && canModifyField(f.field, source, f.table))
     .map((f) => f.field);
 }
 
