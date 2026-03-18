@@ -85,9 +85,13 @@ export function V3ScanWrapper({ route }: any) {
     onProductFound={(barcode, scanContext) => {
       // V3-FIX-157: Intent-specific routing on product found
       if (scanContext === "procurement") {
-        // Return to BUY with the found barcode for detail view
-        nav.goBack();
+        // Return to BUY with scanned barcode so BUY can open detail for the matched product
+        nav.navigate("V3Buy" as any, { scannedBarcode: barcode });
+      } else if (scanContext === "counter_purchase") {
+        // Return to Counter Purchase with scanned barcode
+        nav.navigate("V3CounterPurchase" as any, { scannedBarcode: barcode });
       } else {
+        // SELL: scan already added to cart, just go back
         nav.goBack();
       }
     }}

@@ -14,8 +14,10 @@ jest.mock("react-native-svg", () => {
   return { __esModule: true, default: mock, Svg: mock, Rect: mock, Path: mock, Circle: mock, Line: mock };
 });
 
+const mockNavigate = jest.fn();
+const mockGoBack = jest.fn();
 jest.mock("@react-navigation/native", () => ({
-  useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn(), getParent: () => ({ navigate: jest.fn() }) }),
+  useNavigation: () => ({ navigate: mockNavigate, goBack: mockGoBack, getParent: () => ({ navigate: jest.fn() }) }),
 }));
 
 jest.mock("react-i18next", () => ({
@@ -70,7 +72,27 @@ jest.mock("../../services/cartPayload", () => ({
   buildCartItem: jest.fn((p: any) => ({ id: p.barcode, name: p.name, priceMinor: p.priceMinor, quantity: 1 })),
 }));
 
+// Mocks for V3ScreenWrappers imports (all screens except ScanScreenV3 which is tested)
+jest.mock("../../screens/v3/PaymentScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/CashScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/UpiScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/UdharScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/SuccessScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/NewProductScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/CompareScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/CounterPurchaseScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/GRNScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/ReorderScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/StockScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/KhataScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/SalesHistoryScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/FinanceScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/ReportsScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/CustomersScreenV3", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../screens/v3/SettingsScreenV3", () => ({ __esModule: true, default: () => null }));
+
 import ScanScreenV3 from "../../screens/v3/ScanScreenV3";
+import { V3ScanWrapper } from "../../screens/v3/V3ScreenWrappers";
 import { resetDuplicateState } from "../../services/scanIntent";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -111,6 +133,46 @@ describe("V3-FIX-157+160: ScanScreenV3 mounted SELL scan (runtime)", () => {
     expect(screen.getByText("999999999")).toBeTruthy();
     // New Product button should be visible in sell mode
     expect(screen.getByTestId("scan-new-product-btn")).toBeTruthy();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// V3-FIX-157: V3ScanWrapper mounted routing proof
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("V3-FIX-157: V3ScanWrapper mounted routing (runtime)", () => {
+  beforeEach(() => { resetDuplicateState(); mockNavigate.mockClear(); });
+
+  it("wrapper reads defaultContext param for procurement mode", () => {
+    const route = { params: { defaultContext: "procurement" } };
+    render(<V3ScanWrapper route={route} />);
+    // Should render scan screen (visible=true)
+    expect(screen.getByText("Scan Barcode")).toBeTruthy();
+  });
+
+  it("procurement found navigates to V3Buy with scannedBarcode", () => {
+    const route = { params: { defaultContext: "procurement" } };
+    render(<V3ScanWrapper route={route} />);
+
+    // Scan a known barcode
+    const input = screen.getByPlaceholderText(/Type barcode/);
+    fireEvent.changeText(input, "890100001");
+    fireEvent(input, "submitEditing");
+
+    // Procurement success should navigate to V3Buy with barcode param
+    expect(mockNavigate).toHaveBeenCalledWith("V3Buy", { scannedBarcode: "890100001" });
+  });
+
+  it("sell found does NOT navigate to V3Buy", () => {
+    const route = { params: { defaultContext: "sell" } };
+    render(<V3ScanWrapper route={route} />);
+
+    const input = screen.getByPlaceholderText(/Type barcode/);
+    fireEvent.changeText(input, "890100001");
+    fireEvent(input, "submitEditing");
+
+    // SELL success should NOT navigate to V3Buy
+    expect(mockNavigate).not.toHaveBeenCalledWith("V3Buy", expect.anything());
   });
 });
 

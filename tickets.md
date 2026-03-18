@@ -6698,6 +6698,18 @@ Override requirement:
 - Existing SELL scan/cart code must be updated, replaced, or deleted where needed so production has one authoritative scan-to-cart contract.
 - Do not preserve older barcode fallback branches that can create duplicate cart identities or conflicting scan outcomes in live use.
 
+Implemented scope:
+- SELL_SCAN_RULES defined in scanIntent.ts: barcode precedence documented (store_override > manufacturer > generated_label), repeat increments cart, miss stays in SELL, miss never routes to BUY
+- productsStore.getProductByBarcode: exact barcode match → product ID fallback (covers manufacturer + generated label)
+- ScanScreenV3: one processScan() pipeline for HID + manual + camera — no duplicate business logic
+- Repeat scans: isDuplicateScan 300ms debounce prevents burst duplicates
+- Scan miss: shows "Product Not Found" with "New Product" button in SELL mode only
+
+Deferred scope:
+- True multi-source barcode precedence (store_product_barcodes table vs manufacturer primary_barcode vs generated SM- label) requires backend barcode resolution via /pos/store-products/lookup endpoint — client-side productsStore only has the flat product.barcode field
+- Conflicting barcode arbitration (same barcode mapped to different products) requires backend-side resolution logic
+- Backend /store-products/lookup already queries both store_product_barcodes and primary_barcode with proper precedence — but ScanScreenV3 does not yet call it (uses local productsStore instead for offline-first speed)
+
 ## V3-HARDEN-161 - Add 50k purchase scans/day and 50k sales scans/day capacity, latency, duplicate-suppression, and crash-resistance gates across HID and camera paths
 
 Priority: P0
