@@ -44,8 +44,11 @@ if [ "$APP_SHA" = "${BACKEND_SHA:-}" ]; then
   echo "MATCH: App and backend are on the same SHA"
 elif [ "$BACKEND_SHA" = "unknown" ]; then
   echo "WARN: Backend SHA not available — manual verification required"
+  echo "GATE: WARN (non-blocking — backend health may not expose SHA)"
 else
   echo "MISMATCH: App ($APP_SHA) != Backend ($BACKEND_SHA)"
   echo "This may cause auth/feature incompatibility."
   echo "Deploy the matching backend before device QA."
+  echo "GATE FAILED: Version mismatch detected"
+  exit 1
 fi
