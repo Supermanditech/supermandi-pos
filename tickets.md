@@ -7053,3 +7053,585 @@ Guard rails:
 - Do not leave manual/offline-only supplier triggering beside an automated or event-driven live path without an explicit ownership rule.
 - Do not allow reorder, sell-through, delivery, or WhatsApp state to drift between UI surfaces and backend event truth.
 - Existing conflicting order-monitoring, reorder, dispatch, notification, and live-update code must be updated, replaced, or deleted so production has one singular cross-layer orchestration model.
+
+## V3-FIX-167 - Define one canonical procurement-to-retail measurement and conversion contract for packaged, loose, carton/dozen, and split-unit selling
+
+Priority: P0
+Layers: product model, procurement UOM, retail UOM, pricing math, POS contract, retailer web, supplier web, SuperAdmin, schema
+
+Issue:
+- The codebase already has partial support for `LOOSE_BULK`, `soldBy`, `rateUnit`, generated barcodes, and retail variants, but it still does not have one authoritative contract connecting:
+  - supplier procurement unit
+  - store stock base unit
+  - retail selling unit
+  - consumer-facing quantity choice
+- This blocks a clean production flow for kirana realities like:
+  - buy 100 kg sugar, sell 1 kg / 500 g
+  - buy 15 L oil tins, sell 1 L / 500 ml
+  - buy eggs by tray or dozen, sell by piece or dozen
+
+Root cause:
+- Mounted code paths were built in pieces:
+  - retailer-admin products already support `PACKAGED` and `LOOSE_BULK`
+  - retail variants already exist for `LOOSE_BULK`
+  - POS sales already convert some variant units back to parent stock units
+  - but supplier catalog add, BUY cart, purchase draft, supplier listing, and SuperAdmin publish still do not share one canonical measurement model
+
+Files impacted:
+- `src/stores/productsStore.ts`
+- `src/stores/purchaseDraftLogic.ts`
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/services/api/catalogApi.ts`
+- `src/services/api/productsApi.ts`
+- `retailer-admin/src/pages/ProductsPage.tsx`
+- `retailer-admin/src/pages/SupplierCatalogPage.tsx`
+- `retailer-admin/src/components/VariantManager.tsx`
+- `supplier-portal/src/app/(dashboard)/products/page.tsx`
+- SuperAdmin product approval/publish surfaces touched by supplier-product review
+- `backend/src/routes/v1/retailer-admin/products.ts`
+- `backend/src/routes/v1/retailer-admin/suppliers.ts`
+- `backend/src/routes/v1/admin/suppliers.ts`
+- `backend/src/routes/v1/pos/storeProducts.ts`
+- `backend/src/routes/v1/pos/sales.ts`
+- migrations introduced by the fix
+
+Expected outcome:
+- One canonical measurement contract exists for every sellable SKU:
+  - `procurement_mode`
+  - `procurement_unit`
+  - `procurement_pack_qty`
+  - `base_stock_unit`
+  - `retail_sell_mode`
+  - `allow_fractional_sell`
+  - `default_retail_variants`
+  - `conversion_precision`
+- The same SKU can be understood consistently across:
+  - supplier listing
+  - SuperAdmin approval/publish
+  - retailer add-to-catalog
+  - inward/GRN
+  - POS/cart/scan/sale
+  - stock and ledger
+- Procurement quantity math and retail deduction math are explicit, not screen-local guesswork.
+
+Actor interaction contract:
+- Supplier web:
+  - supplier lists procurement-ready packaging and measurement truth
+  - supplier does not guess retailer-side loose-sale behavior after publish
+- SuperAdmin:
+  - reviews and approves the measurement/conversion contract before publish
+  - can normalize bad supplier input and enforce approved unit combinations
+- Retailer web / POS:
+  - retailer sees a store-ready representation of how the item is bought, stocked, and sold
+  - retailer does not have to mentally convert cartons/dozens/bags every time
+
+UI / navigation contract:
+- Supplier web product form:
+  - separate sections for procurement packaging, base stock unit, and retailer sell behavior
+- SuperAdmin review:
+  - conversion preview before publish
+- Retailer web products / supplier catalog add:
+  - explicit “bought as / stocked as / sold as” preview
+- POS:
+  - tile/cart/scan displays must show the correct consumer sell unit, not procurement-only labels
+
+Business logic contract:
+- Procurement stock lands in one canonical base stock unit.
+- Retail sale deducts from that same base stock unit.
+- Variant sale and manual quantity sale both resolve through the same conversion engine.
+- If conversion rules change after stock already exists, the system must require an explicit migration/versioning path instead of silently mutating math.
+
+API / backend contract:
+- Version one canonical product measurement payload shared across:
+  - supplier products
+  - store products
+  - supplier catalog APIs
+  - POS product/search/scan APIs
+  - procurement/inward APIs
+- Remove thin one-off mappings that drop conversion fields on one path but not another.
+
+Schema / migration expectations:
+- forward migrations for canonical conversion fields and/or a normalized conversion profile table
+- explicit versioning for conversion profiles if historical stock/sales already exist
+- no parallel legacy field set may remain authoritative after rollout
+
+Edge cases:
+- same item available from multiple suppliers with different pack sizes
+- carton/dozen purchase with per-piece retail sale
+- fractional weight or volume precision drift
+- supplier changes pack size after retailer already has stock
+- retailer edits conversion on an existing stocked SKU
+- variant barcode collision with parent/store barcode
+- negative stock caused by bad conversion math
+
+Override requirement:
+- Claude must inspect the existing `LOOSE_BULK`, variant, supplier-catalog, and POS conversion logic first and override conflicting live behavior in place.
+- Do not keep packaged-first procurement math in one path and loose-bulk conversion math in another path for the same SKU.
+- Existing unit assumptions, thin mappings, duplicate conversion helpers, and conflicting screen-local math must be updated, replaced, or deleted so production has one authoritative measurement and conversion contract.
+
+## V3-FIX-168 - Build smooth retailer digitisation and retailer-web product-management UX for bulk-buy, loose-sell, and retail-variant automation
+
+Priority: P0
+Layers: retailer web UX, digitisation UX, import UX, product edit UX, automation, variants
+
+Issue:
+- Retailer product creation/import already supports `LOOSE_BULK`, but the workflow is still expert-only and fragmented.
+- A regular kirana operator still has to think through too many manual steps to go from:
+  - “I bought 100 kg sugar”
+  - to “I sell 1 kg, 500 g, and 250 g”
+
+Root cause:
+- Existing retailer-admin product forms and variant management expose primitives, but not one guided bulk-to-retail workflow.
+- Supplier-catalog add is especially thin and does not yet open a conversion-aware onboarding step for newly procured bulk SKUs.
+
+Files impacted:
+- `retailer-admin/src/pages/ProductsPage.tsx`
+- `retailer-admin/src/pages/ImportPage.tsx`
+- `retailer-admin/src/pages/SupplierCatalogPage.tsx`
+- `retailer-admin/src/components/VariantManager.tsx`
+- `src/screens/v3/NewProductScreenV3.tsx`
+- `src/screens/v3/CounterPurchaseScreenV3.tsx`
+- `src/components/v3/PurchaseItemCardV3.tsx`
+- retailer-admin APIs and backend routes touched by digitisation/import/add flows
+
+Expected outcome:
+- Retailer gets one guided workflow with explicit modes:
+  - packaged product
+  - loose retail product
+  - procured in bulk, sold in smaller retail quantities
+- The system can auto-suggest common kirana retail variants/templates:
+  - weight: `250 g`, `500 g`, `1 kg`, `5 kg`
+  - volume: `250 ml`, `500 ml`, `1 L`
+  - count: `1 pc`, `6 pcs`, `12 pcs`, `1 dozen`
+- For first-time bulk/carton/dozen/tin/bag procurements, the system should auto-create a conversion draft and offer a one-tap `Use Suggested Retail Setup` path so the operator does not have to build variants manually in the common case.
+- Supplier-catalog add opens a conversion review step when the incoming product requires retailer-side split selling.
+- CSV import supports the same canonical conversion model as the UI flow.
+
+Actor interaction contract:
+- Retailer web operator:
+  - can digitize a new store product with guided conversion defaults
+  - can review and adjust retail variants before saving
+  - can import in bulk without breaking the same contract
+- POS-side operator:
+  - when onboarding a new product from scan/counter purchase, sees the same simplified choices rather than a second disconnected model
+
+UI / navigation contract:
+- Retailer web:
+  - `Products -> Add Product`
+  - `Supplier Catalog -> Add to Store -> Conversion Review`
+  - `Products -> Variants`
+  - `Import -> Bulk/Loose conversion columns`
+- POS:
+  - `Counter Purchase / New Product` must not diverge from the retailer-web product model
+
+Business logic contract:
+- Repeated procurement of the same SKU reuses the same store product and conversion profile where appropriate.
+- New procurement that truly represents a new sellable SKU must create a clean new onboarding path.
+- Auto-suggested retail variants remain editable, but generated output must stay within the canonical conversion rules from `V3-FIX-167`.
+
+API / backend contract:
+- Add explicit APIs or payload fields for:
+  - conversion template suggestions
+  - auto-generated retail variants
+  - conversion-review save/update
+- CSV and manual create/edit must hit the same backend rules, not separate partial validators.
+
+Schema / migration expectations:
+- if template/application state is stored, it must reference canonical store product IDs and conversion profiles
+- do not create a second variant-template table that bypasses `catalog.product_retail_variants`
+
+Edge cases:
+- retailer accepts supplier pack as-is and later switches to loose retail sale
+- variant names duplicated (`1 kg` twice with different prices)
+- import row creates parent loose product plus variants out of order
+- supplier-catalog add for an already digitized product with different conversion settings
+- store with zero technical knowledge should still complete the flow with defaults
+- retailer ignores the first conversion prompt and comes back later from POS or retailer web
+- system-generated suggested variants are accepted without edits and must still remain valid and auditable
+
+Override requirement:
+- Claude must inspect current retailer-web create/edit/import/supplier-catalog add flows first and override conflicting live UX in place.
+- Do not leave one manual variant flow in retailer web and a second hidden conversion flow in POS/counter purchase.
+- Existing thin add-to-catalog behavior, variant drift, and duplicated onboarding logic must be updated, replaced, or deleted so regular kirana users get one smooth product-management flow.
+
+## V3-FIX-169 - Build supplier-web and SuperAdmin approval/publish contract for procurement packs, split-sell eligibility, and retailer-ready conversion defaults
+
+Priority: P0
+Layers: supplier web, SuperAdmin, catalogue approval, publish logic, supplier metadata governance
+
+Issue:
+- Supplier listing and SuperAdmin approval still do not explicitly govern how a bulk-procured SKU can be retailed after the retailer buys it.
+- Without this, supplier products can be published with good pricing but weak conversion semantics.
+
+Root cause:
+- Supplier portal focuses on core product metadata and pricing.
+- SuperAdmin approval/publish flows normalize many fields already, but the procurement-pack to retail-sell-unit contract is not yet enforced as a first-class approval rule.
+
+Files impacted:
+- `supplier-portal/src/app/(dashboard)/products/page.tsx`
+- supplier-portal API helpers
+- SuperAdmin supplier-product review screens/routes
+- `backend/src/routes/v1/admin/suppliers.ts`
+- supplier product and publish-related tables/migrations introduced by the fix
+
+Expected outcome:
+- Supplier web captures procurement-side truth explicitly:
+  - sold to retailer as bag/carton/dozen/case/tin/drum/loose
+  - quantity per procurement pack
+  - whether pack can be split downstream
+  - recommended retailer sell unit if applicable
+- SuperAdmin approves one retailer-ready contract per published SKU:
+  - procurement presentation
+  - base stock unit
+  - default retail variant suggestions
+  - whether supplier identity stays visible or hidden per broader business rules
+- Published supplier-catalogue products expose conversion-safe metadata to retailer web and POS.
+
+Actor interaction contract:
+- Supplier:
+  - lists procurement packaging honestly, not just FMCG consumer-facing unit text
+- SuperAdmin:
+  - validates and edits supplier-supplied conversion defaults
+  - can reject or request change if pack-to-retail math is inconsistent
+- Retailer:
+  - sees only approved procurement and retail conversion options, not raw supplier ambiguity
+
+UI / navigation contract:
+- Supplier web:
+  - `Products -> Add/Edit -> Procurement & Sell Conversion`
+- SuperAdmin:
+  - `Supplier Products -> Review -> Conversion Approval`
+  - publish view must show “retailer buys as / stores as / sells as”
+
+Business logic contract:
+- A published supplier product cannot remain ambiguous on:
+  - procurement pack quantity
+  - base stock unit
+  - split-sell eligibility
+- Supplier pack changes after publish must trigger explicit re-review and versioning, not silent mutation for live retailer catalogs.
+
+API / backend contract:
+- Supplier-product create/update/read and publish APIs must carry canonical conversion fields
+- Publish path must materialize retailer-facing catalogue data without dropping those fields
+
+Schema / migration expectations:
+- forward migrations for supplier-product conversion fields and publish-state snapshots where needed
+- published catalog rows must preserve approved conversion metadata immutably enough for downstream procurement and stock math
+
+Edge cases:
+- supplier lists “1 carton” but omits quantity per carton
+- supplier lists “dozen” for a count item but retailer wants piece sale
+- supplier changes pack from `12 pcs` to `24 pcs` after retailers already use the SKU
+- different suppliers publish the same brand SKU with different procurement packs
+
+Override requirement:
+- Claude must inspect current supplier portal forms, SuperAdmin review, and publish materialization paths first and override conflicting live behavior in place.
+- Do not keep thin supplier metadata on one path and rich conversion defaults on another unpublished path.
+- Existing approval omissions, ambiguous pack metadata, and publish mappings that drop conversion truth must be updated, replaced, or deleted so production has one approved supplier-to-retailer conversion contract.
+
+## V3-FIX-170 - Build retailer BUY, counter-purchase, inward, GRN, and pack-break flow from bulk procurement into sellable store stock
+
+Priority: P0
+Layers: POS BUY, retailer web procurement, counter purchase, inward/GRN, stock intake, pack-break UX
+
+Issue:
+- Retailer can buy bulk from supplier catalog or counter purchase directly, but the system still does not provide one clean flow that turns procurement quantity into sellable retail stock.
+
+Root cause:
+- `BuyScreenV3` is still case-oriented.
+- purchase draft logic is thin.
+- supplier-catalog add currently copies price/stock without a conversion-aware onboarding step.
+- inward/GRN does not yet present retailer-friendly pack-break or stock-preview UX for bulk purchases.
+
+Files impacted:
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/screens/v3/CounterPurchaseScreenV3.tsx`
+- `src/screens/v3/StoreScreenV3.tsx`
+- `src/stores/purchaseDraftLogic.ts`
+- `src/components/v3/PurchaseItemCardV3.tsx`
+- `retailer-admin/src/pages/SupplierCatalogPage.tsx`
+- relevant procurement/GRN screens in retailer web
+- `backend/src/routes/v1/retailer-admin/suppliers.ts`
+- procurement / inward / GRN backend paths touched by the fix
+
+Expected outcome:
+- Retailer can procure in:
+  - cartons / cases / dozen / bags / tins / drums
+  - loose bulk quantity
+  - direct local counter purchase
+- Before confirm or GRN, the UI shows:
+  - bought as
+  - received as
+  - stock that will land in base unit
+  - retail variants that become sellable
+- If the procured SKU is bulk/split-sell eligible and no confirmed conversion profile exists yet, POS and retailer web must show a clear `Retail Setup Needed` warning instead of silently treating the item as sell-ready.
+- That warning must support:
+  - one-tap `Use Suggested Setup`
+  - `Review/Edit Setup`
+  - `Remind Me at GRN`
+- Repeated procurement of an already-converted SKU should bypass this warning and reuse the existing profile automatically.
+- On repeated procurement of the same SKU, the existing conversion profile is reused automatically.
+- On true first procurement, retailer gets a guided conversion review instead of a thin stock-and-price prompt.
+
+Actor interaction contract:
+- POS retailer:
+  - can place repeat or fresh procurement orders with conversion preview
+  - can receive goods and confirm GRN with pack-aware stock preview
+- Retailer web:
+  - can perform the same onboarding/GRN tasks without a different business model
+- SuperAdmin:
+  - sees procurement quantities and landed base-unit stock in one linked chain
+
+UI / navigation contract:
+- POS:
+  - `BUY -> cart -> conversion preview -> order`
+  - `Counter Purchase -> confirm -> conversion review`
+  - `STORE -> incoming stock / GRN -> landed stock preview`
+  - `STORE / Incoming Stock -> Retail Setup Needed` warning card for first-time bulk SKUs
+- Retailer web:
+  - `Supplier Catalog -> Add / Order`
+  - `Procurement / GRN -> landed stock preview`
+  - `Procurement / GRN -> Retail Setup Needed` banner for unconverted first-time bulk SKUs
+
+Business logic contract:
+- Procurement quantity times approved pack quantity becomes base stock quantity on inward.
+- Partial receipts, damaged quantities, and short receipts adjust landed base stock explicitly.
+- Pack-break may be logical-only if stock is tracked purely in base unit, but the operator experience must still be easy and explicit.
+- Repeated inward for the same conversion profile must not create duplicate store products or duplicate retail variants.
+- First-time bulk procurement may create a draft conversion profile automatically, but stock must not be exposed as consumer-sellable until the retailer confirms or accepts the suggested setup.
+- If the retailer defers setup, the system must keep the stock in an inbound/non-sellable state or equivalent guarded state until confirmation rules are satisfied.
+
+API / backend contract:
+- procurement and inward APIs must accept/return:
+  - procurement qty
+  - procurement unit
+  - base stock delta
+  - linked conversion profile/version
+  - retail variants impacted
+- supplier-catalog add path must not remain a thin `sellPrice + initialStock` shortcut when conversion review is required.
+
+Schema / migration expectations:
+- if pack-break or landed-stock preview state is stored, it must reference canonical product/conversion identities
+- forward migrations for procurement snapshot fields needed for replay/audit
+
+Edge cases:
+- buy 1 carton, receive 10 loose units short
+- buy 100 kg, receive 98.5 kg
+- supplier changes pack config between order and GRN
+- counter purchase for a barcode already linked to a store product with different pack assumptions
+- retailer receives a new bulk SKU first, then later procures it from supplier catalog
+- retailer sells or scans the item before confirming conversion setup
+- retailer accepts suggested setup on mobile POS with weak connectivity and the draft must reconcile cleanly later
+
+Override requirement:
+- Claude must inspect current BUY, supplier-catalog add, counter-purchase, inward, and GRN paths first and override conflicting live behavior in place.
+- Do not leave thin case/carton ordering in one flow and conversion-aware procurement in another flow.
+- Existing shortcut add-to-catalog logic, case-only cart math, and disconnected inward behavior must be updated, replaced, or deleted so production has one coherent bulk-procurement-to-store-stock flow.
+
+## V3-HARDEN-171 - Make POS app and retailer web consumer-selling flow smooth for loose quantities, retail variants, and rapid kirana operations
+
+Priority: P0
+Layers: POS UX, SELL UX, scan UX, cart math, stock decrement, retailer web sell assistance, automation
+
+Issue:
+- Even where `LOOSE_BULK` and retail variants exist, the actual consumer-sale experience is still not smooth enough for a regular kirana operator selling fast from bulk stock.
+
+Root cause:
+- POS SELL is still largely packaged-first.
+- Loose selling relies too heavily on backend primitives and variant barcodes without one clear operator-first flow for:
+  - quick quantity entry
+  - common preset units
+  - scan of parent or variant barcode
+  - price visibility per retail unit
+  - easy repeat sale from the same loose stock
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/screens/v3/ScanScreenV3.tsx`
+- `src/services/scan/handleScan.ts`
+- `src/components/v3/ProductTileV3.tsx`
+- `src/components/v3/CartSheetV3.tsx`
+- retailer web order/quick-sell or product preview surfaces touched by the fix
+- `backend/src/routes/v1/pos/storeProducts.ts`
+- `backend/src/routes/v1/pos/sales.ts`
+- any automation/recommendation helper introduced by the fix
+
+Expected outcome:
+- POS sells loose/bulk-derived stock with one smooth operator flow:
+  - tap preset retail units
+  - enter quantity manually when needed
+  - scan parent loose barcode and choose retail quantity
+  - scan retail-variant barcode and add directly
+- Cart and stock always deduct in canonical base stock units.
+- Retailer web reflects the same stock/sell semantics when showing product and movement views.
+- Common kirana tasks are automated where safe:
+  - auto-suggest common retail units
+  - auto-prefill last used loose quantity for that SKU if appropriate
+  - optional quick-label/barcode generation after onboarding or GRN
+- If stock exists for a bulk SKU but retail conversion is still unconfirmed, POS must show a high-clarity warning and block normal sale until the operator accepts the suggested setup or completes conversion review.
+- The warning must be lightweight for regular stores:
+  - short explanation
+  - suggested setup summary
+  - one-tap accept path
+  - edit path only when needed
+
+Actor interaction contract:
+- POS cashier/owner:
+  - should not need to think in backend base units during normal sale
+  - chooses consumer-facing quantities and the system handles deduction safely
+- POS cashier/owner must also be protected from accidentally selling an unconverted bulk SKU by a clear warning state instead of a vague failure.
+- Retailer web operator:
+  - sees clear stock movement and can manage sellable retail variants without different semantics
+
+UI / navigation contract:
+- POS:
+  - `SELL -> product tile -> quick qty / variant`
+  - `SCAN -> parent loose barcode -> variant picker or quick sell quantity`
+  - `SCAN -> retail-variant barcode -> direct add`
+  - `SELL / SCAN -> Conversion Needed` modal or banner when stock exists but retail setup is not yet confirmed
+- Retailer web:
+  - product detail / stock views show the same retail units and conversion summary
+
+Business logic contract:
+- variant barcode and parent loose barcode must converge to the same stock truth
+- repeated consumer sales decrement correctly from base stock
+- sell flow must handle:
+  - count items
+  - weight items
+  - volume items
+  - fractional quantities where allowed
+- no duplicate cart lines for equivalent variant/parent identity
+
+API / backend contract:
+- scan lookup and sale payloads must carry canonical variant/base-unit metadata
+- sale response and stock refresh must return enough data for real-time UI updates without client-side guesswork
+
+Schema / migration expectations:
+- add only the minimum schema needed for sell-assist preferences, last-used quantities, or label automation if those are introduced
+- do not create a second stock truth outside the existing ledger/sales model
+
+Edge cases:
+- parent loose barcode scanned when no retail variants exist yet
+- retail variant barcode scanned for a deactivated variant
+- sale in grams against kilogram stock
+- sale in pieces against dozen-based procurement
+- rapid repeated scans creating duplicate cart rows
+- operator edits quantity manually after scan
+- cashier scans a bulk parent barcode for a just-received SKU before conversion confirmation
+- retailer accepted suggested setup once, then supplier pack or conversion defaults changed later
+
+Override requirement:
+- Claude must inspect current SELL, scan, cart, and stock-decrement paths first and override conflicting live behavior in place.
+- Do not leave packaged-first SELL assumptions active beside a new loose-sale UX.
+- Existing duplicated scan branches, cart identity drift, and consumer-quantity shortcuts must be updated, replaced, or deleted so production has one fast kirana-friendly loose-sale contract.
+
+## V3-HARDEN-172 - Add ledger, reporting, automation, staging, and GCP parity gates for the full bulk-procurement-to-retail-sale lifecycle
+
+Priority: P0
+Layers: ledger truth, reporting, automation, migrations, staging parity, runtime readiness, release gates
+
+Issue:
+- The above bulk-buy / loose-sell model is not production-safe unless inventory truth, reporting, automation, and environment readiness are verified end to end.
+
+Root cause:
+- Current code has partial ledger and variant support, but no explicit release/readiness phase for:
+  - procurement pack to base stock landing
+  - base stock to consumer retail sale
+  - conversion-safe reporting
+  - cross-portal runtime parity in staging/GCP
+
+Files impacted:
+- relevant inventory/sales/procurement ledger paths
+- reporting APIs and dashboards touched by this flow
+- automation/recommendation jobs introduced for kirana ease-of-use
+- `.github/workflows/`
+- `scripts/gates/`
+- `backend/src/startup/validateGcp.ts`
+- runtime config and staging smoke paths used by this lifecycle
+
+Expected outcome:
+- Append-only ledger and stock summaries can explain:
+  - how much was procured
+  - how much landed in base stock
+  - how much sold in retail quantities
+  - how much remains unsold
+  - how much was damaged/wasted/adjusted if modeled
+- Reports and dashboards in retailer web and SuperAdmin use the same conversion truth.
+- Automation for regular kirana flow is explicit and safe:
+  - optional default retail-variant suggestions
+  - repeat inward templates
+  - reorder hints based on base stock and sell-through
+- GCP/staging parity and release gates verify that this lifecycle works before rollout.
+
+Actor interaction contract:
+- Retailer:
+  - can trust stock and margin views for bulk-bought loose-sold SKUs
+- Supplier:
+  - sees procurement truth, not retailer-internal consumer-sale noise
+- SuperAdmin:
+  - can audit conversion-driven stock and sales behavior without hidden screen-local math
+
+Reporting / automation contract:
+- reports must show both procurement and retail context where relevant:
+  - bought as
+  - stocked as
+  - sold as
+- automation must not silently create stock or variant data without an auditable source event
+
+GCP / staging parity contract:
+- staging must prove:
+  - supplier product with procurement pack metadata
+  - SuperAdmin publish with approved conversion defaults
+  - retailer add/order/inward of bulk SKU
+  - POS sell in retail quantity
+  - stock/report refresh across POS and retailer web
+- deploy/release gates must fail if conversion-critical migrations, APIs, or staging-smoke checks are missing
+
+Schema / migration expectations:
+- forward migrations for any conversion-ledger snapshot, report summary, or automation preference data introduced by the fix
+- versioned/staging-safe rollout plan for existing stores already using partial `LOOSE_BULK` logic
+
+Edge cases:
+- legacy store product already exists with partial loose metadata
+- migrated variant rows do not match new canonical conversion contract
+- report rounding mismatch between procurement and sales views
+- automation suggests variants or reorder using stale stock
+- one portal runs old code against new conversion schema
+
+Override requirement:
+- Claude must inspect the current ledger, reporting, automation, deploy-gate, and staging-smoke paths first and override conflicting live behavior in place.
+- Do not bolt a new report layer on top of old stock math and call the flow complete.
+- Existing weaker gates, stale report formulas, hidden automation shortcuts, and conflicting conversion assumptions must be updated, replaced, or deleted so production has one auditable bulk-to-retail lifecycle.
+
+## Phase 17 - Bulk Procurement, Loose Retail Selling, and Unit-Conversion Automation Across POS, Retailer Web, Supplier Web, and SuperAdmin
+
+Tickets:
+- `V3-FIX-167`
+- `V3-FIX-168`
+- `V3-FIX-169`
+- `V3-FIX-170`
+- `V3-HARDEN-171`
+- `V3-HARDEN-172`
+
+Why seventeenth:
+- Audit of the current codebase shows real partial primitives already exist:
+  - `LOOSE_BULK`
+  - `soldBy`
+  - `rateUnit`
+  - store-generated loose barcodes
+  - retail variants
+  - partial unit-conversion on sale
+- But the end-to-end production contract is still missing for the actual kirana workflow:
+  - buy in carton/dozen/bag/tin/loose
+  - land stock safely
+  - sell in kg/litre/piece/smaller retail packs
+  - keep stock, pricing, scan, and reporting consistent across all platforms
+- This phase makes that procurement-to-retail conversion model explicit across POS app, retailer web, supplier web, SuperAdmin, backend, migrations, and staging/GCP gates.
+
+Guard rails:
+- Do not treat `LOOSE_BULK` support already in code as “done”; this phase exists because the mounted flows are still fragmented.
+- Do not allow supplier-catalog add, counter purchase, digitisation, BUY, GRN, and SELL to each define their own unit-conversion rules.
+- Do not leave thin packaged/case-only cart math active beside conversion-aware procurement math.
+- Do not let POS loose sale and retailer-web stock/reporting use different stock truths.
+- Existing conflicting pack/unit assumptions, partial variant flows, thin supplier-catalog add logic, stale report math, and weaker rollout gates must be updated, replaced, or deleted so production has one singular bulk-to-retail contract.
