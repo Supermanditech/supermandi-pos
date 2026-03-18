@@ -76,9 +76,23 @@ export function V3SuccessWrapper({ route }: any) {
 
 export function V3ScanWrapper({ route }: any) {
   const nav = useNavigation<Nav>();
-  // V3-FIX-080: Pass defaultContext from route params so Opening Stock enters stock_in mode
-  const context = route?.params?.context ?? "sell";
-  return <ScanScreenV3 visible={true} defaultContext={context} onClose={() => nav.goBack()} onProductFound={() => nav.goBack()} onNewProduct={(barcode) => nav.navigate("V3NewProduct", { barcode })} />;
+  // V3-FIX-157: Read both "context" and "defaultContext" params for scan intent routing
+  const context = route?.params?.defaultContext ?? route?.params?.context ?? "sell";
+  return <ScanScreenV3
+    visible={true}
+    defaultContext={context}
+    onClose={() => nav.goBack()}
+    onProductFound={(barcode, scanContext) => {
+      // V3-FIX-157: Intent-specific routing on product found
+      if (scanContext === "procurement") {
+        // Return to BUY with the found barcode for detail view
+        nav.goBack();
+      } else {
+        nav.goBack();
+      }
+    }}
+    onNewProduct={(barcode) => nav.navigate("V3NewProduct", { barcode })}
+  />;
 }
 
 export function V3NewProductWrapper({ route }: any) {

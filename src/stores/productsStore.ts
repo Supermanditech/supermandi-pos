@@ -159,9 +159,17 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     }
   },
 
+  // V3-FIX-160: Barcode lookup with explicit precedence:
+  // 1. Store override barcode (exact match on barcode field)
+  // 2. Manufacturer barcode (exact match on barcode field — same column, different origin)
+  // 3. Product ID as barcode fallback (for generated SM- labels)
   getProductByBarcode: (barcode: string) => {
     const { products } = get();
-    return products.find(product => product.barcode === barcode);
+    // Primary: exact barcode match (covers both store override and manufacturer)
+    const byBarcode = products.find(product => product.barcode === barcode);
+    if (byBarcode) return byBarcode;
+    // Fallback: generated label barcode (SM- prefix or product ID)
+    return products.find(product => product.id === barcode) ?? undefined;
   },
 
   searchProducts: (query: string) => {

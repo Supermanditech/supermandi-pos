@@ -6581,6 +6581,17 @@ Expected outcome:
 Override requirement:
 - Claude must inspect the current procurement, mapping, and edit-persistence logic first and override conflicting repeated/new scan assumptions in place.
 - Do not leave a parallel “scan purchase” identity model beside the approved procurement lane.
+
+Implemented scope:
+- resolveProcurementScanAction() defined with supplier_catalog_procurement_scan intent
+- PROCUREMENT_SCAN_RULES: repeated preserves metadata, POS edits stay local, unknown blocked
+- ScanScreenV3 procurement miss hides “New Product” button, shows “not available in supplier catalogue”
+- BuyScreenV3 opens scan with defaultContext: “procurement” (routed through V3ScanWrapper)
+
+Deferred scope:
+- Live procurement scan still resolves via getProductByBarcode (store lookup), not supplier-SKU-specific resolution — a supplier barcode lookup API endpoint would be needed for true supplier-SKU resolution
+- resolveProcurementScanAction() is not yet called from the live screen path (screen uses its own processScan pipeline which handles procurement context but delegates to store-product lookup)
+- Full supplier-SKU scan resolution requires backend /pos/suppliers/:id/products/barcode endpoint
 - Existing procurement-scan code must be updated, replaced, or deleted where needed so production does not contain two conflicting repeated/new purchase models.
 - Do not preserve silent legacy metadata-write paths that can diverge from the approved edited-field propagation contract.
 
@@ -6627,6 +6638,17 @@ Expected outcome:
 Override requirement:
 - Claude must inspect the existing Counter Purchase scan, edit, and inward-save paths first and override conflicting live behavior in place.
 - Do not keep a second silent fallback path that treats edited new items as if they were authoritative existing products.
+
+Implemented scope:
+- resolveCounterPurchaseScanAction() defined with counter_purchase_scan intent
+- COUNTER_PURCHASE_SCAN_RULES: known hydrates from store, edits draft-only, no duplicate store products, new uses barcode identity
+- CounterPurchaseScreenV3 now uses normalizeBarcode + isDuplicateScan from canonical scanIntent service
+- ScanScreenV3 context toggle includes "counter_purchase" intent
+
+Deferred scope:
+- CounterPurchaseScreenV3 still runs its own local handleBarcodeScan business logic inline (not fully delegated to ScanScreenV3/canonical router) — the screen's barcode input is embedded in the purchase form, not a separate scan modal
+- Moving Counter Purchase entirely onto ScanScreenV3 would require significant UX refactoring of the inline barcode-entry form pattern
+- resolveCounterPurchaseScanAction() is not yet called from the live screen (screen uses its own inline pipeline with canonical normalization/dedup)
 - Existing Counter Purchase scan and inward-save code must be updated, replaced, or deleted where needed so production has one authoritative direct-inward behavior.
 - Do not leave old save paths, duplicate barcode resolution rules, or hidden edit-persistence branches that can conflict after deployment.
 
