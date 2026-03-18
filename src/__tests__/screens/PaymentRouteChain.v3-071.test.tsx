@@ -17,6 +17,17 @@ jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: mockNavigate, goBack: jest.fn() }),
 }));
 
+jest.mock("react-native-qrcode-svg", () => {
+  const React = require("react");
+  const { View, Text } = require("react-native");
+  return {
+    __esModule: true,
+    default: (props: any) => React.createElement(View, { testID: "qr-code" },
+      React.createElement(Text, null, `QR:${props.value?.substring(0, 20)}`)
+    ),
+  };
+});
+
 jest.mock("react-native-svg", () => {
   const React = require("react");
   const { View } = require("react-native");
@@ -64,7 +75,8 @@ jest.mock("../../utils/showToast", () => ({ showToast: jest.fn() }));
 jest.mock("../../services/logger", () => ({ logger: { debug: jest.fn(), error: jest.fn() } }));
 
 const mockCreateSale = jest.fn().mockResolvedValue({ saleId: "sale-001", billRef: "SM-001" });
-const mockInitUpi = jest.fn().mockResolvedValue({ paymentId: "pay-001", upiVpa: "store@upi", qrData: "upi://pay?pa=store@upi&am=100", billRef: "SM-001" });
+// V3-FIX-073: Mock matches canonical /payments/upi/generate response shape
+const mockInitUpi = jest.fn().mockResolvedValue({ paymentId: "pay-001", orderId: "order_abc123", qrData: "upi://pay?pa=store@upi&pn=TestStore&am=40.00&tr=order_abc123&tn=Sale", upiVpa: "store@upi", expiresAt: new Date(Date.now() + 300000).toISOString() });
 const mockConfirmUpi = jest.fn().mockResolvedValue({ status: "confirmed" });
 const mockRecordCash = jest.fn().mockResolvedValue({ status: "completed" });
 const mockRecordDue = jest.fn().mockResolvedValue({ status: "recorded" });
@@ -163,7 +175,7 @@ describe("V3-FIX-071: Payment route chain", () => {
   });
 
   describe("UPI child screen — init/confirm separation", () => {
-    it("auto-initializes UPI on mount (creates sale + inits payment)", async () => {
+    it("auto-initializes UPI on mount (creates sale + inits payment with amountMinor)", async () => {
       render(<UpiScreenV3 onBack={onBack} onComplete={onComplete} />);
 
       // Should show initializing state first
@@ -174,6 +186,9 @@ describe("V3-FIX-071: Payment route chain", () => {
         expect(mockCreateSale).toHaveBeenCalledTimes(1);
         expect(mockInitUpi).toHaveBeenCalledTimes(1);
       });
+
+      // V3-FIX-073: Verify canonical contract — amountMinor passed to /payments/upi/generate
+      expect(mockInitUpi).toHaveBeenCalledWith({ saleId: "sale-001", amountMinor: 4000 });
 
       // After init, should show waiting state with QR data
       await waitFor(() => {
@@ -210,10 +225,12 @@ describe("V3-FIX-071: Payment route chain", () => {
       });
     });
 
-    it("shows QR data from backend", async () => {
+    it("renders real QR component from backend qrData", async () => {
       render(<UpiScreenV3 onBack={onBack} onComplete={onComplete} />);
       await waitFor(() => {
-        expect(screen.getByText(/upi:\/\/pay/)).toBeTruthy();
+        // QRCode mock renders testID="qr-code" with value prefix
+        expect(screen.getByTestId("qr-code")).toBeTruthy();
+        expect(screen.getByText(/QR:upi:\/\/pay/)).toBeTruthy();
       });
     });
 

@@ -78,19 +78,23 @@ export async function createSale(input: {
   return offline;
 }
 
+/**
+ * V3-FIX-073: Canonical UPI payment init — uses /payments/upi/generate
+ * which returns real qrData (UPI intent string) for QR rendering.
+ * The old /payments/upi/init in sales.ts does NOT return qrData.
+ */
 export async function initUpiPayment(input: {
   saleId: string;
-  transactionId?: string;
-}): Promise<{ paymentId: string; billRef: string; amountMinor: number; storeName: string | null; upiVpa: string; qrData?: string; expiresAt?: string }> {
+  amountMinor: number;
+}): Promise<{ paymentId: string; orderId: string; qrData: string; upiVpa: string; expiresAt: string }> {
   if (!(await isOnline())) {
-    // GL-CRIT-0041: Clear error message explaining why UPI is unavailable offline
     throw new ApiError(
       0,
       "upi_offline_blocked",
       "UPI payments require internet connection. Please use Cash or Credit payment instead, or connect to the internet to process UPI."
     );
   }
-  return apiClient.post("/api/v1/pos/payments/upi/init", input);
+  return apiClient.post("/api/v1/pos/payments/upi/generate", input);
 }
 
 export async function confirmUpiPaymentManual(input: {

@@ -7,9 +7,10 @@
  */
 import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { View, Pressable, ActivityIndicator, StyleSheet, Text } from "react-native";
+import QRCode from "react-native-qrcode-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
-import { useCartStore, type SellMode } from "../../stores/cartStore";
+import { useCartStore } from "../../stores/cartStore";
 import { createSale, initUpiPayment, confirmUpiPaymentManual, type SaleItemInput } from "../../services/api/posApi";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
@@ -91,14 +92,14 @@ export default function UpiScreenV3({ onBack, onComplete }: UpiScreenV3Props) {
         setSaleId(saleResult.saleId);
         logger.debug("V3Upi", `sale_created:${saleResult.saleId}`);
 
-        // Init UPI payment — get QR data
-        const upi = await initUpiPayment({ saleId: saleResult.saleId });
+        // Init UPI payment via canonical /payments/upi/generate — returns real qrData
+        const upi = await initUpiPayment({ saleId: saleResult.saleId, amountMinor: grandTotal });
         if (cancelled) return;
 
         setPaymentId(upi.paymentId);
         setUpiVpa(upi.upiVpa);
-        setQrData(upi.qrData ?? null);
-        setBillRef(upi.billRef);
+        setQrData(upi.qrData);
+        setBillRef(upi.orderId);
         setUpiState("waiting");
         logger.debug("V3Upi", `upi_initiated:${upi.paymentId},vpa:${upi.upiVpa}`);
       } catch (err: any) {
@@ -162,16 +163,12 @@ export default function UpiScreenV3({ onBack, onComplete }: UpiScreenV3Props) {
         {/* Waiting state — QR is ready, waiting for customer to pay */}
         {(upiState === "waiting" || upiState === "confirming") ? (
           <View style={styles.qrArea}>
-            <View style={styles.qrBox}>
+            <View style={styles.qrBox} testID="upi-qr-box">
+              <Text style={styles.qrLabel}>Scan to Pay</Text>
               {qrData ? (
-                <>
-                  <Text style={styles.qrLabel}>Scan to Pay</Text>
-                  <View style={styles.qrDataBox}>
-                    <Text style={styles.qrDataText} selectable numberOfLines={3}>{qrData}</Text>
-                  </View>
-                </>
+                <QRCode value={qrData} size={150} backgroundColor="#fff" color="#000" />
               ) : (
-                <Text style={styles.qrLabel}>UPI QR</Text>
+                <Text style={styles.qrFallback}>QR</Text>
               )}
               {upiVpa ? <Text style={styles.qrVpa}>{upiVpa}</Text> : null}
               {billRef ? <Text style={styles.qrRef}>Ref: {billRef}</Text> : null}
@@ -233,10 +230,9 @@ function createStyles(colors: ColorPalette) {
     retryBtn: { marginTop: 12, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, borderWidth: 2, borderColor: colors.border },
     retryText: { fontSize: 13, fontWeight: "600", color: colors.textSecondary },
     qrArea: { marginTop: 28, alignItems: "center", width: "100%" },
-    qrBox: { width: 220, minHeight: 200, borderRadius: 18, borderWidth: 3, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface, padding: 16 },
-    qrLabel: { fontSize: 14, fontWeight: "700", color: colors.textTertiary, marginBottom: 8 },
-    qrDataBox: { width: 160, height: 100, borderRadius: 10, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center", padding: 8 },
-    qrDataText: { fontSize: 9, color: colors.textTertiary, fontFamily: "monospace", textAlign: "center" },
+    qrBox: { width: 220, minHeight: 220, borderRadius: 18, borderWidth: 3, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: "#fff", padding: 16 },
+    qrLabel: { fontSize: 12, fontWeight: "700", color: colors.textTertiary, marginBottom: 12 },
+    qrFallback: { fontSize: 24, fontWeight: "700", color: colors.textTertiary },
     qrVpa: { fontSize: 13, fontWeight: "600", color: colors.primary, marginTop: 8 },
     qrRef: { fontSize: 11, color: colors.textTertiary, marginTop: 2 },
     waitingRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 16, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: colors.warningSoft, borderRadius: 12 },
