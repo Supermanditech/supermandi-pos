@@ -9,6 +9,8 @@ import { getPool } from "../../../db/client";
 import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
 import { requireActiveSupplier, requireRegisteredSupplier } from "../../../middleware/supplierStatusGate";
 import { log } from "../../../lib/logger";
+// V3-FIX-143: Staged supplier disclosure
+import { SUPPLIER_VISIBILITY_RULES } from "../../../services/procurementLane";
 
 // SUP-POS-012: JWT config for SSE token verification (EventSource can't set headers)
 // SEC-003: Only allow dev fallback when NODE_ENV is explicitly 'development' or 'test'
@@ -137,13 +139,16 @@ router.get("/orders", requireSupplierAuth, requireRegisteredSupplier, async (req
       statusFilter ? [req.supplierId, limit, offset, statusFilter] : [req.supplierId, limit, offset]
     );
 
+    // V3-FIX-143: Staged disclosure — list view uses pre-acceptance rules
+    const listVisibility = SUPPLIER_VISIBILITY_RULES.pre_acceptance;
     res.json({
       data: result.rows.map((o) => ({
         id: o.id,
-        storeId: o.store_id,
-        storeName: o.store_name,
+        // V3-FIX-143: Hide store identity in list (pre-acceptance)
+        storeId: undefined,
+        storeName: listVisibility.retailerName ? o.store_name : undefined,
         status: o.status,
-        orderType: o.order_type || 'manual',  // T-245: reorder context
+        orderType: o.order_type || 'manual',
         totalAmount: o.total_amount,
         items: o.items || [],
         createdAt: o.created_at,
@@ -414,15 +419,20 @@ router.get("/orders/:id", requireSupplierAuth, requireRegisteredSupplier, async 
 
     const o = orderResult.rows[0];
 
-    // T-245: Include reorder context + payment terms + delivery info
+    // V3-FIX-143: Staged disclosure — detail uses acceptance-phase-based rules
+    const isAccepted = ["confirmed", "shipped", "delivered", "partial_received"].includes(o.status);
+    const vis = isAccepted ? SUPPLIER_VISIBILITY_RULES.post_acceptance : SUPPLIER_VISIBILITY_RULES.pre_acceptance;
+
     res.json({
       data: {
         id: o.id,
         orderNumber: o.order_number,
-        storeId: o.store_id,
-        storeName: o.store_name,
-        storeCity: o.store_city,
-        storePhone: o.store_phone,
+        // V3-FIX-143: Store identity gated by acceptance phase
+        storeId: undefined,
+        storeName: vis.retailerName ? o.store_name : undefined,
+        storeCity: vis.deliveryCity ? o.store_city : undefined,
+        storePhone: vis.retailerPhone ? o.store_phone : undefined,
+        deliveryFullAddress: vis.deliveryFullAddress ? (o.delivery_address ?? o.store_city) : undefined,
         status: o.status,
         orderType: o.order_type || 'manual',
         isReorder: o.order_type === 'reorder',

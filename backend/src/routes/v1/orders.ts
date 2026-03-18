@@ -48,8 +48,9 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
   if (!supplierId || typeof supplierId !== "string") {
     return res.status(400).json({ success: false, error: "invalid_supplier", message: "supplierId is required" });
   }
-  if (!orderType || !["manual", "reorder"].includes(orderType)) {
-    return res.status(400).json({ success: false, error: "invalid_order_type", message: "orderType must be 'manual' or 'reorder'" });
+  // V3-FIX-142: Accept catalogue_principal as valid order type for principal procurement lane
+  if (!orderType || !["manual", "reorder", "catalogue_principal"].includes(orderType)) {
+    return res.status(400).json({ success: false, error: "invalid_order_type", message: "orderType must be 'manual', 'reorder', or 'catalogue_principal'" });
   }
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ success: false, error: "invalid_items", message: "items array is required and must not be empty" });
@@ -187,13 +188,17 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
     const orderNumber = `PO-${dateStr}-${shortId}`;
 
     // 5. Insert purchase order
+    // V3-FIX-142: Resolve procurement lane from orderType
+    const { resolveProcurementLane } = require("../../services/procurementLane");
+    const procurementLane = resolveProcurementLane(orderType);
+
     const orderId = randomUUID();
     const orderResult = await client.query(
       `INSERT INTO orders.purchase_orders (
         id, order_number, store_id, supplier_id, order_type, status,
         total_amount, item_count, store_notes, delivery_address,
-        expected_delivery_date, created_by_user_id
-      ) VALUES ($1, $2, $3, $4, $5, $11, $6, $7, $8, $9, $10, NULL)
+        expected_delivery_date, created_by_user_id, procurement_lane
+      ) VALUES ($1, $2, $3, $4, $5, $12, $6, $7, $8, $9, $10, NULL, $11)
       RETURNING
         id,
         order_number as "orderNumber",
@@ -206,6 +211,7 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         store_notes as "storeNotes",
         delivery_address as "deliveryAddress",
         expected_delivery_date as "expectedDeliveryDate",
+        procurement_lane as "procurementLane",
         created_at as "createdAt",
         updated_at as "updatedAt"`,
       [
@@ -213,6 +219,7 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         totalAmount, validatedItems.length,
         storeNotes || null, deliveryAddress || null,
         expectedDeliveryDate || null,
+        procurementLane,
         orderStatus,
       ]
     );

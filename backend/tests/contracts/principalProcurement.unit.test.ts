@@ -63,6 +63,17 @@ describe("V3-FIX-142: Procurement lane isolation (executable)", () => {
     expect(src).toContain("catalogue_principal");
     expect(src).not.toContain('orderType: "standard"');
   });
+
+  it("order creation route accepts catalogue_principal and sets procurement_lane (static — narrowly scoped)", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/routes/v1/orders.ts"), "utf8"
+    );
+    expect(src).toContain('"catalogue_principal"');
+    expect(src).toContain("resolveProcurementLane");
+    expect(src).toContain("procurement_lane");
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -154,6 +165,61 @@ describe("V3-HARDEN-146: Stock event rules per lane (executable)", () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // V3-DELETE-149: Cleanup verification
 // ═══════════════════════════════════════════════════════════════════════════════
+
+describe("V3-FIX-143: Supplier orders route uses staged disclosure (static — narrowly scoped)", () => {
+  it("supplier orders route imports and uses SUPPLIER_VISIBILITY_RULES", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/routes/v1/supplier/orders.ts"), "utf8"
+    );
+    expect(src).toContain("SUPPLIER_VISIBILITY_RULES");
+    expect(src).toContain("pre_acceptance");
+    expect(src).toContain("post_acceptance");
+    // List route hides store identity
+    expect(src).toContain("listVisibility.retailerName");
+    // Detail route gates by acceptance phase
+    expect(src).toContain("vis.retailerName");
+    expect(src).toContain("vis.retailerPhone");
+    expect(src).toContain("vis.deliveryFullAddress");
+  });
+});
+
+describe("V3-HARDEN-147: Migration has constraints (static — narrowly scoped)", () => {
+  it("migration 196 includes CHECK constraints and indexes", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../migrations/196_principal_procurement_support.sql"), "utf8"
+    );
+    expect(src).toContain("chk_procurement_lane");
+    expect(src).toContain("chk_invoice_dispatch_type");
+    expect(src).toContain("chk_dispatch_status");
+    expect(src).toContain("idx_invoice_dispatch_invoice_id");
+    expect(src).toContain("idx_purchase_orders_procurement_lane");
+  });
+});
+
+describe("V3-HARDEN-148: Deploy gate wired (static — narrowly scoped)", () => {
+  it("deploy.yml includes principal-procurement-gate.sh", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../..", ".github/workflows/deploy.yml"), "utf8"
+    );
+    expect(src).toContain("principal-procurement-gate.sh");
+  });
+
+  it("gate script checks correct migration 196", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../..", "scripts/gates/principal-procurement-gate.sh"), "utf8"
+    );
+    expect(src).toContain("196_principal_procurement_support.sql");
+    expect(src).not.toContain("195_principal_procurement_support.sql");
+  });
+});
 
 describe("V3-DELETE-149: No direct-supplier catalogue checkout (static — narrowly scoped)", () => {
   it("BuyScreenV3 does not use direct supplier checkout", () => {

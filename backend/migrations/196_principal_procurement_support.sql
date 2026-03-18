@@ -65,3 +65,52 @@ CREATE TABLE IF NOT EXISTS public.invoice_dispatch_logs (
 );
 
 COMMENT ON TABLE public.invoice_dispatch_logs IS 'V3-FIX-145: WhatsApp dispatch tracking for dual invoices';
+
+-- V3-HARDEN-147: Data governance constraints
+
+-- 6. CHECK constraint on procurement_lane values
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'chk_procurement_lane'
+  ) THEN
+    ALTER TABLE public.purchase_orders
+      ADD CONSTRAINT chk_procurement_lane
+      CHECK (procurement_lane IN ('CATALOGUE_PRINCIPAL', 'COUNTER_PURCHASE'));
+  END IF;
+END $$;
+
+-- 7. CHECK constraint on invoice_type values
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'chk_invoice_dispatch_type'
+  ) THEN
+    ALTER TABLE public.invoice_dispatch_logs
+      ADD CONSTRAINT chk_invoice_dispatch_type
+      CHECK (invoice_type IN ('SUPPLIER_TO_SUPERMANDI', 'SUPERMANDI_TO_RETAILER'));
+  END IF;
+END $$;
+
+-- 8. CHECK constraint on dispatch status
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.check_constraints
+    WHERE constraint_name = 'chk_dispatch_status'
+  ) THEN
+    ALTER TABLE public.invoice_dispatch_logs
+      ADD CONSTRAINT chk_dispatch_status
+      CHECK (status IN ('sent', 'failed', 'pending_retry'));
+  END IF;
+END $$;
+
+-- 9. Index on invoice_dispatch_logs for lookup
+CREATE INDEX IF NOT EXISTS idx_invoice_dispatch_invoice_id
+  ON public.invoice_dispatch_logs (invoice_id);
+
+CREATE INDEX IF NOT EXISTS idx_invoice_dispatch_status
+  ON public.invoice_dispatch_logs (status) WHERE status != 'sent';
+
+-- 10. Index on procurement_lane for filtering
+CREATE INDEX IF NOT EXISTS idx_purchase_orders_procurement_lane
+  ON public.purchase_orders (procurement_lane) WHERE procurement_lane IS NOT NULL;

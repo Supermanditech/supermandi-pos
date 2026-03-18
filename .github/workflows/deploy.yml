@@ -261,6 +261,12 @@ jobs:
           STAGING_URL: https://staging.supermandi.tech
           APP_BUILD_SHA: ${{ needs.gate.outputs.sha_short }}
 
+      # V3-HARDEN-148: Principal procurement gate — checks procurement lane infrastructure
+      - name: Principal Procurement Gate
+        run: bash scripts/gates/principal-procurement-gate.sh
+        env:
+          STAGING_URL: https://staging.supermandi.tech
+
       # V3-HARDEN-105: Scale acceptance gate — blocking index + throughput verification
       - name: Scale Acceptance Gate
         run: bash scripts/gates/scale-acceptance.sh

@@ -132,9 +132,9 @@ export default function BuyScreenV3() {
         </Pressable>
       </View>
 
-      {/* Supplier selector */}
+      {/* V3-FIX-142: Principal lane — retailer buys from SuperMandi, not directly from supplier */}
       <View style={styles.supplierRow}>
-        <Text style={styles.supplierLabel}>BUYING FROM</Text>
+        <Text style={styles.supplierLabel}>SUPERMANDI CATALOGUE</Text>
         <FlatList
           horizontal
           data={suppliers}

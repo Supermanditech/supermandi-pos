@@ -20,8 +20,8 @@ else
 fi
 
 # 2. Check migration 195 exists in repo
-echo -n "  [2/5] Migration 195 (procurement schema)... "
-if [ -f "backend/migrations/195_principal_procurement_support.sql" ]; then
+echo -n "  [2/5] Migration 196 (procurement schema)... "
+if [ -f "backend/migrations/196_principal_procurement_support.sql" ]; then
   echo "OK"
 else
   echo "FAIL — migration file missing"
