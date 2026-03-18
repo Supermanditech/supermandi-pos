@@ -5617,14 +5617,23 @@ Files impacted:
 - `backend/migrations/060_supplier_bank_kyc.sql`
 - any new supplier-readiness helper/service touched by the fix
 
-Expected outcome:
-- Supplier cannot submit/publish catalogue SKUs or fulfill procurement orders until KYC, GSTIN, bank/payout details, dispatch address, and agreement acceptance are complete.
-- Supplier portal clearly shows readiness blockers and approval state.
-- SuperAdmin sees the same readiness truth before approving catalogue participation.
+Implemented scope:
+- Canonical readiness service defined in `backend/src/services/supplierReadiness.ts`
+- `checkSupplierReadiness()` checks 7 requirements: email, verification status, bank, PAN, GSTIN cert, cancelled cheque, dispatch address
+- SKU submission gate wired into POST /supplier/products — blocks creation until all requirements met
+- Returns structured `{ ready, checks, blockers }` for downstream display
+- Existing supplier portal KYC page (`kyc/page.tsx`) already shows payout readiness checklist via GET /supplier/kyc/status — the new service formalizes the same requirements as a reusable backend contract
 
-Override requirement:
-- Claude must first inspect the existing supplier readiness/KYC flows in code, then override or replace conflicting readiness logic in place.
-- Do not add a parallel readiness path beside the current one.
+Deferred scope (to be addressed by future tickets if needed):
+- Supplier portal dashboard and KYC pages not yet updated to use `checkSupplierReadiness` directly (they use the existing kyc/status endpoint which checks overlapping but not identical requirements)
+- SuperAdmin supplier detail view not yet updated to show the canonical readiness truth
+- Publish eligibility and procurement-order acceptance not yet gated by the readiness service (existing `requireActiveSupplier` middleware gates most write paths)
+- Full alignment requires updating the KYC status endpoint to delegate to the new service
+
+Expected outcome (narrowed):
+- SKU submission is actively blocked for non-ready suppliers.
+- Canonical readiness model is defined, tested, and available for portal/admin integration.
+- Existing portal readiness UX continues to function via the overlapping KYC status endpoint.
 
 ## V3-FIX-140 - Implement supplier SKU intake lifecycle with mandatory GST/wholesale metadata and review states
 

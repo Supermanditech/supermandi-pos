@@ -62,9 +62,13 @@ export default function ProductDetailSheetV3({
 
   if (!visible || !product) return null;
 
-  const priceLabel = `₹${(product.priceMrpMinor / 100).toFixed(product.priceMrpMinor % 100 === 0 ? 0 : 2)}`;
-  const tradeLabel = product.priceTradeMinor
-    ? `₹${(product.priceTradeMinor / 100).toFixed(product.priceTradeMinor % 100 === 0 ? 0 : 2)}`
+  // V3-FIX-136: BUY CTA uses procurement/trade price, SELL uses MRP
+  const displayPriceMinor = context === "BUY" && product.priceTradeMinor
+    ? product.priceTradeMinor
+    : product.priceMrpMinor;
+  const priceLabel = `₹${(displayPriceMinor / 100).toFixed(displayPriceMinor % 100 === 0 ? 0 : 2)}`;
+  const mrpLabel = product.priceMrpMinor > 0
+    ? `MRP ₹${(product.priceMrpMinor / 100).toFixed(product.priceMrpMinor % 100 === 0 ? 0 : 2)}`
     : null;
   const ctaLabel = context === "SELL" ? "Add to Cart" : "Add to Purchase Cart";
   const stockText = product.stock != null
@@ -99,10 +103,14 @@ export default function ProductDetailSheetV3({
             <Text style={styles.productName}>{product.name}</Text>
             {product.brand ? <Text style={styles.brand}>{product.brand}</Text> : null}
 
-            {/* Price row */}
+            {/* Price row — BUY shows trade price prominently, SELL shows MRP */}
             <View style={styles.priceRow}>
               <Text style={styles.price}>{priceLabel}</Text>
-              {tradeLabel ? <Text style={styles.tradePrice}>Trade: {tradeLabel}</Text> : null}
+              {context === "BUY" && mrpLabel ? (
+                <Text style={styles.tradePrice}>{mrpLabel}</Text>
+              ) : context === "SELL" && product.priceTradeMinor ? (
+                <Text style={styles.tradePrice}>Trade: ₹{(product.priceTradeMinor / 100).toFixed(0)}</Text>
+              ) : null}
             </View>
 
             {/* Metadata grid */}
@@ -178,10 +186,28 @@ export default function ProductDetailSheetV3({
                     <Text style={[styles.metaValue, { color: colors.success }]}>{procurement.scheme}</Text>
                   </View>
                 ) : null}
+                {procurement.ptsMinor ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>PTS</Text>
+                    <Text style={styles.metaValue}>₹{(procurement.ptsMinor / 100).toFixed(2)}/unit</Text>
+                  </View>
+                ) : null}
+                {procurement.tradeDiscountPct ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Trade Discount</Text>
+                    <Text style={[styles.metaValue, { color: colors.success }]}>{procurement.tradeDiscountPct}%</Text>
+                  </View>
+                ) : null}
                 {procurement.creditDays ? (
                   <View style={styles.metaItem}>
                     <Text style={styles.metaLabel}>Credit</Text>
                     <Text style={styles.metaValue}>{procurement.creditDays} days</Text>
+                  </View>
+                ) : null}
+                {procurement.bnplAvailable ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>BNPL</Text>
+                    <Text style={[styles.metaValue, { color: colors.primary }]}>Available</Text>
                   </View>
                 ) : null}
               </View>
