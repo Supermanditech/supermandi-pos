@@ -17,6 +17,8 @@ import { getCatalog, type CatalogProduct } from "../../services/api/catalogApi";
 import { createOrder, submitOrder, type CreateOrderParams } from "../../services/api/orderApi";
 import { getDeviceStoreId } from "../../services/deviceSession";
 import { logger } from "../../services/logger";
+// V3-FIX-157: Consume scan result from procurement scan
+import { BuyScreenV3ScanResult } from "./V3ScreenWrappers";
 
 // V3-FIX-076: BUY tab — no fabricated wholesale metadata
 
@@ -92,6 +94,25 @@ export default function BuyScreenV3() {
     };
     void fetchCatalog();
   }, []);
+
+  // V3-FIX-157: Consume scanned barcode from procurement scan and auto-open detail
+  useEffect(() => {
+    if (!loading && products.length > 0 && BuyScreenV3ScanResult.barcode) {
+      const scannedBarcode = BuyScreenV3ScanResult.barcode;
+      // Clear the result so it doesn't re-trigger
+      BuyScreenV3ScanResult.barcode = null;
+      // Find the matching product and open its detail
+      const match = products.find((p) =>
+        p.id === scannedBarcode || (p as any).barcode === scannedBarcode
+      );
+      if (match) {
+        setDetailProduct(match);
+        showToast(`Found: ${match.name}`);
+      } else {
+        showToast(`Scanned product not found in catalogue`);
+      }
+    }
+  }, [loading, products]);
 
   // V3-FIX-076: Filter products by supplier, category, and search query
   const filteredProducts = useMemo(() => {

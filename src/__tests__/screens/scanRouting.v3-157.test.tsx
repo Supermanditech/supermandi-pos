@@ -150,7 +150,11 @@ describe("V3-FIX-157: V3ScanWrapper mounted routing (runtime)", () => {
     expect(screen.getByText("Scan Barcode")).toBeTruthy();
   });
 
-  it("procurement found navigates to V3Buy with scannedBarcode", () => {
+  it("procurement found sets BuyScreenV3ScanResult and goes back", () => {
+    const { BuyScreenV3ScanResult } = require("../../screens/v3/V3ScreenWrappers");
+    BuyScreenV3ScanResult.barcode = null;
+    BuyScreenV3ScanResult.timestamp = 0;
+
     const route = { params: { defaultContext: "procurement" } };
     render(<V3ScanWrapper route={route} />);
 
@@ -159,11 +163,17 @@ describe("V3-FIX-157: V3ScanWrapper mounted routing (runtime)", () => {
     fireEvent.changeText(input, "890100001");
     fireEvent(input, "submitEditing");
 
-    // Procurement success should navigate to V3Buy with barcode param
-    expect(mockNavigate).toHaveBeenCalledWith("V3Buy", { scannedBarcode: "890100001" });
+    // Procurement success should set the scan result for BUY to consume
+    expect(BuyScreenV3ScanResult.barcode).toBe("890100001");
+    expect(BuyScreenV3ScanResult.timestamp).toBeGreaterThan(0);
+    // And go back to BUY tab
+    expect(mockGoBack).toHaveBeenCalled();
   });
 
-  it("sell found does NOT navigate to V3Buy", () => {
+  it("sell found does NOT set BuyScreenV3ScanResult", () => {
+    const { BuyScreenV3ScanResult } = require("../../screens/v3/V3ScreenWrappers");
+    BuyScreenV3ScanResult.barcode = null;
+
     const route = { params: { defaultContext: "sell" } };
     render(<V3ScanWrapper route={route} />);
 
@@ -171,8 +181,8 @@ describe("V3-FIX-157: V3ScanWrapper mounted routing (runtime)", () => {
     fireEvent.changeText(input, "890100001");
     fireEvent(input, "submitEditing");
 
-    // SELL success should NOT navigate to V3Buy
-    expect(mockNavigate).not.toHaveBeenCalledWith("V3Buy", expect.anything());
+    // SELL success should NOT set procurement scan result
+    expect(BuyScreenV3ScanResult.barcode).toBeNull();
   });
 });
 
