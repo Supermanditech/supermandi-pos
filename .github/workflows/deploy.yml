@@ -254,6 +254,13 @@ jobs:
           STAGING_URL: https://staging.supermandi.tech
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
+      # V3-HARDEN-119: Version parity check — reports app/backend SHA alignment
+      - name: Version Parity Check
+        run: bash scripts/gates/version-parity-check.sh
+        env:
+          STAGING_URL: https://staging.supermandi.tech
+          APP_BUILD_SHA: ${{ needs.gate.outputs.sha_short }}
+
       # V3-HARDEN-105: Scale acceptance gate — blocking index + throughput verification
       - name: Scale Acceptance Gate
         run: bash scripts/gates/scale-acceptance.sh

@@ -31,5 +31,9 @@ configStatusRouter.get("/config-status", (_req, res) => {
     hasSmsProvider: process.env.SMS_DISABLED === "true" || !!process.env.SMS_PROVIDER,
     hasDatabaseUrl: !!process.env.DATABASE_URL,
     hasJwtSecret: !!process.env.JWT_SECRET,
+
+    // V3-FIX-116: Explicit auth capability signal (public, no token required)
+    // App boot checks this before routing into phone+OTP flow
+    otpAuthEnabled: true,
   });
 });

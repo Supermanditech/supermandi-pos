@@ -67,21 +67,16 @@ export default function SplashScreenV3() {
       const session = await Promise.race([getDeviceSession(), timeoutPromise]);
 
       if (!session) {
-        // V3-FIX-116: Check backend capability before routing to phone+OTP
+        // V3-FIX-116: Explicit backend capability check via public config-status
         setStatusText("Checking capabilities...");
         try {
-          const { apiClient } = require("../../services/api/apiClient");
-          const capRes = await Promise.race([
-            apiClient.get("/api/v1/pos/auth/send-otp").catch((e: any) => e),
+          const res = await Promise.race([
+            fetch(`${require("../../config/api").API_BASE_URL}/api/v1/config-status`).then((r) => r.json()),
             new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 5000)),
-          ]);
-          // If we get a 400 (missing phone param), the route exists → OTP auth is deployed
-          // If we get 401 DEVICE_UNAUTHORIZED or 404, the route is not deployed
-          const isOtpAvailable = capRes?.status === 400 || capRes?.response?.status === 400
-            || (capRes?.message && !capRes.message.includes("DEVICE_UNAUTHORIZED"));
-          if (!isOtpAvailable && capRes?.message?.includes("DEVICE_UNAUTHORIZED")) {
+          ]) as any;
+          if (res?.otpAuthEnabled !== true) {
             setStatusText("Update required");
-            setErrorState("This app version requires a backend update. Contact your administrator.");
+            setErrorState("POS phone+OTP login is not yet available on this server. Contact your administrator.");
             return;
           }
         } catch {

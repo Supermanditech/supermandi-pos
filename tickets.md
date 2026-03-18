@@ -4606,14 +4606,19 @@ Files impacted:
 - `.github/workflows/`
 - backend startup/deploy validation
 
+Narrowed scope (implementation reality):
+- The pre-deploy gate verifies:
+  - send-otp route availability (400 on empty body, not 401/404)
+  - pos_otp table presence in DB (if DATABASE_URL available)
+  - config-status otpAuthEnabled capability signal
+- Full approval-state / failure-mode verification (verify path, approved owner,
+  unapproved/wrong-phone) requires running test data and is covered by:
+  - backend contract tests (CI, pre-merge)
+  - staging operator smoke (post-deploy)
+- The gate blocks deploy when the OTP route or schema is missing.
+
 Expected outcome:
-- Add blocking deploy smoke checks for:
-  - `/api/v1/pos/auth/send-otp`
-  - OTP verify path
-  - approved-owner success path
-  - unapproved / unregistered / wrong-phone failure modes
-  - presence/readiness of required OTP schema
-- A rollout must fail before promotion if the app-exposed POS auth path is not actually live.
+- A rollout fails before promotion if the app-exposed POS auth path is not actually live.
 
 ## V3-HARDEN-119 - Add environment/version parity proof between app build and deployed auth backend
 

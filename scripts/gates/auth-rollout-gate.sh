@@ -51,6 +51,16 @@ else
   echo "  SKIP: No DATABASE_URL — cannot verify OTP schema"
 fi
 
+# 3. Config-status reports otpAuthEnabled
+echo "Checking GET /api/v1/config-status for otpAuthEnabled..."
+CONFIG_BODY=$(curl -s "${BASE_URL}/api/v1/config-status" 2>/dev/null || echo '{}')
+if echo "$CONFIG_BODY" | grep -q '"otpAuthEnabled":true'; then
+  echo "  OK: config-status reports otpAuthEnabled=true"
+else
+  echo "  FAIL: config-status does not report otpAuthEnabled=true"
+  ERRORS=$((ERRORS+1))
+fi
+
 echo ""
 if [ $ERRORS -gt 0 ]; then
   echo "GATE FAILED: $ERRORS error(s) — OTP auth not ready for promotion"

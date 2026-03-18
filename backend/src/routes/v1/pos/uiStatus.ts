@@ -212,6 +212,8 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
     // SA-P2-003: Minimum app version enforcement
     forceUpdate,
     minAppVersion: minAppVersionValue,
+    // V3-FIX-116: Explicit auth capability signal
+    otpAuthEnabled: true,
     features: {
       scan_lookup_v2: scanLookupV2Enabled,
       // GO-LIVE-REVEAL-001: Feature flags for POS tab visibility
