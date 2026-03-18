@@ -44,9 +44,15 @@ export default function KhataScreenV3({ onClose }: Props) {
     .filter((c) => c.balanceMinor > 0 && (!c.lastEntryAt || (Date.now() - new Date(c.lastEntryAt).getTime()) <= 30 * 86400000))
     .map((c) => ({ name: c.name, initial: c.name[0] ?? "?", days: Math.max(1, Math.round((Date.now() - new Date(c.lastEntryAt ?? Date.now()).getTime()) / 86400000)), amount: Math.round(c.balanceMinor / 100), overdue: false }));
 
-  // V3-FIX-082: Use only real data — no demo fallback
-  const displayOverdue = realOverdue;
-  const displayPending = realPending;
+  // V3-FIX-082: Use only real data — no demo fallback. Search filters both lists.
+  const [searchQuery, setSearchQuery] = useState("");
+  const filterBySearch = (list: Customer[]) => {
+    if (!searchQuery.trim()) return list;
+    const q = searchQuery.trim().toLowerCase();
+    return list.filter((c) => c.name.toLowerCase().includes(q));
+  };
+  const displayOverdue = filterBySearch(realOverdue);
+  const displayPending = filterBySearch(realPending);
   const totalOutstanding = khataCustomers.reduce((s, c) => s + Math.max(0, c.balanceMinor), 0);
   const totalOverdue = realOverdue.reduce((s, c) => s + c.amount * 100, 0);
 
@@ -82,7 +88,8 @@ export default function KhataScreenV3({ onClose }: Props) {
       <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Khata</Text><Pressable style={styles.addBtn}><Text style={styles.addBtnText}>+ Record</Text></Pressable></View>
       <View style={styles.summaryBar}><View><Text style={styles.sumLabel}>OUTSTANDING</Text><Text style={styles.sumVal}>₹{Math.round(totalOutstanding / 100).toLocaleString("en-IN")}</Text></View><View style={{ alignItems: "flex-end" }}><Text style={styles.sumLabel}>OVERDUE</Text><Text style={styles.sumVal}>₹{Math.round(totalOverdue / 100).toLocaleString("en-IN")}</Text></View></View>
       {khataLoading ? <ActivityIndicator size="small" color={colors.primary} style={{ padding: 10 }} /> : null}
-      <View style={styles.searchBar}><TextInput style={styles.searchInput} placeholder="Search customer..." placeholderTextColor={colors.textTertiary} /></View>
+      {/* V3-FIX-082: Wired search filter */}
+      <View style={styles.searchBar}><TextInput style={styles.searchInput} placeholder="Search customer..." placeholderTextColor={colors.textTertiary} value={searchQuery} onChangeText={setSearchQuery} /></View>
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
         {!khataLoading && displayOverdue.length === 0 && displayPending.length === 0 ? (
           <View style={{ padding: 32, alignItems: "center" }}>
@@ -100,7 +107,14 @@ export default function KhataScreenV3({ onClose }: Props) {
         )}
       </ScrollView>
       <View style={styles.footer}>
-        <Pressable style={styles.bulkWaBtn} onPress={() => showToast("Reminders sent to all overdue")}><Svg width={14} height={14} viewBox="0 0 24 24" fill="#fff"><Path d={WA_SVG} /><Path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.638l4.72-1.391A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" /></Svg><Text style={styles.bulkWaText}>Remind All Overdue</Text></Pressable>
+        {/* V3-FIX-082: Real bulk WhatsApp reminder with customer list */}
+        <Pressable style={styles.bulkWaBtn} onPress={() => {
+          if (realOverdue.length === 0) { showToast("No overdue customers to remind"); return; }
+          const lines = realOverdue.map((c) => `• ${c.name}: ₹${c.amount} (${c.days} days)`).join("\n");
+          const msg = encodeURIComponent(`*Payment Reminder*\n${lines}\n\nPlease clear your pending dues. Thank you!\n— SuperMandi`);
+          const { Linking } = require("react-native");
+          Linking.openURL(`whatsapp://send?text=${msg}`).catch(() => showToast("WhatsApp not installed"));
+        }}><Svg width={14} height={14} viewBox="0 0 24 24" fill="#fff"><Path d={WA_SVG} /><Path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.638l4.72-1.391A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" /></Svg><Text style={styles.bulkWaText}>Remind All Overdue</Text></Pressable>
       </View>
     </View>
   );

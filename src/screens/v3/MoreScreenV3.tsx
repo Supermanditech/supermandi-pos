@@ -29,7 +29,8 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
   }, []);
 
   const MENU_ITEMS = [
-    { icon: "📒", label: t("more.khata", "Khata (Udhar)"), bg: colors.primaryLight, badge: 3, screen: "khata" },
+    // V3-FIX-081: No hardcoded badge — badge hidden until real overdue count API is available
+    { icon: "📒", label: t("more.khata", "Khata (Udhar)"), bg: colors.primaryLight, screen: "khata" },
     { icon: "👥", label: t("more.customers", "Customers"), bg: colors.successSoft, screen: "customers" },
     { icon: "📊", label: t("more.reports", "Reports"), bg: colors.warningSoft, screen: "reports" },
     { icon: "📦", label: t("more.stock", "Stock"), bg: colors.backgroundSecondary, screen: "stock" },
@@ -88,7 +89,7 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
             <Pressable key={item.label} style={styles.menuItem} onPress={() => onNavigate(item.screen)}>
               <View style={[styles.menuIcon, { backgroundColor: item.bg }]}><Text style={{ fontSize: 18 }}>{item.icon}</Text></View>
               <Text style={styles.menuLabel}>{item.label}</Text>
-              {item.badge ? <View style={styles.menuBadge}><Text style={styles.menuBadgeText}>{item.badge}</Text></View> : null}
+              {(item as any).badge ? <View style={styles.menuBadge}><Text style={styles.menuBadgeText}>{(item as any).badge}</Text></View> : null}
               <Text style={styles.menuArrow}>›</Text>
             </Pressable>
           ))}

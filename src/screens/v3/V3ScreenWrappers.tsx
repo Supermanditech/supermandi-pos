@@ -104,7 +104,7 @@ export function V3ReorderWrapper() {
 
 export function V3StockWrapper() {
   const nav = useNavigation<Nav>();
-  return <StockScreenV3 onClose={() => nav.goBack()} />;
+  return <StockScreenV3 onClose={() => nav.goBack()} onOpeningStock={() => { nav.goBack(); nav.navigate("V3Scan" as any); }} />;
 }
 
 export function V3KhataWrapper() {

@@ -11,9 +11,9 @@ import { showToast } from "../../utils/showToast";
 
 type StockItem = { name: string; costMinor: number; sellMinor: number; stock: number; status: "in" | "low" | "out" };
 
-type Props = { onClose: () => void };
+type Props = { onClose: () => void; onOpeningStock?: () => void };
 
-export default function StockScreenV3({ onClose }: Props) {
+export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<"current" | "unsold" | "movement">("current");
@@ -102,9 +102,9 @@ export default function StockScreenV3({ onClose }: Props) {
       {/* V3-FIX-080: Real actions instead of placeholder alerts */}
       <View style={styles.footer}>
         <Pressable style={styles.footerBtn} onPress={() => {
-          onClose();
-          // Navigate to scan screen in stock_in context for opening stock
-          const { useNavigation } = require("@react-navigation/native");
+          // V3-FIX-080: Navigate to scan in stock_in context via wrapper
+          if (onOpeningStock) { onOpeningStock(); }
+          else { showToast("Opening stock — navigate to scan screen"); }
         }} accessibilityLabel="Opening stock entry">
           <Text style={styles.footerBtnText}>Opening Stock</Text>
         </Pressable>
