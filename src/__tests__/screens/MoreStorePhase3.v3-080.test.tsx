@@ -35,6 +35,15 @@ jest.mock("../../config/api", () => ({ API_BASE_URL: "http://test", BUILD_INFO: 
 jest.mock("../../services/api/apiClient", () => ({ apiClient: { get: jest.fn().mockResolvedValue({}), post: jest.fn().mockResolvedValue({}) } }));
 jest.mock("../../services/api/staffApi", () => ({ staffLogin: jest.fn(), staffMe: jest.fn() }));
 jest.mock("../../services/networkStatus", () => ({ isOnline: jest.fn().mockResolvedValue(true) }));
+jest.mock("../../stores/productsStore", () => ({
+  useProductsStore: (sel: (s: any) => any) => sel({ products: [], getProductByBarcode: () => null }),
+}));
+jest.mock("../../stores/cartStore", () => ({
+  useCartStore: Object.assign(
+    (sel: (s: any) => any) => sel({ items: [], addItem: jest.fn(), updateQuantity: jest.fn() }),
+    { getState: () => ({ items: [] }) },
+  ),
+}));
 jest.mock("../../utils/showToast", () => ({ showToast: jest.fn() }));
 jest.mock("../../services/logger", () => ({ logger: { debug: jest.fn(), error: jest.fn() } }));
 jest.mock("../../services/deviceSession", () => ({ getDeviceStoreId: jest.fn().mockResolvedValue("store-1") }));
@@ -215,20 +224,35 @@ describe("V3-FIX-080: Stock screen", () => {
     });
   });
 
-  it("V3StockWrapper passes stock_in context to scan navigation", () => {
-    // Verify the source wiring — V3StockWrapper navigates with { context: "stock_in" }
-    const src = require("fs").readFileSync(
-      require("path").resolve(__dirname, "../../screens/v3/V3ScreenWrappers.tsx"), "utf8"
-    );
-    expect(src).toContain('context: "stock_in"');
+  it("V3StockWrapper onOpeningStock navigates to V3Scan with stock_in context", () => {
+    const { V3StockWrapper } = require("../../screens/v3/V3ScreenWrappers");
+    render(<V3StockWrapper />);
+    fireEvent.press(screen.getByLabelText("Opening stock entry"));
+    expect(mockNavigate).toHaveBeenCalledWith("V3Scan", { context: "stock_in" });
   });
 
-  it("V3ScanWrapper reads defaultContext from route params", () => {
-    const src = require("fs").readFileSync(
-      require("path").resolve(__dirname, "../../screens/v3/V3ScreenWrappers.tsx"), "utf8"
-    );
-    expect(src).toContain("route?.params?.context");
-    expect(src).toContain("defaultContext={context}");
+  it("V3ScanWrapper passes route context as defaultContext to ScanScreenV3", () => {
+    const { V3ScanWrapper } = require("../../screens/v3/V3ScreenWrappers");
+    const route = { params: { context: "stock_in" } };
+    render(<V3ScanWrapper route={route} />);
+    // ScanScreenV3 renders header "Scan Barcode"
+    expect(screen.getByText("Scan Barcode")).toBeTruthy();
+    // Context toggle visible because defaultContext !== "sell"
+    expect(screen.getByText("SCAN MODE")).toBeTruthy();
+  });
+
+  it("barcode labels use real barcode + sellMinor from StockItem", async () => {
+    const mockPrint = require("../../services/printerService").printerService.printReceipt;
+    mockPrint.mockClear();
+    render(<StockScreenV3 onClose={jest.fn()} />);
+    await waitFor(() => expect(screen.getByText("Coke")).toBeTruthy());
+    fireEvent.press(screen.getByLabelText("Print barcode labels"));
+    await waitFor(() => expect(mockPrint).toHaveBeenCalledTimes(1));
+    // Verify the label content includes real barcode and sell price
+    const labelText = mockPrint.mock.calls[0][0] as string;
+    expect(labelText).toContain("Coke");
+    expect(labelText).toContain("123"); // barcode from mock data
+    expect(labelText).toContain("₹20"); // sellMinor 2000 / 100 = 20
   });
 });
 

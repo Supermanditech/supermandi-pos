@@ -9,7 +9,8 @@ import { showToast } from "../../utils/showToast";
 
 // V3-044: Stock screen v3 — wire real getStockStatement API
 
-type StockItem = { name: string; costMinor: number; sellMinor: number; stock: number; status: "in" | "low" | "out" };
+// V3-FIX-080: Carry barcode for label printing
+type StockItem = { name: string; barcode: string; costMinor: number; sellMinor: number; stock: number; status: "in" | "low" | "out" };
 
 type Props = { onClose: () => void; onOpeningStock?: () => void };
 
@@ -28,6 +29,7 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
         const res = await getStockStatement(200, true);
         const mapped: StockItem[] = (res.data ?? []).map((p: any) => ({
           name: p.name ?? "Unknown",
+          barcode: p.barcode ?? p.primaryBarcode ?? "",
           costMinor: p.unitCostMinor ?? 0,
           sellMinor: p.unitPriceMinor ?? p.priceMinor ?? 0,
           stock: p.quantity ?? 0,
@@ -112,7 +114,8 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
           if (items.length === 0) { showToast("Add products first to print barcode labels"); return; }
           try {
             const { printerService } = require("../../services/printerService");
-            const labels = items.map((p: any) => `${p.name}\n${p.barcode ?? "—"}\n₹${Math.round((p.priceMinor ?? 0) / 100)}`).join("\n\n");
+            // V3-FIX-080: Use real barcode + sellMinor from StockItem
+            const labels = items.map((p) => `${p.name}\n${p.barcode || "—"}\n₹${Math.round(p.sellMinor / 100)}`).join("\n\n");
             const ok = await printerService.printReceipt(labels);
             showToast(ok ? `${items.length} barcode labels sent to printer` : "Print failed — check printer connection");
           } catch { showToast("Printer not available"); }
