@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
-import { View, Pressable, ScrollView, StyleSheet, Text, Alert, TextInput, Modal } from "react-native";
+import { View, Pressable, ScrollView, KeyboardAvoidingView, Platform, StyleSheet, Text, Alert, TextInput, Modal } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -174,7 +174,9 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
       </ScrollView>
 
       {/* Cross-platform modal for Add Staff + Owner PIN (works on Android) */}
+      {/* V3-HARDEN-112: KeyboardAvoidingView wraps modal content */}
       <Modal visible={modalMode !== null} transparent animationType="slide" onRequestClose={() => setModalMode(null)} testID="settings-modal">
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
             {modalMode === "add-staff" && (
@@ -278,6 +280,7 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
             )}
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

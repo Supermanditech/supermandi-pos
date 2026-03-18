@@ -14,6 +14,7 @@
 import React from "react";
 import { Text, TextProps, StyleSheet, Platform, StyleProp, TextStyle } from "react-native";
 import { theme } from "../../theme";
+import { getChipFontSize } from "../../theme/responsive";
 
 export type AppTextVariant =
   | "body"      // Default body text
@@ -155,8 +156,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  // V3-HARDEN-111: Label variant uses responsive chip font size
   label: {
-    fontSize: 12,
+    fontSize: getChipFontSize(),
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.5,

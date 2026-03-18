@@ -4485,15 +4485,16 @@ Files impacted:
 - CI workflow files under `.github/workflows/`
 - any helper scripts/runbooks used to capture approval snapshots
 
-Expected outcome:
-- Add a release gate that captures and verifies all V3 screens across the supported device matrix, including:
+Expected outcome (aligned with narrowed scope):
+- Automated proof: responsive.test.ts verifies device class detection, adaptive grid columns, and layout token scaling for all 5 width buckets (31 tests).
+- Manual proof: operator runs Maestro harness against connected devices to capture and verify all V3 screens across the supported device matrix, including:
   - auth screens
   - SELL family
   - BUY family
   - STORE family
   - MORE family
   - all modal/sheet states that are part of the operator journey
-- Proof must include:
+- Visual acceptance criteria (verified manually via Maestro, not automated CI gate):
   - no clipped or stretched text
   - no hidden CTA controls
   - no overlapping badges/icons

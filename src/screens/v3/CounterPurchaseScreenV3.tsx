@@ -158,7 +158,7 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
   }, 0);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={onClose} accessibilityLabel="Back"><Text style={styles.backText}>←</Text></Pressable>
@@ -296,7 +296,7 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

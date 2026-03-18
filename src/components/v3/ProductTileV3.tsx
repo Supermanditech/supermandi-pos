@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { View, Pressable, StyleSheet, Text, Image } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { getChipFontSize } from "../../theme/responsive";
 import type { SellMode } from "../../stores/cartStore";
 
 // STG-553: Product tile for v3 sell grid — stock dot, cart badge, case size, wholesale price
@@ -126,9 +127,10 @@ function createStyles(colors: ColorPalette) {
       justifyContent: "center",
       zIndex: 2,
     },
+    // V3-HARDEN-111: Responsive badge text
     cartBadgeText: {
       color: "#FFFFFF",
-      fontSize: 11,
+      fontSize: getChipFontSize(),
       fontWeight: "800",
     },
     stockDot: {
@@ -164,14 +166,14 @@ function createStyles(colors: ColorPalette) {
       letterSpacing: 0.3,
       marginTop: 2,
     },
-    // V3-FIX-108: Removed fixed height:28 — use minHeight for flexible text fit
+    // V3-HARDEN-111: Responsive name text with flexible height
     name: {
-      fontSize: 11,
+      fontSize: getChipFontSize(),
       fontWeight: "600",
       color: colors.textPrimary,
-      lineHeight: 14,
+      lineHeight: getChipFontSize() + 3,
       textAlign: "center",
-      minHeight: 28,
+      minHeight: (getChipFontSize() + 3) * 2,
     },
     price: {
       fontSize: 15,

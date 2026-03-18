@@ -140,7 +140,9 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
       </ScrollView>
 
       {/* Split Payment Modal — stays in chooser */}
+      {/* V3-HARDEN-112: KeyboardAvoidingView wraps modal content for keyboard safety */}
       <Modal visible={splitVisible} transparent animationType="slide" onRequestClose={() => setSplitVisible(false)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
             <Text style={{ fontSize: 18, fontWeight: "800", marginBottom: 4 }}>Split Payment</Text>
@@ -206,6 +208,7 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
             </View>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
