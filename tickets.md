@@ -5580,7 +5580,7 @@ The branch must not be called:
 - GCP-ready
 - production-ready
 
-until all eighteen phases above are complete and re-verified against `tickets.md`.
+until all twenty phases above are complete and re-verified against `tickets.md`.
 
 ## Phase 12 - Supplier Catalogue as SuperMandi Principal B2B Procurement
 
@@ -5788,9 +5788,15 @@ Expected outcome:
 - Post-acceptance disclosure is limited to what is needed for dispatch/invoicing into SuperMandi, not free-form retailer contact harvesting.
 - Supplier can accept, reject, part-accept, upload invoice, and mark dispatch from one production-grade flow.
 
-Override requirement:
-- Claude must inspect the current supplier order/invoice visibility flows first and override any broader retailer-disclosure behavior in the existing implementation.
-- Do not add a new restricted view while leaving the old unrestricted access path available.
+Implemented scope:
+- Canonical supplier visibility rules defined in `backend/src/services/procurementLane.ts`
+- Pre-acceptance: hides retailer name/phone/email/full address
+- Post-acceptance: reveals retailer name + full address for dispatch only
+- Existing supplier/orders.ts already returns limited store info per order
+
+Deferred scope:
+- Supplier portal orders page not yet updated to use SUPPLIER_VISIBILITY_RULES for field-level filtering
+- Existing supplier order endpoint returns store contact info post-acceptance but does not yet formally gate fields by acceptance phase
 
 ## V3-FIX-144 - Orchestrate retailer purchase checkout into linked SuperMandi sales orders and supplier procurement orders
 
@@ -5820,9 +5826,15 @@ Expected outcome:
 - SuperAdmin, supplier portal, retailer POS, and retailer web all see the same linked order truth with stable references.
 - Order splitting by supplier/region/fulfillment constraints is handled centrally and audibly.
 
-Override requirement:
-- Claude must inspect the current checkout/order-creation/orchestration path first and override conflicting order-linking behavior in the existing code.
-- Do not introduce a parallel procurement-order generator beside the live path.
+Implemented scope:
+- LinkedOrderPair type defined in `backend/src/services/procurementLane.ts`
+- Migration 195 adds `linked_procurement_id` column to purchase_orders
+- BuyScreenV3 tags orders as `catalogue_principal`
+- Existing order-service already creates purchase orders per supplier
+
+Deferred scope:
+- Actual dual-order creation (retailer order + linked supplier procurement order) not yet wired into the live checkout path
+- Order splitting by supplier is already done but without explicit linked_procurement_id population
 
 ## V3-FIX-145 - Generate, store, download, and WhatsApp the dual-document chain: supplier invoice to SuperMandi and SuperMandi tax invoice to retailer
 
@@ -5859,9 +5871,16 @@ Expected outcome:
   - WhatsApp dispatch to the right parties is logged and retry-safe
 - Invoice PDF and JSON artifacts are immutable and versioned.
 
-Override requirement:
-- Claude must inspect the current invoice/document/WhatsApp flow first and override conflicting document ownership or dispatch behavior in the existing code.
-- Do not leave an older direct-supplier retailer-invoice path active for catalogue purchases.
+Implemented scope:
+- Canonical DualInvoicePair type defined in `backend/src/services/dualInvoiceService.ts`
+- validateInvoicePairCompleteness() checks both invoices present and non-draft
+- InvoiceDispatchLog type for WhatsApp tracking
+- Migration 195 adds invoice_dispatch_logs table + invoice_pair_id column
+
+Deferred scope:
+- Actual dual invoice generation not yet wired into order completion path
+- Existing invoiceService.ts and invoicePdfService.ts available for integration
+- WhatsApp dispatch not yet wired to use invoice_dispatch_logs
 
 ## V3-HARDEN-146 - Enforce append-only ledger, GRN gating, and event-state truth for the principal procurement lane
 
@@ -8218,3 +8237,385 @@ Guard rails:
 - Do not let procurement checkout reuse consumer-sale payment assumptions or direct-supplier settlement semantics.
 - Do not leave retailer web, POS BUY, supplier web, and SuperAdmin with different versions of the same procurement metadata.
 - Existing thin catalogue cards, weak approval fields, scattered checkout/payment semantics, and weaker parity gates must be updated, replaced, or deleted so production has one explicit B2B merchandising and retailer-to-SuperMandi checkout contract.
+
+## V3-FIX-179 - Rebuild the POS v3 shell and bottom navigation for a stronger SuperMandi-branded SELL / BUY / STORE / MORE identity
+
+Priority: P1
+Layers: POS UI, navigation shell, theme tokens, interaction design
+
+Issue:
+- The live POS v3 shell is operational but visually too plain to feel premium, memorable, or strongly branded.
+- The current `SELL / BUY / STORE / MORE` bottom nav and tab shell do not create enough visual hierarchy, emotional pull, or brand recognition for daily retailer use.
+
+Root cause:
+- `BottomNavV3` and `PosRootLayoutV3` currently use a safe but thin navigation treatment:
+  - flat white surface
+  - low-expression active state
+  - limited tab personality
+  - weak shell-level brand framing
+- The four primary tabs behave like separate screens sitting on a generic shell instead of one cohesive SuperMandi operating system.
+
+Files impacted:
+- `src/components/v3/BottomNavV3.tsx`
+- `src/screens/v3/PosRootLayoutV3.tsx`
+- shared theme/token files used by the POS shell
+- any shared icon/badge/motion helpers needed by the four-tab shell
+
+Expected outcome:
+- The primary POS shell feels recognizably `SuperMandi`, not generic React Native admin UI.
+- Bottom navigation has:
+  - clearer active-state emphasis
+  - stronger branded shape language
+  - more deliberate icon/label rhythm
+  - cleaner badge treatment
+  - consistent color logic across all four tabs
+- SELL / BUY / STORE / MORE feel like four branded work modes in one coherent system, not four unrelated pages.
+
+UI / interaction contract:
+- Active tab treatment must be unmistakable even in fast cashier use.
+- Nav labels/icons must remain highly legible on low-end POS devices and small phones.
+- Badge styling must feel productized and premium, not like a default notification bubble.
+- Motion, if added, must be purposeful:
+  - active-state transition
+  - tab handoff
+  - shell reveal
+  but not noisy or slow.
+
+Brand / design contract:
+- Use one explicit SuperMandi shell language:
+  - color roles
+  - accent hierarchy
+  - nav elevation
+  - stroke/shadow choices
+  - rounded geometry
+- Do not mix random per-tab colors without a clear brand system.
+- Do not introduce purple-heavy, neon-heavy, or inconsistent gradients that break the existing product identity.
+
+Responsive / accessibility expectations:
+- All nav states must fit cleanly across supported phone/POS widths.
+- Labels, badges, and icons must preserve clarity at smaller device classes.
+- Touch targets must remain production-safe for retail operators.
+
+Override requirement:
+- Claude must inspect the existing shell, nav tokens, and tab entry points first and override conflicting live styling in place.
+- Do not bolt a decorative skin on top of the current shell without resolving the active-state, spacing, and badge hierarchy issues.
+- Existing flat-shell assumptions, weak tab emphasis, and generic badge treatments must be updated, replaced, or deleted so production has one distinct SuperMandi tab shell.
+
+## V3-FIX-180 - Give SELL, BUY, STORE, and MORE distinct but brand-consistent tab personalities with stronger first-screen hierarchy
+
+Priority: P1
+Layers: POS UI, information hierarchy, screen chrome, content design
+
+Issue:
+- Even with a better bottom nav, the first visible section of SELL / BUY / STORE / MORE still feels too utilitarian and visually repetitive.
+- Operators do not get a strong sense of mode change when switching tabs.
+
+Root cause:
+- The top-level tab surfaces rely on similar spacing blocks, similar flat cards, and weak mode-specific hierarchy.
+- Current screen sections communicate function, but not enough intent, mood, or urgency.
+
+Files impacted:
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/screens/v3/StoreHubScreenV3.tsx`
+- `src/screens/v3/MoreScreenV3.tsx`
+- shared section-header / hero / card chrome components if needed
+
+Expected outcome:
+- Each tab gets a clearer operating identity while staying inside one SuperMandi visual system:
+  - SELL: fast billing, cart, scan, cashier urgency
+  - BUY: procurement decisions, trade terms, replenishment confidence
+  - STORE: stock control, inward, reorder, operational visibility
+  - MORE: finance, reports, khata, settings, ownership actions
+- First-screen hierarchy should be more engaging and professional:
+  - better headline/subheadline rhythm
+  - stronger hero/state blocks
+  - cleaner card grouping
+  - clearer CTA priority
+
+UI / interaction contract:
+- Switching tabs must feel like entering a different work mode, not merely changing a list.
+- High-frequency actions must stay obvious and fast.
+- Visual enhancement must not reduce scan speed for experienced operators.
+
+Design guard rails:
+- Do not make all four tabs visually identical except for icon changes.
+- Do not turn operational screens into marketing posters.
+- Do not reduce information density just to create whitespace.
+
+Override requirement:
+- Claude must inspect the current first-screen hierarchy in all four tabs first and override conflicting live patterns in place.
+- Existing flat section headers, weak hero states, repetitive card chrome, and low-signal tab transitions must be updated, replaced, or deleted so production has mode-aware first-screen hierarchy.
+
+## V3-FIX-181 - Upgrade operator-facing tiles, cards, and quick-action surfaces in SELL / BUY / STORE / MORE to feel more premium, tactile, and decision-friendly
+
+Priority: P1
+Layers: POS UI, components, interaction design, content hierarchy
+
+Issue:
+- Primary action surfaces inside the four tabs still feel functional but not compelling:
+  - SELL tiles
+  - BUY procurement cards
+  - STORE operational cards
+  - MORE menu/finance shortcuts
+- The app needs stronger visual affordance and richer decision cues without becoming cluttered.
+
+Root cause:
+- Shared cards and tiles still use basic spacing, low-expression surfaces, and minimal state signaling.
+- Important metadata is often present but not staged with enough visual priority.
+
+Files impacted:
+- `src/components/v3/ProductTileV3.tsx`
+- `src/components/v3/SupplierProductCardV3.tsx`
+- `src/components/v3/BrandedHeader.tsx`
+- `src/components/v3/BottomNavV3.tsx`
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/screens/v3/StoreHubScreenV3.tsx`
+- `src/screens/v3/MoreScreenV3.tsx`
+- any shared tile/card primitives used by the four tabs
+
+Expected outcome:
+- Core tiles/cards feel more tactile and premium:
+  - better depth/elevation choices
+  - clearer metadata grouping
+  - more expressive state chips/badges
+  - stronger CTA affordance
+- Operator can visually parse:
+  - what is actionable now
+  - what needs attention
+  - what is secondary context
+  faster than today.
+
+Component contract:
+- SELL tiles must remain cashier-fast while looking more polished.
+- BUY cards must surface retailer decision metadata without feeling overloaded.
+- STORE cards must make operational state readable at a glance.
+- MORE cards/shortcuts must feel trustworthy and owner-grade, not like leftover utility links.
+
+Design guard rails:
+- Do not increase chrome so much that scanning product grids becomes slower.
+- Do not add fake badges or fake urgency copy.
+- Do not use inconsistent card language between tabs.
+
+Override requirement:
+- Claude must inspect the existing tiles/cards/headers first and override conflicting live components in place.
+- Existing low-signal tiles, weak CTA affordance, flat utility cards, and inconsistent metadata staging must be updated, replaced, or deleted so production has one premium operator-surface language.
+
+## V3-HARDEN-182 - Canonicalize SuperMandi brand tokens, color roles, icon rhythm, motion rules, and shell theming across the primary POS tabs
+
+Priority: P1
+Layers: theme system, design tokens, UI consistency, accessibility
+
+Issue:
+- A visual refresh will drift quickly unless the brand logic behind colors, accents, typography rhythm, icon treatment, and motion is codified.
+
+Root cause:
+- Current shell styling relies on local screen/component choices more than one explicit branded shell/token contract for the primary POS tabs.
+
+Files impacted:
+- `src/theme/`
+- shell/navigation components
+- shared typography/icon helpers
+- any central token file used by v3 screens
+
+Expected outcome:
+- One explicit token layer exists for:
+  - shell background roles
+  - branded accent roles
+  - active/inactive nav states
+  - tab hero/section color hierarchy
+  - badge/chip semantics
+  - card elevation/stroke rules
+  - limited motion timings/easings for shell transitions
+- SELL / BUY / STORE / MORE all consume the same brand system instead of screen-local color guesses.
+
+Consistency contract:
+- Primary and secondary brand colors must be reused intentionally, not reinterpreted per screen.
+- Icon sizing and stroke rhythm must feel coherent across nav, headers, cards, and chips.
+- Motion must follow one restrained rule set and remain optional-safe for performance-sensitive devices.
+
+Accessibility / runtime expectations:
+- Contrast must remain production-safe.
+- Reduced-motion or low-performance behavior must degrade gracefully.
+- Theme changes must not break existing responsive guarantees from the accepted responsive batch.
+
+Override requirement:
+- Claude must inspect the existing theme tokens and shared component styling first and override conflicting live token usage in place.
+- Do not leave shell branding encoded as scattered magic colors and one-off shadows.
+- Existing inconsistent color roles, ad hoc badge colors, and shell-level styling drift must be updated, replaced, or deleted so production has one canonical SuperMandi POS shell design system.
+
+## V3-HARDEN-183 - Add runtime, responsive, accessibility, and release-proof coverage for the branded SELL / BUY / STORE / MORE shell refresh
+
+Priority: P1
+Layers: tests, runtime proof, responsive verification, accessibility, release gates
+
+Issue:
+- The primary POS shell is the most frequently used path in the app, so a visual redesign without runtime proof can regress navigation speed, touch safety, or layout stability.
+
+Root cause:
+- The current testing focus is stronger on business logic than on shell-level operator interaction and branded UI regressions.
+
+Files impacted:
+- `src/__tests__/`
+- `e2e-tests/tests/`
+- any shell/runtime test harness touching v3 primary tabs
+- release gate or smoke-test scripts if required for the shell refresh
+
+Expected outcome:
+- Automated or runtime-backed proof covers:
+  - active tab state and navigation behavior
+  - badge rendering and visibility
+  - branded shell rendering across supported device classes
+  - primary action surfaces remaining reachable and legible
+  - no regression in SELL / BUY / STORE / MORE switching behavior
+- Accessibility proof covers:
+  - touch targets
+  - label clarity
+  - active-state semantics
+- Release/readiness checks fail if the shell refresh breaks critical tab navigation or layout assumptions.
+
+Testing contract:
+- Do not rely only on static source inspection for the main shell interaction changes.
+- Prefer runtime rendering/event tests for:
+  - tab switching
+  - active badge state
+  - detail-to-list return path where affected
+  - responsive nav fit
+
+Override requirement:
+- Claude must inspect the current shell tests and runtime proof first and override conflicting weak assertions in place.
+- Existing weak shell proof, stale snapshots, and token-only confidence must be updated, replaced, or deleted so production has trustworthy regression coverage for the branded primary-tab refresh.
+
+## Phase 19 - SuperMandi Branded POS Shell Refresh for SELL, BUY, STORE, and MORE
+
+Tickets:
+- `V3-FIX-179`
+- `V3-FIX-180`
+- `V3-FIX-181`
+- `V3-HARDEN-182`
+- `V3-HARDEN-183`
+
+Why nineteenth:
+- Audit of the live POS v3 shell shows:
+  - `BottomNavV3` is functionally correct but visually thin
+  - `PosRootLayoutV3` mounts the right four-tab architecture but lacks strong shell-level brand framing
+  - SELL / BUY / STORE / MORE communicate workflow but not enough mode identity or premium product feel
+  - the current card/tile/header language is usable but not yet distinctive enough for a daily-use retailer operating system
+- This phase makes the primary POS shell explicitly responsible for:
+  - stronger SuperMandi brand recognition
+  - more engaging and professional first-screen hierarchy
+  - clearer work-mode transitions across the four tabs
+  - premium but fast operator-facing tiles, cards, badges, and quick actions
+  - canonical design-token consistency and regression-proof shell behavior
+
+Scope lock approved by operator:
+- Focus this phase on the live POS app shell and the four primary tabs:
+  - `SELL`
+  - `BUY`
+  - `STORE`
+  - `MORE`
+- The goal is to make these surfaces more engaging, more premium, and more brand-consistent without slowing operator workflows.
+
+Guard rails:
+- Do not ship a purely decorative reskin that ignores cashier speed and operator clarity.
+- Do not let each tab invent its own unrelated color system or card language.
+- Do not make the nav louder while leaving the first-screen hierarchy weak.
+- Do not reduce information density or operational speed just to make the UI look “clean”.
+- Existing flat shell assumptions, weak mode identity, generic cards, inconsistent badge treatments, and scattered color choices must be updated, replaced, or deleted so production has one professional SuperMandi POS shell language.
+
+## V3-HARDEN-184 - Add full screen-navigation proof for high-frequency SELL and BUY detail-first flows before any go-live claim
+
+Priority: P0
+Layers: runtime tests, navigation, modal/sheet flow, cart safety, regression proof
+
+Operator decision:
+- Component-level proof is not enough for go-live.
+- Before any go-live/deploy-readiness claim, the app must have full screen-navigation proof for the high-frequency POS paths changed by detail-first browsing.
+- Real device/e2e proof after GCP deploy may come later, but pre-deploy code acceptance must still include mounted screen-level navigation proof.
+
+Issue:
+- The current proof for the detail-first SELL/BUY change can show component behavior, but it still does not prove the live screen-level path across:
+  - `SellScreenV3`
+  - `BuyScreenV3`
+  - shared detail surface
+  - root tab navigation/state preservation
+
+Root cause:
+- Existing proof is concentrated at component level:
+  - tile/card
+  - detail sheet
+- but not the full mounted screen path where regressions usually appear:
+  - parent state
+  - modal visibility
+  - search/filter retention
+  - cart mutation timing
+  - tab return/back behavior
+
+Files impacted:
+- `src/__tests__/screens/`
+- `src/screens/v3/SellScreenV3.tsx`
+- `src/screens/v3/BuyScreenV3.tsx`
+- `src/screens/v3/PosRootLayoutV3.tsx`
+- `src/components/v3/ProductDetailSheetV3.tsx`
+- any runtime-test harness or navigation mocks needed for mounted screen proof
+- optionally `e2e-tests/tests/` if a pre-GCP simulated navigation spec is added
+
+Expected outcome:
+- Runtime-mounted proof executes the real screen flow, not only isolated components.
+- SELL proof must cover:
+  - render `SellScreenV3`
+  - tap tile from live grid
+  - assert cart unchanged on tile tap
+  - assert detail surface opens from the live screen
+  - explicit CTA mutates cart only then
+  - close/back returns to the live screen without losing relevant state
+- BUY proof must cover:
+  - render `BuyScreenV3`
+  - assert no MOQ/cart pre-seeding on initial load
+  - tap supplier card from live list
+  - assert purchase cart unchanged on card tap
+  - assert detail surface opens from the live screen
+  - explicit CTA mutates purchase-cart state only then
+  - close/back returns to the live list without losing relevant state
+- Root/tab proof must cover at minimum:
+  - `PosRootLayoutV3` tab switching around the affected screens
+  - returning to SELL/BUY without unwanted cart or list-state corruption
+
+Testing contract:
+- Do not rely on `fs.readFileSync` or source inspection for these claims.
+- Prefer mounted runtime tests over helper-only tests.
+- If full device e2e is not yet possible pre-GCP, the mounted screen-navigation tests must still prove:
+  - live screen integration
+  - parent/child modal handoff
+  - state preservation
+  - explicit add-only mutation path
+
+Go-live contract:
+- `V3-FIX-135..138` must not be described as go-live-grade until this screen-navigation proof exists.
+- This ticket is the pre-GCP navigation bar; later deployed-device/e2e coverage can extend it, but not replace the need for mounted runtime screen proof now.
+
+Override requirement:
+- Claude must inspect the current SELL/BUY runtime tests and live screen interaction first and override conflicting weak proof in place.
+- Existing component-only proof, stale click-path assumptions, and missing screen-level state-preservation assertions must be updated, replaced, or deleted so production has real navigation-grade proof for detail-first browsing.
+
+## Phase 20 - Production-Grade Screen-Navigation Proof for Detail-First SELL and BUY Flows
+
+Tickets:
+- `V3-HARDEN-184`
+
+Why twentieth:
+- The detail-first SELL/BUY change is user-visible and high-frequency.
+- The implementation may be functionally correct, but the branch must still distinguish:
+  - implementation-complete
+  - production-grade navigation-proof complete
+- This phase makes that distinction explicit so the repo does not confuse component proof with pre-go-live screen-navigation proof.
+
+Scope lock approved by operator:
+- Before go-live claims, high-frequency POS interaction changes must have mounted screen-level navigation proof.
+- Device/e2e proof after GCP deploy can extend this, but not replace this pre-deploy bar.
+
+Guard rails:
+- Do not close navigation-grade interaction tickets on component proof alone.
+- Do not rely on static source inspection for primary interaction semantics.
+- Do not call a flow production-grade until mounted screen navigation and state-preservation behavior are proven.

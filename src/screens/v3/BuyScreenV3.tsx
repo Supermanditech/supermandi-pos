@@ -287,7 +287,8 @@ export default function BuyScreenV3() {
                   quantity: (orderQtys[p.id] ?? 0) * p.caseSize,
                   unitPrice: p.ptrMinor,
                 }));
-                const order = await createOrder(sid, { supplierId, orderType: "standard" as any, items: orderItems });
+                // V3-FIX-142: Tag as principal lane — catalogue purchases go through SuperMandi
+                const order = await createOrder(sid, { supplierId, orderType: "catalogue_principal" as any, items: orderItems });
                 await submitOrder(sid, order.id);
                 totalItems += orderItems.length;
                 logger.debug("BuyV3", `order_submitted:${order.id},supplier:${supplierId},items:${orderItems.length}`);
