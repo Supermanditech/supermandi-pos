@@ -34,14 +34,21 @@ describe("V3-HARDEN-130: Store isolation (executable)", () => {
     expect(STORE_ISOLATION_RULES.BUY_SEARCH).toContain("supplier_store_links");
   });
 
-  it("backend search endpoints use assertStoreId (static — narrowly scoped)", () => {
+  it("ALL pos/store-products routes use fail-closed storeId extraction (static — narrowly scoped)", () => {
     const fs = require("fs");
     const path = require("path");
     const src = fs.readFileSync(
       path.resolve(__dirname, "../../src/routes/v1/pos/storeProducts.ts"), "utf8"
     );
-    expect(src).toContain('assertStoreId(storeId, "store-products/search")');
-    expect(src).toContain('assertStoreId(storeId, "store-products/lookup")');
+    // Must define fail-closed helper
+    expect(src).toContain("function getStoreIdFromPosDevice(");
+    expect(src).toContain("assertStoreId(storeId, operation)");
+    // Must NOT have any raw posDevice.storeId extraction
+    expect(src).not.toMatch(/const \{ storeId \} = \(req as any\)\.posDevice/);
+    // Must use the helper for all routes (13 extraction points)
+    const helperCalls = src.match(/getStoreIdFromPosDevice\(/g);
+    expect(helperCalls).not.toBeNull();
+    expect(helperCalls!.length).toBeGreaterThanOrEqual(10);
   });
 
   it("ALL pos/suppliers routes use assertStoreId (static — narrowly scoped)", () => {

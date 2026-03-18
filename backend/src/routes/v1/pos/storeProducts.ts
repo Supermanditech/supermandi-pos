@@ -8,8 +8,14 @@ import {
   type CreateStoreProductResult
 } from "../../../services/storeProductDigitisationService";
 import { log } from "../../../lib/logger";
-// V3-HARDEN-130: Store isolation enforcement
+// V3-HARDEN-130: Store isolation enforcement — every route goes through this
 import { assertStoreId } from "../../../services/storeIsolation";
+import type { Request as ExpressRequest } from "express";
+function getStoreIdFromPosDevice(req: ExpressRequest, operation: string): string {
+  const storeId = (req as any).posDevice?.storeId as string | null | undefined;
+  assertStoreId(storeId, operation);
+  return storeId;
+}
 // V3-FIX-132: Multilingual search support
 import { expandHindiSearchTokens, normalizeQuantityTokens } from "../../../services/searchLocalization";
 import {
@@ -126,7 +132,7 @@ function isConflictResult(result: CreateStoreProductResult): result is ConflictR
  */
 // BUG-003: Enforce store must be ACTIVE for product creation
 posStoreProductsRouter.post("/store-products", requireDeviceToken, requireActiveStore, async (req, res) => {
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
 
   // AUD-073-A FIX: Extract variant and packSize from request body
   const {
@@ -291,9 +297,7 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, requireActive
  * Returns authoritative stock from inventory.stock_balances
  */
 posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (req, res) => {
-  const { storeId } = (req as any).posDevice as { storeId: string };
-  // V3-HARDEN-130: Fail-closed store isolation assertion
-  assertStoreId(storeId, "store-products/search");
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
   const q = String(req.query.q || "").trim();
   const limit = Math.min(Math.max(parseInt(String(req.query.limit || "30"), 10) || 30, 1), 100);
   const includeZeroStock = req.query.includeZeroStock !== "false";
@@ -485,9 +489,7 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
  * Returns authoritative stock from inventory.stock_balances
  */
 posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (req, res) => {
-  const { storeId } = (req as any).posDevice as { storeId: string };
-  // V3-HARDEN-130: Fail-closed store isolation assertion
-  assertStoreId(storeId, "store-products/lookup");
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
   const barcode = String(req.query.barcode || "").trim();
 
   if (!barcode) {
@@ -668,7 +670,7 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
  * SCALE-C3: Optional sort=fefo for FEFO (First Expired First Out) ordering
  */
 posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (req, res) => {
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
   const limit = Math.min(Math.max(parseInt(String(req.query.limit || "50"), 10) || 50, 1), 200);
   const offset = Math.max(parseInt(String(req.query.offset || "0"), 10) || 0, 0);
   // SCALE-C3: FEFO sort — earliest expiry first, NULL expiry last, then alpha
@@ -790,7 +792,7 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
  * POS uses this to decide whether to re-sync catalog after dashboard edits.
  */
 posStoreProductsRouter.get("/store-products/freshness", requireDeviceToken, async (req, res) => {
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
   const since = String(req.query.since || "").trim();
 
   const pool = getPool();
@@ -839,7 +841,7 @@ posStoreProductsRouter.get("/store-products/freshness", requireDeviceToken, asyn
  * Used when POS user edits price inline
  */
 posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, requireActiveStore, async (req, res) => {
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
   // ITER3-001: Accept storeProductId in addition to barcode/productId
   const { barcode, productId, storeProductId, sellPrice } = req.body as {
     barcode?: string;
@@ -962,7 +964,7 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, requir
  * Used when POS user updates stock from product detail view
  */
 posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, requireActiveStore, async (req, res) => {
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
   // ITER3-001: Accept storeProductId in addition to productId/barcode
   // RET-POS-SYNC-012: Accept stockUpdatedAt for LWW conflict detection
   const { productId, barcode, storeProductId, stock, stockUpdatedAt } = req.body as {
@@ -1093,7 +1095,7 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, requir
  * IMPORTANT: This literal route MUST be defined BEFORE the parametric /:storeProductId/metadata route.
  */
 posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, requireActiveStore, async (req, res) => {
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
   const { barcode, productId, storeProductId, displayName, purchasePrice, sellPrice, brand, mode, metadataUpdatedAt } = req.body as {
     barcode?: string;
     productId?: string;
@@ -1327,7 +1329,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, req
  * Last-write-wins: server sets metadata_updated_at = NOW() on every write
  */
 posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", requireDeviceToken, requireActiveStore, async (req, res) => {
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
   const { storeProductId } = req.params;
   const { displayName, purchasePrice, brand, metadataUpdatedAt } = req.body as {
     displayName?: string;
@@ -1445,7 +1447,7 @@ posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", require
 // Returns retail selling variants for a LOOSE_BULK product (used by POS variant picker)
 // =============================================================================
 posStoreProductsRouter.get("/store-products/:storeProductId/variants", requireDeviceToken, async (req, res) => {
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
   const { storeProductId } = req.params;
 
   const pool = getPool();
@@ -1502,7 +1504,7 @@ const frequentProductsCache = new Map<string, { data: any[]; expiresAt: number }
 const FREQUENT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 posStoreProductsRouter.get("/products/frequent", requireDeviceToken, async (req, res) => {
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
 
   // Check cache first
   const cached = frequentProductsCache.get(storeId);
@@ -1585,7 +1587,7 @@ posStoreProductsRouter.get("/products/frequent", requireDeviceToken, async (req,
 // =============================================================================
 
 posStoreProductsRouter.get("/purchases/recent", requireDeviceToken, async (req, res) => {
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
 
   const pool = getPool();
   if (!pool) {
@@ -1645,7 +1647,7 @@ posStoreProductsRouter.get("/purchases/recent", requireDeviceToken, async (req, 
  * Returns up to 4 substitute products from the same category that are in stock.
  */
 posStoreProductsRouter.get("/products/:productId/substitutes", requireDeviceToken, async (req, res) => {
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
   const { productId } = req.params;
 
   if (!productId) {
