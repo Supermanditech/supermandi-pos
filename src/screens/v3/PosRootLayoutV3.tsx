@@ -18,6 +18,13 @@ import { startSSEClient, stopSSEClient } from "../../services/sseClient";
 
 type Nav = NativeStackNavigationProp<any>;
 
+// V3-DELETE-085 / V3-HARDEN-090: Exported for testability — maps MORE menu keys to registered route names
+export const MORE_ROUTE_MAP: Record<string, string> = {
+  khata: "V3Khata", customers: "V3Customers", reports: "V3Reports",
+  stock: "V3Stock", finance: "V3Finance", sales: "V3Reports",
+  settings: "V3Settings",
+};
+
 // STG-552: POS v3 root layout — 4-tab navigation (SELL / BUY / STORE / MORE)
 // Placeholder screens will be replaced by actual v3 screens in subsequent tickets.
 
@@ -93,13 +100,7 @@ export default function PosRootLayoutV3() {
         {activeTab === "MORE" ? (
           <ScreenErrorBoundary screenName="MoreV3">
             <MoreScreenV3 onNavigate={(s) => {
-              // V3-DELETE-085: Removed dead "help" -> "Help" mapping (no registered route)
-              // Sales History intentionally aliases to V3Reports
-              const map: Record<string, string> = {
-                khata: "V3Khata", customers: "V3Customers", reports: "V3Reports",
-                stock: "V3Stock", finance: "V3Finance", sales: "V3Reports",
-                settings: "V3Settings",
-              };
+              const map = MORE_ROUTE_MAP;
               if (map[s]) navigateTo(map[s]);
             }} />
           </ScreenErrorBoundary>

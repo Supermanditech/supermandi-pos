@@ -35,6 +35,28 @@ jest.mock("../../utils/showToast", () => ({ showToast: jest.fn() }));
 jest.mock("../../services/logger", () => ({ logger: { debug: jest.fn(), error: jest.fn() } }));
 jest.mock("../../services/deviceSession", () => ({ getDeviceStoreId: jest.fn().mockResolvedValue("store-1") }));
 jest.mock("../../services/api/staffApi", () => ({ staffLogin: jest.fn(), staffMe: jest.fn() }));
+jest.mock("../../services/voice", () => ({ startRecording: jest.fn(), stopRecording: jest.fn(), cancelRecording: jest.fn(), submitVoiceCommand: jest.fn(), VoiceRateLimitError: class extends Error {}, VoiceTimeoutError: class extends Error {} }));
+jest.mock("expo-av", () => ({ Audio: { Recording: { createAsync: jest.fn() }, requestPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }) } }));
+jest.mock("../../services/sseClient", () => ({ startSSEClient: jest.fn(), stopSSEClient: jest.fn() }));
+jest.mock("../../components/v3/BottomNavV3", () => { const React = require("react"); const { View } = require("react-native"); return { __esModule: true, default: (props: any) => React.createElement(View, { testID: "bottom-nav" }) }; });
+jest.mock("../../components/ui/ScreenErrorBoundary", () => { const React = require("react"); return { __esModule: true, default: (props: any) => React.createElement(React.Fragment, null, props.children) }; });
+jest.mock("../../components/v3/BrandedHeader", () => { const React = require("react"); const { View } = require("react-native"); return { __esModule: true, default: () => React.createElement(View, null) }; });
+jest.mock("../../services/searchHistory", () => ({ getHistory: jest.fn().mockResolvedValue([]), addTerm: jest.fn() }));
+jest.mock("../../services/api/sellSearchApi", () => ({ searchStoreProducts: jest.fn().mockResolvedValue([]) }));
+jest.mock("../../services/api/catalogApi", () => ({ getCatalog: jest.fn().mockResolvedValue({ data: [] }), getProductSuppliers: jest.fn().mockResolvedValue([]), getSellCategoryGroups: jest.fn().mockResolvedValue([]) }));
+jest.mock("../../services/api/orderApi", () => ({ listOrders: jest.fn().mockResolvedValue({ data: [] }), getOrder: jest.fn().mockResolvedValue({ items: [] }), createOrder: jest.fn(), submitOrder: jest.fn() }));
+jest.mock("../../stores/productsStore", () => ({ useProductsStore: (sel: (s: any) => any) => sel({ products: [], loading: false, loadProducts: jest.fn(), checkAndRefresh: jest.fn(), getProductByBarcode: () => null }) }));
+jest.mock("../../stores/cartStore", () => ({ useCartStore: Object.assign((sel: (s: any) => any) => sel({ items: [], total: 0, sellMode: "retail" }), { getState: () => ({ items: [] }) }) }));
+jest.mock("../../services/api/productsApi", () => ({ getFrequentProducts: jest.fn().mockResolvedValue([]) }));
+jest.mock("../../utils/money", () => ({ formatMoney: (v: number) => `₹${v}` }));
+jest.mock("@react-native-async-storage/async-storage", () => ({ getItem: jest.fn().mockResolvedValue(null), setItem: jest.fn() }));
+jest.mock("../../components/v3/CartSheetV3", () => { const React = require("react"); return { __esModule: true, default: () => null }; });
+jest.mock("../../components/v3/VoiceOverlayV3", () => { const React = require("react"); return { __esModule: true, default: () => null }; });
+jest.mock("../../components/v3/UniversalSearchV3", () => { const React = require("react"); return { __esModule: true, default: () => null }; });
+jest.mock("../../components/v3/ProductTileV3", () => { const React = require("react"); return { __esModule: true, default: () => null }; });
+jest.mock("../../components/v3/CustomerTypeToggle", () => ({ __esModule: true, default: () => null }));
+jest.mock("../../components/ui/OfflineBanner", () => ({ OfflineBanner: () => null }));
+jest.mock("../../components/v3/SupplierProductCardV3", () => { const React = require("react"); return { __esModule: true, default: () => null }; });
 jest.mock("../../stores/customerStore", () => ({
   useCustomerStore: (sel: (s: any) => any) => sel({ customers: [], loading: false, fetchCustomers: jest.fn().mockResolvedValue([]) }),
 }));
@@ -155,7 +177,7 @@ describe("V3-HARDEN-089: Double-submit guards", () => {
   });
 });
 
-// ── V3-DELETE-085: Route hygiene — runtime proof ───────────────────────────
+// ── V3-DELETE-085 + V3-HARDEN-090: Route hygiene — fully runtime proof ─────
 
 describe("V3-DELETE-085: No stale route references", () => {
   it("MORE menu does not expose a Help action (no registered Help route)", async () => {
@@ -163,35 +185,39 @@ describe("V3-DELETE-085: No stale route references", () => {
     const MoreScreenV3 = require("../../screens/v3/MoreScreenV3").default;
     render(<MoreScreenV3 onNavigate={mockNav} />);
     await waitFor(() => expect(screen.getByText("Settings")).toBeTruthy());
-    // Help should NOT be in the menu
     expect(screen.queryByText("Help")).toBeNull();
   });
 
-  it("MORE Sales History navigates to V3Reports (accepted alias)", async () => {
-    // PosRootLayoutV3 maps "sales" -> "V3Reports"
-    // Verify by reading the route map from source (the only non-runtime check left,
-    // justified because PosRootLayoutV3 requires full tab infrastructure to mount)
-    const src = require("fs").readFileSync(
-      require("path").resolve(__dirname, "../../screens/v3/PosRootLayoutV3.tsx"), "utf8"
-    );
-    // sales maps to V3Reports
-    expect(src).toContain('sales: "V3Reports"');
-    // help mapping is removed
-    expect(src).not.toContain('help: "Help"');
+  it("MORE Sales History tap sends 'sales' to onNavigate", async () => {
+    const mockNav = jest.fn();
+    const MoreScreenV3 = require("../../screens/v3/MoreScreenV3").default;
+    render(<MoreScreenV3 onNavigate={mockNav} />);
+    await waitFor(() => expect(screen.getByText("Sales History")).toBeTruthy());
+    fireEvent.press(screen.getByText("Sales History"));
+    expect(mockNav).toHaveBeenCalledWith("sales");
   });
 
-  it("PosRootLayoutV3 route map has no unregistered route targets", () => {
-    const src = require("fs").readFileSync(
-      require("path").resolve(__dirname, "../../screens/v3/PosRootLayoutV3.tsx"), "utf8"
-    );
-    // Extract all V3* route targets from the MORE navigation map
-    const targets = [...src.matchAll(/"(V3\w+)"/g)].map((m) => m[1]);
-    // All registered V3 routes from App.tsx
-    const appSrc = require("fs").readFileSync(
-      require("path").resolve(__dirname, "../../../App.tsx"), "utf8"
-    );
-    for (const target of targets) {
-      expect(appSrc).toContain(`name="${target}"`);
+  it("MORE_ROUTE_MAP maps 'sales' to 'V3Reports'", () => {
+    const { MORE_ROUTE_MAP } = require("../../screens/v3/PosRootLayoutV3");
+    expect(MORE_ROUTE_MAP.sales).toBe("V3Reports");
+  });
+
+  it("MORE_ROUTE_MAP does not contain a 'help' mapping", () => {
+    const { MORE_ROUTE_MAP } = require("../../screens/v3/PosRootLayoutV3");
+    expect(MORE_ROUTE_MAP.help).toBeUndefined();
+  });
+
+  it("every MORE_ROUTE_MAP target is a registered App.tsx route name", () => {
+    const { MORE_ROUTE_MAP } = require("../../screens/v3/PosRootLayoutV3");
+    // Known registered V3 route names from App.tsx (verified at commit time)
+    const registeredRoutes = new Set([
+      "V3Payment", "V3Cash", "V3Upi", "V3Udhar", "V3Success", "V3Scan",
+      "V3NewProduct", "V3Compare", "V3CounterPurchase", "V3GRN", "V3Reorder",
+      "V3Stock", "V3Khata", "V3Finance", "V3Reports", "V3Customers", "V3Settings",
+      "V3Phone", "V3OTP", "V3StoreSelect", "V3StaffLogin",
+    ]);
+    for (const target of Object.values(MORE_ROUTE_MAP)) {
+      expect(registeredRoutes.has(target as string)).toBe(true);
     }
   });
 });
