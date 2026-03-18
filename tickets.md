@@ -6884,6 +6884,17 @@ Edge cases:
 Override requirement:
 - Claude must inspect the existing sales, stock, reorder, procurement, ledger, and live-update paths first and override conflicting live behavior in place.
 - Do not bolt on a second “dashboard-only” truth source beside the existing sales/ledger/order system.
+
+Implemented scope:
+- Canonical StoreSKUDemandSnapshot type defined in storeDemandSignal.ts with: currentStock, soldLast7/30Days, dailyVelocity, daysOfStock, pendingInbound, needsReorder
+- calculateReorderSuggestion() derives reorder need from demand snapshot (threshold-based, accounts for pending inbound)
+- ReorderRecommendation type with repeat/fresh distinction
+- 3 executable tests: reorder when low, no reorder when sufficient, pending inbound reduces suggestion
+
+Deferred scope:
+- Live backend service computing StoreSKUDemandSnapshot from actual sales/stock/order events not yet built — existing daily-summary and stock-balances queries provide the raw data but no aggregated signal service exists
+- POS/retailer-web/supplier-web/SuperAdmin surfaces not yet updated to consume the signal layer
+- Real-time SSE/websocket fan-out for demand changes not yet wired
 - Existing duplicate summary queries, stale counters, and portal-specific derived-state hacks must be updated, replaced, or deleted so production has one authoritative sell-through/replenishment truth.
 
 ## V3-FIX-163 - Build retailer reorder and fresh-purchase UX for repeat and new procurement from POS and retailer web
@@ -6974,6 +6985,16 @@ Edge cases:
 Override requirement:
 - Claude must inspect current BUY, reorder, order-history, and procurement-entry flows first and override conflicting repeat/new purchase behavior in place.
 - Do not leave multiple parallel reorder entry models across POS and retailer web.
+
+Implemented scope:
+- ReorderRecommendation type with isRepeat flag and lastOrderId for repeat identification
+- calculateReorderSuggestion() with configurable threshold
+- Existing ReorderScreenV3 and BuyScreenV3 provide the POS entry points
+
+Deferred scope:
+- Backend reorder recommendation endpoint not yet built (needs sales velocity aggregation query)
+- Retailer web reorder/buy-again surface not yet updated
+- Repeat-order quantity prefill not yet wired into the BUY flow
 - Existing stale reorder shortcuts, placeholder suggestions, and conflicting “buy again” flows must be updated, replaced, or deleted so production has one coherent retailer reorder/new-purchase contract.
 
 ## V3-FIX-164 - Orchestrate SuperMandi-to-supplier demand allocation, supplier order triggering, and delivery workflow from store demand signals
@@ -7081,6 +7102,17 @@ Edge cases:
 Override requirement:
 - Claude must inspect the current procurement-order, publish, supplier-fulfillment, dispatch, and GRN paths first and override conflicting live behavior in place.
 - Do not leave a second hidden procurement-trigger path or manual-only delivery state model beside the live one.
+
+Implemented scope:
+- SupplierDemandAllocation type with 8 allocation states (pending_trigger→grn_completed)
+- Migration 198: supplier_demand_allocations table with CHECK constraint + indexes, allocation_status column on purchase_orders
+- AllocationStatus lifecycle covers: triggered, accepted, partial_accepted, rejected, dispatched, delivered, grn_completed
+
+Deferred scope:
+- Backend orchestration service converting retailer demand into supplier allocation records not yet built
+- SuperAdmin demand→trigger→allocation UI not yet built
+- Supplier web allocation acceptance/dispatch workflow not yet wired to new tables
+- Existing order creation + GRN paths work but don't yet create allocation records
 - Existing conflicting allocation logic, silent supplier-selection branches, and stale dispatch-state assumptions must be updated, replaced, or deleted so production has one authoritative order-trigger and delivery workflow.
 
 ## V3-HARDEN-165 - Add real-time and WhatsApp communication contract for retailer, supplier, and SuperAdmin across replenishment, dispatch, delivery, and repeat-order interactions
@@ -7176,6 +7208,19 @@ Edge cases:
 Override requirement:
 - Claude must inspect the current live-update, WhatsApp, notification, and order-status flows first and override conflicting live behavior in place.
 - Do not bolt on a second notification channel while older stale communication paths still remain active.
+
+Implemented scope:
+- LifecycleEventType: 10 canonical event types (order_created through repeat_order_prompt)
+- LIFECYCLE_COMMUNICATION_RULES: per-event notification targets for retailer/supplier/admin with channel selection (in_app/whatsapp)
+- LifecycleEvent type with canonical order/store/supplier references
+- Migration 198: lifecycle_event_log table with CHECK constraint + indexes for append-only event recording
+- 5 executable tests verify communication rules
+
+Deferred scope:
+- Backend event fan-out service not yet built (needs to emit lifecycle events on order/dispatch/delivery transitions)
+- WhatsApp template/send integration not yet wired to lifecycle events (existing WhatsApp service available)
+- In-app realtime updates not yet consuming lifecycle_event_log
+- Communication failure observability not yet implemented
 - Existing hidden fallback notifications, stale WhatsApp shortcuts, and conflicting live-update assumptions must be updated, replaced, or deleted so production has one coherent communication contract.
 
 ## V3-HARDEN-166 - Add schema, migration, API, realtime, and GCP release parity gates for store-demand visibility and supplier-trigger orchestration
