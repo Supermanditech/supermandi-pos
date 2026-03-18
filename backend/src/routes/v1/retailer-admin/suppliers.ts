@@ -39,7 +39,7 @@ retailerAdminSuppliersRouter.get("/suppliers", async (req: Request, res: Respons
   const { query } = req.query;
 
   try {
-    let whereClause = "WHERE ssl.store_id = $1 AND ${SQL_LINK_IS_ACTIVE}";
+    let whereClause = `WHERE ssl.store_id = $1 AND ${SQL_LINK_IS_ACTIVE}`;
     const params: any[] = [storeId];
     let paramIndex = 2;
 
