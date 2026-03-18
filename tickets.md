@@ -5561,7 +5561,7 @@ The branch must not be called:
 - GCP-ready
 - production-ready
 
-until all fifteen phases above are complete and re-verified against `tickets.md`.
+until all sixteen phases above are complete and re-verified against `tickets.md`.
 
 ## Phase 12 - Supplier Catalogue as SuperMandi Principal B2B Procurement
 
@@ -6555,3 +6555,221 @@ Guard rails:
 - Do not let HID and camera paths diverge into different product-identity or side-effect outcomes for the same barcode.
 - Do not certify scanner scale until purchase-side and sales-side throughput are both proven at the approved daily volumes.
 - Existing conflicting scanner code, duplicate handlers, fallback branches, stale tests, and weaker legacy gates must be updated, replaced, or deleted so the production path is singular and non-conflicting.
+
+## V3-HARDEN-162 - Build one real-time per-store SKU sell-through and replenishment signal layer for SuperMandi across POS, retailer web, supplier web, and SuperAdmin
+
+Priority: P0
+Layers: sales telemetry, stock truth, demand visibility, realtime sync, backend orchestration, cross-portal UX
+
+Issue:
+- SuperMandi still does not have one production-grade cross-store layer telling it, in near real time, for every store and SKU:
+  - what sold
+  - what remains unsold/in stock
+  - what is newly ordered
+  - what needs replenishment attention
+
+Root cause:
+- Existing work covers ledger events, principal procurement, reorder, and GRN in pieces, but there is not yet one explicit sell-through and replenishment signal contract across:
+  - POS sale commit
+  - retailer web inventory/order views
+  - supplier-facing fulfillment views
+  - SuperAdmin demand and allocation visibility
+
+Files impacted:
+- POS sale/stock sync surfaces
+- retailer web inventory/order dashboards
+- supplier web order/dispatch dashboards
+- SuperAdmin demand/procurement dashboards
+- backend sales/order/ledger/realtime services
+- DB tables/materialized views/event feeds introduced by the fix
+- GCP/runtime paths used for live event delivery
+
+Expected outcome:
+- SuperMandi has one canonical cross-store signal layer showing, per store and per SKU:
+  - sold quantity
+  - unsold/available stock
+  - pending replenishment
+  - open procurement/order state
+  - delivery/GRN progress
+- POS app, retailer web, supplier web, and SuperAdmin all derive from the same underlying event/state truth rather than separate approximations.
+- Real-time updates propagate to the involved portals when a sale, stock event, order event, dispatch event, or delivery event changes the operational state.
+
+Override requirement:
+- Claude must inspect the existing sales, stock, reorder, procurement, ledger, and live-update paths first and override conflicting live behavior in place.
+- Do not bolt on a second “dashboard-only” truth source beside the existing sales/ledger/order system.
+- Existing duplicate summary queries, stale counters, and portal-specific derived-state hacks must be updated, replaced, or deleted so production has one authoritative sell-through/replenishment truth.
+
+## V3-FIX-163 - Build retailer reorder and fresh-purchase UX for repeat and new procurement from POS and retailer web
+
+Priority: P0
+Layers: retailer UX, reorder workflow, procurement navigation, product discovery, repeat-vs-new purchase behavior
+
+Issue:
+- Retailers still need one explicit production-grade way to:
+  - reorder repeat SKUs from prior demand/sales history
+  - place fresh procurement orders for newly required SKUs
+  - do this consistently from POS and retailer web
+
+Root cause:
+- Existing BUY/reorder flows and later procurement tickets do not yet define one operator-approved repeat/new purchasing interaction model tied to:
+  - sales velocity
+  - current stock
+  - supplier catalogue availability
+  - reorder shortcuts
+
+Files impacted:
+- `src/screens/v3/ReorderScreenV3.tsx`
+- `src/screens/v3/BuyScreenV3.tsx`
+- POS and retailer-web procurement/order-history surfaces
+- repeat-order recommendation / reorder API routes
+- shared order-draft/cart state touched by the fix
+
+Expected outcome:
+- Retailer can clearly place:
+  - repeat orders for previously procured or fast-selling SKUs
+  - fresh orders for newly required supplier-catalogue SKUs
+- Repeat/new purchase entry points are available in both POS and retailer web with clear navigation and state continuity.
+- Reorder suggestions are grounded in real store stock/sales truth rather than demo thresholds or isolated screen logic.
+
+Override requirement:
+- Claude must inspect current BUY, reorder, order-history, and procurement-entry flows first and override conflicting repeat/new purchase behavior in place.
+- Do not leave multiple parallel reorder entry models across POS and retailer web.
+- Existing stale reorder shortcuts, placeholder suggestions, and conflicting “buy again” flows must be updated, replaced, or deleted so production has one coherent retailer reorder/new-purchase contract.
+
+## V3-FIX-164 - Orchestrate SuperMandi-to-supplier demand allocation, supplier order triggering, and delivery workflow from store demand signals
+
+Priority: P0
+Layers: procurement orchestration, supplier allocation, delivery workflow, SuperAdmin operations, supplier fulfillment
+
+Issue:
+- Even with principal procurement locked, there is not yet one explicit flow for how SuperMandi converts store demand into:
+  - supplier-triggered procurement orders
+  - supplier-specific allocation
+  - dispatch and delivery tracking
+
+Root cause:
+- Current procurement work is split across approval, publish, BUY, GRN, and supplier fulfillment tickets, but the operator-approved business flow still needs one explicit order-trigger contract from store demand to supplier dispatch.
+
+Files impacted:
+- SuperAdmin procurement/order-allocation screens
+- supplier web order acceptance/dispatch screens
+- retailer order-tracking and delivery-status screens
+- backend procurement orchestration, allocation, and dispatch services
+- order/dispatch/delivery tables and migrations introduced by the fix
+
+Expected outcome:
+- SuperMandi can convert store-level demand and replenishment needs into the correct supplier-facing procurement orders.
+- Supplier-specific order triggering, acceptance, partial fulfillment, dispatch, and delivery tracking are explicit and auditable.
+- Retailer and SuperAdmin can see the same linked lifecycle:
+  - store demand
+  - procurement trigger
+  - supplier acceptance
+  - dispatch
+  - delivery
+  - GRN closure
+
+Override requirement:
+- Claude must inspect the current procurement-order, publish, supplier-fulfillment, dispatch, and GRN paths first and override conflicting live behavior in place.
+- Do not leave a second hidden procurement-trigger path or manual-only delivery state model beside the live one.
+- Existing conflicting allocation logic, silent supplier-selection branches, and stale dispatch-state assumptions must be updated, replaced, or deleted so production has one authoritative order-trigger and delivery workflow.
+
+## V3-HARDEN-165 - Add real-time and WhatsApp communication contract for retailer, supplier, and SuperAdmin across replenishment, dispatch, delivery, and repeat-order interactions
+
+Priority: P0
+Layers: realtime comms, notifications, WhatsApp, portal UX, event delivery, observability
+
+Issue:
+- The involved users still lack one explicit communication contract covering:
+  - new order creation
+  - supplier trigger/acceptance
+  - dispatch and delivery updates
+  - repeat-order prompts
+  - exception/failure states
+
+Root cause:
+- Existing WhatsApp and live-update work is fragmented around POS checkout and isolated screens.
+- There is no single approved real-time communication model for retailer, supplier, and SuperAdmin in the replenishment/procurement lifecycle.
+
+Files impacted:
+- POS app order-status surfaces
+- retailer web order/reorder views
+- supplier web order/dispatch views
+- SuperAdmin monitoring and action surfaces
+- backend notification/event fan-out services
+- WhatsApp routes/templates/logging
+- gateway/runtime/GCP paths used by live event delivery
+
+Expected outcome:
+- Retailer, supplier, and SuperAdmin receive explicit real-time updates and WhatsApp communication for:
+  - order created
+  - supplier action required
+  - supplier accepted/rejected/partial
+  - dispatch out
+  - delivery due
+  - delivered / GRN pending / GRN complete
+  - repeat-order reminder or replenishment prompt where approved
+- UI states and notification states stay consistent across POS, retailer web, supplier web, and SuperAdmin.
+- Communication failures are observable and do not silently desync the lifecycle.
+
+Override requirement:
+- Claude must inspect the current live-update, WhatsApp, notification, and order-status flows first and override conflicting live behavior in place.
+- Do not bolt on a second notification channel while older stale communication paths still remain active.
+- Existing hidden fallback notifications, stale WhatsApp shortcuts, and conflicting live-update assumptions must be updated, replaced, or deleted so production has one coherent communication contract.
+
+## V3-HARDEN-166 - Add schema, migration, API, realtime, and GCP release parity gates for store-demand visibility and supplier-trigger orchestration
+
+Priority: P0
+Layers: schema, migrations, API contracts, runtime parity, GCP readiness, release gates
+
+Issue:
+- The above real-time sell-through and supplier-trigger flow is not production-safe unless schema, event transport, portal APIs, and deployment/runtime readiness are verified as one explicit go-live contract.
+
+Root cause:
+- Current readiness tickets cover auth, principal procurement, payments, and scanner scale in separate areas, but not the full cross-portal demand-to-supplier orchestration stack.
+
+Files impacted:
+- backend migrations for order/delivery/event state introduced by the fix
+- API gateway/runtime config
+- Pub/Sub / Cloud Tasks / worker / storage / websocket-SSE parity paths used by the flow
+- `.github/workflows/`
+- `scripts/gates/`
+- environment validation and runbook/reporting surfaces
+
+Expected outcome:
+- Forward migrations, API contracts, event transport, and runtime config are all versioned and validated for:
+  - cross-store sell-through visibility
+  - supplier-triggered procurement orders
+  - dispatch/delivery state propagation
+  - WhatsApp/live notification delivery
+- Deploy/release gates fail if this orchestration stack is not actually live and verifiable in the target environment.
+- Claude must provide one explicit parity/readiness proof covering POS, retailer web, supplier web, SuperAdmin, backend, migrations, and runtime event delivery.
+
+Override requirement:
+- Claude must inspect the current migrations, APIs, realtime transport, deploy gates, and runtime config first and override conflicting live assumptions in place.
+- Do not add optional scripts or sidecar checks while older permissive gates can still allow a broken orchestration stack through.
+- Existing conflicting schema paths, event-delivery assumptions, stale env validation, and weaker release checks must be updated, replaced, or deleted so production has one enforceable readiness contract.
+
+## Phase 16 - Real-Time Store Sell-Through, Replenishment, Supplier Triggering, and Delivery Orchestration
+
+Tickets:
+- `V3-HARDEN-162`
+- `V3-FIX-163`
+- `V3-FIX-164`
+- `V3-HARDEN-165`
+- `V3-HARDEN-166`
+
+Why sixteenth:
+- Principal procurement, ledger truth, repeat ordering, and supplier fulfillment are already partially ticketed, but the operator-approved end-to-end requirement still needs one explicit cross-portal phase for:
+  - store-level sell-through visibility
+  - SuperMandi-triggered supplier ordering
+  - retailer repeat/new order UX
+  - delivery progress
+  - real-time and WhatsApp communication
+- This phase makes the operational control loop explicit from store sale to supplier-triggered replenishment and delivery closure.
+
+Guard rails:
+- Do not treat this as a dashboard-only analytics phase; it must be tied to real order, stock, delivery, and communication behavior.
+- Do not split portal behavior into separate truths for POS, retailer web, supplier web, and SuperAdmin.
+- Do not leave manual/offline-only supplier triggering beside an automated or event-driven live path without an explicit ownership rule.
+- Do not allow reorder, sell-through, delivery, or WhatsApp state to drift between UI surfaces and backend event truth.
+- Existing conflicting order-monitoring, reorder, dispatch, notification, and live-update code must be updated, replaced, or deleted so production has one singular cross-layer orchestration model.
