@@ -741,6 +741,11 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
       ptrMinor, ptsMinor, tradeDiscountPct, scheme,
       deliverySlaDays, deliveryTerms, creditDays: patchCreditDays, financeEligible,
       moqTiers: patchMoqTiers, packageType: patchPackageType,
+      // V3-FIX-174: Package/procurement semantics
+      procurementUnit: patchProcurementUnit,
+      procurementPackQty: patchProcurementPackQty,
+      baseStockUnit: patchBaseStockUnit,
+      splitSellEligible: patchSplitSellEligible,
     } = req.body;
 
     const pool = getPool();
@@ -919,6 +924,11 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
     if (patchCreditDays !== undefined) { updates.push(`credit_days = $${paramIndex++}`); values.push(patchCreditDays != null ? parseInt(String(patchCreditDays)) : null); }
     if (financeEligible !== undefined) { updates.push(`finance_eligible = $${paramIndex++}`); values.push(financeEligible === true || financeEligible === 'true'); }
     if (patchMoqTiers !== undefined) { updates.push(`moq_tiers = $${paramIndex++}`); values.push(typeof patchMoqTiers === 'string' ? patchMoqTiers : JSON.stringify(patchMoqTiers)); }
+    // V3-FIX-174: Package/procurement semantics in supplier PATCH
+    if (patchProcurementUnit !== undefined) { updates.push(`procurement_unit = $${paramIndex++}`); values.push(patchProcurementUnit?.trim() || null); }
+    if (patchProcurementPackQty !== undefined) { updates.push(`procurement_pack_qty = $${paramIndex++}`); values.push(patchProcurementPackQty != null ? parseFloat(String(patchProcurementPackQty)) : null); }
+    if (patchBaseStockUnit !== undefined) { updates.push(`base_stock_unit = $${paramIndex++}`); values.push(patchBaseStockUnit?.trim() || null); }
+    if (patchSplitSellEligible !== undefined) { updates.push(`split_sell_eligible = $${paramIndex++}`); values.push(patchSplitSellEligible === true || patchSplitSellEligible === 'true'); }
 
     if (updates.length === 0) {
       res.status(400).json({

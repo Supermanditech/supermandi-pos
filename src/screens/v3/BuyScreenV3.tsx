@@ -368,7 +368,7 @@ export default function BuyScreenV3() {
             {/* V3-FIX-175: Per-item published terms in checkout — authoritative accepted snapshot */}
             {(() => {
               const selected = products.filter((p) => (orderQtys[p.id] ?? 0) > 0);
-              const withTerms = selected.filter(p => p.scheme || p.tradeDiscountPct || p.deliveryDays || p.deliveryTerms || p.bnplAvailable || p.financeEligible || p.creditDays);
+              const withTerms = selected.filter(p => p.scheme || p.tradeDiscountPct || p.deliveryDays || p.deliveryTerms || p.bnplAvailable || p.financeEligible || p.creditDays || p.publishedTermsVersion || (p.procurementUnit && p.procurementUnit !== p.unit));
               if (withTerms.length === 0) return null;
               return (
                 <View style={{ backgroundColor: '#f0f9ff', borderRadius: 10, padding: 10, marginBottom: 10 }}>
@@ -384,6 +384,17 @@ export default function BuyScreenV3() {
                         {p.creditDays ? <Text style={{ fontSize: 10, color: '#4338ca' }}>{p.creditDays}d credit</Text> : null}
                         {p.bnplAvailable ? <Text style={{ fontSize: 10, color: '#16a34a' }}>BNPL</Text> : null}
                         {p.financeEligible && !p.bnplAvailable ? <Text style={{ fontSize: 10, color: '#16a34a' }}>Finance</Text> : null}
+                        {p.procurementUnit && p.procurementUnit !== p.unit ? <Text style={{ fontSize: 10, color: '#7c3aed' }}>{p.procurementUnit}{p.procurementPackQty && p.procurementPackQty > 1 ? ` ×${p.procurementPackQty}` : ''}</Text> : null}
+                        {(() => {
+                          // V3-FIX-175: Show applied MOQ tier for ordered quantity
+                          const qty = (orderQtys[p.id] ?? 0) * p.caseSize;
+                          const tiers = (p as any).moqTiers;
+                          if (!tiers || !Array.isArray(tiers) || tiers.length === 0) return null;
+                          const sorted = [...tiers].sort((a: any, b: any) => (b.minQty || 0) - (a.minQty || 0));
+                          const applied = sorted.find((t: any) => qty >= (t.minQty || 0));
+                          if (!applied) return null;
+                          return <Text style={{ fontSize: 10, color: '#059669', fontWeight: '600' }}>MOQ tier: {applied.minQty}+ → -{applied.discountPct}%</Text>;
+                        })()}
                         {p.publishedTermsVersion ? <Text style={{ fontSize: 9, color: '#9ca3af' }}>v{p.publishedTermsVersion}</Text> : null}
                       </View>
                     </View>
