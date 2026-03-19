@@ -36,13 +36,44 @@ const initialVariantForm: VariantFormData = {
   sellPriceMinor: '',
 };
 
+// V3-FIX-168: Common kirana retail variant suggestions by stock unit
+const SUGGESTED_VARIANTS: Record<string, Array<{ label: string; qty: number; unit: string }>> = {
+  KG: [
+    { label: '250 g', qty: 0.25, unit: 'KG' },
+    { label: '500 g', qty: 0.5, unit: 'KG' },
+    { label: '1 kg', qty: 1, unit: 'KG' },
+    { label: '5 kg', qty: 5, unit: 'KG' },
+  ],
+  GM: [
+    { label: '100 g', qty: 100, unit: 'GM' },
+    { label: '250 g', qty: 250, unit: 'GM' },
+    { label: '500 g', qty: 500, unit: 'GM' },
+  ],
+  LTR: [
+    { label: '250 ml', qty: 0.25, unit: 'LTR' },
+    { label: '500 ml', qty: 0.5, unit: 'LTR' },
+    { label: '1 L', qty: 1, unit: 'LTR' },
+  ],
+  ML: [
+    { label: '100 ml', qty: 100, unit: 'ML' },
+    { label: '250 ml', qty: 250, unit: 'ML' },
+    { label: '500 ml', qty: 500, unit: 'ML' },
+  ],
+  PCS: [
+    { label: '1 pc', qty: 1, unit: 'PCS' },
+    { label: '6 pcs', qty: 6, unit: 'PCS' },
+    { label: '12 pcs', qty: 12, unit: 'PCS' },
+  ],
+};
+
 interface Props {
   storeProductId: string;
   productName: string;
   onClose: () => void;
+  baseStockUnit?: string;
 }
 
-export default function VariantManager({ storeProductId, productName, onClose }: Props) {
+export default function VariantManager({ storeProductId, productName, onClose, baseStockUnit }: Props) {
   const { accessToken } = useAuth();
   const [variants, setVariants] = useState<Variant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -244,6 +275,62 @@ export default function VariantManager({ storeProductId, productName, onClose }:
         )}
         {success && (
           <div className="alert alert-success vm-alert-mb">{success}</div>
+        )}
+
+        {/* V3-FIX-168: Suggest retail variants button */}
+        {!isLoading && variants.length === 0 && baseStockUnit && SUGGESTED_VARIANTS[baseStockUnit] && (
+          <div style={{
+            background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8,
+            padding: '12px 16px', marginBottom: 12
+          }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: '#1e40af' }}>
+              Common {baseStockUnit === 'KG' ? 'weight' : baseStockUnit === 'LTR' ? 'volume' : 'count'} variants available
+            </p>
+            <p style={{ margin: '4px 0 8px', fontSize: 13, color: '#3b82f6' }}>
+              {SUGGESTED_VARIANTS[baseStockUnit].map(v => v.label).join(', ')}
+            </p>
+            <button
+              className="btn btn-primary"
+              style={{ fontSize: 13, padding: '6px 14px' }}
+              disabled={isSubmitting}
+              onClick={async () => {
+                const suggestions = SUGGESTED_VARIANTS[baseStockUnit];
+                if (!suggestions) return;
+                setIsSubmitting(true);
+                setError('');
+                try {
+                  const res = await authFetch(
+                    `/api/v1/retailer-admin/products/${storeProductId}/variants`,
+                    accessToken,
+                    {
+                      method: 'POST',
+                      body: JSON.stringify({
+                        variants: suggestions.map(s => ({
+                          label: s.label,
+                          qty: s.qty,
+                          baseUnit: s.unit,
+                          sellPriceMinor: 0,
+                        })),
+                      }),
+                    }
+                  );
+                  const data = await safeJson(res);
+                  if (res.ok) {
+                    setSuccess(`Added ${suggestions.length} suggested variants — set prices to activate`);
+                    loadVariants();
+                  } else {
+                    setError(data?.error?.message || 'Failed to add suggested variants');
+                  }
+                } catch {
+                  setError('Network error adding suggested variants');
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+            >
+              {isSubmitting ? 'Adding...' : 'Use Suggested Retail Setup'}
+            </button>
+          </div>
         )}
 
         {/* Variant List */}

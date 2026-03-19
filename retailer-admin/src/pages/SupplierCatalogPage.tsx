@@ -270,6 +270,16 @@ export default function SupplierCatalogPage() {
                   </div>
                 </div>
 
+                {/* V3-FIX-168: Unit info for conversion awareness */}
+                {product.unit && (
+                  <div className="scat-category" style={{ fontSize: 13, color: '#6b7280' }}>
+                    Unit: {product.unit}
+                    {(product as any).procurementUnit && (product as any).procurementUnit !== product.unit && (
+                      <span> (shipped as {(product as any).procurementUnit})</span>
+                    )}
+                  </div>
+                )}
+
                 {/* Margin */}
                 {product.marginMinor > 0 && (
                   <div className="scat-margin">

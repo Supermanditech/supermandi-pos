@@ -112,6 +112,11 @@ interface ProductFormData {
   categoryId: string;        // Optional - taxonomy_id from fmcg_taxonomy
   // GL-WF-029: BNPL eligibility toggle
   bnplEligible: boolean;     // Optional - whether product can be purchased on BNPL
+  // V3-FIX-168: Canonical conversion profile
+  procurementUnit: string;   // How item is procured (KG, CARTON, BAG, etc.)
+  procurementPackQty: string; // Base units per procurement unit
+  baseStockUnit: string;     // Canonical inventory unit (KG, GM, PCS, LTR, ML)
+  allowFractionalSell: boolean; // Allow fractional quantity at sale
 }
 
 // T-187: Static fallback categories for Indian FMCG — used when categories API is unavailable
@@ -161,6 +166,11 @@ const initialFormData: ProductFormData = {
   categoryId: '',
   // GL-WF-029: BNPL eligibility
   bnplEligible: false,
+  // V3-FIX-168: Canonical conversion profile
+  procurementUnit: '',
+  procurementPackQty: '1',
+  baseStockUnit: '',
+  allowFractionalSell: false,
 };
 
 export default function ProductsPage() {
@@ -410,6 +420,11 @@ export default function ProductsPage() {
       categoryId: product.categoryId || '',
       // GL-WF-029: BNPL eligibility
       bnplEligible: product.bnplEligible || false,
+      // V3-FIX-168: Canonical conversion profile
+      procurementUnit: (product as any).procurementUnit || '',
+      procurementPackQty: (product as any).procurementPackQty ? String((product as any).procurementPackQty) : '1',
+      baseStockUnit: (product as any).baseStockUnit || '',
+      allowFractionalSell: (product as any).allowFractionalSell || false,
     };
     setFormData(editData);
     formOpenSnapshotRef.current = JSON.stringify(editData);
@@ -505,6 +520,11 @@ export default function ProductsPage() {
       // LOOSE_BULK fields - set defaults when switching to LOOSE_BULK
       soldBy: mode === 'LOOSE_BULK' ? (prev.soldBy || 'WEIGHT') : prev.soldBy,
       rateUnit: mode === 'LOOSE_BULK' ? (prev.rateUnit || 'KG') : prev.rateUnit,
+      // V3-FIX-168: Smart conversion defaults based on mode
+      baseStockUnit: mode === 'PACKAGED' ? 'PCS' : (prev.baseStockUnit || 'KG'),
+      procurementUnit: mode === 'PACKAGED' ? 'PCS' : (prev.procurementUnit || ''),
+      procurementPackQty: prev.procurementPackQty || '1',
+      allowFractionalSell: mode === 'LOOSE_BULK' ? true : false,
     }));
   };
 
@@ -652,6 +672,14 @@ export default function ProductsPage() {
         payload.soldBy = formData.soldBy || 'WEIGHT';
         payload.rateUnit = formData.rateUnit || 'KG';
       }
+
+      // V3-FIX-168: Canonical conversion profile
+      if (formData.procurementUnit) payload.procurementUnit = formData.procurementUnit;
+      if (formData.procurementPackQty && formData.procurementPackQty !== '1') {
+        payload.procurementPackQty = parseFloat(formData.procurementPackQty);
+      }
+      if (formData.baseStockUnit) payload.baseStockUnit = formData.baseStockUnit;
+      payload.allowFractionalSell = formData.allowFractionalSell;
 
       const isEdit = !!editingProduct;
       const url = isEdit
@@ -1250,6 +1278,110 @@ export default function ProductsPage() {
                     </>
                   )}
                 </div>
+              </div>
+
+              {/* ═══ STEP 3b: Procurement & Conversion (V3-FIX-168) ═══ */}
+              <div className="prod-form-section">
+                <h4 className="prod-section-title">
+                  <span className="prod-step-badge" style={{ backgroundColor: '#6366f1' }}>P</span>
+                  Procurement & Conversion
+                </h4>
+                <div className="prod-grid-3">
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="prod-procurementUnit">Bought As</label>
+                    <select
+                      id="prod-procurementUnit"
+                      name="procurementUnit"
+                      className="form-input"
+                      value={formData.procurementUnit}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Same as stock unit</option>
+                      <option value="KG">Kilogram (KG)</option>
+                      <option value="GM">Gram (GM)</option>
+                      <option value="LTR">Litre (LTR)</option>
+                      <option value="ML">Millilitre (ML)</option>
+                      <option value="PCS">Piece (PCS)</option>
+                      <option value="DOZEN">Dozen</option>
+                      <option value="CARTON">Carton</option>
+                      <option value="CASE">Case</option>
+                      <option value="BAG">Bag</option>
+                      <option value="TIN">Tin</option>
+                      <option value="DRUM">Drum</option>
+                      <option value="TRAY">Tray</option>
+                      <option value="BOTTLE">Bottle</option>
+                      <option value="PACK">Pack</option>
+                    </select>
+                    <small className="sup-small-hint">How supplier ships this item</small>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="prod-procurementPackQty">Units per Pack</label>
+                    <input
+                      id="prod-procurementPackQty"
+                      type="number"
+                      name="procurementPackQty"
+                      className="form-input"
+                      placeholder="1"
+                      step="0.01"
+                      min="0.01"
+                      value={formData.procurementPackQty}
+                      onChange={handleInputChange}
+                    />
+                    <small className="sup-small-hint">
+                      {formData.procurementUnit && formData.procurementUnit !== formData.baseStockUnit
+                        ? `1 ${formData.procurementUnit} = ${formData.procurementPackQty || '1'} ${formData.baseStockUnit || 'units'}`
+                        : 'Base units per procurement pack'}
+                    </small>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="prod-baseStockUnit">Stocked As</label>
+                    <select
+                      id="prod-baseStockUnit"
+                      name="baseStockUnit"
+                      className="form-input"
+                      value={formData.baseStockUnit}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Auto-detect</option>
+                      <option value="KG">Kilogram (KG)</option>
+                      <option value="GM">Gram (GM)</option>
+                      <option value="PCS">Piece (PCS)</option>
+                      <option value="LTR">Litre (LTR)</option>
+                      <option value="ML">Millilitre (ML)</option>
+                    </select>
+                    <small className="sup-small-hint">Canonical unit for inventory</small>
+                  </div>
+                </div>
+
+                {/* Conversion preview */}
+                {formData.procurementUnit && formData.baseStockUnit && formData.procurementUnit !== formData.baseStockUnit && (
+                  <div style={{
+                    background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8,
+                    padding: '12px 16px', marginTop: 8, fontSize: 14
+                  }}>
+                    <strong>Conversion Preview:</strong>{' '}
+                    Buy 1 {formData.procurementUnit} → {formData.procurementPackQty || '1'} {formData.baseStockUnit} in stock
+                    {formData.mode === 'LOOSE_BULK' && formData.rateUnit && (
+                      <span> → Sell per {formData.rateUnit}</span>
+                    )}
+                  </div>
+                )}
+
+                {formData.mode === 'LOOSE_BULK' && (
+                  <div style={{ marginTop: 8 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
+                      <input
+                        type="checkbox"
+                        name="allowFractionalSell"
+                        checked={formData.allowFractionalSell}
+                        onChange={(e) => setFormData(prev => ({ ...prev, allowFractionalSell: e.target.checked }))}
+                      />
+                      Allow fractional quantities at sale (e.g., 0.5 kg, 250 ml)
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* ═══ STEP 4: Pricing ═══ */}
@@ -1947,6 +2079,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
           storeProductId={variantProduct.id}
           productName={variantProduct.name}
           onClose={() => setVariantProduct(null)}
+          baseStockUnit={(variantProduct as any).baseStockUnit || (variantProduct as any).rateUnit || undefined}
         />
       )}
     </>
