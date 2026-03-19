@@ -1,6 +1,7 @@
 /**
  * V3-FIX-187: Supplier allocation API client — contract verification
  */
+// @ts-nocheck — vitest types resolved at runtime, not in supplier-portal tsconfig
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
