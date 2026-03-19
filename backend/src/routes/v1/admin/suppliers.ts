@@ -1357,6 +1357,7 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
     // V3-FIX-174: Full commercial term editing
     ptrMinor, ptsMinor, tradeDiscountPct, scheme,
     deliverySlaDays, deliveryTerms, creditDays: adminCreditDays, financeEligible,
+    moqTiers: adminMoqTiers,
   } = req.body || {};
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
   const adminId = (req as any).adminId;
@@ -1415,6 +1416,7 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
         sp.supplier_id,
         sp.ptr_minor, sp.pts_minor, sp.trade_discount_pct, sp.scheme,
         sp.delivery_sla_days, sp.delivery_terms, sp.credit_days, sp.finance_eligible,
+        sp.moq_tiers,
         s.business_name as supplier_name,
         s.verification_status as supplier_status
        FROM catalog.supplier_products sp
@@ -1542,7 +1544,8 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
     if (adminCreditDays !== undefined) { updates.push(`credit_days = $${paramIndex++}`); values.push(parseInt(String(adminCreditDays))); changes.creditDays = { from: current.credit_days, to: adminCreditDays }; }
     if (financeEligible !== undefined) { updates.push(`finance_eligible = $${paramIndex++}`); values.push(financeEligible === true); changes.financeEligible = { from: current.finance_eligible, to: financeEligible }; }
     // V3-HARDEN-177: Increment published_terms_version on ANY commercial field edit
-    if (ptrMinor !== undefined || ptsMinor !== undefined || tradeDiscountPct !== undefined || scheme !== undefined || deliverySlaDays !== undefined || deliveryTerms !== undefined || adminCreditDays !== undefined || financeEligible !== undefined) {
+    if (adminMoqTiers !== undefined) { updates.push(`moq_tiers = $${paramIndex++}`); values.push(typeof adminMoqTiers === 'string' ? adminMoqTiers : JSON.stringify(adminMoqTiers)); changes.moqTiers = { from: current.moq_tiers, to: adminMoqTiers }; }
+    if (ptrMinor !== undefined || ptsMinor !== undefined || tradeDiscountPct !== undefined || scheme !== undefined || deliverySlaDays !== undefined || deliveryTerms !== undefined || adminCreditDays !== undefined || financeEligible !== undefined || adminMoqTiers !== undefined) {
       updates.push(`published_terms_version = COALESCE(published_terms_version, 0) + 1`);
       updates.push(`published_at = NOW()`);
       updates.push(`published_by = $${paramIndex++}`);

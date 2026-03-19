@@ -1,14 +1,14 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 467,
+  "version": 469,
   "fixes": [
     {
       "ticket": "STG-001",
       "file": "backend/src/routes/v1/admin/suppliers.ts",
       "start_line": 227,
-      "end_line": 2508,
-      "checksum": "9bf98aef4c31e818",
+      "end_line": 301,
+      "checksum": "4026db39f4070f6d",
       "description": "Self-registered supplier verify: fallback to auth.applications with correct column aliases, VARCHAR(15) GSTIN, conditional table update",
       "test_file": "backend/tests/suppliers.stg-001.verify-fallback.unit.test.ts",
       "registered_at": "2026-03-13T08:58:45.431Z",

@@ -100,6 +100,7 @@ interface SuppliersTabProps {
     deliveryTerms: string;
     creditDays: string;
     financeEligible: boolean;
+    moqTiers: string;
   };
   setEditProductForm: (fn: (f: SuppliersTabProps["editProductForm"]) => SuppliersTabProps["editProductForm"]) => void;
   editProductError: string;
@@ -1064,6 +1065,13 @@ export function SuppliersTab({
                       Finance Eligible
                     </label>
                   </div>
+                </div>
+                <div style={{ gridColumn: "1 / -1", marginTop: 4 }}>
+                  <label>MOQ Tier Discounts (JSON)</label>
+                  <input type="text" className="sa-input" style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }}
+                    value={editProductForm.moqTiers}
+                    placeholder='[{"minQty":10,"discountPct":5}]'
+                    onChange={(e) => updateProductForm((f) => ({ ...f, moqTiers: e.target.value }))} />
                 </div>
               </div>
 
