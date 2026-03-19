@@ -7832,8 +7832,9 @@ Scope narrowing (2026-03-19):
   - startup check: validateConversionSchemaReadiness() called in server.ts, logs missing
     migration 199 columns (warn-level, does NOT block startup)
   - sale guard: backend rejects sales for LOOSE_BULK products with conversion_confirmed=false
-  - data flow: CSV import, supplier-catalog add, SuperAdmin publish, POS digitisation all
-    persist canonical conversion columns into catalog.store_products
+  - data flow: CSV import (create and update-existing), supplier-catalog add, SuperAdmin publish,
+    POS digitisation (insert and ON CONFLICT update), manual inward/GRN all persist canonical
+    conversion columns into catalog.store_products on every write path
   - SuperAdmin: conversion PATCH endpoint for procurement/stock/sell-unit editing, fails visibly on error
 - DEFERRED to full-live tickets (V3-HARDEN-185..189):
   - per-SKU conversion-versioned reporting dashboards

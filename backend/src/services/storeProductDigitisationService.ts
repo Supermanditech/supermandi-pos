@@ -44,6 +44,11 @@ export interface StoreProductResponse {
   productMode?: string; // T-054: PACKAGED or LOOSE_BULK
   soldBy?: string; // T-054: WEIGHT or COUNT (LOOSE_BULK only)
   rateUnit?: string; // T-054: KG, GM, LTR, ML, PCS (LOOSE_BULK only)
+  // V3-FIX-167: Canonical conversion profile
+  procurementUnit?: string;
+  procurementPackQty?: number;
+  baseStockUnit?: string;
+  conversionConfirmed?: boolean;
 }
 
 export interface ScanResolvePrefill {
@@ -492,6 +497,12 @@ export async function createStoreProductFromDigitisation(
         taxonomy_id = COALESCE(catalog.store_products.taxonomy_id, EXCLUDED.taxonomy_id),
         metadata_updated_at = COALESCE(catalog.store_products.metadata_updated_at, NOW()),
         metadata_updated_by = COALESCE(catalog.store_products.metadata_updated_by, 'POS_APP'),
+        -- V3-FIX-167: Update conversion fields on conflict (fill if not already set)
+        product_mode = COALESCE(catalog.store_products.product_mode, EXCLUDED.product_mode),
+        procurement_unit = COALESCE(catalog.store_products.procurement_unit, EXCLUDED.procurement_unit),
+        procurement_pack_qty = COALESCE(catalog.store_products.procurement_pack_qty, EXCLUDED.procurement_pack_qty),
+        base_stock_unit = COALESCE(catalog.store_products.base_stock_unit, EXCLUDED.base_stock_unit),
+        conversion_confirmed = COALESCE(catalog.store_products.conversion_confirmed, EXCLUDED.conversion_confirmed),
         is_active = true,
         updated_at = NOW()
       RETURNING id
@@ -550,8 +561,7 @@ export async function createStoreProductFromDigitisation(
 
     log.info("[digitisation] Successfully created store product:", actualStoreProductId, "for store:", storeId);
 
-    // Return the created store product
-    // AUD-073-A FIX: Include variant and packSize in response
+    // Return the created store product with real conversion profile
     return {
       success: true,
       storeProduct: {
@@ -572,9 +582,14 @@ export async function createStoreProductFromDigitisation(
         imageUrl: "",
         variant: input.variant?.trim() || "",
         packSize: input.packSize ?? null,
-        productMode: 'PACKAGED',
-        soldBy: undefined,
-        rateUnit: undefined,
+        // V3-FIX-167: Return real conversion profile, not hardcoded PACKAGED
+        productMode: digProductMode,
+        soldBy: digProductMode === 'LOOSE_BULK' ? 'WEIGHT' : undefined,
+        rateUnit: digProductMode === 'LOOSE_BULK' ? (digBaseStockUnit || 'KG') : undefined,
+        procurementUnit: digProcurementUnit,
+        procurementPackQty: digProcurementPackQty,
+        baseStockUnit: digBaseStockUnit,
+        conversionConfirmed: true,
       }
     };
   } catch (error) {

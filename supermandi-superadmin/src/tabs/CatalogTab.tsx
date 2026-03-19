@@ -33,6 +33,9 @@ export function CatalogTab() {
   const [editProcurementPackQty, setEditProcurementPackQty] = useState("");
   const [editBaseStockUnit, setEditBaseStockUnit] = useState("");
   const [editSplitSellEligible, setEditSplitSellEligible] = useState(false);
+  // V3-FIX-169: "Sells as" approval
+  const [editSellUnit, setEditSellUnit] = useState("");
+  const [editDefaultVariants, setEditDefaultVariants] = useState("");
 
   // R4-NET-007: In-flight guard
   const refreshInFlight = useRef(false);
@@ -106,6 +109,13 @@ export function CatalogTab() {
     setEditProcurementPackQty((product as any).procurementPackQty ? String((product as any).procurementPackQty) : "1");
     setEditBaseStockUnit((product as any).baseStockUnit || "");
     setEditSplitSellEligible((product as any).splitSellEligible || false);
+    // V3-FIX-169: Sells-as defaults
+    setEditSellUnit((product as any).baseStockUnit || "");
+    setEditDefaultVariants(
+      (product as any).baseStockUnit === "KG" ? "250g, 500g, 1kg, 5kg" :
+      (product as any).baseStockUnit === "LTR" ? "250ml, 500ml, 1L" :
+      (product as any).baseStockUnit === "PCS" ? "1pc, 6pcs, 12pcs" : ""
+    );
   };
 
   // Save category override
@@ -130,6 +140,8 @@ export function CatalogTab() {
           procurementPackQty: editProcurementPackQty ? parseFloat(editProcurementPackQty) : undefined,
           baseStockUnit: editBaseStockUnit || undefined,
           splitSellEligible: editSplitSellEligible,
+          sellUnit: editSellUnit || undefined,
+          defaultVariants: editDefaultVariants || undefined,
         });
       }
 
@@ -411,6 +423,40 @@ export function CatalogTab() {
                   1 {editProcurementUnit} = {editProcurementPackQty || '1'} {editBaseStockUnit}
                 </p>
               )}
+
+              {/* V3-FIX-169: "Sells As" + default retail variants approval */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 2 }}>Sells As:</label>
+                  <select
+                    value={editSellUnit}
+                    onChange={(e) => setEditSellUnit(e.target.value)}
+                    className="sa-input"
+                    style={{ width: '100%', fontSize: 13 }}
+                    disabled={editSaving}
+                  >
+                    <option value="">Same as stock unit</option>
+                    <option value="KG">Per KG</option><option value="GM">Per GM</option>
+                    <option value="LTR">Per LTR</option><option value="ML">Per ML</option>
+                    <option value="PCS">Per PCS</option><option value="DOZEN">Per Dozen</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 2 }}>Default Retail Variants:</label>
+                  <input
+                    type="text"
+                    value={editDefaultVariants}
+                    onChange={(e) => setEditDefaultVariants(e.target.value)}
+                    className="sa-input"
+                    style={{ width: '100%', fontSize: 13 }}
+                    placeholder="250g, 500g, 1kg"
+                    disabled={editSaving}
+                  />
+                  <p style={{ fontSize: 10, color: '#9ca3af', margin: '2px 0 0' }}>
+                    Suggested retail variants for retailers after add
+                  </p>
+                </div>
+              </div>
             </div>
             <div style={{ marginBottom: 16 }}>
               <label htmlFor="category-input" style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>

@@ -300,7 +300,9 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, requireAc
 
     for (const item of items) {
       // SCALE-C1: Destructure batchNumber and expiryDate for purchase_received tracking
-      const { productId, quantity, unitCost, batchNumber, expiryDate } = item;
+      // V3-FIX-170: Also accept conversion context for first-time setup
+      const { productId, quantity, unitCost, batchNumber, expiryDate,
+              procurementUnit, procurementPackQty, baseStockUnit, conversionConfirmed } = item;
 
       if (!productId || quantity === undefined || quantity === 0) {
         continue;
@@ -358,6 +360,21 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, requireAc
            SET current_stock = $3, updated_at = NOW()
            WHERE store_id = $1 AND product_id = $2`,
           [storeId, productId, newStock]
+        );
+      }
+
+      // V3-FIX-170: Persist conversion profile on inward if provided
+      if (procurementUnit || baseStockUnit) {
+        await client.query(
+          `UPDATE catalog.store_products SET
+            procurement_unit = COALESCE($3, procurement_unit),
+            procurement_pack_qty = COALESCE($4, procurement_pack_qty),
+            base_stock_unit = COALESCE($5, base_stock_unit)
+           WHERE store_id = $1 AND product_id = $2`,
+          [storeId, productId,
+           procurementUnit?.trim()?.toUpperCase() || null,
+           procurementPackQty ? parseFloat(String(procurementPackQty)) : null,
+           baseStockUnit?.trim()?.toUpperCase() || null]
         );
       }
 

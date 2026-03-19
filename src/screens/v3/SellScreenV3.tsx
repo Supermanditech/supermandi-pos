@@ -166,6 +166,13 @@ export default function SellScreenV3() {
           imageUrl: (sku as any).image_url ?? (g as any).imageUrl ?? undefined,
           mrpMinor: (sku as any).mrpMinor ?? undefined,
           supplierName: (g as any).supplierName ?? undefined,
+          // V3-FIX-167: Carry canonical conversion profile from search
+          productMode: (sku as any).mode ?? (sku as any).productMode ?? undefined,
+          soldBy: (sku as any).soldBy ?? undefined,
+          rateUnit: (sku as any).rateUnit ?? undefined,
+          baseStockUnit: (sku as any).baseStockUnit ?? undefined,
+          allowFractionalSell: (sku as any).allowFractionalSell ?? undefined,
+          conversionConfirmed: (sku as any).conversionConfirmed ?? undefined,
         }))
       );
       // DA-029: Deduplicate by barcode

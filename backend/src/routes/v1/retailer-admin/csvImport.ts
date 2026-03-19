@@ -526,12 +526,23 @@ async function commitSingleRow(
 
     if (existingStoreProductId && existingProductId) {
       // RET-POS-SYNC-001: UPDATE existing product instead of creating duplicate
+      // V3-FIX-168: Also update conversion columns on existing products
+      const { inferBaseStockUnit: inferBSU } = require("../../../services/conversionEngine");
+      const updProcUnit = row.procurement_unit?.trim()?.toUpperCase() || null;
+      const updPackQty = row.procurement_pack_qty ? parseFloat(row.procurement_pack_qty) : null;
+      const updBaseUnit = row.base_stock_unit?.trim()?.toUpperCase() || null;
+
       await client.query(
         `UPDATE catalog.store_products SET
           sell_price = $2, mrp = $3, purchase_price = $4,
-          current_stock = $5, updated_at = NOW()
+          current_stock = $5,
+          procurement_unit = COALESCE($6, procurement_unit),
+          procurement_pack_qty = COALESCE($7, procurement_pack_qty),
+          base_stock_unit = COALESCE($8, base_stock_unit),
+          updated_at = NOW()
          WHERE id = $1`,
-        [existingStoreProductId, sellPricePaise, row.mrp || null, purchasePricePaise, stock]
+        [existingStoreProductId, sellPricePaise, row.mrp || null, purchasePricePaise, stock,
+         updProcUnit, updPackQty, updBaseUnit]
       );
 
       await client.query(

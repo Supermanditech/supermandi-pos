@@ -53,6 +53,8 @@ export async function updateProductConversion(
     procurementPackQty?: number;
     baseStockUnit?: string;
     splitSellEligible?: boolean;
+    sellUnit?: string;
+    defaultVariants?: string;
   }
 ): Promise<void> {
   const base = API_BASE;
