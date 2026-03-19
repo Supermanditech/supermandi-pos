@@ -34,6 +34,8 @@ export interface SupplierProduct {
   procurementUnit?: string;
   procurementPackQty?: number;
   baseStockUnit?: string;
+  sellUnit?: string;
+  defaultVariants?: string;
 }
 
 // V3-FIX-136: Card is browse-only — no inline qty/add controls

@@ -1679,21 +1679,30 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
     const resolvedProcurementUnit = product.procurement_unit || resolvedBaseStockUnit;
     const resolvedPackQty = product.procurement_pack_qty || 1;
 
+    // V3-FIX-169: Resolve sell-side defaults from approved metadata
+    const resolvedSellUnit = product.sell_unit || resolvedBaseStockUnit;
+    const resolvedSoldBy = ['KG', 'GM', 'LTR', 'ML'].includes(resolvedSellUnit) ? 'WEIGHT' : 'COUNT';
+    const resolvedRateUnit = resolvedSellUnit;
+    const resolvedProductMode = product.split_sell_eligible || resolvedSoldBy === 'WEIGHT' ? 'LOOSE_BULK' : 'PACKAGED';
+
     for (const store of linkedStores.rows) {
-      // Add product to store catalog — V3-FIX-169: propagate conversion profile
+      // Add product to store catalog — V3-FIX-169: propagate full conversion + sell profile
       const insertResult = await client.query(
         `INSERT INTO catalog.store_products (
           store_id, product_id, display_name, sell_price, purchase_price,
           current_stock, is_active, supplier_id,
           procurement_unit, procurement_pack_qty, base_stock_unit,
-          allow_fractional_sell, conversion_confirmed
+          allow_fractional_sell, conversion_confirmed,
+          product_mode, sold_by, rate_unit
         ) VALUES ($1, $2::uuid, $3, $4, $5, 0, true, $6::uuid,
-          $7, $8, $9, $10, false)
+          $7, $8, $9, $10, false,
+          $11, $12, $13)
         RETURNING id`,
         [store.store_id, catalogProductId, product.name, retailerPrice,
          product.purchase_price, product.supplier_id,
          resolvedProcurementUnit, resolvedPackQty, resolvedBaseStockUnit,
-         product.split_sell_eligible || false]
+         product.split_sell_eligible || false,
+         resolvedProductMode, resolvedSoldBy, resolvedRateUnit]
       );
 
       // Add barcode mapping

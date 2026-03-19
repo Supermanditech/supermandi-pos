@@ -49,6 +49,9 @@ function catalogToSupplier(p: CatalogProduct): SupplierProduct {
     procurementUnit: raw.procurementUnit ?? raw.procurement_unit,
     procurementPackQty: raw.procurementPackQty ?? raw.procurement_pack_qty,
     baseStockUnit: raw.baseStockUnit ?? raw.base_stock_unit,
+    // V3-FIX-169: Carry approved sell-side defaults
+    sellUnit: raw.sellUnit ?? raw.sell_unit,
+    defaultVariants: raw.defaultVariants ?? raw.default_retail_variants,
   };
 }
 

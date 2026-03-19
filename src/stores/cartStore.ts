@@ -186,8 +186,10 @@ const calculateCartTotals = (items: CartItem[], discount: CartDiscount | null) =
     const priceParsed = Number(item.priceMinor);
     const qtyParsed = Number(item.quantity);
     const safePrice = Math.max(0, Math.round(Number.isFinite(priceParsed) ? priceParsed : 0));
-    const safeQty = Math.max(0, Math.round(Number.isFinite(qtyParsed) ? qtyParsed : 0));
-    const lineSubtotal = safePrice * safeQty;
+    // V3-HARDEN-171: Preserve fractional quantities for loose/bulk products (0.25 kg, 0.5 L)
+    // Round line subtotal to integer paise instead of rounding qty
+    const safeQty = Math.max(0, Number.isFinite(qtyParsed) ? qtyParsed : 0);
+    const lineSubtotal = Math.round(safePrice * safeQty);
     const lineDiscount = calculateDiscountAmount(lineSubtotal, item.itemDiscount ?? null);
     subtotal += lineSubtotal;
     itemDiscountAmount += lineDiscount;

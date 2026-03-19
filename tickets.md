@@ -7833,7 +7833,12 @@ Scope narrowing (2026-03-19):
     migration 199 (store_products) and 200 (supplier_products) columns (warn-level, does NOT block startup)
   - sale guard: backend rejects sales for LOOSE_BULK products with conversion_confirmed=false
   - fractional qty: backend sales.ts rounds to 3dp (not integer) for loose/bulk sub-unit sells,
-    frontend stockCap preserves fractional quantities (0.25kg, 0.5L)
+    frontend stockCap normalizeQuantity preserves fractional quantities (0.25kg, 0.5L),
+    cart calculateCartTotals uses fractional qty with Math.round on line subtotals (not qty)
+  - publish materialization: sets product_mode, sold_by, rate_unit on store_products from approved
+    sell_unit and split_sell_eligible — downstream POS/retailer reads get the full sell profile
+  - operator flow: supplier-catalog review modal supports preview/edit/defer modes with distinct
+    conversionConfirmed outcomes; scan quick-qty presets use correct fractional amounts
   - data flow: CSV import (create-new and update-existing with full product_mode/procurement/base/confirmed),
     supplier-catalog add (with conversion review modal — "Use Suggested Setup & Add" sets
     conversion_confirmed=true, "Add & Set Up Later" sets conversion_confirmed=false),

@@ -57,6 +57,10 @@ export default function SupplierCatalogPage() {
   const [addError, setAddError] = useState<{ productId: string; message: string } | null>(null);
   // V3-FIX-170: Conversion review modal state
   const [reviewProduct, setReviewProduct] = useState<SupplierProduct | null>(null);
+  const [reviewMode, setReviewMode] = useState<'preview' | 'edit'>('preview');
+  const [editSetupUnit, setEditSetupUnit] = useState('');
+  const [editSetupPackQty, setEditSetupPackQty] = useState('1');
+  const [editSetupStockUnit, setEditSetupStockUnit] = useState('');
 
   // Fetch supplier catalog
   const fetchCatalog = useCallback(async (query?: string, offset = 0) => {
@@ -362,37 +366,54 @@ export default function SupplierCatalogPage() {
       {reviewProduct && (
         <div className="sa-modal-overlay" onClick={() => setReviewProduct(null)}>
           <div className="card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440, margin: '10vh auto', padding: 24 }}>
-            <h3 style={{ marginTop: 0 }}>Review Conversion Setup</h3>
+            <h3 style={{ marginTop: 0 }}>{reviewMode === 'edit' ? 'Edit Conversion Setup' : 'Review Conversion Setup'}</h3>
             <p style={{ fontSize: 14, color: '#374151' }}>
               <strong>{reviewProduct.displayName}</strong> requires conversion review before adding to your catalog.
             </p>
-            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: 12, margin: '12px 0' }}>
-              <table style={{ fontSize: 13, width: '100%' }}>
-                <tbody>
-                  <tr>
-                    <td style={{ padding: '4px 0', color: '#6b7280' }}>Bought as:</td>
-                    <td style={{ fontWeight: 600 }}>
-                      {(reviewProduct as any).procurementUnit || reviewProduct.unit || 'PCS'}
-                      {(reviewProduct as any).procurementPackQty && Number((reviewProduct as any).procurementPackQty) > 1
-                        ? ` (${(reviewProduct as any).procurementPackQty} per pack)`
-                        : ''}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '4px 0', color: '#6b7280' }}>Stocked as:</td>
-                    <td style={{ fontWeight: 600 }}>{(reviewProduct as any).baseStockUnit || 'PCS'}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '4px 0', color: '#6b7280' }}>Split-sell:</td>
-                    <td style={{ fontWeight: 600 }}>{(reviewProduct as any).splitSellEligible ? 'Yes — can sell in smaller retail units' : 'No'}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '4px 0', color: '#6b7280' }}>Your price:</td>
-                    <td style={{ fontWeight: 600, color: '#16a34a' }}>{formatPrice(reviewProduct.retailerPriceMinor)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+
+            {reviewMode === 'preview' ? (
+              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: 12, margin: '12px 0' }}>
+                <table style={{ fontSize: 13, width: '100%' }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ padding: '4px 0', color: '#6b7280' }}>Bought as:</td>
+                      <td style={{ fontWeight: 600 }}>{(reviewProduct as any).procurementUnit || reviewProduct.unit || 'PCS'}{(reviewProduct as any).procurementPackQty && Number((reviewProduct as any).procurementPackQty) > 1 ? ` (${(reviewProduct as any).procurementPackQty} per pack)` : ''}</td>
+                    </tr>
+                    <tr><td style={{ padding: '4px 0', color: '#6b7280' }}>Stocked as:</td><td style={{ fontWeight: 600 }}>{(reviewProduct as any).baseStockUnit || 'PCS'}</td></tr>
+                    <tr><td style={{ padding: '4px 0', color: '#6b7280' }}>Split-sell:</td><td style={{ fontWeight: 600 }}>{(reviewProduct as any).splitSellEligible ? 'Yes' : 'No'}</td></tr>
+                    <tr><td style={{ padding: '4px 0', color: '#6b7280' }}>Your price:</td><td style={{ fontWeight: 600, color: '#16a34a' }}>{formatPrice(reviewProduct.retailerPriceMinor)}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 8, padding: 12, margin: '12px 0' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                  <div>
+                    <label style={{ fontSize: 11, color: '#6b7280' }}>Bought as</label>
+                    <select className="form-input" style={{ fontSize: 13, padding: 4 }} value={editSetupUnit} onChange={(e) => setEditSetupUnit(e.target.value)}>
+                      <option value="">Auto</option>
+                      <option value="KG">KG</option><option value="GM">GM</option>
+                      <option value="LTR">LTR</option><option value="ML">ML</option>
+                      <option value="PCS">PCS</option><option value="DOZEN">Dozen</option>
+                      <option value="CARTON">Carton</option><option value="BAG">Bag</option>
+                      <option value="TIN">Tin</option><option value="TRAY">Tray</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: '#6b7280' }}>Per pack</label>
+                    <input type="number" className="form-input" style={{ fontSize: 13, padding: 4 }} value={editSetupPackQty} onChange={(e) => setEditSetupPackQty(e.target.value)} min="0.01" step="0.01" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: '#6b7280' }}>Stock unit</label>
+                    <select className="form-input" style={{ fontSize: 13, padding: 4 }} value={editSetupStockUnit} onChange={(e) => setEditSetupStockUnit(e.target.value)}>
+                      <option value="">Auto</option>
+                      <option value="KG">KG</option><option value="GM">GM</option>
+                      <option value="PCS">PCS</option><option value="LTR">LTR</option><option value="ML">ML</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* V3-FIX-170: Suggested retail variants from approved defaults */}
             {(reviewProduct as any).defaultVariants ? (
               <p style={{ fontSize: 12, color: '#059669', margin: '4px 0' }}>
@@ -412,7 +433,7 @@ export default function SupplierCatalogPage() {
               <button
                 className="btn btn-primary btn-full"
                 disabled={addingProductId === reviewProduct.productId}
-                onClick={() => { handleAddProduct(reviewProduct, true); setReviewProduct(null); }}
+                onClick={() => { handleAddProduct(reviewProduct, true); setReviewProduct(null); setReviewMode('preview'); }}
               >
                 {addingProductId === reviewProduct.productId ? 'Adding...' : 'Use Suggested Setup & Add'}
               </button>
@@ -421,16 +442,37 @@ export default function SupplierCatalogPage() {
                   className="btn btn-secondary"
                   style={{ flex: 1 }}
                   onClick={() => {
-                    // V3-FIX-170: Add with conversion_confirmed=false — retailer must complete setup before sell
-                    handleAddProduct(reviewProduct, false);
-                    setReviewProduct(null);
-                    setSuccess('Added — set up retail variants in Products → Variants before selling');
+                    if (reviewMode === 'preview') {
+                      // Switch to edit mode
+                      setReviewMode('edit');
+                      setEditSetupUnit((reviewProduct as any).procurementUnit || '');
+                      setEditSetupPackQty(String((reviewProduct as any).procurementPackQty || 1));
+                      setEditSetupStockUnit((reviewProduct as any).baseStockUnit || '');
+                    } else {
+                      // Save edits back to product and add
+                      // The edited values will be persisted through the same backend flow
+                      handleAddProduct(reviewProduct, true);
+                      setReviewProduct(null);
+                      setReviewMode('preview');
+                    }
                   }}
                 >
-                  Add & Set Up Later
+                  {reviewMode === 'preview' ? 'Review/Edit Setup' : 'Save Setup & Add'}
                 </button>
-                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setReviewProduct(null)}>Cancel</button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    handleAddProduct(reviewProduct, false);
+                    setReviewProduct(null);
+                    setReviewMode('preview');
+                    setSuccess('Added — complete retail setup in Products → Variants before selling');
+                  }}
+                >
+                  Set Up Later
+                </button>
               </div>
+              <button className="btn btn-secondary" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => { setReviewProduct(null); setReviewMode('preview'); }}>Cancel</button>
             </div>
           </div>
         </div>
