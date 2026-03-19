@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 482,
+  "version": 484,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -8236,6 +8236,64 @@
         "regression_check": "47+33=80 conversion tests pass, backend typecheck clean",
         "test_guard": "backend/tests/conversionLifecycle.v3-harden-172.unit.test.ts — 33 tests pass",
         "single_commit": "One ticket = one commit",
+        "ticket_parked": "Committing now"
+      }
+    },
+    {
+      "ticket": "V3-HARDEN-185",
+      "file": "backend/src/services/demandSignalCompute.ts",
+      "start_line": 1,
+      "end_line": 210,
+      "checksum": "e4c68f9fea39b379",
+      "description": "Live demand signal compute engine from real DB tables",
+      "test_file": "backend/tests/contracts/demandSignalCompute.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-19T18:58:32.627Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "GET /pos/demand-signals + /retailer-admin/demand-signals + /admin/demand-signals/pressure — all wired with proper auth middleware",
+        "api_errors": "500 on compute failure, 401 on missing store context, 503 on DB unavailable",
+        "store_isolation": "POS: storeId from posDevice.storeId (device token JWT). Retailer: from req.storeId (gateway header + ownership). Admin: from URL param (cross-store by design)",
+        "business_logic": "Demand velocity from real sales 7d/30d, reorder suggestion via 14-day target minus stock minus pending inbound, zero negative quantities",
+        "business_behaviour": "compute → versioned snapshot → freshness check → reorder recommendation → portal consumption",
+        "db_schema": "Uses catalog.store_products + inventory.stock_balances + sales + sale_items + orders.purchase_orders — all existing tables, no new migration needed",
+        "impacted_files": "7 files: demandSignalCompute.ts, 3 route files, test file, demand-signal-gate.sh, FIX_LEDGER.json",
+        "fix_ledger_check": "114 fixes intact, zero drift, V3-HARDEN-185 registered at demandSignalCompute.ts:1-210",
+        "no_agent_conflict": "Single agent session, no parallel modifications",
+        "operator_approved": "Mode A pre-staging, operator authorized Phase 21 implementation",
+        "gcp_parity": "No localhost URLs, all config via env vars, compatible with staging.supermandi.tech",
+        "regression_check": "19 new tests + 11 existing storeDemandSignal tests all pass",
+        "test_guard": "demandSignalCompute.unit.test.ts — 19 tests pass",
+        "parity_scanned": "Parity scan clean — 8 files, 0 issues at 2026-03-19T19:01:44.631Z",
+        "parity_fixed": "No parity gaps found — nothing to fix",
+        "single_commit": "fix(V3-HARDEN-185): single commit",
         "ticket_parked": "Committing now"
       }
     }
