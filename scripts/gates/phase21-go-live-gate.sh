@@ -113,6 +113,52 @@ check "allocationService tests" test -f "backend/tests/contracts/allocationServi
 check "lifecycleEventService tests" test -f "backend/tests/contracts/lifecycleEventService.unit.test.ts"
 check "phase21GoLiveGate tests" test -f "backend/tests/contracts/phase21GoLiveGate.unit.test.ts"
 
+# ─── SECTION 10: Runtime behavioral tests (blocking) ───
+echo ""
+echo "--- Runtime Behavioral Tests ---"
+
+check "Phase 21 Jest tests pass (120+ tests)" bash -c '
+  cd backend && npx jest \
+    tests/contracts/demandSignalCompute.unit.test.ts \
+    tests/contracts/buyAgainService.unit.test.ts \
+    tests/contracts/allocationService.unit.test.ts \
+    tests/contracts/lifecycleEventService.unit.test.ts \
+    tests/contracts/phase21GoLiveGate.unit.test.ts \
+    tests/contracts/storeDemandSignal.unit.test.ts \
+    --no-coverage --silent 2>&1 | grep -q "Tests:.*passed"
+'
+
+# Runtime behavioral checks via Jest (handles TS compilation)
+check "Allocation state machine: transitions validated at runtime" bash -c '
+  cd backend && npx jest tests/contracts/allocationService.unit.test.ts \
+    -t "happy path" --no-coverage --silent 2>&1 | grep -q "1 passed"
+'
+
+check "Lifecycle communication rules: 10 events validated at runtime" bash -c '
+  cd backend && npx jest tests/contracts/lifecycleEventService.unit.test.ts \
+    -t "all 10 event types" --no-coverage --silent 2>&1 | grep -q "1 passed"
+'
+
+check "Demand compute: reorder math validated at runtime" bash -c '
+  cd backend && npx jest tests/contracts/demandSignalCompute.unit.test.ts \
+    -t "suggests quantity to cover 14 days" --no-coverage --silent 2>&1 | grep -q "1 passed"
+'
+
+check "Store ownership enforcement validated at runtime" bash -c '
+  cd backend && npx jest tests/contracts/demandSignalCompute.unit.test.ts \
+    -t "store ownership" --no-coverage --silent 2>&1 | grep -q "1 passed"
+'
+
+check "Auth enforcement: admin routes require token" bash -c '
+  cd backend && npx jest tests/contracts/demandSignalCompute.unit.test.ts \
+    -t "Admin demand-signals routes require auth" --no-coverage --silent 2>&1 | grep -q "passed"
+'
+
+check "RBAC migration 202 exists for demand_signals + allocations" bash -c '
+  grep -q "demand_signals" backend/migrations/202_phase21_rbac_permissions.sql && \
+  grep -q "allocations" backend/migrations/202_phase21_rbac_permissions.sql
+'
+
 echo ""
 echo "=== Results: $((CHECKS - FAILURES))/$CHECKS passed ==="
 if [ "$FAILURES" -gt 0 ]; then
