@@ -60,9 +60,13 @@ export default function CompareScreenV3({ visible, productName, productId, packS
         if (!online) { showToast("Offline — comparison unavailable"); setLoading(false); return; }
         const storeId = await getDeviceStoreId();
         if (!storeId) return;
-        // V3-FIX-173: Use canonical productId when available, fall back to productName
-        const lookupId = productId || productName;
-        const suppliers = await getProductSuppliers(storeId, lookupId);
+        // V3-FIX-173: Use canonical productId for supplier-offer identity lookup
+        if (!productId) {
+          showToast("Product identity missing — cannot compare suppliers");
+          setLoading(false);
+          return;
+        }
+        const suppliers = await getProductSuppliers(storeId, productId);
         // Sort by price ascending — lowest price is best
         const sorted = [...suppliers].sort((a, b) => a.purchasePrice - b.purchasePrice);
         const bestPrice = sorted.length > 0 ? sorted[0].purchasePrice : 0;

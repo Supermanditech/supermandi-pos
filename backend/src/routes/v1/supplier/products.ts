@@ -552,7 +552,15 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         shelf_life_days,
         approval_status,
         is_active,
-        created_at`,
+        created_at,
+        ptr_minor,
+        pts_minor,
+        trade_discount_pct,
+        scheme,
+        delivery_sla_days,
+        delivery_terms,
+        credit_days,
+        finance_eligible`,
       [
         req.supplierId,
         name,
@@ -645,6 +653,9 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
       manufacturerName, countryOfOrigin, shelfLifeDays, // SCALE-A1: Compliance fields
       netContentValue, // SCALE-A2
       netContentUnit,  // SCALE-A2
+      // V3-FIX-174: Commercial terms
+      ptrMinor, ptsMinor, tradeDiscountPct, scheme,
+      deliverySlaDays, deliveryTerms, creditDays: patchCreditDays, financeEligible,
     } = req.body;
 
     const pool = getPool();
@@ -808,6 +819,16 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
       updates.push(`net_content_unit = $${paramIndex++}`);
       values.push(netContentUnit || null);
     }
+
+    // V3-FIX-174: Commercial term fields in UPDATE
+    if (ptrMinor !== undefined) { updates.push(`ptr_minor = $${paramIndex++}`); values.push(ptrMinor != null ? parseInt(String(ptrMinor)) : null); }
+    if (ptsMinor !== undefined) { updates.push(`pts_minor = $${paramIndex++}`); values.push(ptsMinor != null ? parseInt(String(ptsMinor)) : null); }
+    if (tradeDiscountPct !== undefined) { updates.push(`trade_discount_pct = $${paramIndex++}`); values.push(tradeDiscountPct != null ? parseFloat(String(tradeDiscountPct)) : null); }
+    if (scheme !== undefined) { updates.push(`scheme = $${paramIndex++}`); values.push(scheme?.trim() || null); }
+    if (deliverySlaDays !== undefined) { updates.push(`delivery_sla_days = $${paramIndex++}`); values.push(deliverySlaDays != null ? parseInt(String(deliverySlaDays)) : null); }
+    if (deliveryTerms !== undefined) { updates.push(`delivery_terms = $${paramIndex++}`); values.push(deliveryTerms?.trim() || null); }
+    if (patchCreditDays !== undefined) { updates.push(`credit_days = $${paramIndex++}`); values.push(patchCreditDays != null ? parseInt(String(patchCreditDays)) : null); }
+    if (financeEligible !== undefined) { updates.push(`finance_eligible = $${paramIndex++}`); values.push(financeEligible === true || financeEligible === 'true'); }
 
     if (updates.length === 0) {
       res.status(400).json({

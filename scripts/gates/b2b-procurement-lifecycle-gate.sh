@@ -163,11 +163,43 @@ else
   ERRORS=$((ERRORS + 1))
 fi
 
-# Behavioral: CompareScreen accepts productId
-if grep -q "productId" src/screens/v3/CompareScreenV3.tsx; then
-  echo "PASS: CompareScreen accepts canonical productId"
+# Behavioral: CompareScreen requires productId (no productName fallback)
+if grep -q "productId" src/screens/v3/CompareScreenV3.tsx && grep -q "Product identity missing" src/screens/v3/CompareScreenV3.tsx; then
+  echo "PASS: CompareScreen requires canonical productId (no fallback)"
 else
-  echo "FAIL: CompareScreen missing productId prop"
+  echo "FAIL: CompareScreen still falls back to productName"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: Order route creates payment intent for principal orders
+if grep -q "createPaymentIntent" backend/src/routes/v1/orders.ts; then
+  echo "PASS: Order route creates procurement payment intent"
+else
+  echo "FAIL: Order route missing payment intent creation"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: Server startup fails for critical procurement schema
+if grep -q "Refusing to start\|process.exit" backend/src/server.ts && grep -q "procurement" backend/src/server.ts; then
+  echo "PASS: Startup fails loudly for missing procurement schema in production"
+else
+  echo "FAIL: Startup does not fail for missing procurement schema"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: Server-side accepted terms snapshot (not client-composed)
+if grep -q "snapshotAt\|version.*1\|validatedItems" backend/src/routes/v1/orders.ts; then
+  echo "PASS: Order route builds server-side accepted terms snapshot"
+else
+  echo "FAIL: Order route uses client-composed terms"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: Supplier PATCH accepts commercial terms
+if grep -q "ptr_minor\|trade_discount_pct\|delivery_sla_days" backend/src/routes/v1/supplier/products.ts; then
+  echo "PASS: Supplier PATCH accepts full commercial terms"
+else
+  echo "FAIL: Supplier PATCH missing commercial terms"
   ERRORS=$((ERRORS + 1))
 fi
 

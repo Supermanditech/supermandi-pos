@@ -55,9 +55,19 @@ async function start(): Promise<void> {
     if (pool) {
       const convResult = await validateConversionSchemaReadiness(pool);
       if (convResult.ready) {
-        logger.info("[V3-HARDEN-172] Conversion schema ready — all migration 199 columns present");
+        logger.info("[V3-HARDEN-172+178] Conversion + procurement schema ready");
       } else {
-        logger.error(`[V3-HARDEN-172] Conversion schema NOT ready — missing columns: ${convResult.missing.join(', ')}. Run migration 199.`);
+        // V3-HARDEN-178: Fail loudly for procurement-critical missing columns
+        const critical = convResult.missing.filter((c: string) => c.includes('payment_intents') || c.includes('accepted_terms'));
+        if (critical.length > 0) {
+          logger.error(`[V3-HARDEN-178] CRITICAL: Procurement checkout schema NOT ready — missing: ${critical.join(', ')}. Run migrations 199-201.`);
+          if (process.env.NODE_ENV === 'production') {
+            logger.error("[V3-HARDEN-178] Refusing to start with missing procurement schema in production.");
+            process.exit(1);
+          }
+        } else {
+          logger.warn(`[V3-HARDEN-172] Conversion schema NOT fully ready — missing: ${convResult.missing.join(', ')}. Run migrations.`);
+        }
       }
     }
   } catch (err) {

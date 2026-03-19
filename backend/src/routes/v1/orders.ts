@@ -199,8 +199,8 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         id, order_number, store_id, supplier_id, order_type, status,
         total_amount, item_count, store_notes, delivery_address,
         expected_delivery_date, created_by_user_id, procurement_lane,
-        accepted_terms_snapshot, payment_lane
-      ) VALUES ($1, $2, $3, $4, $5, $12, $6, $7, $8, $9, $10, NULL, $11, $13, $14)
+        accepted_terms_snapshot, accepted_terms_version, payment_lane
+      ) VALUES ($1, $2, $3, $4, $5, $12, $6, $7, $8, $9, $10, NULL, $11, $13, 1, $14)
       RETURNING
         id,
         order_number as "orderNumber",
@@ -223,8 +223,17 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         expectedDeliveryDate || null,
         procurementLane,
         orderStatus,
-        // V3-FIX-175: Snapshot accepted terms from checkout items
-        items.some((i: any) => i.acceptedTerms) ? JSON.stringify(items.map((i: any) => ({ supplierProductId: i.supplierProductId, acceptedTerms: i.acceptedTerms }))) : null,
+        // V3-FIX-175+177: Server-side accepted published-term snapshot from catalog
+        // Read authoritative terms from DB, not client — prevents client-composed term spoofing
+        JSON.stringify({
+          version: 1,
+          snapshotAt: new Date().toISOString(),
+          items: validatedItems.map((vi: any) => ({
+            supplierProductId: vi.supplierProductId,
+            unitPrice: vi.unitPrice,
+            quantity: vi.quantity,
+          })),
+        }),
         // V3-FIX-176: Payment lane — SuperMandi principal for catalogue orders
         procurementLane === "CATALOGUE_PRINCIPAL" ? "SUPERMANDI_PRINCIPAL" : null,
       ]
@@ -240,6 +249,22 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         [linkedProcurementId, orderId]
       );
       order.linkedProcurementId = linkedProcurementId;
+
+      // V3-FIX-176: Create canonical procurement payment intent for principal orders
+      if (paymentMode && paymentMode !== "CASH") {
+        const { createPaymentIntent } = require("../../services/procurementPaymentService");
+        const providerMap: Record<string, string> = { UPI: 'UPI_DIRECT', BANK: 'RAZORPAY', BNPL: 'BNPL', CREDIT: 'SUPERMANDI_CREDIT' };
+        try {
+          const intent = await createPaymentIntent(client, {
+            storeId, orderId, amountMinor: totalAmount,
+            mode: paymentMode, provider: providerMap[paymentMode] || 'MANUAL',
+          });
+          order.paymentIntentId = intent.id;
+          order.paymentIntentStatus = intent.status;
+        } catch (payErr: any) {
+          log.warn(`[V3-FIX-176] Payment intent creation failed for order ${orderId}: ${payErr.message}`);
+        }
+      }
     }
 
     // 6. Insert order items

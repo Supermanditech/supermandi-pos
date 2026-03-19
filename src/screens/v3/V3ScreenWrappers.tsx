@@ -110,7 +110,8 @@ export function V3NewProductWrapper({ route }: any) {
 export function V3CompareWrapper({ route }: any) {
   const nav = useNavigation<Nav>();
   const params = route?.params ?? {};
-  return <CompareScreenV3 visible={true} productName={params.productName ?? "Product"} packSize={params.packSize ?? ""} mrpMinor={params.mrpMinor ?? 1000} currentStock={params.currentStock ?? 0} sellPriceMinor={params.sellPriceMinor ?? 1000} weeklyNeed={params.weeklyNeed ?? 50} onClose={() => nav.goBack()} onOrder={() => nav.goBack()} />;
+  // V3-FIX-173: Pass canonical productId for supplier-offer identity lookup
+  return <CompareScreenV3 visible={true} productName={params.productName ?? "Product"} productId={params.productId} packSize={params.packSize ?? ""} mrpMinor={params.mrpMinor ?? 1000} currentStock={params.currentStock ?? 0} sellPriceMinor={params.sellPriceMinor ?? 1000} weeklyNeed={params.weeklyNeed ?? 50} onClose={() => nav.goBack()} onOrder={() => nav.goBack()} />;
 }
 
 export function V3CounterPurchaseWrapper() {
