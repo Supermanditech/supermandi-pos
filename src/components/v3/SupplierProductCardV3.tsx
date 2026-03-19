@@ -34,8 +34,10 @@ export interface SupplierProduct {
   procurementUnit?: string;
   procurementPackQty?: number;
   baseStockUnit?: string;
-  sellUnit?: string;
-  defaultVariants?: string;
+  // V3-FIX-169: Approved sell profile (from store_products, set by publish materialization)
+  soldBy?: string;
+  rateUnit?: string;
+  productMode?: string;
 }
 
 // V3-FIX-136: Card is browse-only — no inline qty/add controls

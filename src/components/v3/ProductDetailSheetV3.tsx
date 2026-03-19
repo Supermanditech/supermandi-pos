@@ -57,8 +57,14 @@ export default function ProductDetailSheetV3({
     onClose();
   }, [product, qty, onAddToCart, onClose]);
 
-  // Reset qty when product changes
-  React.useEffect(() => { setQty(1); }, [product?.id]);
+  // Reset qty when product changes — use 0.5 as default for weight/volume loose products
+  React.useEffect(() => {
+    if (product?.productMode === "LOOSE_BULK" && (product.baseStockUnit === "KG" || product.baseStockUnit === "LTR")) {
+      setQty(0.5);
+    } else {
+      setQty(1);
+    }
+  }, [product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!visible || !product) return null;
 
@@ -215,17 +221,39 @@ export default function ProductDetailSheetV3({
 
             {/* Quantity selector */}
             <View style={styles.qtyRow}>
-              <Text style={styles.qtyLabel}>Quantity</Text>
+              <Text style={styles.qtyLabel}>
+                Quantity{product.productMode === "LOOSE_BULK" && product.rateUnit ? ` (per ${product.rateUnit})` : ""}
+              </Text>
               <View style={styles.qtyStepper}>
-                <Pressable style={styles.qtyBtn} onPress={() => setQty(Math.max(1, qty - 1))} accessibilityLabel="Decrease quantity">
+                <Pressable style={styles.qtyBtn} onPress={() => setQty(Math.max(0.25, qty - (product.productMode === "LOOSE_BULK" ? 0.25 : 1)))} accessibilityLabel="Decrease quantity">
                   <Text style={styles.qtyBtnText}>−</Text>
                 </Pressable>
-                <Text style={styles.qtyValue}>{qty}</Text>
-                <Pressable style={styles.qtyBtn} onPress={() => setQty(qty + 1)} accessibilityLabel="Increase quantity">
+                <Text style={styles.qtyValue}>{qty % 1 === 0 ? qty : qty.toFixed(2)}</Text>
+                <Pressable style={styles.qtyBtn} onPress={() => setQty(qty + (product.productMode === "LOOSE_BULK" ? 0.25 : 1))} accessibilityLabel="Increase quantity">
                   <Text style={styles.qtyBtnText}>+</Text>
                 </Pressable>
               </View>
             </View>
+
+            {/* V3-HARDEN-171: Quick-qty presets for loose products on SELL tile */}
+            {context === "SELL" && product.productMode === "LOOSE_BULK" && product.rateUnit ? (
+              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+                {(product.baseStockUnit === 'KG' || product.rateUnit === 'KG'
+                  ? [{ label: '250g', qty: 0.25 }, { label: '500g', qty: 0.5 }, { label: '1kg', qty: 1 }, { label: '2kg', qty: 2 }, { label: '5kg', qty: 5 }]
+                  : product.baseStockUnit === 'LTR' || product.rateUnit === 'LTR'
+                  ? [{ label: '250ml', qty: 0.25 }, { label: '500ml', qty: 0.5 }, { label: '1L', qty: 1 }, { label: '2L', qty: 2 }]
+                  : [{ label: '1', qty: 1 }, { label: '6', qty: 6 }, { label: '12', qty: 12 }]
+                ).map(p => (
+                  <Pressable
+                    key={p.label}
+                    style={{ backgroundColor: qty === p.qty ? colors.primary : colors.primary + '15', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: qty === p.qty ? colors.primary : colors.primary + '30' }}
+                    onPress={() => setQty(p.qty)}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: qty === p.qty ? '#fff' : colors.primary }}>{p.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
           </ScrollView>
 
           {/* Bottom explicit add CTA */}

@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 439,
+  "version": 440,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6963,8 +6963,8 @@
       "ticket": "STG-561",
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 1,
-      "end_line": 388,
-      "checksum": "279f3d6c521f912b",
+      "end_line": 390,
+      "checksum": "8ce050e82317cac4",
       "description": "BUY tab v3 — supplier catalogue with wholesale metadata, supplier filter, categories, counter purchase CTA",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,
@@ -7074,8 +7074,8 @@
       "ticket": "STG-564",
       "file": "src/screens/v3/NewProductScreenV3.tsx",
       "start_line": 1,
-      "end_line": 420,
-      "checksum": "1d4f2a9d7d4959b5",
+      "end_line": 425,
+      "checksum": "3030bacaddaf78de",
       "description": "New product digitization v3 — auto-fill from master DB, photo, sell/cost/margin, HSN/GST, Add to Store",
       "test_file": "src/__tests__/screens/new-product-v3.stg-564.test.ts",
       "depends_on": null,

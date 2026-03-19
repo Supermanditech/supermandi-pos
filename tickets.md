@@ -7837,12 +7837,18 @@ Scope narrowing (2026-03-19):
     cart calculateCartTotals uses fractional qty with Math.round on line subtotals (not qty)
   - publish materialization: sets product_mode, sold_by, rate_unit on store_products from approved
     sell_unit and split_sell_eligible — downstream POS/retailer reads get the full sell profile
-  - operator flow: supplier-catalog review modal supports preview/edit/defer modes with distinct
-    conversionConfirmed outcomes and edited setup persistence; scan loose parent barcode opens
-    chooser without pre-adding (operator picks qty first); quick-qty presets use correct fractional
-    amounts; NewProduct has accept/edit/defer setup flow
-  - POS BUY catalog response now includes procurementUnit, procurementPackQty, baseStockUnit,
-    productMode, soldBy, rateUnit from store_products — POS BUY mapping consumes them
+  - operator flow:
+    - supplier-catalog review: preview/edit/defer with "Use Suggested" (confirmed=true),
+      "Save Setup & Add" (edited values + confirmed=true), "Remind at GRN" (confirmed=false,
+      GRN screen shows setup warning for these items)
+    - scan: loose parent barcode opens chooser without pre-adding, operator picks qty first
+      via fractional presets (250g=0.25, 500g=0.5, 1kg=1, 5kg=5)
+    - SELL tile: detail sheet shows quick-qty presets for loose products (same fractional values),
+      stepper increments by 0.25 for weight/volume, default qty is 0.5 for KG/LTR
+    - NewProduct: LOOSE_BULK setupMode (suggest/edit/accepted) controls conversionConfirmed
+      persisted to backend — "accepted" = true, "suggest" or "edit" = false
+  - POS BUY catalog response includes procurementUnit, procurementPackQty, baseStockUnit,
+    productMode, soldBy, rateUnit from store_products — BUY mapping consumes the live sell profile
   - data flow: CSV import (create-new and update-existing with full product_mode/procurement/base/confirmed),
     supplier-catalog add (with conversion review modal — "Use Suggested Setup & Add" sets
     conversion_confirmed=true, "Add & Set Up Later" sets conversion_confirmed=false),

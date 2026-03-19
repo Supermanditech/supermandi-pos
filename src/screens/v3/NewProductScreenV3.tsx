@@ -101,15 +101,20 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
       // V3-FIX-168: Persist conversion profile via store-products API when online
       try {
         if (await isOnline()) {
+          // V3-FIX-168: setupMode determines persisted conversion state:
+          // "accepted" = operator confirmed setup → conversion_confirmed=true
+          // "suggest" = operator did not review → conversion_confirmed=false (sell blocked until confirmed)
+          // "edit" = operator is mid-edit (should not reach here, but treat as unconfirmed)
+          const conversionConfirmed = productMode === "LOOSE_BULK" ? setupMode === "accepted" : true;
           await apiClient.post("/api/v1/pos/store-products", {
             barcode, name, sellPrice: priceMinor, mrp: mrp ? Math.round(parseFloat(mrp) * 100) : undefined,
             initialStockQty: parseInt(openingStock, 10) || 0, unit,
             brand, description: category,
-            // V3-FIX-168: Canonical conversion fields
             mode: productMode,
             procurementUnit: productMode === "LOOSE_BULK" ? procurementUnit || undefined : undefined,
             procurementPackQty: productMode === "LOOSE_BULK" ? parseFloat(procurementPackQty) || 1 : undefined,
             baseStockUnit: productMode === "LOOSE_BULK" ? baseStockUnit || undefined : undefined,
+            conversionConfirmed,
           });
         }
       } catch (apiErr) {

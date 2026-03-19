@@ -49,9 +49,11 @@ function catalogToSupplier(p: CatalogProduct): SupplierProduct {
     procurementUnit: raw.procurementUnit ?? raw.procurement_unit,
     procurementPackQty: raw.procurementPackQty ?? raw.procurement_pack_qty,
     baseStockUnit: raw.baseStockUnit ?? raw.base_stock_unit,
-    // V3-FIX-169: Carry approved sell-side defaults
-    sellUnit: raw.sellUnit ?? raw.sell_unit,
-    defaultVariants: raw.defaultVariants ?? raw.default_retail_variants,
+    // V3-FIX-169: Approved sell profile from store_products (set by publish materialization)
+    // soldBy/rateUnit/productMode are the live sell-side contract, not separate sellUnit field
+    soldBy: raw.soldBy ?? raw.sold_by,
+    rateUnit: raw.rateUnit ?? raw.rate_unit,
+    productMode: raw.productMode ?? raw.product_mode,
   };
 }
 

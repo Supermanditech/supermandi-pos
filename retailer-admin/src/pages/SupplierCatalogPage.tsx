@@ -473,13 +473,15 @@ export default function SupplierCatalogPage() {
                   className="btn btn-secondary"
                   style={{ flex: 1 }}
                   onClick={() => {
+                    // V3-FIX-170: "Remind Me at GRN" — adds with conversion_confirmed=false
+                    // GRN screen will show "items need retail setup" warning for these products
                     handleAddProduct(reviewProduct, false);
                     setReviewProduct(null);
                     setReviewMode('preview');
-                    setSuccess('Added — complete retail setup in Products → Variants before selling');
+                    setSuccess('Added — you will be reminded to set up retail variants when receiving stock (GRN)');
                   }}
                 >
-                  Set Up Later
+                  Remind at GRN
                 </button>
               </div>
               <button className="btn btn-secondary" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => { setReviewProduct(null); setReviewMode('preview'); }}>Cancel</button>

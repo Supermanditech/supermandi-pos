@@ -152,7 +152,8 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, requireActive
     procurementUnit,
     procurementPackQty,
     baseStockUnit,
-  } = req.body as Partial<CreateStoreProductInput>;
+    conversionConfirmed,
+  } = req.body as Partial<CreateStoreProductInput & { conversionConfirmed?: boolean }>;
 
   // AUD-059-A/B FIX: Input validation bounds
   const MAX_PRICE_MINOR = 1000000000; // 10M INR = 1B paise
@@ -272,6 +273,7 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, requireActive
       procurementUnit,
       procurementPackQty: procurementPackQty ? Number(procurementPackQty) : undefined,
       baseStockUnit,
+      conversionConfirmed: conversionConfirmed ?? undefined,
     });
 
     if (isSuccessResult(result)) {
