@@ -659,6 +659,15 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         isActive: product.is_active,
         createdAt: product.created_at,
         autoApproved,
+        // V3-FIX-174: Commercial terms in CREATE response
+        ptrMinor: product.ptr_minor || null,
+        ptsMinor: product.pts_minor || null,
+        tradeDiscountPct: product.trade_discount_pct != null ? Number(product.trade_discount_pct) : null,
+        scheme: product.scheme || null,
+        deliverySlaDays: product.delivery_sla_days || null,
+        deliveryTerms: product.delivery_terms || null,
+        creditDays: product.credit_days || null,
+        financeEligible: product.finance_eligible || false,
       },
     });
   } catch (error) {
@@ -959,7 +968,15 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
          price_change_pending,
          pending_purchase_price,
          pending_mrp,
-         updated_at`,
+         updated_at,
+         ptr_minor,
+         pts_minor,
+         trade_discount_pct,
+         scheme,
+         delivery_sla_days,
+         delivery_terms,
+         credit_days,
+         finance_eligible`,
       values
     );
 
@@ -1004,6 +1021,15 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
         pendingPurchasePrice: product.pending_purchase_price || null,
         pendingMrp: product.pending_mrp || null,
         updatedAt: product.updated_at,
+        // V3-FIX-174: Commercial terms in PATCH response
+        ptrMinor: product.ptr_minor || null,
+        ptsMinor: product.pts_minor || null,
+        tradeDiscountPct: product.trade_discount_pct != null ? Number(product.trade_discount_pct) : null,
+        scheme: product.scheme || null,
+        deliverySlaDays: product.delivery_sla_days || null,
+        deliveryTerms: product.delivery_terms || null,
+        creditDays: product.credit_days || null,
+        financeEligible: product.finance_eligible || false,
       },
     });
   } catch (error) {

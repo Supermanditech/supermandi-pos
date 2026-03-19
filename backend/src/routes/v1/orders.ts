@@ -199,9 +199,10 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
     const termSnapItems = [];
     for (const vi of validatedItems) {
       const termRow = await client.query(
-        `SELECT ptr_minor, purchase_price, mrp, trade_discount_pct, scheme,
-                delivery_sla_days, delivery_days, credit_days, finance_eligible,
-                bnpl_eligible, moq, published_terms_version
+        `SELECT ptr_minor, pts_minor, purchase_price, mrp, trade_discount_pct, scheme,
+                delivery_sla_days, delivery_days, delivery_terms, credit_days,
+                finance_eligible, bnpl_eligible, moq, moq_tiers,
+                published_terms_version, published_at
          FROM catalog.supplier_products WHERE id = $1`,
         [vi.supplierProductId]
       );
@@ -211,12 +212,19 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         unitPrice: vi.unitPrice,
         quantity: vi.quantity,
         publishedTerms: {
-          ptrMinor: t.ptr_minor, purchasePrice: t.purchase_price, mrp: t.mrp,
+          ptrMinor: t.ptr_minor, ptsMinor: t.pts_minor,
+          purchasePrice: t.purchase_price, mrp: t.mrp,
           tradeDiscountPct: t.trade_discount_pct ? Number(t.trade_discount_pct) : null,
-          scheme: t.scheme, deliveryDays: t.delivery_sla_days || t.delivery_days,
-          creditDays: t.credit_days, financeEligible: t.finance_eligible,
-          bnplEligible: t.bnpl_eligible, moq: t.moq,
+          scheme: t.scheme,
+          deliveryDays: t.delivery_sla_days || t.delivery_days,
+          deliveryTerms: t.delivery_terms,
+          creditDays: t.credit_days,
+          financeEligible: t.finance_eligible,
+          bnplEligible: t.bnpl_eligible,
+          moq: t.moq,
+          moqTiers: t.moq_tiers,
           version: t.published_terms_version || 1,
+          publishedAt: t.published_at,
         },
       });
     }

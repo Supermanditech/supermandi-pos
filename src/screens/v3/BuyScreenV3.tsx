@@ -51,6 +51,10 @@ function catalogToSupplier(p: CatalogProduct): SupplierProduct {
     tradeDiscountPct: bestOffer.tradeDiscountPct ?? undefined,
     scheme: bestOffer.scheme ?? undefined,
     creditDays: bestOffer.creditDays ?? undefined,
+    // V3-FIX-173: Full published buyer-card contract
+    deliveryTerms: bestOffer.deliveryTerms ?? undefined,
+    financeEligible: bestOffer.financeEligible ?? false,
+    publishedTermsVersion: bestOffer.publishedTermsVersion ?? undefined,
     // V3-FIX-170: Conversion-aware procurement context
     procurementUnit: raw.procurementUnit ?? raw.procurement_unit,
     procurementPackQty: raw.procurementPackQty ?? raw.procurement_pack_qty,
@@ -396,13 +400,24 @@ export default function BuyScreenV3() {
                       paymentMode: paymentMode as any,
                     });
                     await submitOrder(sid, order.id);
-                    // V3-FIX-176: Payment intent is now created server-side during order creation
-                    // via procurementPaymentService when paymentMode is non-CASH.
-                    // No separate confirmPayment call needed — payment state is on procurement.payment_intents.
+                    // V3-FIX-176: Payment intent created server-side — surface state
+                    const orderData = order as any;
+                    if (orderData.paymentIntentStatus === 'pending' && orderData.paymentRedirectUrl) {
+                      // UPI: show deep link action
+                      showToast(`Order placed — open UPI app to pay ₹${Math.round(cartTotal / 100)}`);
+                      // In production, this would open the deep link via Linking.openURL
+                      logger.debug("BuyV3", `upi_redirect:${orderData.paymentRedirectUrl}`);
+                    } else if (orderData.paymentIntentStatus === 'authorized') {
+                      showToast(`Order placed — SuperMandi Credit approved`);
+                    } else if (orderData.paymentIntentStatus === 'pending') {
+                      showToast(`Order placed — payment pending approval`);
+                    }
                     totalItems += orderItems.length;
-                    logger.debug("BuyV3", `checkout:${order.id},supplier:${supplierId},payment:${paymentMode},items:${orderItems.length}`);
+                    logger.debug("BuyV3", `checkout:${order.id},supplier:${supplierId},payment:${paymentMode},intent:${orderData.paymentIntentStatus || 'none'}`);
                   }
-                  showToast(`Order placed (${paymentMode}): ${totalItems} items · ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")}`);
+                  if (paymentMode === "CASH") {
+                    showToast(`Order placed (Cash on Delivery): ${totalItems} items · ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")}`);
+                  }
                   setOrderQtys({});
                   setCheckoutVisible(false);
                 } catch (err: any) {

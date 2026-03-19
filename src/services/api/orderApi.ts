@@ -56,6 +56,12 @@ export interface PurchaseOrder {
   createdByUserId: string | null;
   createdAt: string;
   updatedAt: string;
+  // V3-FIX-176: Procurement payment intent state
+  paymentIntentId?: string;
+  paymentIntentStatus?: string;
+  paymentRedirectUrl?: string;
+  paymentQrData?: string;
+  paymentLane?: string;
 }
 
 export interface PurchaseOrderWithItems extends PurchaseOrder {

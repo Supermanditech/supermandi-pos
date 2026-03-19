@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 453,
+  "version": 454,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -4098,8 +4098,8 @@
     {
       "ticket": "STG-497",
       "file": "src/services/api/orderApi.ts",
-      "start_line": 427,
-      "end_line": 541,
+      "start_line": 433,
+      "end_line": 547,
       "description": "GRN idempotency key — deterministic key from orderId+items prevents duplicate stock entries on retry",
       "test_file": "src/__tests__/screens/GRNScreen.stg-497.idempotency.test.ts",
       "checksum": "fb35654b2171b46c",
@@ -4153,7 +4153,7 @@
         "single_commit": "fix(STG-497): add deterministic idempotency key to GRN receiveGoods",
         "ticket_parked": "STAGING_TICKETS.md updated to PARKED"
       },
-      "line_shifted_at": "2026-03-19T13:14:27.457Z"
+      "line_shifted_at": "2026-03-19T14:20:39.029Z"
     },
     {
       "ticket": "STG-499",
@@ -4514,8 +4514,8 @@
       "ticket": "STG-509",
       "file": "backend/src/routes/v1/orders.ts",
       "start_line": 1653,
-      "end_line": 2063,
-      "checksum": "2dd996dadebc4eac",
+      "end_line": 2071,
+      "checksum": "e6f8862c4bd15ba4",
       "description": "Reject GRN receive if total qty > ordered * 1.1 (10% tolerance)",
       "test_file": "src/__tests__/screens/grn-excess-qty.stg-509.test.ts",
       "depends_on": null,
@@ -6964,8 +6964,8 @@
       "ticket": "STG-561",
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 1,
-      "end_line": 466,
-      "checksum": "8af8e0aaebacd587",
+      "end_line": 478,
+      "checksum": "055eecca65905bc2",
       "description": "BUY tab v3 — supplier catalogue with wholesale metadata, supplier filter, categories, counter purchase CTA",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,

@@ -34,6 +34,10 @@ export interface SupplierProduct {
   procurementUnit?: string;
   procurementPackQty?: number;
   baseStockUnit?: string;
+  // V3-FIX-173: Full published buyer-card contract
+  deliveryTerms?: string;
+  financeEligible?: boolean;
+  publishedTermsVersion?: number;
   // V3-FIX-169: Approved sell profile (from store_products, set by publish materialization)
   soldBy?: string;
   rateUnit?: string;

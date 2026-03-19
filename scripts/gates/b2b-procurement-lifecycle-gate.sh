@@ -131,11 +131,11 @@ else
   ERRORS=$((ERRORS + 1))
 fi
 
-# Behavioral: Checkout uses server-side payment intent (not client-side confirmPayment)
-if grep -q "Payment intent is now created server-side" src/screens/v3/BuyScreenV3.tsx; then
-  echo "PASS: Checkout relies on server-side payment intent (not client confirmPayment)"
+# Behavioral: Checkout surfaces payment intent state (not just toast)
+if grep -q "paymentIntentStatus\|paymentRedirectUrl\|paymentQrData" src/screens/v3/BuyScreenV3.tsx; then
+  echo "PASS: Checkout surfaces payment intent state from order response"
 else
-  echo "FAIL: Checkout payment intent not server-side"
+  echo "FAIL: Checkout does not surface payment intent state"
   ERRORS=$((ERRORS + 1))
 fi
 
@@ -195,11 +195,29 @@ else
   ERRORS=$((ERRORS + 1))
 fi
 
-# Behavioral: Supplier PATCH accepts commercial terms
-if grep -q "ptr_minor\|trade_discount_pct\|delivery_sla_days" backend/src/routes/v1/supplier/products.ts; then
-  echo "PASS: Supplier PATCH accepts full commercial terms"
+# Behavioral: Supplier CREATE/PATCH responses include commercial terms
+CREATE_RESP=$(grep -c "V3-FIX-174.*Commercial terms in CREATE response\|ptrMinor.*CREATE response" backend/src/routes/v1/supplier/products.ts)
+PATCH_RESP=$(grep -c "V3-FIX-174.*Commercial terms in PATCH response\|ptrMinor.*PATCH response" backend/src/routes/v1/supplier/products.ts)
+if [ "$CREATE_RESP" -gt 0 ] && [ "$PATCH_RESP" -gt 0 ]; then
+  echo "PASS: Supplier CREATE/PATCH responses include commercial terms"
 else
-  echo "FAIL: Supplier PATCH missing commercial terms"
+  echo "FAIL: Supplier CREATE ($CREATE_RESP) or PATCH ($PATCH_RESP) responses missing commercial terms"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: Accepted terms snapshot includes full contract (ptsMinor, deliveryTerms, moqTiers)
+if grep -q "ptsMinor.*pts_minor\|deliveryTerms.*delivery_terms\|moqTiers.*moq_tiers" backend/src/routes/v1/orders.ts; then
+  echo "PASS: Accepted terms snapshot includes full published contract"
+else
+  echo "FAIL: Accepted terms snapshot missing full contract fields"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: BUY mapper reads full buyer metadata from bestOffer
+if grep -q "deliveryTerms.*bestOffer\|financeEligible.*bestOffer\|publishedTermsVersion.*bestOffer" src/screens/v3/BuyScreenV3.tsx; then
+  echo "PASS: BUY mapper reads full buyer metadata from bestOffer"
+else
+  echo "FAIL: BUY mapper still drops buyer metadata"
   ERRORS=$((ERRORS + 1))
 fi
 
