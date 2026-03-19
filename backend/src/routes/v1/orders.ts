@@ -2121,7 +2121,7 @@ ordersRouter.post("/procurement/payment-callback", async (req: Request, res: Res
   // Pine Labs: verify via HMAC-SHA256 using verifyPineLabsCallback
   else if (req.body.ppc_DIA_SECRET && process.env.PINE_LABS_SECRET) {
     const { verifyPineLabsCallback } = require("../../services/paymentProviders/pinelabsAdapter");
-    const plVerified = verifyPineLabsCallback(req.body);
+    const plVerified = await verifyPineLabsCallback(req.body);
     if (!plVerified.success) {
       log.warn("[payment-callback] Pine Labs HMAC verification FAILED");
       return res.status(401).json({ error: "Invalid Pine Labs callback signature" });

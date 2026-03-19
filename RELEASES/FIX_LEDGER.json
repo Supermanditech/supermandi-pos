@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 466,
+  "version": 467,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -4515,7 +4515,7 @@
       "file": "backend/src/routes/v1/orders.ts",
       "start_line": 1653,
       "end_line": 2212,
-      "checksum": "03dcc1870b88c0ff",
+      "checksum": "549d27ac8a310a8d",
       "description": "Reject GRN receive if total qty > ordered * 1.1 (10% tolerance)",
       "test_file": "src/__tests__/screens/grn-excess-qty.stg-509.test.ts",
       "depends_on": null,
