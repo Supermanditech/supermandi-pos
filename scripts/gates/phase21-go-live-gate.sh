@@ -113,11 +113,17 @@ check "allocationService tests" test -f "backend/tests/contracts/allocationServi
 check "lifecycleEventService tests" test -f "backend/tests/contracts/lifecycleEventService.unit.test.ts"
 check "phase21GoLiveGate tests" test -f "backend/tests/contracts/phase21GoLiveGate.unit.test.ts"
 
-# ─── SECTION 10: Runtime behavioral tests (blocking) ───
+# ─── SECTION 10: Runtime behavioral verification (blocking) ───
 echo ""
-echo "--- Runtime Behavioral Tests ---"
+echo "--- Runtime Behavioral Verification ---"
 
-check "Phase 21 Jest tests pass (120+ tests)" bash -c '
+# Runtime behavioral verification via Jest — executes actual code paths
+check "Runtime behavioral verification (20+ checks via Jest)" bash -c '
+  cd backend && npx jest tests/contracts/phase21RuntimeVerify.unit.test.ts \
+    --no-coverage --silent 2>&1 | grep -q "Tests:.*passed"
+'
+
+check "Backend Phase 21 full suite (120+ tests)" bash -c '
   cd backend && npx jest \
     tests/contracts/demandSignalCompute.unit.test.ts \
     tests/contracts/buyAgainService.unit.test.ts \
@@ -128,30 +134,9 @@ check "Phase 21 Jest tests pass (120+ tests)" bash -c '
     --no-coverage --silent 2>&1 | grep -q "Tests:.*passed"
 '
 
-# Runtime behavioral checks via Jest (handles TS compilation)
-check "Allocation state machine: transitions validated at runtime" bash -c '
-  cd backend && npx jest tests/contracts/allocationService.unit.test.ts \
-    -t "happy path" --no-coverage --silent 2>&1 | grep -q "1 passed"
-'
-
-check "Lifecycle communication rules: 10 events validated at runtime" bash -c '
-  cd backend && npx jest tests/contracts/lifecycleEventService.unit.test.ts \
-    -t "all 10 event types" --no-coverage --silent 2>&1 | grep -q "1 passed"
-'
-
-check "Demand compute: reorder math validated at runtime" bash -c '
-  cd backend && npx jest tests/contracts/demandSignalCompute.unit.test.ts \
-    -t "suggests quantity to cover 14 days" --no-coverage --silent 2>&1 | grep -q "1 passed"
-'
-
-check "Store ownership enforcement validated at runtime" bash -c '
-  cd backend && npx jest tests/contracts/demandSignalCompute.unit.test.ts \
-    -t "store ownership" --no-coverage --silent 2>&1 | grep -q "1 passed"
-'
-
-check "Auth enforcement: admin routes require token" bash -c '
-  cd backend && npx jest tests/contracts/demandSignalCompute.unit.test.ts \
-    -t "Admin demand-signals routes require auth" --no-coverage --silent 2>&1 | grep -q "passed"
+check "POS buy-again runtime tests (Zustand store execution)" bash -c '
+  npx jest src/__tests__/services/buyAgainRuntime.test.ts \
+    --no-coverage --silent 2>&1 | grep -q "Tests:.*7 passed"
 '
 
 check "RBAC migration 202 exists for demand_signals + allocations" bash -c '

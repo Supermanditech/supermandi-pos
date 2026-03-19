@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 507,
+  "version": 508,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -8583,7 +8583,7 @@
       "file": "scripts/gates/phase21-go-live-gate.sh",
       "start_line": 1,
       "end_line": 120,
-      "checksum": "e68e341f3667380f",
+      "checksum": "ec2485be42b9a3e5",
       "description": "P0: behavioral gate + deploy CI + portal consumers",
       "test_file": "backend/tests/contracts/phase21GoLiveGate.unit.test.ts",
       "depends_on": null,
