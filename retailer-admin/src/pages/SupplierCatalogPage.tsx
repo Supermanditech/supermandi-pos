@@ -323,6 +323,7 @@ export default function SupplierCatalogPage() {
                     {product.scheme ? <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 4 }}>{product.scheme}</span> : null}
                     {product.deliveryTerms ? <span style={{ background: '#f0f9ff', color: '#0369a1', padding: '1px 6px', borderRadius: 4 }}>{product.deliveryTerms}</span> : null}
                     {product.financeEligible ? <span style={{ background: '#dcfce7', color: '#16a34a', padding: '1px 6px', borderRadius: 4 }}>Finance</span> : null}
+                    {product.publishedTermsVersion ? <span style={{ background: '#f1f5f9', color: '#64748b', padding: '1px 6px', borderRadius: 4 }}>v{product.publishedTermsVersion}</span> : null}
                   </div>
                 ) : null}
 

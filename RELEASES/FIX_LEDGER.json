@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 471,
+  "version": 472,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -4672,7 +4672,7 @@
       "file": "supplier-portal/src/lib/api.ts",
       "start_line": 4,
       "end_line": 1473,
-      "checksum": "92c88742d3d2389f",
+      "checksum": "574e0b3ef26e6b25",
       "description": "HTTPS enforcement for supplier-portal in production",
       "test_file": "src/__tests__/screens/https-enforcement.stg-518.test.ts",
       "depends_on": null,
@@ -7002,7 +7002,7 @@
       "file": "src/screens/v3/CompareScreenV3.tsx",
       "start_line": 1,
       "end_line": 221,
-      "checksum": "54630946a0e48629",
+      "checksum": "f0c6018eb554c49b",
       "description": "Supplier price comparison — ranked offers with MOQ, delivery, BNPL, margin, weekly need calc",
       "test_file": "src/__tests__/screens/compare-v3.stg-562.test.ts",
       "depends_on": null,
@@ -8013,7 +8013,7 @@
       "file": "supplier-portal/src/app/(dashboard)/products/page.tsx",
       "start_line": 90,
       "end_line": 1330,
-      "checksum": "6e81e7c2d59f5ea1",
+      "checksum": "6d9c98dfd2f90cc8",
       "description": "Supplier product form with procurement packaging fields (procurementUnit, procurementPackQty, baseStockUnit, splitSellEligible)",
       "test_file": "backend/tests/conversionEngine.v3-fix-167.unit.test.ts",
       "depends_on": null,

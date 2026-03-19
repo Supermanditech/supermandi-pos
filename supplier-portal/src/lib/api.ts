@@ -517,6 +517,7 @@ export interface Product {
   procurementUnit?: string | null;
   procurementPackQty?: number | null;
   baseStockUnit?: string | null;
+  splitSellEligible?: boolean;
 }
 
 export interface ProductInput {

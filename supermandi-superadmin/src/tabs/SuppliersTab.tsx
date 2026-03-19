@@ -101,6 +101,10 @@ interface SuppliersTabProps {
     creditDays: string;
     financeEligible: boolean;
     moqTiers: string;
+    procurementUnit: string;
+    procurementPackQty: string;
+    baseStockUnit: string;
+    splitSellEligible: boolean;
   };
   setEditProductForm: (fn: (f: SuppliersTabProps["editProductForm"]) => SuppliersTabProps["editProductForm"]) => void;
   editProductError: string;
@@ -1072,6 +1076,47 @@ export function SuppliersTab({
                     value={editProductForm.moqTiers}
                     placeholder='[{"minQty":10,"discountPct":5}]'
                     onChange={(e) => updateProductForm((f) => ({ ...f, moqTiers: e.target.value }))} />
+                </div>
+                {/* V3-HARDEN-177: Package / procurement semantics */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, gridColumn: "1 / -1", marginTop: 4 }}>
+                  <div>
+                    <label>Procurement Unit</label>
+                    <select className="sa-input" style={{ width: "100%" }}
+                      value={editProductForm.procurementUnit}
+                      onChange={(e) => updateProductForm((f) => ({ ...f, procurementUnit: e.target.value }))}>
+                      <option value="">Not specified</option>
+                      <option value="KG">KG</option><option value="CARTON">Carton</option>
+                      <option value="BOX">Box</option><option value="CASE">Case</option>
+                      <option value="BAG">Bag</option><option value="TIN">Tin</option>
+                      <option value="BOTTLE">Bottle</option><option value="PCS">PCS</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>Pack Qty</label>
+                    <input type="number" className="sa-input" style={{ width: "100%" }}
+                      value={editProductForm.procurementPackQty}
+                      placeholder="units per pack"
+                      min="1" step="1"
+                      onChange={(e) => updateProductForm((f) => ({ ...f, procurementPackQty: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label>Base Stock Unit</label>
+                    <select className="sa-input" style={{ width: "100%" }}
+                      value={editProductForm.baseStockUnit}
+                      onChange={(e) => updateProductForm((f) => ({ ...f, baseStockUnit: e.target.value }))}>
+                      <option value="">Auto</option>
+                      <option value="KG">KG</option><option value="GM">GM</option>
+                      <option value="LTR">LTR</option><option value="ML">ML</option>
+                      <option value="PCS">PCS</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                    <input type="checkbox" checked={editProductForm.splitSellEligible}
+                      onChange={(e) => updateProductForm((f) => ({ ...f, splitSellEligible: e.target.checked }))} />
+                    Split-sell eligible (loose items from bulk)
+                  </label>
                 </div>
               </div>
 

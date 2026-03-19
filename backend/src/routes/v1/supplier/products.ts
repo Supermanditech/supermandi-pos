@@ -277,7 +277,8 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         procurement_unit,
         procurement_pack_qty,
         base_stock_unit,
-        hsn_code
+        hsn_code,
+        split_sell_eligible
       FROM catalog.supplier_products
       WHERE ${whereClause}
       ORDER BY created_at DESC
@@ -341,6 +342,7 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         procurementPackQty: p.procurement_pack_qty != null ? Number(p.procurement_pack_qty) : null,
         baseStockUnit: p.base_stock_unit || null,
         hsnCode: p.hsn_code || null,
+        splitSellEligible: p.split_sell_eligible || false,
       })),
       // GL-WF-063: Pagination metadata
       pagination: {
@@ -379,7 +381,8 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
               ptr_minor, pts_minor, trade_discount_pct, scheme,
               delivery_sla_days, delivery_terms, credit_days, finance_eligible,
               delivery_days, bnpl_max_days, published_terms_version, published_at,
-              moq_tiers, procurement_unit, procurement_pack_qty, base_stock_unit, hsn_code
+              moq_tiers, procurement_unit, procurement_pack_qty, base_stock_unit, hsn_code,
+              split_sell_eligible
        FROM catalog.supplier_products
        WHERE id = $1::uuid AND supplier_id = $2`,
       [req.params.productId, req.supplierId]
@@ -423,6 +426,7 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
         procurementPackQty: p.procurement_pack_qty != null ? Number(p.procurement_pack_qty) : null,
         baseStockUnit: p.base_stock_unit || null,
         hsnCode: p.hsn_code || null,
+        splitSellEligible: p.split_sell_eligible || false,
       },
     });
   } catch (error) {
@@ -619,7 +623,8 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         procurement_unit,
         procurement_pack_qty,
         base_stock_unit,
-        hsn_code`,
+        hsn_code,
+        split_sell_eligible`,
       [
         req.supplierId,
         name,
@@ -701,6 +706,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         procurementPackQty: product.procurement_pack_qty != null ? Number(product.procurement_pack_qty) : null,
         baseStockUnit: product.base_stock_unit || null,
         hsnCode: product.hsn_code || null,
+        splitSellEligible: product.split_sell_eligible || false,
       },
     });
   } catch (error) {
@@ -1021,6 +1027,7 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
          procurement_pack_qty,
          base_stock_unit,
          hsn_code,
+         split_sell_eligible,
          image_url,
          description`,
       values
@@ -1085,6 +1092,7 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
         procurementPackQty: product.procurement_pack_qty != null ? Number(product.procurement_pack_qty) : null,
         baseStockUnit: product.base_stock_unit || null,
         hsnCode: product.hsn_code || null,
+        splitSellEligible: product.split_sell_eligible || false,
         imageUrl: product.image_url || null,
         description: product.description || null,
       },

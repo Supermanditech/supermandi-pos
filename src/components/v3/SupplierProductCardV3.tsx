@@ -127,6 +127,11 @@ export default function SupplierProductCardV3({ product, orderQtyCases, onPress 
                 <Text style={[styles.tagText, { color: '#7c3aed' }]}>{product.procurementUnit}{product.procurementPackQty && product.procurementPackQty > 1 ? ` ×${product.procurementPackQty}` : ''}</Text>
               </View>
             ) : null}
+            {product.publishedTermsVersion ? (
+              <View style={[styles.tag, { backgroundColor: '#f1f5f9' }]}>
+                <Text style={[styles.tagText, { color: '#64748b', fontSize: 8 }]}>v{product.publishedTermsVersion}</Text>
+              </View>
+            ) : null}
           </View>
 
           {/* V3-FIX-136: Browse-only — no inline qty/add. Tap card for details. */}

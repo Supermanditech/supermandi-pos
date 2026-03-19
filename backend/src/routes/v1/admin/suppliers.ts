@@ -1358,6 +1358,11 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
     ptrMinor, ptsMinor, tradeDiscountPct, scheme,
     deliverySlaDays, deliveryTerms, creditDays: adminCreditDays, financeEligible,
     moqTiers: adminMoqTiers,
+    // V3-HARDEN-177: Package/procurement semantics
+    procurementUnit: adminProcurementUnit,
+    procurementPackQty: adminProcurementPackQty,
+    baseStockUnit: adminBaseStockUnit,
+    splitSellEligible: adminSplitSellEligible,
   } = req.body || {};
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
   const adminId = (req as any).adminId;
@@ -1545,7 +1550,12 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
     if (financeEligible !== undefined) { updates.push(`finance_eligible = $${paramIndex++}`); values.push(financeEligible === true); changes.financeEligible = { from: current.finance_eligible, to: financeEligible }; }
     // V3-HARDEN-177: Increment published_terms_version on ANY commercial field edit
     if (adminMoqTiers !== undefined) { updates.push(`moq_tiers = $${paramIndex++}`); values.push(typeof adminMoqTiers === 'string' ? adminMoqTiers : JSON.stringify(adminMoqTiers)); changes.moqTiers = { from: current.moq_tiers, to: adminMoqTiers }; }
-    if (ptrMinor !== undefined || ptsMinor !== undefined || tradeDiscountPct !== undefined || scheme !== undefined || deliverySlaDays !== undefined || deliveryTerms !== undefined || adminCreditDays !== undefined || financeEligible !== undefined || adminMoqTiers !== undefined) {
+    // V3-HARDEN-177: Package/procurement semantics in admin edit
+    if (adminProcurementUnit !== undefined) { updates.push(`procurement_unit = $${paramIndex++}`); values.push(adminProcurementUnit?.trim() || null); }
+    if (adminProcurementPackQty !== undefined) { updates.push(`procurement_pack_qty = $${paramIndex++}`); values.push(adminProcurementPackQty != null ? parseFloat(String(adminProcurementPackQty)) : null); }
+    if (adminBaseStockUnit !== undefined) { updates.push(`base_stock_unit = $${paramIndex++}`); values.push(adminBaseStockUnit?.trim() || null); }
+    if (adminSplitSellEligible !== undefined) { updates.push(`split_sell_eligible = $${paramIndex++}`); values.push(adminSplitSellEligible === true); }
+    if (ptrMinor !== undefined || ptsMinor !== undefined || tradeDiscountPct !== undefined || scheme !== undefined || deliverySlaDays !== undefined || deliveryTerms !== undefined || adminCreditDays !== undefined || financeEligible !== undefined || adminMoqTiers !== undefined || adminProcurementUnit !== undefined || adminProcurementPackQty !== undefined || adminBaseStockUnit !== undefined || adminSplitSellEligible !== undefined) {
       updates.push(`published_terms_version = COALESCE(published_terms_version, 0) + 1`);
       updates.push(`published_at = NOW()`);
       updates.push(`published_by = $${paramIndex++}`);

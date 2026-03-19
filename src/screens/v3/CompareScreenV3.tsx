@@ -29,6 +29,9 @@ type SupplierOffer = {
   scheme?: string;
   deliveryTerms?: string;
   financeEligible?: boolean;
+  publishedTermsVersion?: number;
+  moqTiers?: any;
+  procurementUnit?: string;
   isBestPrice?: boolean;
 };
 
@@ -88,6 +91,9 @@ export default function CompareScreenV3({ visible, productName, productId, packS
           scheme: s.scheme,
           deliveryTerms: s.deliveryTerms,
           financeEligible: s.financeEligible,
+          publishedTermsVersion: s.publishedTermsVersion,
+          moqTiers: (s as any).moqTiers,
+          procurementUnit: (s as any).procurementUnit,
           isBestPrice: s.purchasePrice === bestPrice,
         }));
         setOffers(mapped);
@@ -161,6 +167,8 @@ export default function CompareScreenV3({ visible, productName, productId, packS
                 {offer.financeEligible && !offer.bnplAvailable ? <View style={styles.termBadge}><Text style={styles.termText}>Credit</Text></View> : null}
                 {offer.scheme ? <View style={styles.termBadge}><Text style={styles.termText}>{offer.scheme}</Text></View> : null}
                 {offer.deliveryTerms ? <View style={styles.termBadge}><Text style={[styles.termText, { fontSize: 9 }]}>{offer.deliveryTerms}</Text></View> : null}
+                {offer.procurementUnit ? <View style={styles.termBadge}><Text style={styles.termText}>{offer.procurementUnit}</Text></View> : null}
+                {offer.publishedTermsVersion ? <View style={styles.termBadge}><Text style={[styles.termText, { fontSize: 8 }]}>v{offer.publishedTermsVersion}</Text></View> : null}
               </View>
 
               <Text style={styles.calcLine}>

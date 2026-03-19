@@ -609,7 +609,11 @@ export default function App() {
     creditDays: string;
     financeEligible: boolean;
     moqTiers: string;
-  }>({ editedName: "", marginType: "fixed", fixedMargin: "", percentMargin: "", bnplEligible: false, bnplMaxDays: "7", invoiceModel: "buy_resell", hsnCode: "", gstRate: "", ptrMinor: "", ptsMinor: "", tradeDiscountPct: "", scheme: "", deliverySlaDays: "", deliveryTerms: "", creditDays: "", financeEligible: false, moqTiers: "" });
+    procurementUnit: string;
+    procurementPackQty: string;
+    baseStockUnit: string;
+    splitSellEligible: boolean;
+  }>({ editedName: "", marginType: "fixed", fixedMargin: "", percentMargin: "", bnplEligible: false, bnplMaxDays: "7", invoiceModel: "buy_resell", hsnCode: "", gstRate: "", ptrMinor: "", ptsMinor: "", tradeDiscountPct: "", scheme: "", deliverySlaDays: "", deliveryTerms: "", creditDays: "", financeEligible: false, moqTiers: "", procurementUnit: "", procurementPackQty: "", baseStockUnit: "", splitSellEligible: false });
   const [editProductLoading, setEditProductLoading] = useState<boolean>(false);
   const [editProductError, setEditProductError] = useState<string>("");
   const [editProductSuccess, setEditProductSuccess] = useState<string>("");
@@ -1270,6 +1274,10 @@ export default function App() {
       creditDays: p.creditDays ? String(p.creditDays) : "",
       financeEligible: p.financeEligible || false,
       moqTiers: p.moqTiers ? (typeof p.moqTiers === 'string' ? p.moqTiers : JSON.stringify(p.moqTiers)) : "",
+      procurementUnit: p.procurementUnit || "",
+      procurementPackQty: p.procurementPackQty ? String(p.procurementPackQty) : "",
+      baseStockUnit: p.baseStockUnit || "",
+      splitSellEligible: p.splitSellEligible || false,
     });
     setEditProductError("");
     setEditProductSuccess("");
@@ -1311,6 +1319,10 @@ export default function App() {
         creditDays: editProductForm.creditDays ? parseInt(editProductForm.creditDays) : undefined,
         financeEligible: editProductForm.financeEligible,
         moqTiers: editProductForm.moqTiers || undefined,
+        procurementUnit: editProductForm.procurementUnit || undefined,
+        procurementPackQty: editProductForm.procurementPackQty ? parseFloat(editProductForm.procurementPackQty) : undefined,
+        baseStockUnit: editProductForm.baseStockUnit || undefined,
+        splitSellEligible: editProductForm.splitSellEligible,
       };
 
       if (editProductForm.marginType === "fixed" && editProductForm.fixedMargin) {

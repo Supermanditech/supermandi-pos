@@ -209,6 +209,11 @@ export type ProductEditInput = {
   creditDays?: number;
   financeEligible?: boolean;
   moqTiers?: string; // JSON string
+  // V3-HARDEN-177: Package/procurement semantics
+  procurementUnit?: string;
+  procurementPackQty?: number;
+  baseStockUnit?: string;
+  splitSellEligible?: boolean;
 };
 
 export type ProductEditResponse = {
