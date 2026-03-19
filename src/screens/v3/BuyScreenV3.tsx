@@ -548,12 +548,13 @@ function createStyles(colors: ColorPalette) {
     chip: { paddingHorizontal: getChipPadding(), paddingVertical: 8, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border },
     chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
     chipText: { fontSize: getChipFontSize(), fontWeight: "700", color: colors.textSecondary },
-    chipTextActive: { color: "#fff" },
-    financeBanner: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 14, marginTop: 8, padding: 12, backgroundColor: "#F5F3FF", borderRadius: 12, borderWidth: 1, borderColor: "#DDD6FE" },
+    chipTextActive: { color: colors.textInverse },
+    // V3-FIX-181: Finance banner uses brand tokens
+    financeBanner: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 14, marginTop: 8, padding: 12, backgroundColor: tabAccents(colors).STORE.heroSoft, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
     financeIcon: { fontSize: 20 },
-    financeTitle: { fontSize: 13, fontWeight: "700", color: "#7C3AED" },
-    financeSub: { fontSize: 11, color: "#6D28D9" },
-    financeArrow: { fontSize: 16, color: "#7C3AED", fontWeight: "700" },
+    financeTitle: { fontSize: 13, fontWeight: "700", color: tabAccents(colors).STORE.accent },
+    financeSub: { fontSize: 11, color: tabAccents(colors).STORE.accent },
+    financeArrow: { fontSize: 16, color: tabAccents(colors).STORE.accent, fontWeight: "700" },
     list: { paddingHorizontal: 14, paddingTop: 8 },
     // Counter CTA
     counterCta: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 14, borderWidth: 2, borderStyle: "dashed", borderColor: colors.primary, backgroundColor: colors.primaryLight, marginBottom: 8 },
@@ -564,10 +565,10 @@ function createStyles(colors: ColorPalette) {
     // Cart strip
     cartStrip: { marginHorizontal: 12, marginBottom: 8, borderRadius: 18, padding: 14, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.accent },
     cartLeft: { flexDirection: "column", gap: 2 },
-    cartCount: { fontSize: 13, fontWeight: "700", color: "#fff" },
-    cartItems: { fontSize: 10, color: "rgba(255,255,255,0.8)", maxWidth: 140 },
-    cartTotal: { fontSize: 18, fontWeight: "900", color: "#fff", marginHorizontal: 12 },
-    orderBtn: { backgroundColor: "#fff", paddingHorizontal: 22, paddingVertical: 10, borderRadius: 12 },
+    cartCount: { fontSize: 13, fontWeight: "700", color: colors.textInverse },
+    cartItems: { fontSize: 10, color: colors.overlayInverse, maxWidth: 140 },
+    cartTotal: { fontSize: 18, fontWeight: "900", color: colors.textInverse, marginHorizontal: 12 },
+    orderBtn: { backgroundColor: colors.textInverse, paddingHorizontal: 22, paddingVertical: 10, borderRadius: 12 },
     orderBtnText: { color: colors.accent, fontSize: 14, fontWeight: "800" },
   });
 }

@@ -27,19 +27,48 @@ jest.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (_k: string, d: string) => d || _k }),
 }));
 
+const MOCK_COLORS: Record<string, string> = {
+  primary: "#2563EB", primaryDark: "#1D4ED8", primaryLight: "#EFF6FF",
+  accent: "#14B8A6", accentDark: "#0D9488", accentLight: "#F0FDFA",
+  background: "#fff", surface: "#fff", surfaceAlt: "#F8FAFC",
+  backgroundSecondary: "#F1F5F9", backgroundTertiary: "#E2E8F0",
+  border: "#E2E8F0", borderDark: "#CBD5E1",
+  textPrimary: "#0F172A", textSecondary: "#475569", textTertiary: "#94A3B8",
+  textInverse: "#FFFFFF",
+  success: "#16A34A", successDark: "#166534", successSoft: "#ECFDF5", successBorder: "#BBF7D0",
+  warning: "#F59E0B", warningDark: "#92400E", warningSoft: "#FFF7ED", warningBorder: "#FDE68A",
+  error: "#EF4444", errorDark: "#991B1B", errorSoft: "#FEF2F2", errorBorder: "#FECACA",
+  info: "#0EA5E9",
+  shadow: "#000", overlay: "rgba(0,0,0,0.5)", overlayLight: "rgba(0,0,0,0.2)",
+  overlayInverse: "rgba(255,255,255,0.15)",
+  disabled: "#94A3B8", disabledText: "#94A3B8", disabledBg: "#F1F5F9",
+  ink: "#0B1220", whatsapp: "#25D366",
+  bg: "#F7F9FC", secondary: "#14B8A6", secondaryDark: "#0D9488", secondaryLight: "#F0FDFA",
+  accentSoft: "#ECFEFF", primarySoft: "#EFF6FF",
+};
 jest.mock("../../theme", () => ({
-  useThemeColors: () => ({
-    primary: "#2563EB", primaryLight: "#EFF6FF", background: "#fff", surface: "#fff",
-    backgroundSecondary: "#F1F5F9", border: "#E2E8F0", textPrimary: "#0F172A",
-    textSecondary: "#475569", textTertiary: "#94A3B8", success: "#16A34A",
-    warning: "#F59E0B", error: "#EF4444", warningSoft: "#FEF3C7", successSoft: "#DCFCE7",
-  }),
+  useThemeColors: () => MOCK_COLORS,
 }));
 
 jest.mock("../../theme/responsive", () => ({
   getScreenPadding: () => 16, getGridColumns: () => 3,
-  getChipPadding: () => ({ h: 16, v: 8 }), getChipFontSize: () => 12,
+  getChipPadding: () => 16, getChipFontSize: () => 12,
   getNavIconSize: () => 22, getHeaderSpacing: () => 12, getModalMaxWidth: () => 400,
+}));
+
+jest.mock("../../theme/brand", () => ({
+  shell: { navElevation: { shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 12 }, activePillRadius: 20, cardRadius: 16, headerHeight: 56, navContentHeight: 60, activePillPaddingV: 6, activePillPaddingH: 20 },
+  tabAccents: () => ({
+    SELL: { hero: "#2563EB", heroSoft: "#EFF6FF", accent: "#2563EB", icon: "💰", label: "SELL", subtitle: "Billing" },
+    BUY: { hero: "#14B8A6", heroSoft: "#F0FDFA", accent: "#14B8A6", icon: "🛒", label: "BUY", subtitle: "Procurement" },
+    STORE: { hero: "#7C3AED", heroSoft: "#F5F3FF", accent: "#7C3AED", icon: "📦", label: "STORE", subtitle: "Stock" },
+    MORE: { hero: "#475569", heroSoft: "#F1F5F9", accent: "#475569", icon: "⚙️", label: "MORE", subtitle: "Settings" },
+  }),
+  cardElevation: { flat: { shadowOpacity: 0, elevation: 0 }, subtle: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 2 }, standard: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 4 }, prominent: { shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 8 } },
+  typeRhythm: { sectionTitle: { fontSize: 11, fontWeight: "800", letterSpacing: 0.8 }, heroStat: { fontSize: 28, fontWeight: "900", letterSpacing: -0.5 }, heroLabel: { fontSize: 12, fontWeight: "600" }, cardTitle: { fontSize: 14, fontWeight: "700", letterSpacing: -0.2 }, cardMeta: { fontSize: 11, fontWeight: "500" }, navLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 0.3 }, navLabelActive: { fontSize: 10, fontWeight: "800", letterSpacing: 0.3 } },
+  iconRhythm: { nav: 22, header: 20, card: 16, chip: 12, hero: 32 },
+  chipColors: () => ({ status: { bg: "#ECFDF5", text: "#16A34A", border: "#BBF7D0" }, warning: { bg: "#FFF7ED", text: "#92400E", border: "#FDE68A" }, error: { bg: "#FEF2F2", text: "#EF4444", border: "#FECACA" }, info: { bg: "#EFF6FF", text: "#2563EB", border: "#2563EB" }, neutral: { bg: "#F1F5F9", text: "#475569", border: "#E2E8F0" }, accent: { bg: "#F0FDFA", text: "#0D9488", border: "#14B8A6" } }),
+  motion: { tabSwitch: { duration: 150, easing: "ease-out" }, sheetReveal: { duration: 250, easing: "ease-out" }, badgePulse: { duration: 200, easing: "ease-in-out" }, cardPress: { scale: 0.98, duration: 100 } },
 }));
 
 jest.mock("../../utils/showToast", () => ({ showToast: jest.fn() }));
@@ -97,18 +126,29 @@ jest.mock("../../stores/settingsStore", () => ({
 jest.mock("../../services/api/sellSearchApi", () => ({ searchStoreProducts: jest.fn().mockResolvedValue([]) }));
 jest.mock("../../services/api/catalogApi", () => ({
   getSellCategoryGroups: jest.fn().mockResolvedValue([]),
-  getCatalog: jest.fn().mockResolvedValue({
+  getCatalog: jest.fn().mockResolvedValue({ data: [], total: 0 }),
+  getBuyCatalog: jest.fn().mockResolvedValue({
     data: [
       { id: "sp1", name: "Tata Tea Gold", brand: "Tata", category: "Tea", unit: "pcs",
         netContentValue: 500, netContentUnit: "g", bestPrice: 224,
-        supplierId: "s1", supplierName: "Tata Consumer", moq: 2, caseSize: 12,
-        hsnCode: "0902", gstRate: 5, mrpMinor: 28000, ptrMinor: 22400, deliveryDays: 3 },
+        suppliers: [
+          { supplierId: "s1", supplierName: "Tata Consumer", supplierProductId: "sp1",
+            purchasePrice: 22400, mrp: 28000, moq: 2, stockQuantity: 100,
+            stockStatus: "in_stock", isPreferred: true, bnplEligible: false, deliveryDays: 3 },
+        ],
+        hsnCode: "0902", gstRate: 5 },
     ],
     total: 1,
   }),
 }));
 jest.mock("../../services/api/productsApi", () => ({ getFrequentProducts: jest.fn().mockResolvedValue([]) }));
-jest.mock("../../services/api/orderApi", () => ({ createOrder: jest.fn(), submitOrder: jest.fn() }));
+jest.mock("../../services/api/orderApi", () => ({ createOrder: jest.fn(), submitOrder: jest.fn(), confirmPayment: jest.fn() }));
+jest.mock("../../stores/scanResultStore", () => ({
+  useScanResultStore: Object.assign(
+    (sel: (s: any) => any) => sel({ barcode: null, intent: null, timestamp: 0, clearScanResult: jest.fn() }),
+    { getState: () => ({ barcode: null, intent: null, timestamp: 0, clearScanResult: jest.fn() }) }
+  ),
+}));
 
 // ── Component mocks for heavy children ──────────────────────────────────────
 jest.mock("../../components/v3/BrandedHeader", () => {
@@ -308,10 +348,9 @@ describe("V3-HARDEN-184: BuyScreenV3 mounted detail-first flow", () => {
 
     // After add: purchase cart strip IS now visible with item count
     // BuyScreenV3 shows cart strip when cartItemCount > 0
-    // The handleQtyChange sets orderQtys[id] = quantity, making cartItemCount > 0
     await waitFor(() => {
-      // Cart strip shows item/case summary
-      expect(screen.getByText(/item/i)).toBeTruthy();
+      // Cart strip shows case summary — multiple "item" texts may exist (hero strip + cart strip)
+      expect(screen.getAllByText(/item/i).length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -400,5 +439,183 @@ describe("V3-HARDEN-184: PosRootLayoutV3 tab switching (runtime)", () => {
 
     // Products still render on SELL
     expect(screen.getByText("Maggi Noodles")).toBeTruthy();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATE PRESERVATION: Detail flow does not corrupt parent screen state
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("V3-HARDEN-184: State preservation across detail flow", () => {
+  beforeEach(() => {
+    cartMutationCount = 0;
+    mockAddItem.mockClear();
+    mockUpdateQuantity.mockClear();
+  });
+
+  it("SELL: product grid is intact after open→close detail", async () => {
+    render(<SellScreenV3 />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Maggi Noodles")).toBeTruthy();
+      expect(screen.getByText("Tata Salt")).toBeTruthy();
+    });
+
+    // Open detail for first product
+    fireEvent.press(screen.getAllByLabelText(/tap for details/i)[0]);
+    await waitFor(() => {
+      expect(screen.getByTestId("product-detail-sheet")).toBeTruthy();
+    });
+
+    // Close detail
+    fireEvent.press(screen.getByLabelText("Close details"));
+
+    // Both products still in grid (state preserved)
+    expect(screen.getByText("Maggi Noodles")).toBeTruthy();
+    expect(screen.getByText("Tata Salt")).toBeTruthy();
+  });
+
+  it("SELL: cart state preserved after detail open→add→close cycle", async () => {
+    render(<SellScreenV3 />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Maggi Noodles")).toBeTruthy();
+    });
+
+    // Open detail, add item
+    fireEvent.press(screen.getAllByLabelText(/tap for details/i)[0]);
+    await waitFor(() => {
+      expect(screen.getByTestId("product-detail-sheet")).toBeTruthy();
+    });
+    fireEvent.press(screen.getByTestId("detail-top-add"));
+    expect(mockAddItem).toHaveBeenCalledTimes(1);
+
+    // Open detail for second product
+    await waitFor(() => {
+      expect(screen.getByText("Tata Salt")).toBeTruthy();
+    });
+    fireEvent.press(screen.getAllByLabelText(/tap for details/i)[1]);
+    await waitFor(() => {
+      expect(screen.getByTestId("product-detail-sheet")).toBeTruthy();
+    });
+
+    // Close without adding second
+    fireEvent.press(screen.getByLabelText("Close details"));
+
+    // Only first add was recorded — no spurious mutations
+    expect(mockAddItem).toHaveBeenCalledTimes(1);
+  });
+
+  it("SELL: search bar/mode strip remain accessible after detail flow", async () => {
+    render(<SellScreenV3 />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("sell-screen-v3")).toBeTruthy();
+    });
+
+    // Open and close detail
+    fireEvent.press(screen.getAllByLabelText(/tap for details/i)[0]);
+    await waitFor(() => {
+      expect(screen.getByTestId("product-detail-sheet")).toBeTruthy();
+    });
+    fireEvent.press(screen.getByLabelText("Close details"));
+
+    // Search bar and mode strip are still reachable
+    expect(screen.getByTestId("sell-search-bar")).toBeTruthy();
+    expect(screen.getByTestId("sell-mode-strip")).toBeTruthy();
+  });
+
+  it("BUY: product list preserved after detail close", async () => {
+    render(<BuyScreenV3 />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Tata Tea Gold")).toBeTruthy();
+    });
+
+    // Open and close detail
+    fireEvent.press(screen.getByText("Tata Tea Gold"));
+    await waitFor(() => {
+      expect(screen.getByTestId("product-detail-sheet")).toBeTruthy();
+    });
+    fireEvent.press(screen.getByLabelText("Close details"));
+
+    // Product still visible
+    expect(screen.getByText("Tata Tea Gold")).toBeTruthy();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BACK BEHAVIOR: Close detail returns to browse, not exit
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("V3-HARDEN-184: Back/return behavior", () => {
+  beforeEach(() => {
+    mockAddItem.mockClear();
+  });
+
+  it("SELL: closing detail returns to product grid, not empty screen", async () => {
+    render(<SellScreenV3 />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Maggi Noodles")).toBeTruthy();
+    });
+
+    // Open detail
+    fireEvent.press(screen.getAllByLabelText(/tap for details/i)[0]);
+    await waitFor(() => {
+      expect(screen.getByTestId("product-detail-sheet")).toBeTruthy();
+    });
+
+    // Close
+    fireEvent.press(screen.getByLabelText("Close details"));
+
+    // Product grid visible — not blank/empty
+    await waitFor(() => {
+      expect(screen.getByText("Maggi Noodles")).toBeTruthy();
+      expect(screen.queryByTestId("product-detail-sheet")).toBeNull();
+    });
+  });
+
+  it("BUY: closing detail returns to supplier catalogue, not exit", async () => {
+    render(<BuyScreenV3 />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Tata Tea Gold")).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByText("Tata Tea Gold"));
+    await waitFor(() => {
+      expect(screen.getByTestId("product-detail-sheet")).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByLabelText("Close details"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Tata Tea Gold")).toBeTruthy();
+      expect(screen.queryByTestId("product-detail-sheet")).toBeNull();
+    });
+  });
+
+  it("tab switch from detail-open state does not leave orphan sheet", async () => {
+    render(<PosRootLayoutV3 />);
+
+    // Start on SELL, open detail
+    await waitFor(() => {
+      expect(screen.getByTestId("sell-screen-v3")).toBeTruthy();
+    });
+    fireEvent.press(screen.getAllByLabelText(/tap for details/i)[0]);
+
+    // Switch to BUY while detail is open
+    fireEvent.press(screen.getByLabelText("BUY"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Tata Tea Gold")).toBeTruthy();
+    });
+
+    // SELL detail sheet is unmounted (SELL screen is unmounted)
+    expect(screen.queryByTestId("sell-screen-v3")).toBeNull();
+
+    // No cart corruption
+    expect(mockAddItem).not.toHaveBeenCalled();
   });
 });

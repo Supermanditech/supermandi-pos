@@ -458,26 +458,26 @@ export default function SellScreenV3() {
 
       {/* V3-FIX-036: Welcome guide modal */}
       <Modal visible={showGuide} transparent animationType="fade" onRequestClose={handleDismissGuide} testID="sell-welcome-guide">
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }}>
-          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 28, maxWidth: 340, width: "100%" }}>
-            <Text style={{ fontSize: 22, fontWeight: "900", color: "#2563EB", textAlign: "center", letterSpacing: -0.5 }}>Welcome to SuperMandi POS</Text>
+        <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: "center", alignItems: "center", padding: 24 }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 28, maxWidth: 340, width: "100%" }}>
+            <Text style={{ fontSize: 22, fontWeight: "900", color: colors.primary, textAlign: "center", letterSpacing: -0.5 }}>Welcome to SuperMandi POS</Text>
             <View style={{ marginTop: 20, gap: 12 }}>
-              {[
-                { tab: "SELL", desc: "Billing & checkout", color: "#2563EB" },
-                { tab: "BUY", desc: "Order from suppliers", color: "#16A34A" },
-                { tab: "STORE", desc: "Stock & inventory", color: "#F59E0B" },
-                { tab: "MORE", desc: "Reports, Khata, Settings", color: "#7C3AED" },
-              ].map(({ tab, desc, color }) => (
+              {([
+                { tab: "SELL" as const, desc: "Billing & checkout" },
+                { tab: "BUY" as const, desc: "Order from suppliers" },
+                { tab: "STORE" as const, desc: "Stock & inventory" },
+                { tab: "MORE" as const, desc: "Reports, Khata, Settings" },
+              ]).map(({ tab, desc }) => (
                 <View key={tab} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: color, alignItems: "center", justifyContent: "center" }}>
-                    <Text style={{ color: "#fff", fontSize: 11, fontWeight: "800" }}>{tab}</Text>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: tabAccents(colors)[tab].hero, alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ color: colors.textInverse, fontSize: 11, fontWeight: "800" }}>{tab}</Text>
                   </View>
-                  <Text style={{ fontSize: 14, fontWeight: "600", color: "#334155" }}>{desc}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "600", color: colors.textSecondary }}>{desc}</Text>
                 </View>
               ))}
             </View>
-            <Pressable onPress={handleDismissGuide} style={{ marginTop: 24, backgroundColor: "#2563EB", paddingVertical: 14, borderRadius: 14, alignItems: "center" }} testID="sell-guide-dismiss">
-              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>Got it, Start Billing →</Text>
+            <Pressable onPress={handleDismissGuide} style={{ marginTop: 24, backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 14, alignItems: "center" }} testID="sell-guide-dismiss">
+              <Text style={{ color: colors.textInverse, fontSize: 16, fontWeight: "800" }}>Got it, Start Billing →</Text>
             </Pressable>
           </View>
         </View>

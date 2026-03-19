@@ -36,7 +36,7 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
     { icon: "👥", label: t("more.customers", "Customers"), bg: colors.successSoft, screen: "customers" },
     { icon: "📊", label: t("more.reports", "Reports"), bg: colors.warningSoft, screen: "reports" },
     { icon: "📦", label: t("more.stock", "Stock"), bg: colors.backgroundSecondary, screen: "stock" },
-    { icon: "💳", label: t("more.finance", "Credit & Finance"), bg: "#F5F3FF", screen: "finance" },
+    { icon: "💳", label: t("more.finance", "Credit & Finance"), bg: tabAccents(colors).STORE.heroSoft, screen: "finance" },
     { icon: "🧾", label: t("more.salesHistory", "Sales History"), bg: colors.primaryLight, screen: "sales" },
     { icon: "⚙️", label: t("more.settings", "Settings"), bg: colors.backgroundSecondary, screen: "settings" },
     // V3-DELETE-085: Help removed — no V3 Help screen exists. Will be added when V3-HARDEN-094 is implemented.
@@ -134,7 +134,7 @@ function createStyles(colors: ColorPalette) {
     menuIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
     menuLabel: { flex: 1, fontSize: 14, fontWeight: "600" },
     menuBadge: { backgroundColor: colors.error, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-    menuBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
+    menuBadgeText: { color: colors.textInverse, fontSize: 9, fontWeight: "800" },
     menuArrow: { fontSize: 14, color: colors.border },
   });
 }
