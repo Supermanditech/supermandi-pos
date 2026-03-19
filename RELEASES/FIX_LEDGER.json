@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 525,
+  "version": 526,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -3915,7 +3915,7 @@
       "file": "backend/src/routes/v1/pos/staff.ts",
       "start_line": 130,
       "end_line": 282,
-      "checksum": "b3f718580ddcbe07",
+      "checksum": "a948f62ee37437eb",
       "description": "GET /api/v1/pos/staff/me — returns staff role, name, and store max_discount_percent",
       "test_file": "backend/tests/posStaffMe.stg-487.unit.test.ts",
       "depends_on": null,
@@ -3956,7 +3956,7 @@
       "file": "backend/src/routes/v1/pos/staff.ts",
       "start_line": 173,
       "end_line": 282,
-      "checksum": "8cf71d56bc6adbe7",
+      "checksum": "9c9e9b73688000c5",
       "description": "POST /api/v1/pos/staff/verify-pin — manager PIN verification with rate limiting",
       "test_file": "backend/tests/posStaffVerifyPin.stg-488.unit.test.ts",
       "depends_on": null,

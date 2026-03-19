@@ -14,18 +14,15 @@ export const posStaffRouter = Router();
 
 // STG-488: Rate limit tracker for PIN verification (in-memory, per-process)
 const pinFailures = new Map<string, { count: number; resetAt: number }>();
-const PIN_RATE_LIMIT_MAX = 5;
-const PIN_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-
-// V3-OWNER-023 + V3-BIZ-026: POST /api/v1/pos/staff/login
-// Authenticates by PIN only on a store-bound device.
-// Looks up staff by pin_lookup_hash within the device's store.
-// Supports both staff and owner POS identities.
-import crypto from "crypto";
-
-function pinLookupHash(pin: string, storeId: string): string {
-  return crypto.createHash("sha256").update(`${storeId}:${pin}`).digest("hex");
-}
+// V3-BE-013: Import canonical auth helpers (shared with tests — single source of truth)
+import {
+  PIN_RATE_LIMIT_MAX,
+  PIN_RATE_LIMIT_WINDOW_MS,
+  pinLookupHash,
+  isValidPinFormat,
+  isAccountLocked,
+  computeLockout,
+} from "../../../services/staffAuthHelpers";
 
 posStaffRouter.post("/staff/login", requireDeviceToken, async (req, res) => {
   try {
@@ -38,7 +35,7 @@ posStaffRouter.post("/staff/login", requireDeviceToken, async (req, res) => {
       });
     }
 
-    if (!/^\d{4,6}$/.test(pin)) {
+    if (!isValidPinFormat(pin)) {
       return res.status(400).json({
         error: { code: "INVALID_PIN_FORMAT", message: "PIN must be 4-6 digits" }
       });
@@ -84,8 +81,8 @@ posStaffRouter.post("/staff/login", requireDeviceToken, async (req, res) => {
       });
     }
 
-    // V3-SESSION-025: Durable lockout check
-    if (staff.locked_until && new Date(staff.locked_until) > new Date()) {
+    // V3-SESSION-025: Durable lockout check (via canonical helper)
+    if (isAccountLocked(staff.locked_until)) {
       const remainingMin = Math.ceil((new Date(staff.locked_until).getTime() - Date.now()) / 60000);
       return res.status(429).json({
         error: { code: "STAFF_LOCKED", message: `Account locked. Try again in ${remainingMin} minutes.` }
@@ -95,9 +92,10 @@ posStaffRouter.post("/staff/login", requireDeviceToken, async (req, res) => {
     // Verify PIN with bcrypt
     const pinValid = await bcrypt.compare(pin, staff.pin_hash);
     if (!pinValid) {
-      // Durable failed login tracking
+      // Durable failed login tracking (via canonical helper)
       const newCount = (staff.failed_login_count ?? 0) + 1;
-      const lockUntil = newCount >= PIN_RATE_LIMIT_MAX ? new Date(Date.now() + PIN_RATE_LIMIT_WINDOW_MS) : null;
+      const lockResult = computeLockout(newCount);
+      const lockUntil = lockResult.locked ? lockResult.lockUntil : null;
       await pool.query(
         `UPDATE platform.store_staff SET failed_login_count = $1, last_failed_login_at = NOW(), locked_until = $2 WHERE id = $3`,
         [newCount, lockUntil, staff.id]
