@@ -154,7 +154,13 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
         spb.barcode as "generatedBarcode",
         p.manufacturer_name as "manufacturerName",
         p.country_of_origin as "countryOfOrigin",
-        p.shelf_life_days as "shelfLifeDays"
+        p.shelf_life_days as "shelfLifeDays",
+        sp.procurement_unit as "procurementUnit",
+        sp.procurement_pack_qty as "procurementPackQty",
+        sp.base_stock_unit as "baseStockUnit",
+        sp.allow_fractional_sell as "allowFractionalSell",
+        sp.conversion_precision as "conversionPrecision",
+        sp.conversion_confirmed as "conversionConfirmed"
       FROM catalog.store_products sp
       INNER JOIN catalog.products p ON p.id = sp.product_id
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -236,6 +242,9 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     categoryId, // RCAT-CAT-002: Store override for taxonomy_id
     manufacturerName, countryOfOrigin, shelfLifeDays, // SCALE-A1: Compliance fields
     netContentValue, netContentUnit, // SCALE-A2: Net content fields
+    // V3-FIX-167: Canonical conversion profile fields
+    procurementUnit, procurementPackQty, baseStockUnit,
+    allowFractionalSell, conversionPrecision,
   } = req.body;
 
   // AUD-059-A/B FIX: Input validation bounds
@@ -388,13 +397,25 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     // RCAT-CAT-002: Include taxonomy_id for category assignment (store override)
     // SYNC-PRD-001: Set display_name = name so product is immediately visible with correct name
     // GO-LIVE-147: Use sanitized name for display_name
+    // V3-FIX-167: Infer conversion defaults when not explicitly provided
+    const { inferBaseStockUnit } = await import("../../../services/conversionEngine");
+    const resolvedSoldBy = productMode === 'LOOSE_BULK' ? (soldBy || 'WEIGHT') : null;
+    const resolvedRateUnit = productMode === 'LOOSE_BULK' ? (rateUnit || 'KG') : null;
+    const resolvedBaseStockUnit = baseStockUnit ||
+      inferBaseStockUnit(productMode, resolvedSoldBy, resolvedRateUnit, unit);
+    const resolvedProcurementUnit = procurementUnit || resolvedBaseStockUnit;
+    const resolvedPackQty = procurementPackQty ? parseFloat(procurementPackQty) : 1;
+
     const storeProductResult = await client.query(
       `INSERT INTO catalog.store_products (
         store_id, product_id, sell_price, mrp, purchase_price,
         product_mode, current_stock, is_active,
         low_stock_alert_qty, notes, sold_by, rate_unit, supplier_id, taxonomy_id,
-        display_name, metadata_updated_at, metadata_updated_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, $10, $11, $12, $13, $14, NOW(), 'RETAILER_DASHBOARD')
+        display_name, metadata_updated_at, metadata_updated_by,
+        procurement_unit, procurement_pack_qty, base_stock_unit,
+        allow_fractional_sell, conversion_precision, conversion_confirmed
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, $10, $11, $12, $13, $14, NOW(), 'RETAILER_DASHBOARD',
+        $15, $16, $17, $18, $19, true)
       RETURNING id`,
       [
         storeId,
@@ -406,11 +427,16 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
         stockQty,
         lowStockAlertQty ? parseInt(lowStockAlertQty) : null,
         notes ? sanitizeHtml(notes.trim()) : null,
-        productMode === 'LOOSE_BULK' ? (soldBy || 'WEIGHT') : null,
-        productMode === 'LOOSE_BULK' ? (rateUnit || 'KG') : null,
+        resolvedSoldBy,
+        resolvedRateUnit,
         supplierId || null,
         resolvedCategoryId,
         sanitizedName,
+        resolvedProcurementUnit,
+        resolvedPackQty,
+        resolvedBaseStockUnit,
+        allowFractionalSell === true || allowFractionalSell === 'true',
+        conversionPrecision != null ? Math.min(Math.max(parseInt(conversionPrecision) || 2, 0), 6) : 2,
       ]
     );
     const storeProductId = storeProductResult.rows[0].id;

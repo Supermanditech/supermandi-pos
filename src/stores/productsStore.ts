@@ -9,6 +9,7 @@ import { getDeviceToken } from "../services/deviceSession";
 const PRODUCTS_CACHE_KEY = 'supermandi.cache.products.v1';
 
 // V3-FIX-096: Authoritative product contract — preserves all metadata from backend
+// V3-FIX-167: Added canonical conversion profile fields
 export interface Product {
   id: string;
   storeProductId?: string;
@@ -31,6 +32,16 @@ export interface Product {
   supplierId?: string;
   supplierName?: string;
   metadataUpdatedAt?: string;
+  // V3-FIX-167: Canonical procurement-to-retail conversion profile
+  productMode?: 'PACKAGED' | 'LOOSE_BULK';
+  soldBy?: 'WEIGHT' | 'COUNT';
+  rateUnit?: string;
+  procurementUnit?: string;
+  procurementPackQty?: number;
+  baseStockUnit?: string;
+  allowFractionalSell?: boolean;
+  conversionPrecision?: number;
+  conversionConfirmed?: boolean;
 }
 
 interface ProductsState {
@@ -90,6 +101,16 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
           supplierId: raw.supplierId ?? raw.supplier_id,
           supplierName: raw.supplierName ?? raw.supplier_name,
           metadataUpdatedAt: raw.metadataUpdatedAt ?? raw.metadata_updated_at,
+          // V3-FIX-167: Canonical conversion profile
+          productMode: raw.productMode ?? raw.product_mode ?? raw.mode ?? undefined,
+          soldBy: raw.soldBy ?? raw.sold_by ?? undefined,
+          rateUnit: raw.rateUnit ?? raw.rate_unit ?? undefined,
+          procurementUnit: raw.procurementUnit ?? raw.procurement_unit ?? undefined,
+          procurementPackQty: raw.procurementPackQty ?? raw.procurement_pack_qty ?? undefined,
+          baseStockUnit: raw.baseStockUnit ?? raw.base_stock_unit ?? undefined,
+          allowFractionalSell: raw.allowFractionalSell ?? raw.allow_fractional_sell ?? undefined,
+          conversionPrecision: raw.conversionPrecision ?? raw.conversion_precision ?? undefined,
+          conversionConfirmed: raw.conversionConfirmed ?? raw.conversion_confirmed ?? undefined,
         };
       });
 

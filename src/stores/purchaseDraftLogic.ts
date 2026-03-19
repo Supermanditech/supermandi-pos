@@ -11,6 +11,11 @@ export type PurchaseDraftItem = {
   currency: string;
   isNew?: boolean;
   status: "COMPLETE" | "INCOMPLETE";
+  // V3-FIX-167: Canonical conversion profile for procurement context
+  procurementUnit?: string;
+  procurementPackQty?: number;
+  baseStockUnit?: string;
+  unit?: string;
 };
 
 export type PurchaseDraftInput = {
@@ -25,6 +30,11 @@ export type PurchaseDraftInput = {
   sellingPriceMinor?: number | null;
   currency?: string;
   isNew?: boolean;
+  // V3-FIX-167: Canonical conversion profile for procurement context
+  procurementUnit?: string;
+  procurementPackQty?: number;
+  baseStockUnit?: string;
+  unit?: string;
 };
 
 const buildName = (barcode: string): string => {
@@ -81,7 +91,12 @@ export function normalizePurchaseDraftItem(entry: PurchaseDraftInput & { quantit
     sellingPriceMinor: entry.sellingPriceMinor ?? null,
     currency,
     isNew: entry.isNew,
-    status
+    status,
+    // V3-FIX-167: Carry conversion context through
+    procurementUnit: entry.procurementUnit,
+    procurementPackQty: entry.procurementPackQty,
+    baseStockUnit: entry.baseStockUnit,
+    unit: entry.unit,
   };
 }
 

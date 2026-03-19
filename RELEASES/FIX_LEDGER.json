@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 407,
+  "version": 410,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -7887,6 +7887,64 @@
         "test_guard": "backend/tests/contracts/deviceToken.unit.test.ts passes",
         "single_commit": "Committed in V3-API-005 batch",
         "ticket_parked": "Pre-staging branch"
+      }
+    },
+    {
+      "ticket": "V3-FIX-167",
+      "file": "backend/src/services/conversionEngine.ts",
+      "start_line": 1,
+      "end_line": 240,
+      "checksum": "f9b8a5678666dc7c",
+      "description": "Canonical procurement-to-retail conversion engine: types, constants, procurementToStock, retailToStockDecrement, getUnitMultiplier, inferBaseStockUnit, suggestRetailVariants, validateConversionProfile, normalizeUnitString",
+      "test_file": "backend/tests/conversionEngine.v3-fix-167.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-19T09:54:30.423Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "POS store-products list/lookup + retailer-admin GET/POST expose canonical conversion fields",
+        "api_errors": "Existing error handling preserved — 400/401/404/500 paths unchanged",
+        "store_isolation": "All queries use sp.store_id = $1 from JWT — unchanged",
+        "business_logic": "Conversion profile enforces unit family validation, positive pack qty, precision 0-6",
+        "business_behaviour": "Product CRUD with conversion fields end-to-end via migration 199 + API + frontend types",
+        "db_schema": "Migration 199: 6 columns on store_products, 4 columns on supplier_products, CHECK constraints, back-fill",
+        "impacted_files": "9 files: migration, conversionEngine, test, storeProducts, products, productsStore, purchaseDraftLogic, productsApi, FIX_LEDGER",
+        "fix_ledger_check": "108 fixes intact, V3-FIX-167 registered, zero drift",
+        "no_agent_conflict": "Single-agent session, no parallel modification",
+        "operator_approved": "Pre-staging Mode A — backend/frontend typecheck + 47 unit tests pass",
+        "gcp_parity": "No localhost URLs, no hardcoded values, env-var driven, staging-compatible",
+        "regression_check": "Backend + frontend typecheck clean, 47 new unit tests pass",
+        "test_guard": "backend/tests/conversionEngine.v3-fix-167.unit.test.ts — 47 tests pass",
+        "parity_scanned": "Parity scan found 0 errors, 2 warnings at 2026-03-19T09:56:29.930Z",
+        "parity_fixed": "2 warnings are pre-existing (not from V3-FIX-167), no errors",
+        "single_commit": "One ticket = one commit",
+        "ticket_parked": "Committing now"
       }
     }
   ],

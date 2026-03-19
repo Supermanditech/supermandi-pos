@@ -14,6 +14,7 @@ type ApiProductVariant = {
 };
 
 // V3-FIX-096: Authoritative API product type — matches backend store-products response
+// V3-FIX-167: Added canonical conversion profile fields
 export type ApiProduct = {
   id: string;
   storeProductId?: string;
@@ -52,6 +53,25 @@ export type ApiProduct = {
   supplier_name?: string | null;
   metadataUpdatedAt?: string | null;
   metadata_updated_at?: string | null;
+  // V3-FIX-167: Canonical conversion profile
+  productMode?: string | null;
+  product_mode?: string | null;
+  soldBy?: string | null;
+  sold_by?: string | null;
+  rateUnit?: string | null;
+  rate_unit?: string | null;
+  procurementUnit?: string | null;
+  procurement_unit?: string | null;
+  procurementPackQty?: number | null;
+  procurement_pack_qty?: number | null;
+  baseStockUnit?: string | null;
+  base_stock_unit?: string | null;
+  allowFractionalSell?: boolean | null;
+  allow_fractional_sell?: boolean | null;
+  conversionPrecision?: number | null;
+  conversion_precision?: number | null;
+  conversionConfirmed?: boolean | null;
+  conversion_confirmed?: boolean | null;
 };
 
 // V3-FIX-096: Authoritative list item type matching backend response
@@ -82,6 +102,25 @@ type StoreProductsListItem = {
   supplier_name?: string | null;
   metadataUpdatedAt?: string | null;
   metadata_updated_at?: string | null;
+  // V3-FIX-167: Canonical conversion profile
+  productMode?: string | null;
+  product_mode?: string | null;
+  soldBy?: string | null;
+  sold_by?: string | null;
+  rateUnit?: string | null;
+  rate_unit?: string | null;
+  procurementUnit?: string | null;
+  procurement_unit?: string | null;
+  procurementPackQty?: number | null;
+  procurement_pack_qty?: number | null;
+  baseStockUnit?: string | null;
+  base_stock_unit?: string | null;
+  allowFractionalSell?: boolean | null;
+  allow_fractional_sell?: boolean | null;
+  conversionPrecision?: number | null;
+  conversion_precision?: number | null;
+  conversionConfirmed?: boolean | null;
+  conversion_confirmed?: boolean | null;
 };
 
 export type StoreLookupProduct = {
@@ -102,6 +141,15 @@ export type StoreLookupProduct = {
   gstRate?: number | null;
   netContentValue?: number | null;
   netContentUnit?: string | null;
+  // V3-FIX-167: Canonical conversion profile
+  soldBy?: string | null;
+  rateUnit?: string | null;
+  procurementUnit?: string | null;
+  procurementPackQty?: number | null;
+  baseStockUnit?: string | null;
+  allowFractionalSell?: boolean | null;
+  conversionPrecision?: number | null;
+  conversionConfirmed?: boolean | null;
 };
 
 export type PriceSources = {
@@ -142,6 +190,16 @@ const mapStoreProductToApiProduct = (item: StoreProductsListItem): ApiProduct =>
     supplierId: item.supplierId ?? item.supplier_id,
     supplierName: item.supplierName ?? item.supplier_name,
     metadataUpdatedAt: item.metadataUpdatedAt ?? item.metadata_updated_at,
+    // V3-FIX-167: Canonical conversion profile pass-through
+    productMode: (item as any).productMode ?? (item as any).product_mode ?? (item as any).mode ?? null,
+    soldBy: (item as any).soldBy ?? (item as any).sold_by ?? null,
+    rateUnit: (item as any).rateUnit ?? (item as any).rate_unit ?? null,
+    procurementUnit: (item as any).procurementUnit ?? (item as any).procurement_unit ?? null,
+    procurementPackQty: (item as any).procurementPackQty ?? (item as any).procurement_pack_qty ?? null,
+    baseStockUnit: (item as any).baseStockUnit ?? (item as any).base_stock_unit ?? null,
+    allowFractionalSell: (item as any).allowFractionalSell ?? (item as any).allow_fractional_sell ?? null,
+    conversionPrecision: (item as any).conversionPrecision ?? (item as any).conversion_precision ?? null,
+    conversionConfirmed: (item as any).conversionConfirmed ?? (item as any).conversion_confirmed ?? null,
   };
 };
 

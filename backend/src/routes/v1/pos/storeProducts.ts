@@ -536,7 +536,15 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         COALESCE(sp.image_url, p.image_url) AS image_url,
         p.default_gst_rate AS gst_rate,
         p.net_content_value,
-        p.net_content_unit
+        p.net_content_unit,
+        sp.sold_by,
+        sp.rate_unit,
+        sp.procurement_unit,
+        sp.procurement_pack_qty,
+        sp.base_stock_unit,
+        sp.allow_fractional_sell,
+        sp.conversion_precision,
+        sp.conversion_confirmed
       FROM catalog.store_products sp
       JOIN catalog.products p ON p.id = sp.product_id
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -649,6 +657,15 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         gstRate: row.gst_rate != null ? Number(row.gst_rate) : undefined,
         netContentValue: row.net_content_value != null ? Number(row.net_content_value) : undefined,
         netContentUnit: row.net_content_unit || undefined,
+        // V3-FIX-167: Canonical conversion profile
+        soldBy: row.sold_by || undefined,
+        rateUnit: row.rate_unit || undefined,
+        procurementUnit: row.procurement_unit || undefined,
+        procurementPackQty: row.procurement_pack_qty != null ? Number(row.procurement_pack_qty) : undefined,
+        baseStockUnit: row.base_stock_unit || undefined,
+        allowFractionalSell: row.allow_fractional_sell || false,
+        conversionPrecision: row.conversion_precision ?? 2,
+        conversionConfirmed: row.conversion_confirmed || false,
       },
       context: "SELL",
     };
@@ -714,7 +731,15 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
           COALESCE(sp.image_url, p.image_url) AS image_url,
           p.default_gst_rate AS gst_rate,
           p.net_content_value,
-          p.net_content_unit
+          p.net_content_unit,
+          sp.sold_by,
+          sp.rate_unit,
+          sp.procurement_unit,
+          sp.procurement_pack_qty,
+          sp.base_stock_unit,
+          sp.allow_fractional_sell,
+          sp.conversion_precision,
+          sp.conversion_confirmed
         FROM catalog.store_products sp
         JOIN catalog.products p ON p.id = sp.product_id
         LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -774,6 +799,15 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
       gst_rate: row.gst_rate != null ? Number(row.gst_rate) : null,
       net_content_value: row.net_content_value != null ? Number(row.net_content_value) : null,
       net_content_unit: row.net_content_unit || null,
+      // V3-FIX-167: Canonical conversion profile
+      soldBy: row.sold_by || null,
+      rateUnit: row.rate_unit || null,
+      procurementUnit: row.procurement_unit || null,
+      procurementPackQty: row.procurement_pack_qty != null ? Number(row.procurement_pack_qty) : null,
+      baseStockUnit: row.base_stock_unit || null,
+      allowFractionalSell: row.allow_fractional_sell || false,
+      conversionPrecision: row.conversion_precision ?? 2,
+      conversionConfirmed: row.conversion_confirmed || false,
     }));
 
     const total = countResult.rows[0]?.total || 0;
