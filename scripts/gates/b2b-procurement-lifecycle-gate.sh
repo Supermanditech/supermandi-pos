@@ -259,6 +259,16 @@ else
   echo "FAIL: Procurement payment service tests failed"
   ERRORS=$((ERRORS + 1))
 fi
+
+# V3-HARDEN-178: Run B2B procurement lifecycle behavioral tests
+# Proves: provider resolution for all 6 modes, status transitions, conversion math,
+#         retail→stock decrement, profile validation, MOQ tier resolution, snapshot shape
+if npx jest tests/b2bProcurementLifecycle.v3-harden-178.unit.test.ts --no-coverage --silent 2>/dev/null; then
+  echo "PASS: B2B procurement lifecycle behavioral tests pass (34 tests)"
+else
+  echo "FAIL: B2B procurement lifecycle behavioral tests failed"
+  ERRORS=$((ERRORS + 1))
+fi
 cd .. 2>/dev/null
 
 # TypeScript typecheck — proves code compiles with all type contracts

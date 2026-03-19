@@ -8427,17 +8427,31 @@ Override requirement:
 
 ## V3-HARDEN-178 - Add runtime, e2e, staging, and GCP release parity gates for supplier-list -> SuperAdmin publish -> retailer browse/cart/checkout -> payment callback -> order status propagation
 
-Scope narrowing (2026-03-19):
+Scope narrowing (2026-03-19, updated 2026-03-19):
 - IMPLEMENTED: 7-layer release gate (6 structural pre-checks + Layer 7 behavioral proof via
   unit test execution + TypeScript typecheck). Structural checks cover migration 201, payment
   service exports, operator/B2B card split, checkout flow wiring, supplier authoring, order API,
   payment callback, SuperAdmin prefill, compare metadata, accepted terms snapshot. Startup
   validation fails loudly in production for missing procurement-critical schema. Payment provider
   configuration check at startup.
+- IMPLEMENTED: 34-test B2B procurement lifecycle behavioral test suite
+  (b2bProcurementLifecycle.v3-harden-178.unit.test.ts) proving:
+  - Payment intent provider resolution for all 6 modes (CASH→MANUAL, UPI→UPI_DIRECT,
+    BNPL→BNPL, CREDIT→SUPERMANDI_CREDIT, BANK→RAZORPAY, CARD→RAZORPAY)
+  - Payment intent initial status per provider (created/pending/authorized/failed)
+  - Status transition SQL execution (pending, paid, failed with providerPaymentId)
+  - Intent retrieval by order ID (found + null cases)
+  - Conversion engine procurement→stock math (5 cases including fractional)
+  - Conversion engine retail→stock decrement (4 cases including cross-unit)
+  - Unit multiplier system (KG→GM, LTR→ML, same-unit)
+  - inferBaseStockUnit for LOOSE_BULK/PACKAGED/null modes
+  - normalizeUnitString aliases and case handling
+  - Conversion profile validation (valid, invalid packQty, negative packQty)
+  - Accepted terms snapshot shape contract (11 fields)
+  - Applied MOQ tier resolution (5 cases: below-min, exact, between, highest, null)
 - DEFERRED: Full runtime/e2e/staging lifecycle proof (supplier draft → admin publish → retailer
   browse/compare/cart/checkout → payment callback/reconciliation → order status refresh). This
-  requires a running staging backend with live DB + provider sandbox credentials. The structural
-  gate + unit test execution is the closest proof available without a live server.
+  requires a running staging backend with live DB + provider sandbox credentials.
 
 Priority: P0
 Layers: tests, e2e, staging, workflows, release gates, GCP parity, observability
