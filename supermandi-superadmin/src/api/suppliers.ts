@@ -186,6 +186,12 @@ export type PendingProduct = {
   marginPercent?: number | null;
   hsnCode?: string | null;
   gstRate?: number | null;
+  // V3-HARDEN-177: Package/procurement semantics
+  procurementUnit?: string | null;
+  procurementPackQty?: number | null;
+  baseStockUnit?: string | null;
+  splitSellEligible?: boolean | null;
+  moqTiers?: any;
 };
 
 export type ProductEditInput = {

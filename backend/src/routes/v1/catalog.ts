@@ -517,7 +517,11 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           sp.delivery_sla_days,
           sp.delivery_terms,
           sp.finance_eligible,
-          sp.published_terms_version
+          sp.published_terms_version,
+          sp.moq_tiers,
+          sp.procurement_unit,
+          sp.procurement_pack_qty,
+          sp.base_stock_unit
         FROM catalog.supplier_products sp
         JOIN supplier.suppliers s ON s.id = sp.supplier_id
         JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
@@ -589,7 +593,11 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           'deliveryDays', COALESCE(delivery_sla_days, delivery_days, 2),
           'deliveryTerms', delivery_terms,
           'financeEligible', COALESCE(finance_eligible, false),
-          'publishedTermsVersion', published_terms_version
+          'publishedTermsVersion', published_terms_version,
+          'moqTiers', moq_tiers,
+          'procurementUnit', procurement_unit,
+          'procurementPackQty', procurement_pack_qty,
+          'baseStockUnit', base_stock_unit
         ) ORDER BY is_preferred DESC, retailer_price ASC) AS suppliers
       FROM priced
       GROUP BY group_id

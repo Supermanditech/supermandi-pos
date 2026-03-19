@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 473,
+  "version": 474,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6965,7 +6965,7 @@
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 1,
       "end_line": 530,
-      "checksum": "b5ef182d8486e7c0",
+      "checksum": "25c7ad6b7e8a052b",
       "description": "BUY tab v3 — supplier catalogue with wholesale metadata, supplier filter, categories, counter purchase CTA",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,
@@ -7002,7 +7002,7 @@
       "file": "src/screens/v3/CompareScreenV3.tsx",
       "start_line": 1,
       "end_line": 221,
-      "checksum": "f0c6018eb554c49b",
+      "checksum": "c9edfb759124f18f",
       "description": "Supplier price comparison — ranked offers with MOQ, delivery, BNPL, margin, weekly need calc",
       "test_file": "src/__tests__/screens/compare-v3.stg-562.test.ts",
       "depends_on": null,

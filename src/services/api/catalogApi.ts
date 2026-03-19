@@ -33,6 +33,11 @@ export interface CatalogSupplier {
   publishedTermsVersion?: number;
   moqUnit?: string;
   freeDelivery?: boolean;
+  // V3-HARDEN-177: Package/procurement + MOQ-tier metadata per supplier offer
+  moqTiers?: any;
+  procurementUnit?: string;
+  procurementPackQty?: number;
+  baseStockUnit?: string;
 }
 
 /**

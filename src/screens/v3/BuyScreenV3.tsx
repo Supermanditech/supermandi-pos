@@ -55,10 +55,12 @@ function catalogToSupplier(p: CatalogProduct): SupplierProduct {
     deliveryTerms: bestOffer.deliveryTerms ?? undefined,
     financeEligible: bestOffer.financeEligible ?? false,
     publishedTermsVersion: bestOffer.publishedTermsVersion ?? undefined,
-    // V3-FIX-170: Conversion-aware procurement context
-    procurementUnit: raw.procurementUnit ?? raw.procurement_unit,
-    procurementPackQty: raw.procurementPackQty ?? raw.procurement_pack_qty,
-    baseStockUnit: raw.baseStockUnit ?? raw.base_stock_unit,
+    // V3-HARDEN-177: MOQ tier discounts from supplier offer
+    moqTiers: bestOffer.moqTiers ?? undefined,
+    // V3-FIX-170: Conversion-aware procurement context (from supplier offer, fallback to product level)
+    procurementUnit: bestOffer.procurementUnit ?? raw.procurementUnit ?? raw.procurement_unit,
+    procurementPackQty: bestOffer.procurementPackQty ?? raw.procurementPackQty ?? raw.procurement_pack_qty,
+    baseStockUnit: bestOffer.baseStockUnit ?? raw.baseStockUnit ?? raw.base_stock_unit,
     soldBy: raw.soldBy ?? raw.sold_by,
     rateUnit: raw.rateUnit ?? raw.rate_unit,
     productMode: raw.productMode ?? raw.product_mode,
@@ -388,7 +390,7 @@ export default function BuyScreenV3() {
                         {(() => {
                           // V3-FIX-175: Show applied MOQ tier for ordered quantity
                           const qty = (orderQtys[p.id] ?? 0) * p.caseSize;
-                          const tiers = (p as any).moqTiers;
+                          const tiers = p.moqTiers;
                           if (!tiers || !Array.isArray(tiers) || tiers.length === 0) return null;
                           const sorted = [...tiers].sort((a: any, b: any) => (b.minQty || 0) - (a.minQty || 0));
                           const applied = sorted.find((t: any) => qty >= (t.minQty || 0));

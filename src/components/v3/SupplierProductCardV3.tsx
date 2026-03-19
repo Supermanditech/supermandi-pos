@@ -38,6 +38,8 @@ export interface SupplierProduct {
   deliveryTerms?: string;
   financeEligible?: boolean;
   publishedTermsVersion?: number;
+  // V3-HARDEN-177: MOQ tier discounts from supplier offer
+  moqTiers?: any;
   // V3-FIX-169: Approved sell profile (from store_products, set by publish materialization)
   soldBy?: string;
   rateUnit?: string;

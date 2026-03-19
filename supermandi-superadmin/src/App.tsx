@@ -1254,7 +1254,7 @@ export default function App() {
   function handleOpenEditProduct(product: PendingProduct) {
     setEditingProduct(product);
     // V3-FIX-174: Prefill edit form from current product commercial contract
-    const p = product as any;
+    const p = product;
     setEditProductForm({
       editedName: product.productName,
       marginType: p.superMandiMarginMinor ? "fixed" : p.marginPercent ? "percent" : "fixed",

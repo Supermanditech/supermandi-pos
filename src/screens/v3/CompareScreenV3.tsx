@@ -92,8 +92,8 @@ export default function CompareScreenV3({ visible, productName, productId, packS
           deliveryTerms: s.deliveryTerms,
           financeEligible: s.financeEligible,
           publishedTermsVersion: s.publishedTermsVersion,
-          moqTiers: (s as any).moqTiers,
-          procurementUnit: (s as any).procurementUnit,
+          moqTiers: s.moqTiers,
+          procurementUnit: s.procurementUnit,
           isBestPrice: s.purchasePrice === bestPrice,
         }));
         setOffers(mapped);
