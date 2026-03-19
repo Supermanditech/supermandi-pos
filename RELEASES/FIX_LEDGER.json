@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 499,
+  "version": 501,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -8632,6 +8632,63 @@
         "test_guard": "P0 fix — portal consumers + behavioral gate",
         "single_commit": "P0 fix — portal consumers + behavioral gate",
         "ticket_parked": "P0 fix — portal consumers + behavioral gate"
+      }
+    },
+    {
+      "ticket": "V3-HARDEN-189-RBAC",
+      "file": "backend/migrations/202_phase21_rbac_permissions.sql",
+      "start_line": 1,
+      "end_line": 25,
+      "checksum": "7b0514f7100e62b0",
+      "description": "RBAC permission seeds for demand_signals + allocations",
+      "test_file": "backend/tests/contracts/phase21GoLiveGate.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-19T19:52:15.656Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "operator_approved": "Mode A pre-staging",
+        "backend_api": "RBAC migration seed — idempotent ON CONFLICT",
+        "api_errors": "RBAC migration seed — idempotent ON CONFLICT",
+        "store_isolation": "RBAC migration seed — idempotent ON CONFLICT",
+        "business_logic": "RBAC migration seed — idempotent ON CONFLICT",
+        "business_behaviour": "RBAC migration seed — idempotent ON CONFLICT",
+        "db_schema": "RBAC migration seed — idempotent ON CONFLICT",
+        "migration_safe": "RBAC migration seed — idempotent ON CONFLICT",
+        "impacted_files": "RBAC migration seed — idempotent ON CONFLICT",
+        "fix_ledger_check": "RBAC migration seed — idempotent ON CONFLICT",
+        "no_agent_conflict": "RBAC migration seed — idempotent ON CONFLICT",
+        "gcp_parity": "RBAC migration seed — idempotent ON CONFLICT",
+        "regression_check": "RBAC migration seed — idempotent ON CONFLICT",
+        "test_guard": "RBAC migration seed — idempotent ON CONFLICT",
+        "single_commit": "RBAC migration seed — idempotent ON CONFLICT",
+        "ticket_parked": "RBAC migration seed — idempotent ON CONFLICT"
       }
     }
   ],
