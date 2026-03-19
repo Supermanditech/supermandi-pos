@@ -273,3 +273,253 @@ describe("V3-HARDEN-185: Compute service module contract", () => {
     expect(src).toContain("computeStoreDemandSignals");
   });
 });
+
+// ─── P0-1: Canonical schema column verification ───
+
+describe("P0-1: demandSignalCompute uses canonical PO schema", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const src = fs.readFileSync(
+    path.resolve(__dirname, "../../src/services/demandSignalCompute.ts"),
+    "utf8"
+  );
+
+  it("uses poi.order_id (not purchase_order_id) for FK join", () => {
+    expect(src).toContain("poi.order_id");
+    expect(src).not.toContain("poi.purchase_order_id");
+  });
+
+  it("uses poi.ordered_quantity (not poi.quantity) for sum", () => {
+    expect(src).toContain("poi.ordered_quantity");
+    expect(src).not.toContain("SUM(poi.quantity)");
+  });
+});
+
+// ─── P0-2: Admin auth enforcement ───
+
+describe("P0-2: Admin demand-signals routes require auth", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const src = fs.readFileSync(
+    path.resolve(__dirname, "../../src/routes/v1/admin/demandSignals.ts"),
+    "utf8"
+  );
+
+  it("imports requireAdminToken", () => {
+    expect(src).toContain("requireAdminToken");
+  });
+
+  it("applies requireAdminToken to all demand-signal routes", () => {
+    expect(src).toContain('adminDemandSignalsRouter.use("/demand-signals", requireAdminToken)');
+  });
+
+  it("applies requirePermission to read endpoints", () => {
+    expect(src).toContain('requirePermission("demand_signals", "read")');
+  });
+
+  it("applies requirePermission write to recompute", () => {
+    expect(src).toContain('requirePermission("demand_signals", "write")');
+  });
+});
+
+describe("P0-2: Admin allocation routes require auth", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const src = fs.readFileSync(
+    path.resolve(__dirname, "../../src/routes/v1/admin/allocations.ts"),
+    "utf8"
+  );
+
+  it("imports requireAdminToken", () => {
+    expect(src).toContain("requireAdminToken");
+  });
+
+  it("applies requireAdminToken to all allocation routes", () => {
+    expect(src).toContain('adminAllocationsRouter.use("/allocations", requireAdminToken)');
+  });
+
+  it("applies requirePermission to read and write", () => {
+    expect(src).toContain('requirePermission("allocations", "read")');
+    expect(src).toContain('requirePermission("allocations", "write")');
+  });
+});
+
+describe("P0-2: Supplier allocations use canonical req.supplierId", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const src = fs.readFileSync(
+    path.resolve(__dirname, "../../src/routes/v1/supplier/allocations.ts"),
+    "utf8"
+  );
+
+  it("uses req.supplierId (not req.supplier!.id)", () => {
+    expect(src).toContain("req.supplierId");
+    // Check no code usage of req.supplier!.id (comments are OK)
+    const codeLines = src.split("\n").filter((l: string) => !l.trim().startsWith("*") && !l.trim().startsWith("//"));
+    const hasOldPattern = codeLines.some((l: string) => l.includes("req.supplier!"));
+    expect(hasOldPattern).toBe(false);
+  });
+
+  it("returns 401 when supplierId is missing", () => {
+    expect(src).toContain('return res.status(401)');
+    expect(src).toContain("Supplier auth required");
+  });
+});
+
+// ─── P0-3: Canonical lifecycle publisher wiring ───
+
+describe("P0-3: allocationService uses canonical publishLifecycleEvent", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const src = fs.readFileSync(
+    path.resolve(__dirname, "../../src/services/allocationService.ts"),
+    "utf8"
+  );
+
+  it("imports publishLifecycleEvent from lifecycleEventService", () => {
+    expect(src).toContain('import { publishLifecycleEvent } from "./lifecycleEventService"');
+  });
+
+  it("calls publishLifecycleEvent in transitionAllocation", () => {
+    expect(src).toContain("await publishLifecycleEvent(");
+  });
+
+  it("does NOT have sidecar writeLifecycleEvent", () => {
+    expect(src).not.toContain("function writeLifecycleEvent");
+  });
+});
+
+describe("P0-3: lifecycleEventService uses real WhatsApp send", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const src = fs.readFileSync(
+    path.resolve(__dirname, "../../src/services/lifecycleEventService.ts"),
+    "utf8"
+  );
+
+  it("imports sendTextMessage from whatsappService", () => {
+    expect(src).toContain("sendTextMessage");
+  });
+
+  it("imports normalizePhone from whatsappService", () => {
+    expect(src).toContain("normalizePhone");
+  });
+
+  it("resolves recipient phone from DB", () => {
+    expect(src).toContain("resolveRecipientPhone");
+    expect(src).toContain("platform.users");
+    expect(src).toContain("supplier.suppliers");
+  });
+
+  it("calls sendTextMessage with normalized phone", () => {
+    expect(src).toContain("await sendTextMessage({ to: normalizedPhone, body: message })");
+  });
+
+  it("handles RATE_LIMITED with retry", () => {
+    expect(src).toContain("RATE_LIMITED");
+  });
+});
+
+// ─── P0-4: Store ownership on lifecycle events ───
+
+describe("P0-4: POS lifecycle events enforce store ownership", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const src = fs.readFileSync(
+    path.resolve(__dirname, "../../src/routes/v1/pos/lifecycleEvents.ts"),
+    "utf8"
+  );
+
+  it("verifies order belongs to device store before returning events", () => {
+    expect(src).toContain("ownerCheck");
+    expect(src).toContain("store_id = $2");
+  });
+
+  it("returns 404 for cross-store order IDs", () => {
+    expect(src).toContain("Order not found");
+  });
+
+  it("checks both lifecycle_event_log and purchase_orders", () => {
+    expect(src).toContain("lifecycle_event_log");
+    expect(src).toContain("orders.purchase_orders");
+  });
+});
+
+// ─── P0-5: Startup validation wiring ───
+
+describe("P0-5: Phase 21 startup validation wired", () => {
+  it("app.ts calls validatePhase21Startup", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../src/app.ts"),
+      "utf8"
+    );
+    expect(src).toContain("validatePhase21Startup");
+  });
+
+  it("deploy.yml has Phase 21 gate as blocking step", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../..", ".github/workflows/deploy.yml"),
+      "utf8"
+    );
+    expect(src).toContain("phase21-go-live-gate.sh");
+    expect(src).toContain("Phase 21 Go-Live Gate");
+  });
+});
+
+// ─── P0-6: Portal consumers exist ───
+
+describe("P0-6: Cross-portal consumers exist", () => {
+  const fs = require("fs");
+  const path = require("path");
+
+  it("superadmin demand signals consumer", () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../..", "supermandi-superadmin/src/api/demandSignals.ts"),
+      "utf8"
+    );
+    expect(src).toContain("getDemandPressure");
+    expect(src).toContain("/api/v1/admin/demand-signals/pressure");
+  });
+
+  it("superadmin allocations consumer", () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../..", "supermandi-superadmin/src/api/allocations.ts"),
+      "utf8"
+    );
+    expect(src).toContain("getAllocationSummary");
+    expect(src).toContain("/api/v1/admin/allocations/summary");
+  });
+
+  it("supplier-portal allocations consumer", () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../..", "supplier-portal/src/lib/demandAllocations.ts"),
+      "utf8"
+    );
+    expect(src).toContain("listAllocations");
+    expect(src).toContain("updateAllocationStatus");
+    expect(src).toContain("/api/v1/supplier/allocations");
+  });
+
+  it("retailer-admin demand signals consumer", () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../..", "retailer-admin/src/lib/demandSignals.ts"),
+      "utf8"
+    );
+    expect(src).toContain("getDemandSignals");
+    expect(src).toContain("getDemandRecommendations");
+    expect(src).toContain("/api/v1/retailer-admin/demand-signals");
+  });
+
+  it("POS buyAgainApi wires purchaseDraftStore", () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../..", "src/services/api/buyAgainApi.ts"),
+      "utf8"
+    );
+    expect(src).toContain("loadBuyAgainIntoDraft");
+    expect(src).toContain("usePurchaseDraftStore");
+  });
+});

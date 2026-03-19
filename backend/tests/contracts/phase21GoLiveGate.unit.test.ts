@@ -145,8 +145,7 @@ describe("V3-HARDEN-189: Gate script existence", () => {
     expect(src).toContain("buyAgainService.ts");
     expect(src).toContain("allocationService.ts");
     expect(src).toContain("lifecycleEventService.ts");
-    expect(src).toContain("phase21StartupValidation" /* not required in gate but referenced */
-      .replace("phase21StartupValidation", "sseService.ts")); // SSE readiness check
+    expect(src).toContain("phase21StartupValidation.ts");
     // Must validate routes
     expect(src).toContain("posDemandSignalsRouter");
     expect(src).toContain("posBuyAgainRouter");

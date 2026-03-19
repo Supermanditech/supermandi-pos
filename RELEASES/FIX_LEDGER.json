@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 492,
+  "version": 497,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6138,8 +6138,8 @@
     {
       "ticket": "STG-519",
       "file": "backend/src/app.ts",
-      "start_line": 76,
-      "end_line": 181,
+      "start_line": 82,
+      "end_line": 187,
       "checksum": "b60308b1bfb64a7a",
       "description": "Accept both CORS_ALLOWED_ORIGINS and ALLOWED_ORIGINS env vars with filter(Boolean)",
       "test_file": "src/__tests__/screens/cors-env-vars.stg-519.test.ts",
@@ -6188,7 +6188,8 @@
         "db_schema": "N/A — no DB changes",
         "no_agent_conflict": "No conflict — app.ts CORS section only",
         "ticket_parked": "false — completed"
-      }
+      },
+      "line_shifted_at": "2026-03-19T19:30:31.180Z"
     },
     {
       "ticket": "STG-501",
@@ -8244,7 +8245,7 @@
       "file": "backend/src/services/demandSignalCompute.ts",
       "start_line": 1,
       "end_line": 210,
-      "checksum": "e4c68f9fea39b379",
+      "checksum": "4bc88e026ba3343c",
       "description": "Live demand signal compute engine from real DB tables",
       "test_file": "backend/tests/contracts/demandSignalCompute.unit.test.ts",
       "depends_on": null,
@@ -8358,7 +8359,7 @@
       "file": "backend/src/services/allocationService.ts",
       "start_line": 1,
       "end_line": 280,
-      "checksum": "4297c01a6241e5a6",
+      "checksum": "f9789432b151694e",
       "description": "Allocation state machine with enforced transitions and lifecycle event logging",
       "test_file": "backend/tests/contracts/allocationService.unit.test.ts",
       "depends_on": null,
@@ -8414,7 +8415,7 @@
       "file": "backend/src/services/lifecycleEventService.ts",
       "start_line": 1,
       "end_line": 250,
-      "checksum": "8b852e36ad49504e",
+      "checksum": "a2074367abe65865",
       "description": "Lifecycle event fan-out with SSE + WhatsApp + idempotency + retry",
       "test_file": "backend/tests/contracts/lifecycleEventService.unit.test.ts",
       "depends_on": null,
@@ -8519,6 +8520,62 @@
         "test_guard": "phase21GoLiveGate.unit.test.ts — 13 tests",
         "single_commit": "fix(V3-HARDEN-189): single commit",
         "ticket_parked": "Committing now"
+      }
+    },
+    {
+      "ticket": "V3-HARDEN-185-P0",
+      "file": "backend/src/services/demandSignalCompute.ts",
+      "start_line": 108,
+      "end_line": 115,
+      "checksum": "ba8c76d445c265ae",
+      "description": "P0: canonical order_id + ordered_quantity columns in pending_orders CTE",
+      "test_file": "backend/tests/contracts/demandSignalCompute.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-19T19:30:08.359Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "operator_approved": "Mode A pre-staging",
+        "backend_api": "P0 fix — see commit",
+        "api_errors": "P0 fix — see commit",
+        "store_isolation": "P0 fix — see commit",
+        "business_logic": "P0 fix — see commit",
+        "business_behaviour": "P0 fix — see commit",
+        "db_schema": "P0 fix — see commit",
+        "impacted_files": "P0 fix — see commit",
+        "fix_ledger_check": "P0 fix — see commit",
+        "no_agent_conflict": "P0 fix — see commit",
+        "gcp_parity": "P0 fix — see commit",
+        "regression_check": "P0 fix — see commit",
+        "test_guard": "P0 fix — see commit",
+        "single_commit": "P0 fix — see commit",
+        "ticket_parked": "P0 fix — see commit"
       }
     }
   ],

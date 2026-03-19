@@ -106,9 +106,9 @@ export async function computeStoreDemandSignals(
       GROUP BY si.product_id
     ),
     pending_orders AS (
-      SELECT poi.product_id, COALESCE(SUM(poi.quantity), 0)::int AS pending
+      SELECT poi.product_id, COALESCE(SUM(poi.ordered_quantity), 0)::int AS pending
       FROM orders.purchase_order_items poi
-      JOIN orders.purchase_orders po ON po.id = poi.purchase_order_id
+      JOIN orders.purchase_orders po ON po.id = poi.order_id
       WHERE po.store_id = $1
         AND po.status IN ('submitted', 'confirmed', 'shipped')
       GROUP BY poi.product_id
@@ -254,9 +254,9 @@ export async function computeCrossStoreDemandPressure(
           AND s.created_at >= NOW() - INTERVAL '7 days'
       ) s7 ON true
       LEFT JOIN LATERAL (
-        SELECT COALESCE(SUM(poi.quantity), 0)::int AS pending
+        SELECT COALESCE(SUM(poi.ordered_quantity), 0)::int AS pending
         FROM orders.purchase_order_items poi
-        JOIN orders.purchase_orders po ON po.id = poi.purchase_order_id
+        JOIN orders.purchase_orders po ON po.id = poi.order_id
         WHERE po.store_id = sp.store_id
           AND poi.product_id = sp.product_id
           AND po.status IN ('submitted', 'confirmed', 'shipped')

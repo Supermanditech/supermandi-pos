@@ -8,10 +8,10 @@
  * Every transition writes to supplier_demand_allocations + lifecycle_event_log.
  */
 
-import { Pool } from "pg";
 import { getPool } from "../db/client";
 import { log } from "../lib/logger";
 import type { AllocationStatus, LifecycleEventType } from "./storeDemandSignal";
+import { publishLifecycleEvent } from "./lifecycleEventService";
 
 /** Valid state transitions */
 const VALID_TRANSITIONS: Record<AllocationStatus, AllocationStatus[]> = {
@@ -96,9 +96,15 @@ export async function createAllocation(
     [retailerOrderId, supplierId, storeId]
   );
 
-  // Write lifecycle event
-  await writeLifecycleEvent(pool, "order_created", retailerOrderId, storeId, supplierId, {
-    allocationId: result.rows[0].id,
+  // Publish lifecycle event via canonical fan-out
+  await publishLifecycleEvent({
+    eventType: "order_created",
+    orderId: retailerOrderId,
+    storeId,
+    supplierId,
+    targets: [],
+    payload: { allocationId: result.rows[0].id },
+    timestamp: new Date().toISOString(),
   });
 
   return result.rows[0];
@@ -175,16 +181,21 @@ export async function transitionAllocation(
     [newStatus, record.retailerOrderId]
   ).catch(() => { /* column may not exist yet — non-blocking */ });
 
-  // Write lifecycle event
+  // Publish lifecycle event via canonical fan-out (SSE + WhatsApp + notifications)
   const transitionKey = `${previousStatus}→${newStatus}`;
   const eventType = TRANSITION_EVENTS[transitionKey];
   let eventId = "";
   if (eventType) {
-    eventId = await writeLifecycleEvent(
-      pool, eventType,
-      record.retailerOrderId, record.storeId, record.supplierId,
-      { allocationId, actorId, previousStatus, newStatus, ...payload }
-    );
+    const publishResult = await publishLifecycleEvent({
+      eventType,
+      orderId: record.retailerOrderId,
+      storeId: record.storeId,
+      supplierId: record.supplierId,
+      targets: [], // Resolved by LIFECYCLE_COMMUNICATION_RULES in publisher
+      payload: { allocationId, actorId, previousStatus, newStatus, ...payload },
+      timestamp: new Date().toISOString(),
+    });
+    eventId = publishResult.eventId;
   }
 
   log.info("allocation:transition",
@@ -338,22 +349,3 @@ export async function getAllocationSummary(): Promise<{
   return { total, byStatus };
 }
 
-// ─── Internal helpers ───
-
-async function writeLifecycleEvent(
-  pool: Pool,
-  eventType: LifecycleEventType,
-  orderId: string,
-  storeId: string,
-  supplierId: string | null,
-  payload: Record<string, unknown>
-): Promise<string> {
-  const result = await pool.query<{ id: string }>(
-    `INSERT INTO public.lifecycle_event_log
-      (event_type, order_id, store_id, supplier_id, payload)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id`,
-    [eventType, orderId, storeId, supplierId, JSON.stringify(payload)]
-  );
-  return result.rows[0].id;
-}

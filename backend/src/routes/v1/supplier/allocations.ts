@@ -1,17 +1,15 @@
 /**
  * V3-FIX-187: Supplier allocation management endpoints
- *
- * Suppliers can view, accept, reject, dispatch allocations.
+ * P0-2: Use req.supplierId (canonical SupplierAuthRequest), not req.supplier!.id.
  */
 
-import { Router, Response, NextFunction } from "express";
+import { Router, Response } from "express";
 import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
 import { requireActiveSupplier } from "../../../middleware/supplierStatusGate";
 import {
   listSupplierAllocations,
   getAllocation,
   transitionAllocation,
-  type AllocationRecord,
 } from "../../../services/allocationService";
 import type { AllocationStatus } from "../../../services/storeDemandSignal";
 import { log } from "../../../lib/logger";
@@ -21,7 +19,6 @@ export const supplierAllocationsRouter = Router();
 
 /**
  * GET /api/v1/supplier/allocations
- * List allocations for the authenticated supplier.
  */
 supplierAllocationsRouter.get(
   "/allocations",
@@ -29,7 +26,9 @@ supplierAllocationsRouter.get(
   requireActiveSupplier,
   async (req: SupplierAuthRequest, res: Response) => {
     try {
-      const supplierId = req.supplier!.id;
+      const supplierId = req.supplierId;
+      if (!supplierId) return res.status(401).json({ error: "Supplier auth required" });
+
       const status = req.query.status as AllocationStatus | undefined;
       const limit = Math.min(parseInt(req.query.limit as string, 10) || 20, 100);
       const offset = parseInt(req.query.offset as string, 10) || 0;
@@ -50,7 +49,6 @@ supplierAllocationsRouter.get(
 
 /**
  * GET /api/v1/supplier/allocations/:id
- * Get allocation detail.
  */
 supplierAllocationsRouter.get(
   "/allocations/:id",
@@ -58,7 +56,9 @@ supplierAllocationsRouter.get(
   requireActiveSupplier,
   async (req: SupplierAuthRequest, res: Response) => {
     try {
-      const supplierId = req.supplier!.id;
+      const supplierId = req.supplierId;
+      if (!supplierId) return res.status(401).json({ error: "Supplier auth required" });
+
       const allocation = await getAllocation(req.params.id);
 
       if (!allocation || allocation.supplierId !== supplierId) {
@@ -75,8 +75,6 @@ supplierAllocationsRouter.get(
 
 /**
  * PATCH /api/v1/supplier/allocations/:id/status
- * Transition allocation status.
- * Body: { status: "accepted" | "partial_accepted" | "rejected" | "dispatched" | "delivered" }
  */
 supplierAllocationsRouter.patch(
   "/allocations/:id/status",
@@ -84,7 +82,9 @@ supplierAllocationsRouter.patch(
   requireActiveSupplier,
   async (req: SupplierAuthRequest, res: Response) => {
     try {
-      const supplierId = req.supplier!.id;
+      const supplierId = req.supplierId;
+      if (!supplierId) return res.status(401).json({ error: "Supplier auth required" });
+
       const { status: newStatus, ...payload } = req.body || {};
 
       if (!newStatus) {

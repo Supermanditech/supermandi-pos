@@ -45,6 +45,12 @@ if (firebaseEnabled && (firebaseServiceAccountPath || firebaseProjectId)) {
 // SCALE-D3: Start BullMQ CSV import worker (no-op when REDIS_ENABLED=false)
 initCsvImportWorker();
 
+// V3-HARDEN-189: Phase 21 startup validation — non-blocking, logs structured readiness
+import { validatePhase21Startup } from "./services/phase21StartupValidation";
+validatePhase21Startup().catch((err) => {
+  logger.warn("[App] Phase 21 startup validation failed (non-blocking):", String(err));
+});
+
 // DEV-071: Capture build info at startup for /health endpoint
 // INFRA-003: Use env var baked at Docker build time (execSync fails in containers without .git)
 const GIT_SHA = process.env.GIT_SHA || "unknown";

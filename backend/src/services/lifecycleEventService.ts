@@ -14,7 +14,7 @@
 import { getPool } from "../db/client";
 import { log } from "../lib/logger";
 import { emitStoreEvent } from "./sseService";
-import { isWhatsAppConfigured } from "./whatsappService";
+import { isWhatsAppConfigured, sendTextMessage, normalizePhone } from "./whatsappService";
 import {
   LIFECYCLE_COMMUNICATION_RULES,
   type LifecycleEventType,
@@ -255,6 +255,42 @@ export async function getStoreLifecycleEvents(
   return result.rows;
 }
 
+// ─── Recipient resolution ───
+
+async function resolveRecipientPhone(
+  role: "retailer" | "supplier",
+  event: LifecycleEvent
+): Promise<string | null> {
+  const pool = getPool();
+  if (!pool) return null;
+
+  try {
+    if (role === "retailer" && event.storeId) {
+      // Look up store owner phone from platform.stores → platform.users
+      const result = await pool.query<{ phone: string }>(
+        `SELECT u.phone FROM platform.users u
+         JOIN platform.stores s ON s.owner_id = u.id
+         WHERE s.id = $1 AND u.phone IS NOT NULL
+         LIMIT 1`,
+        [event.storeId]
+      );
+      return result.rows[0]?.phone ?? null;
+    }
+    if (role === "supplier" && event.supplierId) {
+      const result = await pool.query<{ phone: string }>(
+        `SELECT phone FROM supplier.suppliers
+         WHERE id = $1 AND phone IS NOT NULL
+         LIMIT 1`,
+        [event.supplierId]
+      );
+      return result.rows[0]?.phone ?? null;
+    }
+  } catch {
+    // Phone lookup failure is non-blocking
+  }
+  return null;
+}
+
 // ─── WhatsApp retry with exponential backoff ───
 
 async function sendWhatsAppWithRetry(
@@ -263,23 +299,53 @@ async function sendWhatsAppWithRetry(
   maxAttempts: number = 3
 ): Promise<boolean> {
   const message = template.buildMessage(event);
+  const rules = LIFECYCLE_COMMUNICATION_RULES[event.eventType];
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      // For now, log the would-be message. Real WhatsApp send uses sendWhatsAppMessage()
-      // from whatsappService.ts which requires a phone number.
-      // The actual phone lookup would come from the store/supplier contact record.
-      log.info(`[LifecycleEvent] WhatsApp ${template.templateKey}: ${message} (attempt ${attempt})`);
-      return true;
-    } catch (err) {
-      if (attempt < maxAttempts) {
-        const delay = Math.pow(2, attempt) * 500; // 1s, 2s, 4s
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      } else {
-        log.error(`[LifecycleEvent] WhatsApp failed after ${maxAttempts} attempts:`, String(err));
-        return false;
+  // Resolve recipients for each role that needs WhatsApp
+  const targets: Array<{ role: "retailer" | "supplier"; phone: string }> = [];
+  if (rules.retailer.includes("whatsapp")) {
+    const phone = await resolveRecipientPhone("retailer", event);
+    if (phone) targets.push({ role: "retailer", phone });
+  }
+  if (rules.supplier.includes("whatsapp")) {
+    const phone = await resolveRecipientPhone("supplier", event);
+    if (phone) targets.push({ role: "supplier", phone });
+  }
+
+  if (targets.length === 0) {
+    log.info(`[LifecycleEvent] WhatsApp: no recipients resolved for ${event.eventType}`);
+    return false;
+  }
+
+  let anySuccess = false;
+  for (const target of targets) {
+    const normalizedPhone = normalizePhone(target.phone);
+    if (!normalizedPhone) continue;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const result = await sendTextMessage({ to: normalizedPhone, body: message });
+        if (result.sent) {
+          log.info(`[LifecycleEvent] WhatsApp sent to ${target.role}: ${event.eventType} (wamid=${result.wamid})`);
+          anySuccess = true;
+          break;
+        }
+        if (result.errorCode === "RATE_LIMITED" && attempt < maxAttempts) {
+          const delay = Math.pow(2, attempt) * 500;
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        log.warn(`[LifecycleEvent] WhatsApp not sent to ${target.role}: ${result.errorCode} — ${result.errorMessage}`);
+        break;
+      } catch (err) {
+        if (attempt < maxAttempts) {
+          const delay = Math.pow(2, attempt) * 500;
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        } else {
+          log.error(`[LifecycleEvent] WhatsApp failed after ${maxAttempts} attempts to ${target.role}:`, String(err));
+        }
       }
     }
   }
-  return false;
+  return anySuccess;
 }

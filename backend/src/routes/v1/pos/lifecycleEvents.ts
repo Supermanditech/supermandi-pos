@@ -48,7 +48,35 @@ posLifecycleEventsRouter.get("/lifecycle/events", requireDeviceToken, async (req
  */
 posLifecycleEventsRouter.get("/lifecycle/events/:orderId", requireDeviceToken, async (req: Request, res: Response) => {
   try {
-    const events = await getOrderLifecycleEvents(req.params.orderId);
+    const storeId = getStoreIdFromDevice(req);
+    const { orderId } = req.params;
+
+    // P0-4: Enforce store ownership — verify order belongs to this device's store
+    const { getPool } = require("../../../db/client");
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "Database unavailable" });
+
+    const ownerCheck = await pool.query(
+      `SELECT 1 FROM public.lifecycle_event_log
+       WHERE order_id = $1 AND store_id = $2
+       LIMIT 1`,
+      [orderId, storeId]
+    );
+
+    if (ownerCheck.rows.length === 0) {
+      // Also check purchase_orders as fallback (order may have no lifecycle events yet)
+      const poCheck = await pool.query(
+        `SELECT 1 FROM orders.purchase_orders
+         WHERE id = $1 AND store_id = $2
+         LIMIT 1`,
+        [orderId, storeId]
+      );
+      if (poCheck.rows.length === 0) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+    }
+
+    const events = await getOrderLifecycleEvents(orderId);
     return res.json({ success: true, data: events });
   } catch (err) {
     log.error("lifecycle:pos:order-events", asError(err).message);
