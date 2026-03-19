@@ -1341,6 +1341,9 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
     invoiceModel,
     hsnCode,
     gstRate,
+    // V3-FIX-174: Full commercial term editing
+    ptrMinor, ptsMinor, tradeDiscountPct, scheme,
+    deliverySlaDays, deliveryTerms, creditDays: adminCreditDays, financeEligible,
   } = req.body || {};
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
   const adminId = (req as any).adminId;
@@ -1511,6 +1514,23 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
       updates.push(`gst_rate = $${paramIndex++}`);
       values.push(gstRate);
       changes.gstRate = { from: current.gst_rate, to: gstRate };
+    }
+
+    // V3-FIX-174: Full commercial term editing for SuperAdmin
+    if (ptrMinor !== undefined) { updates.push(`ptr_minor = $${paramIndex++}`); values.push(parseInt(String(ptrMinor))); changes.ptrMinor = { from: null, to: ptrMinor }; }
+    if (ptsMinor !== undefined) { updates.push(`pts_minor = $${paramIndex++}`); values.push(parseInt(String(ptsMinor))); changes.ptsMinor = { from: null, to: ptsMinor }; }
+    if (tradeDiscountPct !== undefined) { updates.push(`trade_discount_pct = $${paramIndex++}`); values.push(parseFloat(String(tradeDiscountPct))); changes.tradeDiscountPct = { from: null, to: tradeDiscountPct }; }
+    if (scheme !== undefined) { updates.push(`scheme = $${paramIndex++}`); values.push(scheme?.trim() || null); changes.scheme = { from: null, to: scheme }; }
+    if (deliverySlaDays !== undefined) { updates.push(`delivery_sla_days = $${paramIndex++}`); values.push(parseInt(String(deliverySlaDays))); changes.deliverySlaDays = { from: null, to: deliverySlaDays }; }
+    if (deliveryTerms !== undefined) { updates.push(`delivery_terms = $${paramIndex++}`); values.push(deliveryTerms?.trim() || null); changes.deliveryTerms = { from: null, to: deliveryTerms }; }
+    if (adminCreditDays !== undefined) { updates.push(`credit_days = $${paramIndex++}`); values.push(parseInt(String(adminCreditDays))); changes.creditDays = { from: null, to: adminCreditDays }; }
+    if (financeEligible !== undefined) { updates.push(`finance_eligible = $${paramIndex++}`); values.push(financeEligible === true); changes.financeEligible = { from: null, to: financeEligible }; }
+    // Increment published_terms_version on any commercial field edit
+    if (ptrMinor !== undefined || tradeDiscountPct !== undefined || scheme !== undefined || deliverySlaDays !== undefined || financeEligible !== undefined) {
+      updates.push(`published_terms_version = COALESCE(published_terms_version, 0) + 1`);
+      updates.push(`published_at = NOW()`);
+      updates.push(`published_by = $${paramIndex++}`);
+      values.push(adminId);
     }
 
     if (updates.length === 0) {

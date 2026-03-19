@@ -392,16 +392,9 @@ export default function BuyScreenV3() {
                       paymentMode: paymentMode as any,
                     });
                     await submitOrder(sid, order.id);
-                    // V3-FIX-176: Initiate payment via canonical payment flow
-                    if (paymentMode !== "CASH") {
-                      try {
-                        await confirmPayment(sid, order.id, paymentMode as any);
-                        logger.debug("BuyV3", `payment_initiated:${order.id},mode:${paymentMode}`);
-                      } catch (payErr) {
-                        logger.debug("BuyV3", `payment_initiation_failed:${order.id}:${String(payErr)}`);
-                        // Non-blocking: order is submitted, payment can be completed later
-                      }
-                    }
+                    // V3-FIX-176: Payment intent is now created server-side during order creation
+                    // via procurementPaymentService when paymentMode is non-CASH.
+                    // No separate confirmPayment call needed — payment state is on procurement.payment_intents.
                     totalItems += orderItems.length;
                     logger.debug("BuyV3", `checkout:${order.id},supplier:${supplierId},payment:${paymentMode},items:${orderItems.length}`);
                   }

@@ -507,7 +507,17 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           sp.net_content_unit AS sp_net_content_unit,
           mp.net_content_value AS mp_net_content_value,
           mp.net_content_unit AS mp_net_content_unit,
-          sp.created_at AS sp_created_at
+          sp.created_at AS sp_created_at,
+          sp.ptr_minor,
+          sp.pts_minor,
+          sp.trade_discount_pct,
+          sp.scheme,
+          sp.credit_days,
+          sp.delivery_days,
+          sp.delivery_sla_days,
+          sp.delivery_terms,
+          sp.finance_eligible,
+          sp.published_terms_version
         FROM catalog.supplier_products sp
         JOIN supplier.suppliers s ON s.id = sp.supplier_id
         JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
@@ -570,7 +580,16 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           'bnplEligible', COALESCE(bnpl_eligible, false),
           'bnplMaxDays', COALESCE(bnpl_max_days, 0),
           'isPreferred', is_preferred,
-          'minOrderValue', min_order_value
+          'minOrderValue', min_order_value,
+          'ptrMinor', ptr_minor,
+          'ptsMinor', pts_minor,
+          'tradeDiscountPct', trade_discount_pct,
+          'scheme', scheme,
+          'creditDays', credit_days,
+          'deliveryDays', COALESCE(delivery_sla_days, delivery_days, 2),
+          'deliveryTerms', delivery_terms,
+          'financeEligible', COALESCE(finance_eligible, false),
+          'publishedTermsVersion', published_terms_version
         ) ORDER BY is_preferred DESC, retailer_price ASC) AS suppliers
       FROM priced
       GROUP BY group_id

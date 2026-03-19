@@ -260,7 +260,19 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         country_of_origin,
         shelf_life_days,
         created_at,
-        updated_at
+        updated_at,
+        ptr_minor,
+        pts_minor,
+        trade_discount_pct,
+        scheme,
+        delivery_sla_days,
+        delivery_terms,
+        credit_days,
+        finance_eligible,
+        delivery_days,
+        bnpl_max_days,
+        published_terms_version,
+        published_at
       FROM catalog.supplier_products
       WHERE ${whereClause}
       ORDER BY created_at DESC
@@ -306,6 +318,19 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         shelfLifeDays: p.shelf_life_days || null,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
+        // V3-FIX-174: Commercial terms
+        ptrMinor: p.ptr_minor || null,
+        ptsMinor: p.pts_minor || null,
+        tradeDiscountPct: p.trade_discount_pct != null ? Number(p.trade_discount_pct) : null,
+        scheme: p.scheme || null,
+        deliverySlaDays: p.delivery_sla_days || null,
+        deliveryTerms: p.delivery_terms || null,
+        creditDays: p.credit_days || null,
+        financeEligible: p.finance_eligible || false,
+        deliveryDays: p.delivery_days || null,
+        bnplMaxDays: p.bnpl_max_days || null,
+        publishedTermsVersion: p.published_terms_version || null,
+        publishedAt: p.published_at || null,
       })),
       // GL-WF-063: Pagination metadata
       pagination: {

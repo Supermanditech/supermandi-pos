@@ -194,6 +194,38 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
     const procurementLane = resolveProcurementLane(orderType);
 
     const orderId = randomUUID();
+
+    // V3-FIX-175+177: Build authoritative accepted-term snapshot from published catalog data
+    const termSnapItems = [];
+    for (const vi of validatedItems) {
+      const termRow = await client.query(
+        `SELECT ptr_minor, purchase_price, mrp, trade_discount_pct, scheme,
+                delivery_sla_days, delivery_days, credit_days, finance_eligible,
+                bnpl_eligible, moq, published_terms_version
+         FROM catalog.supplier_products WHERE id = $1`,
+        [vi.supplierProductId]
+      );
+      const t = termRow.rows[0] || {};
+      termSnapItems.push({
+        supplierProductId: vi.supplierProductId,
+        unitPrice: vi.unitPrice,
+        quantity: vi.quantity,
+        publishedTerms: {
+          ptrMinor: t.ptr_minor, purchasePrice: t.purchase_price, mrp: t.mrp,
+          tradeDiscountPct: t.trade_discount_pct ? Number(t.trade_discount_pct) : null,
+          scheme: t.scheme, deliveryDays: t.delivery_sla_days || t.delivery_days,
+          creditDays: t.credit_days, financeEligible: t.finance_eligible,
+          bnplEligible: t.bnpl_eligible, moq: t.moq,
+          version: t.published_terms_version || 1,
+        },
+      });
+    }
+    const acceptedTermsSnapshot = JSON.stringify({
+      version: Math.max(...termSnapItems.map(i => i.publishedTerms.version), 1),
+      snapshotAt: new Date().toISOString(),
+      items: termSnapItems,
+    });
+
     const orderResult = await client.query(
       `INSERT INTO orders.purchase_orders (
         id, order_number, store_id, supplier_id, order_type, status,
@@ -223,17 +255,7 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         expectedDeliveryDate || null,
         procurementLane,
         orderStatus,
-        // V3-FIX-175+177: Server-side accepted published-term snapshot from catalog
-        // Read authoritative terms from DB, not client — prevents client-composed term spoofing
-        JSON.stringify({
-          version: 1,
-          snapshotAt: new Date().toISOString(),
-          items: validatedItems.map((vi: any) => ({
-            supplierProductId: vi.supplierProductId,
-            unitPrice: vi.unitPrice,
-            quantity: vi.quantity,
-          })),
-        }),
+        acceptedTermsSnapshot,
         // V3-FIX-176: Payment lane — SuperMandi principal for catalogue orders
         procurementLane === "CATALOGUE_PRINCIPAL" ? "SUPERMANDI_PRINCIPAL" : null,
       ]
