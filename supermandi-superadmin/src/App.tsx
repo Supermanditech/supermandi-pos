@@ -102,6 +102,8 @@ import { MaintenanceTab } from "./tabs/MaintenanceTab";  // SA-P0-007: System ma
 import { HealthDashboardTab } from "./tabs/HealthDashboardTab";  // SA-P1-009: Store health dashboard
 import { ComplianceTab } from "./tabs/ComplianceTab";  // SA-P2-004: Compliance status aggregation
 import { CatalogTab } from "./tabs/CatalogTab";  // SA-P2-006: Product category override
+import { DemandPressureTab } from "./tabs/DemandPressureTab";  // V3-HARDEN-185: Cross-store demand pressure
+import { AllocationsDashboardTab } from "./tabs/AllocationsDashboardTab";  // V3-FIX-187: Allocation management
 // T-083: Lucide sidebar icons
 import {
   Activity, Store, Smartphone, Users, AlertTriangle, Receipt,
@@ -115,6 +117,8 @@ import {
   MessageCircle,  // WA-002: WhatsApp dashboard
   Stethoscope,  // SA-P1-009: Store health dashboard
   ClipboardCheck,  // SA-P2-004: Compliance overview
+  TrendingDown,  // V3-HARDEN-185: Demand pressure
+  GitBranch,  // V3-FIX-187: Allocations
 } from "lucide-react";
 import "./App.css";
 
@@ -149,6 +153,8 @@ const TAB_LABELS: Record<TabKey, string> = {
   "store-health": "Store Health",
   "compliance": "Compliance",
   "catalog": "Catalog",
+  "demand-pressure": "Demand Pressure",
+  "allocations": "Allocations",
 };
 
 // T-114: Valid tab keys for hash routing
@@ -3152,6 +3158,12 @@ export default function App() {
             <button aria-current={tab === "ai-insights" ? "page" : undefined} className={`sidebarItem ${tab === "ai-insights" ? "sidebarItemActive" : ""}`} onClick={() => setTab("ai-insights")}>
               <span className="sidebarItemLabel"><Brain size={18} className={`sa-nav-icon ${tab === "ai-insights" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />AI Intelligence</span>
             </button>
+            <button aria-current={tab === "demand-pressure" ? "page" : undefined} className={`sidebarItem ${tab === "demand-pressure" ? "sidebarItemActive" : ""}`} onClick={() => setTab("demand-pressure")}>
+              <span className="sidebarItemLabel"><TrendingDown size={18} className={`sa-nav-icon ${tab === "demand-pressure" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Demand Pressure</span>
+            </button>
+            <button aria-current={tab === "allocations" ? "page" : undefined} className={`sidebarItem ${tab === "allocations" ? "sidebarItemActive" : ""}`} onClick={() => setTab("allocations")}>
+              <span className="sidebarItemLabel"><GitBranch size={18} className={`sa-nav-icon ${tab === "allocations" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Allocations</span>
+            </button>
             <button aria-current={tab === "whatsapp" ? "page" : undefined} className={`sidebarItem ${tab === "whatsapp" ? "sidebarItemActive" : ""}`} onClick={() => setTab("whatsapp")}>
               <span className="sidebarItemLabel"><MessageCircle size={18} className={`sa-nav-icon ${tab === "whatsapp" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} style={{ color: tab === "whatsapp" ? "#25D366" : undefined }} />WhatsApp</span>
             </button>
@@ -3254,6 +3266,8 @@ export default function App() {
           <button role="tab" aria-selected={tab === "credit-providers"} className={tab === "credit-providers" ? "tab tabActive" : "tab"} onClick={() => setTab("credit-providers")}>Finance</button>
           <button role="tab" aria-selected={tab === "support"} className={tab === "support" ? "tab tabActive" : "tab"} onClick={() => setTab("support")}>Support</button>
           <button role="tab" aria-selected={tab === "ai-insights"} className={tab === "ai-insights" ? "tab tabActive" : "tab"} onClick={() => setTab("ai-insights")}>AI Intelligence</button>
+          <button role="tab" aria-selected={tab === "demand-pressure"} className={tab === "demand-pressure" ? "tab tabActive" : "tab"} onClick={() => setTab("demand-pressure")}>Demand</button>
+          <button role="tab" aria-selected={tab === "allocations"} className={tab === "allocations" ? "tab tabActive" : "tab"} onClick={() => setTab("allocations")}>Allocations</button>
           <button role="tab" aria-selected={tab === "whatsapp"} className={tab === "whatsapp" ? "tab tabActive" : "tab"} onClick={() => setTab("whatsapp")}>WhatsApp</button>
           <button role="tab" aria-selected={tab === "catalog"} className={tab === "catalog" ? "tab tabActive" : "tab"} onClick={() => setTab("catalog")}>Catalog</button>
         </nav>
@@ -3810,6 +3824,10 @@ export default function App() {
       {tab === "support" && <SupportQueueTab />}
 
       {tab === "ai-insights" && <AIInsightsTab />}
+
+      {tab === "demand-pressure" && <DemandPressureTab />}
+
+      {tab === "allocations" && <AllocationsDashboardTab />}
 
       {tab === "whatsapp" && <WhatsAppTab />}
 
