@@ -1,11 +1,12 @@
 import React from "react";
-import { View, Pressable, StyleSheet, Text } from "react-native";
+import { View, Pressable, StyleSheet, Text, Animated } from "react-native";
 import Svg, { Path, Circle, Line } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getNavIconSize } from "../../theme/responsive";
+import { shell, typeRhythm, iconRhythm } from "../../theme/brand";
 
-// STG-552: POS v3 4-tab bottom navigation — SELL / BUY / STORE / MORE
+// STG-552 + V3-FIX-179: POS v3 4-tab bottom navigation — SuperMandi branded
 export type V3Tab = "SELL" | "BUY" | "STORE" | "MORE";
 
 type BottomNavV3Props = {
@@ -16,7 +17,7 @@ type BottomNavV3Props = {
   moreBadge?: number;
 };
 
-// SVG icon components for each tab
+// SVG icon components — stroke-based, consistent rhythm
 function SellIcon({ color, size }: { color: string; size: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -78,61 +79,71 @@ export default function BottomNavV3({ activeTab, onTabPress, sellBadge, buyBadge
 
   return (
     <View style={styles.container}>
-      {(["SELL", "BUY", "STORE", "MORE"] as V3Tab[]).map((tab) => {
-        const isActive = activeTab === tab;
-        const IconComponent = ICON_MAP[tab];
-        const badge = badges[tab];
-        const iconColor = isActive ? "#FFFFFF" : colors.textTertiary;
+      {/* V3-FIX-179: Subtle top accent line for brand presence */}
+      <View style={styles.topAccent} />
+      <View style={styles.tabRow}>
+        {(["SELL", "BUY", "STORE", "MORE"] as V3Tab[]).map((tab) => {
+          const isActive = activeTab === tab;
+          const IconComponent = ICON_MAP[tab];
+          const badge = badges[tab];
+          const iconColor = isActive ? colors.textInverse : colors.textTertiary;
 
-        return (
-          <Pressable
-            key={tab}
-            style={styles.tab}
-            onPress={() => onTabPress(tab)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isActive }}
-            accessibilityLabel={TAB_LABELS[tab]}
-          >
-            <View style={[styles.iconPill, isActive && styles.iconPillActive]}>
-              <IconComponent color={iconColor} size={22} />
-              {badge != null && badge > 0 ? (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{badge > 99 ? "99+" : String(badge)}</Text>
-                </View>
-              ) : null}
-            </View>
-            <Text style={[styles.label, isActive && styles.labelActive]}>{TAB_LABELS[tab]}</Text>
-          </Pressable>
-        );
-      })}
+          return (
+            <Pressable
+              key={tab}
+              style={styles.tab}
+              onPress={() => onTabPress(tab)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+              accessibilityLabel={TAB_LABELS[tab]}
+            >
+              <View style={[styles.iconPill, isActive && styles.iconPillActive]}>
+                <IconComponent color={iconColor} size={iconRhythm.nav} />
+                {badge != null && badge > 0 ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{badge > 99 ? "99+" : String(badge)}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text style={[styles.label, isActive && styles.labelActive]}>{TAB_LABELS[tab]}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 function createStyles(colors: ColorPalette) {
+  const iconSize = getNavIconSize();
   return StyleSheet.create({
     container: {
-      flexDirection: "row",
       backgroundColor: colors.surface,
-      paddingBottom: 8,
       shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: -4 },
-      shadowOpacity: 0.06,
-      shadowRadius: 16,
-      elevation: 8,
+      ...shell.navElevation,
+    },
+    // V3-FIX-179: Thin branded accent line at top of nav bar
+    topAccent: {
+      height: 2,
+      backgroundColor: colors.primary,
+      opacity: 0.12,
+    },
+    tabRow: {
+      flexDirection: "row",
+      paddingBottom: 8,
     },
     tab: {
       flex: 1,
       alignItems: "center",
-      paddingTop: 8,
+      paddingTop: 10,
       paddingBottom: 4,
-      gap: 3,
+      gap: 4,
     },
-    // V3-HARDEN-111: Responsive icon pill sizing
+    // V3-FIX-179: Wider, more prominent active pill
     iconPill: {
-      width: getNavIconSize() * 2.3,
-      height: getNavIconSize() + 8,
-      borderRadius: 16,
+      width: iconSize * 2.6,
+      height: iconSize + 12,
+      borderRadius: shell.activePillRadius,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "transparent",
@@ -141,39 +152,37 @@ function createStyles(colors: ColorPalette) {
       backgroundColor: colors.primary,
       shadowColor: colors.primary,
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 4,
+      shadowOpacity: 0.35,
+      shadowRadius: 10,
+      elevation: 6,
     },
     label: {
-      fontSize: 10,
-      fontWeight: "600",
+      ...typeRhythm.navLabel,
       color: colors.textTertiary,
-      letterSpacing: 0.2,
     },
     labelActive: {
+      ...typeRhythm.navLabelActive,
       color: colors.primary,
-      fontWeight: "800",
     },
-    // V3-DELETE-113: Responsive badge sizing
+    // V3-FIX-179: More polished badge
     badge: {
       position: "absolute",
-      top: -2,
-      right: 2,
+      top: -4,
+      right: 0,
       backgroundColor: colors.error,
-      borderRadius: getNavIconSize() / 3,
-      minWidth: getNavIconSize() * 0.67,
-      height: getNavIconSize() * 0.67,
+      borderRadius: 10,
+      minWidth: 18,
+      height: 18,
       alignItems: "center",
       justifyContent: "center",
-      paddingHorizontal: 4,
+      paddingHorizontal: 5,
       borderWidth: 2,
       borderColor: colors.surface,
     },
     badgeText: {
-      fontSize: 8,
+      fontSize: 9,
       fontWeight: "800",
-      color: "#FFFFFF",
+      color: colors.textInverse,
     },
   });
 }

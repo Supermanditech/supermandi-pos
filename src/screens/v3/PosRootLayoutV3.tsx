@@ -75,8 +75,8 @@ export default function PosRootLayoutV3() {
   return (
     <View style={styles.container}>
       {offline && (
-        <View style={{ backgroundColor: "#FEF3C7", paddingVertical: 6, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ fontSize: 12, fontWeight: "600", color: "#92400E" }}>Offline — data may not be current</Text>
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineText}>⚡ Offline — data may not be current</Text>
         </View>
       )}
       <View style={styles.content}>
@@ -126,6 +126,22 @@ function createStyles(colors: ColorPalette) {
     },
     content: {
       flex: 1,
+    },
+    // V3-FIX-179: Branded offline banner
+    offlineBanner: {
+      backgroundColor: colors.warningSoft,
+      paddingVertical: 6,
+      paddingHorizontal: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.warningBorder,
+    },
+    offlineText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.warningDark,
     },
   });
 }

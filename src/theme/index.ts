@@ -57,3 +57,5 @@ export function getThemeColors(): ColorPalette {
 
 export { colors, lightColors, darkColors, typography, spacing };
 export type { ColorPalette };
+// V3-HARDEN-182: Brand token system
+export { shell, tabAccents, cardElevation, chipColors, motion, typeRhythm, iconRhythm } from './brand';

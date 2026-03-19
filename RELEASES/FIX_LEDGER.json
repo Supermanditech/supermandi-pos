@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 475,
+  "version": 476,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6620,7 +6620,7 @@
       "file": "src/screens/v3/PosRootLayoutV3.tsx",
       "start_line": 1,
       "end_line": 132,
-      "checksum": "591dc944d950c968",
+      "checksum": "fcd5db6e9eb2b638",
       "description": "POS v3 root layout — 4-tab nav shell with SellScreenV3 wired",
       "test_file": "src/__tests__/screens/pos-root-v3.stg-552.test.ts",
       "depends_on": null,
@@ -7187,7 +7187,7 @@
       "file": "src/screens/v3/StoreHubScreenV3.tsx",
       "start_line": 1,
       "end_line": 152,
-      "checksum": "c93c38f963bd8c37",
+      "checksum": "d608017230c91eba",
       "description": "Store hub v3 — 4 SVG action cards, recent orders",
       "test_file": "src/__tests__/screens/store-layer4.stg-567-570.test.ts",
       "depends_on": null,
@@ -7335,7 +7335,7 @@
       "file": "src/screens/v3/MoreScreenV3.tsx",
       "start_line": 1,
       "end_line": 138,
-      "checksum": "b3d605de84320bae",
+      "checksum": "99f2b4bcd4300b9a",
       "description": "STG-571 v3 screen",
       "test_file": "src/__tests__/screens/more-layer5.stg-571-576.test.ts",
       "depends_on": null,

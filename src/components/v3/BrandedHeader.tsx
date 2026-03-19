@@ -4,6 +4,7 @@ import Svg, { Rect, Circle } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding, getHeaderSpacing, getNavIconSize } from "../../theme/responsive";
+import { shell } from "../../theme/brand";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { isOnline as checkOnline } from "../../services/networkStatus";
 
@@ -74,8 +75,8 @@ function createStyles(colors: ColorPalette) {
       gap: getHeaderSpacing(),
     },
     brandText: {
-      color: "#FFFFFF",
-      fontSize: 15,
+      color: colors.textInverse,
+      fontSize: 16,
       fontWeight: "800",
       letterSpacing: -0.3,
     },
@@ -120,7 +121,7 @@ function createStyles(colors: ColorPalette) {
       justifyContent: "center",
     },
     menuDots: {
-      color: "#FFFFFF",
+      color: colors.textInverse,
       fontSize: 18,
       fontWeight: "700",
     },

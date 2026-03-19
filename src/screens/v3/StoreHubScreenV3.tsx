@@ -4,6 +4,7 @@ import Svg, { Rect, Path, Circle, Line } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
+import { tabAccents, cardElevation, typeRhythm } from "../../theme/brand";
 import { getPurchaseHistory } from "../../services/api/inventoryApi";
 import { isOnline } from "../../services/networkStatus";
 import { logger } from "../../services/logger";
@@ -133,11 +134,12 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { backgroundColor: colors.primary, paddingHorizontal: getScreenPadding(), paddingVertical: 14, flexDirection: "row", alignItems: "center", gap: 8 },
-    headerTitle: { color: "#fff", fontSize: 16, fontWeight: "700" },
+    // V3-FIX-180: Branded STORE hero header with mode identity
+    header: { backgroundColor: tabAccents(colors).STORE.hero, paddingHorizontal: getScreenPadding(), paddingVertical: 16, flexDirection: "row", alignItems: "center", gap: 10 },
+    headerTitle: { color: colors.textInverse, fontSize: 18, fontWeight: "800", letterSpacing: -0.3 },
     body: { flex: 1 },
     grid: { flexDirection: "row", flexWrap: "wrap", padding: getScreenPadding(), gap: 12 },
-    card: { width: "47%", backgroundColor: colors.surface, borderRadius: 18, padding: 20, alignItems: "center", borderWidth: 1.5, borderColor: colors.border },
+    card: { width: "47%", backgroundColor: colors.surface, borderRadius: 18, padding: 20, alignItems: "center", borderWidth: 1, borderColor: colors.border, ...cardElevation.subtle },
     cardWarning: { borderColor: colors.warning },
     cardTitle: { fontSize: 15, fontWeight: "800", color: colors.textPrimary, marginTop: 8, letterSpacing: -0.3 },
     cardSub: { fontSize: 11, color: colors.textTertiary, marginTop: 4 },

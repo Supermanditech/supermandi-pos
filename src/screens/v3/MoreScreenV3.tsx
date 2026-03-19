@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding, getChipFontSize } from "../../theme/responsive";
+import { tabAccents, cardElevation, typeRhythm } from "../../theme/brand";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { getDailySummary, type DailySummary } from "../../services/api/dailySummaryApi";
 import { isOnline } from "../../services/networkStatus";
@@ -103,9 +104,10 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { backgroundColor: colors.primary, paddingHorizontal: 18, paddingVertical: 12, flexDirection: "row", alignItems: "center" },
-    greeting: { color: "#fff", fontSize: 17, fontWeight: "800", letterSpacing: -0.3 },
-    storeInfo: { color: "rgba(255,255,255,0.8)", fontSize: 11, fontWeight: "500", marginTop: 2 },
+    // V3-FIX-180: MORE mode identity — muted header with owner/settings feel
+    header: { backgroundColor: colors.textPrimary, paddingHorizontal: 18, paddingVertical: 14, flexDirection: "row", alignItems: "center" },
+    greeting: { color: colors.textInverse, fontSize: 17, fontWeight: "800", letterSpacing: -0.3 },
+    storeInfo: { color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: "500", marginTop: 2 },
     settingsBtn: { width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     settingsIcon: { fontSize: 18 },
     body: { flex: 1 },
@@ -115,9 +117,9 @@ function createStyles(colors: ColorPalette) {
     morningKey: { color: "rgba(255,255,255,0.8)", fontSize: 13 },
     morningVal: { color: "#fff", fontSize: 13, fontWeight: "700" },
     statsRow: { flexDirection: "row", gap: 8, paddingHorizontal: getScreenPadding() },
-    statCard: { flex: 1, padding: 14, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border },
-    statLabel: { fontSize: 10, fontWeight: "700", color: colors.textTertiary, textTransform: "uppercase", letterSpacing: 0.5 },
-    statVal: { fontSize: 22, fontWeight: "900", marginTop: 4, letterSpacing: -0.5 },
+    statCard: { flex: 1, padding: 14, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, ...cardElevation.subtle },
+    statLabel: { ...typeRhythm.sectionTitle, color: colors.textTertiary, textTransform: "uppercase" },
+    statVal: { ...typeRhythm.heroStat, fontSize: 22, marginTop: 4 },
     statSub: { fontSize: 11, color: colors.textTertiary, marginTop: 2 },
     financeBanner: { marginHorizontal: getScreenPadding(), marginTop: 10, padding: 14, borderRadius: 16, backgroundColor: "#7C3AED", flexDirection: "row", alignItems: "center", gap: 12 },
     financeIcon: { fontSize: 28 },
