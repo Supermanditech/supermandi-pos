@@ -77,24 +77,15 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
           return;
         }
 
-        // V3-HARDEN-171: Loose/bulk product — route to variant picker or quick-qty
+        // V3-HARDEN-171: Loose/bulk parent barcode — show chooser, do NOT pre-add
+        // Operator must pick quantity via presets or manual entry before anything is added to cart
         if (product.productMode === "LOOSE_BULK" && product.rateUnit) {
-          // For loose products, show the found result with sell-unit info
-          // and let the operator choose quantity via the result panel
           setLastResult({
             barcode: code, productName: product.name,
             price: product.priceMinor, stock: product.stock, isNew: false,
           });
-          // Add 1 unit at the product's rate unit (operator can adjust via cart)
-          const existing = useCartStore.getState().items.find((i) => i.barcode === code);
-          if (existing) {
-            useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
-            showToast(`${product.name} ×${existing.quantity + 1} (per ${product.rateUnit})`);
-          } else {
-            addItem(buildCartItem(product));
-            showToast(`${product.name} added (per ${product.rateUnit})`);
-          }
-          onProductFound(code, context);
+          showToast(`${product.name} — choose quantity below (per ${product.rateUnit})`);
+          // Do NOT add to cart here — quick-qty presets in the result panel handle the add
           return;
         }
 

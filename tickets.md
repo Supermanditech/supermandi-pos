@@ -7838,7 +7838,11 @@ Scope narrowing (2026-03-19):
   - publish materialization: sets product_mode, sold_by, rate_unit on store_products from approved
     sell_unit and split_sell_eligible — downstream POS/retailer reads get the full sell profile
   - operator flow: supplier-catalog review modal supports preview/edit/defer modes with distinct
-    conversionConfirmed outcomes; scan quick-qty presets use correct fractional amounts
+    conversionConfirmed outcomes and edited setup persistence; scan loose parent barcode opens
+    chooser without pre-adding (operator picks qty first); quick-qty presets use correct fractional
+    amounts; NewProduct has accept/edit/defer setup flow
+  - POS BUY catalog response now includes procurementUnit, procurementPackQty, baseStockUnit,
+    productMode, soldBy, rateUnit from store_products — POS BUY mapping consumes them
   - data flow: CSV import (create-new and update-existing with full product_mode/procurement/base/confirmed),
     supplier-catalog add (with conversion review modal — "Use Suggested Setup & Add" sets
     conversion_confirmed=true, "Add & Set Up Later" sets conversion_confirmed=false),

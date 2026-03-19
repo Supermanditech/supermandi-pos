@@ -939,8 +939,13 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
   }
 
   const { productId } = req.params;
-  // V3-FIX-170: Accept conversionConfirmed from frontend review flow
-  const { initialStock = 0, sellPrice, conversionConfirmed: clientConversionConfirmed } = req.body;
+  // V3-FIX-170: Accept conversionConfirmed + edited setup from frontend review flow
+  const {
+    initialStock = 0, sellPrice, conversionConfirmed: clientConversionConfirmed,
+    procurementUnit: clientProcurementUnit,
+    procurementPackQty: clientProcurementPackQty,
+    baseStockUnit: clientBaseStockUnit,
+  } = req.body;
 
   const client = await pool.connect();
   try {
@@ -1016,9 +1021,10 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
 
     // V3-FIX-170: Infer conversion defaults for supplier-catalog add
     const { inferBaseStockUnit: inferBSU } = require("../../../services/conversionEngine");
-    const catAddBaseUnit = product.base_stock_unit || inferBSU(null, null, null, product.unit);
-    const catAddProcUnit = product.procurement_unit || catAddBaseUnit;
-    const catAddPackQty = product.procurement_pack_qty || 1;
+    // V3-FIX-170: Use client-edited values when provided, fall back to supplier defaults
+    const catAddBaseUnit = clientBaseStockUnit?.trim()?.toUpperCase() || product.base_stock_unit || inferBSU(null, null, null, product.unit);
+    const catAddProcUnit = clientProcurementUnit?.trim()?.toUpperCase() || product.procurement_unit || catAddBaseUnit;
+    const catAddPackQty = clientProcurementPackQty ? parseFloat(String(clientProcurementPackQty)) : (product.procurement_pack_qty || 1);
 
     // Add to store catalog using the resolved catalog product_id
     // V3-FIX-170: Include conversion profile from supplier product

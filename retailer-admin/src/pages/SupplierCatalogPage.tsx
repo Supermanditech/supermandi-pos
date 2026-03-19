@@ -119,8 +119,12 @@ export default function SupplierCatalogPage() {
     return () => clearTimeout(timeout);
   }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // V3-FIX-170: Add product with conversion setup state
-  const handleAddProduct = async (product: SupplierProduct, conversionConfirmed = false) => {
+  // V3-FIX-170: Add product with conversion setup state and optional edited values
+  const handleAddProduct = async (
+    product: SupplierProduct,
+    conversionConfirmed = false,
+    editedSetup?: { procurementUnit?: string; procurementPackQty?: number; baseStockUnit?: string }
+  ) => {
     setAddingProductId(product.productId);
     setAddError(null);
     setError('');
@@ -134,8 +138,11 @@ export default function SupplierCatalogPage() {
           body: JSON.stringify({
             sellPrice: product.retailerPriceMinor,
             initialStock: 0,
-            // V3-FIX-170: Signal whether conversion setup was reviewed/confirmed
             conversionConfirmed,
+            // V3-FIX-170: Send edited setup values when operator reviewed/edited
+            ...(editedSetup?.procurementUnit ? { procurementUnit: editedSetup.procurementUnit } : {}),
+            ...(editedSetup?.procurementPackQty ? { procurementPackQty: editedSetup.procurementPackQty } : {}),
+            ...(editedSetup?.baseStockUnit ? { baseStockUnit: editedSetup.baseStockUnit } : {}),
           }),
         }
       );
@@ -449,9 +456,12 @@ export default function SupplierCatalogPage() {
                       setEditSetupPackQty(String((reviewProduct as any).procurementPackQty || 1));
                       setEditSetupStockUnit((reviewProduct as any).baseStockUnit || '');
                     } else {
-                      // Save edits back to product and add
-                      // The edited values will be persisted through the same backend flow
-                      handleAddProduct(reviewProduct, true);
+                      // Save edited setup and add with conversion confirmed
+                      handleAddProduct(reviewProduct, true, {
+                        procurementUnit: editSetupUnit || undefined,
+                        procurementPackQty: editSetupPackQty ? parseFloat(editSetupPackQty) : undefined,
+                        baseStockUnit: editSetupStockUnit || undefined,
+                      });
                       setReviewProduct(null);
                       setReviewMode('preview');
                     }

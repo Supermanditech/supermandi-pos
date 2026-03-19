@@ -79,6 +79,7 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
   const [procurementUnit, setProcurementUnit] = useState("");
   const [procurementPackQty, setProcurementPackQty] = useState("1");
   const [baseStockUnit, setBaseStockUnit] = useState("");
+  const [setupMode, setSetupMode] = useState<"suggest" | "edit" | "accepted">("suggest");
 
   const canSubmit = name.trim().length > 0 && (sellPrice.trim().length > 0 || mrp.trim().length > 0);
 
@@ -264,30 +265,65 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
                 <TextInput style={styles.fieldInput} value={baseStockUnit} onChangeText={setBaseStockUnit} placeholder="KG" placeholderTextColor={colors.textTertiary} />
               </View>
             </View>
-            {/* V3-FIX-168: Guided onboarding — auto-configured based on stock unit */}
-            <View style={{ backgroundColor: colors.primaryLight || '#eff6ff', borderRadius: 8, padding: 10, marginTop: 4 }}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary, marginBottom: 4 }}>
-                Retail Setup (auto-configured)
-              </Text>
-              {baseStockUnit === 'KG' ? (
-                <>
-                  <Text style={{ fontSize: 11, color: colors.textSecondary }}>Sell per KG · Variants: 250g, 500g, 1kg, 5kg</Text>
-                  <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: 2 }}>Auto-created after save. Set prices in cart or Products page.</Text>
-                </>
-              ) : baseStockUnit === 'LTR' ? (
-                <>
-                  <Text style={{ fontSize: 11, color: colors.textSecondary }}>Sell per LTR · Variants: 250ml, 500ml, 1L</Text>
-                  <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: 2 }}>Auto-created after save. Set prices in cart or Products page.</Text>
-                </>
-              ) : baseStockUnit === 'PCS' ? (
-                <>
-                  <Text style={{ fontSize: 11, color: colors.textSecondary }}>Sell per PCS · Variants: 1pc, 6pcs, 12pcs</Text>
-                  <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: 2 }}>Auto-created after save. Set prices in cart or Products page.</Text>
-                </>
-              ) : (
-                <Text style={{ fontSize: 11, color: colors.textTertiary }}>Set stock unit above to configure retail setup</Text>
-              )}
-            </View>
+            {/* V3-FIX-168: Guided onboarding with distinct operator actions */}
+            {setupMode === "accepted" ? (
+              <View style={{ backgroundColor: '#ecfdf5', borderRadius: 8, padding: 10, marginTop: 4, borderWidth: 1, borderColor: '#86efac' }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#16a34a' }}>Retail Setup Confirmed</Text>
+                <Text style={{ fontSize: 11, color: '#15803d' }}>
+                  {baseStockUnit === 'KG' ? 'Sell per KG · Variants: 250g, 500g, 1kg, 5kg' :
+                   baseStockUnit === 'LTR' ? 'Sell per LTR · Variants: 250ml, 500ml, 1L' :
+                   baseStockUnit === 'PCS' ? 'Sell per PCS · Variants: 1pc, 6pcs, 12pcs' : 'Custom setup'}
+                </Text>
+                <Pressable onPress={() => setSetupMode("edit")} style={{ marginTop: 4 }}>
+                  <Text style={{ fontSize: 11, color: colors.primary, fontWeight: '600' }}>Edit Setup</Text>
+                </Pressable>
+              </View>
+            ) : setupMode === "edit" ? (
+              <View style={{ backgroundColor: '#fef3c7', borderRadius: 8, padding: 10, marginTop: 4, borderWidth: 1, borderColor: '#fbbf24' }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400e', marginBottom: 4 }}>Edit Retail Setup</Text>
+                <Text style={{ fontSize: 10, color: '#78716c' }}>Adjust procurement and stock settings above, then confirm.</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                  <Pressable
+                    style={{ flex: 1, backgroundColor: colors.primary, borderRadius: 6, padding: 8, alignItems: 'center' }}
+                    onPress={() => setSetupMode("accepted")}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#fff' }}>Confirm Setup</Text>
+                  </Pressable>
+                  <Pressable
+                    style={{ flex: 1, backgroundColor: colors.border, borderRadius: 6, padding: 8, alignItems: 'center' }}
+                    onPress={() => setSetupMode("suggest")}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary }}>Cancel</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <View style={{ backgroundColor: colors.primaryLight || '#eff6ff', borderRadius: 8, padding: 10, marginTop: 4 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary, marginBottom: 4 }}>
+                  Suggested Retail Setup
+                </Text>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }}>
+                  {baseStockUnit === 'KG' ? 'Sell per KG · Variants: 250g, 500g, 1kg, 5kg' :
+                   baseStockUnit === 'LTR' ? 'Sell per LTR · Variants: 250ml, 500ml, 1L' :
+                   baseStockUnit === 'PCS' ? 'Sell per PCS · Variants: 1pc, 6pcs, 12pcs' :
+                   'Set stock unit above to see suggestions'}
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                  <Pressable
+                    style={{ flex: 1, backgroundColor: colors.primary, borderRadius: 6, padding: 8, alignItems: 'center' }}
+                    onPress={() => setSetupMode("accepted")}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#fff' }}>Use Suggested</Text>
+                  </Pressable>
+                  <Pressable
+                    style={{ flex: 1, backgroundColor: colors.background, borderRadius: 6, padding: 8, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}
+                    onPress={() => setSetupMode("edit")}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary }}>Edit Setup</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
           </>
         ) : null}
 

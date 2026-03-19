@@ -129,7 +129,13 @@ catalogRouter.get("/stores/:storeId/catalog", requireDeviceToken, async (req: Re
           WHEN COALESCE(sb.current_qty, sp.current_stock, 0) <= 5 THEN 'low_stock'
           ELSE 'in_stock'
         END as "stockStatus",
-        p.is_active as "isActive"
+        p.is_active as "isActive",
+        sp.procurement_unit as "procurementUnit",
+        sp.procurement_pack_qty as "procurementPackQty",
+        sp.base_stock_unit as "baseStockUnit",
+        sp.product_mode as "productMode",
+        sp.sold_by as "soldBy",
+        sp.rate_unit as "rateUnit"
       FROM catalog.store_products sp
       LEFT JOIN catalog.products p ON p.id = sp.product_id
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -152,6 +158,13 @@ catalogRouter.get("/stores/:storeId/catalog", requireDeviceToken, async (req: Re
       stockStatus: row.stockStatus,
       isActive: row.isActive !== false,
       suppliers: [],
+      // V3-FIX-169: Approved sell-side conversion profile
+      procurementUnit: row.procurementUnit || null,
+      procurementPackQty: row.procurementPackQty != null ? Number(row.procurementPackQty) : null,
+      baseStockUnit: row.baseStockUnit || null,
+      productMode: row.productMode || null,
+      soldBy: row.soldBy || null,
+      rateUnit: row.rateUnit || null,
     }));
 
     const responsePayload = {
