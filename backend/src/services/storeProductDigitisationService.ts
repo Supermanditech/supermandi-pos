@@ -561,12 +561,23 @@ export async function createStoreProductFromDigitisation(
 
     log.info("[digitisation] Successfully created store product:", actualStoreProductId, "for store:", storeId);
 
-    // Return the created store product with real conversion profile
+    // V3-FIX-167: Reload actual persisted row to return truthful conversion profile
+    // (ON CONFLICT may have preserved existing values via COALESCE)
+    const reloadResult = await client.query(
+      `SELECT sp.product_mode, sp.sold_by, sp.rate_unit,
+              sp.procurement_unit, sp.procurement_pack_qty,
+              sp.base_stock_unit, sp.conversion_confirmed
+       FROM catalog.store_products sp
+       WHERE sp.id = $1`,
+      [actualStoreProductId]
+    );
+    const actual = reloadResult.rows[0] || {};
+
     return {
       success: true,
       storeProduct: {
         storeProductId: actualStoreProductId,
-        productId, // ISSUE-068: catalog.products.id for variant resolution
+        productId,
         name: productName,
         barcode: normalizedBarcode,
         sellPrice: sellPriceMinor ?? null,
@@ -582,14 +593,14 @@ export async function createStoreProductFromDigitisation(
         imageUrl: "",
         variant: input.variant?.trim() || "",
         packSize: input.packSize ?? null,
-        // V3-FIX-167: Return real conversion profile, not hardcoded PACKAGED
-        productMode: digProductMode,
-        soldBy: digProductMode === 'LOOSE_BULK' ? 'WEIGHT' : undefined,
-        rateUnit: digProductMode === 'LOOSE_BULK' ? (digBaseStockUnit || 'KG') : undefined,
-        procurementUnit: digProcurementUnit,
-        procurementPackQty: digProcurementPackQty,
-        baseStockUnit: digBaseStockUnit,
-        conversionConfirmed: true,
+        // V3-FIX-167: Return actual persisted conversion profile
+        productMode: actual.product_mode || digProductMode,
+        soldBy: actual.sold_by || (actual.product_mode === 'LOOSE_BULK' ? 'WEIGHT' : undefined),
+        rateUnit: actual.rate_unit || (actual.product_mode === 'LOOSE_BULK' ? (actual.base_stock_unit || 'KG') : undefined),
+        procurementUnit: actual.procurement_unit || digProcurementUnit,
+        procurementPackQty: actual.procurement_pack_qty ? Number(actual.procurement_pack_qty) : digProcurementPackQty,
+        baseStockUnit: actual.base_stock_unit || digBaseStockUnit,
+        conversionConfirmed: actual.conversion_confirmed ?? true,
       }
     };
   } catch (error) {

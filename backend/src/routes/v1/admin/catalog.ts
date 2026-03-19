@@ -146,7 +146,9 @@ adminCatalogRouter.get(
           sp.procurement_unit AS "procurementUnit",
           sp.procurement_pack_qty AS "procurementPackQty",
           sp.base_stock_unit AS "baseStockUnit",
-          sp.split_sell_eligible AS "splitSellEligible"
+          sp.split_sell_eligible AS "splitSellEligible",
+          sp.sell_unit AS "sellUnit",
+          sp.default_retail_variants AS "defaultVariants"
         FROM catalog.supplier_products sp
         LEFT JOIN supplier.suppliers s ON s.id = sp.supplier_id
         ${whereClause}
@@ -290,7 +292,8 @@ adminCatalogRouter.patch(
     if (!pool) return res.status(503).json({ error: "database unavailable" });
 
     const { productId } = req.params;
-    const { procurementUnit, procurementPackQty, baseStockUnit, splitSellEligible } = req.body;
+    const { procurementUnit, procurementPackQty, baseStockUnit, splitSellEligible,
+            sellUnit, defaultVariants } = req.body;
 
     try {
       const result = await pool.query(
@@ -299,17 +302,23 @@ adminCatalogRouter.patch(
              procurement_pack_qty = COALESCE($2, procurement_pack_qty),
              base_stock_unit = COALESCE($3, base_stock_unit),
              split_sell_eligible = COALESCE($4, split_sell_eligible),
+             sell_unit = COALESCE($6, sell_unit),
+             default_retail_variants = COALESCE($7, default_retail_variants),
              updated_at = NOW()
-         WHERE id = $5::uuid
+         WHERE id = $8::uuid
          RETURNING id, procurement_unit AS "procurementUnit",
                    procurement_pack_qty AS "procurementPackQty",
                    base_stock_unit AS "baseStockUnit",
-                   split_sell_eligible AS "splitSellEligible"`,
+                   split_sell_eligible AS "splitSellEligible",
+                   sell_unit AS "sellUnit",
+                   default_retail_variants AS "defaultVariants"`,
         [
           procurementUnit?.trim() || null,
           procurementPackQty != null ? parseFloat(procurementPackQty) : null,
           baseStockUnit?.trim() || null,
           splitSellEligible != null ? splitSellEligible : null,
+          sellUnit?.trim() || null,
+          defaultVariants?.trim() || null,
           productId,
         ]
       );

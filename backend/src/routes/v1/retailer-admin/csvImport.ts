@@ -532,17 +532,24 @@ async function commitSingleRow(
       const updPackQty = row.procurement_pack_qty ? parseFloat(row.procurement_pack_qty) : null;
       const updBaseUnit = row.base_stock_unit?.trim()?.toUpperCase() || null;
 
+      // V3-FIX-168: Infer conversion defaults for update path (same logic as create)
+      const updResolvedBase = updBaseUnit || inferBSU(mode, row.sold_by, row.rate_unit, row.unit);
+      const updResolvedProc = updProcUnit || updResolvedBase;
+      const updResolvedPackQty = updPackQty || 1;
+
       await client.query(
         `UPDATE catalog.store_products SET
           sell_price = $2, mrp = $3, purchase_price = $4,
           current_stock = $5,
-          procurement_unit = COALESCE($6, procurement_unit),
-          procurement_pack_qty = COALESCE($7, procurement_pack_qty),
-          base_stock_unit = COALESCE($8, base_stock_unit),
+          product_mode = COALESCE($6, product_mode),
+          procurement_unit = COALESCE($7, procurement_unit),
+          procurement_pack_qty = COALESCE($8, procurement_pack_qty),
+          base_stock_unit = COALESCE($9, base_stock_unit),
+          conversion_confirmed = COALESCE($10, conversion_confirmed),
           updated_at = NOW()
          WHERE id = $1`,
         [existingStoreProductId, sellPricePaise, row.mrp || null, purchasePricePaise, stock,
-         updProcUnit, updPackQty, updBaseUnit]
+         mode || null, updResolvedProc, updResolvedPackQty, updResolvedBase, true]
       );
 
       await client.query(

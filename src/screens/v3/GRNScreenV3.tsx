@@ -224,6 +224,11 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
                 return {
                   productId: item.productId || item.barcode,
                   quantity: landedQty,
+                  // V3-FIX-170: Carry conversion fields through to backend
+                  procurementUnit: item.procurementUnit,
+                  procurementPackQty: item.procurementPackQty,
+                  baseStockUnit: item.baseStockUnit,
+                  conversionConfirmed: item.conversionConfirmed,
                 };
               });
               const grnNotes = `GRN receipt: ${receivedItems.length} items, ${totalReceived} units received`;

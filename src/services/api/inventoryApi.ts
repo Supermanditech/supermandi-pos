@@ -31,6 +31,11 @@ export interface InventoryTransactionItem {
   // SCALE-C1: Optional batch tracking fields for FEFO and expiry alerts
   batchNumber?: string | null;
   expiryDate?: string | null; // ISO date YYYY-MM-DD
+  // V3-FIX-170: Canonical conversion fields for procurement-aware inward
+  procurementUnit?: string;
+  procurementPackQty?: number;
+  baseStockUnit?: string;
+  conversionConfirmed?: boolean;
 }
 
 export interface InventoryTransactionInput {
@@ -234,12 +239,17 @@ export async function recordManualInward(
   const referenceId = `INWARD-${Date.now()}`;
 
   // SCALE-C1: Map items preserving batchNumber and expiryDate for backend persistence
+  // V3-FIX-170: Also carry conversion fields for procurement-aware inward
   const mappedItems = items.map((item) => ({
     productId: item.productId,
     quantity: item.quantity,
     unitCost: item.unitCost,
     ...(item.batchNumber ? { batchNumber: item.batchNumber } : {}),
     ...(item.expiryDate ? { expiryDate: item.expiryDate } : {}),
+    ...(item.procurementUnit ? { procurementUnit: item.procurementUnit } : {}),
+    ...(item.procurementPackQty ? { procurementPackQty: item.procurementPackQty } : {}),
+    ...(item.baseStockUnit ? { baseStockUnit: item.baseStockUnit } : {}),
+    ...(item.conversionConfirmed != null ? { conversionConfirmed: item.conversionConfirmed } : {}),
   }));
 
   const response = await apiClient.post<{ data: InventoryTransactionResponse }>(

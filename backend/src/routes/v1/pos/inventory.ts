@@ -364,17 +364,19 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, requireAc
       }
 
       // V3-FIX-170: Persist conversion profile on inward if provided
-      if (procurementUnit || baseStockUnit) {
+      if (procurementUnit || baseStockUnit || conversionConfirmed != null) {
         await client.query(
           `UPDATE catalog.store_products SET
             procurement_unit = COALESCE($3, procurement_unit),
             procurement_pack_qty = COALESCE($4, procurement_pack_qty),
-            base_stock_unit = COALESCE($5, base_stock_unit)
+            base_stock_unit = COALESCE($5, base_stock_unit),
+            conversion_confirmed = COALESCE($6, conversion_confirmed)
            WHERE store_id = $1 AND product_id = $2`,
           [storeId, productId,
            procurementUnit?.trim()?.toUpperCase() || null,
            procurementPackQty ? parseFloat(String(procurementPackQty)) : null,
-           baseStockUnit?.trim()?.toUpperCase() || null]
+           baseStockUnit?.trim()?.toUpperCase() || null,
+           conversionConfirmed != null ? conversionConfirmed : null]
         );
       }
 

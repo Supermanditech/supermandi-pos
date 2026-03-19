@@ -109,12 +109,13 @@ export function CatalogTab() {
     setEditProcurementPackQty((product as any).procurementPackQty ? String((product as any).procurementPackQty) : "1");
     setEditBaseStockUnit((product as any).baseStockUnit || "");
     setEditSplitSellEligible((product as any).splitSellEligible || false);
-    // V3-FIX-169: Sells-as defaults
-    setEditSellUnit((product as any).baseStockUnit || "");
+    // V3-FIX-169: Sells-as — load from saved data, fallback to suggestion
+    setEditSellUnit((product as any).sellUnit || (product as any).baseStockUnit || "");
     setEditDefaultVariants(
-      (product as any).baseStockUnit === "KG" ? "250g, 500g, 1kg, 5kg" :
-      (product as any).baseStockUnit === "LTR" ? "250ml, 500ml, 1L" :
-      (product as any).baseStockUnit === "PCS" ? "1pc, 6pcs, 12pcs" : ""
+      (product as any).defaultVariants ||
+      ((product as any).baseStockUnit === "KG" ? "250g, 500g, 1kg, 5kg" :
+       (product as any).baseStockUnit === "LTR" ? "250ml, 500ml, 1L" :
+       (product as any).baseStockUnit === "PCS" ? "1pc, 6pcs, 12pcs" : "")
     );
   };
 

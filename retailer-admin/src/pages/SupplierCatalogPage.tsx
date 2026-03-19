@@ -55,6 +55,8 @@ export default function SupplierCatalogPage() {
   const [addingProductId, setAddingProductId] = useState<string | null>(null);
   // SUPPLIER-CATALOG-ADD-NO-ERROR-UI: track per-product add errors inline
   const [addError, setAddError] = useState<{ productId: string; message: string } | null>(null);
+  // V3-FIX-170: Conversion review modal state
+  const [reviewProduct, setReviewProduct] = useState<SupplierProduct | null>(null);
 
   // Fetch supplier catalog
   const fetchCatalog = useCallback(async (query?: string, offset = 0) => {
@@ -306,7 +308,15 @@ export default function SupplierCatalogPage() {
                 ) : (
                   <button
                     className="btn btn-primary btn-full"
-                    onClick={() => handleAddProduct(product)}
+                    onClick={() => {
+                      // V3-FIX-170: Route through conversion review when bulk setup needed
+                      const p = product as any;
+                      if (p.procurementUnit && p.baseStockUnit && p.procurementUnit !== p.baseStockUnit) {
+                        setReviewProduct(product);
+                      } else {
+                        handleAddProduct(product);
+                      }
+                    }}
                     disabled={addingProductId === product.productId}
                   >
                     {addingProductId === product.productId ? 'Adding...' : '+ Add to My Catalog'}
@@ -345,6 +355,58 @@ export default function SupplierCatalogPage() {
           </ul>
         </div>
       </div>
+
+      {/* V3-FIX-170: Conversion review modal for bulk supplier products */}
+      {reviewProduct && (
+        <div className="sa-modal-overlay" onClick={() => setReviewProduct(null)}>
+          <div className="card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440, margin: '10vh auto', padding: 24 }}>
+            <h3 style={{ marginTop: 0 }}>Review Conversion Setup</h3>
+            <p style={{ fontSize: 14, color: '#374151' }}>
+              <strong>{reviewProduct.displayName}</strong> requires conversion review before adding to your catalog.
+            </p>
+            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: 12, margin: '12px 0' }}>
+              <table style={{ fontSize: 13, width: '100%' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '4px 0', color: '#6b7280' }}>Bought as:</td>
+                    <td style={{ fontWeight: 600 }}>
+                      {(reviewProduct as any).procurementUnit || reviewProduct.unit || 'PCS'}
+                      {(reviewProduct as any).procurementPackQty && Number((reviewProduct as any).procurementPackQty) > 1
+                        ? ` (${(reviewProduct as any).procurementPackQty} per pack)`
+                        : ''}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px 0', color: '#6b7280' }}>Stocked as:</td>
+                    <td style={{ fontWeight: 600 }}>{(reviewProduct as any).baseStockUnit || 'PCS'}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px 0', color: '#6b7280' }}>Split-sell:</td>
+                    <td style={{ fontWeight: 600 }}>{(reviewProduct as any).splitSellEligible ? 'Yes — can sell in smaller retail units' : 'No'}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px 0', color: '#6b7280' }}>Your price:</td>
+                    <td style={{ fontWeight: 600, color: '#16a34a' }}>{formatPrice(reviewProduct.retailerPriceMinor)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p style={{ fontSize: 12, color: '#6b7280', margin: '8px 0' }}>
+              After adding, you can set retail variants (e.g., 250g, 500g, 1kg) in Products → Variants.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="btn btn-secondary" onClick={() => setReviewProduct(null)}>Cancel</button>
+              <button
+                className="btn btn-primary"
+                disabled={addingProductId === reviewProduct.productId}
+                onClick={() => { handleAddProduct(reviewProduct); setReviewProduct(null); }}
+              >
+                {addingProductId === reviewProduct.productId ? 'Adding...' : 'Confirm & Add'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

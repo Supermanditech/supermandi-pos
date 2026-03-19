@@ -249,20 +249,34 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
         </View>
 
         {productMode === "LOOSE_BULK" ? (
-          <View style={styles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.fieldLabel}>BOUGHT AS</Text>
-              <TextInput style={styles.fieldInput} value={procurementUnit} onChangeText={setProcurementUnit} placeholder="BAG/CARTON" placeholderTextColor={colors.textTertiary} />
+          <>
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldLabel}>BOUGHT AS</Text>
+                <TextInput style={styles.fieldInput} value={procurementUnit} onChangeText={setProcurementUnit} placeholder="BAG/CARTON" placeholderTextColor={colors.textTertiary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldLabel}>PER PACK</Text>
+                <TextInput style={styles.fieldInput} value={procurementPackQty} onChangeText={setProcurementPackQty} placeholder="50" placeholderTextColor={colors.textTertiary} keyboardType="numeric" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldLabel}>STOCK UNIT</Text>
+                <TextInput style={styles.fieldInput} value={baseStockUnit} onChangeText={setBaseStockUnit} placeholder="KG" placeholderTextColor={colors.textTertiary} />
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.fieldLabel}>PER PACK</Text>
-              <TextInput style={styles.fieldInput} value={procurementPackQty} onChangeText={setProcurementPackQty} placeholder="50" placeholderTextColor={colors.textTertiary} keyboardType="numeric" />
+            {/* V3-FIX-168: Suggested retail variants for guided onboarding */}
+            <View style={{ backgroundColor: colors.primaryLight || '#eff6ff', borderRadius: 8, padding: 10, marginTop: 4 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary, marginBottom: 4 }}>
+                Suggested Retail Variants
+              </Text>
+              <Text style={{ fontSize: 11, color: colors.textSecondary }}>
+                {baseStockUnit === 'KG' ? '250g, 500g, 1kg, 5kg — set prices in Products → Variants after save' :
+                 baseStockUnit === 'LTR' ? '250ml, 500ml, 1L — set prices in Products → Variants after save' :
+                 baseStockUnit === 'PCS' ? '1pc, 6pcs, 12pcs — set prices in Products → Variants after save' :
+                 'Set stock unit above to see suggestions'}
+              </Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.fieldLabel}>STOCK UNIT</Text>
-              <TextInput style={styles.fieldInput} value={baseStockUnit} onChangeText={setBaseStockUnit} placeholder="KG" placeholderTextColor={colors.textTertiary} />
-            </View>
-          </View>
+          </>
         ) : null}
 
         {/* MRP + Opening stock */}

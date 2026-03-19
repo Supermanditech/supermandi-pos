@@ -43,6 +43,8 @@ export type CatalogProduct = {
   procurementPackQty?: number | null;
   baseStockUnit?: string | null;
   splitSellEligible?: boolean | null;
+  sellUnit?: string | null;
+  defaultVariants?: string | null;
 };
 
 // V3-FIX-169: Update supplier product conversion metadata
