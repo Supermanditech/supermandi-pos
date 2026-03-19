@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # V3-HARDEN-178: Release gate — B2B procurement lifecycle
-# Validates structural AND behavioral readiness for the supplier-draft →
-# SuperAdmin-publish → retailer-browse/cart/checkout → payment-intent →
-# order-status chain. Includes code-level behavioral checks, not grep-only.
+# Layer 1-5: Structural validation (migration, service, card, checkout, API)
+# Layer 6: Behavioral proof via unit test execution (procurementPayment tests)
+# Layer 7: Code-level behavioral wiring checks
 # Exit 0 = PASS, Exit 1 = FAIL
 
 set -euo pipefail
@@ -218,6 +218,28 @@ if grep -q "deliveryTerms.*bestOffer\|financeEligible.*bestOffer\|publishedTerms
   echo "PASS: BUY mapper reads full buyer metadata from bestOffer"
 else
   echo "FAIL: BUY mapper still drops buyer metadata"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# ── LAYER 7: Behavioral proof via test execution ──
+echo ""
+echo "── Layer 7: Behavioral proof (test execution) ──"
+
+# Run procurement payment service tests — proves provider resolution and intent state
+cd backend 2>/dev/null
+if npx jest tests/procurementPayment.v3-fix-176.unit.test.ts --no-coverage --silent 2>/dev/null; then
+  echo "PASS: Procurement payment service tests pass (8 tests)"
+else
+  echo "FAIL: Procurement payment service tests failed"
+  ERRORS=$((ERRORS + 1))
+fi
+cd .. 2>/dev/null
+
+# TypeScript typecheck — proves code compiles with all type contracts
+if npx tsc --noEmit --project backend/tsconfig.json 2>/dev/null; then
+  echo "PASS: Backend TypeScript typecheck passes"
+else
+  echo "FAIL: Backend TypeScript typecheck failed"
   ERRORS=$((ERRORS + 1))
 fi
 

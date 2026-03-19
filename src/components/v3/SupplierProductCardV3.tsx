@@ -112,6 +112,16 @@ export default function SupplierProductCardV3({ product, orderQtyCases, onPress 
                 <Text style={[styles.tagText, { color: '#16a34a' }]}>BNPL</Text>
               </View>
             ) : null}
+            {product.financeEligible && !product.bnplAvailable ? (
+              <View style={[styles.tag, { backgroundColor: '#dcfce7' }]}>
+                <Text style={[styles.tagText, { color: '#16a34a' }]}>Credit</Text>
+              </View>
+            ) : null}
+            {product.deliveryTerms ? (
+              <View style={[styles.tag, { backgroundColor: '#f0f9ff' }]}>
+                <Text style={[styles.tagText, { color: '#0369a1', fontSize: 9 }]}>{product.deliveryTerms}</Text>
+              </View>
+            ) : null}
             {product.procurementUnit && product.procurementUnit !== product.unit ? (
               <View style={[styles.tag, { backgroundColor: '#f3e8ff' }]}>
                 <Text style={[styles.tagText, { color: '#7c3aed' }]}>{product.procurementUnit}{product.procurementPackQty && product.procurementPackQty > 1 ? ` ×${product.procurementPackQty}` : ''}</Text>

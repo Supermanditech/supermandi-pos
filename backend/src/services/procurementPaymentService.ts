@@ -106,7 +106,18 @@ export async function createPaymentIntent(
     return { id, status: 'pending' as PaymentIntentStatus, provider };
   }
 
-  // RAZORPAY / PINE_LABS / other — would create provider order, stays pending
+  if (provider === 'RAZORPAY' || provider === 'PINE_LABS') {
+    // Generate provider checkout URL — in production, this calls the provider API
+    // For now, generate a deterministic checkout URL that the frontend can redirect to
+    const checkoutUrl = `https://checkout.supermandi.tech/pay/${id}?amount=${amountRupees}&provider=${provider.toLowerCase()}`;
+    await client.query(
+      `UPDATE procurement.payment_intents SET status = 'pending', provider_order_id = $2, updated_at = NOW() WHERE id = $1`,
+      [id, `${provider}-${id.substring(0, 8)}`]
+    );
+    return { id, status: 'pending' as PaymentIntentStatus, provider, redirectUrl: checkoutUrl };
+  }
+
+  // MANUAL / other — stays created, no provider action needed
   return { id, status: 'created' as PaymentIntentStatus, provider };
 }
 
