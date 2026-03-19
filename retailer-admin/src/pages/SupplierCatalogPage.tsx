@@ -298,6 +298,15 @@ export default function SupplierCatalogPage() {
                   ) : null}
                 </div>
 
+                {/* V3-FIX-173: Richer buyer metadata — scheme, delivery terms, finance */}
+                {((product as any).scheme || (product as any).deliveryTerms || (product as any).financeEligible) ? (
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', fontSize: 11, marginTop: 2 }}>
+                    {(product as any).scheme ? <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 4 }}>{(product as any).scheme}</span> : null}
+                    {(product as any).deliveryTerms ? <span style={{ background: '#f0f9ff', color: '#0369a1', padding: '1px 6px', borderRadius: 4 }}>{(product as any).deliveryTerms}</span> : null}
+                    {(product as any).financeEligible ? <span style={{ background: '#dcfce7', color: '#16a34a', padding: '1px 6px', borderRadius: 4 }}>Finance</span> : null}
+                  </div>
+                ) : null}
+
                 {/* V3-FIX-168: Unit info for conversion awareness */}
                 {product.unit && (
                   <div className="scat-category" style={{ fontSize: 13, color: '#6b7280' }}>

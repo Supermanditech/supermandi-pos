@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 459,
+  "version": 461,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -4514,8 +4514,8 @@
       "ticket": "STG-509",
       "file": "backend/src/routes/v1/orders.ts",
       "start_line": 1653,
-      "end_line": 2127,
-      "checksum": "e3fb6e6e1f9196a5",
+      "end_line": 2166,
+      "checksum": "a686d3009c62afec",
       "description": "Reject GRN receive if total qty > ordered * 1.1 (10% tolerance)",
       "test_file": "src/__tests__/screens/grn-excess-qty.stg-509.test.ts",
       "depends_on": null,
@@ -8012,8 +8012,8 @@
       "ticket": "V3-FIX-169",
       "file": "supplier-portal/src/app/(dashboard)/products/page.tsx",
       "start_line": 90,
-      "end_line": 1290,
-      "checksum": "5bf7fa94f6800e62",
+      "end_line": 1316,
+      "checksum": "682138ee4bb3f453",
       "description": "Supplier product form with procurement packaging fields (procurementUnit, procurementPackQty, baseStockUnit, splitSellEligible)",
       "test_file": "backend/tests/conversionEngine.v3-fix-167.unit.test.ts",
       "depends_on": null,

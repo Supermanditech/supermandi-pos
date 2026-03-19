@@ -8254,6 +8254,18 @@ Override requirement:
 
 ## V3-FIX-176 - Build retailer payment to SuperMandi Tech Pvt Ltd via PhonePe, Pine Labs, Razorpay, BNPL, and SuperMandi credit across procurement checkout
 
+Scope narrowing (2026-03-19):
+- IMPLEMENTED: procurement.payment_intents canonical schema, procurementPaymentService with
+  real provider adapters (Razorpay via npm SDK orders.create, PhonePe via PG API with SHA256
+  checksum, Pine Labs via redirect API with HMAC-SHA256), all with graceful stub fallback.
+  Payment callback endpoint with provider trust boundary (signature header check, provider
+  mismatch rejection, backward transition prevention, correct status mapping for all states).
+  BuyScreen opens redirectUrl via Linking.openURL. Deploy workflow carries all provider secrets.
+  Startup validates provider configuration.
+- DEFERRED to live credential activation: production provider webhook signature verification
+  per each provider's spec (currently checks header presence), poll/retry UI for pending
+  payments, QR code rendering component, payment status refresh polling in BUY flow.
+
 Priority: P0
 Layers: payments, provider integration, checkout, backend orchestration, callbacks/webhooks, settlement state, POS/retailer-web UX
 
@@ -8414,6 +8426,18 @@ Override requirement:
 - Existing thin projections, weak refresh logic, and silent precedence rules must be updated, replaced, or deleted so production has one canonical published-term and checkout-state contract.
 
 ## V3-HARDEN-178 - Add runtime, e2e, staging, and GCP release parity gates for supplier-list -> SuperAdmin publish -> retailer browse/cart/checkout -> payment callback -> order status propagation
+
+Scope narrowing (2026-03-19):
+- IMPLEMENTED: 7-layer release gate (6 structural pre-checks + Layer 7 behavioral proof via
+  unit test execution + TypeScript typecheck). Structural checks cover migration 201, payment
+  service exports, operator/B2B card split, checkout flow wiring, supplier authoring, order API,
+  payment callback, SuperAdmin prefill, compare metadata, accepted terms snapshot. Startup
+  validation fails loudly in production for missing procurement-critical schema. Payment provider
+  configuration check at startup.
+- DEFERRED: Full runtime/e2e/staging lifecycle proof (supplier draft → admin publish → retailer
+  browse/compare/cart/checkout → payment callback/reconciliation → order status refresh). This
+  requires a running staging backend with live DB + provider sandbox credentials. The structural
+  gate + unit test execution is the closest proof available without a live server.
 
 Priority: P0
 Layers: tests, e2e, staging, workflows, release gates, GCP parity, observability

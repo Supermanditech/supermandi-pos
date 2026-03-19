@@ -873,6 +873,32 @@ export default function ProductsPage() {
                     value={formData.deliveryTerms || ''} onChange={handleChange}
                     className="input" placeholder="e.g. Free above ₹5000" />
                 </div>
+                <div className="col-span-2">
+                  <label htmlFor="product-moqTiers" className="label">MOQ Tier Discounts (JSON)</label>
+                  <input type="text" id="product-moqTiers" name="moqTiers"
+                    value={(formData as any).moqTiers || ''}
+                    onChange={handleChange}
+                    className="input font-mono text-xs"
+                    placeholder='[{"minQty":10,"discountPct":5},{"minQty":50,"discountPct":10}]' />
+                  <p className="text-xs text-slate-400 mt-1">Optional: JSON array of tier discounts by minimum quantity</p>
+                </div>
+                <div className="col-span-2">
+                  <label htmlFor="product-packageType" className="label">Package Type</label>
+                  <select id="product-packageType" name="packageType"
+                    value={(formData as any).packageType || ''}
+                    onChange={handleChange}
+                    className="input">
+                    <option value="">Not specified</option>
+                    <option value="LOOSE">Loose</option>
+                    <option value="CARTON">Carton</option>
+                    <option value="BOX">Box</option>
+                    <option value="CASE">Case</option>
+                    <option value="BAG">Bag</option>
+                    <option value="TIN">Tin</option>
+                    <option value="BOTTLE">Bottle</option>
+                    <option value="PER_UNIT">Per Unit</option>
+                  </select>
+                </div>
                 <div className="col-span-2 flex items-center gap-2">
                   <input type="checkbox" id="product-financeEligible" name="financeEligible"
                     checked={formData.financeEligible || false}
