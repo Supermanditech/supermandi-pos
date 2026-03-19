@@ -83,11 +83,10 @@ describe("V3-FIX-142: Procurement lane isolation (executable)", () => {
     );
     // Must tag each order as catalogue_principal
     expect(src).toContain("catalogue_principal");
-    expect(src).toContain("principal_order_submitted");
+    // Must call submitOrder after createOrder (principal lane submission)
+    expect(src).toContain("submitOrder(sid, order.id)");
     // Must NOT use old "standard" order type
     expect(src).not.toContain('orderType: "standard"');
-    // Comment must explain the principal lane behavior
-    expect(src).toContain("retailer→SuperMandi");
   });
 
   it("mixed-supplier BUY cart creates separate principal orders per supplier (executable)", () => {
