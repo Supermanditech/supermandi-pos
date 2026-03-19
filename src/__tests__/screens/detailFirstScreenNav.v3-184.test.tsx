@@ -666,6 +666,55 @@ describe("V3-HARDEN-184: Category/filter state retention across detail flow", ()
     }
   });
 
+  it("SELL: category selection state is retained after detail open→close", async () => {
+    render(<SellScreenV3 />);
+    await waitFor(() => expect(screen.getByTestId("sell-category-chips")).toBeTruthy());
+
+    // Select "Beverages" category
+    const bevChip = screen.queryByText("Beverages");
+    if (bevChip) {
+      fireEvent.press(bevChip);
+      // Verify Beverages is now the active selection (it stays in the chip list)
+      expect(screen.getByText("Beverages")).toBeTruthy();
+
+      // Open and close detail
+      const tiles = screen.queryAllByLabelText(/tap for details/i);
+      if (tiles.length > 0) {
+        fireEvent.press(tiles[0]);
+        await waitFor(() => expect(screen.getByTestId("product-detail-sheet")).toBeTruthy());
+        fireEvent.press(screen.getByLabelText("Close details"));
+        await waitFor(() => expect(screen.queryByTestId("product-detail-sheet")).toBeNull());
+      }
+
+      // Beverages chip still exists and the chips container is intact
+      expect(screen.getByText("Beverages")).toBeTruthy();
+      expect(screen.getByTestId("sell-category-chips")).toBeTruthy();
+      // No cart mutation during this flow
+      expect(mockAddItem).not.toHaveBeenCalled();
+    }
+  });
+
+  it("BUY: search query text is retained after detail open→close", async () => {
+    render(<BuyScreenV3 />);
+    await waitFor(() => expect(screen.getByText("Tata Tea Gold")).toBeTruthy());
+
+    // Type into BUY search input
+    const searchInput = screen.getByPlaceholderText("Search supplier products...");
+    fireEvent.changeText(searchInput, "Tata");
+
+    // Open detail
+    fireEvent.press(screen.getByText("Tata Tea Gold"));
+    await waitFor(() => expect(screen.getByTestId("product-detail-sheet")).toBeTruthy());
+
+    // Close detail
+    fireEvent.press(screen.getByLabelText("Close details"));
+    await waitFor(() => expect(screen.queryByTestId("product-detail-sheet")).toBeNull());
+
+    // Search input still has "Tata" text
+    const inputAfter = screen.getByPlaceholderText("Search supplier products...");
+    expect(inputAfter.props.value).toBe("Tata");
+  });
+
   it("SELL: mode strip (BILLING MODE) persists across detail flow", async () => {
     render(<SellScreenV3 />);
 

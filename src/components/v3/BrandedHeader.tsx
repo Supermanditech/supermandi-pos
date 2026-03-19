@@ -89,7 +89,7 @@ function createStyles(colors: ColorPalette) {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
-      backgroundColor: "rgba(255,255,255,0.15)",
+      backgroundColor: colors.overlayInverse,
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: 8,
@@ -107,13 +107,14 @@ function createStyles(colors: ColorPalette) {
       backgroundColor: colors.error,
     },
     statusText: {
-      color: "rgba(255,255,255,0.9)",
+      color: colors.textInverse,
       fontSize: 10,
       fontWeight: "600",
+      opacity: 0.9,
     },
     // V3-HARDEN-111: Responsive menu button size
     menuButton: {
-      backgroundColor: "rgba(255,255,255,0.15)",
+      backgroundColor: colors.overlayInverse,
       width: getNavIconSize() + 8,
       height: getNavIconSize() + 8,
       borderRadius: 10,

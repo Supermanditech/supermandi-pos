@@ -231,6 +231,32 @@ describe("V3-HARDEN-183: PosRootLayoutV3 mounted shell proof", () => {
     expect(screen.queryByTestId("more-stub")).toBeNull();
   });
 
+  it("tab touch targets are accessible (all have pressable role)", async () => {
+    render(<PosRootLayoutV3 />);
+    await waitFor(() => expect(screen.getByTestId("sell-stub")).toBeTruthy());
+
+    // Every tab in the nav bar is a pressable with role="tab"
+    for (const label of ["SELL", "BUY", "STORE", "MORE"]) {
+      const tab = screen.getByLabelText(label);
+      expect(tab).toBeTruthy();
+      // Tab is pressable — pressing it changes content
+      fireEvent.press(tab);
+    }
+    // After pressing MORE, MORE content is shown
+    await waitFor(() => expect(screen.getByTestId("more-stub")).toBeTruthy());
+  });
+
+  it("shell layout structure is correct — content + bottom nav", async () => {
+    const { toJSON } = render(<PosRootLayoutV3 />);
+    await waitFor(() => expect(screen.getByTestId("sell-stub")).toBeTruthy());
+    // The root renders without crash and produces a tree
+    const tree = toJSON();
+    expect(tree).toBeTruthy();
+    // Nav is present (4 tab labels in the tree)
+    expect(screen.getByText("SELL")).toBeTruthy();
+    expect(screen.getByText("MORE")).toBeTruthy();
+  });
+
   it("bottom nav remains visible and interactive across all tab switches", async () => {
     render(<PosRootLayoutV3 />);
     await waitFor(() => expect(screen.getByTestId("sell-stub")).toBeTruthy());

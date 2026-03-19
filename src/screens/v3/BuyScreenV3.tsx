@@ -334,7 +334,7 @@ export default function BuyScreenV3() {
       ) : null}
       {/* V3-FIX-175+176: Procurement checkout modal */}
       <Modal visible={checkoutVisible} transparent animationType="slide" onRequestClose={() => !ordering && setCheckoutVisible(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+        <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '80%' }}>
             <Text style={{ fontSize: 18, fontWeight: '800', color: colors.textPrimary, marginBottom: 12 }}>Procurement Checkout</Text>
             <Text style={{ fontSize: 12, color: colors.textTertiary, marginBottom: 8 }}>Payment to SuperMandi Tech Pvt Ltd</Text>
