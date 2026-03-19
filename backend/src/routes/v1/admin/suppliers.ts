@@ -1610,11 +1610,13 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
   try {
     await client.query("BEGIN");
 
-    // Verify product is approved
+    // Verify product is approved — V3-FIX-169: include conversion fields
     const productCheck = await client.query(
       `SELECT sp.id, sp.name, sp.barcode, sp.category, sp.unit,
               sp.purchase_price, sp.supermandi_margin_minor, sp.margin_percent,
-              sp.supplier_id, s.business_name as supplier_name
+              sp.supplier_id, s.business_name as supplier_name,
+              sp.procurement_unit, sp.procurement_pack_qty,
+              sp.base_stock_unit, sp.split_sell_eligible
        FROM catalog.supplier_products sp
        JOIN supplier.suppliers s ON s.id = sp.supplier_id
        WHERE sp.id = $1::uuid AND sp.approval_status = 'approved'`,
@@ -1669,16 +1671,28 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
     );
 
     let publishedCount = 0;
+    // V3-FIX-169: Infer base stock unit for published products
+    const { inferBaseStockUnit } = require("../../../services/conversionEngine");
+    const resolvedBaseStockUnit = product.base_stock_unit ||
+      inferBaseStockUnit(null, null, null, product.unit);
+    const resolvedProcurementUnit = product.procurement_unit || resolvedBaseStockUnit;
+    const resolvedPackQty = product.procurement_pack_qty || 1;
+
     for (const store of linkedStores.rows) {
-      // Add product to store catalog
+      // Add product to store catalog — V3-FIX-169: propagate conversion profile
       const insertResult = await client.query(
         `INSERT INTO catalog.store_products (
           store_id, product_id, display_name, sell_price, purchase_price,
-          current_stock, is_active, supplier_id
-        ) VALUES ($1, $2::uuid, $3, $4, $5, 0, true, $6::uuid)
+          current_stock, is_active, supplier_id,
+          procurement_unit, procurement_pack_qty, base_stock_unit,
+          allow_fractional_sell, conversion_confirmed
+        ) VALUES ($1, $2::uuid, $3, $4, $5, 0, true, $6::uuid,
+          $7, $8, $9, $10, false)
         RETURNING id`,
         [store.store_id, catalogProductId, product.name, retailerPrice,
-         product.purchase_price, product.supplier_id]
+         product.purchase_price, product.supplier_id,
+         resolvedProcurementUnit, resolvedPackQty, resolvedBaseStockUnit,
+         product.split_sell_eligible || false]
       );
 
       // Add barcode mapping

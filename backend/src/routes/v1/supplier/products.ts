@@ -415,6 +415,8 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
       manufacturerName, countryOfOrigin, shelfLifeDays, // SCALE-A1: Compliance fields
       netContentValue, // SCALE-A2
       netContentUnit,  // SCALE-A2
+      // V3-FIX-169: Procurement packaging metadata
+      procurementUnit, procurementPackQty, baseStockUnit, splitSellEligible,
     } = req.body;
 
     // Validation
@@ -494,6 +496,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
     // STG-080: Include image_url in INSERT
     // SCALE-A1: Include compliance fields
     // SCALE-A2: Include net_content_value and net_content_unit
+    // V3-FIX-169: Include procurement packaging metadata
     const result = await pool.query(
       `INSERT INTO catalog.supplier_products (
         supplier_id,
@@ -512,9 +515,13 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         manufacturer_name,
         country_of_origin,
         shelf_life_days,
+        procurement_unit,
+        procurement_pack_qty,
+        base_stock_unit,
+        split_sell_eligible,
         approval_status,
         is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'pending', true)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, 'pending', true)
       RETURNING
         id,
         name,
@@ -552,6 +559,10 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         manufacturerName?.trim() || null,
         countryOfOrigin?.trim() || null,
         shelfLifeDays !== undefined && shelfLifeDays !== null ? parseInt(shelfLifeDays) : null,
+        procurementUnit?.trim() || null,
+        procurementPackQty !== undefined && procurementPackQty !== null ? parseFloat(procurementPackQty) : null,
+        baseStockUnit?.trim() || null,
+        splitSellEligible === true || splitSellEligible === 'true',
       ]
     );
 

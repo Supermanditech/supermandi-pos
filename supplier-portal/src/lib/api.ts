@@ -520,6 +520,11 @@ export interface ProductInput {
   netContentUnit?: string;
   shelfLifeDays?: number;
   hsnCode?: string;
+  // V3-FIX-169: Procurement packaging and conversion metadata
+  procurementUnit?: string;
+  procurementPackQty?: number;
+  baseStockUnit?: string;
+  splitSellEligible?: boolean;
 }
 
 // GL-WF-063: Pagination types

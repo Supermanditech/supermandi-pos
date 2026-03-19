@@ -104,6 +104,11 @@ export default function ProductsPage() {
     netContentUnit: '',
     shelfLifeDays: undefined,
     hsnCode: '',
+    // V3-FIX-169: Procurement packaging metadata
+    procurementUnit: '',
+    procurementPackQty: undefined,
+    baseStockUnit: '',
+    splitSellEligible: false,
   });
 
   // GL-WF-063: Paginated products query
@@ -222,6 +227,11 @@ export default function ProductsPage() {
       netContentUnit: '',
       shelfLifeDays: undefined,
       hsnCode: '',
+      // V3-FIX-169: Procurement packaging reset
+      procurementUnit: '',
+      procurementPackQty: undefined,
+      baseStockUnit: '',
+      splitSellEligible: false,
     });
   };
 
@@ -728,6 +738,88 @@ export default function ProductsPage() {
                     className="input font-mono"
                     placeholder="e.g. 19023010"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* V3-FIX-169: Procurement Packaging & Conversion */}
+            <div>
+              <h4 className="text-sm font-semibold text-slate-700 mb-2">Procurement Packaging</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="product-procurementUnit" className="label">Shipped As</label>
+                  <select
+                    id="product-procurementUnit"
+                    name="procurementUnit"
+                    value={formData.procurementUnit || ''}
+                    onChange={handleChange}
+                    className="input"
+                  >
+                    <option value="">Same as unit</option>
+                    <option value="KG">Kilogram (KG)</option>
+                    <option value="GM">Gram (GM)</option>
+                    <option value="LTR">Litre (LTR)</option>
+                    <option value="ML">Millilitre (ML)</option>
+                    <option value="PCS">Piece (PCS)</option>
+                    <option value="DOZEN">Dozen</option>
+                    <option value="CARTON">Carton</option>
+                    <option value="CASE">Case</option>
+                    <option value="BAG">Bag</option>
+                    <option value="TIN">Tin</option>
+                    <option value="DRUM">Drum</option>
+                    <option value="TRAY">Tray</option>
+                    <option value="BOTTLE">Bottle</option>
+                    <option value="PACK">Pack</option>
+                  </select>
+                  <p className="text-xs text-slate-400 mt-1">How you ship this product to retailers</p>
+                </div>
+
+                <div>
+                  <label htmlFor="product-procurementPackQty" className="label">Units per Pack</label>
+                  <input
+                    type="number"
+                    id="product-procurementPackQty"
+                    name="procurementPackQty"
+                    value={formData.procurementPackQty ?? ''}
+                    onChange={handleChange}
+                    className="input"
+                    placeholder="e.g. 24 for a carton of 24"
+                    min="0.01"
+                    step="0.01"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Base units per procurement pack</p>
+                </div>
+
+                <div>
+                  <label htmlFor="product-baseStockUnit" className="label">Stock Unit</label>
+                  <select
+                    id="product-baseStockUnit"
+                    name="baseStockUnit"
+                    value={formData.baseStockUnit || ''}
+                    onChange={handleChange}
+                    className="input"
+                  >
+                    <option value="">Auto (from unit)</option>
+                    <option value="KG">Kilogram (KG)</option>
+                    <option value="GM">Gram (GM)</option>
+                    <option value="PCS">Piece (PCS)</option>
+                    <option value="LTR">Litre (LTR)</option>
+                    <option value="ML">Millilitre (ML)</option>
+                  </select>
+                  <p className="text-xs text-slate-400 mt-1">How retailers track this in inventory</p>
+                </div>
+
+                <div className="flex items-end pb-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      name="splitSellEligible"
+                      checked={formData.splitSellEligible || false}
+                      onChange={(e) => setFormData(prev => ({ ...prev, splitSellEligible: e.target.checked }))}
+                      className="rounded border-slate-300"
+                    />
+                    Retailer can split for retail sale
+                  </label>
                 </div>
               </div>
             </div>
