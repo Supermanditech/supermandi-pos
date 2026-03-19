@@ -197,6 +197,31 @@ export async function validateConversionSchemaReadiness(pool: any): Promise<{ re
   } catch {
     missing.push(...supplierColumns.map(c => `supplier_products.${c}`));
   }
+  // V3-HARDEN-178: Check migration 201 — commercial terms + payment intents
+  const commercialColumns = ['moq_tiers', 'delivery_sla_days', 'published_terms_version', 'published_at'];
+  try {
+    const result3 = await pool.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'catalog' AND table_name = 'supplier_products'
+       AND column_name = ANY($1)`,
+      [commercialColumns]
+    );
+    const found3 = new Set(result3.rows.map((r: any) => r.column_name));
+    for (const col of commercialColumns) {
+      if (!found3.has(col)) missing.push(`supplier_products.${col}`);
+    }
+  } catch {
+    missing.push(...commercialColumns.map(c => `supplier_products.${c}`));
+  }
+  // Check procurement.payment_intents table
+  try {
+    const result4 = await pool.query(
+      `SELECT 1 FROM information_schema.tables WHERE table_schema = 'procurement' AND table_name = 'payment_intents' LIMIT 1`
+    );
+    if (result4.rows.length === 0) missing.push('procurement.payment_intents table');
+  } catch {
+    missing.push('procurement.payment_intents table');
+  }
   return { ready: missing.length === 0, missing };
 }
 
