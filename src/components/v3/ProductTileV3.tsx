@@ -3,6 +3,7 @@ import { View, Pressable, StyleSheet, Text, Image } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getChipFontSize } from "../../theme/responsive";
+import { cardElevation, shell } from "../../theme/brand";
 import type { SellMode } from "../../stores/cartStore";
 
 // STG-553: Product tile for v3 sell grid — stock dot, cart badge, case size, wholesale price
@@ -103,14 +104,14 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress }: P
 
       {/* V3-FIX-173: Operator-first stock health indicator */}
       {product.stock != null && product.stock > 0 && product.stock <= 10 ? (
-        <Text style={{ fontSize: 9, color: "#f59e0b", textAlign: "center", fontWeight: "700" }}>Low: {product.stock}</Text>
+        <Text style={styles.stockLow}>Low: {product.stock}</Text>
       ) : product.stock != null && product.stock <= 0 ? (
-        <Text style={{ fontSize: 9, color: "#ef4444", textAlign: "center", fontWeight: "700" }}>Out of stock</Text>
+        <Text style={styles.stockOut}>Out of stock</Text>
       ) : null}
 
       {/* V3-HARDEN-171: Warning for unconverted bulk stock */}
       {product.conversionConfirmed === false && product.productMode === "LOOSE_BULK" ? (
-        <Text style={{ fontSize: 10, color: "#f59e0b", textAlign: "center", marginTop: 2 }}>Setup needed</Text>
+        <Text style={styles.setupNeeded}>Setup needed</Text>
       ) : null}
     </Pressable>
   );
@@ -127,14 +128,16 @@ function getCategoryEmoji(cat?: string): string {
 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
+    // V3-FIX-181: Premium tile with subtle elevation
     tile: {
       backgroundColor: colors.surface,
-      borderRadius: 16,
+      borderRadius: shell.cardRadius,
       padding: 10,
       alignItems: "center",
-      borderWidth: 2,
-      borderColor: "transparent",
+      borderWidth: 1.5,
+      borderColor: colors.border,
       position: "relative",
+      ...cardElevation.subtle,
     },
     tileInCart: {
       borderColor: colors.primary,
@@ -155,7 +158,7 @@ function createStyles(colors: ColorPalette) {
     },
     // V3-HARDEN-111: Responsive badge text
     cartBadgeText: {
-      color: "#FFFFFF",
+      color: colors.textInverse,
       fontSize: getChipFontSize(),
       fontWeight: "800",
     },
@@ -216,5 +219,9 @@ function createStyles(colors: ColorPalette) {
       color: colors.textTertiary,
       marginTop: 1,
     },
+    // V3-FIX-181: Stock health + setup indicators using theme tokens
+    stockLow: { fontSize: 9, color: colors.warning, textAlign: "center" as const, fontWeight: "700" as const },
+    stockOut: { fontSize: 9, color: colors.error, textAlign: "center" as const, fontWeight: "700" as const },
+    setupNeeded: { fontSize: 10, color: colors.warning, textAlign: "center" as const, marginTop: 2 },
   });
 }

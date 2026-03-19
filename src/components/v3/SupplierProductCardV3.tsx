@@ -3,6 +3,7 @@ import { View, Pressable, StyleSheet, Text } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
+import { cardElevation, shell, typeRhythm } from "../../theme/brand";
 
 // STG-561: Supplier product card with full wholesale B2B metadata
 
@@ -162,7 +163,8 @@ export default function SupplierProductCardV3({ product, orderQtyCases, onPress 
 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    card: { backgroundColor: colors.surface, borderRadius: 16, padding: getScreenPadding(), borderWidth: 1, borderColor: colors.border, marginBottom: 8 },
+    // V3-FIX-181: Premium card with subtle elevation
+    card: { backgroundColor: colors.surface, borderRadius: shell.cardRadius, padding: getScreenPadding(), borderWidth: 1, borderColor: colors.border, marginBottom: 8, ...cardElevation.subtle },
     cardUrgent: { borderLeftWidth: 3, borderLeftColor: colors.error },
     row: { flexDirection: "row", gap: 12 },
     imgBox: { width: 56, height: 56, borderRadius: 12, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center" },
@@ -170,8 +172,8 @@ function createStyles(colors: ColorPalette) {
     brandLabel: { fontSize: 7, fontWeight: "700", color: colors.textTertiary, marginTop: 1 },
     info: { flex: 1 },
     topRow: { flexDirection: "row", justifyContent: "space-between" },
-    name: { fontSize: 14, fontWeight: "800", color: colors.textPrimary, letterSpacing: -0.2 },
-    meta: { fontSize: 10, color: colors.textTertiary, marginTop: 1 },
+    name: { ...typeRhythm.cardTitle, color: colors.textPrimary },
+    meta: { ...typeRhythm.cardMeta, color: colors.textTertiary, marginTop: 1 },
     priceCol: { alignItems: "flex-end" },
     ptr: { fontSize: 16, fontWeight: "900", color: colors.success },
     ptrLabel: { fontSize: 9, color: colors.textTertiary },
@@ -182,7 +184,7 @@ function createStyles(colors: ColorPalette) {
     marginText: { fontSize: 9, fontWeight: "800", color: colors.success },
     terms: { flexDirection: "row", gap: 4, marginTop: 4 },
     schemeBadge: { backgroundColor: colors.warningSoft, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-    schemeText: { fontSize: 9, fontWeight: "700", color: "#92400E" },
+    schemeText: { fontSize: 9, fontWeight: "700", color: colors.warningDark },
     discBadge: { backgroundColor: colors.accentLight, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
     discText: { fontSize: 9, fontWeight: "700", color: colors.accentDark },
     creditBadge: { backgroundColor: colors.primaryLight, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
@@ -199,7 +201,7 @@ function createStyles(colors: ColorPalette) {
     qtyVal: { fontSize: 13, fontWeight: "800", minWidth: 20, textAlign: "center" },
     casesLabel: { fontSize: 9, color: colors.textTertiary },
     addBtn: { backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
-    addBtnText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+    addBtnText: { color: colors.textInverse, fontSize: 11, fontWeight: "700" },
     calcLine: { fontSize: 9, color: colors.textTertiary, marginTop: 4 },
     // V3-FIX-136: Browse-only card styles
     cartBadge: { backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
