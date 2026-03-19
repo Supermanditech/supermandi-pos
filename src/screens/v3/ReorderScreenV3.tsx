@@ -9,6 +9,8 @@ import { listPendingReorders, getStockDeficit, isCriticallyLow, getEstimatedTota
 import type { PendingReorder } from "../../services/api/reorderApi";
 import { getDeviceStoreId } from "../../services/deviceSession";
 import { isOnline } from "../../services/networkStatus";
+// V3-FIX-186: Buy-again flow wired into reorder screen
+import { buyAgain, loadBuyAgainIntoDraft } from "../../services/api/buyAgainApi";
 
 // V3-043: Reorder v3 — wire real listPendingReorders API
 
@@ -27,6 +29,8 @@ export default function ReorderScreenV3({ onClose }: Props) {
   // V3-HARDEN-089: Prevent double-submit on approve actions
   const [approving, setApproving] = useState(false);
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
+  // V3-FIX-186: Buy-again loading state
+  const [buyAgainLoading, setBuyAgainLoading] = useState(false);
 
   const handleQtyEdit = useCallback((idx: number, newQty: string) => {
     const qty = parseInt(newQty, 10);
@@ -131,6 +135,20 @@ export default function ReorderScreenV3({ onClose }: Props) {
         ))}
       </ScrollView>
       <View style={styles.footer}>
+        {/* V3-FIX-186: Buy Again — loads demand-driven draft into purchaseDraftStore */}
+        <Pressable style={[styles.buyAgainBtn, buyAgainLoading && { opacity: 0.5 }]} disabled={buyAgainLoading} onPress={async () => {
+          if (buyAgainLoading) return;
+          const online = await isOnline();
+          if (!online) { showToast("Buy Again requires connection"); return; }
+          setBuyAgainLoading(true);
+          try {
+            const draft = await buyAgain();
+            if (draft.items.length === 0) { showToast("No items to reorder"); return; }
+            loadBuyAgainIntoDraft(draft);
+            showToast(`${draft.items.length} items loaded into purchase draft`);
+            onClose();
+          } catch { showToast("Failed to load buy-again"); } finally { setBuyAgainLoading(false); }
+        }}><Text style={styles.buyAgainBtnText}>{buyAgainLoading ? "Loading..." : "Buy Again"}</Text></Pressable>
         {/* V3-FIX-080: Real WhatsApp send with order summary */}
         <Pressable style={styles.waBtn} onPress={() => {
           if (items.length === 0) { showToast("No items to send"); return; }
@@ -182,7 +200,9 @@ function createStyles(colors: ColorPalette) {
     editBtnText: { fontSize: 12, fontWeight: "700", color: colors.primary },
     dismissBtn: { paddingVertical: 10, paddingHorizontal: 14, alignItems: "center" },
     dismissBtnText: { fontSize: 14, color: colors.textTertiary },
-    footer: { flexDirection: "row", gap: 8, padding: 12, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
+    footer: { flexDirection: "row", gap: 8, padding: 12, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border, flexWrap: "wrap" },
+    buyAgainBtn: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, backgroundColor: colors.primaryLight, alignItems: "center" },
+    buyAgainBtnText: { fontSize: 11, fontWeight: "700", color: colors.primary },
     waBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, backgroundColor: "#25D366" },
     waBtnText: { fontSize: 11, fontWeight: "700", color: "#fff" },
     approveAllBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: colors.primary, alignItems: "center" },
