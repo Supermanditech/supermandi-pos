@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 517,
+  "version": 519,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6621,7 +6621,7 @@
       "file": "src/screens/v3/PosRootLayoutV3.tsx",
       "start_line": 1,
       "end_line": 132,
-      "checksum": "fcd5db6e9eb2b638",
+      "checksum": "7080576559231be1",
       "description": "POS v3 root layout — 4-tab nav shell with SellScreenV3 wired",
       "test_file": "src/__tests__/screens/pos-root-v3.stg-552.test.ts",
       "depends_on": null,
@@ -7736,7 +7736,9 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:44:37.822Z",
-      "status": "ACTIVE"
+      "status": "SUPERSEDED",
+      "superseded_by": "V3-DELETE-058",
+      "superseded_reason": "File deleted — stale swap documentation removed per V3-DELETE-058"
     },
     {
       "ticket": "V3-063",

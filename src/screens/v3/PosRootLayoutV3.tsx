@@ -27,20 +27,6 @@ export const MORE_ROUTE_MAP: Record<string, string> = {
 };
 
 // STG-552: POS v3 root layout — 4-tab navigation (SELL / BUY / STORE / MORE)
-// Placeholder screens will be replaced by actual v3 screens in subsequent tickets.
-
-function PlaceholderScreen({ name, description }: { name: string; description: string }) {
-  const colors = useThemeColors();
-  return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background, padding: 32 }}>
-      <Text style={{ fontSize: 24, fontWeight: "800", color: colors.primary, letterSpacing: -0.5 }}>{name}</Text>
-      <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 8, textAlign: "center", lineHeight: 20 }}>{description}</Text>
-      <View style={{ marginTop: 24, paddingHorizontal: 20, paddingVertical: 12, backgroundColor: colors.primaryLight, borderRadius: 12 }}>
-        <Text style={{ fontSize: 12, color: colors.primary, fontWeight: "600" }}>v3 Screen — Coming Soon</Text>
-      </View>
-    </View>
-  );
-}
 
 export default function PosRootLayoutV3() {
   const { t } = useTranslation();
