@@ -225,7 +225,7 @@ export async function validateConversionSchemaReadiness(pool: any): Promise<{ re
   // V3-FIX-176: Check payment provider configuration — full secret sets
   const providerChecks: Array<{ name: string; required: string[] }> = [
     { name: 'Razorpay', required: ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET'] },
-    { name: 'PhonePe', required: ['PHONEPE_MERCHANT_ID', 'PHONEPE_SALT_KEY'] },
+    { name: 'PhonePe', required: ['PHONEPE_MERCHANT_ID', 'PHONEPE_SALT_KEY', 'PHONEPE_SALT_INDEX'] },
     { name: 'PineLabs', required: ['PINE_LABS_MERCHANT_ID', 'PINE_LABS_ACCESS_CODE', 'PINE_LABS_SECRET'] },
   ];
   const configuredProviders: string[] = [];
@@ -248,6 +248,9 @@ export async function validateConversionSchemaReadiness(pool: any): Promise<{ re
   }
   if (!process.env.PAYMENT_CALLBACK_URL) {
     missing.push('PAYMENT_CALLBACK_URL not set (webhook callbacks will fail)');
+  }
+  if (!process.env.PAYMENT_WEBHOOK_SECRET && !process.env.RAZORPAY_KEY_SECRET) {
+    missing.push('PAYMENT_WEBHOOK_SECRET not set (callback signature verification will fail in production)');
   }
 
   // V3-HARDEN-178: Check accepted_terms_snapshot on live orders table

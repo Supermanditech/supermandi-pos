@@ -883,20 +883,20 @@ export default function ProductsPage() {
                   <p className="text-xs text-slate-400 mt-1">Optional: JSON array of tier discounts by minimum quantity</p>
                 </div>
                 <div className="col-span-2">
-                  <label htmlFor="product-packageType" className="label">Package Type</label>
-                  <select id="product-packageType" name="packageType"
-                    value={(formData as any).packageType || ''}
+                  <label htmlFor="product-packageType" className="label">Package Type (sets procurement unit)</label>
+                  <select id="product-packageType" name="procurementUnit"
+                    value={formData.procurementUnit || ''}
                     onChange={handleChange}
                     className="input">
                     <option value="">Not specified</option>
-                    <option value="LOOSE">Loose</option>
+                    <option value="KG">Loose (KG)</option>
                     <option value="CARTON">Carton</option>
                     <option value="BOX">Box</option>
                     <option value="CASE">Case</option>
                     <option value="BAG">Bag</option>
                     <option value="TIN">Tin</option>
                     <option value="BOTTLE">Bottle</option>
-                    <option value="PER_UNIT">Per Unit</option>
+                    <option value="PCS">Per Unit (PCS)</option>
                   </select>
                 </div>
                 <div className="col-span-2 flex items-center gap-2">

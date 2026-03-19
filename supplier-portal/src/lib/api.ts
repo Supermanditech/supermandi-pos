@@ -535,7 +535,7 @@ export interface ProductInput {
   creditDays?: number;
   financeEligible?: boolean;
   moqTiers?: string; // JSON string: [{minQty, discountPct}]
-  packageType?: string; // LOOSE|CARTON|BOX|CASE|BAG|TIN|BOTTLE|PER_UNIT
+  // packageType maps to procurementUnit — no separate field needed
 }
 
 // GL-WF-063: Pagination types

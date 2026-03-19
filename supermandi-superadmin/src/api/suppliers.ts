@@ -208,6 +208,7 @@ export type ProductEditInput = {
   deliveryTerms?: string;
   creditDays?: number;
   financeEligible?: boolean;
+  moqTiers?: string; // JSON string
 };
 
 export type ProductEditResponse = {

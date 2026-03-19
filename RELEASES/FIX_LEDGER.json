@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 464,
+  "version": 466,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -4672,7 +4672,7 @@
       "file": "supplier-portal/src/lib/api.ts",
       "start_line": 4,
       "end_line": 1458,
-      "checksum": "cb4e54cdf6eebe7c",
+      "checksum": "04f32752f0887eb8",
       "description": "HTTPS enforcement for supplier-portal in production",
       "test_file": "src/__tests__/screens/https-enforcement.stg-518.test.ts",
       "depends_on": null,
@@ -8013,7 +8013,7 @@
       "file": "supplier-portal/src/app/(dashboard)/products/page.tsx",
       "start_line": 90,
       "end_line": 1316,
-      "checksum": "682138ee4bb3f453",
+      "checksum": "9716ad7a0953fe15",
       "description": "Supplier product form with procurement packaging fields (procurementUnit, procurementPackQty, baseStockUnit, splitSellEligible)",
       "test_file": "backend/tests/conversionEngine.v3-fix-167.unit.test.ts",
       "depends_on": null,
