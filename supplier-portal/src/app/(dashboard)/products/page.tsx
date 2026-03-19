@@ -307,6 +307,20 @@ export default function ProductsPage() {
       netContentUnit: product.netContentUnit || '',
       shelfLifeDays: product.shelfLifeDays,
       hsnCode: product.hsnCode || '',
+      // V3-FIX-174: Pre-fill commercial terms on edit
+      procurementUnit: product.procurementUnit || '',
+      procurementPackQty: undefined,
+      baseStockUnit: '',
+      splitSellEligible: false,
+      ptrMinor: product.ptrMinor ?? undefined,
+      ptsMinor: product.ptsMinor ?? undefined,
+      tradeDiscountPct: product.tradeDiscountPct ?? undefined,
+      scheme: product.scheme || '',
+      deliverySlaDays: product.deliverySlaDays ?? undefined,
+      deliveryTerms: product.deliveryTerms || '',
+      creditDays: product.creditDays ?? undefined,
+      financeEligible: product.financeEligible || false,
+      moqTiers: product.moqTiers ? (typeof product.moqTiers === 'string' ? product.moqTiers : JSON.stringify(product.moqTiers)) : '',
     });
     setShowForm(true);
   };

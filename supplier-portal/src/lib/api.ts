@@ -500,6 +500,21 @@ export interface Product {
   netContentUnit?: string;
   shelfLifeDays?: number;
   hsnCode?: string;
+  // V3-FIX-174: Commercial terms (returned from supplier list/get/create/update)
+  ptrMinor?: number | null;
+  ptsMinor?: number | null;
+  tradeDiscountPct?: number | null;
+  scheme?: string | null;
+  deliverySlaDays?: number | null;
+  deliveryTerms?: string | null;
+  creditDays?: number | null;
+  financeEligible?: boolean;
+  deliveryDays?: number | null;
+  bnplMaxDays?: number | null;
+  publishedTermsVersion?: number | null;
+  publishedAt?: string | null;
+  moqTiers?: any;
+  procurementUnit?: string | null;
 }
 
 export interface ProductInput {
