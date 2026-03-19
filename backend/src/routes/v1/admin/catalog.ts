@@ -141,7 +141,12 @@ adminCatalogRouter.get(
           sp.net_content_unit AS "netContentUnit",
           sp.manufacturer_name AS "manufacturerName",
           sp.country_of_origin AS "countryOfOrigin",
-          sp.shelf_life_days AS "shelfLifeDays"
+          sp.shelf_life_days AS "shelfLifeDays",
+          sp.unit,
+          sp.procurement_unit AS "procurementUnit",
+          sp.procurement_pack_qty AS "procurementPackQty",
+          sp.base_stock_unit AS "baseStockUnit",
+          sp.split_sell_eligible AS "splitSellEligible"
         FROM catalog.supplier_products sp
         LEFT JOIN supplier.suppliers s ON s.id = sp.supplier_id
         ${whereClause}

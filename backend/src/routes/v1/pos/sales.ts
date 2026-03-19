@@ -31,6 +31,12 @@ import {
   normalizeUnit,
   type BaseUnit
 } from "../../../services/inventoryService";
+// V3-FIX-167: Canonical conversion engine — authoritative unit math
+import {
+  getUnitMultiplier as canonicalGetUnitMultiplier,
+  retailToStockDecrement,
+  inferBaseStockUnit,
+} from "../../../services/conversionEngine";
 import {
   recordSaleInventoryMovements,
   recordSaleReturnMovements,
@@ -107,14 +113,31 @@ function isValidUUID(value: string): boolean {
   return uuidRegex.test(value);
 }
 
+/**
+ * Parse variant size string like "500g", "1kg", "250ml" into base unit and size.
+ * V3-FIX-167: Now delegates to canonical conversionEngine for multiplier math.
+ * Legacy normalizeUnit kept as fallback for "g"/"ml" base unit naming convention.
+ */
 function parseVariantSize(variantRaw: string | null | undefined): { baseUnit: BaseUnit; sizeBase: number } | null {
   if (!variantRaw) return null;
   const trimmed = variantRaw.trim().toLowerCase();
   if (!trimmed) return null;
-  const match = trimmed.match(/(\d+(?:\.\d+)?)\s*(kg|g|ml|l)\b/);
+  const match = trimmed.match(/(\d+(?:\.\d+)?)\s*(kg|g|gm|ml|l|ltr|pcs|dozen)\b/i);
   if (!match) return null;
   const amount = Number(match[1]);
   if (!Number.isFinite(amount) || amount <= 0) return null;
+
+  // V3-FIX-167: Use canonical engine multiplier for conversion
+  const unitStr = match[2].toUpperCase().replace('G', 'GM').replace('L', 'LTR');
+  const canonicalMultiplier = canonicalGetUnitMultiplier(unitStr, unitStr === 'GM' || unitStr === 'KG' ? 'GM' : 'ML');
+  if (canonicalMultiplier !== null) {
+    const sizeBase = Math.round(amount * canonicalMultiplier);
+    if (sizeBase <= 0) return null;
+    const baseUnit: BaseUnit = (unitStr === 'GM' || unitStr === 'KG') ? 'g' : 'ml';
+    return { baseUnit, sizeBase };
+  }
+
+  // Legacy fallback for non-weight/volume units
   const unitInfo = normalizeUnit(match[2]);
   if (!unitInfo) return null;
   const sizeBase = Math.round(amount * unitInfo.multiplier);
@@ -157,19 +180,24 @@ async function resolveVariantFromCatalogProduct(params: {
   const { client, storeId, storeProductId, productId, barcode, currency } = params;
 
   // Step 1: Find the catalog store_product
+  // V3-FIX-167: Include conversion profile for authoritative unit math
   let catalogProduct: {
     store_product_id: string;
     product_id: string;
     display_name: string;
     primary_barcode: string | null;
     unit: string | null;
+    product_mode: string | null;
+    base_stock_unit: string | null;
+    conversion_confirmed: boolean;
   } | null = null;
 
   if (storeProductId && isValidUUID(storeProductId)) {
     const res = await client.query(
       `SELECT sp.id as store_product_id, sp.product_id,
               COALESCE(sp.display_name, p.name) as display_name,
-              p.primary_barcode, p.unit
+              p.primary_barcode, p.unit,
+              sp.product_mode, sp.base_stock_unit, sp.conversion_confirmed
        FROM catalog.store_products sp
        JOIN catalog.products p ON p.id = sp.product_id
        WHERE sp.id = $1 AND sp.store_id = $2`,
@@ -1113,6 +1141,22 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
         throw new Error("product_not_found");
       }
 
+      // V3-HARDEN-171: Block sale of unconverted bulk products
+      // If the product was resolved via catalog bridge and conversion is not confirmed,
+      // the operator must complete retail setup before selling
+      if (item.storeProductId && isValidUUID(item.storeProductId)) {
+        const convCheck = await client.query(
+          `SELECT conversion_confirmed, product_mode
+           FROM catalog.store_products
+           WHERE id = $1 AND store_id = $2`,
+          [item.storeProductId, storeId]
+        );
+        if (convCheck.rows[0]?.product_mode === 'LOOSE_BULK' &&
+            convCheck.rows[0]?.conversion_confirmed === false) {
+          throw new Error("conversion_not_confirmed");
+        }
+      }
+
       // T-060: Compute effective stock quantity for retail variant sales
       // For variant "500 GM" of a KG-tracked product, multiplier = 0.5
       // So selling qty 2 → stockQuantity = 2 * 0.5 = 1 KG deducted from parent
@@ -1302,6 +1346,13 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
     }
     if (error instanceof Error && error.message === "product_not_found") {
       return res.status(404).json({ error: "product_not_found" });
+    }
+    // V3-HARDEN-171: Block sale of unconverted bulk products
+    if (error instanceof Error && error.message === "conversion_not_confirmed") {
+      return res.status(422).json({
+        error: "conversion_not_confirmed",
+        message: "Retail conversion setup required before selling this product. Complete setup in Products → Variants.",
+      });
     }
     if (error instanceof Error && error.message === "sale_id_conflict") {
       return res.status(409).json({ error: "sale_id_conflict" });

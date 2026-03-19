@@ -72,6 +72,8 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
     const product = getProductByBarcode(code);
     if (product) {
       // V3-FIX-078: Known product — carry real productId for authoritative inward record
+      // V3-FIX-170: Carry conversion context for bulk procurement awareness
+      const isBulkFirstTime = product.productMode === 'LOOSE_BULK' && product.conversionConfirmed === false;
       const newItem: PurchaseItemData = {
         barcode: product.barcode ?? barcode.trim(),
         name: product.name,
@@ -83,9 +85,16 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
         caseSize: 1,
         productId: (product as any).id ?? (product as any).storeProductId,
         gstPct: (product as any).gstPct ?? (product as any).gstRate,
+        // V3-FIX-170: Conversion-aware procurement context
+        procurementUnit: product.procurementUnit,
+        procurementPackQty: product.procurementPackQty,
+        baseStockUnit: product.baseStockUnit,
+        conversionConfirmed: product.conversionConfirmed,
       } as PurchaseItemData & { productId?: string; gstPct?: number };
       setItems((prev) => [newItem, ...prev]);
-      showToast(`Added: ${product.name}`);
+      showToast(isBulkFirstTime
+        ? `Added: ${product.name} — Retail setup needed after inward`
+        : `Added: ${product.name}`);
     } else {
       // Unknown barcode — new product
       const newItem: PurchaseItemData = {

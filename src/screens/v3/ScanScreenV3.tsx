@@ -70,6 +70,13 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
       });
 
       if (context === "sell_scan") {
+        // V3-HARDEN-171: Block sale of unconverted bulk products
+        if (product.productMode === "LOOSE_BULK" && product.conversionConfirmed === false) {
+          showToast("Retail setup needed — complete conversion setup before selling");
+          setLastResult({ barcode: code, productName: product.name, price: product.priceMinor, stock: product.stock, isNew: false });
+          return;
+        }
+
         // V3-FIX-160: SELL scan — add/increment cart through canonical path
         const existing = useCartStore.getState().items.find((i) => i.barcode === code);
         if (existing) {

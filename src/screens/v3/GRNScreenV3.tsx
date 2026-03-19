@@ -56,6 +56,11 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
               received: item.receivedQuantity ?? 0,
               checked: (item.receivedQuantity ?? 0) >= (item.orderedQuantity ?? 0),
               productId: item.productId,
+              // V3-FIX-170: Conversion context from order items
+              procurementUnit: (item as any).procurementUnit,
+              procurementPackQty: (item as any).procurementPackQty,
+              baseStockUnit: (item as any).baseStockUnit,
+              conversionConfirmed: (item as any).conversionConfirmed,
             });
           }
         }
@@ -179,9 +184,29 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
 
       <View style={styles.footer}>
         <Text style={styles.footerMeta}>Received: {receivedCount}/{items.length} items ({totalReceived}/{totalOrdered} units)</Text>
+
+        {/* V3-FIX-170: Landed stock preview for bulk items */}
+        {(() => {
+          const bulkItems = items.filter(i => i.checked && i.procurementPackQty && i.procurementPackQty > 1);
+          if (bulkItems.length === 0) return null;
+          const totalLanded = bulkItems.reduce((sum, i) => sum + (i.received * (i.procurementPackQty ?? 1)), 0);
+          return (
+            <Text style={[styles.footerMeta, { color: "#6366f1", fontWeight: "700" }]}>
+              Stock landing: {Math.round(totalLanded)} {bulkItems[0]?.baseStockUnit ?? "units"} from {bulkItems.length} bulk items
+            </Text>
+          );
+        })()}
+
+        {/* V3-FIX-170: Setup warning for unconfirmed bulk items */}
+        {items.some(i => i.checked && i.conversionConfirmed === false && i.procurementPackQty && i.procurementPackQty > 1) ? (
+          <Text style={[styles.footerMeta, { color: "#f59e0b", fontWeight: "600" }]}>
+            ⚠ Some items need retail setup before they can be sold
+          </Text>
+        ) : null}
+
         <View style={styles.footerActions}>
           <Pressable style={styles.matchAllBtn} onPress={async () => { const online = await isOnline(); if (!online) { showToast("Offline — match all requires connection"); return; } setItems(prev => prev.map(it => ({ ...it, checked: true, received: it.ordered }))); showToast("All items matched to PO"); }}><Text style={styles.matchAllText}>Match All</Text></Pressable>
-          <Pressable style={styles.confirmBtn} onPress={() => { showToast("Receipt confirmed! Stock updated."); setTimeout(onClose, 1000); }}><Text style={styles.confirmText}>✓ Confirm Receipt</Text></Pressable>
+          <Pressable style={styles.confirmBtn} onPress={() => { showToast("Receipt confirmed! Stock updated."); setTimeout(onClose, 1000); }}><Text style={styles.confirmText}>Confirm Receipt</Text></Pressable>
         </View>
       </View>
     </View>

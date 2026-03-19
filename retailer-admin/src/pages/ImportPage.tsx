@@ -493,12 +493,19 @@ export default function ImportPage() {
             <div className="imp-format-info">
               <h4 className="imp-format-title">Expected CSV Format:</h4>
               <code className="imp-format-code">
-                name,barcode,brand,unit,sell_price,purchase_price,mrp,stock,mode
+                name,barcode,brand,unit,sell_price,purchase_price,mrp,stock,mode,procurement_unit,procurement_pack_qty,base_stock_unit
                 <br />
-                Parle-G 100g,8901030865432,Parle,PCS,10.00,8.50,10.00,100,PACKAGED
+                Parle-G 100g,8901030865432,Parle,PCS,10.00,8.50,10.00,100,PACKAGED,PCS,1,PCS
                 <br />
-                Loose Rice,,Local,KG,85.00,75.00,,25,LOOSE_BULK
+                Loose Rice,,Local,KG,85.00,75.00,,25,LOOSE_BULK,BAG,50,KG
+                <br />
+                Oil 15L Tin,,Brand,LTR,180.00,150.00,,10,LOOSE_BULK,TIN,15,LTR
               </code>
+              <p className="imp-format-hint" style={{ fontSize: 12, color: '#6b7280', marginTop: 8 }}>
+                <strong>V3 Conversion columns (optional):</strong> procurement_unit (BAG/CARTON/DOZEN/TIN/KG/PCS...),
+                procurement_pack_qty (units per pack), base_stock_unit (KG/GM/PCS/LTR/ML).
+                If omitted, defaults to 1:1 same-unit mapping.
+              </p>
             </div>
           </div>
         )}

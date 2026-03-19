@@ -302,7 +302,7 @@ export function CatalogTab() {
             aria-label="Edit product category"
             aria-modal="true"
           >
-            <h3 style={{ marginTop: 0 }}>Edit Product Category</h3>
+            <h3 style={{ marginTop: 0 }}>Edit Product — Category & Conversion</h3>
             <div style={{ marginBottom: 12 }}>
               <strong>Product:</strong> {editingProduct.displayName}
             </div>
@@ -314,6 +314,45 @@ export function CatalogTab() {
                 <strong>Current Override:</strong> {editingProduct.editedCategory}
               </div>
             )}
+
+            {/* V3-FIX-169: Conversion review — "bought as / stocked as / sold as" */}
+            <div style={{
+              background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8,
+              padding: '12px 16px', marginBottom: 16
+            }}>
+              <h4 style={{ margin: '0 0 8px', fontSize: 14, color: '#0369a1' }}>Conversion Contract</h4>
+              <table style={{ fontSize: 13, width: '100%' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '4px 8px', color: '#6b7280' }}>Bought as:</td>
+                    <td style={{ padding: '4px 8px', fontWeight: 600 }}>
+                      {(editingProduct as any).procurementUnit || (editingProduct as any).unit || 'PCS'}
+                      {(editingProduct as any).procurementPackQty && Number((editingProduct as any).procurementPackQty) > 1
+                        ? ` (${(editingProduct as any).procurementPackQty} per pack)`
+                        : ''}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px 8px', color: '#6b7280' }}>Stocked as:</td>
+                    <td style={{ padding: '4px 8px', fontWeight: 600 }}>
+                      {(editingProduct as any).baseStockUnit || 'PCS'}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px 8px', color: '#6b7280' }}>Sold as:</td>
+                    <td style={{ padding: '4px 8px', fontWeight: 600 }}>
+                      {(editingProduct as any).baseStockUnit || 'PCS'}
+                      {(editingProduct as any).splitSellEligible ? ' (split-sell OK)' : ''}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              {!(editingProduct as any).procurementUnit && (
+                <p style={{ fontSize: 11, color: '#f59e0b', marginTop: 6, marginBottom: 0 }}>
+                  Supplier has not set procurement packaging — defaults will apply at publish
+                </p>
+              )}
+            </div>
             <div style={{ marginBottom: 16 }}>
               <label htmlFor="category-input" style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>
                 New Category:

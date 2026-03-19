@@ -37,6 +37,12 @@ export type CatalogProduct = {
   manufacturerName?: string | null;
   countryOfOrigin?: string | null;
   shelfLifeDays?: number | null;
+  // V3-FIX-169: Conversion/procurement metadata
+  unit?: string | null;
+  procurementUnit?: string | null;
+  procurementPackQty?: number | null;
+  baseStockUnit?: string | null;
+  splitSellEligible?: boolean | null;
 };
 
 export type CatalogProductsResponse = {

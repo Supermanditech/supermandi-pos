@@ -160,6 +160,30 @@ export function validateGcpCredentials(): GcpValidationResult {
 }
 
 /**
+ * V3-HARDEN-172: Validate conversion schema readiness at startup
+ * Checks that migration 199 columns exist on catalog.store_products
+ */
+export async function validateConversionSchemaReadiness(pool: any): Promise<{ ready: boolean; missing: string[] }> {
+  const missing: string[] = [];
+  const requiredColumns = ['procurement_unit', 'procurement_pack_qty', 'base_stock_unit', 'conversion_confirmed'];
+  try {
+    const result = await pool.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'catalog' AND table_name = 'store_products'
+       AND column_name = ANY($1)`,
+      [requiredColumns]
+    );
+    const found = new Set(result.rows.map((r: any) => r.column_name));
+    for (const col of requiredColumns) {
+      if (!found.has(col)) missing.push(col);
+    }
+  } catch {
+    missing.push(...requiredColumns);
+  }
+  return { ready: missing.length === 0, missing };
+}
+
+/**
  * Run GCP validation and log results
  * Call this during server startup
  */

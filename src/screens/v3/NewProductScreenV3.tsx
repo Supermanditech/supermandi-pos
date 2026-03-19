@@ -73,6 +73,11 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
   const [gstPct, setGstPct] = useState("18");
   const [unit, setUnit] = useState("pcs");
   const [caseQty, setCaseQty] = useState("24");
+  // V3-FIX-168: Product mode + conversion setup
+  const [productMode, setProductMode] = useState<"PACKAGED" | "LOOSE_BULK">("PACKAGED");
+  const [procurementUnit, setProcurementUnit] = useState("");
+  const [procurementPackQty, setProcurementPackQty] = useState("1");
+  const [baseStockUnit, setBaseStockUnit] = useState("");
 
   const canSubmit = name.trim().length > 0 && (sellPrice.trim().length > 0 || mrp.trim().length > 0);
 
@@ -196,6 +201,44 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
             <TextInput style={styles.fieldInput} value={caseQty} onChangeText={setCaseQty} placeholder="24" placeholderTextColor={colors.textTertiary} keyboardType="numeric" />
           </View>
         </View>
+
+        {/* V3-FIX-168: Product mode toggle + conversion setup */}
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>PRODUCT TYPE</Text>
+          <View style={styles.row}>
+            <Pressable
+              style={[styles.halfField, { backgroundColor: productMode === "PACKAGED" ? colors.primary + "20" : colors.background, borderRadius: 8, padding: 10, alignItems: "center", borderWidth: 1, borderColor: productMode === "PACKAGED" ? colors.primary : colors.border }]}
+              onPress={() => { setProductMode("PACKAGED"); setUnit("pcs"); setBaseStockUnit("PCS"); }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: "700", color: productMode === "PACKAGED" ? colors.primary : colors.textSecondary }}>PACKAGED</Text>
+              <Text style={{ fontSize: 10, color: colors.textTertiary }}>Fixed pack</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.halfField, { backgroundColor: productMode === "LOOSE_BULK" ? colors.primary + "20" : colors.background, borderRadius: 8, padding: 10, alignItems: "center", borderWidth: 1, borderColor: productMode === "LOOSE_BULK" ? colors.primary : colors.border }]}
+              onPress={() => { setProductMode("LOOSE_BULK"); setUnit("kg"); setBaseStockUnit("KG"); }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: "700", color: productMode === "LOOSE_BULK" ? colors.primary : colors.textSecondary }}>LOOSE / BULK</Text>
+              <Text style={{ fontSize: 10, color: colors.textTertiary }}>Weight / volume</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {productMode === "LOOSE_BULK" ? (
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fieldLabel}>BOUGHT AS</Text>
+              <TextInput style={styles.fieldInput} value={procurementUnit} onChangeText={setProcurementUnit} placeholder="BAG/CARTON" placeholderTextColor={colors.textTertiary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fieldLabel}>PER PACK</Text>
+              <TextInput style={styles.fieldInput} value={procurementPackQty} onChangeText={setProcurementPackQty} placeholder="50" placeholderTextColor={colors.textTertiary} keyboardType="numeric" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fieldLabel}>STOCK UNIT</Text>
+              <TextInput style={styles.fieldInput} value={baseStockUnit} onChangeText={setBaseStockUnit} placeholder="KG" placeholderTextColor={colors.textTertiary} />
+            </View>
+          </View>
+        ) : null}
 
         {/* MRP + Opening stock */}
         <View style={styles.row}>

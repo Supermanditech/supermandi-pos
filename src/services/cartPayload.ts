@@ -31,6 +31,12 @@ export function buildCartItem(product: Product, overrides?: Partial<CartItem>): 
       category: product.category,
       imageUrl: product.imageUrl,
     },
+    // V3-HARDEN-171: Carry conversion context for canonical sell flow
+    productMode: product.productMode,
+    soldBy: product.soldBy,
+    rateUnit: product.rateUnit,
+    baseStockUnit: product.baseStockUnit,
+    allowFractionalSell: product.allowFractionalSell,
     ...overrides,
   };
 }
