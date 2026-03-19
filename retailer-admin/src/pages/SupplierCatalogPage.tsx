@@ -115,8 +115,8 @@ export default function SupplierCatalogPage() {
     return () => clearTimeout(timeout);
   }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Add product to store catalog
-  const handleAddProduct = async (product: SupplierProduct) => {
+  // V3-FIX-170: Add product with conversion setup state
+  const handleAddProduct = async (product: SupplierProduct, conversionConfirmed = false) => {
     setAddingProductId(product.productId);
     setAddError(null);
     setError('');
@@ -130,6 +130,8 @@ export default function SupplierCatalogPage() {
           body: JSON.stringify({
             sellPrice: product.retailerPriceMinor,
             initialStock: 0,
+            // V3-FIX-170: Signal whether conversion setup was reviewed/confirmed
+            conversionConfirmed,
           }),
         }
       );
@@ -410,7 +412,7 @@ export default function SupplierCatalogPage() {
               <button
                 className="btn btn-primary btn-full"
                 disabled={addingProductId === reviewProduct.productId}
-                onClick={() => { handleAddProduct(reviewProduct); setReviewProduct(null); }}
+                onClick={() => { handleAddProduct(reviewProduct, true); setReviewProduct(null); }}
               >
                 {addingProductId === reviewProduct.productId ? 'Adding...' : 'Use Suggested Setup & Add'}
               </button>
@@ -419,10 +421,10 @@ export default function SupplierCatalogPage() {
                   className="btn btn-secondary"
                   style={{ flex: 1 }}
                   onClick={() => {
-                    // Add without conversion — retailer can edit later
-                    handleAddProduct(reviewProduct);
+                    // V3-FIX-170: Add with conversion_confirmed=false — retailer must complete setup before sell
+                    handleAddProduct(reviewProduct, false);
                     setReviewProduct(null);
-                    setSuccess('Added — set up retail variants in Products → Variants');
+                    setSuccess('Added — set up retail variants in Products → Variants before selling');
                   }}
                 >
                   Add & Set Up Later

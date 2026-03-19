@@ -133,33 +133,45 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
           try {
             const sellPriceMinor = Math.round(parseFloat(it.sellPrice || it.purchasePrice) * 100);
             const purchasePriceMinor = Math.round(parseFloat(it.purchasePrice) * 100);
+            // V3-FIX-170: Send full canonical conversion contract for new SKU
             const res = await apiClient.post<any>("/api/v1/pos/store-products", {
               barcode: it.barcode,
               name: it.name || `Item ${it.barcode.slice(-4)}`,
               sellPrice: sellPriceMinor,
               purchasePrice: purchasePriceMinor,
-              initialStockQty: 0, // Stock will be added via inward below
-              unit: "pcs",
+              initialStockQty: 0,
+              unit: it.baseStockUnit ? it.baseStockUnit.toLowerCase() : "pcs",
               brand: it.brand,
+              mode: it.procurementUnit ? "LOOSE_BULK" : "PACKAGED",
+              procurementUnit: it.procurementUnit,
+              procurementPackQty: it.procurementPackQty,
+              baseStockUnit: it.baseStockUnit,
             });
             if (res?.storeProduct?.productId) {
               resolvedProductIds.set(it.barcode, res.storeProduct.productId);
             }
           } catch (digErr) {
-            // If digitisation fails (e.g., conflict), try to find existing product
+            // If digitisation fails (e.g., conflict), use existing product's real ID
             const existing = getProductByBarcode(it.barcode);
-            if (existing?.storeProductId) {
-              resolvedProductIds.set(it.barcode, (existing as any).id || it.barcode);
+            if (existing) {
+              resolvedProductIds.set(it.barcode, (existing as any).id || (existing as any).storeProductId);
+            } else {
+              // No fallback — skip this item from inward and warn
+              showToast(`Could not create ${it.name || it.barcode} — skipping`);
             }
           }
         }
       }
 
-      // Pass 2: Build inward items with real product IDs
-      const txnItems = items.map((it) => ({
-        productId: it.state === "existing" && (it as any).productId
+      // Pass 2: Build inward items with real product IDs only (no barcode fallback)
+      const txnItems = items.filter((it) => {
+        if (it.state === "new" && !resolvedProductIds.has(it.barcode)) return false;
+        if (it.state === "existing" && !(it as any).productId) return false;
+        return true;
+      }).map((it) => ({
+        productId: it.state === "existing"
           ? (it as any).productId
-          : resolvedProductIds.get(it.barcode) || it.barcode,
+          : resolvedProductIds.get(it.barcode)!,
         quantity: it.qtyCases * (it.caseSize ?? 1),
         unitCost: Math.round(parseFloat(it.purchasePrice) * 100),
         // V3-FIX-170: Conversion context for procurement-aware inward

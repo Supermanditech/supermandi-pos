@@ -15,9 +15,14 @@ export type StockCapUpdateResult = {
   unknownStock: boolean;
 };
 
+// V3-HARDEN-171: Allow fractional quantities for loose/bulk products
+// Round only for values >= 1 or whole numbers; preserve fractions like 0.25, 0.5
 const normalizeQuantity = (value: unknown): number => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return 0;
+  // Preserve fractional values (e.g., 0.25 kg, 0.5 L) — only round integers
+  if (parsed > 0 && parsed < 1) return Math.max(0, parsed);
+  if (parsed % 1 !== 0) return Math.max(0, parsed); // e.g., 2.5 kg
   return Math.max(0, Math.round(parsed));
 };
 

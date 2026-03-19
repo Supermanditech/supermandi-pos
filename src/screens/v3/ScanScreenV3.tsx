@@ -243,10 +243,13 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
                 {(() => {
                   const product = getProductByBarcode(lastResult.barcode);
                   if (!product || product.productMode !== 'LOOSE_BULK' || !product.rateUnit) return null;
+                  // V3-HARDEN-171: Correct fractional quantities for loose sell
+                  // For KG stock: 250g = 0.25 KG, 500g = 0.5 KG, 1kg = 1 KG, 5kg = 5 KG
+                  // For LTR stock: 250ml = 0.25 LTR, 500ml = 0.5 LTR, 1L = 1 LTR
                   const presets = product.rateUnit === 'KG' || product.baseStockUnit === 'KG'
-                    ? [{ label: '250g', qty: 1 }, { label: '500g', qty: 1 }, { label: '1kg', qty: 1 }, { label: '5kg', qty: 5 }]
+                    ? [{ label: '250g', qty: 0.25 }, { label: '500g', qty: 0.5 }, { label: '1kg', qty: 1 }, { label: '5kg', qty: 5 }]
                     : product.rateUnit === 'LTR' || product.baseStockUnit === 'LTR'
-                    ? [{ label: '250ml', qty: 1 }, { label: '500ml', qty: 1 }, { label: '1L', qty: 1 }]
+                    ? [{ label: '250ml', qty: 0.25 }, { label: '500ml', qty: 0.5 }, { label: '1L', qty: 1 }]
                     : [{ label: '1', qty: 1 }, { label: '6', qty: 6 }, { label: '12', qty: 12 }];
                   return (
                     <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>

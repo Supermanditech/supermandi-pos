@@ -7830,12 +7830,16 @@ Scope narrowing (2026-03-19):
   - contract tests: 33 unit tests proving conversion engine math for 4 kirana scenarios
     (sugar/oil/eggs/bottles) — NOT live API or DB integration tests
   - startup check: validateConversionSchemaReadiness() called in server.ts, logs missing
-    migration 199 columns (warn-level, does NOT block startup)
+    migration 199 (store_products) and 200 (supplier_products) columns (warn-level, does NOT block startup)
   - sale guard: backend rejects sales for LOOSE_BULK products with conversion_confirmed=false
+  - fractional qty: backend sales.ts rounds to 3dp (not integer) for loose/bulk sub-unit sells,
+    frontend stockCap preserves fractional quantities (0.25kg, 0.5L)
   - data flow: CSV import (create-new and update-existing with full product_mode/procurement/base/confirmed),
-    supplier-catalog add (with conversion review modal for bulk products),
+    supplier-catalog add (with conversion review modal — "Use Suggested Setup & Add" sets
+    conversion_confirmed=true, "Add & Set Up Later" sets conversion_confirmed=false),
     SuperAdmin publish (propagates conversion profile),
-    POS digitisation (insert and ON CONFLICT update, response reloaded from actual DB row),
+    POS digitisation (insert and ON CONFLICT update, response reloaded from actual DB row,
+    counter-purchase digitizes new SKUs with full conversion contract before inward — no barcode-as-productId fallback),
     manual inward/GRN (inventoryApi carries procurementUnit/packQty/baseStockUnit/conversionConfirmed
     → pos/inventory persists them including conversionConfirmed)
     all persist canonical conversion columns into catalog.store_products on every write path

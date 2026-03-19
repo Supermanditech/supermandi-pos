@@ -939,7 +939,8 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
   }
 
   const { productId } = req.params;
-  const { initialStock = 0, sellPrice } = req.body;
+  // V3-FIX-170: Accept conversionConfirmed from frontend review flow
+  const { initialStock = 0, sellPrice, conversionConfirmed: clientConversionConfirmed } = req.body;
 
   const client = await pool.connect();
   try {
@@ -1028,7 +1029,7 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
         procurement_unit, procurement_pack_qty, base_stock_unit,
         allow_fractional_sell, conversion_confirmed
       ) VALUES ($1, $2::uuid, $3, $4, $5, $6, true, $7::uuid,
-        $8, $9, $10, $11, false)
+        $8, $9, $10, $11, $12)
       RETURNING id`,
       [
         storeId,
@@ -1042,6 +1043,7 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
         catAddPackQty,
         catAddBaseUnit,
         product.split_sell_eligible || false,
+        clientConversionConfirmed === true, // V3-FIX-170: Only true if operator explicitly confirmed
       ]
     );
 

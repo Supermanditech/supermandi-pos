@@ -911,9 +911,11 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
     // T-060: Retail variant ID for stock quantity conversion
     const retailVariantId =
       asTrimmedString(item.retailVariantId) ?? asTrimmedString(item.retail_variant_id);
+    // V3-HARDEN-171: Allow fractional quantities for loose/bulk products (0.25 kg, 0.5 L)
+    // Round to 3 decimal places instead of integer to support sub-unit sells
     const quantity =
       typeof item.quantity === "number" && Number.isFinite(item.quantity)
-        ? Math.round(item.quantity)
+        ? Math.round(item.quantity * 1000) / 1000
         : NaN;
     const priceMinor =
       typeof item.priceMinor === "number" && Number.isFinite(item.priceMinor)
