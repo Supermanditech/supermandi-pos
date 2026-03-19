@@ -98,14 +98,13 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
         await setLocalPrice(barcode, priceMinor);
       }
 
-      // V3-FIX-168: Persist conversion profile via store-products API when online
-      try {
-        if (await isOnline()) {
-          // V3-FIX-168: setupMode determines persisted conversion state:
-          // "accepted" = operator confirmed setup → conversion_confirmed=true
-          // "suggest" = operator did not review → conversion_confirmed=false (sell blocked until confirmed)
-          // "edit" = operator is mid-edit (should not reach here, but treat as unconfirmed)
-          const conversionConfirmed = productMode === "LOOSE_BULK" ? setupMode === "accepted" : true;
+      // V3-FIX-168: Persist conversion profile via store-products API
+      // For LOOSE_BULK products, authoritative persistence MUST succeed before cart entry
+      const conversionConfirmed = productMode === "LOOSE_BULK" ? setupMode === "accepted" : true;
+      let persistSucceeded = false;
+
+      if (await isOnline()) {
+        try {
           await apiClient.post("/api/v1/pos/store-products", {
             barcode, name, sellPrice: priceMinor, mrp: mrp ? Math.round(parseFloat(mrp) * 100) : undefined,
             initialStockQty: parseInt(openingStock, 10) || 0, unit,
@@ -116,19 +115,36 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
             baseStockUnit: productMode === "LOOSE_BULK" ? baseStockUnit || undefined : undefined,
             conversionConfirmed,
           });
+          persistSucceeded = true;
+        } catch (apiErr) {
+          logger.debug("NewProductV3", `api_persist_failed:${String(apiErr)}`);
+          // PACKAGED products: non-blocking (local product still usable)
+          // LOOSE_BULK products: blocking (must not enter cart without authoritative row)
+          if (productMode !== "LOOSE_BULK") {
+            persistSucceeded = true; // PACKAGED can proceed with local-only
+          }
         }
-      } catch (apiErr) {
-        // Non-blocking: offline or API failure — local product still created
-        logger.debug("NewProductV3", `api_persist_failed:${String(apiErr)}`);
+      } else {
+        // Offline: PACKAGED products can use local-only, LOOSE_BULK cannot
+        if (productMode !== "LOOSE_BULK") {
+          persistSucceeded = true;
+        }
       }
 
-      // V3-FIX-168: Only add to cart if conversion setup is confirmed or product is PACKAGED
-      // Unconfirmed loose/bulk products must NOT enter the normal sellable cart path
-      if (productMode === "LOOSE_BULK" && setupMode !== "accepted") {
-        showToast(`${name} saved — complete retail setup before selling`);
+      // V3-FIX-168: Gate cart entry on persist success + setup confirmation
+      // LOOSE_BULK: must have successful API persist AND accepted setup
+      // PACKAGED: can enter cart even offline (no conversion ambiguity)
+      if (productMode === "LOOSE_BULK" && (!persistSucceeded || setupMode !== "accepted")) {
+        const reason = !persistSucceeded
+          ? "saved locally — sync required before selling (check connection)"
+          : "saved — complete retail setup before selling";
+        showToast(`${name} ${reason}`);
         onProductAdded(barcode, name);
         onClose();
         return;
+      }
+      if (!persistSucceeded && productMode === "PACKAGED") {
+        // PACKAGED offline: still add to cart (no conversion risk)
       }
 
       // Add to cart (only for PACKAGED or confirmed LOOSE_BULK)

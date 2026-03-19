@@ -7848,12 +7848,14 @@ Scope narrowing (2026-03-19):
       default qty is 0.5 for KG/GM/LTR/ML, 1 for PCS/DOZEN
     - NewProduct: LOOSE_BULK setupMode (suggest/edit/accepted) controls conversionConfirmed
       persisted to backend — "accepted" = true, "suggest" or "edit" = false;
-      unconfirmed LOOSE_BULK products are NOT added to cart (saved to store but blocked from sale)
+      accepted LOOSE_BULK enters cart ONLY after successful API persist (offline/failure → saved
+      locally but NOT added to cart, operator sees "sync required before selling");
+      unconfirmed LOOSE_BULK products are NOT added to cart regardless of persist success
   - POS BUY catalog response includes procurementUnit, procurementPackQty, baseStockUnit,
     productMode, soldBy, rateUnit from store_products — BUY mapping consumes the live sell profile
   - data flow: CSV import (create-new and update-existing with full product_mode/procurement/base/confirmed),
     supplier-catalog add (with conversion review modal — "Use Suggested Setup & Add" sets
-    conversion_confirmed=true, "Add & Set Up Later" sets conversion_confirmed=false),
+    conversion_confirmed=true, "Remind at GRN" sets conversion_confirmed=false),
     SuperAdmin publish (propagates conversion profile),
     POS digitisation (insert and ON CONFLICT update, response reloaded from actual DB row,
     counter-purchase digitizes new SKUs with full conversion contract before inward — no barcode-as-productId fallback),
