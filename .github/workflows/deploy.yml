@@ -297,6 +297,10 @@ jobs:
       - name: Demand Signal Gate
         run: bash scripts/gates/demand-signal-gate.sh
 
+      # V3-HARDEN-189: Phase 21 go-live gate (blocking)
+      - name: Phase 21 Go-Live Gate
+        run: bash scripts/gates/phase21-go-live-gate.sh
+
       # STAGE-001 + STAGE-014: Create Cloud SQL backup before any deploy
       # Non-blocking: automated daily backups are enabled (INFRA-019).
       # If WIF SA lacks cloudsql.admin, log warning and continue.

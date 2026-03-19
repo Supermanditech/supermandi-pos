@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 497,
+  "version": 499,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -8576,6 +8576,62 @@
         "test_guard": "P0 fix — see commit",
         "single_commit": "P0 fix — see commit",
         "ticket_parked": "P0 fix — see commit"
+      }
+    },
+    {
+      "ticket": "V3-HARDEN-189-P0",
+      "file": "scripts/gates/phase21-go-live-gate.sh",
+      "start_line": 1,
+      "end_line": 120,
+      "checksum": "17c401c337efa1e4",
+      "description": "P0: behavioral gate + deploy CI + portal consumers",
+      "test_file": "backend/tests/contracts/phase21GoLiveGate.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-19T19:33:24.458Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "operator_approved": "Mode A pre-staging",
+        "backend_api": "P0 fix — portal consumers + behavioral gate",
+        "api_errors": "P0 fix — portal consumers + behavioral gate",
+        "store_isolation": "P0 fix — portal consumers + behavioral gate",
+        "business_logic": "P0 fix — portal consumers + behavioral gate",
+        "business_behaviour": "P0 fix — portal consumers + behavioral gate",
+        "db_schema": "P0 fix — portal consumers + behavioral gate",
+        "impacted_files": "P0 fix — portal consumers + behavioral gate",
+        "fix_ledger_check": "P0 fix — portal consumers + behavioral gate",
+        "no_agent_conflict": "P0 fix — portal consumers + behavioral gate",
+        "gcp_parity": "P0 fix — portal consumers + behavioral gate",
+        "regression_check": "P0 fix — portal consumers + behavioral gate",
+        "test_guard": "P0 fix — portal consumers + behavioral gate",
+        "single_commit": "P0 fix — portal consumers + behavioral gate",
+        "ticket_parked": "P0 fix — portal consumers + behavioral gate"
       }
     }
   ],
