@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 440,
+  "version": 441,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -7074,8 +7074,8 @@
       "ticket": "STG-564",
       "file": "src/screens/v3/NewProductScreenV3.tsx",
       "start_line": 1,
-      "end_line": 425,
-      "checksum": "3030bacaddaf78de",
+      "end_line": 433,
+      "checksum": "960727547926a9bf",
       "description": "New product digitization v3 — auto-fill from master DB, photo, sell/cost/margin, HSN/GST, Add to Store",
       "test_file": "src/__tests__/screens/new-product-v3.stg-564.test.ts",
       "depends_on": null,

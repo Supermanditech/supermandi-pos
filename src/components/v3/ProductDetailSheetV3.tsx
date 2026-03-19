@@ -57,9 +57,11 @@ export default function ProductDetailSheetV3({
     onClose();
   }, [product, qty, onAddToCart, onClose]);
 
-  // Reset qty when product changes — use 0.5 as default for weight/volume loose products
+  // Reset qty when product changes — unit-aware defaults
+  // Weight/volume: 0.5 (half kg/ltr). Count: 1 (whole piece/dozen).
   React.useEffect(() => {
-    if (product?.productMode === "LOOSE_BULK" && (product.baseStockUnit === "KG" || product.baseStockUnit === "LTR")) {
+    const bsu = product?.baseStockUnit?.toUpperCase();
+    if (product?.productMode === "LOOSE_BULK" && (bsu === "KG" || bsu === "GM" || bsu === "LTR" || bsu === "ML")) {
       setQty(0.5);
     } else {
       setQty(1);
@@ -219,21 +221,30 @@ export default function ProductDetailSheetV3({
               </View>
             ) : null}
 
-            {/* Quantity selector */}
+            {/* Quantity selector — V3-HARDEN-171: unit-aware stepping */}
+            {(() => {
+              // Weight/volume units get 0.25 step, count/piece units get 1 step
+              const isWeightOrVolume = product.productMode === "LOOSE_BULK" &&
+                ['KG', 'GM', 'LTR', 'ML'].includes((product.baseStockUnit || product.rateUnit || '').toUpperCase());
+              const stepSize = isWeightOrVolume ? 0.25 : 1;
+              const minQty = isWeightOrVolume ? 0.25 : 1;
+              return (
             <View style={styles.qtyRow}>
               <Text style={styles.qtyLabel}>
                 Quantity{product.productMode === "LOOSE_BULK" && product.rateUnit ? ` (per ${product.rateUnit})` : ""}
               </Text>
               <View style={styles.qtyStepper}>
-                <Pressable style={styles.qtyBtn} onPress={() => setQty(Math.max(0.25, qty - (product.productMode === "LOOSE_BULK" ? 0.25 : 1)))} accessibilityLabel="Decrease quantity">
+                <Pressable style={styles.qtyBtn} onPress={() => setQty(Math.max(minQty, qty - stepSize))} accessibilityLabel="Decrease quantity">
                   <Text style={styles.qtyBtnText}>−</Text>
                 </Pressable>
                 <Text style={styles.qtyValue}>{qty % 1 === 0 ? qty : qty.toFixed(2)}</Text>
-                <Pressable style={styles.qtyBtn} onPress={() => setQty(qty + (product.productMode === "LOOSE_BULK" ? 0.25 : 1))} accessibilityLabel="Increase quantity">
+                <Pressable style={styles.qtyBtn} onPress={() => setQty(qty + stepSize)} accessibilityLabel="Increase quantity">
                   <Text style={styles.qtyBtnText}>+</Text>
                 </Pressable>
               </View>
             </View>
+              );
+            })()}
 
             {/* V3-HARDEN-171: Quick-qty presets for loose products on SELL tile */}
             {context === "SELL" && product.productMode === "LOOSE_BULK" && product.rateUnit ? (

@@ -122,7 +122,16 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
         logger.debug("NewProductV3", `api_persist_failed:${String(apiErr)}`);
       }
 
-      // Add to cart
+      // V3-FIX-168: Only add to cart if conversion setup is confirmed or product is PACKAGED
+      // Unconfirmed loose/bulk products must NOT enter the normal sellable cart path
+      if (productMode === "LOOSE_BULK" && setupMode !== "accepted") {
+        showToast(`${name} saved — complete retail setup before selling`);
+        onProductAdded(barcode, name);
+        onClose();
+        return;
+      }
+
+      // Add to cart (only for PACKAGED or confirmed LOOSE_BULK)
       useCartStore.getState().addItem({
         id: barcode,
         name,
@@ -130,7 +139,6 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
         barcode,
         currency: "INR",
         metadata: { brand, category, packSize, unit, hsnCode, gstPct: parseInt(gstPct, 10) || 18 },
-        // V3-FIX-168: Carry conversion context into cart
         productMode,
         soldBy: productMode === "LOOSE_BULK" ? "WEIGHT" : undefined,
         rateUnit: productMode === "LOOSE_BULK" ? (baseStockUnit || "KG") : undefined,

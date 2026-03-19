@@ -7844,9 +7844,11 @@ Scope narrowing (2026-03-19):
     - scan: loose parent barcode opens chooser without pre-adding, operator picks qty first
       via fractional presets (250g=0.25, 500g=0.5, 1kg=1, 5kg=5)
     - SELL tile: detail sheet shows quick-qty presets for loose products (same fractional values),
-      stepper increments by 0.25 for weight/volume, default qty is 0.5 for KG/LTR
+      stepper is unit-aware: 0.25 step for weight/volume (KG/GM/LTR/ML), 1 step for count (PCS/DOZEN),
+      default qty is 0.5 for KG/GM/LTR/ML, 1 for PCS/DOZEN
     - NewProduct: LOOSE_BULK setupMode (suggest/edit/accepted) controls conversionConfirmed
-      persisted to backend — "accepted" = true, "suggest" or "edit" = false
+      persisted to backend — "accepted" = true, "suggest" or "edit" = false;
+      unconfirmed LOOSE_BULK products are NOT added to cart (saved to store but blocked from sale)
   - POS BUY catalog response includes procurementUnit, procurementPackQty, baseStockUnit,
     productMode, soldBy, rateUnit from store_products — BUY mapping consumes the live sell profile
   - data flow: CSV import (create-new and update-existing with full product_mode/procurement/base/confirmed),
