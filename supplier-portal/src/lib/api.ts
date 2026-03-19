@@ -534,6 +534,8 @@ export interface ProductInput {
   deliveryTerms?: string;
   creditDays?: number;
   financeEligible?: boolean;
+  moqTiers?: string; // JSON string: [{minQty, discountPct}]
+  packageType?: string; // LOOSE|CARTON|BOX|CASE|BAG|TIN|BOTTLE|PER_UNIT
 }
 
 // GL-WF-063: Pagination types

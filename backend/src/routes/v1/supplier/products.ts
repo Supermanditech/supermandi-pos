@@ -331,6 +331,7 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         bnplMaxDays: p.bnpl_max_days || null,
         publishedTermsVersion: p.published_terms_version || null,
         publishedAt: p.published_at || null,
+        moqTiers: p.moq_tiers || null,
       })),
       // GL-WF-063: Pagination metadata
       pagination: {
@@ -407,6 +408,7 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
         financeEligible: p.finance_eligible || false, deliveryDays: p.delivery_days || null,
         bnplMaxDays: p.bnpl_max_days || null, publishedTermsVersion: p.published_terms_version || null,
         publishedAt: p.published_at || null,
+        moqTiers: p.moq_tiers || null,
       },
     });
   } catch (error) {
@@ -456,6 +458,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
       // V3-FIX-174: Commercial terms
       ptrMinor, ptsMinor, tradeDiscountPct, scheme,
       deliverySlaDays, deliveryTerms, creditDays: supplierCreditDays, financeEligible,
+      moqTiers, packageType,
     } = req.body;
 
     // Validation
@@ -566,9 +569,10 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         delivery_terms,
         credit_days,
         finance_eligible,
+        moq_tiers,
         approval_status,
         is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, 'pending', true)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, 'pending', true)
       RETURNING
         id,
         name,
@@ -626,6 +630,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         deliveryTerms?.trim() || null,
         supplierCreditDays != null ? parseInt(String(supplierCreditDays)) : null,
         financeEligible === true || financeEligible === 'true',
+        moqTiers ? (typeof moqTiers === 'string' ? moqTiers : JSON.stringify(moqTiers)) : null,
       ]
     );
 
@@ -672,6 +677,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         bnplMaxDays: product.bnpl_max_days || null,
         publishedTermsVersion: product.published_terms_version || null,
         publishedAt: product.published_at || null,
+        moqTiers: product.moq_tiers || null,
       },
     });
   } catch (error) {
@@ -705,6 +711,7 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
       // V3-FIX-174: Commercial terms
       ptrMinor, ptsMinor, tradeDiscountPct, scheme,
       deliverySlaDays, deliveryTerms, creditDays: patchCreditDays, financeEligible,
+      moqTiers: patchMoqTiers, packageType: patchPackageType,
     } = req.body;
 
     const pool = getPool();
@@ -878,6 +885,7 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
     if (deliveryTerms !== undefined) { updates.push(`delivery_terms = $${paramIndex++}`); values.push(deliveryTerms?.trim() || null); }
     if (patchCreditDays !== undefined) { updates.push(`credit_days = $${paramIndex++}`); values.push(patchCreditDays != null ? parseInt(String(patchCreditDays)) : null); }
     if (financeEligible !== undefined) { updates.push(`finance_eligible = $${paramIndex++}`); values.push(financeEligible === true || financeEligible === 'true'); }
+    if (patchMoqTiers !== undefined) { updates.push(`moq_tiers = $${paramIndex++}`); values.push(typeof patchMoqTiers === 'string' ? patchMoqTiers : JSON.stringify(patchMoqTiers)); }
 
     if (updates.length === 0) {
       res.status(400).json({
@@ -1038,6 +1046,7 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
         bnplMaxDays: product.bnpl_max_days || null,
         publishedTermsVersion: product.published_terms_version || null,
         publishedAt: product.published_at || null,
+        moqTiers: product.moq_tiers || null,
       },
     });
   } catch (error) {

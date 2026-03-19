@@ -226,6 +226,16 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
           version: t.published_terms_version || 1,
           publishedAt: t.published_at,
         },
+        // V3-FIX-175: Resolve which MOQ tier applies to the ordered quantity
+        appliedMoqTier: (() => {
+          if (!t.moq_tiers) return null;
+          try {
+            const tiers = typeof t.moq_tiers === 'string' ? JSON.parse(t.moq_tiers) : t.moq_tiers;
+            if (!Array.isArray(tiers)) return null;
+            const sorted = [...tiers].sort((a: any, b: any) => (b.minQty || 0) - (a.minQty || 0));
+            return sorted.find((tier: any) => vi.quantity >= (tier.minQty || 0)) || null;
+          } catch { return null; }
+        })(),
       });
     }
     const acceptedTermsSnapshot = JSON.stringify({
@@ -2108,14 +2118,20 @@ ordersRouter.post("/procurement/payment-callback", async (req: Request, res: Res
     }
     log.info("[payment-callback] PhonePe checksum verified");
   }
-  // Pine Labs: verified via HMAC in pinelabsAdapter.verifyPineLabsCallback()
-  // Generic webhook secret fallback
-  else if (webhookSecret) {
-    const genericSig = req.headers['x-webhook-signature'] as string | undefined;
-    if (!genericSig) {
-      log.warn("[payment-callback] Missing webhook signature — rejecting untrusted callback");
-      return res.status(401).json({ error: "Missing webhook signature" });
+  // Pine Labs: verify via HMAC-SHA256 using verifyPineLabsCallback
+  else if (req.body.ppc_DIA_SECRET && process.env.PINE_LABS_SECRET) {
+    const { verifyPineLabsCallback } = require("../../services/paymentProviders/pinelabsAdapter");
+    const plVerified = verifyPineLabsCallback(req.body);
+    if (!plVerified.success) {
+      log.warn("[payment-callback] Pine Labs HMAC verification FAILED");
+      return res.status(401).json({ error: "Invalid Pine Labs callback signature" });
     }
+    log.info(`[payment-callback] Pine Labs verified: txn=${plVerified.transactionId}`);
+  }
+  // No known provider signature — reject in production
+  else if (webhookSecret || process.env.NODE_ENV === 'production') {
+    log.warn("[payment-callback] No recognized provider signature — rejecting callback");
+    return res.status(401).json({ error: "Unrecognized payment callback — no valid provider signature" });
   }
   // No webhook secret configured — allow in dev/staging, warn in production
   else if (process.env.NODE_ENV === 'production') {

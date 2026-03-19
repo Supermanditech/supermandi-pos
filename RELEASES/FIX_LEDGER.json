@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 462,
+  "version": 464,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -4514,8 +4514,8 @@
       "ticket": "STG-509",
       "file": "backend/src/routes/v1/orders.ts",
       "start_line": 1653,
-      "end_line": 2196,
-      "checksum": "d0de70e93ddc2668",
+      "end_line": 2212,
+      "checksum": "03dcc1870b88c0ff",
       "description": "Reject GRN receive if total qty > ordered * 1.1 (10% tolerance)",
       "test_file": "src/__tests__/screens/grn-excess-qty.stg-509.test.ts",
       "depends_on": null,
@@ -4671,8 +4671,8 @@
       "ticket": "STG-518",
       "file": "supplier-portal/src/lib/api.ts",
       "start_line": 4,
-      "end_line": 1456,
-      "checksum": "0b391d5a3e1255a5",
+      "end_line": 1458,
+      "checksum": "cb4e54cdf6eebe7c",
       "description": "HTTPS enforcement for supplier-portal in production",
       "test_file": "src/__tests__/screens/https-enforcement.stg-518.test.ts",
       "depends_on": null,
