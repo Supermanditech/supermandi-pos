@@ -854,7 +854,14 @@ retailerAdminSuppliersRouter.get("/supplier-catalog", async (req: Request, res: 
         sp.base_stock_unit as "baseStockUnit",
         sp.split_sell_eligible as "splitSellEligible",
         sp.sell_unit as "sellUnit",
-        sp.default_retail_variants as "defaultVariants"
+        sp.default_retail_variants as "defaultVariants",
+        sp.scheme,
+        sp.trade_discount_pct as "tradeDiscountPct",
+        sp.credit_days as "creditDays",
+        COALESCE(sp.delivery_sla_days, sp.delivery_days) as "deliveryDays",
+        sp.delivery_terms as "deliveryTerms",
+        sp.finance_eligible as "financeEligible",
+        sp.published_terms_version as "publishedTermsVersion"
       FROM catalog.supplier_products sp
       JOIN supplier.suppliers s ON s.id = sp.supplier_id
       ${whereClause}

@@ -272,7 +272,12 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         delivery_days,
         bnpl_max_days,
         published_terms_version,
-        published_at
+        published_at,
+        moq_tiers,
+        procurement_unit,
+        procurement_pack_qty,
+        base_stock_unit,
+        hsn_code
       FROM catalog.supplier_products
       WHERE ${whereClause}
       ORDER BY created_at DESC
@@ -332,6 +337,10 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         publishedTermsVersion: p.published_terms_version || null,
         publishedAt: p.published_at || null,
         moqTiers: p.moq_tiers || null,
+        procurementUnit: p.procurement_unit || null,
+        procurementPackQty: p.procurement_pack_qty != null ? Number(p.procurement_pack_qty) : null,
+        baseStockUnit: p.base_stock_unit || null,
+        hsnCode: p.hsn_code || null,
       })),
       // GL-WF-063: Pagination metadata
       pagination: {
@@ -369,7 +378,8 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
               created_at, updated_at,
               ptr_minor, pts_minor, trade_discount_pct, scheme,
               delivery_sla_days, delivery_terms, credit_days, finance_eligible,
-              delivery_days, bnpl_max_days, published_terms_version, published_at
+              delivery_days, bnpl_max_days, published_terms_version, published_at,
+              moq_tiers, procurement_unit, procurement_pack_qty, base_stock_unit, hsn_code
        FROM catalog.supplier_products
        WHERE id = $1::uuid AND supplier_id = $2`,
       [req.params.productId, req.supplierId]
@@ -409,6 +419,10 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
         bnplMaxDays: p.bnpl_max_days || null, publishedTermsVersion: p.published_terms_version || null,
         publishedAt: p.published_at || null,
         moqTiers: p.moq_tiers || null,
+        procurementUnit: p.procurement_unit || null,
+        procurementPackQty: p.procurement_pack_qty != null ? Number(p.procurement_pack_qty) : null,
+        baseStockUnit: p.base_stock_unit || null,
+        hsnCode: p.hsn_code || null,
       },
     });
   } catch (error) {
@@ -600,7 +614,12 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         delivery_sla_days,
         delivery_terms,
         credit_days,
-        finance_eligible`,
+        finance_eligible,
+        moq_tiers,
+        procurement_unit,
+        procurement_pack_qty,
+        base_stock_unit,
+        hsn_code`,
       [
         req.supplierId,
         name,
@@ -678,6 +697,10 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         publishedTermsVersion: product.published_terms_version || null,
         publishedAt: product.published_at || null,
         moqTiers: product.moq_tiers || null,
+        procurementUnit: product.procurement_unit || null,
+        procurementPackQty: product.procurement_pack_qty != null ? Number(product.procurement_pack_qty) : null,
+        baseStockUnit: product.base_stock_unit || null,
+        hsnCode: product.hsn_code || null,
       },
     });
   } catch (error) {
@@ -815,6 +838,10 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
     if (name !== undefined) {
       updates.push(`name = $${paramIndex++}`);
       values.push(name);
+    }
+    if (description !== undefined) {
+      updates.push(`description = $${paramIndex++}`);
+      values.push(description || null);
     }
     if (category !== undefined) {
       updates.push(`category = $${paramIndex++}`);
@@ -988,7 +1015,14 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
          delivery_sla_days,
          delivery_terms,
          credit_days,
-         finance_eligible`,
+         finance_eligible,
+         moq_tiers,
+         procurement_unit,
+         procurement_pack_qty,
+         base_stock_unit,
+         hsn_code,
+         image_url,
+         description`,
       values
     );
 
@@ -1047,6 +1081,12 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
         publishedTermsVersion: product.published_terms_version || null,
         publishedAt: product.published_at || null,
         moqTiers: product.moq_tiers || null,
+        procurementUnit: product.procurement_unit || null,
+        procurementPackQty: product.procurement_pack_qty != null ? Number(product.procurement_pack_qty) : null,
+        baseStockUnit: product.base_stock_unit || null,
+        hsnCode: product.hsn_code || null,
+        imageUrl: product.image_url || null,
+        description: product.description || null,
       },
     });
   } catch (error) {

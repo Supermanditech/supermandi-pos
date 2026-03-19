@@ -515,6 +515,8 @@ export interface Product {
   publishedAt?: string | null;
   moqTiers?: any;
   procurementUnit?: string | null;
+  procurementPackQty?: number | null;
+  baseStockUnit?: string | null;
 }
 
 export interface ProductInput {

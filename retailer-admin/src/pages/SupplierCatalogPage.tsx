@@ -34,6 +34,19 @@ interface SupplierProduct {
   supplierCity: string | null;
   supplierPhone: string | null;
   inStoreCatalog: boolean;
+  // V3-FIX-173: B2B decision metadata
+  deliveryDays?: number;
+  scheme?: string;
+  deliveryTerms?: string;
+  financeEligible?: boolean;
+  tradeDiscountPct?: number;
+  creditDays?: number;
+  publishedTermsVersion?: number;
+  // V3-FIX-170: Conversion-aware procurement context
+  procurementUnit?: string;
+  procurementPackQty?: number;
+  baseStockUnit?: string;
+  splitSellEligible?: boolean;
 }
 
 interface Pagination {
@@ -287,11 +300,17 @@ export default function SupplierCatalogPage() {
 
                 {/* V3-FIX-173: B2B decision metadata for retailer buyers */}
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4, fontSize: 11 }}>
-                  {(product as any).deliveryDays != null ? (
-                    <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '1px 6px', borderRadius: 4 }}>Delivery: {(product as any).deliveryDays}d</span>
+                  {product.deliveryDays != null ? (
+                    <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '1px 6px', borderRadius: 4 }}>Delivery: {product.deliveryDays}d</span>
                   ) : null}
                   {product.bnplEligible ? (
                     <span style={{ background: '#dcfce7', color: '#16a34a', padding: '1px 6px', borderRadius: 4 }}>BNPL {product.bnplMaxDays}d</span>
+                  ) : null}
+                  {product.tradeDiscountPct ? (
+                    <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 4 }}>-{product.tradeDiscountPct}%</span>
+                  ) : null}
+                  {product.creditDays ? (
+                    <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '1px 6px', borderRadius: 4 }}>{product.creditDays}d credit</span>
                   ) : null}
                   {product.marginMinor > 0 ? (
                     <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 4 }}>Margin: {formatPrice(product.marginMinor)}/u</span>
@@ -299,11 +318,11 @@ export default function SupplierCatalogPage() {
                 </div>
 
                 {/* V3-FIX-173: Richer buyer metadata — scheme, delivery terms, finance */}
-                {((product as any).scheme || (product as any).deliveryTerms || (product as any).financeEligible) ? (
+                {(product.scheme || product.deliveryTerms || product.financeEligible) ? (
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', fontSize: 11, marginTop: 2 }}>
-                    {(product as any).scheme ? <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 4 }}>{(product as any).scheme}</span> : null}
-                    {(product as any).deliveryTerms ? <span style={{ background: '#f0f9ff', color: '#0369a1', padding: '1px 6px', borderRadius: 4 }}>{(product as any).deliveryTerms}</span> : null}
-                    {(product as any).financeEligible ? <span style={{ background: '#dcfce7', color: '#16a34a', padding: '1px 6px', borderRadius: 4 }}>Finance</span> : null}
+                    {product.scheme ? <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 4 }}>{product.scheme}</span> : null}
+                    {product.deliveryTerms ? <span style={{ background: '#f0f9ff', color: '#0369a1', padding: '1px 6px', borderRadius: 4 }}>{product.deliveryTerms}</span> : null}
+                    {product.financeEligible ? <span style={{ background: '#dcfce7', color: '#16a34a', padding: '1px 6px', borderRadius: 4 }}>Finance</span> : null}
                   </div>
                 ) : null}
 
@@ -311,8 +330,8 @@ export default function SupplierCatalogPage() {
                 {product.unit && (
                   <div className="scat-category" style={{ fontSize: 13, color: '#6b7280' }}>
                     Unit: {product.unit}
-                    {(product as any).procurementUnit && (product as any).procurementUnit !== product.unit && (
-                      <span> (shipped as {(product as any).procurementUnit})</span>
+                    {product.procurementUnit && product.procurementUnit !== product.unit && (
+                      <span> (shipped as {product.procurementUnit})</span>
                     )}
                   </div>
                 )}
@@ -326,10 +345,10 @@ export default function SupplierCatalogPage() {
 
                 {/* Action Button */}
                 {/* V3-FIX-170: Conversion review before add */}
-                {!product.inStoreCatalog && (product as any).procurementUnit && (product as any).procurementUnit !== ((product as any).baseStockUnit || product.unit) && (
+                {!product.inStoreCatalog && product.procurementUnit && product.procurementUnit !== (product.baseStockUnit || product.unit) && (
                   <div style={{ fontSize: 12, color: '#6366f1', padding: '4px 0', borderTop: '1px solid #e5e7eb', marginTop: 6 }}>
-                    Conversion: 1 {(product as any).procurementUnit} = {(product as any).procurementPackQty ?? 1} {(product as any).baseStockUnit || product.unit || 'units'}
-                    {(product as any).splitSellEligible ? ' · Split-sell OK' : ''}
+                    Conversion: 1 {product.procurementUnit} = {product.procurementPackQty ?? 1} {product.baseStockUnit || product.unit || 'units'}
+                    {product.splitSellEligible ? ' · Split-sell OK' : ''}
                   </div>
                 )}
 
@@ -345,8 +364,7 @@ export default function SupplierCatalogPage() {
                     className="btn btn-primary btn-full"
                     onClick={() => {
                       // V3-FIX-170: Route through conversion review when bulk setup needed
-                      const p = product as any;
-                      if (p.procurementUnit && p.baseStockUnit && p.procurementUnit !== p.baseStockUnit) {
+                      if (product.procurementUnit && product.baseStockUnit && product.procurementUnit !== product.baseStockUnit) {
                         setReviewProduct(product);
                       } else {
                         handleAddProduct(product);
@@ -406,10 +424,10 @@ export default function SupplierCatalogPage() {
                   <tbody>
                     <tr>
                       <td style={{ padding: '4px 0', color: '#6b7280' }}>Bought as:</td>
-                      <td style={{ fontWeight: 600 }}>{(reviewProduct as any).procurementUnit || reviewProduct.unit || 'PCS'}{(reviewProduct as any).procurementPackQty && Number((reviewProduct as any).procurementPackQty) > 1 ? ` (${(reviewProduct as any).procurementPackQty} per pack)` : ''}</td>
+                      <td style={{ fontWeight: 600 }}>{reviewProduct.procurementUnit || reviewProduct.unit || 'PCS'}{reviewProduct.procurementPackQty && Number(reviewProduct.procurementPackQty) > 1 ? ` (${reviewProduct.procurementPackQty} per pack)` : ''}</td>
                     </tr>
-                    <tr><td style={{ padding: '4px 0', color: '#6b7280' }}>Stocked as:</td><td style={{ fontWeight: 600 }}>{(reviewProduct as any).baseStockUnit || 'PCS'}</td></tr>
-                    <tr><td style={{ padding: '4px 0', color: '#6b7280' }}>Split-sell:</td><td style={{ fontWeight: 600 }}>{(reviewProduct as any).splitSellEligible ? 'Yes' : 'No'}</td></tr>
+                    <tr><td style={{ padding: '4px 0', color: '#6b7280' }}>Stocked as:</td><td style={{ fontWeight: 600 }}>{reviewProduct.baseStockUnit || 'PCS'}</td></tr>
+                    <tr><td style={{ padding: '4px 0', color: '#6b7280' }}>Split-sell:</td><td style={{ fontWeight: 600 }}>{reviewProduct.splitSellEligible ? 'Yes' : 'No'}</td></tr>
                     <tr><td style={{ padding: '4px 0', color: '#6b7280' }}>Your price:</td><td style={{ fontWeight: 600, color: '#16a34a' }}>{formatPrice(reviewProduct.retailerPriceMinor)}</td></tr>
                   </tbody>
                 </table>
@@ -448,11 +466,11 @@ export default function SupplierCatalogPage() {
               <p style={{ fontSize: 12, color: '#059669', margin: '4px 0' }}>
                 Suggested retail variants: <strong>{(reviewProduct as any).defaultVariants}</strong>
               </p>
-            ) : (reviewProduct as any).baseStockUnit === 'KG' ? (
+            ) : reviewProduct.baseStockUnit === 'KG' ? (
               <p style={{ fontSize: 12, color: '#059669', margin: '4px 0' }}>
                 Suggested: 250g, 500g, 1kg, 5kg — auto-created after add
               </p>
-            ) : (reviewProduct as any).baseStockUnit === 'LTR' ? (
+            ) : reviewProduct.baseStockUnit === 'LTR' ? (
               <p style={{ fontSize: 12, color: '#059669', margin: '4px 0' }}>
                 Suggested: 250ml, 500ml, 1L — auto-created after add
               </p>
@@ -474,9 +492,9 @@ export default function SupplierCatalogPage() {
                     if (reviewMode === 'preview') {
                       // Switch to edit mode
                       setReviewMode('edit');
-                      setEditSetupUnit((reviewProduct as any).procurementUnit || '');
-                      setEditSetupPackQty(String((reviewProduct as any).procurementPackQty || 1));
-                      setEditSetupStockUnit((reviewProduct as any).baseStockUnit || '');
+                      setEditSetupUnit(reviewProduct.procurementUnit || '');
+                      setEditSetupPackQty(String(reviewProduct.procurementPackQty || 1));
+                      setEditSetupStockUnit(reviewProduct.baseStockUnit || '');
                     } else {
                       // Save edited setup and add with conversion confirmed
                       handleAddProduct(reviewProduct, true, {

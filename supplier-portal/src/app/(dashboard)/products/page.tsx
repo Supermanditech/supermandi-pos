@@ -118,6 +118,7 @@ export default function ProductsPage() {
     deliveryTerms: '',
     creditDays: undefined,
     financeEligible: false,
+    moqTiers: '',
   });
 
   // GL-WF-063: Paginated products query
@@ -205,6 +206,19 @@ export default function ProductsPage() {
         netContentUnit: product.netContentUnit,
         shelfLifeDays: product.shelfLifeDays,
         hsnCode: product.hsnCode,
+        // V3-FIX-174: Preserve commercial terms on resubmit
+        procurementUnit: product.procurementUnit || '',
+        procurementPackQty: product.procurementPackQty ?? undefined,
+        baseStockUnit: product.baseStockUnit || '',
+        ptrMinor: product.ptrMinor ?? undefined,
+        ptsMinor: product.ptsMinor ?? undefined,
+        tradeDiscountPct: product.tradeDiscountPct ?? undefined,
+        scheme: product.scheme || '',
+        deliverySlaDays: product.deliverySlaDays ?? undefined,
+        deliveryTerms: product.deliveryTerms || '',
+        creditDays: product.creditDays ?? undefined,
+        financeEligible: product.financeEligible || false,
+        moqTiers: product.moqTiers ? (typeof product.moqTiers === 'string' ? product.moqTiers : JSON.stringify(product.moqTiers)) : '',
       },
     });
   };
@@ -241,6 +255,16 @@ export default function ProductsPage() {
       procurementPackQty: undefined,
       baseStockUnit: '',
       splitSellEligible: false,
+      // V3-FIX-174: Commercial terms reset
+      ptrMinor: undefined,
+      ptsMinor: undefined,
+      tradeDiscountPct: undefined,
+      scheme: '',
+      deliverySlaDays: undefined,
+      deliveryTerms: '',
+      creditDays: undefined,
+      financeEligible: false,
+      moqTiers: '',
     });
   };
 
@@ -309,8 +333,8 @@ export default function ProductsPage() {
       hsnCode: product.hsnCode || '',
       // V3-FIX-174: Pre-fill commercial terms on edit
       procurementUnit: product.procurementUnit || '',
-      procurementPackQty: undefined,
-      baseStockUnit: '',
+      procurementPackQty: product.procurementPackQty ?? undefined,
+      baseStockUnit: product.baseStockUnit || '',
       splitSellEligible: false,
       ptrMinor: product.ptrMinor ?? undefined,
       ptsMinor: product.ptsMinor ?? undefined,
@@ -459,6 +483,13 @@ export default function ProductsPage() {
           // SCALE-B5: netContentValue and shelfLifeDays are optional positive integers
           : name === 'netContentValue' || name === 'shelfLifeDays'
           ? value === '' ? undefined : parseFloat(value) || undefined
+          // V3-FIX-174: Numeric commercial fields — paise values and integer counts
+          : name === 'ptrMinor' || name === 'ptsMinor'
+          ? value === '' ? undefined : Math.round((parseFloat(value || '0') + Number.EPSILON) * 100)
+          : name === 'tradeDiscountPct'
+          ? value === '' ? undefined : parseFloat(value) || undefined
+          : name === 'deliverySlaDays' || name === 'creditDays' || name === 'procurementPackQty'
+          ? value === '' ? undefined : parseInt(value) || undefined
           : value,
     }));
   };
@@ -854,8 +885,14 @@ export default function ProductsPage() {
                 <div>
                   <label htmlFor="product-ptrMinor" className="label">PTR (₹/unit)</label>
                   <input type="number" id="product-ptrMinor" name="ptrMinor"
-                    value={formData.ptrMinor ?? ''} onChange={handleChange}
+                    value={formData.ptrMinor != null ? (formData.ptrMinor / 100).toFixed(2) : ''} onChange={handleChange}
                     className="input" placeholder="Price to Retailer" min="0" step="0.01" />
+                </div>
+                <div>
+                  <label htmlFor="product-ptsMinor" className="label">PTS (₹/unit)</label>
+                  <input type="number" id="product-ptsMinor" name="ptsMinor"
+                    value={formData.ptsMinor != null ? (formData.ptsMinor / 100).toFixed(2) : ''} onChange={handleChange}
+                    className="input" placeholder="Price to Stockist" min="0" step="0.01" />
                 </div>
                 <div>
                   <label htmlFor="product-tradeDiscountPct" className="label">Trade Discount (%)</label>
@@ -890,7 +927,7 @@ export default function ProductsPage() {
                 <div className="col-span-2">
                   <label htmlFor="product-moqTiers" className="label">MOQ Tier Discounts (JSON)</label>
                   <input type="text" id="product-moqTiers" name="moqTiers"
-                    value={(formData as any).moqTiers || ''}
+                    value={formData.moqTiers || ''}
                     onChange={handleChange}
                     className="input font-mono text-xs"
                     placeholder='[{"minQty":10,"discountPct":5},{"minQty":50,"discountPct":10}]' />
@@ -911,6 +948,26 @@ export default function ProductsPage() {
                     <option value="TIN">Tin</option>
                     <option value="BOTTLE">Bottle</option>
                     <option value="PCS">Per Unit (PCS)</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="product-procurementPackQty" className="label">Pack Qty (units per package)</label>
+                  <input type="number" id="product-procurementPackQty" name="procurementPackQty"
+                    value={formData.procurementPackQty ?? ''} onChange={handleChange}
+                    className="input" placeholder="e.g. 12" min="1" step="1" />
+                </div>
+                <div>
+                  <label htmlFor="product-baseStockUnit" className="label">Base Stock Unit</label>
+                  <select id="product-baseStockUnit" name="baseStockUnit"
+                    value={formData.baseStockUnit || ''}
+                    onChange={handleChange}
+                    className="input">
+                    <option value="">Auto (same as unit)</option>
+                    <option value="KG">KG</option>
+                    <option value="GM">GM</option>
+                    <option value="LTR">LTR</option>
+                    <option value="ML">ML</option>
+                    <option value="PCS">PCS</option>
                   </select>
                 </div>
                 <div className="col-span-2 flex items-center gap-2">

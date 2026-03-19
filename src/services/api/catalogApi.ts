@@ -21,6 +21,18 @@ export interface CatalogSupplier {
   bnplEligible?: boolean;
   bnplMaxDays?: number;
   minOrderValue?: number; // POS-BUY-003: from supplier_store_links.min_order_value (minor units)
+  // V3-FIX-173: Full buyer-card commercial metadata
+  ptrMinor?: number;
+  ptsMinor?: number;
+  tradeDiscountPct?: number;
+  scheme?: string;
+  creditDays?: number;
+  deliveryDays?: number;
+  deliveryTerms?: string;
+  financeEligible?: boolean;
+  publishedTermsVersion?: number;
+  moqUnit?: string;
+  freeDelivery?: boolean;
 }
 
 /**
