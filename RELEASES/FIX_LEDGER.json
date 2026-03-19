@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 484,
+  "version": 486,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -8294,6 +8294,62 @@
         "parity_scanned": "Parity scan clean — 8 files, 0 issues at 2026-03-19T19:01:44.631Z",
         "parity_fixed": "No parity gaps found — nothing to fix",
         "single_commit": "fix(V3-HARDEN-185): single commit",
+        "ticket_parked": "Committing now"
+      }
+    },
+    {
+      "ticket": "V3-FIX-186",
+      "file": "backend/src/services/buyAgainService.ts",
+      "start_line": 1,
+      "end_line": 280,
+      "checksum": "4835ed5e40271d25",
+      "description": "Buy-again service with demand-driven quantities and pending inbound suppression",
+      "test_file": "backend/tests/contracts/buyAgainService.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-19T19:03:20.615Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "operator_approved": "Mode A pre-staging",
+        "backend_api": "POST /pos/buy-again + GET /pos/buy-again/history",
+        "api_errors": "500 on failure, 503 on DB unavailable",
+        "store_isolation": "storeId from posDevice.storeId (device token JWT)",
+        "business_logic": "Demand-driven quantities, pending inbound suppression, Math.max(1,qty)",
+        "business_behaviour": "buy-again → demand lookup → price lookup → draft → purchaseDraftStore",
+        "db_schema": "Uses purchases + purchase_items tables — existing schema",
+        "impacted_files": "buyAgainService.ts, buyAgain route, buyAgainApi.ts, test, index.ts, FIX_LEDGER",
+        "fix_ledger_check": "115 fixes intact, zero drift",
+        "no_agent_conflict": "Single agent session",
+        "gcp_parity": "No localhost URLs, env vars used",
+        "regression_check": "12 new tests pass, existing tests unaffected",
+        "test_guard": "buyAgainService.unit.test.ts — 12 tests pass",
+        "single_commit": "fix(V3-FIX-186): single commit",
         "ticket_parked": "Committing now"
       }
     }

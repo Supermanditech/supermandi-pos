@@ -126,6 +126,13 @@ import { posWholesaleRouter } from "./pos/wholesaleFields";
 import { posLastPurchaseRouter } from "./pos/lastPurchase";
 import { posMasterCatalogRouter } from "./pos/masterCatalog";
 import { posSalesVelocityRouter } from "./pos/salesVelocity";
+import { posDemandSignalsRouter } from "./pos/demandSignals";  // V3-HARDEN-185: Demand signals
+import { posBuyAgainRouter } from "./pos/buyAgain";  // V3-FIX-186: Buy-again / repeat-last-order
+import { posLifecycleEventsRouter } from "./pos/lifecycleEvents";  // V3-HARDEN-188: Lifecycle events
+import { retailerDemandSignalsRouter } from "./retailer-admin/demandSignals";  // V3-HARDEN-185: Retailer demand
+import { adminDemandSignalsRouter } from "./admin/demandSignals";  // V3-HARDEN-185: Admin demand
+import { adminAllocationsRouter } from "./admin/allocations";  // V3-FIX-187: Admin allocation dashboard
+import { supplierAllocationsRouter } from "./supplier/allocations";  // V3-FIX-187: Supplier allocation mgmt
 
 export const v1Router = Router();
 
@@ -180,6 +187,9 @@ v1Router.use("/pos", posWholesaleRouter);
 v1Router.use("/pos", posLastPurchaseRouter);
 v1Router.use("/pos", posMasterCatalogRouter);
 v1Router.use("/pos", posSalesVelocityRouter);
+v1Router.use("/pos", posDemandSignalsRouter);  // V3-HARDEN-185: POS demand signals
+v1Router.use("/pos", posBuyAgainRouter);  // V3-FIX-186: Buy-again / repeat-last-order
+v1Router.use("/pos", posLifecycleEventsRouter);  // V3-HARDEN-188: Lifecycle events
 v1Router.use("/pos/translations", posTranslationsRouter);
 v1Router.use("/", consentRouter);  // STG-485: DPDP consent API (available to POS + portals)
 v1Router.use("/reorder", reorderRouter);
@@ -229,6 +239,8 @@ v1Router.use("/admin", adminReorderPoliciesRouter);  // SA-P1-015: Reorder polic
 v1Router.use("/admin", adminImportsRouter);  // SA-P2-008: Bulk import notification
 v1Router.use("/admin", adminPriceBoundsRouter);  // SA-P0-003: Price bounds
 v1Router.use("/admin", adminAnomalyAlertsRouter);  // SA-P1-010: Anomaly detection alerts
+v1Router.use("/admin", adminDemandSignalsRouter);  // V3-HARDEN-185: Cross-store demand pressure
+v1Router.use("/admin", adminAllocationsRouter);  // V3-FIX-187: Allocation dashboard
 v1Router.use("/admin/quality", qualityDashboardRouter);  // T-223: Quality dashboard API
 v1Router.use("/admin/credit-providers", adminCreditProvidersRouter);  // T-281/T-289/T-290: Provider health + management
 v1Router.use("/admin", adminMaintenanceRouter);  // SA-P0-007: System maintenance mode
@@ -281,12 +293,14 @@ v1Router.use("/retailer-admin", retailerNotificationsRouter);  // Phase 8: In-ap
 v1Router.use("/retailer-admin", retailerReconciliationRouter);  // T-260: Payment reconciliation
 v1Router.use("/retailer-admin", retailerCreditDashboardRouter);  // T-277: Credit dashboard
 v1Router.use("/retailer-admin", retailerPurchaseOrdersRouter);  // T-180: Purchase order visibility
+v1Router.use("/retailer-admin", retailerDemandSignalsRouter);  // V3-HARDEN-185: Retailer demand signals
 v1Router.use("/credit", creditProvidersRouter);  // T-263/T-274/T-275/T-276/T-278: Credit provider APIs
 v1Router.use("/demo", demoRouter);
 v1Router.use("/webhooks", webhooksRouter);  // SM-018: Razorpay payout webhooks
 v1Router.use("/webhooks", refundWebhookRouter);  // T-219: Razorpay refund status webhooks
 v1Router.use("/webhooks", whatsappWebhookRouter);  // WA-001: WhatsApp delivery status webhooks
 v1Router.use("/supplier", supplierRouter);  // SM-005, SM-006, SM-007: Supplier portal APIs
+v1Router.use("/supplier", supplierAllocationsRouter);  // V3-FIX-187: Supplier allocation management
 v1Router.use("/supplier/bnpl", supplierBnplRouter);  // T-280: Supplier BNPL visibility
 v1Router.use("/chat", chatRouter);  // T-291→T-302: In-app messaging, support, templates
 v1Router.use("/", aiIntelligenceRouter);  // T-303→T-316: AI Intelligence (POS + admin endpoints)
