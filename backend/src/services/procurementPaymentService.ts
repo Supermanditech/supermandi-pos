@@ -71,13 +71,43 @@ export async function createPaymentIntent(
 
   log.info(`[V3-FIX-176] Payment intent created: ${id}, order=${input.orderId}, amount=${input.amountMinor}, mode=${input.mode}, provider=${provider}`);
 
-  // Provider-specific initialization would go here
-  // For now, return the intent in 'created' state
-  return {
-    id,
-    status: 'created',
-    provider,
-  };
+  // V3-FIX-176: Provider-specific initialization
+  // Each provider returns actionable data for the checkout UI
+  const amountRupees = (input.amountMinor / 100).toFixed(2);
+
+  if (provider === 'UPI_DIRECT') {
+    // Generate UPI deep link for SuperMandi merchant
+    const merchantVpa = process.env.SUPERMANDI_UPI_VPA || 'supermandi@icici';
+    const merchantName = 'SuperMandi Tech Pvt Ltd';
+    const upiDeepLink = `upi://pay?pa=${merchantVpa}&pn=${encodeURIComponent(merchantName)}&am=${amountRupees}&cu=INR&tn=Order-${input.orderId.substring(0, 8)}`;
+    const qrData = `upi://pay?pa=${merchantVpa}&pn=${encodeURIComponent(merchantName)}&am=${amountRupees}&cu=INR`;
+    await client.query(
+      `UPDATE procurement.payment_intents SET status = 'pending', provider_order_id = $2, updated_at = NOW() WHERE id = $1`,
+      [id, `UPI-${id.substring(0, 8)}`]
+    );
+    return { id, status: 'pending' as PaymentIntentStatus, provider, redirectUrl: upiDeepLink, qrData };
+  }
+
+  if (provider === 'SUPERMANDI_CREDIT') {
+    // Credit approval is instant for eligible stores — mark as authorized
+    await client.query(
+      `UPDATE procurement.payment_intents SET status = 'authorized', updated_at = NOW() WHERE id = $1`,
+      [id]
+    );
+    return { id, status: 'authorized' as PaymentIntentStatus, provider };
+  }
+
+  if (provider === 'BNPL') {
+    // BNPL requires partner approval — stays pending
+    await client.query(
+      `UPDATE procurement.payment_intents SET status = 'pending', updated_at = NOW() WHERE id = $1`,
+      [id]
+    );
+    return { id, status: 'pending' as PaymentIntentStatus, provider };
+  }
+
+  // RAZORPAY / PINE_LABS / other — would create provider order, stays pending
+  return { id, status: 'created' as PaymentIntentStatus, provider };
 }
 
 /**

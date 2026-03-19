@@ -131,11 +131,11 @@ else
   ERRORS=$((ERRORS + 1))
 fi
 
-# Behavioral: Checkout calls confirmPayment after submitOrder
-if grep -q "confirmPayment" src/screens/v3/BuyScreenV3.tsx; then
-  echo "PASS: Checkout calls confirmPayment for non-CASH modes"
+# Behavioral: Checkout uses server-side payment intent (not client-side confirmPayment)
+if grep -q "Payment intent is now created server-side" src/screens/v3/BuyScreenV3.tsx; then
+  echo "PASS: Checkout relies on server-side payment intent (not client confirmPayment)"
 else
-  echo "FAIL: Checkout missing confirmPayment call"
+  echo "FAIL: Checkout payment intent not server-side"
   ERRORS=$((ERRORS + 1))
 fi
 

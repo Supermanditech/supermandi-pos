@@ -1400,6 +1400,8 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
         sp.invoice_model, sp.hsn_code, sp.gst_rate,
         sp.approval_status,
         sp.supplier_id,
+        sp.ptr_minor, sp.pts_minor, sp.trade_discount_pct, sp.scheme,
+        sp.delivery_sla_days, sp.delivery_terms, sp.credit_days, sp.finance_eligible,
         s.business_name as supplier_name,
         s.verification_status as supplier_status
        FROM catalog.supplier_products sp
@@ -1517,16 +1519,17 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
     }
 
     // V3-FIX-174: Full commercial term editing for SuperAdmin
-    if (ptrMinor !== undefined) { updates.push(`ptr_minor = $${paramIndex++}`); values.push(parseInt(String(ptrMinor))); changes.ptrMinor = { from: null, to: ptrMinor }; }
-    if (ptsMinor !== undefined) { updates.push(`pts_minor = $${paramIndex++}`); values.push(parseInt(String(ptsMinor))); changes.ptsMinor = { from: null, to: ptsMinor }; }
-    if (tradeDiscountPct !== undefined) { updates.push(`trade_discount_pct = $${paramIndex++}`); values.push(parseFloat(String(tradeDiscountPct))); changes.tradeDiscountPct = { from: null, to: tradeDiscountPct }; }
-    if (scheme !== undefined) { updates.push(`scheme = $${paramIndex++}`); values.push(scheme?.trim() || null); changes.scheme = { from: null, to: scheme }; }
-    if (deliverySlaDays !== undefined) { updates.push(`delivery_sla_days = $${paramIndex++}`); values.push(parseInt(String(deliverySlaDays))); changes.deliverySlaDays = { from: null, to: deliverySlaDays }; }
-    if (deliveryTerms !== undefined) { updates.push(`delivery_terms = $${paramIndex++}`); values.push(deliveryTerms?.trim() || null); changes.deliveryTerms = { from: null, to: deliveryTerms }; }
-    if (adminCreditDays !== undefined) { updates.push(`credit_days = $${paramIndex++}`); values.push(parseInt(String(adminCreditDays))); changes.creditDays = { from: null, to: adminCreditDays }; }
-    if (financeEligible !== undefined) { updates.push(`finance_eligible = $${paramIndex++}`); values.push(financeEligible === true); changes.financeEligible = { from: null, to: financeEligible }; }
-    // Increment published_terms_version on any commercial field edit
-    if (ptrMinor !== undefined || tradeDiscountPct !== undefined || scheme !== undefined || deliverySlaDays !== undefined || financeEligible !== undefined) {
+    // V3-FIX-174: Full commercial term editing with real audit trail
+    if (ptrMinor !== undefined) { updates.push(`ptr_minor = $${paramIndex++}`); values.push(parseInt(String(ptrMinor))); changes.ptrMinor = { from: current.ptr_minor, to: ptrMinor }; }
+    if (ptsMinor !== undefined) { updates.push(`pts_minor = $${paramIndex++}`); values.push(parseInt(String(ptsMinor))); changes.ptsMinor = { from: current.pts_minor, to: ptsMinor }; }
+    if (tradeDiscountPct !== undefined) { updates.push(`trade_discount_pct = $${paramIndex++}`); values.push(parseFloat(String(tradeDiscountPct))); changes.tradeDiscountPct = { from: current.trade_discount_pct, to: tradeDiscountPct }; }
+    if (scheme !== undefined) { updates.push(`scheme = $${paramIndex++}`); values.push(scheme?.trim() || null); changes.scheme = { from: current.scheme, to: scheme }; }
+    if (deliverySlaDays !== undefined) { updates.push(`delivery_sla_days = $${paramIndex++}`); values.push(parseInt(String(deliverySlaDays))); changes.deliverySlaDays = { from: current.delivery_sla_days, to: deliverySlaDays }; }
+    if (deliveryTerms !== undefined) { updates.push(`delivery_terms = $${paramIndex++}`); values.push(deliveryTerms?.trim() || null); changes.deliveryTerms = { from: current.delivery_terms, to: deliveryTerms }; }
+    if (adminCreditDays !== undefined) { updates.push(`credit_days = $${paramIndex++}`); values.push(parseInt(String(adminCreditDays))); changes.creditDays = { from: current.credit_days, to: adminCreditDays }; }
+    if (financeEligible !== undefined) { updates.push(`finance_eligible = $${paramIndex++}`); values.push(financeEligible === true); changes.financeEligible = { from: current.finance_eligible, to: financeEligible }; }
+    // V3-HARDEN-177: Increment published_terms_version on ANY commercial field edit
+    if (ptrMinor !== undefined || ptsMinor !== undefined || tradeDiscountPct !== undefined || scheme !== undefined || deliverySlaDays !== undefined || deliveryTerms !== undefined || adminCreditDays !== undefined || financeEligible !== undefined) {
       updates.push(`published_terms_version = COALESCE(published_terms_version, 0) + 1`);
       updates.push(`published_at = NOW()`);
       updates.push(`published_by = $${paramIndex++}`);

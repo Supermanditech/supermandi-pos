@@ -232,7 +232,7 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         total_amount, item_count, store_notes, delivery_address,
         expected_delivery_date, created_by_user_id, procurement_lane,
         accepted_terms_snapshot, accepted_terms_version, payment_lane
-      ) VALUES ($1, $2, $3, $4, $5, $12, $6, $7, $8, $9, $10, NULL, $11, $13, 1, $14)
+      ) VALUES ($1, $2, $3, $4, $5, $12, $6, $7, $8, $9, $10, NULL, $11, $13, $15, $14)
       RETURNING
         id,
         order_number as "orderNumber",
@@ -258,6 +258,8 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         acceptedTermsSnapshot,
         // V3-FIX-176: Payment lane — SuperMandi principal for catalogue orders
         procurementLane === "CATALOGUE_PRINCIPAL" ? "SUPERMANDI_PRINCIPAL" : null,
+        // V3-FIX-175: Real published-term version from snapshot
+        Math.max(...termSnapItems.map(i => i.publishedTerms.version), 1),
       ]
     );
 
@@ -283,6 +285,8 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
           });
           order.paymentIntentId = intent.id;
           order.paymentIntentStatus = intent.status;
+          order.paymentRedirectUrl = intent.redirectUrl;
+          order.paymentQrData = intent.qrData;
         } catch (payErr: any) {
           log.warn(`[V3-FIX-176] Payment intent creation failed for order ${orderId}: ${payErr.message}`);
         }

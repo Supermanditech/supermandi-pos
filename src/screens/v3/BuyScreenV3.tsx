@@ -23,34 +23,38 @@ import { useScanResultStore } from "../../stores/scanResultStore";
 // V3-FIX-076: BUY tab — no fabricated wholesale metadata
 
 // Map CatalogProduct → SupplierProduct using real backend fields only
+// V3-FIX-173: Map CatalogProduct (with suppliers array) to SupplierProduct
+// Uses best supplier offer (first in sorted array) for commercial terms
 function catalogToSupplier(p: CatalogProduct): SupplierProduct {
   const raw = p as any;
+  // Buy-catalog returns products with a suppliers[] array containing per-supplier offers
+  const bestOffer = (raw.suppliers ?? [])[0] ?? {};
   return {
-    id: p.id,
-    supplierId: raw.supplierId ?? raw.supplier_id ?? "",
-    barcode: raw.barcode ?? raw.primary_barcode ?? undefined, // V3-FIX-157: carry barcode for scan matching
+    id: bestOffer.supplierProductId ?? p.id,
+    supplierId: bestOffer.supplierId ?? raw.supplierId ?? "",
+    barcode: raw.barcode ?? raw.primaryBarcode ?? undefined,
     name: p.name,
     brand: p.brand ?? "",
     category: p.category ?? "",
     packSize: p.netContentValue ? `${p.netContentValue}${p.netContentUnit ?? ""}` : "",
     caseSize: raw.caseSize ?? raw.case_size ?? 1,
     unit: p.unit ?? "pcs",
-    mrpMinor: raw.mrpMinor ?? (raw.bestPrice ? Math.round(raw.bestPrice * 100) : 0),
-    ptrMinor: raw.ptrMinor ?? raw.adminRetailPriceMinor ?? raw.purchasePrice ?? 0,
+    mrpMinor: bestOffer.mrp ?? raw.mrpMinor ?? 0,
+    ptrMinor: bestOffer.ptrMinor ?? bestOffer.purchasePrice ?? raw.bestPrice ?? 0,
+    ptsMinor: bestOffer.ptsMinor ?? undefined,
     hsnCode: p.hsnCode ?? "",
     gstPct: p.gstRate ?? p.defaultGstRate ?? 18,
-    moq: raw.moq ?? 1,
-    supplierName: raw.supplierName ?? "",
-    deliveryDays: raw.deliveryDays ?? 0,
-    bnplAvailable: raw.bnplAvailable ?? false,
-    tradeDiscountPct: raw.tradeDiscountPct,
-    creditDays: raw.creditDays,
+    moq: bestOffer.moq ?? raw.minMoq ?? 1,
+    supplierName: bestOffer.supplierName ?? raw.bestSupplierName ?? "",
+    deliveryDays: bestOffer.deliveryDays ?? 2,
+    bnplAvailable: bestOffer.bnplEligible ?? false,
+    tradeDiscountPct: bestOffer.tradeDiscountPct ?? undefined,
+    scheme: bestOffer.scheme ?? undefined,
+    creditDays: bestOffer.creditDays ?? undefined,
     // V3-FIX-170: Conversion-aware procurement context
     procurementUnit: raw.procurementUnit ?? raw.procurement_unit,
     procurementPackQty: raw.procurementPackQty ?? raw.procurement_pack_qty,
     baseStockUnit: raw.baseStockUnit ?? raw.base_stock_unit,
-    // V3-FIX-169: Approved sell profile from store_products (set by publish materialization)
-    // soldBy/rateUnit/productMode are the live sell-side contract, not separate sellUnit field
     soldBy: raw.soldBy ?? raw.sold_by,
     rateUnit: raw.rateUnit ?? raw.rate_unit,
     productMode: raw.productMode ?? raw.product_mode,
