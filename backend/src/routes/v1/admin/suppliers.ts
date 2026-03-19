@@ -1617,7 +1617,12 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
               sp.supplier_id, s.business_name as supplier_name,
               sp.procurement_unit, sp.procurement_pack_qty,
               sp.base_stock_unit, sp.split_sell_eligible,
-              sp.sell_unit, sp.default_retail_variants
+              sp.sell_unit, sp.default_retail_variants,
+              sp.ptr_minor, sp.pts_minor, sp.trade_discount_pct, sp.scheme,
+              sp.credit_days AS supplier_credit_days, sp.delivery_days,
+              sp.delivery_sla_days, sp.delivery_terms, sp.finance_eligible,
+              sp.bnpl_eligible, sp.bnpl_max_days,
+              sp.published_terms_version, sp.moq_tiers
        FROM catalog.supplier_products sp
        JOIN supplier.suppliers s ON s.id = sp.supplier_id
        WHERE sp.id = $1::uuid AND sp.approval_status = 'approved'`,

@@ -417,6 +417,9 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
       netContentUnit,  // SCALE-A2
       // V3-FIX-169: Procurement packaging metadata
       procurementUnit, procurementPackQty, baseStockUnit, splitSellEligible,
+      // V3-FIX-174: Commercial terms
+      ptrMinor, ptsMinor, tradeDiscountPct, scheme,
+      deliverySlaDays, deliveryTerms, creditDays: supplierCreditDays, financeEligible,
     } = req.body;
 
     // Validation

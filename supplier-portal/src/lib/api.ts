@@ -525,6 +525,15 @@ export interface ProductInput {
   procurementPackQty?: number;
   baseStockUnit?: string;
   splitSellEligible?: boolean;
+  // V3-FIX-174: Commercial terms
+  ptrMinor?: number;
+  ptsMinor?: number;
+  tradeDiscountPct?: number;
+  scheme?: string;
+  deliverySlaDays?: number;
+  deliveryTerms?: string;
+  creditDays?: number;
+  financeEligible?: boolean;
 }
 
 // GL-WF-063: Pagination types

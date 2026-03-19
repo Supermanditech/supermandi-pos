@@ -109,6 +109,15 @@ export default function ProductsPage() {
     procurementPackQty: undefined,
     baseStockUnit: '',
     splitSellEligible: false,
+    // V3-FIX-174: Commercial terms
+    ptrMinor: undefined,
+    ptsMinor: undefined,
+    tradeDiscountPct: undefined,
+    scheme: '',
+    deliverySlaDays: undefined,
+    deliveryTerms: '',
+    creditDays: undefined,
+    financeEligible: false,
   });
 
   // GL-WF-063: Paginated products query
@@ -819,6 +828,58 @@ export default function ProductsPage() {
                       className="rounded border-slate-300"
                     />
                     Retailer can split for retail sale
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* V3-FIX-174: Commercial Terms */}
+            <div>
+              <h4 className="text-sm font-semibold text-slate-700 mb-2">Commercial Terms</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="product-ptrMinor" className="label">PTR (₹/unit)</label>
+                  <input type="number" id="product-ptrMinor" name="ptrMinor"
+                    value={formData.ptrMinor ?? ''} onChange={handleChange}
+                    className="input" placeholder="Price to Retailer" min="0" step="0.01" />
+                </div>
+                <div>
+                  <label htmlFor="product-tradeDiscountPct" className="label">Trade Discount (%)</label>
+                  <input type="number" id="product-tradeDiscountPct" name="tradeDiscountPct"
+                    value={formData.tradeDiscountPct ?? ''} onChange={handleChange}
+                    className="input" placeholder="e.g. 5" min="0" max="100" step="0.1" />
+                </div>
+                <div>
+                  <label htmlFor="product-scheme" className="label">Scheme / Offer</label>
+                  <input type="text" id="product-scheme" name="scheme"
+                    value={formData.scheme || ''} onChange={handleChange}
+                    className="input" placeholder="e.g. 10+1 Free" />
+                </div>
+                <div>
+                  <label htmlFor="product-creditDays" className="label">Credit Days</label>
+                  <input type="number" id="product-creditDays" name="creditDays"
+                    value={formData.creditDays ?? ''} onChange={handleChange}
+                    className="input" placeholder="e.g. 7" min="0" />
+                </div>
+                <div>
+                  <label htmlFor="product-deliverySlaDays" className="label">Delivery SLA (days)</label>
+                  <input type="number" id="product-deliverySlaDays" name="deliverySlaDays"
+                    value={formData.deliverySlaDays ?? ''} onChange={handleChange}
+                    className="input" placeholder="e.g. 2" min="0" />
+                </div>
+                <div>
+                  <label htmlFor="product-deliveryTerms" className="label">Delivery Terms</label>
+                  <input type="text" id="product-deliveryTerms" name="deliveryTerms"
+                    value={formData.deliveryTerms || ''} onChange={handleChange}
+                    className="input" placeholder="e.g. Free above ₹5000" />
+                </div>
+                <div className="col-span-2 flex items-center gap-2">
+                  <input type="checkbox" id="product-financeEligible" name="financeEligible"
+                    checked={formData.financeEligible || false}
+                    onChange={(e) => setFormData(prev => ({ ...prev, financeEligible: e.target.checked }))}
+                    className="rounded border-slate-300" />
+                  <label htmlFor="product-financeEligible" className="text-sm cursor-pointer">
+                    Eligible for BNPL / SuperMandi Credit financing
                   </label>
                 </div>
               </div>
