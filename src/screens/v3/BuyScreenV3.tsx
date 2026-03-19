@@ -337,6 +337,25 @@ export default function BuyScreenV3() {
               <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 2 }}>Principal lane · Inclusive of applicable GST</Text>
             </View>
 
+            {/* V3-FIX-175: Published terms summary in checkout */}
+            {(() => {
+              const selected = products.filter((p) => (orderQtys[p.id] ?? 0) > 0);
+              const hasScheme = selected.some(p => p.scheme);
+              const hasDiscount = selected.some(p => p.tradeDiscountPct);
+              const hasDelivery = selected.some(p => p.deliveryDays || p.deliveryTerms);
+              const hasFinance = selected.some(p => p.bnplAvailable || p.financeEligible);
+              if (!hasScheme && !hasDiscount && !hasDelivery && !hasFinance) return null;
+              return (
+                <View style={{ backgroundColor: '#f0f9ff', borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#0369a1', marginBottom: 4 }}>Accepted Terms</Text>
+                  {hasScheme ? <Text style={{ fontSize: 11, color: '#374151' }}>Scheme: {selected.filter(p => p.scheme).map(p => p.scheme).join(', ')}</Text> : null}
+                  {hasDiscount ? <Text style={{ fontSize: 11, color: '#374151' }}>Trade discount: {selected.filter(p => p.tradeDiscountPct).map(p => `-${p.tradeDiscountPct}%`).join(', ')}</Text> : null}
+                  {hasDelivery ? <Text style={{ fontSize: 11, color: '#374151' }}>Delivery: {selected.filter(p => p.deliveryDays).map(p => `${p.deliveryDays}d${p.deliveryTerms ? ` (${p.deliveryTerms})` : ''}`).join(', ')}</Text> : null}
+                  {hasFinance ? <Text style={{ fontSize: 11, color: '#16a34a' }}>Finance: {selected.some(p => p.bnplAvailable) ? 'BNPL available' : 'Credit eligible'}</Text> : null}
+                </View>
+              );
+            })()}
+
             {/* V3-FIX-176: Payment mode selection */}
             <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary, marginBottom: 6 }}>Payment Method</Text>
             {(["CASH", "UPI", "BNPL", "CREDIT"] as const).map((mode) => (
@@ -400,17 +419,22 @@ export default function BuyScreenV3() {
                       paymentMode: paymentMode as any,
                     });
                     await submitOrder(sid, order.id);
-                    // V3-FIX-176: Payment intent created server-side — surface state
+                    // V3-FIX-176: Payment intent created server-side — surface state + redirect
                     const orderData = order as any;
                     if (orderData.paymentIntentStatus === 'pending' && orderData.paymentRedirectUrl) {
-                      // UPI: show deep link action
-                      showToast(`Order placed — open UPI app to pay ₹${Math.round(cartTotal / 100)}`);
-                      // In production, this would open the deep link via Linking.openURL
-                      logger.debug("BuyV3", `upi_redirect:${orderData.paymentRedirectUrl}`);
+                      // UPI/Provider: open payment redirect
+                      showToast(`Order placed — redirecting to payment...`);
+                      try {
+                        const { Linking } = require('react-native');
+                        await Linking.openURL(orderData.paymentRedirectUrl);
+                      } catch {
+                        showToast(`Pay via: ${orderData.paymentRedirectUrl}`);
+                      }
+                      logger.debug("BuyV3", `payment_redirect:${orderData.paymentRedirectUrl}`);
                     } else if (orderData.paymentIntentStatus === 'authorized') {
-                      showToast(`Order placed — SuperMandi Credit approved`);
+                      showToast(`Order placed — SuperMandi Credit approved!`);
                     } else if (orderData.paymentIntentStatus === 'pending') {
-                      showToast(`Order placed — payment pending approval`);
+                      showToast(`Order placed — payment pending partner approval`);
                     }
                     totalItems += orderItems.length;
                     logger.debug("BuyV3", `checkout:${order.id},supplier:${supplierId},payment:${paymentMode},intent:${orderData.paymentIntentStatus || 'none'}`);

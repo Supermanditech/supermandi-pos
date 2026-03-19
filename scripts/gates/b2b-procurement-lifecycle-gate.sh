@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # V3-HARDEN-178: Release gate — B2B procurement lifecycle
-# Layer 1-5: Structural validation (migration, service, card, checkout, API)
-# Layer 6: Behavioral proof via unit test execution (procurementPayment tests)
-# Layer 7: Code-level behavioral wiring checks
+# Layers 1-6: Structural pre-checks (migration, service, card, checkout, API, wiring)
+#   These verify that required code/schema artifacts exist and are structurally correct.
+#   They are NOT runtime behavioral proof — they are necessary-but-not-sufficient.
+# Layer 7: Behavioral proof — runs actual unit tests and TypeScript typecheck.
+#   This is the closest to runtime proof available without a live DB/API server.
 # Exit 0 = PASS, Exit 1 = FAIL
 
 set -euo pipefail

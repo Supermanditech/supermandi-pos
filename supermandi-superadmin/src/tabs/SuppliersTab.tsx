@@ -91,6 +91,15 @@ interface SuppliersTabProps {
     invoiceModel: "buy_resell" | "platform_fee" | "";  // T-070
     hsnCode: string;  // T-070
     gstRate: string;  // T-070
+    // V3-FIX-174: Commercial contract
+    ptrMinor: string;
+    ptsMinor: string;
+    tradeDiscountPct: string;
+    scheme: string;
+    deliverySlaDays: string;
+    deliveryTerms: string;
+    creditDays: string;
+    financeEligible: boolean;
   };
   setEditProductForm: (fn: (f: SuppliersTabProps["editProductForm"]) => SuppliersTabProps["editProductForm"]) => void;
   editProductError: string;
@@ -1000,6 +1009,62 @@ export function SuppliersTab({
                   <option value="18">18%</option>
                   <option value="28">28%</option>
                 </select>
+              </div>
+
+              {/* V3-FIX-174: Full commercial contract editing */}
+              <div style={{ marginTop: 16, borderTop: "1px solid var(--color-border)", paddingTop: 12 }}>
+                <h4 style={{ margin: "0 0 8px", fontSize: 14 }}>Commercial Terms</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <div>
+                    <label>PTR (₹/unit)</label>
+                    <input type="number" className="sa-input" style={{ width: "100%" }}
+                      value={editProductForm.ptrMinor} placeholder="Price to Retailer"
+                      onChange={(e) => updateProductForm((f) => ({ ...f, ptrMinor: e.target.value }))} step="0.01" min="0" />
+                  </div>
+                  <div>
+                    <label>PTS (₹/unit)</label>
+                    <input type="number" className="sa-input" style={{ width: "100%" }}
+                      value={editProductForm.ptsMinor} placeholder="Price to Stockist"
+                      onChange={(e) => updateProductForm((f) => ({ ...f, ptsMinor: e.target.value }))} step="0.01" min="0" />
+                  </div>
+                  <div>
+                    <label>Trade Discount (%)</label>
+                    <input type="number" className="sa-input" style={{ width: "100%" }}
+                      value={editProductForm.tradeDiscountPct} placeholder="e.g. 5"
+                      onChange={(e) => updateProductForm((f) => ({ ...f, tradeDiscountPct: e.target.value }))} step="0.1" min="0" max="100" />
+                  </div>
+                  <div>
+                    <label>Scheme / Offer</label>
+                    <input type="text" className="sa-input" style={{ width: "100%" }}
+                      value={editProductForm.scheme} placeholder="e.g. 10+1 Free"
+                      onChange={(e) => updateProductForm((f) => ({ ...f, scheme: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label>Delivery SLA (days)</label>
+                    <input type="number" className="sa-input" style={{ width: "100%" }}
+                      value={editProductForm.deliverySlaDays} placeholder="e.g. 2"
+                      onChange={(e) => updateProductForm((f) => ({ ...f, deliverySlaDays: e.target.value }))} min="0" />
+                  </div>
+                  <div>
+                    <label>Delivery Terms</label>
+                    <input type="text" className="sa-input" style={{ width: "100%" }}
+                      value={editProductForm.deliveryTerms} placeholder="e.g. Free above ₹5000"
+                      onChange={(e) => updateProductForm((f) => ({ ...f, deliveryTerms: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label>Credit Days</label>
+                    <input type="number" className="sa-input" style={{ width: "100%" }}
+                      value={editProductForm.creditDays} placeholder="e.g. 7"
+                      onChange={(e) => updateProductForm((f) => ({ ...f, creditDays: e.target.value }))} min="0" />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "flex-end" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                      <input type="checkbox" checked={editProductForm.financeEligible}
+                        onChange={(e) => updateProductForm((f) => ({ ...f, financeEligible: e.target.checked }))} />
+                      Finance Eligible
+                    </label>
+                  </div>
+                </div>
               </div>
 
               {editProductError && <div className="banner" role="alert">{editProductError}</div>}

@@ -184,6 +184,15 @@ export type ProductEditInput = {
   invoiceModel?: "buy_resell" | "platform_fee";
   hsnCode?: string;
   gstRate?: number;  // 0, 5, 12, 18, or 28
+  // V3-FIX-174: Full commercial contract editing
+  ptrMinor?: number;
+  ptsMinor?: number;
+  tradeDiscountPct?: number;
+  scheme?: string;
+  deliverySlaDays?: number;
+  deliveryTerms?: string;
+  creditDays?: number;
+  financeEligible?: boolean;
 };
 
 export type ProductEditResponse = {

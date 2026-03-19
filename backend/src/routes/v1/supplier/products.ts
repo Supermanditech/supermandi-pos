@@ -659,7 +659,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         isActive: product.is_active,
         createdAt: product.created_at,
         autoApproved,
-        // V3-FIX-174: Commercial terms in CREATE response
+        // V3-FIX-174: Commercial terms in CREATE response (full draft contract)
         ptrMinor: product.ptr_minor || null,
         ptsMinor: product.pts_minor || null,
         tradeDiscountPct: product.trade_discount_pct != null ? Number(product.trade_discount_pct) : null,
@@ -668,6 +668,10 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         deliveryTerms: product.delivery_terms || null,
         creditDays: product.credit_days || null,
         financeEligible: product.finance_eligible || false,
+        deliveryDays: product.delivery_days || null,
+        bnplMaxDays: product.bnpl_max_days || null,
+        publishedTermsVersion: product.published_terms_version || null,
+        publishedAt: product.published_at || null,
       },
     });
   } catch (error) {
@@ -1021,7 +1025,7 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
         pendingPurchasePrice: product.pending_purchase_price || null,
         pendingMrp: product.pending_mrp || null,
         updatedAt: product.updated_at,
-        // V3-FIX-174: Commercial terms in PATCH response
+        // V3-FIX-174: Commercial terms in PATCH response (full draft contract)
         ptrMinor: product.ptr_minor || null,
         ptsMinor: product.pts_minor || null,
         tradeDiscountPct: product.trade_discount_pct != null ? Number(product.trade_discount_pct) : null,
@@ -1030,6 +1034,10 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
         deliveryTerms: product.delivery_terms || null,
         creditDays: product.credit_days || null,
         financeEligible: product.finance_eligible || false,
+        deliveryDays: product.delivery_days || null,
+        bnplMaxDays: product.bnpl_max_days || null,
+        publishedTermsVersion: product.published_terms_version || null,
+        publishedAt: product.published_at || null,
       },
     });
   } catch (error) {

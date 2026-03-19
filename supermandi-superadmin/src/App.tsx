@@ -596,10 +596,19 @@ export default function App() {
     percentMargin: string;
     bnplEligible: boolean;
     bnplMaxDays: string;
-    invoiceModel: "buy_resell" | "platform_fee" | "";  // T-070
-    hsnCode: string;  // T-070
-    gstRate: string;  // T-070
-  }>({ editedName: "", marginType: "fixed", fixedMargin: "", percentMargin: "", bnplEligible: false, bnplMaxDays: "7", invoiceModel: "buy_resell", hsnCode: "", gstRate: "" });
+    invoiceModel: "buy_resell" | "platform_fee" | "";
+    hsnCode: string;
+    gstRate: string;
+    // V3-FIX-174: Commercial contract
+    ptrMinor: string;
+    ptsMinor: string;
+    tradeDiscountPct: string;
+    scheme: string;
+    deliverySlaDays: string;
+    deliveryTerms: string;
+    creditDays: string;
+    financeEligible: boolean;
+  }>({ editedName: "", marginType: "fixed", fixedMargin: "", percentMargin: "", bnplEligible: false, bnplMaxDays: "7", invoiceModel: "buy_resell", hsnCode: "", gstRate: "", ptrMinor: "", ptsMinor: "", tradeDiscountPct: "", scheme: "", deliverySlaDays: "", deliveryTerms: "", creditDays: "", financeEligible: false });
   const [editProductLoading, setEditProductLoading] = useState<boolean>(false);
   const [editProductError, setEditProductError] = useState<string>("");
   const [editProductSuccess, setEditProductSuccess] = useState<string>("");
@@ -1280,6 +1289,15 @@ export default function App() {
         invoiceModel: editProductForm.invoiceModel === "" ? undefined : editProductForm.invoiceModel as "buy_resell" | "platform_fee",
         hsnCode: editProductForm.hsnCode || undefined,
         gstRate: editProductForm.gstRate ? parseFloat(editProductForm.gstRate) : undefined,
+        // V3-FIX-174: Full commercial contract
+        ptrMinor: editProductForm.ptrMinor ? Math.round(parseFloat(editProductForm.ptrMinor) * 100) : undefined,
+        ptsMinor: editProductForm.ptsMinor ? Math.round(parseFloat(editProductForm.ptsMinor) * 100) : undefined,
+        tradeDiscountPct: editProductForm.tradeDiscountPct ? parseFloat(editProductForm.tradeDiscountPct) : undefined,
+        scheme: editProductForm.scheme || undefined,
+        deliverySlaDays: editProductForm.deliverySlaDays ? parseInt(editProductForm.deliverySlaDays) : undefined,
+        deliveryTerms: editProductForm.deliveryTerms || undefined,
+        creditDays: editProductForm.creditDays ? parseInt(editProductForm.creditDays) : undefined,
+        financeEligible: editProductForm.financeEligible,
       };
 
       if (editProductForm.marginType === "fixed" && editProductForm.fixedMargin) {
