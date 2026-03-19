@@ -1616,7 +1616,8 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
               sp.purchase_price, sp.supermandi_margin_minor, sp.margin_percent,
               sp.supplier_id, s.business_name as supplier_name,
               sp.procurement_unit, sp.procurement_pack_qty,
-              sp.base_stock_unit, sp.split_sell_eligible
+              sp.base_stock_unit, sp.split_sell_eligible,
+              sp.sell_unit, sp.default_retail_variants
        FROM catalog.supplier_products sp
        JOIN supplier.suppliers s ON s.id = sp.supplier_id
        WHERE sp.id = $1::uuid AND sp.approval_status = 'approved'`,

@@ -7839,7 +7839,9 @@ Scope narrowing (2026-03-19):
     manual inward/GRN (inventoryApi carries procurementUnit/packQty/baseStockUnit/conversionConfirmed
     → pos/inventory persists them including conversionConfirmed)
     all persist canonical conversion columns into catalog.store_products on every write path
-  - SuperAdmin: conversion PATCH endpoint for procurement/stock/sell-unit editing, fails visibly on error
+  - SuperAdmin: conversion PATCH endpoint for procurement/stock/sell-unit/defaultVariants editing
+    (migration 200 adds sell_unit + default_retail_variants to supplier_products), fails visibly on error
+  - gate/startup readiness checks cover both migration 199 (store_products) and 200 (supplier_products) columns
 - DEFERRED to full-live tickets (V3-HARDEN-185..189):
   - per-SKU conversion-versioned reporting dashboards
   - reorder automation using conversion-aware base stock

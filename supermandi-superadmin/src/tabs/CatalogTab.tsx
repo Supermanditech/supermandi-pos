@@ -130,11 +130,13 @@ export function CatalogTab() {
 
       await overrideProductCategory(editingProduct.id, categoryToSend);
 
-      // V3-FIX-169: Save conversion metadata if changed — fail visibly on error
+      // V3-FIX-169: Save conversion metadata if ANY conversion field changed
       const conversionChanged =
         editProcurementUnit !== ((editingProduct as any).procurementUnit || (editingProduct as any).unit || '') ||
         editBaseStockUnit !== ((editingProduct as any).baseStockUnit || '') ||
-        editSplitSellEligible !== ((editingProduct as any).splitSellEligible || false);
+        editSplitSellEligible !== ((editingProduct as any).splitSellEligible || false) ||
+        editSellUnit !== ((editingProduct as any).sellUnit || (editingProduct as any).baseStockUnit || '') ||
+        editDefaultVariants !== ((editingProduct as any).defaultVariants || '');
       if (conversionChanged) {
         await updateProductConversion(editingProduct.id, {
           procurementUnit: editProcurementUnit || undefined,

@@ -38,6 +38,20 @@ for col in procurement_unit procurement_pack_qty base_stock_unit conversion_conf
 done
 echo "PASS: Migration 199 defines all 6 conversion columns"
 
+# 1b. Migration 200 (sell-side defaults)
+if [ -f "backend/migrations/200_supplier_product_sell_defaults.sql" ]; then
+  if grep -q "sell_unit" backend/migrations/200_supplier_product_sell_defaults.sql && \
+     grep -q "default_retail_variants" backend/migrations/200_supplier_product_sell_defaults.sql; then
+    echo "PASS: Migration 200 defines sell_unit + default_retail_variants"
+  else
+    echo "FAIL: Migration 200 missing sell_unit or default_retail_variants"
+    ERRORS=$((ERRORS + 1))
+  fi
+else
+  echo "FAIL: Migration 200 (sell-side defaults) missing"
+  ERRORS=$((ERRORS + 1))
+fi
+
 # ── LAYER 2: Conversion Engine ──
 echo ""
 echo "── Layer 2: Conversion Engine ──"

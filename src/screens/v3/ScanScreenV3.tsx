@@ -227,17 +227,51 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
         {lastResult ? (
           <View style={styles.resultPanel}>
             {!lastResult.isNew ? (
-              <View style={styles.resultFound}>
-                <View style={styles.resultEmoji}><Text style={{ fontSize: 28 }}>🍪</Text></View>
-                <View style={styles.resultInfo}>
-                  <Text style={styles.resultName}>{lastResult.productName}</Text>
-                  <Text style={styles.resultBarcode}>{lastResult.barcode}</Text>
+              <>
+                <View style={styles.resultFound}>
+                  <View style={styles.resultEmoji}><Text style={{ fontSize: 28 }}>🍪</Text></View>
+                  <View style={styles.resultInfo}>
+                    <Text style={styles.resultName}>{lastResult.productName}</Text>
+                    <Text style={styles.resultBarcode}>{lastResult.barcode}</Text>
+                  </View>
+                  <View style={styles.resultRight}>
+                    <Text style={styles.resultPrice}>₹{((lastResult.price ?? 0) / 100).toFixed(0)}</Text>
+                    <Text style={styles.resultStock}>Stock: {lastResult.stock}</Text>
+                  </View>
                 </View>
-                <View style={styles.resultRight}>
-                  <Text style={styles.resultPrice}>₹{((lastResult.price ?? 0) / 100).toFixed(0)}</Text>
-                  <Text style={styles.resultStock}>Stock: {lastResult.stock}</Text>
-                </View>
-              </View>
+                {/* V3-HARDEN-171: Quick-qty presets for loose products */}
+                {(() => {
+                  const product = getProductByBarcode(lastResult.barcode);
+                  if (!product || product.productMode !== 'LOOSE_BULK' || !product.rateUnit) return null;
+                  const presets = product.rateUnit === 'KG' || product.baseStockUnit === 'KG'
+                    ? [{ label: '250g', qty: 1 }, { label: '500g', qty: 1 }, { label: '1kg', qty: 1 }, { label: '5kg', qty: 5 }]
+                    : product.rateUnit === 'LTR' || product.baseStockUnit === 'LTR'
+                    ? [{ label: '250ml', qty: 1 }, { label: '500ml', qty: 1 }, { label: '1L', qty: 1 }]
+                    : [{ label: '1', qty: 1 }, { label: '6', qty: 6 }, { label: '12', qty: 12 }];
+                  return (
+                    <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                      <Text style={{ fontSize: 11, color: colors.textTertiary, width: '100%' }}>Quick add (per {product.rateUnit}):</Text>
+                      {presets.map(p => (
+                        <Pressable
+                          key={p.label}
+                          style={{ backgroundColor: colors.primary + '15', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: colors.primary + '30' }}
+                          onPress={() => {
+                            const existing = useCartStore.getState().items.find(i => i.barcode === lastResult!.barcode);
+                            if (existing) {
+                              useCartStore.getState().updateQuantity(existing.id, existing.quantity + p.qty);
+                            } else {
+                              addItem({ ...buildCartItem(product), quantity: p.qty });
+                            }
+                            showToast(`${product.name} +${p.qty} (${p.label})`);
+                          }}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>{p.label}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  );
+                })()}
+              </>
             ) : (
               <View style={styles.resultNew}>
                 <Text style={styles.resultNewIcon}>⚠</Text>

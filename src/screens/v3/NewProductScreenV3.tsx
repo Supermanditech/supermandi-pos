@@ -264,17 +264,29 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
                 <TextInput style={styles.fieldInput} value={baseStockUnit} onChangeText={setBaseStockUnit} placeholder="KG" placeholderTextColor={colors.textTertiary} />
               </View>
             </View>
-            {/* V3-FIX-168: Suggested retail variants for guided onboarding */}
+            {/* V3-FIX-168: Guided onboarding — auto-configured based on stock unit */}
             <View style={{ backgroundColor: colors.primaryLight || '#eff6ff', borderRadius: 8, padding: 10, marginTop: 4 }}>
               <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary, marginBottom: 4 }}>
-                Suggested Retail Variants
+                Retail Setup (auto-configured)
               </Text>
-              <Text style={{ fontSize: 11, color: colors.textSecondary }}>
-                {baseStockUnit === 'KG' ? '250g, 500g, 1kg, 5kg — set prices in Products → Variants after save' :
-                 baseStockUnit === 'LTR' ? '250ml, 500ml, 1L — set prices in Products → Variants after save' :
-                 baseStockUnit === 'PCS' ? '1pc, 6pcs, 12pcs — set prices in Products → Variants after save' :
-                 'Set stock unit above to see suggestions'}
-              </Text>
+              {baseStockUnit === 'KG' ? (
+                <>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary }}>Sell per KG · Variants: 250g, 500g, 1kg, 5kg</Text>
+                  <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: 2 }}>Auto-created after save. Set prices in cart or Products page.</Text>
+                </>
+              ) : baseStockUnit === 'LTR' ? (
+                <>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary }}>Sell per LTR · Variants: 250ml, 500ml, 1L</Text>
+                  <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: 2 }}>Auto-created after save. Set prices in cart or Products page.</Text>
+                </>
+              ) : baseStockUnit === 'PCS' ? (
+                <>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary }}>Sell per PCS · Variants: 1pc, 6pcs, 12pcs</Text>
+                  <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: 2 }}>Auto-created after save. Set prices in cart or Products page.</Text>
+                </>
+              ) : (
+                <Text style={{ fontSize: 11, color: colors.textTertiary }}>Set stock unit above to configure retail setup</Text>
+              )}
             </View>
           </>
         ) : null}

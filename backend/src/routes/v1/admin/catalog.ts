@@ -302,10 +302,10 @@ adminCatalogRouter.patch(
              procurement_pack_qty = COALESCE($2, procurement_pack_qty),
              base_stock_unit = COALESCE($3, base_stock_unit),
              split_sell_eligible = COALESCE($4, split_sell_eligible),
-             sell_unit = COALESCE($6, sell_unit),
-             default_retail_variants = COALESCE($7, default_retail_variants),
+             sell_unit = COALESCE($5, sell_unit),
+             default_retail_variants = COALESCE($6, default_retail_variants),
              updated_at = NOW()
-         WHERE id = $8::uuid
+         WHERE id = $7::uuid
          RETURNING id, procurement_unit AS "procurementUnit",
                    procurement_pack_qty AS "procurementPackQty",
                    base_stock_unit AS "baseStockUnit",

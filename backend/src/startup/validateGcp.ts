@@ -166,6 +166,8 @@ export function validateGcpCredentials(): GcpValidationResult {
 export async function validateConversionSchemaReadiness(pool: any): Promise<{ ready: boolean; missing: string[] }> {
   const missing: string[] = [];
   const requiredColumns = ['procurement_unit', 'procurement_pack_qty', 'base_stock_unit', 'conversion_confirmed'];
+  // V3-HARDEN-172: Also check migration 200 columns on supplier_products
+  const supplierColumns = ['sell_unit', 'default_retail_variants'];
   try {
     const result = await pool.query(
       `SELECT column_name FROM information_schema.columns
@@ -179,6 +181,21 @@ export async function validateConversionSchemaReadiness(pool: any): Promise<{ re
     }
   } catch {
     missing.push(...requiredColumns);
+  }
+  // Check migration 200 columns on supplier_products
+  try {
+    const result2 = await pool.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'catalog' AND table_name = 'supplier_products'
+       AND column_name = ANY($1)`,
+      [supplierColumns]
+    );
+    const found2 = new Set(result2.rows.map((r: any) => r.column_name));
+    for (const col of supplierColumns) {
+      if (!found2.has(col)) missing.push(`supplier_products.${col}`);
+    }
+  } catch {
+    missing.push(...supplierColumns.map(c => `supplier_products.${c}`));
   }
   return { ready: missing.length === 0, missing };
 }

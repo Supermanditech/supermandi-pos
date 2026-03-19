@@ -852,7 +852,9 @@ retailerAdminSuppliersRouter.get("/supplier-catalog", async (req: Request, res: 
         sp.procurement_unit as "procurementUnit",
         sp.procurement_pack_qty as "procurementPackQty",
         sp.base_stock_unit as "baseStockUnit",
-        sp.split_sell_eligible as "splitSellEligible"
+        sp.split_sell_eligible as "splitSellEligible",
+        sp.sell_unit as "sellUnit",
+        sp.default_retail_variants as "defaultVariants"
       FROM catalog.supplier_products sp
       JOIN supplier.suppliers s ON s.id = sp.supplier_id
       ${whereClause}

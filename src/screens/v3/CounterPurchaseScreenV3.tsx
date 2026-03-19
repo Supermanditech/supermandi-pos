@@ -14,6 +14,7 @@ import { useProductsStore } from "../../stores/productsStore";
 import { normalizeBarcode, isDuplicateScan } from "../../services/scanIntent";
 import { recordManualInward } from "../../services/api/inventoryApi";
 import { getPurchaseHistory } from "../../services/api/inventoryApi";
+import { apiClient } from "../../services/api/apiClient";
 import { isOnline } from "../../services/networkStatus";
 import { getSuppliers } from "../../services/api/suppliersApi";
 
@@ -124,18 +125,44 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
     if (!online) { showToast("Offline — purchase will be queued and synced when online"); }
     setSaving(true);
     try {
-      // V3-FIX-078: Explicit product identity semantics
-      //   - Known products (state==="existing"): use real productId — required, not barcode fallback
-      //   - New/manual products (state==="new"): use barcode as provisional identity with explicit flag
-      // V3-FIX-170: Include conversion context in counter-purchase payload
+      // V3-FIX-170: Two-pass confirm — digitize new products first, then inward all
+      // Pass 1: Create store products for new items via POS digitisation API
+      const resolvedProductIds = new Map<string, string>(); // barcode → real productId
+      for (const it of items) {
+        if (it.state === "new" && it.barcode) {
+          try {
+            const sellPriceMinor = Math.round(parseFloat(it.sellPrice || it.purchasePrice) * 100);
+            const purchasePriceMinor = Math.round(parseFloat(it.purchasePrice) * 100);
+            const res = await apiClient.post<any>("/api/v1/pos/store-products", {
+              barcode: it.barcode,
+              name: it.name || `Item ${it.barcode.slice(-4)}`,
+              sellPrice: sellPriceMinor,
+              purchasePrice: purchasePriceMinor,
+              initialStockQty: 0, // Stock will be added via inward below
+              unit: "pcs",
+              brand: it.brand,
+            });
+            if (res?.storeProduct?.productId) {
+              resolvedProductIds.set(it.barcode, res.storeProduct.productId);
+            }
+          } catch (digErr) {
+            // If digitisation fails (e.g., conflict), try to find existing product
+            const existing = getProductByBarcode(it.barcode);
+            if (existing?.storeProductId) {
+              resolvedProductIds.set(it.barcode, (existing as any).id || it.barcode);
+            }
+          }
+        }
+      }
+
+      // Pass 2: Build inward items with real product IDs
       const txnItems = items.map((it) => ({
         productId: it.state === "existing" && (it as any).productId
           ? (it as any).productId
-          : it.barcode, // New products: barcode is the provisional identity until master-cataloged
+          : resolvedProductIds.get(it.barcode) || it.barcode,
         quantity: it.qtyCases * (it.caseSize ?? 1),
         unitCost: Math.round(parseFloat(it.purchasePrice) * 100),
-        isNewProduct: it.state === "new",
-        // Conversion context for procurement-aware inward
+        // V3-FIX-170: Conversion context for procurement-aware inward
         procurementUnit: it.procurementUnit ?? undefined,
         procurementPackQty: it.procurementPackQty ?? undefined,
         baseStockUnit: it.baseStockUnit ?? undefined,

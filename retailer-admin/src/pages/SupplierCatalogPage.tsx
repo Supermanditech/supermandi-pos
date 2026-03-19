@@ -391,18 +391,44 @@ export default function SupplierCatalogPage() {
                 </tbody>
               </table>
             </div>
-            <p style={{ fontSize: 12, color: '#6b7280', margin: '8px 0' }}>
-              After adding, you can set retail variants (e.g., 250g, 500g, 1kg) in Products → Variants.
-            </p>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-              <button className="btn btn-secondary" onClick={() => setReviewProduct(null)}>Cancel</button>
+            {/* V3-FIX-170: Suggested retail variants from approved defaults */}
+            {(reviewProduct as any).defaultVariants ? (
+              <p style={{ fontSize: 12, color: '#059669', margin: '4px 0' }}>
+                Suggested retail variants: <strong>{(reviewProduct as any).defaultVariants}</strong>
+              </p>
+            ) : (reviewProduct as any).baseStockUnit === 'KG' ? (
+              <p style={{ fontSize: 12, color: '#059669', margin: '4px 0' }}>
+                Suggested: 250g, 500g, 1kg, 5kg — auto-created after add
+              </p>
+            ) : (reviewProduct as any).baseStockUnit === 'LTR' ? (
+              <p style={{ fontSize: 12, color: '#059669', margin: '4px 0' }}>
+                Suggested: 250ml, 500ml, 1L — auto-created after add
+              </p>
+            ) : null}
+
+            <div style={{ display: 'flex', gap: 8, flexDirection: 'column', marginTop: 16 }}>
               <button
-                className="btn btn-primary"
+                className="btn btn-primary btn-full"
                 disabled={addingProductId === reviewProduct.productId}
                 onClick={() => { handleAddProduct(reviewProduct); setReviewProduct(null); }}
               >
-                {addingProductId === reviewProduct.productId ? 'Adding...' : 'Confirm & Add'}
+                {addingProductId === reviewProduct.productId ? 'Adding...' : 'Use Suggested Setup & Add'}
               </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn btn-secondary"
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    // Add without conversion — retailer can edit later
+                    handleAddProduct(reviewProduct);
+                    setReviewProduct(null);
+                    setSuccess('Added — set up retail variants in Products → Variants');
+                  }}
+                >
+                  Add & Set Up Later
+                </button>
+                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setReviewProduct(null)}>Cancel</button>
+              </div>
             </div>
           </div>
         </div>
