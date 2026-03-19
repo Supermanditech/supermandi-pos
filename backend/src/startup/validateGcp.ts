@@ -222,6 +222,17 @@ export async function validateConversionSchemaReadiness(pool: any): Promise<{ re
   } catch {
     missing.push('procurement.payment_intents table');
   }
+  // V3-HARDEN-178: Check accepted_terms_snapshot on live orders table
+  try {
+    const result5 = await pool.query(
+      `SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'orders' AND table_name = 'purchase_orders'
+       AND column_name = 'accepted_terms_snapshot' LIMIT 1`
+    );
+    if (result5.rows.length === 0) missing.push('orders.purchase_orders.accepted_terms_snapshot');
+  } catch {
+    missing.push('orders.purchase_orders.accepted_terms_snapshot');
+  }
   return { ready: missing.length === 0, missing };
 }
 

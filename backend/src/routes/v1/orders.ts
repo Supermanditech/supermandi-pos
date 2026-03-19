@@ -39,7 +39,8 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const storeId = getStoreIdFromDevice(req);
-  const { supplierId, orderType, items, storeNotes, deliveryAddress, expectedDeliveryDate, status: requestedStatus } = req.body || {};
+  // V3-FIX-175: Accept paymentMode and accepted terms from checkout
+  const { supplierId, orderType, items, storeNotes, deliveryAddress, expectedDeliveryDate, status: requestedStatus, paymentMode } = req.body || {};
 
   // POS-BUY-004: Allow "draft" or "submitted" status (default: submitted)
   const orderStatus = requestedStatus === "draft" ? "draft" : "submitted";
@@ -197,8 +198,9 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
       `INSERT INTO orders.purchase_orders (
         id, order_number, store_id, supplier_id, order_type, status,
         total_amount, item_count, store_notes, delivery_address,
-        expected_delivery_date, created_by_user_id, procurement_lane
-      ) VALUES ($1, $2, $3, $4, $5, $12, $6, $7, $8, $9, $10, NULL, $11)
+        expected_delivery_date, created_by_user_id, procurement_lane,
+        accepted_terms_snapshot, payment_lane
+      ) VALUES ($1, $2, $3, $4, $5, $12, $6, $7, $8, $9, $10, NULL, $11, $13, $14)
       RETURNING
         id,
         order_number as "orderNumber",
@@ -221,6 +223,10 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         expectedDeliveryDate || null,
         procurementLane,
         orderStatus,
+        // V3-FIX-175: Snapshot accepted terms from checkout items
+        items.some((i: any) => i.acceptedTerms) ? JSON.stringify(items.map((i: any) => ({ supplierProductId: i.supplierProductId, acceptedTerms: i.acceptedTerms }))) : null,
+        // V3-FIX-176: Payment lane — SuperMandi principal for catalogue orders
+        procurementLane === "CATALOGUE_PRINCIPAL" ? "SUPERMANDI_PRINCIPAL" : null,
       ]
     );
 

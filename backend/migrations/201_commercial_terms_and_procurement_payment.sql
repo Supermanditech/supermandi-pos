@@ -24,8 +24,9 @@ ALTER TABLE catalog.supplier_products
 
 -- ============================================================
 -- 2. Order term snapshots — preserve accepted terms at order time
+-- Uses the live orders.purchase_orders table (not procurement schema)
 -- ============================================================
-ALTER TABLE procurement.purchase_orders
+ALTER TABLE orders.purchase_orders
   ADD COLUMN IF NOT EXISTS accepted_terms_snapshot JSONB,
   ADD COLUMN IF NOT EXISTS accepted_terms_version INTEGER,
   ADD COLUMN IF NOT EXISTS payment_lane VARCHAR(30) DEFAULT 'SUPERMANDI_PRINCIPAL';

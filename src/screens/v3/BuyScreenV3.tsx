@@ -13,8 +13,8 @@ import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
-import { getCatalog, type CatalogProduct } from "../../services/api/catalogApi";
-import { createOrder, submitOrder, type CreateOrderParams } from "../../services/api/orderApi";
+import { getBuyCatalog, type CatalogProduct } from "../../services/api/catalogApi";
+import { createOrder, submitOrder, confirmPayment, type CreateOrderParams } from "../../services/api/orderApi";
 import { getDeviceStoreId } from "../../services/deviceSession";
 import { logger } from "../../services/logger";
 // V3-FIX-157: Reactive scan result store for procurement scan handoff
@@ -88,7 +88,8 @@ export default function BuyScreenV3() {
       try {
         const storeId = await getDeviceStoreId();
         if (!storeId) { setLoading(false); return; }
-        const result = await getCatalog(storeId, { limit: 50 });
+        // V3-FIX-173: Use buy-catalog endpoint for B2B procurement offers
+        const result = await getBuyCatalog(storeId, { limit: 50 });
         const mapped = result.data.map(catalogToSupplier);
         setProducts(mapped);
         // V3-FIX-076: Extract real categories from loaded data
@@ -391,6 +392,16 @@ export default function BuyScreenV3() {
                       paymentMode: paymentMode as any,
                     });
                     await submitOrder(sid, order.id);
+                    // V3-FIX-176: Initiate payment via canonical payment flow
+                    if (paymentMode !== "CASH") {
+                      try {
+                        await confirmPayment(sid, order.id, paymentMode as any);
+                        logger.debug("BuyV3", `payment_initiated:${order.id},mode:${paymentMode}`);
+                      } catch (payErr) {
+                        logger.debug("BuyV3", `payment_initiation_failed:${order.id}:${String(payErr)}`);
+                        // Non-blocking: order is submitted, payment can be completed later
+                      }
+                    }
                     totalItems += orderItems.length;
                     logger.debug("BuyV3", `checkout:${order.id},supplier:${supplierId},payment:${paymentMode},items:${orderItems.length}`);
                   }

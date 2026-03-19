@@ -522,9 +522,17 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         procurement_pack_qty,
         base_stock_unit,
         split_sell_eligible,
+        ptr_minor,
+        pts_minor,
+        trade_discount_pct,
+        scheme,
+        delivery_sla_days,
+        delivery_terms,
+        credit_days,
+        finance_eligible,
         approval_status,
         is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, 'pending', true)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, 'pending', true)
       RETURNING
         id,
         name,
@@ -566,6 +574,14 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         procurementPackQty !== undefined && procurementPackQty !== null ? parseFloat(procurementPackQty) : null,
         baseStockUnit?.trim() || null,
         splitSellEligible === true || splitSellEligible === 'true',
+        ptrMinor != null ? parseInt(String(ptrMinor)) : null,
+        ptsMinor != null ? parseInt(String(ptsMinor)) : null,
+        tradeDiscountPct != null ? parseFloat(String(tradeDiscountPct)) : null,
+        scheme?.trim() || null,
+        deliverySlaDays != null ? parseInt(String(deliverySlaDays)) : null,
+        deliveryTerms?.trim() || null,
+        supplierCreditDays != null ? parseInt(String(supplierCreditDays)) : null,
+        financeEligible === true || financeEligible === 'true',
       ]
     );
 

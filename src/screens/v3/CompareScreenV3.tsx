@@ -31,6 +31,7 @@ type SupplierOffer = {
 type CompareScreenV3Props = {
   visible: boolean;
   productName: string;
+  productId?: string; // V3-FIX-173: canonical product ID for supplier lookup
   packSize: string;
   mrpMinor: number;
   currentStock: number;
@@ -42,7 +43,7 @@ type CompareScreenV3Props = {
 
 // V3-014: Demo data removed — offers loaded from real API
 
-export default function CompareScreenV3({ visible, productName, packSize, mrpMinor, currentStock, sellPriceMinor, weeklyNeed, onClose, onOrder }: CompareScreenV3Props) {
+export default function CompareScreenV3({ visible, productName, productId, packSize, mrpMinor, currentStock, sellPriceMinor, weeklyNeed, onClose, onOrder }: CompareScreenV3Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -59,8 +60,9 @@ export default function CompareScreenV3({ visible, productName, packSize, mrpMin
         if (!online) { showToast("Offline — comparison unavailable"); setLoading(false); return; }
         const storeId = await getDeviceStoreId();
         if (!storeId) return;
-        // V3-FIX-077: Use productName for lookup; map authoritative fields only
-        const suppliers = await getProductSuppliers(storeId, productName);
+        // V3-FIX-173: Use canonical productId when available, fall back to productName
+        const lookupId = productId || productName;
+        const suppliers = await getProductSuppliers(storeId, lookupId);
         // Sort by price ascending — lowest price is best
         const sorted = [...suppliers].sort((a, b) => a.purchasePrice - b.purchasePrice);
         const bestPrice = sorted.length > 0 ? sorted[0].purchasePrice : 0;

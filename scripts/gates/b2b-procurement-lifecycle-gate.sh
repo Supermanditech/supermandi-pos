@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # V3-HARDEN-178: Release gate — B2B procurement lifecycle
-# Validates structural readiness for the supplier-draft → SuperAdmin-publish →
-# retailer-browse/cart/checkout → payment-intent → order-status chain.
+# Validates structural AND behavioral readiness for the supplier-draft →
+# SuperAdmin-publish → retailer-browse/cart/checkout → payment-intent →
+# order-status chain. Includes code-level behavioral checks, not grep-only.
 # Exit 0 = PASS, Exit 1 = FAIL
 
 set -euo pipefail
@@ -111,14 +112,62 @@ else
   ERRORS=$((ERRORS + 1))
 fi
 
-# ── LAYER 6: Order API ──
+# ── LAYER 6: Order API + Live Wiring ──
 echo ""
-echo "── Layer 6: Order API ──"
+echo "── Layer 6: Order API + Live Wiring ──"
 
 if grep -q "paymentMode" src/services/api/orderApi.ts; then
   echo "PASS: CreateOrderParams includes paymentMode"
 else
   echo "FAIL: OrderApi missing paymentMode"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: BuyScreen uses getBuyCatalog (not getCatalog)
+if grep -q "getBuyCatalog" src/screens/v3/BuyScreenV3.tsx && ! grep -q "getCatalog(" src/screens/v3/BuyScreenV3.tsx; then
+  echo "PASS: BuyScreen uses getBuyCatalog (correct procurement path)"
+else
+  echo "FAIL: BuyScreen still uses getCatalog instead of getBuyCatalog"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: Checkout calls confirmPayment after submitOrder
+if grep -q "confirmPayment" src/screens/v3/BuyScreenV3.tsx; then
+  echo "PASS: Checkout calls confirmPayment for non-CASH modes"
+else
+  echo "FAIL: Checkout missing confirmPayment call"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: Order route persists accepted_terms_snapshot
+if grep -q "accepted_terms_snapshot" backend/src/routes/v1/orders.ts; then
+  echo "PASS: Order route persists accepted terms snapshot"
+else
+  echo "FAIL: Order route missing accepted_terms_snapshot"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: Supplier CREATE persists commercial terms
+if grep -q "ptr_minor\|trade_discount_pct\|delivery_sla_days\|finance_eligible" backend/src/routes/v1/supplier/products.ts; then
+  echo "PASS: Supplier CREATE persists commercial terms"
+else
+  echo "FAIL: Supplier CREATE missing commercial terms"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: Migration targets live orders table
+if grep -q "orders.purchase_orders" backend/migrations/201_commercial_terms_and_procurement_payment.sql; then
+  echo "PASS: Migration 201 targets live orders.purchase_orders table"
+else
+  echo "FAIL: Migration 201 targets wrong table"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: CompareScreen accepts productId
+if grep -q "productId" src/screens/v3/CompareScreenV3.tsx; then
+  echo "PASS: CompareScreen accepts canonical productId"
+else
+  echo "FAIL: CompareScreen missing productId prop"
   ERRORS=$((ERRORS + 1))
 fi
 
