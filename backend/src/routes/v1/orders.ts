@@ -2069,3 +2069,59 @@ ordersRouter.get("/stores/:storeId/orders/:orderId/receives/:receiveId", require
     });
   }
 });
+
+/**
+ * V3-FIX-176: POST /api/v1/orders/procurement/payment-callback
+ * Procurement payment callback/webhook handler — reconciles provider payment
+ * state into procurement.payment_intents and updates order payment status.
+ * Called by provider webhooks (PhonePe/Razorpay/BNPL partner) or by polling.
+ */
+ordersRouter.post("/procurement/payment-callback", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { paymentIntentId, providerPaymentId, status, providerData } = req.body;
+
+  if (!paymentIntentId || !status) {
+    return res.status(400).json({ error: "paymentIntentId and status are required" });
+  }
+
+  const validStatuses = ['pending', 'authorized', 'paid', 'failed', 'refunded', 'expired'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Update payment intent status
+    const { updatePaymentIntentStatus } = require("../../services/procurementPaymentService");
+    await updatePaymentIntentStatus(client, paymentIntentId, status, providerPaymentId);
+
+    // Find the associated order and update its payment status
+    const intentResult = await client.query(
+      `SELECT order_id, amount_minor FROM procurement.payment_intents WHERE id = $1`,
+      [paymentIntentId]
+    );
+
+    if (intentResult.rows.length > 0) {
+      const orderId = intentResult.rows[0].order_id;
+      const paymentStatus = status === 'paid' ? 'paid' : status === 'authorized' ? 'partial' : 'pending';
+      await client.query(
+        `UPDATE orders.purchase_orders SET payment_status = $1, updated_at = NOW() WHERE id = $2`,
+        [paymentStatus, orderId]
+      );
+      log.info(`[V3-FIX-176] Payment callback: intent=${paymentIntentId}, status=${status}, order=${orderId}, paymentStatus=${paymentStatus}`);
+    }
+
+    await client.query("COMMIT");
+    return res.json({ success: true, status });
+  } catch (err: any) {
+    await client.query("ROLLBACK");
+    log.error("[V3-FIX-176] Payment callback error:", err.message);
+    return res.status(500).json({ error: "Failed to process payment callback" });
+  } finally {
+    client.release();
+  }
+});

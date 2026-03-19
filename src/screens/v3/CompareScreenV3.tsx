@@ -25,6 +25,10 @@ type SupplierOffer = {
   bnplAvailable?: boolean;
   freeDelivery?: boolean;
   creditDays?: number;
+  // V3-FIX-173: Full buyer-card metadata
+  scheme?: string;
+  deliveryTerms?: string;
+  financeEligible?: boolean;
   isBestPrice?: boolean;
 };
 
@@ -81,6 +85,10 @@ export default function CompareScreenV3({ visible, productName, productId, packS
           tradeDiscountPct: (s as any).tradeDiscountPct,
           creditDays: (s as any).creditDays,
           freeDelivery: (s as any).freeDelivery,
+          // V3-FIX-173: Full buyer-card metadata in compare
+          scheme: (s as any).scheme,
+          deliveryTerms: (s as any).deliveryTerms,
+          financeEligible: (s as any).financeEligible,
           isBestPrice: s.purchasePrice === bestPrice,
         }));
         setOffers(mapped);
@@ -151,6 +159,9 @@ export default function CompareScreenV3({ visible, productName, productId, packS
                 {offer.tradeDiscountPct ? <View style={styles.termBadge}><Text style={styles.termText}>Disc {offer.tradeDiscountPct}%</Text></View> : null}
                 {offer.creditDays ? <View style={styles.termBadge}><Text style={styles.termText}>Credit {offer.creditDays}d</Text></View> : null}
                 {offer.bnplAvailable ? <View style={styles.bnplBadge}><Text style={styles.bnplText}>BNPL</Text></View> : null}
+                {offer.financeEligible && !offer.bnplAvailable ? <View style={styles.termBadge}><Text style={styles.termText}>Credit</Text></View> : null}
+                {offer.scheme ? <View style={styles.termBadge}><Text style={styles.termText}>{offer.scheme}</Text></View> : null}
+                {offer.deliveryTerms ? <View style={styles.termBadge}><Text style={[styles.termText, { fontSize: 9 }]}>{offer.deliveryTerms}</Text></View> : null}
               </View>
 
               <Text style={styles.calcLine}>

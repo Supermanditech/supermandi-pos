@@ -330,12 +330,40 @@ export default function BuyScreenV3() {
             <Text style={{ fontSize: 18, fontWeight: '800', color: colors.textPrimary, marginBottom: 12 }}>Procurement Checkout</Text>
             <Text style={{ fontSize: 12, color: colors.textTertiary, marginBottom: 8 }}>Payment to SuperMandi Tech Pvt Ltd</Text>
 
-            {/* Order summary */}
-            <View style={{ backgroundColor: colors.backgroundSecondary, borderRadius: 12, padding: 12, marginBottom: 12 }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>{cartItemCount} items · {Object.values(orderQtys).reduce((s, v) => s + v, 0)} cases</Text>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.primary, marginTop: 4 }}>₹{Math.round(cartTotal / 100).toLocaleString("en-IN")}</Text>
-              <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 2 }}>Principal lane · Inclusive of applicable GST</Text>
-            </View>
+            {/* Order summary with GST/discount/payment breakdown */}
+            {(() => {
+              const selected = products.filter((p) => (orderQtys[p.id] ?? 0) > 0);
+              const subtotal = cartTotal;
+              const avgGstPct = selected.length > 0 ? selected.reduce((s, p) => s + (p.gstPct || 18), 0) / selected.length : 18;
+              const estimatedGst = Math.round(subtotal * avgGstPct / (100 + avgGstPct)); // extract GST from inclusive price
+              const baseAmount = subtotal - estimatedGst;
+              const discountItems = selected.filter(p => p.tradeDiscountPct);
+              const hasCredit = paymentMode === "CREDIT" || paymentMode === "BNPL";
+              return (
+                <View style={{ backgroundColor: colors.backgroundSecondary, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>{cartItemCount} items · {Object.values(orderQtys).reduce((s, v) => s + v, 0)} cases</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary }}>Subtotal (excl. GST)</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '600' }}>₹{Math.round(baseAmount / 100).toLocaleString("en-IN")}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary }}>GST (~{Math.round(avgGstPct)}%)</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '600' }}>₹{Math.round(estimatedGst / 100).toLocaleString("en-IN")}</Text>
+                  </View>
+                  {discountItems.length > 0 ? (
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+                      <Text style={{ fontSize: 12, color: '#16a34a' }}>Trade discount applied</Text>
+                      <Text style={{ fontSize: 12, color: '#16a34a', fontWeight: '600' }}>{discountItems.map(p => `-${p.tradeDiscountPct}%`).join(', ')}</Text>
+                    </View>
+                  ) : null}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 6 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: colors.primary }}>{hasCredit ? 'Payable later' : 'Total payable'}</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: colors.primary }}>₹{Math.round(subtotal / 100).toLocaleString("en-IN")}</Text>
+                  </View>
+                  <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: 2 }}>Payment to SuperMandi Tech Pvt Ltd · Principal procurement lane</Text>
+                </View>
+              );
+            })()}
 
             {/* V3-FIX-175: Published terms summary in checkout */}
             {(() => {

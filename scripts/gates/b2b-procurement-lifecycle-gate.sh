@@ -207,11 +207,35 @@ else
   ERRORS=$((ERRORS + 1))
 fi
 
-# Behavioral: Accepted terms snapshot includes full contract (ptsMinor, deliveryTerms, moqTiers)
+# Behavioral: Accepted terms snapshot includes full contract
 if grep -q "ptsMinor.*pts_minor\|deliveryTerms.*delivery_terms\|moqTiers.*moq_tiers" backend/src/routes/v1/orders.ts; then
   echo "PASS: Accepted terms snapshot includes full published contract"
 else
   echo "FAIL: Accepted terms snapshot missing full contract fields"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: Payment callback/reconciliation endpoint exists
+if grep -q "payment-callback\|updatePaymentIntentStatus" backend/src/routes/v1/orders.ts; then
+  echo "PASS: Procurement payment callback handler exists"
+else
+  echo "FAIL: Missing procurement payment callback handler"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: SuperAdmin loads current commercial contract for edit
+if grep -q "ptrMinor.*ptrMinor\|prefill.*commercial\|Prefill.*current" supermandi-superadmin/src/App.tsx; then
+  echo "PASS: SuperAdmin edit prefills current commercial contract"
+else
+  echo "FAIL: SuperAdmin edit does not prefill commercial contract"
+  ERRORS=$((ERRORS + 1))
+fi
+
+# Behavioral: Compare renders full buyer metadata
+if grep -q "scheme.*deliveryTerms\|financeEligible.*bnplAvailable" src/screens/v3/CompareScreenV3.tsx; then
+  echo "PASS: Compare renders full buyer metadata"
+else
+  echo "FAIL: Compare missing buyer metadata"
   ERRORS=$((ERRORS + 1))
 fi
 

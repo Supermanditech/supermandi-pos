@@ -166,11 +166,26 @@ export type PendingProduct = {
   purchasePrice: number;
   mrp: number;
   moq?: number;
-  imageUrl?: string | null; // T-162: Product image URL
-  thumbnailUrl?: string | null; // T-162: Thumbnail for list views
+  imageUrl?: string | null;
+  thumbnailUrl?: string | null;
   createdAt: string;
   supplierId: string;
   supplierName: string;
+  // V3-FIX-174: Commercial contract fields from supplier draft
+  ptrMinor?: number | null;
+  ptsMinor?: number | null;
+  tradeDiscountPct?: number | null;
+  scheme?: string | null;
+  deliverySlaDays?: number | null;
+  deliveryTerms?: string | null;
+  creditDays?: number | null;
+  financeEligible?: boolean | null;
+  bnplEligible?: boolean | null;
+  bnplMaxDays?: number | null;
+  superMandiMarginMinor?: number | null;
+  marginPercent?: number | null;
+  hsnCode?: string | null;
+  gstRate?: number | null;
 };
 
 export type ProductEditInput = {

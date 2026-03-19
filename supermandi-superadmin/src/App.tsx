@@ -1248,16 +1248,26 @@ export default function App() {
   // T-119: Persist modal state to sessionStorage
   function handleOpenEditProduct(product: PendingProduct) {
     setEditingProduct(product);
+    // V3-FIX-174: Prefill edit form from current product commercial contract
+    const p = product as any;
     setEditProductForm({
       editedName: product.productName,
-      marginType: "fixed",
-      fixedMargin: "",
-      percentMargin: "",
-      bnplEligible: false,
-      bnplMaxDays: "7",
-      invoiceModel: "",
-      hsnCode: "",
-      gstRate: "",
+      marginType: p.superMandiMarginMinor ? "fixed" : p.marginPercent ? "percent" : "fixed",
+      fixedMargin: p.superMandiMarginMinor ? String(p.superMandiMarginMinor / 100) : "",
+      percentMargin: p.marginPercent ? String(p.marginPercent) : "",
+      bnplEligible: p.bnplEligible || false,
+      bnplMaxDays: String(p.bnplMaxDays || 7),
+      invoiceModel: p.invoiceModel || "",
+      hsnCode: p.hsnCode || "",
+      gstRate: p.gstRate != null ? String(p.gstRate) : "",
+      ptrMinor: p.ptrMinor ? String(p.ptrMinor / 100) : "",
+      ptsMinor: p.ptsMinor ? String(p.ptsMinor / 100) : "",
+      tradeDiscountPct: p.tradeDiscountPct != null ? String(p.tradeDiscountPct) : "",
+      scheme: p.scheme || "",
+      deliverySlaDays: p.deliverySlaDays ? String(p.deliverySlaDays) : "",
+      deliveryTerms: p.deliveryTerms || "",
+      creditDays: p.creditDays ? String(p.creditDays) : "",
+      financeEligible: p.financeEligible || false,
     });
     setEditProductError("");
     setEditProductSuccess("");

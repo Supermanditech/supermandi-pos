@@ -775,7 +775,20 @@ adminSuppliersRouter.get("/products/pending", requireAdminToken, requirePermissi
         sp.created_at as "createdAt",
         s.id as "supplierId",
         s.business_name as "supplierName",
-        s.verification_status as "supplierStatus"
+        s.verification_status as "supplierStatus",
+        sp.ptr_minor as "ptrMinor",
+        sp.pts_minor as "ptsMinor",
+        sp.trade_discount_pct as "tradeDiscountPct",
+        sp.scheme,
+        sp.delivery_sla_days as "deliverySlaDays",
+        sp.delivery_terms as "deliveryTerms",
+        sp.credit_days as "creditDays",
+        sp.finance_eligible as "financeEligible",
+        sp.bnpl_eligible as "bnplEligible",
+        sp.bnpl_max_days as "bnplMaxDays",
+        sp.supermandi_margin_minor as "superMandiMarginMinor",
+        sp.hsn_code as "hsnCode",
+        sp.default_gst_rate as "gstRate"
       FROM catalog.supplier_products sp
       JOIN supplier.suppliers s ON s.id = sp.supplier_id
       WHERE sp.approval_status = 'pending'
