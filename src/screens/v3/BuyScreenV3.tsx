@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect } from "react";
-import { View, FlatList, Pressable, ActivityIndicator, TextInput, StyleSheet, Text } from "react-native";
+import { View, FlatList, Pressable, ActivityIndicator, TextInput, StyleSheet, Text, Modal } from "react-native";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
@@ -73,6 +73,10 @@ export default function BuyScreenV3() {
   const [loading, setLoading] = useState(true);
   const [suppliers, setSuppliers] = useState<string[]>(["All Suppliers"]);
   const [offline, setOffline] = useState(false);
+  // V3-FIX-175: Procurement checkout state
+  const [checkoutVisible, setCheckoutVisible] = useState(false);
+  const [paymentMode, setPaymentMode] = useState<"UPI" | "BANK" | "BNPL" | "CREDIT" | "CASH">("CASH");
+  const [ordering, setOrdering] = useState(false);
 
   // V3-013: Fetch real catalog data
   useEffect(() => {
@@ -304,46 +308,107 @@ export default function BuyScreenV3() {
             <Text style={styles.cartItems}>{products.filter((p: SupplierProduct) => (orderQtys[p.id] ?? 0) > 0).map((p: SupplierProduct) => p.name.split(" ")[0]).join(", ")}</Text>
           </View>
           <Text style={styles.cartTotal}>₹{Math.round(cartTotal / 100).toLocaleString("en-IN")}</Text>
-          <Pressable style={styles.orderBtn} accessibilityLabel="Place order" onPress={async () => {
-            const online = await isOnline();
-            if (!online) { showToast("Order requires internet connection"); return; }
-            const sid = await getDeviceStoreId();
-            if (!sid) { showToast("Store not configured"); return; }
-            const selectedProducts = products.filter((p) => (orderQtys[p.id] ?? 0) > 0);
-            if (selectedProducts.length === 0) { showToast("No items in order"); return; }
-            // V3-FIX-142: Principal procurement — one order per supplier, all tagged catalogue_principal
-            // Backend enforces single-supplier per order; we split here and tag each as principal
-            const bySupplier = new Map<string, typeof selectedProducts>();
-            for (const p of selectedProducts) {
-              if (!p.supplierId) { showToast(`${p.name}: supplier identity missing`); return; }
-              const list = bySupplier.get(p.supplierId) ?? [];
-              list.push(p);
-              bySupplier.set(p.supplierId, list);
-            }
-            try {
-              let totalItems = 0;
-              for (const [supplierId, supplierProducts] of bySupplier) {
-                const orderItems = supplierProducts.map((p) => ({
-                  supplierProductId: p.id,
-                  quantity: (orderQtys[p.id] ?? 0) * p.caseSize,
-                  unitPrice: p.ptrMinor,
-                }));
-                // V3-FIX-142: Every catalogue order is principal-sale — retailer→SuperMandi
-                const order = await createOrder(sid, { supplierId, orderType: "catalogue_principal" as any, items: orderItems });
-                await submitOrder(sid, order.id);
-                totalItems += orderItems.length;
-                logger.debug("BuyV3", `principal_order_submitted:${order.id},supplier:${supplierId},items:${orderItems.length}`);
-              }
-              showToast(`Order placed: ${totalItems} items · ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")}`);
-              setOrderQtys({});
-            } catch (err: any) {
-              showToast(err?.message ?? "Failed to place order");
-            }
-          }}>
-            <Text style={styles.orderBtnText}>ORDER →</Text>
+          {/* V3-FIX-175: Open checkout instead of direct order */}
+          <Pressable style={styles.orderBtn} accessibilityLabel="Review & checkout" onPress={() => setCheckoutVisible(true)}>
+            <Text style={styles.orderBtnText}>CHECKOUT →</Text>
           </Pressable>
         </View>
       ) : null}
+      {/* V3-FIX-175+176: Procurement checkout modal */}
+      <Modal visible={checkoutVisible} transparent animationType="slide" onRequestClose={() => !ordering && setCheckoutVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '80%' }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: colors.textPrimary, marginBottom: 12 }}>Procurement Checkout</Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginBottom: 8 }}>Payment to SuperMandi Tech Pvt Ltd</Text>
+
+            {/* Order summary */}
+            <View style={{ backgroundColor: colors.backgroundSecondary, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>{cartItemCount} items · {Object.values(orderQtys).reduce((s, v) => s + v, 0)} cases</Text>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.primary, marginTop: 4 }}>₹{Math.round(cartTotal / 100).toLocaleString("en-IN")}</Text>
+              <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 2 }}>Principal lane · Inclusive of applicable GST</Text>
+            </View>
+
+            {/* V3-FIX-176: Payment mode selection */}
+            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary, marginBottom: 6 }}>Payment Method</Text>
+            {(["CASH", "UPI", "BNPL", "CREDIT"] as const).map((mode) => (
+              <Pressable
+                key={mode}
+                style={{ flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: paymentMode === mode ? colors.primary + '15' : colors.background, borderRadius: 10, marginBottom: 4, borderWidth: 1, borderColor: paymentMode === mode ? colors.primary : colors.border }}
+                onPress={() => setPaymentMode(mode)}
+              >
+                <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: paymentMode === mode ? colors.primary : colors.border, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                  {paymentMode === mode ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary }} /> : null}
+                </View>
+                <Text style={{ fontSize: 14, fontWeight: paymentMode === mode ? '700' : '500', color: paymentMode === mode ? colors.primary : colors.textPrimary }}>
+                  {mode === "CASH" ? "Cash on Delivery" : mode === "UPI" ? "UPI / PhonePe" : mode === "BNPL" ? "Buy Now Pay Later" : "SuperMandi Credit"}
+                </Text>
+              </Pressable>
+            ))}
+
+            {/* Action buttons */}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+              <Pressable style={{ flex: 1, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }} onPress={() => setCheckoutVisible(false)} disabled={ordering}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary }}>Cancel</Text>
+              </Pressable>
+              <Pressable style={{ flex: 2, padding: 12, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' }} disabled={ordering} onPress={async () => {
+                setOrdering(true);
+                try {
+                  const online = await isOnline();
+                  if (!online) { showToast("Order requires internet connection"); setOrdering(false); return; }
+                  const sid = await getDeviceStoreId();
+                  if (!sid) { showToast("Store not configured"); setOrdering(false); return; }
+                  const selectedProducts = products.filter((p) => (orderQtys[p.id] ?? 0) > 0);
+                  if (selectedProducts.length === 0) { showToast("No items in order"); setOrdering(false); return; }
+
+                  // V3-FIX-175: Snapshot accepted terms per item
+                  const bySupplier = new Map<string, typeof selectedProducts>();
+                  for (const p of selectedProducts) {
+                    if (!p.supplierId) { showToast(`${p.name}: supplier identity missing`); setOrdering(false); return; }
+                    const list = bySupplier.get(p.supplierId) ?? [];
+                    list.push(p);
+                    bySupplier.set(p.supplierId, list);
+                  }
+
+                  let totalItems = 0;
+                  for (const [supplierId, supplierProducts] of bySupplier) {
+                    const orderItems = supplierProducts.map((p) => ({
+                      supplierProductId: p.id,
+                      quantity: (orderQtys[p.id] ?? 0) * p.caseSize,
+                      unitPrice: p.ptrMinor,
+                      // V3-FIX-175: Snapshot commercial terms at order time
+                      acceptedTerms: {
+                        ptrMinor: p.ptrMinor, mrpMinor: p.mrpMinor,
+                        scheme: p.scheme, tradeDiscountPct: p.tradeDiscountPct,
+                        deliveryDays: p.deliveryDays, creditDays: p.creditDays,
+                        moq: p.moq, bnplAvailable: p.bnplAvailable,
+                      },
+                    }));
+                    // V3-FIX-176: Include payment mode in order
+                    const order = await createOrder(sid, {
+                      supplierId,
+                      orderType: "catalogue_principal" as any,
+                      items: orderItems,
+                      paymentMode: paymentMode as any,
+                    });
+                    await submitOrder(sid, order.id);
+                    totalItems += orderItems.length;
+                    logger.debug("BuyV3", `checkout:${order.id},supplier:${supplierId},payment:${paymentMode},items:${orderItems.length}`);
+                  }
+                  showToast(`Order placed (${paymentMode}): ${totalItems} items · ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")}`);
+                  setOrderQtys({});
+                  setCheckoutVisible(false);
+                } catch (err: any) {
+                  showToast(err?.message ?? "Failed to place order");
+                } finally {
+                  setOrdering(false);
+                }
+              }}>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{ordering ? "Placing..." : `Pay ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")} →`}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

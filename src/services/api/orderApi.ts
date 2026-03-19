@@ -138,6 +138,8 @@ export interface CreateOrderParams {
   expectedDeliveryDate?: string;
   // POS-BUY-004: Allow creating orders as draft
   status?: "draft" | "submitted";
+  // V3-FIX-176: Payment mode for procurement checkout
+  paymentMode?: "UPI" | "BANK" | "BNPL" | "CREDIT" | "CASH";
 }
 
 export interface CreateOrderResponse {
