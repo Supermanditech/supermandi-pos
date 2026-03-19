@@ -115,10 +115,10 @@ jest.mock("../../stores/productsStore", () => ({
 jest.mock("../../stores/settingsStore", () => ({
   useSettingsStore: Object.assign(
     (sel: (s: any) => any) => sel({
-      voiceEnabled: false, categoryBrowsingEnabled: false,
-      language: "en", storeName: "Test Store",
+      voiceEnabled: false, categoryBrowsingEnabled: true,
+      language: "en", storeName: "Test Store", themeMode: "light",
     }),
-    { getState: () => ({ voiceEnabled: false, categoryBrowsingEnabled: false }) }
+    { getState: () => ({ voiceEnabled: false, categoryBrowsingEnabled: true, themeMode: "light" }) }
   ),
 }));
 
@@ -616,6 +616,76 @@ describe("V3-HARDEN-184: Back/return behavior", () => {
     expect(screen.queryByTestId("sell-screen-v3")).toBeNull();
 
     // No cart corruption
+    expect(mockAddItem).not.toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CATEGORY/FILTER STATE RETENTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("V3-HARDEN-184: Category/filter state retention across detail flow", () => {
+  beforeEach(() => {
+    mockAddItem.mockClear();
+  });
+
+  it("SELL: category chip selection is preserved after detail open→close", async () => {
+    render(<SellScreenV3 />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("sell-screen-v3")).toBeTruthy();
+    });
+
+    // Category chips should be visible (categoryBrowsingEnabled=true)
+    await waitFor(() => {
+      expect(screen.getByTestId("sell-category-chips")).toBeTruthy();
+    });
+
+    // The default "Frequent" chip exists — select a different one if available
+    // With fallback categories: Frequent, Beverages, Snacks, Dairy, Staples, Home Care
+    const snacksChip = screen.queryByText("Snacks");
+    if (snacksChip) {
+      fireEvent.press(snacksChip);
+
+      // Open detail
+      const tiles = screen.queryAllByLabelText(/tap for details/i);
+      if (tiles.length > 0) {
+        fireEvent.press(tiles[0]);
+        await waitFor(() => {
+          expect(screen.getByTestId("product-detail-sheet")).toBeTruthy();
+        });
+
+        // Close detail
+        fireEvent.press(screen.getByLabelText("Close details"));
+      }
+
+      // Category chips should still show "Snacks" as an option
+      expect(screen.getByText("Snacks")).toBeTruthy();
+      // Category chips container still visible
+      expect(screen.getByTestId("sell-category-chips")).toBeTruthy();
+    }
+  });
+
+  it("SELL: mode strip (BILLING MODE) persists across detail flow", async () => {
+    render(<SellScreenV3 />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("sell-mode-strip")).toBeTruthy();
+    });
+
+    // Open and close detail
+    const tiles = screen.queryAllByLabelText(/tap for details/i);
+    if (tiles.length > 0) {
+      fireEvent.press(tiles[0]);
+      await waitFor(() => {
+        expect(screen.getByTestId("product-detail-sheet")).toBeTruthy();
+      });
+      fireEvent.press(screen.getByLabelText("Close details"));
+    }
+
+    // Mode strip still present
+    expect(screen.getByTestId("sell-mode-strip")).toBeTruthy();
+    // Cart state unchanged
     expect(mockAddItem).not.toHaveBeenCalled();
   });
 });

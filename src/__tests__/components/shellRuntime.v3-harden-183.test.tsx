@@ -11,7 +11,7 @@
  *   7. Active tab label uses bold styling (via style check)
  */
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react-native";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 
 // ── Mocks ──
 jest.mock("react-native-svg", () => {
@@ -53,7 +53,42 @@ jest.mock("../../theme/brand", () => ({
   iconRhythm: { nav: 22 },
 }));
 
+// Mock remaining dependencies for PosRootLayoutV3
+jest.mock("@react-navigation/native", () => ({
+  useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn(), getParent: () => ({ navigate: jest.fn() }) }),
+}));
+jest.mock("react-i18next", () => ({ useTranslation: () => ({ t: (_k: string, d: string) => d || _k }) }));
+jest.mock("../../stores/cartStore", () => ({
+  useCartStore: Object.assign((sel: (s: any) => any) => sel({ items: [], total: 0 }), { getState: () => ({ items: [] }) }),
+}));
+jest.mock("../../services/networkStatus", () => ({ isOnline: jest.fn().mockResolvedValue(true) }));
+jest.mock("../../services/sseClient", () => ({ startSSEClient: jest.fn(), stopSSEClient: jest.fn() }));
+jest.mock("../../components/ui/ScreenErrorBoundary", () => ({
+  __esModule: true, default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+// Stub all 4 tab screens for PosRootLayout shell testing
+jest.mock("../../screens/v3/SellScreenV3", () => {
+  const { View, Text } = require("react-native");
+  return { __esModule: true, default: () => <View testID="sell-stub"><Text>SELL Content</Text></View> };
+});
+jest.mock("../../screens/v3/BuyScreenV3", () => {
+  const { View, Text } = require("react-native");
+  return { __esModule: true, default: () => <View testID="buy-stub"><Text>BUY Content</Text></View> };
+});
+jest.mock("../../screens/v3/StoreHubScreenV3", () => {
+  const { View, Text } = require("react-native");
+  return { __esModule: true, default: () => <View testID="store-stub"><Text>STORE Content</Text></View> };
+});
+jest.mock("../../screens/v3/MoreScreenV3", () => {
+  const { View, Text } = require("react-native");
+  return { __esModule: true, default: () => <View testID="more-stub"><Text>MORE Content</Text></View> };
+});
+jest.mock("../../stores/settingsStore", () => ({
+  useSettingsStore: Object.assign((sel: (s: any) => any) => sel({ themeMode: "light", storeName: "Test" }), { getState: () => ({ themeMode: "light" }) }),
+}));
+
 import BottomNavV3, { type V3Tab } from "../../components/v3/BottomNavV3";
+import PosRootLayoutV3 from "../../screens/v3/PosRootLayoutV3";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TESTS
@@ -133,5 +168,85 @@ describe("V3-HARDEN-183: BottomNavV3 mounted runtime proof", () => {
     rerender(<BottomNavV3 activeTab="BUY" onTabPress={onTabPress} />);
     expect(screen.getByLabelText("SELL").props.accessibilityState).toEqual({ selected: false });
     expect(screen.getByLabelText("BUY").props.accessibilityState).toEqual({ selected: true });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PosRootLayoutV3: Mounted shell proof
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("V3-HARDEN-183: PosRootLayoutV3 mounted shell proof", () => {
+  it("renders with SELL as default active tab", async () => {
+    render(<PosRootLayoutV3 />);
+    await waitFor(() => {
+      expect(screen.getByTestId("sell-stub")).toBeTruthy();
+    });
+    // Bottom nav is present with all 4 tabs
+    expect(screen.getByLabelText("SELL")).toBeTruthy();
+    expect(screen.getByLabelText("BUY")).toBeTruthy();
+    expect(screen.getByLabelText("STORE")).toBeTruthy();
+    expect(screen.getByLabelText("MORE")).toBeTruthy();
+  });
+
+  it("all 4 tabs are reachable via tab press", async () => {
+    render(<PosRootLayoutV3 />);
+    // Default: SELL
+    await waitFor(() => expect(screen.getByTestId("sell-stub")).toBeTruthy());
+
+    // Switch to BUY
+    fireEvent.press(screen.getByLabelText("BUY"));
+    await waitFor(() => expect(screen.getByTestId("buy-stub")).toBeTruthy());
+    expect(screen.queryByTestId("sell-stub")).toBeNull();
+
+    // Switch to STORE
+    fireEvent.press(screen.getByLabelText("STORE"));
+    await waitFor(() => expect(screen.getByTestId("store-stub")).toBeTruthy());
+    expect(screen.queryByTestId("buy-stub")).toBeNull();
+
+    // Switch to MORE
+    fireEvent.press(screen.getByLabelText("MORE"));
+    await waitFor(() => expect(screen.getByTestId("more-stub")).toBeTruthy());
+    expect(screen.queryByTestId("store-stub")).toBeNull();
+
+    // Switch back to SELL
+    fireEvent.press(screen.getByLabelText("SELL"));
+    await waitFor(() => expect(screen.getByTestId("sell-stub")).toBeTruthy());
+  });
+
+  it("tab content switches without corruption — only active tab is mounted", async () => {
+    render(<PosRootLayoutV3 />);
+    await waitFor(() => expect(screen.getByTestId("sell-stub")).toBeTruthy());
+
+    // Only SELL is mounted
+    expect(screen.queryByTestId("buy-stub")).toBeNull();
+    expect(screen.queryByTestId("store-stub")).toBeNull();
+    expect(screen.queryByTestId("more-stub")).toBeNull();
+
+    fireEvent.press(screen.getByLabelText("STORE"));
+    await waitFor(() => expect(screen.getByTestId("store-stub")).toBeTruthy());
+
+    // Only STORE is mounted
+    expect(screen.queryByTestId("sell-stub")).toBeNull();
+    expect(screen.queryByTestId("buy-stub")).toBeNull();
+    expect(screen.queryByTestId("more-stub")).toBeNull();
+  });
+
+  it("bottom nav remains visible and interactive across all tab switches", async () => {
+    render(<PosRootLayoutV3 />);
+    await waitFor(() => expect(screen.getByTestId("sell-stub")).toBeTruthy());
+
+    // Nav should always be present
+    for (const tab of ["SELL", "BUY", "STORE", "MORE"]) {
+      expect(screen.getByLabelText(tab)).toBeTruthy();
+    }
+
+    // Switch to MORE
+    fireEvent.press(screen.getByLabelText("MORE"));
+    await waitFor(() => expect(screen.getByTestId("more-stub")).toBeTruthy());
+
+    // Nav still present
+    for (const tab of ["SELL", "BUY", "STORE", "MORE"]) {
+      expect(screen.getByLabelText(tab)).toBeTruthy();
+    }
   });
 });

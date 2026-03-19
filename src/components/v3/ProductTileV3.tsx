@@ -99,7 +99,7 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress }: P
 
       {/* V3-HARDEN-171: Sell-unit indicator for loose products */}
       {product.productMode === "LOOSE_BULK" && product.rateUnit ? (
-        <Text style={[styles.caseInfo, { color: "#6366f1" }]}>per {product.rateUnit}</Text>
+        <Text style={styles.looseRate}>per {product.rateUnit}</Text>
       ) : null}
 
       {/* V3-FIX-173: Operator-first stock health indicator */}
@@ -220,6 +220,7 @@ function createStyles(colors: ColorPalette) {
       marginTop: 1,
     },
     // V3-FIX-181: Stock health + setup indicators using theme tokens
+    looseRate: { fontSize: getChipFontSize() - 3, color: colors.accent, textAlign: "center" as const },
     stockLow: { fontSize: 9, color: colors.warning, textAlign: "center" as const, fontWeight: "700" as const },
     stockOut: { fontSize: 9, color: colors.error, textAlign: "center" as const, fontWeight: "700" as const },
     setupNeeded: { fontSize: 10, color: colors.warning, textAlign: "center" as const, marginTop: 2 },

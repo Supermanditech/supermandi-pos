@@ -3,7 +3,7 @@ import { View, Pressable, StyleSheet, Text } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
-import { cardElevation, shell, typeRhythm } from "../../theme/brand";
+import { cardElevation, shell, typeRhythm, chipColors } from "../../theme/brand";
 
 // STG-561: Supplier product card with full wholesale B2B metadata
 
@@ -103,37 +103,25 @@ export default function SupplierProductCardV3({ product, orderQtyCases, onPress 
             </View>
           ) : null}
 
-          {/* V3-FIX-173: Delivery + finance row */}
+          {/* V3-FIX-173+181: Delivery + finance row — canonical chip tokens */}
           <View style={styles.terms}>
             {product.deliveryDays != null ? (
-              <View style={[styles.tag, { backgroundColor: '#dbeafe' }]}>
-                <Text style={[styles.tagText, { color: '#1d4ed8' }]}>Delivery: {product.deliveryDays}d</Text>
-              </View>
+              <View style={styles.infoBadge}><Text style={styles.infoBadgeText}>Delivery: {product.deliveryDays}d</Text></View>
             ) : null}
             {product.bnplAvailable ? (
-              <View style={[styles.tag, { backgroundColor: '#dcfce7' }]}>
-                <Text style={[styles.tagText, { color: '#16a34a' }]}>BNPL</Text>
-              </View>
+              <View style={styles.successBadge}><Text style={styles.successBadgeText}>BNPL</Text></View>
             ) : null}
             {product.financeEligible && !product.bnplAvailable ? (
-              <View style={[styles.tag, { backgroundColor: '#dcfce7' }]}>
-                <Text style={[styles.tagText, { color: '#16a34a' }]}>Credit</Text>
-              </View>
+              <View style={styles.successBadge}><Text style={styles.successBadgeText}>Credit</Text></View>
             ) : null}
             {product.deliveryTerms ? (
-              <View style={[styles.tag, { backgroundColor: '#f0f9ff' }]}>
-                <Text style={[styles.tagText, { color: '#0369a1', fontSize: 9 }]}>{product.deliveryTerms}</Text>
-              </View>
+              <View style={styles.infoBadge}><Text style={[styles.infoBadgeText, { fontSize: 9 }]}>{product.deliveryTerms}</Text></View>
             ) : null}
             {product.procurementUnit && product.procurementUnit !== product.unit ? (
-              <View style={[styles.tag, { backgroundColor: '#f3e8ff' }]}>
-                <Text style={[styles.tagText, { color: '#7c3aed' }]}>{product.procurementUnit}{product.procurementPackQty && product.procurementPackQty > 1 ? ` ×${product.procurementPackQty}` : ''}</Text>
-              </View>
+              <View style={styles.accentBadge}><Text style={styles.accentBadgeText}>{product.procurementUnit}{product.procurementPackQty && product.procurementPackQty > 1 ? ` ×${product.procurementPackQty}` : ''}</Text></View>
             ) : null}
             {product.publishedTermsVersion ? (
-              <View style={[styles.tag, { backgroundColor: '#f1f5f9' }]}>
-                <Text style={[styles.tagText, { color: '#64748b', fontSize: 8 }]}>v{product.publishedTermsVersion}</Text>
-              </View>
+              <View style={styles.neutralBadge}><Text style={[styles.neutralBadgeText, { fontSize: 8 }]}>v{product.publishedTermsVersion}</Text></View>
             ) : null}
           </View>
 
@@ -205,7 +193,16 @@ function createStyles(colors: ColorPalette) {
     calcLine: { fontSize: 9, color: colors.textTertiary, marginTop: 4 },
     // V3-FIX-136: Browse-only card styles
     cartBadge: { backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-    cartBadgeText: { color: "#fff", fontSize: 10, fontWeight: "700" },
+    cartBadgeText: { color: colors.textInverse, fontSize: 10, fontWeight: "700" },
     tapHint: { fontSize: 11, color: colors.textTertiary, fontWeight: "500" },
+    // V3-FIX-181: Semantic badge styles from chipColors tokens
+    infoBadge: { backgroundColor: chipColors(colors).info.bg, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
+    infoBadgeText: { fontSize: 9, fontWeight: "700", color: chipColors(colors).info.text },
+    successBadge: { backgroundColor: chipColors(colors).status.bg, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
+    successBadgeText: { fontSize: 9, fontWeight: "700", color: chipColors(colors).status.text },
+    accentBadge: { backgroundColor: chipColors(colors).accent.bg, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
+    accentBadgeText: { fontSize: 9, fontWeight: "700", color: chipColors(colors).accent.text },
+    neutralBadge: { backgroundColor: chipColors(colors).neutral.bg, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
+    neutralBadgeText: { fontSize: 9, fontWeight: "700", color: chipColors(colors).neutral.text },
   });
 }

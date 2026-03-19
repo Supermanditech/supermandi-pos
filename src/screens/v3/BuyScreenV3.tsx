@@ -361,8 +361,8 @@ export default function BuyScreenV3() {
                   </View>
                   {discountItems.length > 0 ? (
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
-                      <Text style={{ fontSize: 12, color: '#16a34a' }}>Trade discount applied</Text>
-                      <Text style={{ fontSize: 12, color: '#16a34a', fontWeight: '600' }}>{discountItems.map(p => `-${p.tradeDiscountPct}%`).join(', ')}</Text>
+                      <Text style={{ fontSize: 12, color: colors.success }}>Trade discount applied</Text>
+                      <Text style={{ fontSize: 12, color: colors.success, fontWeight: '600' }}>{discountItems.map(p => `-${p.tradeDiscountPct}%`).join(', ')}</Text>
                     </View>
                   ) : null}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 6 }}>
@@ -380,31 +380,30 @@ export default function BuyScreenV3() {
               const withTerms = selected.filter(p => p.scheme || p.tradeDiscountPct || p.deliveryDays || p.deliveryTerms || p.bnplAvailable || p.financeEligible || p.creditDays || p.publishedTermsVersion || (p.procurementUnit && p.procurementUnit !== p.unit) || (p.moqTiers && Array.isArray(p.moqTiers) && p.moqTiers.length > 0));
               if (withTerms.length === 0) return null;
               return (
-                <View style={{ backgroundColor: '#f0f9ff', borderRadius: 10, padding: 10, marginBottom: 10 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#0369a1', marginBottom: 6 }}>Accepted Terms (per item)</Text>
+                <View style={{ backgroundColor: colors.primaryLight, borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.info, marginBottom: 6 }}>Accepted Terms (per item)</Text>
                   {withTerms.map((p) => (
-                    <View key={p.id} style={{ marginBottom: 4, paddingBottom: 4, borderBottomWidth: withTerms.indexOf(p) < withTerms.length - 1 ? 0.5 : 0, borderBottomColor: '#bae6fd' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '600', color: '#1e3a5f' }}>{p.name} ×{orderQtys[p.id] ?? 0} cases</Text>
+                    <View key={p.id} style={{ marginBottom: 4, paddingBottom: 4, borderBottomWidth: withTerms.indexOf(p) < withTerms.length - 1 ? 0.5 : 0, borderBottomColor: colors.border }}>
+                      <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textPrimary }}>{p.name} ×{orderQtys[p.id] ?? 0} cases</Text>
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
-                        {p.scheme ? <Text style={{ fontSize: 10, color: '#92400e', backgroundColor: '#fef3c7', paddingHorizontal: 4, borderRadius: 3 }}>{p.scheme}</Text> : null}
-                        {p.tradeDiscountPct ? <Text style={{ fontSize: 10, color: '#374151' }}>-{p.tradeDiscountPct}%</Text> : null}
-                        {p.deliveryDays != null ? <Text style={{ fontSize: 10, color: '#1d4ed8' }}>{p.deliveryDays}d delivery</Text> : null}
-                        {p.deliveryTerms ? <Text style={{ fontSize: 10, color: '#0369a1' }}>{p.deliveryTerms}</Text> : null}
-                        {p.creditDays ? <Text style={{ fontSize: 10, color: '#4338ca' }}>{p.creditDays}d credit</Text> : null}
-                        {p.bnplAvailable ? <Text style={{ fontSize: 10, color: '#16a34a' }}>BNPL</Text> : null}
-                        {p.financeEligible && !p.bnplAvailable ? <Text style={{ fontSize: 10, color: '#16a34a' }}>Finance</Text> : null}
-                        {p.procurementUnit && p.procurementUnit !== p.unit ? <Text style={{ fontSize: 10, color: '#7c3aed' }}>{p.procurementUnit}{p.procurementPackQty && p.procurementPackQty > 1 ? ` ×${p.procurementPackQty}` : ''}</Text> : null}
+                        {p.scheme ? <Text style={{ fontSize: 10, color: colors.warningDark, backgroundColor: colors.warningSoft, paddingHorizontal: 4, borderRadius: 3 }}>{p.scheme}</Text> : null}
+                        {p.tradeDiscountPct ? <Text style={{ fontSize: 10, color: colors.textSecondary }}>-{p.tradeDiscountPct}%</Text> : null}
+                        {p.deliveryDays != null ? <Text style={{ fontSize: 10, color: colors.info }}>{p.deliveryDays}d delivery</Text> : null}
+                        {p.deliveryTerms ? <Text style={{ fontSize: 10, color: colors.info }}>{p.deliveryTerms}</Text> : null}
+                        {p.creditDays ? <Text style={{ fontSize: 10, color: colors.primary }}>{p.creditDays}d credit</Text> : null}
+                        {p.bnplAvailable ? <Text style={{ fontSize: 10, color: colors.success }}>BNPL</Text> : null}
+                        {p.financeEligible && !p.bnplAvailable ? <Text style={{ fontSize: 10, color: colors.success }}>Finance</Text> : null}
+                        {p.procurementUnit && p.procurementUnit !== p.unit ? <Text style={{ fontSize: 10, color: colors.accent }}>{p.procurementUnit}{p.procurementPackQty && p.procurementPackQty > 1 ? ` ×${p.procurementPackQty}` : ''}</Text> : null}
                         {(() => {
-                          // V3-FIX-175: Show applied MOQ tier for ordered quantity
                           const qty = (orderQtys[p.id] ?? 0) * p.caseSize;
                           const tiers = p.moqTiers;
                           if (!tiers || !Array.isArray(tiers) || tiers.length === 0) return null;
                           const sorted = [...tiers].sort((a: any, b: any) => (b.minQty || 0) - (a.minQty || 0));
                           const applied = sorted.find((t: any) => qty >= (t.minQty || 0));
                           if (!applied) return null;
-                          return <Text style={{ fontSize: 10, color: '#059669', fontWeight: '600' }}>MOQ tier: {applied.minQty}+ → -{applied.discountPct}%</Text>;
+                          return <Text style={{ fontSize: 10, color: colors.success, fontWeight: '600' }}>MOQ tier: {applied.minQty}+ → -{applied.discountPct}%</Text>;
                         })()}
-                        {p.publishedTermsVersion ? <Text style={{ fontSize: 9, color: '#9ca3af' }}>v{p.publishedTermsVersion}</Text> : null}
+                        {p.publishedTermsVersion ? <Text style={{ fontSize: 9, color: colors.textTertiary }}>v{p.publishedTermsVersion}</Text> : null}
                       </View>
                     </View>
                   ))}
@@ -508,7 +507,7 @@ export default function BuyScreenV3() {
                   setOrdering(false);
                 }
               }}>
-                <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{ordering ? "Placing..." : `Pay ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")} →`}</Text>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textInverse }}>{ordering ? "Placing..." : `Pay ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")} →`}</Text>
               </Pressable>
             </View>
           </View>

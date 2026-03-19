@@ -101,10 +101,10 @@ function createStyles(colors: ColorPalette) {
       borderRadius: (getHeaderSpacing() - 2) / 2,
     },
     dotOnline: {
-      backgroundColor: "#4ADE80",
+      backgroundColor: colors.success,
     },
     dotOffline: {
-      backgroundColor: "#F87171",
+      backgroundColor: colors.error,
     },
     statusText: {
       color: "rgba(255,255,255,0.9)",
