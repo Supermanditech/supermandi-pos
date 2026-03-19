@@ -9,6 +9,9 @@
 import { randomUUID } from "crypto";
 import type { PoolClient } from "pg";
 import { log } from "../lib/logger";
+import { createRazorpayOrder } from "./paymentProviders/razorpayAdapter";
+import { createPhonePePayment } from "./paymentProviders/phonepeAdapter";
+import { createPineLabsPayment } from "./paymentProviders/pinelabsAdapter";
 
 export type PaymentProvider = 'PHONEPE' | 'PINE_LABS' | 'RAZORPAY' | 'BNPL' | 'SUPERMANDI_CREDIT' | 'MANUAL' | 'UPI_DIRECT';
 export type PaymentMode = 'UPI' | 'BANK' | 'BNPL' | 'CREDIT' | 'CASH' | 'CARD';
@@ -75,8 +78,33 @@ export async function createPaymentIntent(
   // Each provider returns actionable data for the checkout UI
   const amountRupees = (input.amountMinor / 100).toFixed(2);
 
-  if (provider === 'UPI_DIRECT') {
-    // Generate UPI deep link for SuperMandi merchant
+  const callbackBaseUrl = process.env.PAYMENT_CALLBACK_URL || 'https://staging.supermandi.tech/api/v1/orders/procurement/payment-callback';
+
+  // ── PhonePe UPI ──
+  if (provider === 'PHONEPE') {
+    try {
+      const result = await createPhonePePayment({
+        amountMinor: input.amountMinor,
+        merchantTransactionId: id,
+        merchantUserId: input.storeId,
+        callbackUrl: callbackBaseUrl,
+        redirectUrl: `${callbackBaseUrl}?intentId=${id}&provider=phonepe`,
+      });
+      await client.query(
+        `UPDATE procurement.payment_intents SET status = 'pending', provider_order_id = $2, updated_at = NOW() WHERE id = $1`,
+        [id, result.merchantTransactionId]
+      );
+      return { id, status: 'pending' as PaymentIntentStatus, provider,
+        redirectUrl: result.redirectUrl,
+        qrData: result.instrumentResponse?.qrData };
+    } catch (err: any) {
+      log.error(`[PhonePe] Failed: ${err.message}`);
+      // Fall through to UPI deep link
+    }
+  }
+
+  // ── UPI Direct (fallback when PhonePe not configured) ──
+  if (provider === 'UPI_DIRECT' || (provider === 'PHONEPE' && !process.env.PHONEPE_MERCHANT_ID)) {
     const merchantVpa = process.env.SUPERMANDI_UPI_VPA || 'supermandi@icici';
     const merchantName = 'SuperMandi Tech Pvt Ltd';
     const upiDeepLink = `upi://pay?pa=${merchantVpa}&pn=${encodeURIComponent(merchantName)}&am=${amountRupees}&cu=INR&tn=Order-${input.orderId.substring(0, 8)}`;
@@ -85,11 +113,51 @@ export async function createPaymentIntent(
       `UPDATE procurement.payment_intents SET status = 'pending', provider_order_id = $2, updated_at = NOW() WHERE id = $1`,
       [id, `UPI-${id.substring(0, 8)}`]
     );
-    return { id, status: 'pending' as PaymentIntentStatus, provider, redirectUrl: upiDeepLink, qrData };
+    return { id, status: 'pending' as PaymentIntentStatus, provider: 'UPI_DIRECT', redirectUrl: upiDeepLink, qrData };
   }
 
+  // ── Razorpay ──
+  if (provider === 'RAZORPAY') {
+    try {
+      const rzpOrder = await createRazorpayOrder({
+        amountMinor: input.amountMinor,
+        receipt: `order-${input.orderId.substring(0, 20)}`,
+        notes: { orderId: input.orderId, storeId: input.storeId },
+      });
+      await client.query(
+        `UPDATE procurement.payment_intents SET status = 'pending', provider_order_id = $2, updated_at = NOW() WHERE id = $1`,
+        [id, rzpOrder.orderId]
+      );
+      return { id, status: 'pending' as PaymentIntentStatus, provider, redirectUrl: rzpOrder.checkoutUrl };
+    } catch (err: any) {
+      log.error(`[Razorpay] Failed: ${err.message}`);
+      await client.query(`UPDATE procurement.payment_intents SET status = 'failed', updated_at = NOW() WHERE id = $1`, [id]);
+      return { id, status: 'failed' as PaymentIntentStatus, provider };
+    }
+  }
+
+  // ── Pine Labs ──
+  if (provider === 'PINE_LABS') {
+    try {
+      const plResult = await createPineLabsPayment({
+        amountMinor: input.amountMinor,
+        orderId: input.orderId,
+        returnUrl: `${callbackBaseUrl}?intentId=${id}&provider=pinelabs`,
+      });
+      await client.query(
+        `UPDATE procurement.payment_intents SET status = 'pending', provider_order_id = $2, updated_at = NOW() WHERE id = $1`,
+        [id, plResult.transactionId]
+      );
+      return { id, status: 'pending' as PaymentIntentStatus, provider, redirectUrl: plResult.redirectUrl };
+    } catch (err: any) {
+      log.error(`[PineLabs] Failed: ${err.message}`);
+      await client.query(`UPDATE procurement.payment_intents SET status = 'failed', updated_at = NOW() WHERE id = $1`, [id]);
+      return { id, status: 'failed' as PaymentIntentStatus, provider };
+    }
+  }
+
+  // ── SuperMandi Credit ──
   if (provider === 'SUPERMANDI_CREDIT') {
-    // Credit approval is instant for eligible stores — mark as authorized
     await client.query(
       `UPDATE procurement.payment_intents SET status = 'authorized', updated_at = NOW() WHERE id = $1`,
       [id]
@@ -97,8 +165,8 @@ export async function createPaymentIntent(
     return { id, status: 'authorized' as PaymentIntentStatus, provider };
   }
 
+  // ── BNPL ──
   if (provider === 'BNPL') {
-    // BNPL requires partner approval — stays pending
     await client.query(
       `UPDATE procurement.payment_intents SET status = 'pending', updated_at = NOW() WHERE id = $1`,
       [id]
@@ -106,18 +174,7 @@ export async function createPaymentIntent(
     return { id, status: 'pending' as PaymentIntentStatus, provider };
   }
 
-  if (provider === 'RAZORPAY' || provider === 'PINE_LABS') {
-    // Generate provider checkout URL — in production, this calls the provider API
-    // For now, generate a deterministic checkout URL that the frontend can redirect to
-    const checkoutUrl = `https://checkout.supermandi.tech/pay/${id}?amount=${amountRupees}&provider=${provider.toLowerCase()}`;
-    await client.query(
-      `UPDATE procurement.payment_intents SET status = 'pending', provider_order_id = $2, updated_at = NOW() WHERE id = $1`,
-      [id, `${provider}-${id.substring(0, 8)}`]
-    );
-    return { id, status: 'pending' as PaymentIntentStatus, provider, redirectUrl: checkoutUrl };
-  }
-
-  // MANUAL / other — stays created, no provider action needed
+  // ── MANUAL (Cash) ──
   return { id, status: 'created' as PaymentIntentStatus, provider };
 }
 

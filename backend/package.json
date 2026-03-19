@@ -48,6 +48,7 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",
+    "razorpay": "^2.9.4",
     "@google-cloud/translate": "^9.3.0",
     "@supermandi/common": "workspace:*",
     "@types/bcryptjs": "^2.4.6",

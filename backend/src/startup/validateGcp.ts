@@ -222,6 +222,13 @@ export async function validateConversionSchemaReadiness(pool: any): Promise<{ re
   } catch {
     missing.push('procurement.payment_intents table');
   }
+  // V3-FIX-176: Check payment provider configuration
+  const paymentProviderVars = ['RAZORPAY_KEY_ID', 'PHONEPE_MERCHANT_ID', 'PINE_LABS_MERCHANT_ID'];
+  const missingProviders = paymentProviderVars.filter(v => !process.env[v]);
+  if (missingProviders.length === paymentProviderVars.length) {
+    missing.push('NO_PAYMENT_PROVIDERS (none of RAZORPAY_KEY_ID, PHONEPE_MERCHANT_ID, PINE_LABS_MERCHANT_ID set)');
+  }
+
   // V3-HARDEN-178: Check accepted_terms_snapshot on live orders table
   try {
     const result5 = await pool.query(
