@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 419,
+  "version": 424,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -3655,8 +3655,8 @@
     {
       "ticket": "STG-103",
       "file": "src/stores/cartStore.ts",
-      "start_line": 50,
-      "end_line": 922,
+      "start_line": 56,
+      "end_line": 928,
       "checksum": "a51ab32f6d4ded0f",
       "description": "CartCustomer and CartNote types + setCustomer/setNote actions",
       "test_file": "src/__tests__/stores/cartStore.unit.test.ts",
@@ -3688,7 +3688,7 @@
         "regression_check": "POS-only UI change",
         "test_guard": "POS-only UI change"
       },
-      "line_shifted_at": "2026-03-16T16:13:16.433Z"
+      "line_shifted_at": "2026-03-19T10:14:33.835Z"
     },
     {
       "ticket": "STG-103-UI",
@@ -5600,8 +5600,8 @@
     {
       "ticket": "STG-542",
       "file": "src/stores/cartStore.ts",
-      "start_line": 192,
-      "end_line": 922,
+      "start_line": 198,
+      "end_line": 928,
       "checksum": "6b0800ea9d9b5e5d",
       "description": "Warn in __DEV__ when discount exceeds subtotal (negative total capped to 0)",
       "test_file": "src/__tests__/screens/negative-total.stg-542.test.ts",
@@ -5647,7 +5647,7 @@
         "single_commit": "Done",
         "ticket_parked": "Done"
       },
-      "line_shifted_at": "2026-03-17T11:52:43.103Z"
+      "line_shifted_at": "2026-03-19T10:14:33.879Z"
     },
     {
       "ticket": "STG-512",
@@ -6666,8 +6666,8 @@
       "ticket": "STG-553",
       "file": "src/screens/v3/SellScreenV3.tsx",
       "start_line": 1,
-      "end_line": 482,
-      "checksum": "2a1f3a15b2710576",
+      "end_line": 488,
+      "checksum": "a1cf5fdda88f3f28",
       "description": "SellScreenV3 — product grid + Retail/Bulk toggle + CartSheetV3 wired + V3-HARDEN-106 testIDs",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
       "depends_on": null,
@@ -8122,6 +8122,65 @@
         "wiring": "catalogToSupplier passes conversion fields, PurchaseItemData carries context",
         "navigation": "Existing BUY/GRN/counter-purchase navigation unchanged",
         "i18n_keys": "POS app handles i18n separately — display labels are English"
+      }
+    },
+    {
+      "ticket": "V3-HARDEN-171",
+      "file": "src/components/v3/ProductTileV3.tsx",
+      "start_line": 10,
+      "end_line": 28,
+      "checksum": "6f59b9180e98f0e8",
+      "description": "ProductTileData with conversion-aware sell flow fields (productMode, soldBy, rateUnit, baseStockUnit, allowFractionalSell, conversionConfirmed)",
+      "test_file": "backend/tests/conversionEngine.v3-fix-167.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A"
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-19T10:14:28.423Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "operator_approved": "Pre-staging Mode A",
+        "parity_scanned": "No dev URLs",
+        "parity_fixed": "No issues",
+        "ui_elements": "Sell-unit label on LOOSE_BULK product tiles, Setup needed warning on unconverted stock",
+        "ux_states": "Conversion fields shown conditionally, tile displays per-unit label",
+        "wiring": "productToTileData passes conversion fields, CartItem carries sell context",
+        "navigation": "Existing sell/scan/cart navigation unchanged",
+        "i18n_keys": "Display labels match existing i18n patterns",
+        "business_logic": "Cart items carry conversion context, tile shows sell-unit + stock warning",
+        "business_behaviour": "POS sell flow shows consumer unit label and blocks unconverted bulk stock",
+        "impacted_files": "ProductTileV3, SellScreenV3, cartStore, FIX_LEDGER",
+        "fix_ledger_check": "112 fixes intact, zero drift",
+        "no_agent_conflict": "Single-agent session",
+        "gcp_parity": "No localhost URLs",
+        "regression_check": "Frontend typecheck clean",
+        "test_guard": "Conversion engine tests cover unit operations",
+        "single_commit": "One ticket = one commit",
+        "ticket_parked": "Committing now"
       }
     }
   ],

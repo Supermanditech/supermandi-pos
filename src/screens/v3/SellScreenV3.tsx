@@ -46,6 +46,13 @@ function productToTileData(p: Product): ProductTileData {
     caseSize: (p as any).caseSize ?? undefined, // real case size from backend, not hardcoded
     unit: (p as any).unit ?? "pcs",
     imageUrl: (p as any).imageUrl ?? (p as any).image_url ?? undefined,
+    // V3-HARDEN-171: Conversion-aware sell flow
+    productMode: p.productMode,
+    soldBy: p.soldBy,
+    rateUnit: p.rateUnit,
+    baseStockUnit: p.baseStockUnit,
+    allowFractionalSell: p.allowFractionalSell,
+    conversionConfirmed: p.conversionConfirmed,
   };
 }
 

@@ -34,6 +34,12 @@ export interface CartItem {
   supplierName?: string;        // supplier who sold this product
   tradeDiscountPct?: number;    // trade discount percentage
   scheme?: string;              // e.g. "10+1 Free"
+  // V3-HARDEN-171: Conversion-aware sell context
+  productMode?: string;         // PACKAGED or LOOSE_BULK
+  soldBy?: string;              // WEIGHT or COUNT
+  rateUnit?: string;            // consumer sell unit
+  baseStockUnit?: string;       // canonical inventory unit
+  allowFractionalSell?: boolean;
 }
 
 export interface ItemDiscount {

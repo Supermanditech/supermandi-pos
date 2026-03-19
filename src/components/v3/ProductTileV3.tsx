@@ -19,6 +19,13 @@ export interface ProductTileData {
   caseSize?: number;           // units per case
   unit?: string;               // pcs, kg, ltr, btl
   imageUrl?: string;           // V3-FIX-054: real product image URL
+  // V3-HARDEN-171: Conversion-aware sell flow
+  productMode?: string;        // PACKAGED or LOOSE_BULK
+  soldBy?: string;             // WEIGHT or COUNT
+  rateUnit?: string;           // KG, GM, PCS, DOZEN, LTR, ML
+  baseStockUnit?: string;      // canonical inventory unit
+  allowFractionalSell?: boolean;
+  conversionConfirmed?: boolean;
 }
 
 type ProductTileV3Props = {
@@ -86,6 +93,16 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress }: P
         <Text style={styles.caseInfo}>
           {sellMode === "bulk" ? "Trade" : "MRP"} · {product.caseSize}/{product.unit ?? "pcs"}
         </Text>
+      ) : null}
+
+      {/* V3-HARDEN-171: Sell-unit indicator for loose products */}
+      {product.productMode === "LOOSE_BULK" && product.rateUnit ? (
+        <Text style={[styles.caseInfo, { color: "#6366f1" }]}>per {product.rateUnit}</Text>
+      ) : null}
+
+      {/* V3-HARDEN-171: Warning for unconverted bulk stock */}
+      {product.conversionConfirmed === false && product.productMode === "LOOSE_BULK" ? (
+        <Text style={{ fontSize: 10, color: "#f59e0b", textAlign: "center", marginTop: 2 }}>Setup needed</Text>
       ) : null}
     </Pressable>
   );
