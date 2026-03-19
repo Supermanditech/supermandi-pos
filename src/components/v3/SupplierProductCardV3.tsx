@@ -30,6 +30,10 @@ export interface SupplierProduct {
   currentStock?: number;      // retailer's current stock
   daysOfStock?: number;       // estimated days until stockout
   bnplAvailable?: boolean;    // Buy Now Pay Later eligibility
+  // V3-FIX-170: Conversion-aware procurement context
+  procurementUnit?: string;
+  procurementPackQty?: number;
+  baseStockUnit?: string;
 }
 
 // V3-FIX-136: Card is browse-only — no inline qty/add controls

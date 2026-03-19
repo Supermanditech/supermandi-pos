@@ -15,7 +15,11 @@ import { getDeviceStoreId } from "../../services/deviceSession";
 
 // V3-042: GRN v3 — wire real pending PO items from orderApi
 
-type GRNItem = { barcode: string; name: string; ordered: number; received: number; checked: boolean; productId?: string };
+type GRNItem = {
+  barcode: string; name: string; ordered: number; received: number; checked: boolean; productId?: string;
+  // V3-FIX-170: Conversion context for pack-break preview
+  procurementUnit?: string; procurementPackQty?: number; baseStockUnit?: string; conversionConfirmed?: boolean;
+};
 type POContext = { poNumber: string; supplierName: string; totalMinor: number } | null;
 type ScanFeedback = { productName: string; qty: number } | null;
 

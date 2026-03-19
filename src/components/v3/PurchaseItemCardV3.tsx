@@ -28,6 +28,11 @@ export interface PurchaseItemData {
   purchasePrice: string;
   sellPrice: string;
   caseSize?: number;
+  // V3-FIX-170: Conversion-aware procurement context
+  procurementUnit?: string;
+  procurementPackQty?: number;
+  baseStockUnit?: string;
+  conversionConfirmed?: boolean;
 }
 
 type PurchaseItemCardV3Props = {
@@ -126,6 +131,16 @@ export default function PurchaseItemCardV3({ item, onQtyChange, onPriceChange, o
           {/* Calculated line */}
           {priceNum > 0 ? (
             <Text style={styles.calcLine}>{item.qtyCases} cases × {item.caseSize ?? 24} = {totalUnits} units · ₹{Math.round(totalAmount).toLocaleString("en-IN")}</Text>
+          ) : null}
+
+          {/* V3-FIX-170: Conversion preview for bulk procurement */}
+          {item.procurementUnit && item.baseStockUnit && item.procurementPackQty && item.procurementPackQty > 1 ? (
+            <Text style={[styles.calcLine, { color: "#6366f1" }]}>
+              Stock: {item.qtyCases * (item.caseSize ?? 1)} {item.procurementUnit} × {item.procurementPackQty} = {Math.round(item.qtyCases * (item.caseSize ?? 1) * item.procurementPackQty)} {item.baseStockUnit}
+            </Text>
+          ) : null}
+          {item.conversionConfirmed === false && item.state === "new" ? (
+            <Text style={[styles.warningText, { fontSize: 12, marginTop: 2 }]}>Retail setup needed after inward</Text>
           ) : null}
 
           {/* Edit hint */}

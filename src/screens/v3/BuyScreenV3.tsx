@@ -45,6 +45,10 @@ function catalogToSupplier(p: CatalogProduct): SupplierProduct {
     bnplAvailable: raw.bnplAvailable ?? false,
     tradeDiscountPct: raw.tradeDiscountPct,
     creditDays: raw.creditDays,
+    // V3-FIX-170: Conversion-aware procurement context
+    procurementUnit: raw.procurementUnit ?? raw.procurement_unit,
+    procurementPackQty: raw.procurementPackQty ?? raw.procurement_pack_qty,
+    baseStockUnit: raw.baseStockUnit ?? raw.base_stock_unit,
   };
 }
 
