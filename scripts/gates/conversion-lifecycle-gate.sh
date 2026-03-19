@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # V3-HARDEN-172: Release gate — bulk-procurement-to-retail-sale lifecycle
-# Validates structural, behavioral, and runtime readiness for the
-# canonical conversion contract across all platforms.
+# Validates STRUCTURAL readiness (file existence, grep markers, field presence)
+# for the canonical conversion contract across all platforms.
+# This is NOT runtime behavioral proof — it verifies code structure only.
 # Exit 0 = PASS, Exit 1 = FAIL
 
 set -euo pipefail

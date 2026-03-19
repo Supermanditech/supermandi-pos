@@ -73,6 +73,11 @@ export interface CreateStoreProductInput {
   brand?: string;
   variant?: string; // AUD-073-A FIX: Product variant (e.g., "Red", "500ml")
   packSize?: number; // AUD-073-A FIX: Pack size (e.g., 6 for 6-pack)
+  // V3-FIX-167: Canonical conversion profile
+  mode?: string;
+  procurementUnit?: string;
+  procurementPackQty?: number;
+  baseStockUnit?: string;
 }
 
 export type CreateStoreProductResult =
@@ -450,10 +455,17 @@ export async function createStoreProductFromDigitisation(
     // SYNC-PRD-001: Set metadata_updated_at/metadata_updated_by on both INSERT and ON CONFLICT
     // AUD-025-B: On conflict, preserve user-customized display_name if metadata_updated_at is set
     // (indicates explicit user edit from Dashboard or POS metadata PATCH)
+    // V3-FIX-167: Resolve conversion defaults for POS digitisation
+    const { inferBaseStockUnit } = require("./conversionEngine");
+    const digProductMode = input.mode || 'PACKAGED';
+    const digBaseStockUnit = input.baseStockUnit || inferBaseStockUnit(digProductMode, null, null, input.unit);
+    const digProcurementUnit = input.procurementUnit || digBaseStockUnit;
+    const digProcurementPackQty = input.procurementPackQty || 1;
+
     await client.query(
       `
-      INSERT INTO catalog.store_products (id, store_id, product_id, sell_price, mrp, purchase_price, display_name, is_active, current_stock, taxonomy_id, metadata_updated_at, metadata_updated_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, NOW(), 'POS_APP')
+      INSERT INTO catalog.store_products (id, store_id, product_id, sell_price, mrp, purchase_price, display_name, is_active, current_stock, taxonomy_id, metadata_updated_at, metadata_updated_by, product_mode, procurement_unit, procurement_pack_qty, base_stock_unit, conversion_confirmed)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, NOW(), 'POS_APP', $10, $11, $12, $13, true)
       ON CONFLICT (store_id, product_id) DO UPDATE SET
         -- AUD-025-B: Preserve user-edited metadata fields if metadata_updated_at is set
         sell_price = CASE
@@ -484,7 +496,7 @@ export async function createStoreProductFromDigitisation(
         updated_at = NOW()
       RETURNING id
       `,
-      [storeProductId, storeId, productId, sellPriceMinor, mrpMinor, purchasePriceMinor, productName, input.initialStockQty, taxonomyId]
+      [storeProductId, storeId, productId, sellPriceMinor, mrpMinor, purchasePriceMinor, productName, input.initialStockQty, taxonomyId, digProductMode, digProcurementUnit, digProcurementPackQty, digBaseStockUnit]
     );
 
     // Get the actual store_product_id (might be existing if ON CONFLICT triggered)

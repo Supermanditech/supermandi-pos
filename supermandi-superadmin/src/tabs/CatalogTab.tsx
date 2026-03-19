@@ -119,23 +119,18 @@ export function CatalogTab() {
 
       await overrideProductCategory(editingProduct.id, categoryToSend);
 
-      // V3-FIX-169: Save conversion metadata if changed
+      // V3-FIX-169: Save conversion metadata if changed — fail visibly on error
       const conversionChanged =
         editProcurementUnit !== ((editingProduct as any).procurementUnit || (editingProduct as any).unit || '') ||
         editBaseStockUnit !== ((editingProduct as any).baseStockUnit || '') ||
         editSplitSellEligible !== ((editingProduct as any).splitSellEligible || false);
       if (conversionChanged) {
-        try {
-          await updateProductConversion(editingProduct.id, {
-            procurementUnit: editProcurementUnit || undefined,
-            procurementPackQty: editProcurementPackQty ? parseFloat(editProcurementPackQty) : undefined,
-            baseStockUnit: editBaseStockUnit || undefined,
-            splitSellEligible: editSplitSellEligible,
-          });
-        } catch (convErr) {
-          // Non-fatal — conversion save may fail if endpoint not deployed yet
-          console.warn("Conversion update failed:", convErr);
-        }
+        await updateProductConversion(editingProduct.id, {
+          procurementUnit: editProcurementUnit || undefined,
+          procurementPackQty: editProcurementPackQty ? parseFloat(editProcurementPackQty) : undefined,
+          baseStockUnit: editBaseStockUnit || undefined,
+          splitSellEligible: editSplitSellEligible,
+        });
       }
 
       toast.success("Product updated successfully");

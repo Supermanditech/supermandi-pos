@@ -189,6 +189,12 @@ export default function SellScreenV3() {
 
   // V3-006: Search result → add to cart
   const handleSearchSelect = useCallback((result: SearchResult) => {
+    // V3-HARDEN-171: Block unconfirmed loose-bulk sale on search-add
+    const r = result as any;
+    if (r.productMode === "LOOSE_BULK" && r.conversionConfirmed === false) {
+      showToast("Retail setup needed — complete conversion setup before selling");
+      return;
+    }
     const existing = cartItems.find((i) => i.barcode === result.barcode || i.id === result.id);
     if (existing) {
       useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);

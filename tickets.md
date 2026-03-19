@@ -7824,13 +7824,24 @@ Priority: P0
 Layers: ledger truth, reporting, automation, migrations, staging parity, runtime readiness, release gates
 
 Scope narrowing (2026-03-19):
-- IMPLEMENTED: 9-layer structural+behavioral release gate script, 33 kirana scenario contract tests,
-  validateConversionSchemaReadiness() wired into server startup (fail-loud on missing migration 199 columns),
-  conversion-confirmed sale block in backend, CSV import persists conversion columns, supplier-catalog add
-  propagates conversion profile, SuperAdmin conversion approval PATCH endpoint
-- DEFERRED to full-live tickets (V3-HARDEN-185..189): per-SKU conversion-versioned reporting dashboards,
-  reorder automation using conversion-aware base stock, cross-portal report rounding reconciliation,
-  staging smoke E2E for full supplier→admin→retailer→POS→ledger conversion lifecycle
+- IMPLEMENTED:
+  - release gate: grep/existence validation of migration, engine exports, route fields, type definitions,
+    UI components, and test files across 9 structural layers (NOT runtime behavioral proof)
+  - contract tests: 33 unit tests proving conversion engine math for 4 kirana scenarios
+    (sugar/oil/eggs/bottles) — NOT live API or DB integration tests
+  - startup check: validateConversionSchemaReadiness() called in server.ts, logs missing
+    migration 199 columns (warn-level, does NOT block startup)
+  - sale guard: backend rejects sales for LOOSE_BULK products with conversion_confirmed=false
+  - data flow: CSV import, supplier-catalog add, SuperAdmin publish, POS digitisation all
+    persist canonical conversion columns into catalog.store_products
+  - SuperAdmin: conversion PATCH endpoint for procurement/stock/sell-unit editing, fails visibly on error
+- DEFERRED to full-live tickets (V3-HARDEN-185..189):
+  - per-SKU conversion-versioned reporting dashboards
+  - reorder automation using conversion-aware base stock
+  - cross-portal report rounding reconciliation
+  - staging smoke E2E for full supplier→admin→retailer→POS→ledger conversion lifecycle
+  - runtime behavioral integration tests (API-level, not unit-level)
+  - startup fail-hard on missing conversion schema (currently warn-level)
 
 Issue:
 - The above bulk-buy / loose-sell model is not production-safe unless inventory truth, reporting, automation, and environment readiness are verified end to end.

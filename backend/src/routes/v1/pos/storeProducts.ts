@@ -135,6 +135,7 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, requireActive
   const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
 
   // AUD-073-A FIX: Extract variant and packSize from request body
+  // V3-FIX-167: Extract canonical conversion fields
   const {
     barcode,
     name,
@@ -146,7 +147,11 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, requireActive
     description,
     brand,
     variant,
-    packSize
+    packSize,
+    mode,
+    procurementUnit,
+    procurementPackQty,
+    baseStockUnit,
   } = req.body as Partial<CreateStoreProductInput>;
 
   // AUD-059-A/B FIX: Input validation bounds
@@ -261,7 +266,12 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, requireActive
       description,
       brand,
       variant,
-      packSize
+      packSize,
+      // V3-FIX-167: Pass canonical conversion fields to service
+      mode,
+      procurementUnit,
+      procurementPackQty: procurementPackQty ? Number(procurementPackQty) : undefined,
+      baseStockUnit,
     });
 
     if (isSuccessResult(result)) {
@@ -409,7 +419,15 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
           COALESCE(sp.image_url, p.image_url) AS image_url,
           p.default_gst_rate AS gst_rate,
           p.net_content_value,
-          p.net_content_unit
+          p.net_content_unit,
+          sp.sold_by,
+          sp.rate_unit,
+          sp.procurement_unit,
+          sp.procurement_pack_qty,
+          sp.base_stock_unit,
+          sp.allow_fractional_sell,
+          sp.conversion_precision,
+          sp.conversion_confirmed
         FROM catalog.store_products sp
         JOIN catalog.products p ON p.id = sp.product_id
         LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -472,6 +490,15 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
         gst_rate: row.gst_rate != null ? Number(row.gst_rate) : null,
         net_content_value: row.net_content_value != null ? Number(row.net_content_value) : null,
         net_content_unit: row.net_content_unit || null,
+        // V3-FIX-167: Canonical conversion profile in search results
+        soldBy: row.sold_by || null,
+        rateUnit: row.rate_unit || null,
+        procurementUnit: row.procurement_unit || null,
+        procurementPackQty: row.procurement_pack_qty != null ? Number(row.procurement_pack_qty) : null,
+        baseStockUnit: row.base_stock_unit || null,
+        allowFractionalSell: row.allow_fractional_sell || false,
+        conversionPrecision: row.conversion_precision ?? 2,
+        conversionConfirmed: row.conversion_confirmed ?? true,
       });
     }
 

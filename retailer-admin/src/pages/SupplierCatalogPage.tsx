@@ -288,6 +288,14 @@ export default function SupplierCatalogPage() {
                 )}
 
                 {/* Action Button */}
+                {/* V3-FIX-170: Conversion review before add */}
+                {!product.inStoreCatalog && (product as any).procurementUnit && (product as any).procurementUnit !== ((product as any).baseStockUnit || product.unit) && (
+                  <div style={{ fontSize: 12, color: '#6366f1', padding: '4px 0', borderTop: '1px solid #e5e7eb', marginTop: 6 }}>
+                    Conversion: 1 {(product as any).procurementUnit} = {(product as any).procurementPackQty ?? 1} {(product as any).baseStockUnit || product.unit || 'units'}
+                    {(product as any).splitSellEligible ? ' · Split-sell OK' : ''}
+                  </div>
+                )}
+
                 {product.inStoreCatalog ? (
                   <button
                     className="btn btn-secondary btn-full btn-disabled-dim"
