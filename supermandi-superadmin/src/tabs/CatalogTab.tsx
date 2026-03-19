@@ -4,6 +4,7 @@ import {
   fetchCategories,
   fetchProducts,
   overrideProductCategory,
+  updateProductConversion,
   type CategorySummary,
   type CatalogProduct,
 } from "../api/catalog";
@@ -27,6 +28,11 @@ export function CatalogTab() {
   const [editingProduct, setEditingProduct] = useState<CatalogProduct | null>(null);
   const [editCategory, setEditCategory] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+  // V3-FIX-169: Conversion editing state
+  const [editProcurementUnit, setEditProcurementUnit] = useState("");
+  const [editProcurementPackQty, setEditProcurementPackQty] = useState("");
+  const [editBaseStockUnit, setEditBaseStockUnit] = useState("");
+  const [editSplitSellEligible, setEditSplitSellEligible] = useState(false);
 
   // R4-NET-007: In-flight guard
   const refreshInFlight = useRef(false);
@@ -95,6 +101,11 @@ export function CatalogTab() {
   const openEdit = (product: CatalogProduct) => {
     setEditingProduct(product);
     setEditCategory(product.editedCategory || product.originalCategory || "");
+    // V3-FIX-169: Populate conversion fields
+    setEditProcurementUnit((product as any).procurementUnit || (product as any).unit || "");
+    setEditProcurementPackQty((product as any).procurementPackQty ? String((product as any).procurementPackQty) : "1");
+    setEditBaseStockUnit((product as any).baseStockUnit || "");
+    setEditSplitSellEligible((product as any).splitSellEligible || false);
   };
 
   // Save category override
@@ -107,7 +118,27 @@ export function CatalogTab() {
       const categoryToSend = newCategory === editingProduct.originalCategory ? null : newCategory;
 
       await overrideProductCategory(editingProduct.id, categoryToSend);
-      toast.success("Category updated successfully");
+
+      // V3-FIX-169: Save conversion metadata if changed
+      const conversionChanged =
+        editProcurementUnit !== ((editingProduct as any).procurementUnit || (editingProduct as any).unit || '') ||
+        editBaseStockUnit !== ((editingProduct as any).baseStockUnit || '') ||
+        editSplitSellEligible !== ((editingProduct as any).splitSellEligible || false);
+      if (conversionChanged) {
+        try {
+          await updateProductConversion(editingProduct.id, {
+            procurementUnit: editProcurementUnit || undefined,
+            procurementPackQty: editProcurementPackQty ? parseFloat(editProcurementPackQty) : undefined,
+            baseStockUnit: editBaseStockUnit || undefined,
+            splitSellEligible: editSplitSellEligible,
+          });
+        } catch (convErr) {
+          // Non-fatal — conversion save may fail if endpoint not deployed yet
+          console.warn("Conversion update failed:", convErr);
+        }
+      }
+
+      toast.success("Product updated successfully");
       setEditingProduct(null);
 
       // Refresh both lists
@@ -315,41 +346,74 @@ export function CatalogTab() {
               </div>
             )}
 
-            {/* V3-FIX-169: Conversion review — "bought as / stocked as / sold as" */}
+            {/* V3-FIX-169: Conversion approval — editable "bought as / stocked as / sold as" */}
             <div style={{
               background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8,
               padding: '12px 16px', marginBottom: 16
             }}>
-              <h4 style={{ margin: '0 0 8px', fontSize: 14, color: '#0369a1' }}>Conversion Contract</h4>
-              <table style={{ fontSize: 13, width: '100%' }}>
-                <tbody>
-                  <tr>
-                    <td style={{ padding: '4px 8px', color: '#6b7280' }}>Bought as:</td>
-                    <td style={{ padding: '4px 8px', fontWeight: 600 }}>
-                      {(editingProduct as any).procurementUnit || (editingProduct as any).unit || 'PCS'}
-                      {(editingProduct as any).procurementPackQty && Number((editingProduct as any).procurementPackQty) > 1
-                        ? ` (${(editingProduct as any).procurementPackQty} per pack)`
-                        : ''}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '4px 8px', color: '#6b7280' }}>Stocked as:</td>
-                    <td style={{ padding: '4px 8px', fontWeight: 600 }}>
-                      {(editingProduct as any).baseStockUnit || 'PCS'}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '4px 8px', color: '#6b7280' }}>Sold as:</td>
-                    <td style={{ padding: '4px 8px', fontWeight: 600 }}>
-                      {(editingProduct as any).baseStockUnit || 'PCS'}
-                      {(editingProduct as any).splitSellEligible ? ' (split-sell OK)' : ''}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-              {!(editingProduct as any).procurementUnit && (
-                <p style={{ fontSize: 11, color: '#f59e0b', marginTop: 6, marginBottom: 0 }}>
-                  Supplier has not set procurement packaging — defaults will apply at publish
+              <h4 style={{ margin: '0 0 8px', fontSize: 14, color: '#0369a1' }}>Conversion Contract (Editable)</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 2 }}>Retailer Buys As:</label>
+                  <select
+                    value={editProcurementUnit}
+                    onChange={(e) => setEditProcurementUnit(e.target.value)}
+                    className="sa-input"
+                    style={{ width: '100%', fontSize: 13 }}
+                    disabled={editSaving}
+                  >
+                    <option value="">Auto</option>
+                    <option value="KG">KG</option><option value="GM">GM</option>
+                    <option value="LTR">LTR</option><option value="ML">ML</option>
+                    <option value="PCS">PCS</option><option value="DOZEN">Dozen</option>
+                    <option value="CARTON">Carton</option><option value="CASE">Case</option>
+                    <option value="BAG">Bag</option><option value="TIN">Tin</option>
+                    <option value="DRUM">Drum</option><option value="TRAY">Tray</option>
+                    <option value="BOTTLE">Bottle</option><option value="PACK">Pack</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 2 }}>Units per Pack:</label>
+                  <input
+                    type="number"
+                    value={editProcurementPackQty}
+                    onChange={(e) => setEditProcurementPackQty(e.target.value)}
+                    className="sa-input"
+                    style={{ width: '100%', fontSize: 13 }}
+                    min="0.01" step="0.01"
+                    disabled={editSaving}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 2 }}>Stores As:</label>
+                  <select
+                    value={editBaseStockUnit}
+                    onChange={(e) => setEditBaseStockUnit(e.target.value)}
+                    className="sa-input"
+                    style={{ width: '100%', fontSize: 13 }}
+                    disabled={editSaving}
+                  >
+                    <option value="">Auto</option>
+                    <option value="KG">KG</option><option value="GM">GM</option>
+                    <option value="PCS">PCS</option>
+                    <option value="LTR">LTR</option><option value="ML">ML</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={editSplitSellEligible}
+                      onChange={(e) => setEditSplitSellEligible(e.target.checked)}
+                      disabled={editSaving}
+                    />
+                    Split-sell eligible
+                  </label>
+                </div>
+              </div>
+              {editProcurementUnit && editBaseStockUnit && editProcurementUnit !== editBaseStockUnit && (
+                <p style={{ fontSize: 12, color: '#059669', marginTop: 6, marginBottom: 0 }}>
+                  1 {editProcurementUnit} = {editProcurementPackQty || '1'} {editBaseStockUnit}
                 </p>
               )}
             </div>

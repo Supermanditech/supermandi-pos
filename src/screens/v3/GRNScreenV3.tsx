@@ -11,6 +11,7 @@ import { getScreenPadding, getChipFontSize } from "../../theme/responsive";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import * as orderApi from "../../services/api/orderApi";
+import { recordManualInward } from "../../services/api/inventoryApi";
 import { getDeviceStoreId } from "../../services/deviceSession";
 
 // V3-042: GRN v3 — wire real pending PO items from orderApi
@@ -206,7 +207,33 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
 
         <View style={styles.footerActions}>
           <Pressable style={styles.matchAllBtn} onPress={async () => { const online = await isOnline(); if (!online) { showToast("Offline — match all requires connection"); return; } setItems(prev => prev.map(it => ({ ...it, checked: true, received: it.ordered }))); showToast("All items matched to PO"); }}><Text style={styles.matchAllText}>Match All</Text></Pressable>
-          <Pressable style={styles.confirmBtn} onPress={() => { showToast("Receipt confirmed! Stock updated."); setTimeout(onClose, 1000); }}><Text style={styles.confirmText}>Confirm Receipt</Text></Pressable>
+          <Pressable style={styles.confirmBtn} onPress={async () => {
+            // V3-FIX-170: Real GRN confirm — submit received items to backend
+            const receivedItems = items.filter(i => i.checked && i.received > 0);
+            if (receivedItems.length === 0) { showToast("No items received"); return; }
+            try {
+              const sid = await getDeviceStoreId();
+              if (!sid) { showToast("Store not identified"); return; }
+              const online = await isOnline();
+              if (!online) { showToast("Offline — receipt will be queued"); }
+              // V3-FIX-170: Submit received items as inward with conversion context
+              const inwardItems = receivedItems.map(item => {
+                const landedQty = item.procurementPackQty && item.procurementPackQty > 1
+                  ? item.received * item.procurementPackQty
+                  : item.received;
+                return {
+                  productId: item.productId || item.barcode,
+                  quantity: landedQty,
+                };
+              });
+              const grnNotes = `GRN receipt: ${receivedItems.length} items, ${totalReceived} units received`;
+              await recordManualInward(inwardItems, grnNotes);
+              showToast(`Receipt confirmed! ${receivedItems.length} items, stock updated.`);
+              setTimeout(onClose, 800);
+            } catch (err) {
+              showToast("Receipt failed — check connection and retry");
+            }
+          }}><Text style={styles.confirmText}>Confirm Receipt</Text></Pressable>
         </View>
       </View>
     </View>

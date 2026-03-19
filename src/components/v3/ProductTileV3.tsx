@@ -26,6 +26,7 @@ export interface ProductTileData {
   baseStockUnit?: string;      // canonical inventory unit
   allowFractionalSell?: boolean;
   conversionConfirmed?: boolean;
+  storeProductId?: string;       // canonical store product identity
 }
 
 type ProductTileV3Props = {

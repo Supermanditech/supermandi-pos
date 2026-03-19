@@ -10,6 +10,7 @@ import { showToast } from "../../utils/showToast";
 import { upsertLocalProduct, setLocalPrice } from "../../services/offline/scan";
 import { useCartStore } from "../../stores/cartStore";
 import { apiClient } from "../../services/api/apiClient";
+import { isOnline } from "../../services/networkStatus";
 import { logger } from "../../services/logger";
 
 // V3-FIX-070: New product digitization — real master DB lookup via API
@@ -96,6 +97,25 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
         await setLocalPrice(barcode, priceMinor);
       }
 
+      // V3-FIX-168: Persist conversion profile via store-products API when online
+      try {
+        if (await isOnline()) {
+          await apiClient.post("/api/v1/pos/store-products", {
+            barcode, name, sellPrice: priceMinor, mrp: mrp ? Math.round(parseFloat(mrp) * 100) : undefined,
+            initialStockQty: parseInt(openingStock, 10) || 0, unit,
+            brand, description: category,
+            // V3-FIX-168: Canonical conversion fields
+            mode: productMode,
+            procurementUnit: productMode === "LOOSE_BULK" ? procurementUnit || undefined : undefined,
+            procurementPackQty: productMode === "LOOSE_BULK" ? parseFloat(procurementPackQty) || 1 : undefined,
+            baseStockUnit: productMode === "LOOSE_BULK" ? baseStockUnit || undefined : undefined,
+          });
+        }
+      } catch (apiErr) {
+        // Non-blocking: offline or API failure — local product still created
+        logger.debug("NewProductV3", `api_persist_failed:${String(apiErr)}`);
+      }
+
       // Add to cart
       useCartStore.getState().addItem({
         id: barcode,
@@ -104,6 +124,11 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
         barcode,
         currency: "INR",
         metadata: { brand, category, packSize, unit, hsnCode, gstPct: parseInt(gstPct, 10) || 18 },
+        // V3-FIX-168: Carry conversion context into cart
+        productMode,
+        soldBy: productMode === "LOOSE_BULK" ? "WEIGHT" : undefined,
+        rateUnit: productMode === "LOOSE_BULK" ? (baseStockUnit || "KG") : undefined,
+        baseStockUnit: baseStockUnit || undefined,
       });
 
       logger.debug("NewProductV3", `created:${barcode},name:${name},price:${priceMinor}`);

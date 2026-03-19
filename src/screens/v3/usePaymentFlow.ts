@@ -39,6 +39,7 @@ export function usePaymentFlow() {
     if (!online) {
       showToast("Offline — sale will be queued and synced when online");
     }
+    // V3-FIX-167: Pass canonical store/variant identity through checkout
     const saleItems: SaleItemInput[] = items.map((item) => ({
       productId: item.barcode ?? item.id,
       barcode: item.barcode,
@@ -47,6 +48,9 @@ export function usePaymentFlow() {
       priceMinor: item.priceMinor,
       itemDiscount: item.itemDiscount ?? null,
       batchNumber: item.batchNumber ?? null,
+      // Canonical identity: storeProductId and retailVariantId from cart
+      store_product_id: item.metadata?.storeProductId ?? undefined,
+      retail_variant_id: (item.metadata as any)?.retailVariantId ?? undefined,
     }));
     const discount = useCartStore.getState().discount;
     const result = await createSale({

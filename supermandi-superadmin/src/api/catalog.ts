@@ -45,6 +45,33 @@ export type CatalogProduct = {
   splitSellEligible?: boolean | null;
 };
 
+// V3-FIX-169: Update supplier product conversion metadata
+export async function updateProductConversion(
+  productId: string,
+  conversion: {
+    procurementUnit?: string;
+    procurementPackQty?: number;
+    baseStockUnit?: string;
+    splitSellEligible?: boolean;
+  }
+): Promise<void> {
+  const base = API_BASE;
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/catalog/products/${encodeURIComponent(productId)}/conversion`,
+    {
+      method: "PATCH",
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(conversion),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+}
+
 export type CatalogProductsResponse = {
   data: CatalogProduct[];
   pagination: {

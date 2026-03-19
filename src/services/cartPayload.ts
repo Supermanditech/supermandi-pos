@@ -62,6 +62,13 @@ export function buildCartItemFromSearch(result: {
   imageUrl?: string;
   supplierName?: string;
   mrpMinor?: number;
+  // V3-FIX-167: Conversion context from search
+  productMode?: string;
+  soldBy?: string;
+  rateUnit?: string;
+  baseStockUnit?: string;
+  allowFractionalSell?: boolean;
+  conversionConfirmed?: boolean;
 }): CartItem {
   return {
     id: result.barcode ?? result.id,
@@ -82,6 +89,12 @@ export function buildCartItemFromSearch(result: {
       category: result.category,
       imageUrl: result.imageUrl,
     },
+    // V3-FIX-167: Carry conversion context
+    productMode: result.productMode,
+    soldBy: result.soldBy,
+    rateUnit: result.rateUnit,
+    baseStockUnit: result.baseStockUnit,
+    allowFractionalSell: result.allowFractionalSell,
   };
 }
 
@@ -100,6 +113,14 @@ export function buildCartItemFromTile(tile: {
   unit?: string;
   category?: string;
   imageUrl?: string;
+  // V3-FIX-167: Conversion context from tile
+  productMode?: string;
+  soldBy?: string;
+  rateUnit?: string;
+  baseStockUnit?: string;
+  allowFractionalSell?: boolean;
+  conversionConfirmed?: boolean;
+  storeProductId?: string;
 }, sellMode: "retail" | "bulk"): CartItem {
   const price = sellMode === "bulk" && tile.priceTradeMinor
     ? tile.priceTradeMinor
@@ -114,11 +135,18 @@ export function buildCartItemFromTile(tile: {
     unitLabel: tile.unit,
     caseSize: tile.caseSize,
     metadata: {
+      storeProductId: tile.storeProductId,
       brand: tile.brand,
       category: tile.category,
       imageUrl: tile.imageUrl,
       sellMode,
     },
+    // V3-FIX-167: Carry conversion context from tile
+    productMode: tile.productMode,
+    soldBy: tile.soldBy,
+    rateUnit: tile.rateUnit,
+    baseStockUnit: tile.baseStockUnit,
+    allowFractionalSell: tile.allowFractionalSell,
   };
 }
 

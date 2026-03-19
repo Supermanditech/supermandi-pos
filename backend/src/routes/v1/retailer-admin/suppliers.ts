@@ -940,10 +940,13 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
     await client.query("BEGIN");
 
     // Verify product is approved and from a verified supplier
+    // V3-FIX-170: Include conversion fields from supplier product
     const productCheck = await client.query(
       `SELECT sp.id, sp.name, sp.barcode, sp.category, sp.purchase_price,
               sp.supermandi_margin_minor, sp.margin_percent, sp.mrp, sp.unit,
-              s.id as supplier_id, s.business_name
+              s.id as supplier_id, s.business_name,
+              sp.procurement_unit, sp.procurement_pack_qty,
+              sp.base_stock_unit, sp.split_sell_eligible
        FROM catalog.supplier_products sp
        JOIN supplier.suppliers s ON s.id = sp.supplier_id
        WHERE sp.id = $1::uuid
@@ -1004,12 +1007,22 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
       });
     }
 
+    // V3-FIX-170: Infer conversion defaults for supplier-catalog add
+    const { inferBaseStockUnit: inferBSU } = require("../../../services/conversionEngine");
+    const catAddBaseUnit = product.base_stock_unit || inferBSU(null, null, null, product.unit);
+    const catAddProcUnit = product.procurement_unit || catAddBaseUnit;
+    const catAddPackQty = product.procurement_pack_qty || 1;
+
     // Add to store catalog using the resolved catalog product_id
+    // V3-FIX-170: Include conversion profile from supplier product
     const insertResult = await client.query(
       `INSERT INTO catalog.store_products (
         store_id, product_id, display_name, sell_price, purchase_price,
-        current_stock, is_active, supplier_id
-      ) VALUES ($1, $2::uuid, $3, $4, $5, $6, true, $7::uuid)
+        current_stock, is_active, supplier_id,
+        procurement_unit, procurement_pack_qty, base_stock_unit,
+        allow_fractional_sell, conversion_confirmed
+      ) VALUES ($1, $2::uuid, $3, $4, $5, $6, true, $7::uuid,
+        $8, $9, $10, $11, false)
       RETURNING id`,
       [
         storeId,
@@ -1018,7 +1031,11 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
         retailerPrice,
         product.purchase_price,
         initialStock || 0,
-        product.supplier_id
+        product.supplier_id,
+        catAddProcUnit,
+        catAddPackQty,
+        catAddBaseUnit,
+        product.split_sell_eligible || false,
       ]
     );
 

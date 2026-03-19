@@ -1,5 +1,5 @@
 import app from "./app";
-import { logGcpValidationResults } from "./startup/validateGcp";
+import { logGcpValidationResults, validateConversionSchemaReadiness } from "./startup/validateGcp";
 import { startSyncCleanupScheduler, stopSyncCleanupScheduler } from "./services/syncCleanupScheduler";
 import { loadOnboardingConfig } from "./config/onboardingConfig";
 import { logger } from "./lib/logger";
@@ -47,6 +47,22 @@ async function start(): Promise<void> {
   // The legacy 660-line DDL script conflicted with the migration system
   // (different advisory lock IDs: 839201 vs 839271, concurrent table creation on scale-up).
   // All schema changes MUST go through backend/migrations/*.sql files.
+
+  // V3-HARDEN-172: Validate conversion schema readiness at startup
+  try {
+    const { getPool } = await import("./db/client");
+    const pool = getPool();
+    if (pool) {
+      const convResult = await validateConversionSchemaReadiness(pool);
+      if (convResult.ready) {
+        logger.info("[V3-HARDEN-172] Conversion schema ready — all migration 199 columns present");
+      } else {
+        logger.error(`[V3-HARDEN-172] Conversion schema NOT ready — missing columns: ${convResult.missing.join(', ')}. Run migration 199.`);
+      }
+    }
+  } catch (err) {
+    logger.warn("[V3-HARDEN-172] Could not validate conversion schema", { error: String(err) });
+  }
 
   const server = app.listen(Number(PORT), HOST, () => {
     logger.info(`SuperMandi backend listening on http://${HOST}:${PORT}`, { port: Number(PORT) });

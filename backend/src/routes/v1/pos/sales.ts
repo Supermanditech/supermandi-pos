@@ -590,18 +590,9 @@ async function getRetailVariantStockMultiplier(
   if (!variantUnit || !parentUnit) return qty;
   if (variantUnit === parentUnit) return qty;
 
-  // Unit conversion: normalize variant to parent unit
-  const conversionFactors: Record<string, Record<string, number>> = {
-    GM:    { KG: 0.001 },
-    KG:    { GM: 1000 },
-    ML:    { LTR: 0.001 },
-    LTR:   { ML: 1000 },
-    PCS:   { DOZEN: 1 / 12 },
-    DOZEN: { PCS: 12 },
-  };
-
-  const factor = conversionFactors[variantUnit]?.[parentUnit];
-  if (factor !== undefined) {
+  // V3-FIX-167: Use canonical conversion engine instead of hardcoded map
+  const factor = canonicalGetUnitMultiplier(variantUnit, parentUnit);
+  if (factor !== null) {
     return qty * factor;
   }
 
@@ -1142,18 +1133,26 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       }
 
       // V3-HARDEN-171: Block sale of unconverted bulk products
-      // If the product was resolved via catalog bridge and conversion is not confirmed,
-      // the operator must complete retail setup before selling
-      if (item.storeProductId && isValidUUID(item.storeProductId)) {
-        const convCheck = await client.query(
-          `SELECT conversion_confirmed, product_mode
-           FROM catalog.store_products
-           WHERE id = $1 AND store_id = $2`,
-          [item.storeProductId, storeId]
-        );
-        if (convCheck.rows[0]?.product_mode === 'LOOSE_BULK' &&
-            convCheck.rows[0]?.conversion_confirmed === false) {
-          throw new Error("conversion_not_confirmed");
+      // Check via storeProductId, globalProductId, or barcode — all checkout paths covered
+      {
+        let convCheckSql = '';
+        let convCheckParams: any[] = [storeId];
+        if (item.storeProductId && isValidUUID(item.storeProductId)) {
+          convCheckSql = `SELECT conversion_confirmed, product_mode FROM catalog.store_products WHERE id = $2 AND store_id = $1`;
+          convCheckParams.push(item.storeProductId);
+        } else if (catalogGlobalProductId && isValidUUID(catalogGlobalProductId)) {
+          convCheckSql = `SELECT conversion_confirmed, product_mode FROM catalog.store_products WHERE product_id = $2::uuid AND store_id = $1`;
+          convCheckParams.push(catalogGlobalProductId);
+        } else if (item.barcode) {
+          convCheckSql = `SELECT sp.conversion_confirmed, sp.product_mode FROM catalog.store_products sp JOIN catalog.store_product_barcodes spb ON spb.store_product_id = sp.id AND spb.store_id = sp.store_id WHERE sp.store_id = $1 AND spb.barcode = $2 LIMIT 1`;
+          convCheckParams.push(item.barcode);
+        }
+        if (convCheckSql) {
+          const convCheck = await client.query(convCheckSql, convCheckParams);
+          if (convCheck.rows[0]?.product_mode === 'LOOSE_BULK' &&
+              convCheck.rows[0]?.conversion_confirmed === false) {
+            throw new Error("conversion_not_confirmed");
+          }
         }
       }
 

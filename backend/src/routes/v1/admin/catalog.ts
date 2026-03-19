@@ -280,6 +280,54 @@ adminCatalogRouter.patch(
 );
 
 // =============================================================================
+// V3-FIX-169: Update supplier product conversion metadata
+// PATCH /api/v1/admin/catalog/products/:productId/conversion
+adminCatalogRouter.patch(
+  "/catalog/products/:productId/conversion",
+  requirePermission("catalog", "write"),
+  async (req, res) => {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    const { productId } = req.params;
+    const { procurementUnit, procurementPackQty, baseStockUnit, splitSellEligible } = req.body;
+
+    try {
+      const result = await pool.query(
+        `UPDATE catalog.supplier_products
+         SET procurement_unit = COALESCE($1, procurement_unit),
+             procurement_pack_qty = COALESCE($2, procurement_pack_qty),
+             base_stock_unit = COALESCE($3, base_stock_unit),
+             split_sell_eligible = COALESCE($4, split_sell_eligible),
+             updated_at = NOW()
+         WHERE id = $5::uuid
+         RETURNING id, procurement_unit AS "procurementUnit",
+                   procurement_pack_qty AS "procurementPackQty",
+                   base_stock_unit AS "baseStockUnit",
+                   split_sell_eligible AS "splitSellEligible"`,
+        [
+          procurementUnit?.trim() || null,
+          procurementPackQty != null ? parseFloat(procurementPackQty) : null,
+          baseStockUnit?.trim() || null,
+          splitSellEligible != null ? splitSellEligible : null,
+          productId,
+        ]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      log.info(`[V3-FIX-169] Conversion updated: product=${productId}`);
+      return res.json({ success: true, data: result.rows[0] });
+    } catch (_error: unknown) {
+      const error = asError(_error);
+      log.error("[V3-FIX-169] Conversion update error:", error.message);
+      return res.status(500).json({ error: "Failed to update conversion" });
+    }
+  }
+);
+
 // AUDIT-007: SuperAdmin Margin Control
 // POST /api/v1/admin/catalog/supplier-products/:id/margin
 // Set % or fixed margin on a supplier product before publishing to retailers

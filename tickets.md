@@ -7823,6 +7823,15 @@ Override requirement:
 Priority: P0
 Layers: ledger truth, reporting, automation, migrations, staging parity, runtime readiness, release gates
 
+Scope narrowing (2026-03-19):
+- IMPLEMENTED: 9-layer structural+behavioral release gate script, 33 kirana scenario contract tests,
+  validateConversionSchemaReadiness() wired into server startup (fail-loud on missing migration 199 columns),
+  conversion-confirmed sale block in backend, CSV import persists conversion columns, supplier-catalog add
+  propagates conversion profile, SuperAdmin conversion approval PATCH endpoint
+- DEFERRED to full-live tickets (V3-HARDEN-185..189): per-SKU conversion-versioned reporting dashboards,
+  reorder automation using conversion-aware base stock, cross-portal report rounding reconciliation,
+  staging smoke E2E for full supplier→admin→retailer→POS→ledger conversion lifecycle
+
 Issue:
 - The above bulk-buy / loose-sell model is not production-safe unless inventory truth, reporting, automation, and environment readiness are verified end to end.
 

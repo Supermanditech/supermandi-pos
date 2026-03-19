@@ -52,6 +52,7 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
     if (items.length === 0) { showToast("Cart is empty"); return null; }
     const online = await isOnline();
     if (!online) { showToast("Offline — sale will be queued and synced when online"); }
+    // V3-FIX-167: Pass canonical store/variant identity through checkout
     const saleItems: SaleItemInput[] = items.map((item) => ({
       productId: item.barcode ?? item.id,
       barcode: item.barcode,
@@ -60,6 +61,8 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
       priceMinor: item.priceMinor,
       itemDiscount: item.itemDiscount ?? null,
       batchNumber: item.batchNumber ?? null,
+      store_product_id: item.metadata?.storeProductId ?? undefined,
+      retail_variant_id: (item.metadata as any)?.retailVariantId ?? undefined,
     }));
     const discount = useCartStore.getState().discount;
     const result = await createSale({

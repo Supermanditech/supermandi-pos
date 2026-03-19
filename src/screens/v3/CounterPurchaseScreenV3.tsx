@@ -127,6 +127,7 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
       // V3-FIX-078: Explicit product identity semantics
       //   - Known products (state==="existing"): use real productId — required, not barcode fallback
       //   - New/manual products (state==="new"): use barcode as provisional identity with explicit flag
+      // V3-FIX-170: Include conversion context in counter-purchase payload
       const txnItems = items.map((it) => ({
         productId: it.state === "existing" && (it as any).productId
           ? (it as any).productId
@@ -134,6 +135,11 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
         quantity: it.qtyCases * (it.caseSize ?? 1),
         unitCost: Math.round(parseFloat(it.purchasePrice) * 100),
         isNewProduct: it.state === "new",
+        // Conversion context for procurement-aware inward
+        procurementUnit: it.procurementUnit ?? undefined,
+        procurementPackQty: it.procurementPackQty ?? undefined,
+        baseStockUnit: it.baseStockUnit ?? undefined,
+        conversionConfirmed: it.conversionConfirmed ?? undefined,
       }));
       // V3-FIX-078: Supplier linkage — two distinct paths:
       //   - Known supplier (picked from list): carry id + name (authoritative)

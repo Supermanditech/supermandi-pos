@@ -146,11 +146,12 @@ function safeNumber(val: unknown, defaultVal = 0): number {
 // CSV Template headers and examples
 // T-061: Added variant_of, variant_label, variant_qty, variant_unit columns for retail variants
 // T-165: Added image_url column for product image links
-const CSV_TEMPLATE = `name,barcode,brand,unit,sell_price,purchase_price,mrp,stock,mode,sold_by,rate_unit,pack_size,pack_unit,low_stock_alert,gst_percent,hsn,notes,image_url,variant_of,variant_label,variant_qty,variant_unit
-"Parle-G Glucose Biscuits 100g","8901234567890","Parle","PCS","10.00","8.50","10.00","50","PACKAGED","","","100","g","10","18","1905","Popular biscuit","https://example.com/parle-g.jpg","","","",""
-"Tata Salt 1kg","8901234567891","Tata","PCS","28.00","25.00","28.00","100","PACKAGED","","","1000","g","20","0","2501","","","","","",""
-"Loose Rice Basmati","","Local","KG","85.00","75.00","","25","LOOSE_BULK","WEIGHT","KG","","","5","5","1006","Premium basmati","","","","",""
-"Fresh Eggs","","Farm Fresh","PCS","7.00","5.50","","100","LOOSE_BULK","COUNT","PCS","","","20","0","0407","Per piece rate","","","","",""
+const CSV_TEMPLATE = `name,barcode,brand,unit,sell_price,purchase_price,mrp,stock,mode,sold_by,rate_unit,pack_size,pack_unit,low_stock_alert,gst_percent,hsn,notes,image_url,variant_of,variant_label,variant_qty,variant_unit,procurement_unit,procurement_pack_qty,base_stock_unit
+"Parle-G Glucose Biscuits 100g","8901234567890","Parle","PCS","10.00","8.50","10.00","50","PACKAGED","","","100","g","10","18","1905","Popular biscuit","","","","","","PCS","1","PCS"
+"Tata Salt 1kg","8901234567891","Tata","PCS","28.00","25.00","28.00","100","PACKAGED","","","1000","g","20","0","2501","","","","","","","PCS","1","PCS"
+"Loose Rice Basmati","","Local","KG","85.00","75.00","","25","LOOSE_BULK","WEIGHT","KG","","","5","5","1006","Premium basmati","","","","","","BAG","50","KG"
+"Fresh Eggs","","Farm Fresh","PCS","7.00","5.50","","100","LOOSE_BULK","COUNT","PCS","","","20","0","0407","Per piece rate","","","","","","TRAY","30","PCS"
+"Oil 15L Tin","","Brand","LTR","180.00","150.00","","10","LOOSE_BULK","WEIGHT","LTR","","","5","5","1507","Loose oil","","","","","","TIN","15","LTR"
 "","","","","27.00","","","","","","","","","","","","500gm variant","","Loose Rice Basmati","500 gm","500","GM"
 "","","","","240.00","","","","","","","","","","","","5kg variant","","Loose Rice Basmati","5 kg","5","KG"
 `;
@@ -576,13 +577,26 @@ async function commitSingleRow(
         taxonomyId = taxRes.rows[0]?.taxonomy_id || null;
       } catch { /* taxonomy function may not exist */ }
 
+      // V3-FIX-168: Include canonical conversion columns from CSV
+      const csvProcurementUnit = row.procurement_unit?.trim()?.toUpperCase() || null;
+      const csvProcurementPackQty = row.procurement_pack_qty ? parseFloat(row.procurement_pack_qty) : null;
+      const csvBaseStockUnit = row.base_stock_unit?.trim()?.toUpperCase() || null;
+      // Infer defaults when CSV columns are empty
+      const { inferBaseStockUnit: inferBSU } = require("../../../services/conversionEngine");
+      const resolvedBaseUnit = csvBaseStockUnit || inferBSU(mode, row.sold_by, row.rate_unit, row.unit);
+      const resolvedProcUnit = csvProcurementUnit || resolvedBaseUnit;
+      const resolvedPackQty = csvProcurementPackQty || 1;
+
       const spResult = await client.query(
         `INSERT INTO catalog.store_products (
           store_id, product_id, sell_price, mrp, purchase_price,
           product_mode, current_stock, is_active, display_name, taxonomy_id,
-          metadata_updated_at, metadata_updated_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, NOW(), 'CSV_IMPORT') RETURNING id`,
-        [storeId, productId, sellPricePaise, row.mrp || null, purchasePricePaise, mode, stock, row.name, taxonomyId]
+          metadata_updated_at, metadata_updated_by,
+          procurement_unit, procurement_pack_qty, base_stock_unit, conversion_confirmed
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, NOW(), 'CSV_IMPORT',
+          $10, $11, $12, true) RETURNING id`,
+        [storeId, productId, sellPricePaise, row.mrp || null, purchasePricePaise, mode, stock, row.name, taxonomyId,
+         resolvedProcUnit, resolvedPackQty, resolvedBaseUnit]
       );
       const storeProductId = spResult.rows[0].id;
 

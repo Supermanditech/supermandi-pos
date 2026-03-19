@@ -46,6 +46,8 @@ function productToTileData(p: Product): ProductTileData {
     caseSize: (p as any).caseSize ?? undefined, // real case size from backend, not hardcoded
     unit: (p as any).unit ?? "pcs",
     imageUrl: (p as any).imageUrl ?? (p as any).image_url ?? undefined,
+    // V3-FIX-167: Canonical identity
+    storeProductId: p.storeProductId,
     // V3-HARDEN-171: Conversion-aware sell flow
     productMode: p.productMode,
     soldBy: p.soldBy,
@@ -249,8 +251,13 @@ export default function SellScreenV3() {
   );
 
   // V3-FIX-135: Add-to-cart only from explicit CTA inside detail sheet
+  // V3-HARDEN-171: Block add-to-cart for unconfirmed bulk products
   const handleDetailAdd = useCallback(
     (product: ProductTileData, quantity: number) => {
+      if (product.productMode === "LOOSE_BULK" && product.conversionConfirmed === false) {
+        showToast("Retail setup needed — complete conversion setup before selling");
+        return;
+      }
       const existing = cartItems.find((i) => i.id === (product.barcode ?? product.id) || i.barcode === product.barcode);
       if (existing) {
         useCartStore.getState().updateQuantity(existing.id, existing.quantity + quantity);
