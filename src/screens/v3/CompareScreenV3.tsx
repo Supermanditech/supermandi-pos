@@ -32,6 +32,8 @@ type SupplierOffer = {
   publishedTermsVersion?: number;
   moqTiers?: any;
   procurementUnit?: string;
+  procurementPackQty?: number;
+  baseStockUnit?: string;
   isBestPrice?: boolean;
 };
 
@@ -94,6 +96,8 @@ export default function CompareScreenV3({ visible, productName, productId, packS
           publishedTermsVersion: s.publishedTermsVersion,
           moqTiers: s.moqTiers,
           procurementUnit: s.procurementUnit,
+          procurementPackQty: s.procurementPackQty,
+          baseStockUnit: s.baseStockUnit,
           isBestPrice: s.purchasePrice === bestPrice,
         }));
         setOffers(mapped);
@@ -167,7 +171,7 @@ export default function CompareScreenV3({ visible, productName, productId, packS
                 {offer.financeEligible && !offer.bnplAvailable ? <View style={styles.termBadge}><Text style={styles.termText}>Credit</Text></View> : null}
                 {offer.scheme ? <View style={styles.termBadge}><Text style={styles.termText}>{offer.scheme}</Text></View> : null}
                 {offer.deliveryTerms ? <View style={styles.termBadge}><Text style={[styles.termText, { fontSize: 9 }]}>{offer.deliveryTerms}</Text></View> : null}
-                {offer.procurementUnit ? <View style={styles.termBadge}><Text style={styles.termText}>{offer.procurementUnit}</Text></View> : null}
+                {offer.procurementUnit ? <View style={styles.termBadge}><Text style={styles.termText}>{offer.procurementUnit}{offer.procurementPackQty && offer.procurementPackQty > 1 ? ` ×${offer.procurementPackQty}` : ''}{offer.baseStockUnit && offer.baseStockUnit !== offer.procurementUnit ? ` → ${offer.baseStockUnit}` : ''}</Text></View> : null}
                 {offer.publishedTermsVersion ? <View style={styles.termBadge}><Text style={[styles.termText, { fontSize: 8 }]}>v{offer.publishedTermsVersion}</Text></View> : null}
               </View>
 

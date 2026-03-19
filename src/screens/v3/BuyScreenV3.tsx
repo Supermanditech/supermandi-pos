@@ -370,7 +370,7 @@ export default function BuyScreenV3() {
             {/* V3-FIX-175: Per-item published terms in checkout — authoritative accepted snapshot */}
             {(() => {
               const selected = products.filter((p) => (orderQtys[p.id] ?? 0) > 0);
-              const withTerms = selected.filter(p => p.scheme || p.tradeDiscountPct || p.deliveryDays || p.deliveryTerms || p.bnplAvailable || p.financeEligible || p.creditDays || p.publishedTermsVersion || (p.procurementUnit && p.procurementUnit !== p.unit));
+              const withTerms = selected.filter(p => p.scheme || p.tradeDiscountPct || p.deliveryDays || p.deliveryTerms || p.bnplAvailable || p.financeEligible || p.creditDays || p.publishedTermsVersion || (p.procurementUnit && p.procurementUnit !== p.unit) || (p.moqTiers && Array.isArray(p.moqTiers) && p.moqTiers.length > 0));
               if (withTerms.length === 0) return null;
               return (
                 <View style={{ backgroundColor: '#f0f9ff', borderRadius: 10, padding: 10, marginBottom: 10 }}>
