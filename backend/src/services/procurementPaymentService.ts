@@ -2,8 +2,8 @@
  * V3-FIX-176: Procurement Payment Service
  * Handles retailer-to-SuperMandi payment intent creation and provider abstraction.
  *
- * Provider adapters for PhonePe, Pine Labs, Razorpay are stubbed —
- * the contract is integration-ready but not hardcoded to one partner.
+ * Provider adapters: Razorpay (npm SDK), PhonePe (PG API), Pine Labs (redirect API).
+ * Each adapter falls back gracefully when credentials are not configured.
  */
 
 import { randomUUID } from "crypto";

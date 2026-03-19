@@ -2080,18 +2080,48 @@ ordersRouter.post("/procurement/payment-callback", async (req: Request, res: Res
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  // V3-FIX-176: Webhook signature verification — provider trust boundary
-  const webhookSecret = process.env.PAYMENT_WEBHOOK_SECRET;
-  const signatureHeader = req.headers['x-webhook-signature'] || req.headers['x-razorpay-signature'] || req.headers['x-verify'];
-  if (webhookSecret && !signatureHeader) {
-    log.warn("[payment-callback] Missing webhook signature — rejecting untrusted callback");
-    return res.status(401).json({ error: "Missing webhook signature" });
+  // V3-FIX-176: Webhook signature verification — per-provider trust boundary
+  const razorpaySignature = req.headers['x-razorpay-signature'] as string | undefined;
+  const phonePeVerify = req.headers['x-verify'] as string | undefined;
+  const webhookSecret = process.env.PAYMENT_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET;
+
+  // Razorpay webhook: verify HMAC-SHA256 signature
+  if (razorpaySignature && webhookSecret) {
+    const crypto = require("crypto");
+    const expectedSig = crypto.createHmac("sha256", webhookSecret).update(JSON.stringify(req.body)).digest("hex");
+    if (expectedSig !== razorpaySignature) {
+      log.warn("[payment-callback] Razorpay signature verification FAILED");
+      return res.status(401).json({ error: "Invalid Razorpay webhook signature" });
+    }
+    log.info("[payment-callback] Razorpay signature verified");
   }
-  // When webhookSecret is configured, verify the signature
-  // In production, each provider uses its own verification method
-  // (Razorpay: HMAC-SHA256 of body, PhonePe: SHA256 checksum, Pine Labs: HMAC-SHA256)
-  // For now, we verify presence of a signature header as the trust boundary.
-  // Full per-provider verification is in the respective adapter verify* functions.
+  // PhonePe callback: verify X-VERIFY checksum
+  else if (phonePeVerify && process.env.PHONEPE_SALT_KEY) {
+    const crypto = require("crypto");
+    const response = req.body.response || "";
+    const saltKey = process.env.PHONEPE_SALT_KEY;
+    const saltIndex = process.env.PHONEPE_SALT_INDEX || "1";
+    const expectedChecksum = crypto.createHash("sha256").update(response + "/pg/v1/status" + saltKey).digest("hex") + "###" + saltIndex;
+    if (expectedChecksum !== phonePeVerify) {
+      log.warn("[payment-callback] PhonePe checksum verification FAILED");
+      return res.status(401).json({ error: "Invalid PhonePe callback checksum" });
+    }
+    log.info("[payment-callback] PhonePe checksum verified");
+  }
+  // Pine Labs: verified via HMAC in pinelabsAdapter.verifyPineLabsCallback()
+  // Generic webhook secret fallback
+  else if (webhookSecret) {
+    const genericSig = req.headers['x-webhook-signature'] as string | undefined;
+    if (!genericSig) {
+      log.warn("[payment-callback] Missing webhook signature — rejecting untrusted callback");
+      return res.status(401).json({ error: "Missing webhook signature" });
+    }
+  }
+  // No webhook secret configured — allow in dev/staging, warn in production
+  else if (process.env.NODE_ENV === 'production') {
+    log.error("[payment-callback] PAYMENT_WEBHOOK_SECRET not set in production — callback security compromised");
+    return res.status(500).json({ error: "Webhook secret not configured" });
+  }
 
   const { paymentIntentId, providerPaymentId, status, provider: callbackProvider } = req.body;
 

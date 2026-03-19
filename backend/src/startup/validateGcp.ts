@@ -222,11 +222,32 @@ export async function validateConversionSchemaReadiness(pool: any): Promise<{ re
   } catch {
     missing.push('procurement.payment_intents table');
   }
-  // V3-FIX-176: Check payment provider configuration
-  const paymentProviderVars = ['RAZORPAY_KEY_ID', 'PHONEPE_MERCHANT_ID', 'PINE_LABS_MERCHANT_ID'];
-  const missingProviders = paymentProviderVars.filter(v => !process.env[v]);
-  if (missingProviders.length === paymentProviderVars.length) {
-    missing.push('NO_PAYMENT_PROVIDERS (none of RAZORPAY_KEY_ID, PHONEPE_MERCHANT_ID, PINE_LABS_MERCHANT_ID set)');
+  // V3-FIX-176: Check payment provider configuration — full secret sets
+  const providerChecks: Array<{ name: string; required: string[] }> = [
+    { name: 'Razorpay', required: ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET'] },
+    { name: 'PhonePe', required: ['PHONEPE_MERCHANT_ID', 'PHONEPE_SALT_KEY'] },
+    { name: 'PineLabs', required: ['PINE_LABS_MERCHANT_ID', 'PINE_LABS_ACCESS_CODE', 'PINE_LABS_SECRET'] },
+  ];
+  const configuredProviders: string[] = [];
+  for (const check of providerChecks) {
+    const present = check.required.filter(v => process.env[v]);
+    const absent = check.required.filter(v => !process.env[v]);
+    if (present.length > 0 && absent.length > 0) {
+      // Partial config — provider ID set but secret missing
+      missing.push(`${check.name}: partial config (missing ${absent.join(', ')})`);
+    } else if (present.length === check.required.length) {
+      configuredProviders.push(check.name);
+    }
+  }
+  if (configuredProviders.length === 0) {
+    missing.push('NO_PAYMENT_PROVIDERS (none of Razorpay/PhonePe/PineLabs fully configured)');
+  }
+  // Check common procurement payment config
+  if (!process.env.SUPERMANDI_UPI_VPA && !process.env.DEFAULT_UPI_VPA) {
+    missing.push('SUPERMANDI_UPI_VPA or DEFAULT_UPI_VPA not set');
+  }
+  if (!process.env.PAYMENT_CALLBACK_URL) {
+    missing.push('PAYMENT_CALLBACK_URL not set (webhook callbacks will fail)');
   }
 
   // V3-HARDEN-178: Check accepted_terms_snapshot on live orders table
