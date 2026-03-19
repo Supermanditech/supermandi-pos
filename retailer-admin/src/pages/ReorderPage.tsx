@@ -6,6 +6,7 @@ import { authFetch, safeJson } from '../lib/api';
 import Breadcrumb from '../components/Breadcrumb';
 import EmptyState from '../components/EmptyState';
 import { PackageCheck, RefreshCw, Settings, AlertTriangle } from 'lucide-react';
+import { DemandSignalsSection } from '../components/DemandSignalsSection';
 
 // =============================================================================
 // TYPES (matching T-243 backend response)
@@ -63,7 +64,7 @@ function formatCurrency(minor: number | null): string {
 export default function ReorderPage() {
   const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
-  const [activeTab, setActiveTab] = useState<'suggestions' | 'pending' | 'settings'>('suggestions');
+  const [activeTab, setActiveTab] = useState<'suggestions' | 'pending' | 'settings' | 'demand-signals'>('suggestions');
 
   // Settings state (matches canonical schema)
   const [_settings, setSettings] = useState<ReorderSettings | null>(null);
@@ -198,7 +199,7 @@ export default function ReorderPage() {
 
       {/* Tabs */}
       <div className="reorder-tabs" role="tablist" aria-label="Reorder sections">
-        {(['suggestions', 'pending', 'settings'] as const).map((t) => (
+        {(['suggestions', 'pending', 'demand-signals', 'settings'] as const).map((t) => (
           <button
             key={t}
             role="tab"
@@ -206,7 +207,7 @@ export default function ReorderPage() {
             onClick={() => setActiveTab(t)}
             className={`reorder-tab${activeTab === t ? ' reorder-tab--active' : ''}`}
           >
-            {t === 'suggestions' ? 'Low Stock' : t === 'pending' ? `Pending Reorders${pending.length > 0 ? ` (${pending.length})` : ''}` : 'Settings'}
+            {t === 'suggestions' ? 'Low Stock' : t === 'pending' ? `Pending Reorders${pending.length > 0 ? ` (${pending.length})` : ''}` : t === 'demand-signals' ? 'Demand Signals' : 'Settings'}
           </button>
         ))}
       </div>
@@ -316,6 +317,11 @@ export default function ReorderPage() {
           )}
           {pendingLoading && <div className="reorder-loading">Loading...</div>}
         </div>
+      )}
+
+      {/* Demand Signals Tab — V3-HARDEN-185 */}
+      {activeTab === 'demand-signals' && (
+        <DemandSignalsSection />
       )}
 
       {/* Settings Tab */}
