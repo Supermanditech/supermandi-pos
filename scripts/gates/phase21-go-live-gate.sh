@@ -144,6 +144,25 @@ check "RBAC migration 202 exists for demand_signals + allocations" bash -c '
   grep -q "allocations" backend/migrations/202_phase21_rbac_permissions.sql
 '
 
+check "Lifecycle delivery proof tests (end-to-end chain)" bash -c '
+  cd backend && npx jest tests/contracts/lifecycleDeliveryProof.unit.test.ts \
+    --no-coverage --silent 2>&1 | grep -q "Tests:.*passed"
+'
+
+# ─── SECTION 11: Portal live wiring verification ───
+echo ""
+echo "--- Portal Live Wiring ---"
+
+check "SuperAdmin: demand-pressure + allocations in TabKey type" grep -q '"demand-pressure"' supermandi-superadmin/src/types.ts
+check "SuperAdmin: tabs mounted in App.tsx" bash -c '
+  grep -q "DemandPressureTab" supermandi-superadmin/src/App.tsx && \
+  grep -q "AllocationsDashboardTab" supermandi-superadmin/src/App.tsx
+'
+check "Retailer: DemandSignalsSection in ReorderPage" grep -q "DemandSignalsSection" retailer-admin/src/pages/ReorderPage.tsx
+check "Retailer: demand-signals tab exists" grep -q "demand-signals" retailer-admin/src/pages/ReorderPage.tsx
+check "Supplier: allocations page exists" test -f "supplier-portal/src/app/(dashboard)/allocations/page.tsx"
+check "Supplier: allocations in nav" grep -q "allocations" supplier-portal/src/app/\(dashboard\)/layout.tsx
+
 echo ""
 echo "=== Results: $((CHECKS - FAILURES))/$CHECKS passed ==="
 if [ "$FAILURES" -gt 0 ]; then
