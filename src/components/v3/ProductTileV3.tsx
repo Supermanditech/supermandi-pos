@@ -101,6 +101,13 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress }: P
         <Text style={[styles.caseInfo, { color: "#6366f1" }]}>per {product.rateUnit}</Text>
       ) : null}
 
+      {/* V3-FIX-173: Operator-first stock health indicator */}
+      {product.stock != null && product.stock > 0 && product.stock <= 10 ? (
+        <Text style={{ fontSize: 9, color: "#f59e0b", textAlign: "center", fontWeight: "700" }}>Low: {product.stock}</Text>
+      ) : product.stock != null && product.stock <= 0 ? (
+        <Text style={{ fontSize: 9, color: "#ef4444", textAlign: "center", fontWeight: "700" }}>Out of stock</Text>
+      ) : null}
+
       {/* V3-HARDEN-171: Warning for unconverted bulk stock */}
       {product.conversionConfirmed === false && product.productMode === "LOOSE_BULK" ? (
         <Text style={{ fontSize: 10, color: "#f59e0b", textAlign: "center", marginTop: 2 }}>Setup needed</Text>

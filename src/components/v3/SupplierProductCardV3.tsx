@@ -87,14 +87,33 @@ export default function SupplierProductCardV3({ product, orderQtyCases, onPress 
             <View style={styles.marginTag}><Text style={styles.marginText}>Margin {marginPct}%</Text></View>
           </View>
 
-          {/* Scheme + Trade terms */}
+          {/* V3-FIX-173: B2B decision metadata — scheme, discount, delivery, finance */}
           {(product.scheme || product.tradeDiscountPct || product.creditDays) ? (
             <View style={styles.terms}>
-              {product.scheme ? <View style={styles.schemeBadge}><Text style={styles.schemeText}>Scheme: {product.scheme}</Text></View> : null}
-              {product.tradeDiscountPct ? <View style={styles.discBadge}><Text style={styles.discText}>Trade Disc: {product.tradeDiscountPct}%</Text></View> : null}
-              {product.creditDays ? <View style={styles.creditBadge}><Text style={styles.creditText}>Credit: {product.creditDays} days</Text></View> : null}
+              {product.scheme ? <View style={styles.schemeBadge}><Text style={styles.schemeText}>{product.scheme}</Text></View> : null}
+              {product.tradeDiscountPct ? <View style={styles.discBadge}><Text style={styles.discText}>-{product.tradeDiscountPct}%</Text></View> : null}
+              {product.creditDays ? <View style={styles.creditBadge}><Text style={styles.creditText}>{product.creditDays}d credit</Text></View> : null}
             </View>
           ) : null}
+
+          {/* V3-FIX-173: Delivery + finance row */}
+          <View style={styles.terms}>
+            {product.deliveryDays != null ? (
+              <View style={[styles.tag, { backgroundColor: '#dbeafe' }]}>
+                <Text style={[styles.tagText, { color: '#1d4ed8' }]}>Delivery: {product.deliveryDays}d</Text>
+              </View>
+            ) : null}
+            {product.bnplAvailable ? (
+              <View style={[styles.tag, { backgroundColor: '#dcfce7' }]}>
+                <Text style={[styles.tagText, { color: '#16a34a' }]}>BNPL</Text>
+              </View>
+            ) : null}
+            {product.procurementUnit && product.procurementUnit !== product.unit ? (
+              <View style={[styles.tag, { backgroundColor: '#f3e8ff' }]}>
+                <Text style={[styles.tagText, { color: '#7c3aed' }]}>{product.procurementUnit}{product.procurementPackQty && product.procurementPackQty > 1 ? ` ×${product.procurementPackQty}` : ''}</Text>
+              </View>
+            ) : null}
+          </View>
 
           {/* V3-FIX-136: Browse-only — no inline qty/add. Tap card for details. */}
           <View style={styles.bottomRow}>

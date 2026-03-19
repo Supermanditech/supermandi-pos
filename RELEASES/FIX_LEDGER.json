@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 442,
+  "version": 443,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -8129,8 +8129,8 @@
       "ticket": "V3-HARDEN-171",
       "file": "src/components/v3/ProductTileV3.tsx",
       "start_line": 10,
-      "end_line": 213,
-      "checksum": "477e96d0b0bc70c1",
+      "end_line": 220,
+      "checksum": "5414f706d4f1fc4d",
       "description": "ProductTileData with conversion-aware sell flow fields (productMode, soldBy, rateUnit, baseStockUnit, allowFractionalSell, conversionConfirmed)",
       "test_file": "backend/tests/conversionEngine.v3-fix-167.unit.test.ts",
       "depends_on": null,

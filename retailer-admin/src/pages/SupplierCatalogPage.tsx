@@ -285,6 +285,19 @@ export default function SupplierCatalogPage() {
                   </div>
                 </div>
 
+                {/* V3-FIX-173: B2B decision metadata for retailer buyers */}
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4, fontSize: 11 }}>
+                  {(product as any).deliveryDays != null ? (
+                    <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '1px 6px', borderRadius: 4 }}>Delivery: {(product as any).deliveryDays}d</span>
+                  ) : null}
+                  {product.bnplEligible ? (
+                    <span style={{ background: '#dcfce7', color: '#16a34a', padding: '1px 6px', borderRadius: 4 }}>BNPL {product.bnplMaxDays}d</span>
+                  ) : null}
+                  {product.marginMinor > 0 ? (
+                    <span style={{ background: '#fef3c7', color: '#92400e', padding: '1px 6px', borderRadius: 4 }}>Margin: {formatPrice(product.marginMinor)}/u</span>
+                  ) : null}
+                </div>
+
                 {/* V3-FIX-168: Unit info for conversion awareness */}
                 {product.unit && (
                   <div className="scat-category" style={{ fontSize: 13, color: '#6b7280' }}>
