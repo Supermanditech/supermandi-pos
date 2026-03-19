@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 486,
+  "version": 488,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -8350,6 +8350,62 @@
         "regression_check": "12 new tests pass, existing tests unaffected",
         "test_guard": "buyAgainService.unit.test.ts — 12 tests pass",
         "single_commit": "fix(V3-FIX-186): single commit",
+        "ticket_parked": "Committing now"
+      }
+    },
+    {
+      "ticket": "V3-FIX-187",
+      "file": "backend/src/services/allocationService.ts",
+      "start_line": 1,
+      "end_line": 280,
+      "checksum": "4297c01a6241e5a6",
+      "description": "Allocation state machine with enforced transitions and lifecycle event logging",
+      "test_file": "backend/tests/contracts/allocationService.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-19T19:05:15.152Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "operator_approved": "Mode A pre-staging",
+        "backend_api": "GET/PATCH supplier allocations + GET/POST/PATCH admin allocations",
+        "api_errors": "500 on failure, 404 on not found, 409 on invalid transition, 400 on missing params",
+        "store_isolation": "Supplier: from req.supplier.id (JWT). Admin: cross-store by design. Store: from URL param",
+        "business_logic": "8-state machine, enforced transitions, terminal states, lifecycle event per transition",
+        "business_behaviour": "create→trigger→accept→dispatch→deliver→grn_completed with event logging",
+        "db_schema": "Uses supplier_demand_allocations + lifecycle_event_log from migration 198",
+        "impacted_files": "allocationService.ts, 2 route files, test, index.ts, FIX_LEDGER",
+        "fix_ledger_check": "116 fixes intact, zero drift",
+        "no_agent_conflict": "Single agent session",
+        "gcp_parity": "No localhost, env vars used",
+        "regression_check": "19 tests pass, existing tests unaffected",
+        "test_guard": "allocationService.unit.test.ts — 19 tests",
+        "single_commit": "fix(V3-FIX-187): single commit",
         "ticket_parked": "Committing now"
       }
     }
