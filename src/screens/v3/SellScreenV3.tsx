@@ -17,6 +17,7 @@ import UniversalSearchV3, { type SearchResult } from "../../components/v3/Univer
 import { OfflineBanner } from "../../components/ui/OfflineBanner";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { tabAccents, cardElevation, typeRhythm } from "../../theme/brand";
 import { useProductsStore, type Product } from "../../stores/productsStore";
 import { useCartStore } from "../../stores/cartStore";
 import { searchStoreProducts } from "../../services/api/sellSearchApi";
@@ -303,6 +304,16 @@ export default function SellScreenV3() {
         if (parent) parent.navigate("MORE" as any);
       }} />
 
+      {/* V3-FIX-180: SELL mode identity strip — billing/cashier urgency */}
+      <View style={styles.modeStrip} testID="sell-mode-strip">
+        <Text style={styles.modeLabel}>💰 BILLING MODE</Text>
+        {cartCount > 0 ? (
+          <Text style={styles.modeCartHint}>{cartCount} item{cartCount !== 1 ? 's' : ''} · ₹{Math.round(cartTotal / 100).toLocaleString("en-IN")}</Text>
+        ) : (
+          <Text style={styles.modeHint}>Scan or tap to add</Text>
+        )}
+      </View>
+
       {/* Search bar */}
       <View style={styles.searchBar} testID="sell-search-bar">
         <Pressable style={styles.searchInput} onPress={() => setSearchVisible(true)} testID="sell-search-tap">
@@ -478,6 +489,23 @@ export default function SellScreenV3() {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
+    // V3-FIX-180: SELL mode identity strip
+    modeStrip: {
+      backgroundColor: tabAccents(colors).SELL.heroSoft,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    modeLabel: {
+      ...typeRhythm.sectionTitle,
+      color: tabAccents(colors).SELL.accent,
+    },
+    modeCartHint: { fontSize: 11, fontWeight: "700" as const, color: colors.primary },
+    modeHint: { fontSize: 11, color: colors.textTertiary },
     // Search
     searchBar: { flexDirection: "row", gap: 8, padding: 10, paddingHorizontal: 14, backgroundColor: colors.surface },
     searchInput: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: colors.background, borderRadius: 14, borderWidth: 2, borderColor: colors.border },
@@ -490,17 +518,17 @@ function createStyles(colors: ColorPalette) {
     chip: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 22, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border },
     chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
     chipText: { fontSize: 12, fontWeight: "700", color: colors.textSecondary },
-    chipTextActive: { color: "#FFFFFF" },
+    chipTextActive: { color: colors.textInverse },
     // Grid
     gridContainer: { paddingHorizontal: 14, paddingVertical: 12 },
     gridRow: { gap: 10, marginBottom: 10 },
     // Cart strip
     cartStrip: { marginHorizontal: 12, marginBottom: 8, borderRadius: 18, padding: 14, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.primary },
     cartLeft: { flexDirection: "column", gap: 2 },
-    cartCount: { fontSize: 13, fontWeight: "700", color: "#FFFFFF" },
-    cartItems: { fontSize: 10, color: "rgba(255,255,255,0.8)", maxWidth: 140 },
-    cartTotal: { fontSize: 18, fontWeight: "900", color: "#FFFFFF", marginHorizontal: 12 },
-    payButton: { backgroundColor: "#FFFFFF", paddingHorizontal: 22, paddingVertical: 10, borderRadius: 12 },
+    cartCount: { fontSize: 13, fontWeight: "700", color: colors.textInverse },
+    cartItems: { fontSize: 10, color: colors.overlayInverse, maxWidth: 140 },
+    cartTotal: { ...typeRhythm.heroStat, fontSize: 18, color: colors.textInverse, marginHorizontal: 12 },
+    payButton: { backgroundColor: colors.textInverse, paddingHorizontal: 22, paddingVertical: 10, borderRadius: 12 },
     payButtonText: { color: colors.primary, fontSize: 14, fontWeight: "800" },
     cartEmpty: { marginHorizontal: 12, marginBottom: 8, borderRadius: 18, padding: 14, borderWidth: 2, borderStyle: "dashed", borderColor: colors.border, alignItems: "center" },
     cartEmptyText: { fontSize: 12, fontWeight: "500", color: colors.textTertiary },

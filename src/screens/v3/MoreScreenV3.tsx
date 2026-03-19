@@ -91,7 +91,7 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
             <Pressable key={item.label} style={styles.menuItem} onPress={() => onNavigate(item.screen)}>
               <View style={[styles.menuIcon, { backgroundColor: item.bg }]}><Text style={{ fontSize: 18 }}>{item.icon}</Text></View>
               <Text style={styles.menuLabel}>{item.label}</Text>
-              {(item as any).badge ? <View style={styles.menuBadge}><Text style={styles.menuBadgeText}>{(item as any).badge}</Text></View> : null}
+              {/* V3-FIX-081: Badge hidden until real overdue count API — no (item as any).badge */}
               <Text style={styles.menuArrow}>›</Text>
             </Pressable>
           ))}
@@ -112,21 +112,22 @@ function createStyles(colors: ColorPalette) {
     settingsIcon: { fontSize: 18 },
     body: { flex: 1 },
     morningCard: { margin: getScreenPadding(), padding: 18, borderRadius: 20, backgroundColor: colors.primary, overflow: "hidden" },
-    morningTitle: { color: "#fff", fontSize: 15, fontWeight: "700", marginBottom: 8 },
+    morningTitle: { color: colors.textInverse, fontSize: 15, fontWeight: "700", marginBottom: 8 },
     morningRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
     morningKey: { color: "rgba(255,255,255,0.8)", fontSize: 13 },
-    morningVal: { color: "#fff", fontSize: 13, fontWeight: "700" },
+    morningVal: { color: colors.textInverse, fontSize: 13, fontWeight: "700" },
     statsRow: { flexDirection: "row", gap: 8, paddingHorizontal: getScreenPadding() },
     statCard: { flex: 1, padding: 14, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, ...cardElevation.subtle },
     statLabel: { ...typeRhythm.sectionTitle, color: colors.textTertiary, textTransform: "uppercase" },
     statVal: { ...typeRhythm.heroStat, fontSize: 22, marginTop: 4 },
     statSub: { fontSize: 11, color: colors.textTertiary, marginTop: 2 },
-    financeBanner: { marginHorizontal: getScreenPadding(), marginTop: 10, padding: 14, borderRadius: 16, backgroundColor: "#7C3AED", flexDirection: "row", alignItems: "center", gap: 12 },
+    // V3-FIX-181: Finance banner uses tab accent token instead of hardcoded purple
+    financeBanner: { marginHorizontal: getScreenPadding(), marginTop: 10, padding: 14, borderRadius: 16, backgroundColor: tabAccents(colors).STORE.hero, flexDirection: "row", alignItems: "center", gap: 12 },
     financeIcon: { fontSize: 28 },
-    financeTitle: { color: "#fff", fontSize: 14, fontWeight: "800" },
+    financeTitle: { color: colors.textInverse, fontSize: 14, fontWeight: "800" },
     financeSub: { color: "rgba(255,255,255,0.85)", fontSize: getChipFontSize() },
     financeArrow: { backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10 },
-    financeArrowText: { color: "#fff", fontSize: getChipFontSize(), fontWeight: "700" },
+    financeArrowText: { color: colors.textInverse, fontSize: getChipFontSize(), fontWeight: "700" },
     sectionTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, paddingHorizontal: getScreenPadding(), marginTop: 14, marginBottom: 8 },
     menuCard: { marginHorizontal: getScreenPadding(), backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
     menuItem: { flexDirection: "row", alignItems: "center", gap: 14, padding: 14, borderBottomWidth: 1, borderBottomColor: colors.backgroundSecondary },

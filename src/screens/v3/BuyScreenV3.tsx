@@ -11,6 +11,7 @@ import ProductDetailSheetV3 from "../../components/v3/ProductDetailSheetV3";
 import type { ProductTileData } from "../../components/v3/ProductTileV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
+import { tabAccents, typeRhythm } from "../../theme/brand";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import { getBuyCatalog, type CatalogProduct } from "../../services/api/catalogApi";
@@ -170,6 +171,12 @@ export default function BuyScreenV3() {
 
   return (
     <View style={styles.container}>
+      {/* V3-FIX-180: BUY mode identity — procurement/trade decision */}
+      <View style={styles.buyHero}>
+        <Text style={styles.buyHeroLabel}>🛒 PROCUREMENT</Text>
+        <Text style={styles.buyHeroSub}>{cartItemCount > 0 ? `${cartItemCount} items · ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")}` : 'Browse & order from suppliers'}</Text>
+      </View>
+
       {/* V3-FIX-076: Real search input */}
       <View style={styles.searchBar}>
         <View style={styles.searchInput}>
@@ -514,6 +521,19 @@ export default function BuyScreenV3() {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
+    // V3-FIX-180: BUY mode identity hero
+    buyHero: {
+      backgroundColor: tabAccents(colors).BUY.heroSoft,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    buyHeroLabel: { ...typeRhythm.sectionTitle, color: tabAccents(colors).BUY.accent },
+    buyHeroSub: { fontSize: 11, color: colors.textTertiary },
     // V3-FIX-109: Responsive padding
     searchBar: { flexDirection: "row", gap: 8, padding: 10, paddingHorizontal: getScreenPadding(), backgroundColor: colors.surface },
     searchInput: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: getScreenPadding(), paddingVertical: 10, backgroundColor: colors.background, borderRadius: 14, borderWidth: 2, borderColor: colors.border },
