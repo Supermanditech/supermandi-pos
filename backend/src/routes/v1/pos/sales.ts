@@ -1138,7 +1138,7 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       // Check via storeProductId, globalProductId, or barcode — all checkout paths covered
       {
         let convCheckSql = '';
-        let convCheckParams: any[] = [storeId];
+        const convCheckParams: any[] = [storeId];
         if (item.storeProductId && isValidUUID(item.storeProductId)) {
           convCheckSql = `SELECT conversion_confirmed, product_mode FROM catalog.store_products WHERE id = $2 AND store_id = $1`;
           convCheckParams.push(item.storeProductId);

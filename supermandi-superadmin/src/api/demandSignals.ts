@@ -51,7 +51,7 @@ export async function getDemandPressure(limit: number = 50): Promise<DemandPress
     headers: { Accept: "application/json", ...getAuthHeaders() },
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(sanitizeErrorMessage(data?.error ?? `Request failed (${res.status})`));
+  if (!res.ok) throw new Error(sanitizeErrorMessage(data?.error, `Request failed (${res.status})`));
   return data.data;
 }
 
@@ -60,7 +60,7 @@ export async function getStoreDemandSignals(storeId: string): Promise<StoreDeman
     headers: { Accept: "application/json", ...getAuthHeaders() },
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(sanitizeErrorMessage(data?.error ?? `Request failed (${res.status})`));
+  if (!res.ok) throw new Error(sanitizeErrorMessage(data?.error, `Request failed (${res.status})`));
   return data.data;
 }
 
@@ -72,6 +72,6 @@ export async function recomputeDemandSignals(storeId?: string): Promise<void> {
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(sanitizeErrorMessage(data?.error ?? `Recompute failed (${res.status})`));
+    throw new Error(sanitizeErrorMessage(data?.error, `Recompute failed (${res.status})`));
   }
 }

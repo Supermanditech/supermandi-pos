@@ -2128,15 +2128,10 @@ ordersRouter.post("/procurement/payment-callback", async (req: Request, res: Res
     }
     log.info(`[payment-callback] Pine Labs verified: txn=${plVerified.transactionId}`);
   }
-  // No known provider signature — reject in production
+  // No known provider signature — reject if webhook secret is configured or in production
   else if (webhookSecret || process.env.NODE_ENV === 'production') {
     log.warn("[payment-callback] No recognized provider signature — rejecting callback");
     return res.status(401).json({ error: "Unrecognized payment callback — no valid provider signature" });
-  }
-  // No webhook secret configured — allow in dev/staging, warn in production
-  else if (process.env.NODE_ENV === 'production') {
-    log.error("[payment-callback] PAYMENT_WEBHOOK_SECRET not set in production — callback security compromised");
-    return res.status(500).json({ error: "Webhook secret not configured" });
   }
 
   const { paymentIntentId, providerPaymentId, status, provider: callbackProvider } = req.body;

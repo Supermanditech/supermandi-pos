@@ -32,7 +32,7 @@ export async function getAllocationSummary(): Promise<AllocationSummary> {
     headers: { Accept: "application/json", ...getAuthHeaders() },
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(sanitizeErrorMessage(data?.error ?? `Request failed (${res.status})`));
+  if (!res.ok) throw new Error(sanitizeErrorMessage(data?.error, `Request failed (${res.status})`));
   return data.data;
 }
 
@@ -50,7 +50,7 @@ export async function getStoreAllocations(
     headers: { Accept: "application/json", ...getAuthHeaders() },
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(sanitizeErrorMessage(data?.error ?? `Request failed (${res.status})`));
+  if (!res.ok) throw new Error(sanitizeErrorMessage(data?.error, `Request failed (${res.status})`));
   return { allocations: data.data, total: data.pagination?.total ?? 0 };
 }
 
@@ -65,6 +65,6 @@ export async function transitionAllocation(
     body: JSON.stringify({ status, reason }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(sanitizeErrorMessage(data?.error ?? `Transition failed (${res.status})`));
+  if (!res.ok) throw new Error(sanitizeErrorMessage(data?.error, `Transition failed (${res.status})`));
   return data.data;
 }

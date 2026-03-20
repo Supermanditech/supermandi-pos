@@ -3,17 +3,17 @@
 -- are forward-looking schema — NOT yet used in application code. Safe to leave (empty table, NULL column).
 -- When implementing WhatsApp invoice dispatch, wire these to the dispatch service.
 -- Forward-only migration — adds columns/tables for the SuperMandi principal-sale model
--- ROLLBACK: ALTER TABLE public.purchase_orders DROP COLUMN IF EXISTS procurement_lane, DROP COLUMN IF EXISTS linked_procurement_id, DROP COLUMN IF EXISTS invoice_pair_id; ALTER TABLE catalog.supplier_products DROP COLUMN IF EXISTS billing_model; DROP TABLE IF EXISTS public.invoice_dispatch_logs;
+-- ROLLBACK: ALTER TABLE orders.purchase_orders DROP COLUMN IF EXISTS procurement_lane, DROP COLUMN IF EXISTS linked_procurement_id, DROP COLUMN IF EXISTS invoice_pair_id; ALTER TABLE catalog.supplier_products DROP COLUMN IF EXISTS billing_model; DROP TABLE IF EXISTS public.invoice_dispatch_logs;
 
 -- 1. Add procurement_lane to purchase orders (CATALOGUE_PRINCIPAL | COUNTER_PURCHASE)
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'purchase_orders' AND column_name = 'procurement_lane'
+    WHERE table_schema = 'orders' AND table_name = 'purchase_orders' AND column_name = 'procurement_lane'
   ) THEN
-    ALTER TABLE public.purchase_orders
+    ALTER TABLE orders.purchase_orders
       ADD COLUMN procurement_lane VARCHAR(30) DEFAULT 'CATALOGUE_PRINCIPAL';
-    COMMENT ON COLUMN public.purchase_orders.procurement_lane IS 'V3-FIX-142: CATALOGUE_PRINCIPAL or COUNTER_PURCHASE — must never mix';
+    COMMENT ON COLUMN orders.purchase_orders.procurement_lane IS 'V3-FIX-142: CATALOGUE_PRINCIPAL or COUNTER_PURCHASE — must never mix';
   END IF;
 END $$;
 
@@ -21,11 +21,11 @@ END $$;
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'purchase_orders' AND column_name = 'linked_procurement_id'
+    WHERE table_schema = 'orders' AND table_name = 'purchase_orders' AND column_name = 'linked_procurement_id'
   ) THEN
-    ALTER TABLE public.purchase_orders
+    ALTER TABLE orders.purchase_orders
       ADD COLUMN linked_procurement_id UUID;
-    COMMENT ON COLUMN public.purchase_orders.linked_procurement_id IS 'V3-FIX-144: Links retailer order to upstream supplier procurement order';
+    COMMENT ON COLUMN orders.purchase_orders.linked_procurement_id IS 'V3-FIX-144: Links retailer order to upstream supplier procurement order';
   END IF;
 END $$;
 
@@ -45,11 +45,11 @@ END $$;
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'purchase_orders' AND column_name = 'invoice_pair_id'
+    WHERE table_schema = 'orders' AND table_name = 'purchase_orders' AND column_name = 'invoice_pair_id'
   ) THEN
-    ALTER TABLE public.purchase_orders
+    ALTER TABLE orders.purchase_orders
       ADD COLUMN invoice_pair_id UUID;
-    COMMENT ON COLUMN public.purchase_orders.invoice_pair_id IS 'V3-FIX-145: Links to dual invoice pair for principal procurement';
+    COMMENT ON COLUMN orders.purchase_orders.invoice_pair_id IS 'V3-FIX-145: Links to dual invoice pair for principal procurement';
   END IF;
 END $$;
 
@@ -77,7 +77,7 @@ DO $$ BEGIN
     SELECT 1 FROM information_schema.check_constraints
     WHERE constraint_name = 'chk_procurement_lane'
   ) THEN
-    ALTER TABLE public.purchase_orders
+    ALTER TABLE orders.purchase_orders
       ADD CONSTRAINT chk_procurement_lane
       CHECK (procurement_lane IN ('CATALOGUE_PRINCIPAL', 'COUNTER_PURCHASE'));
   END IF;
@@ -116,4 +116,4 @@ CREATE INDEX IF NOT EXISTS idx_invoice_dispatch_status
 
 -- 10. Index on procurement_lane for filtering
 CREATE INDEX IF NOT EXISTS idx_purchase_orders_procurement_lane
-  ON public.purchase_orders (procurement_lane) WHERE procurement_lane IS NOT NULL;
+  ON orders.purchase_orders (procurement_lane) WHERE procurement_lane IS NOT NULL;

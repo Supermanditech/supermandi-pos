@@ -95,7 +95,7 @@ export async function buildBuyAgainFromOrder(
   }
 
   // Get demand signals for suppression check
-  let demandMap = new Map<string, { currentStock: number; daysOfStock: number; pendingInbound: number; dailyVelocity: number }>();
+  const demandMap = new Map<string, { currentStock: number; daysOfStock: number; pendingInbound: number; dailyVelocity: number }>();
   try {
     const demand = await computeStoreDemandSignals(storeId);
     for (const s of demand.signals) {
@@ -220,7 +220,7 @@ export async function buildBuyAgainFromProducts(
   const purchaseMap = new Map(lastPurchases.rows.map((r) => [r.product_id, r]));
 
   // Get demand signals
-  let demandMap = new Map<string, { currentStock: number; daysOfStock: number; pendingInbound: number; dailyVelocity: number; productName: string; barcode: string | null }>();
+  const demandMap = new Map<string, { currentStock: number; daysOfStock: number; pendingInbound: number; dailyVelocity: number; productName: string; barcode: string | null }>();
   try {
     const demand = await computeStoreDemandSignals(storeId);
     for (const s of demand.signals) {

@@ -192,6 +192,8 @@ export type PendingProduct = {
   baseStockUnit?: string | null;
   splitSellEligible?: boolean | null;
   moqTiers?: any;
+  // T-070: Invoice configuration (CI-FIX: was missing from PendingProduct but used in App.tsx)
+  invoiceModel?: "buy_resell" | "platform_fee" | null;
 };
 
 export type ProductEditInput = {
