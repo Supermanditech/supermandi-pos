@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 530,
+  "version": 531,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -8976,6 +8976,63 @@
         "test_guard": "SellScreenV3.runtime.test.tsx covers payment flow",
         "single_commit": "fix(STG-503): single commit",
         "ticket_parked": "Committing on main"
+      }
+    },
+    {
+      "ticket": "DEEP-001",
+      "file": "retailer-admin/src/pages/CustomersPage.tsx",
+      "start_line": 35,
+      "end_line": 42,
+      "checksum": "af9047879183ecd4",
+      "description": "Client-side search sanitization — strip control chars, cap 100 chars",
+      "test_file": "retailer-admin/src/__tests__/pages/CustomersPage.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "operator_evidence": "DEEP-001 is defense-in-depth sanitization on retailer-admin search input — no behavioral change visible to operator, transparent passthrough for normal text",
+        "parity_scanned": true,
+        "parity_evidence": "Defense-in-depth frontend sanitization — no GCP parity concerns"
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-20T14:15:53.335Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "Search input renders with sanitization function — no new UI elements",
+        "ux_states": "N/A — defense-in-depth sanitization, not a new screen",
+        "wiring": "onChange → sanitizeSearchInput → setSearch → debounce → fetchCustomers",
+        "navigation": "N/A — no navigation changes",
+        "i18n_keys": "N/A — no new user-facing strings",
+        "business_logic": "Search sanitization strips control chars, caps at 100 chars",
+        "business_behaviour": "Search still works — sanitization is transparent to normal input",
+        "impacted_files": "retailer-admin/src/pages/CustomersPage.tsx",
+        "fix_ledger_check": "126 fixes, zero drift",
+        "no_agent_conflict": "No parallel agents — single-author commit",
+        "gcp_parity": "No localhost URLs, no env vars needed",
+        "regression_check": "tsc --noEmit passes clean",
+        "test_guard": "retailer-admin/src/__tests__/pages/CustomersPage.test.tsx exists",
+        "single_commit": "fix(DEEP-001): one commit",
+        "ticket_parked": "DEEP-001 is audit finding, not STG ticket"
       }
     }
   ],

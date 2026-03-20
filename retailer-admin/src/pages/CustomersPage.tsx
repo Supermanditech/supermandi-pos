@@ -32,6 +32,13 @@ interface Purchase {
 }
 
 
+/** DEEP-001: Sanitize search input — strip control chars, limit length */
+function sanitizeSearchInput(raw: string): string {
+  return raw
+    .replace(/[\x00-\x1F\x7F]/g, '')  // strip control characters
+    .slice(0, 100);                     // cap at 100 chars (matches backend validateSearchQuery)
+}
+
 export default function CustomersPage() {
   const { accessToken } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -208,7 +215,7 @@ export default function CustomersPage() {
               type="text"
               placeholder="Search name or phone..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => setSearch(sanitizeSearchInput(e.target.value))}
               className="cust-search-input"
               aria-label="Search customers by name or phone"
             />
@@ -225,7 +232,7 @@ export default function CustomersPage() {
         <EmptyState
           icon={<Users size={32} />}
           title="No customers found"
-          description={search ? `No customers matching "${search}".` : "Customer profiles will appear here when customers are added via POS."}
+          description={search ? `No customers matching "${search.replace(/[<>"'&]/g, '')}".` : "Customer profiles will appear here when customers are added via POS."}
         />
       ) : (
         <div className="table-container">
