@@ -2,9 +2,24 @@
 
 **Date:** 2026-03-21
 **Auditor:** Claude Opus 4.6 (automated) + Opus 4.6 cross-verifier
-**Branch:** main at `2ba75384`
-**GCP deployed SHA:** `81c3a2a4` (208 commits behind)
+**Branch:** main (updated incrementally)
+**GCP deployed SHA:** `81c3a2a4` (210+ commits behind)
 **Migrations:** 000–202 sequential, no gaps
+**Prototype reference:** https://supermanditech.github.io/supermandi-pos/RELEASES/supermandi-pos-v3.html
+
+### Screen Count Reconciliation (auditor cross-verified)
+
+| Category | Prototype | Code (navigable) | Notes |
+|---|---|---|---|
+| System screens | 1 (Splash) | 5 | +4 production-only (DeviceBlocked, ForceUpdate, Enroll, PaymentSetup) |
+| Auth | 3 | 4 | +1 OTP screen (correct split) |
+| SELL tab | 10 | 1 tab + 7 stack | Search/Cart/Voice are inline/modal (correct) |
+| BUY tab | 5 | 1 tab + 4 stack | Match |
+| STORE tab | 3 | 1 tab + 1 stack | Barcode labels is action button (correct) |
+| MORE tab | 8 | 1 tab + 7 stack | BillDetail wired into SalesHistory (fixed) |
+| **User-facing** | **30** | **28 navigable** | Prototype = source of truth |
+
+**BillDetailScreenV3 FIXED**: Was orphaned (not registered/navigable). Now wired into SalesHistoryScreenV3 as inline overlay — bill row tap fetches detail + renders BillDetail with items/reprint/share.
 
 ---
 

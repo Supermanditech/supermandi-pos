@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 528,
+  "version": 529,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -8864,6 +8864,62 @@
         "test_guard": "crossSurfaceStaffAuth.unit.test.ts — 22 behavioral tests pass",
         "single_commit": "fix(V3-REG-022): single commit, 1 new test file",
         "ticket_parked": "Committing on codex/phase21-final-closure"
+      }
+    },
+    {
+      "ticket": "PRE-GCP-AUDIT-001",
+      "file": "src/screens/v3/SalesHistoryScreenV3.tsx",
+      "start_line": 1,
+      "end_line": 97,
+      "checksum": "46ae51e9b90c469f",
+      "description": "Wire BillDetailScreenV3 into SalesHistory — bill row tap fetches detail",
+      "test_file": "src/__tests__/screens/SalesHistoryScreen.stg-258.i18n.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-20T12:51:56.402Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "Bill rows now pressable with chevron, BillDetail overlay renders header+items+actions",
+        "ux_states": "Loading spinner during detail fetch, offline fallback, empty items list handled",
+        "wiring": "Row tap → handleBillTap → GET /pos/sales/:id → setSelectedBill → BillDetail renders",
+        "navigation": "BillDetail is inline overlay (onClose → setSelectedBill(null)), no stack nav needed",
+        "i18n_keys": "N/A — no new i18n keys added, existing bill labels used",
+        "business_logic": "Detail fetch uses sale ID, items mapped from API response",
+        "business_behaviour": "Sales History → tap row → fetch detail → view items → reprint/share → back",
+        "impacted_files": "SalesHistoryScreenV3.tsx, Pre-gcp-deploy-preparedness.md, FIX_LEDGER.json",
+        "fix_ledger_check": "124 fixes, zero drift",
+        "no_agent_conflict": "Single session",
+        "gcp_parity": "Uses apiClient (relative paths), no hardcoded URLs",
+        "regression_check": "233/233 POS, 0 errors tsc",
+        "test_guard": "SalesHistoryScreen.stg-258.i18n.unit.test.ts passes",
+        "single_commit": "fix(PRE-GCP-AUDIT-001): single commit",
+        "ticket_parked": "Committing on main"
       }
     }
   ],

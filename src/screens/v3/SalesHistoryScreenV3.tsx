@@ -10,6 +10,7 @@ import { getScreenPadding } from "../../theme/responsive";
 import { apiClient } from "../../services/api/apiClient";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
+import BillDetailScreenV3 from "./BillDetailScreenV3";
 
 type SaleRow = {
   id: string;
@@ -27,6 +28,11 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedBill, setSelectedBill] = useState<{
+    billRef: string; date: string; method: string; totalMinor: number;
+    items: { name: string; qty: number; priceMinor: number }[];
+  } | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -47,6 +53,33 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
       finally { setLoading(false); }
     })();
   }, []);
+
+  const handleBillTap = async (sale: SaleRow) => {
+    try {
+      setLoadingDetail(true);
+      const online = await isOnline();
+      if (!online) {
+        // Offline: show basic detail without line items
+        setSelectedBill({
+          billRef: sale.billRef, date: formatTime(sale.createdAt),
+          method: sale.paymentMode, totalMinor: sale.totalMinor, items: [],
+        });
+        return;
+      }
+      const res = await apiClient.get<any>(`/api/v1/pos/sales/${sale.id}`);
+      const saleData = res?.sale ?? res;
+      const items = (saleData?.items ?? saleData?.sale_items ?? []).map((i: any) => ({
+        name: i.productName ?? i.product_name ?? i.name ?? "Item",
+        qty: i.quantity ?? i.qty ?? 1,
+        priceMinor: i.priceMinor ?? i.price_minor ?? i.total_minor ?? 0,
+      }));
+      setSelectedBill({
+        billRef: sale.billRef, date: formatTime(sale.createdAt),
+        method: sale.paymentMode, totalMinor: sale.totalMinor, items,
+      });
+    } catch { showToast("Could not load bill details"); }
+    finally { setLoadingDetail(false); }
+  };
 
   const modeIcon = (m: string) => m === "CASH" ? "💵" : m === "UPI" ? "📱" : m === "DUE" ? "📋" : "💰";
   const modeLabel = (m: string) => m === "CASH" ? "Cash" : m === "UPI" ? "UPI" : m === "DUE" ? "Udhar" : m;
@@ -79,7 +112,7 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
           </View>
         ) : null}
         renderItem={({ item }) => (
-          <View style={styles.row}>
+          <Pressable style={styles.row} onPress={() => handleBillTap(item)}>
             <Text style={styles.modeIcon}>{modeIcon(item.paymentMode)}</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.billRef}>{item.billRef}</Text>
@@ -89,9 +122,25 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
               <Text style={styles.amount}>₹{Math.round(item.totalMinor / 100).toLocaleString("en-IN")}</Text>
               <Text style={styles.mode}>{modeLabel(item.paymentMode)}</Text>
             </View>
-          </View>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginLeft: 4 }}>›</Text>
+          </Pressable>
         )}
       />
+
+      {loadingDetail ? <ActivityIndicator size="large" color={colors.primary} style={{ position: "absolute", top: "50%", alignSelf: "center" }} /> : null}
+
+      {selectedBill ? (
+        <View style={StyleSheet.absoluteFill}>
+          <BillDetailScreenV3
+            billRef={selectedBill.billRef}
+            date={selectedBill.date}
+            method={selectedBill.method}
+            totalMinor={selectedBill.totalMinor}
+            items={selectedBill.items}
+            onClose={() => setSelectedBill(null)}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
