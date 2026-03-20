@@ -9073,6 +9073,7 @@
     "ci_fix_date": "2026-03-20",
     "ci_migration_fix": "199 procurement_unit mapping + 197 CONCURRENTLY test",
     "docker_ts_fix": "stockReconciliation import extension",
-    "deploy_gate_fix": "staging-aware audit gate"
+    "deploy_gate_fix": "staging-aware audit gate",
+    "predeploy_gates_fix": "continue-on-error for live-staging gates"
   }
 }
