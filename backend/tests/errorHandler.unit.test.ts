@@ -46,7 +46,8 @@ describe("errorHandler", () => {
     const res = mockRes();
     errorHandler(err, mockReq(), res, next);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.body).toEqual({ error: "Bad input", details: undefined });
+    // STG-536: Standardized format { error: { code, message } }
+    expect(res.body).toEqual({ error: { code: "HTTP_ERROR", message: "Bad input" } });
   });
 
   it("includes details from HttpError when provided", () => {
@@ -54,7 +55,7 @@ describe("errorHandler", () => {
     const res = mockRes();
     errorHandler(err, mockReq(), res, next);
     expect(res.status).toHaveBeenCalledWith(422);
-    expect(res.body.details).toEqual({ field: "email" });
+    expect(res.body.error.details).toEqual({ field: "email" });
   });
 
   it("handles PostgreSQL unique_violation (23505) as 409 Conflict", () => {
@@ -104,36 +105,37 @@ describe("errorHandler", () => {
     expect(res.body.error).toBe("ALREADY_LINKED");
   });
 
-  it("returns generic message in production for non-HttpError", () => {
+  // STG-522 + STG-536: Non-HttpError always returns generic error (never leaks internal details)
+  it("returns generic message for non-HttpError regardless of NODE_ENV", () => {
     process.env.NODE_ENV = "production";
     const err = new Error("sensitive database info");
     const res = mockRes();
     errorHandler(err, mockReq(), res, next);
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.body.error).toBe("Internal server error");
+    expect(res.body).toEqual({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
   });
 
-  it("returns actual error message in non-production", () => {
+  it("returns generic message even in development (STG-522 no detail leakage)", () => {
     process.env.NODE_ENV = "development";
     const err = new Error("specific error message");
     const res = mockRes();
     errorHandler(err, mockReq(), res, next);
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.body.error).toBe("specific error message");
+    expect(res.body).toEqual({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
   });
 
-  it("handles non-Error objects as Unknown error", () => {
+  it("handles non-Error objects with generic error", () => {
     process.env.NODE_ENV = "development";
     const res = mockRes();
     errorHandler("string error", mockReq(), res, next);
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.body.error).toBe("Unknown error");
+    expect(res.body).toEqual({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
   });
 
-  it("returns Internal server error for non-Error in production", () => {
+  it("returns generic error for non-Error in production", () => {
     process.env.NODE_ENV = "production";
     const res = mockRes();
     errorHandler({ weird: "object" }, mockReq(), res, next);
-    expect(res.body.error).toBe("Internal server error");
+    expect(res.body).toEqual({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } });
   });
 });

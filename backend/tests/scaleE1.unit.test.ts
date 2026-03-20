@@ -70,10 +70,15 @@ jest.mock("../src/utils/priceBoundsValidator", () => ({
 
 jest.mock("../src/db/redis", () => ({
   cacheDelete: jest.fn(() => Promise.resolve()),
+  cacheDeleteByPattern: jest.fn(() => Promise.resolve()),
   getRedis: jest.fn(() => null),
   cacheGet: jest.fn(),
   cacheSet: jest.fn(),
   cacheGetOrSet: jest.fn(),
+}));
+
+jest.mock("../src/services/taxonomyAssignment", () => ({
+  assignTaxonomy: jest.fn(() => Promise.resolve()),
 }));
 
 // =============================================================================

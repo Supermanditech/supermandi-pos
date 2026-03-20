@@ -83,7 +83,8 @@ describe('STG-485: DPDP consent records', () => {
 
     it('should require store context from JWT', () => {
       expect(routeSource).toContain('storeId');
-      expect(routeSource).toContain('Store context required');
+      // Store context enforced via posDevice.storeId from device token middleware
+      expect(routeSource).toContain('posDevice');
     });
 
     it('should insert with store_id scoping', () => {
