@@ -922,13 +922,13 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
     if (deliverySlaDays !== undefined) { updates.push(`delivery_sla_days = $${paramIndex++}`); values.push(deliverySlaDays != null ? parseInt(String(deliverySlaDays)) : null); }
     if (deliveryTerms !== undefined) { updates.push(`delivery_terms = $${paramIndex++}`); values.push(deliveryTerms?.trim() || null); }
     if (patchCreditDays !== undefined) { updates.push(`credit_days = $${paramIndex++}`); values.push(patchCreditDays != null ? parseInt(String(patchCreditDays)) : null); }
-    if (financeEligible !== undefined) { updates.push(`finance_eligible = $${paramIndex++}`); values.push(financeEligible === true || financeEligible === 'true'); }
+    if (financeEligible !== undefined) { updates.push(`finance_eligible = $${paramIndex++}`); values.push(String(financeEligible === true || financeEligible === 'true')); }
     if (patchMoqTiers !== undefined) { updates.push(`moq_tiers = $${paramIndex++}`); values.push(typeof patchMoqTiers === 'string' ? patchMoqTiers : JSON.stringify(patchMoqTiers)); }
     // V3-FIX-174: Package/procurement semantics in supplier PATCH
     if (patchProcurementUnit !== undefined) { updates.push(`procurement_unit = $${paramIndex++}`); values.push(patchProcurementUnit?.trim() || null); }
     if (patchProcurementPackQty !== undefined) { updates.push(`procurement_pack_qty = $${paramIndex++}`); values.push(patchProcurementPackQty != null ? parseFloat(String(patchProcurementPackQty)) : null); }
     if (patchBaseStockUnit !== undefined) { updates.push(`base_stock_unit = $${paramIndex++}`); values.push(patchBaseStockUnit?.trim() || null); }
-    if (patchSplitSellEligible !== undefined) { updates.push(`split_sell_eligible = $${paramIndex++}`); values.push(patchSplitSellEligible === true || patchSplitSellEligible === 'true'); }
+    if (patchSplitSellEligible !== undefined) { updates.push(`split_sell_eligible = $${paramIndex++}`); values.push(String(patchSplitSellEligible === true || patchSplitSellEligible === 'true')); }
 
     if (updates.length === 0) {
       res.status(400).json({
@@ -1180,7 +1180,7 @@ router.post(
          LEFT JOIN catalog.supplier_products sp ON sp.supplier_id = s.id
          WHERE s.id = $1
          GROUP BY s.max_sku_capacity`,
-        [supplierId]
+        [req.supplierId]
       );
       const skuCap = csvCapCheck.rows[0]?.max_sku_capacity ?? 3000;
       const skuCount = csvCapCheck.rows[0]?.current_count ?? 0;

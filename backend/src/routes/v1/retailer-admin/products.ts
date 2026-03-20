@@ -398,7 +398,7 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     // SYNC-PRD-001: Set display_name = name so product is immediately visible with correct name
     // GO-LIVE-147: Use sanitized name for display_name
     // V3-FIX-167: Infer conversion defaults when not explicitly provided
-    const { inferBaseStockUnit } = await import("../../../services/conversionEngine");
+    const { inferBaseStockUnit } = await import("../../../services/conversionEngine.js");
     const resolvedSoldBy = productMode === 'LOOSE_BULK' ? (soldBy || 'WEIGHT') : null;
     const resolvedRateUnit = productMode === 'LOOSE_BULK' ? (rateUnit || 'KG') : null;
     const resolvedBaseStockUnit = baseStockUnit ||

@@ -1763,17 +1763,17 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
         }
 
         // SA-P1-004: Detect excess receipt and create alert for SuperAdmin
-        const orderedQty = orderItem.ordered_quantity || 0;
-        if (orderedQty > 0 && newReceivedQty > orderedQty) {
-          const excessQty = newReceivedQty - orderedQty;
-          const excessPct = parseFloat(((excessQty / orderedQty) * 100).toFixed(2));
+        const orderedQtyAlert = orderItem.ordered_quantity || 0;
+        if (orderedQtyAlert > 0 && newReceivedQty > orderedQtyAlert) {
+          const excessQty = newReceivedQty - orderedQtyAlert;
+          const excessPct = parseFloat(((excessQty / orderedQtyAlert) * 100).toFixed(2));
           await client.query(
             `INSERT INTO platform.grn_excess_alerts
              (store_id, purchase_order_id, order_item_id, receive_id,
               product_name, ordered_qty, total_received_qty, excess_qty, excess_pct)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
             [storeId, orderId, item.orderItemId, receiveId,
-             orderItem.productName, orderedQty, newReceivedQty, excessQty, excessPct]
+             orderItem.productName, orderedQtyAlert, newReceivedQty, excessQty, excessPct]
           );
 
           // T-232: Send push notification for excess GRN (fire-and-forget, don't block transaction)
@@ -1781,7 +1781,7 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
             storeId,
             orderId,
             productName: orderItem.productName,
-            orderedQty,
+            orderedQty: orderedQtyAlert,
             receivedQty: newReceivedQty,
             excessQty,
             excessPct,

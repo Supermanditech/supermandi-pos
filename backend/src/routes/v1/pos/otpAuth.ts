@@ -74,7 +74,7 @@ posOtpAuthRouter.post("/auth/send-otp", async (req, res) => {
       try {
         await sendTextMessage({
           to: `91${phone}`,
-          text: `Your SuperMandi POS verification code is: ${otp}\n\nThis code expires in 5 minutes. Do not share it with anyone.`,
+          body: `Your SuperMandi POS verification code is: ${otp}\n\nThis code expires in 5 minutes. Do not share it with anyone.`,
         });
       } catch (waErr) {
         console.error(`[OTP] WhatsApp failed for ${phone.slice(0, 3)}***:`, asError(waErr).message);

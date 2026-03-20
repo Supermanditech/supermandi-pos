@@ -48,7 +48,7 @@ initCsvImportWorker();
 // V3-HARDEN-189: Phase 21 startup validation — non-blocking, logs structured readiness
 import { validatePhase21Startup } from "./services/phase21StartupValidation";
 validatePhase21Startup().catch((err) => {
-  logger.warn("[App] Phase 21 startup validation failed (non-blocking):", String(err));
+  logger.warn("[App] Phase 21 startup validation failed (non-blocking): " + String(err));
 });
 
 // DEV-071: Capture build info at startup for /health endpoint

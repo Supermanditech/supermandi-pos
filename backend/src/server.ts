@@ -50,7 +50,7 @@ async function start(): Promise<void> {
 
   // V3-HARDEN-172: Validate conversion schema readiness at startup
   try {
-    const { getPool } = await import("./db/client");
+    const { getPool } = await import("./db/client.js");
     const pool = getPool();
     if (pool) {
       const convResult = await validateConversionSchemaReadiness(pool);

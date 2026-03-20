@@ -517,7 +517,7 @@ adminCatalogRouter.get(
 adminCatalogRouter.post(
   "/stock-reconciliation/run",
   requireAdminToken,
-  requirePermission("manage_inventory"),
+  requirePermission("manage_inventory", "write"),
   async (_req, res) => {
     try {
       const storeId = typeof _req.body?.storeId === "string" ? _req.body.storeId : undefined;
