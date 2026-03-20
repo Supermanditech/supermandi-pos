@@ -125,8 +125,15 @@ WHERE conversion_confirmed = false
   AND base_stock_unit IS NOT NULL;
 
 -- Back-fill supplier_products from their unit field
+-- CI-FIX: Map unit aliases to canonical values that satisfy chk_sp_procurement_unit
 UPDATE catalog.supplier_products
-SET procurement_unit = UPPER(TRIM(unit)),
+SET procurement_unit = CASE
+      WHEN UPPER(TRIM(unit)) IN ('KG','GM','G') THEN 'KG'
+      WHEN UPPER(TRIM(unit)) IN ('LTR','ML','L') THEN 'LTR'
+      WHEN UPPER(TRIM(unit)) IN ('PCS','PIECE','PIECES','EA','EACH') THEN 'PCS'
+      WHEN UPPER(TRIM(unit)) IN ('DOZ','DOZEN') THEN 'DOZEN'
+      ELSE UPPER(TRIM(unit))
+    END,
     base_stock_unit = CASE
       WHEN UPPER(TRIM(unit)) IN ('KG','GM','G') THEN 'KG'
       WHEN UPPER(TRIM(unit)) IN ('LTR','ML','L') THEN 'LTR'

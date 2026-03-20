@@ -9070,6 +9070,7 @@
       "DEEP-002",
       "DEEP-003"
     ],
-    "ci_fix_date": "2026-03-20"
+    "ci_fix_date": "2026-03-20",
+    "ci_migration_fix": "199 procurement_unit mapping + 197 CONCURRENTLY test"
   }
 }

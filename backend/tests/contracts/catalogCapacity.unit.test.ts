@@ -114,17 +114,19 @@ describe("V3-HARDEN-152: Capacity indexes (static — narrowly scoped)", () => {
     expect(src).toContain("idx_sb_store_product");
   });
 
-  it("indexes use CONCURRENTLY for zero-downtime creation", () => {
+  it("indexes use IF NOT EXISTS for idempotent creation", () => {
     const fs = require("fs");
     const path = require("path");
     const src = fs.readFileSync(
       path.resolve(__dirname, "../../migrations/197_catalog_capacity_indexes.sql"), "utf8"
     );
     const indexLines = src.match(/CREATE INDEX/g);
-    const concurrentLines = src.match(/CREATE INDEX CONCURRENTLY/g);
+    const ifNotExistsLines = src.match(/CREATE INDEX IF NOT EXISTS/g);
     expect(indexLines).not.toBeNull();
-    expect(concurrentLines).not.toBeNull();
-    expect(concurrentLines!.length).toBe(indexLines!.length);
+    expect(ifNotExistsLines).not.toBeNull();
+    // All CREATE INDEX must use IF NOT EXISTS for idempotency
+    // (CONCURRENTLY removed — CI migration runner wraps each file in a transaction)
+    expect(ifNotExistsLines!.length).toBe(indexLines!.length);
   });
 });
 
