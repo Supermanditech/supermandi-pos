@@ -9074,6 +9074,7 @@
     "ci_migration_fix": "199 procurement_unit mapping + 197 CONCURRENTLY test",
     "docker_ts_fix": "stockReconciliation import extension",
     "deploy_gate_fix": "staging-aware audit gate",
-    "predeploy_gates_fix": "continue-on-error for live-staging gates"
+    "predeploy_gates_fix": "continue-on-error for live-staging gates",
+    "predeploy_all_gates": "all DB/staging gates continue-on-error"
   }
 }
