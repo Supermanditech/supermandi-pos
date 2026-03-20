@@ -450,3 +450,139 @@ Key verified: Admin token required on all tabs, X-Request-ID correlation headers
 2. Verify migrations 195–202 apply cleanly on staging Cloud SQL
 3. Test SSE reconnection under network throttling (E2E)
 4. Run operator E2E on staging after deploy
+
+---
+
+## Phase 1A — POS Deep Re-Audit (15 screens)
+
+**Date:** 2026-03-21 | **Auditor:** Claude Opus 4.6 (deep read, full file)
+
+### BuyScreenV3 — PASS
+**File:** `src/screens/v3/BuyScreenV3.tsx` (574 lines)
+**Navigation:** BUY tab root inside PosRootLayoutV3
+**API endpoints:** `GET /api/v1/buy-catalog` (line 103), `POST /api/v1/orders` (line 472), `POST /api/v1/orders/{id}/submit` (line 478)
+**Backend routes:** `backend/src/routes/v1/orders.ts`
+**DB tables:** `purchase_orders`, `purchase_order_items`, `supplier_products`
+**Store isolation:** getDeviceStoreId() line 100 -> server JWT middleware
+**4-state UX:** Loading line 236 | Success product list | Empty line 251 | Error toast line 117
+**Business logic:** Principal lane, real supplier offers (V3-FIX-173), MOQ tiers, snapshot terms
+**Edge cases:** Offline guard, no pre-seeding (V3-FIX-136), UPI/BNPL/CASH payment modes
+**Verdict:** PASS
+
+### CompareScreenV3 — PASS
+**File:** `src/screens/v3/CompareScreenV3.tsx` (233 lines)
+**API endpoints:** `GET /api/v1/suppliers/{productId}` (line 78)
+**Store isolation:** storeId passed to API (line 70)
+**4-state UX:** Loading line 138 | Success sorted cards | Empty line 139 | Error toast line 107
+**Business logic:** Best price highlighted, margin calc, MOQ/delivery/BNPL shown
+**Verdict:** PASS
+
+### CounterPurchaseScreenV3 — PASS
+**File:** `src/screens/v3/CounterPurchaseScreenV3.tsx` (422 lines)
+**API endpoints:** `POST /api/v1/pos/store-products` (line 137), `POST /api/v1/inventory/inward` (line 192), `GET /api/v1/suppliers` (line 257)
+**Backend routes:** `backend/src/routes/v1/pos/storeProducts.ts`, `backend/src/routes/v1/pos/inventory.ts`
+**Store isolation:** Middleware JWT extraction
+**4-state UX:** Loading line 333 | Success toast line 197 | Empty line 280 | Error toast line 200
+**Business logic:** Two-pass flow (V3-FIX-170), conversion-aware, supplier linkage, real GST
+**Edge cases:** Barcode normalization, duplicate scan, offline queuing, digitisation fallback
+**Verdict:** PASS
+
+### GRNScreenV3 — PASS
+**File:** `src/screens/v3/GRNScreenV3.tsx` (299 lines)
+**API endpoints:** `GET /api/v1/orders?status=[...]` (line 48), `GET /api/v1/orders/{id}` (line 51), `POST /api/v1/inventory/inward` (line 235)
+**Backend routes:** `backend/src/routes/v1/orders.ts`, `backend/src/routes/v1/pos/inventory.ts`
+**Store isolation:** storeId passed to all APIs (line 46)
+**4-state UX:** Loading line 137 | Success toast line 236 | Empty line 145 | Error line 138
+**Business logic:** PO context (V3-FIX-079), conversion-aware inward (V3-FIX-170), Against PO/Ad-hoc tabs (line 122-123)
+**Edge cases:** Offline cache, partial receive, conversion warning, no-items guard
+**Verdict:** PASS
+
+### ReorderScreenV3 — PASS
+**File:** `src/screens/v3/ReorderScreenV3.tsx` (212 lines)
+**API endpoints:** `GET /api/v1/reorder/pending` (line 45), `POST /api/v1/reorder/{id}/approve` (line 118), `GET /api/v1/buy-again/draft` (line 145)
+**Store isolation:** storeId passed to all APIs (line 43)
+**4-state UX:** Loading line 78 | Success urgency cards | Empty line 86 | Error line 79
+**Business logic:** Urgency scoring, daily sales calc, double-submit guard (V3-HARDEN-089), buy-again draft (V3-FIX-186)
+**Verdict:** PASS
+
+### StoreHubScreenV3 — PASS
+**File:** `src/screens/v3/StoreHubScreenV3.tsx` (154 lines)
+**API endpoints:** `GET /api/v1/inventory/purchase-history?limit=5` (line 34), `GET /api/v1/pos/inventory/low-stock-count` (line 50)
+**Store isolation:** Server-side JWT filtering
+**4-state UX:** Loading line 102 | Success orders + badge | Empty line 110 | Error line 103
+**Business logic:** Real low-stock count (V3-FIX-079), branded STORE header (V3-FIX-180)
+**Verdict:** PASS
+
+### StockScreenV3 — PASS
+**File:** `src/screens/v3/StockScreenV3.tsx` (160 lines)
+**API endpoints:** `GET /api/v1/inventory/statement?limit=200&detailed=true` (line 30)
+**Store isolation:** Server-side JWT filtering
+**4-state UX:** Loading implicit | Success filtered list | Empty line 88 | Error toast line 41
+**Business logic:** Status logic (out/low/in), threshold default 5, barcode label printing
+**Verdict:** PASS
+
+### MoreScreenV3 — PASS
+**File:** `src/screens/v3/MoreScreenV3.tsx` (141 lines)
+**API endpoints:** `GET /api/v1/pos/daily-summary` (line 29)
+**Store isolation:** Server-side JWT filtering
+**4-state UX:** Loading line 70 | Success stats+menu | Empty stats show dash | Error silent, menu visible
+**Business logic:** Time-based greeting, no hardcoded badges (V3-FIX-081)
+**Verdict:** PASS
+
+### KhataScreenV3 — PASS
+**File:** `src/screens/v3/KhataScreenV3.tsx` (157 lines)
+**API endpoints:** `GET /api/v1/khata/customers` (line 28), `POST /api/v1/khata/collection/cash` (line 75)
+**Store isolation:** Server-side JWT in khataStore
+**4-state UX:** Loading line 91 | Success overdue+pending | Empty line 95 | Error toast line 78
+**Business logic:** Overdue calc (30 days), real data only (V3-FIX-082), WhatsApp bulk reminder
+**Verdict:** PASS
+
+### FinanceScreenV3 — PASS
+**File:** `src/screens/v3/FinanceScreenV3.tsx` (136 lines)
+**API endpoints:** `GET /api/v1/finance/credit-offers` (line 27), `GET /api/v1/finance/credit-applications` (line 28), `POST /api/v1/finance/credit-apply` (line 69)
+**Store isolation:** Server-side JWT filtering
+**4-state UX:** Loading line 51 | Success offers+loans | Empty lines 78,87 | Error toast line 72
+**Business logic:** Real offers from API (V3-DELETE-086), Promise.allSettled fallback
+**Verdict:** PASS
+
+### ReportsScreenV3 — PASS
+**File:** `src/screens/v3/ReportsScreenV3.tsx` (153 lines)
+**API endpoints:** `GET /api/v1/pos/daily-summary?date=YYYY-MM-DD` (line 45)
+**Store isolation:** Server-side JWT filtering
+**4-state UX:** Loading line 74 | Success stats+chart | Empty line 82 | Error line 75
+**Business logic:** Multi-period (today/7d/30d), real profit or N/A (V3-FIX-083), cached per tab
+**Verdict:** PASS
+
+### CustomersScreenV3 — PASS
+**File:** `src/screens/v3/CustomersScreenV3.tsx` (122 lines)
+**API endpoints:** `GET /api/v1/pos/customers` (line 25), `POST /api/v1/pos/customers` (line 54)
+**Store isolation:** Server-side JWT in customerStore
+**4-state UX:** Loading line 69 | Success customer list | Empty line 71 | Error toast line 61
+**Business logic:** Phone preservation for WhatsApp (V3-FIX-091), cross-platform modal
+**Verdict:** PASS
+
+### SalesHistoryScreenV3 — PASS
+**File:** `src/screens/v3/SalesHistoryScreenV3.tsx` (163 lines)
+**API endpoints:** `GET /api/v1/pos/sales?limit=50` (line 42), `GET /api/v1/pos/sales/{id}` (line 69)
+**Store isolation:** Server-side JWT in apiClient
+**4-state UX:** Loading lines 101,130 | Success bill rows | Empty line 107 | Error toast line 52
+**Business logic:** Payment mode icons, offline detail fallback, BillDetail overlay wired
+**Verdict:** PASS
+
+### SettingsScreenV3 — PASS
+**File:** `src/screens/v3/SettingsScreenV3.tsx` (402 lines)
+**API endpoints:** `GET /api/v1/pos/ui-status` (line 43), `PATCH /api/v1/pos/store/payment-settings` (line 304), `GET /api/v1/staff` (line 161), `POST /api/v1/staff` (line 255), `POST /api/v1/retailer-admin/staff/owner-pin` (line 351)
+**Store isolation:** Server-side JWT + MANAGER role check (line 152)
+**4-state UX:** Loading modals | Success toast | Empty toggles default | Error modal errors
+**Business logic:** Subscribed selectors (V3-HARDEN-127), UPI VPA regex, MANAGER-only staff mgmt, hardware status
+**Verdict:** PASS
+
+### NewProductScreenV3 — PASS
+**File:** `src/screens/v3/NewProductScreenV3.tsx` (450 lines)
+**API endpoints:** `GET /api/v1/pos/catalog/master/{barcode}` (line 41), `POST /api/v1/pos/store-products` (line 108)
+**Store isolation:** Server-side JWT in store-products endpoint
+**4-state UX:** Loading master lookup | Success auto-fill+save | Empty blank form | Error toast line 169
+**Business logic:** Master DB lookup (V3-FIX-070), conversion-aware (V3-FIX-168), LOOSE_BULK gate, margin preview
+**Verdict:** PASS
+
+**Phase 1A total: 15/15 PASS. 0 new findings.**
