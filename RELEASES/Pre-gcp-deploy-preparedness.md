@@ -19,7 +19,9 @@
 | MORE tab | 8 | 1 tab + 7 stack | BillDetail wired into SalesHistory (fixed) |
 | **User-facing** | **30** | **28 navigable** | Prototype = source of truth |
 
-**BillDetailScreenV3 FIXED**: Was orphaned (not registered/navigable). Now wired into SalesHistoryScreenV3 as inline overlay — bill row tap fetches detail + renders BillDetail with items/reprint/share.
+**BillDetailScreenV3 FIXED** (`fd58cc53`): Was orphaned (not registered/navigable). Now wired into SalesHistoryScreenV3 as inline overlay — bill row tap fetches detail + renders BillDetail with items/reprint/share.
+
+**STORE tab "Receive Stock" VERIFIED**: Prototype shows Active/Against PO toggle on Receive Stock screen. Code matches: StoreHubScreenV3 → tap "Receive Stock" card → GRNScreenV3 which has `activeTab` state with "Against PO" and "Ad-hoc Inward" tabs (GRNScreenV3.tsx:122-123). Non-conflicting.
 
 ---
 
