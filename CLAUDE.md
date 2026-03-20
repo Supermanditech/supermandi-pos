@@ -15,6 +15,7 @@ Before writing ANY code, Claude MUST read and internalize:
 4. **`RELEASES/FIX_LEDGER.json`** — Machine state: every active fix with file:line checksums (SEE: Zero-Drift Protocol below)
 5. **`RELEASES/CLAUDE_WORKFLOW.md`** — End-to-end 8-phase workflow for every ticket (MANDATORY process)
 6. **`RELEASES/STAGING_TICKETS.md`** — Active ticket registry (operator inputs + Claude outputs)
+7. **`RELEASES/LIVE_TEST_INSTRUCTIONS.md`** — Live staging test protocol (149 surfaces, strict screen-lock)
 
 ## Secondary References (Read When Relevant)
 
