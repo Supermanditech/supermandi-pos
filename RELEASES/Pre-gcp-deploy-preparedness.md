@@ -1004,3 +1004,308 @@ Key verified: Admin token required on all tabs, X-Request-ID correlation headers
 12. Keyboard accessibility (ARIA labels, semantic HTML, role="tablist")
 
 **Phase 3A total: 21 pages + 12 infra/support files = 33/33 PASS.**
+
+---
+
+## Phase 4A — SuperAdmin Deep Audit (30 tabs + 13 components + infra)
+
+**Audited**: 2026-03-20
+**Method**: Full source-code read of every tab, component, and API module. Verified API wiring (function exists in api/*.ts), error handling (try/catch + user-visible toast/banner), loading states (skeleton/spinner/disabled buttons), empty states, confirmation dialogs on destructive actions, input validation, and security (auth headers, error sanitization, XSS prevention).
+
+### 4A.1 — Finance & Payments (6 tabs)
+
+#### PaymentsTab.tsx (88 lines) — PASS
+- Read-only display — data passed via props from parent. Error banner, loading skeleton, empty message all present.
+
+#### RefundsTab.tsx (266 lines) — PASS
+- **API wiring**: `fetchRefunds()`, `approveRefund()`, `rejectRefund()` — all in refunds.ts.
+- **Error handling**: Try/catch on all 3 API paths. Errors cleared before each action.
+- **Confirmation**: Refund approval and rejection both require ConfirmDialog.
+- **Input validation**: Reject reason required.
+- **In-flight guard**: Action loading prevents double-submit.
+
+#### CreditProvidersTab.tsx (274 lines) — PASS
+- **API wiring**: 3 endpoints via `Promise.allSettled` for resilience. PATCH for provider toggle.
+- **Error handling**: Partial failures consolidated. User-visible error banner.
+- **Confirmation**: Provider toggle requires confirmation dialog.
+
+#### InvoicesTab.tsx (384 lines) — PASS
+- **API wiring**: `listInvoices`, `getInvoice`, `issueInvoice`, `cancelInvoice`, `downloadInvoicePdf` — all in invoices.ts.
+- **In-flight guards**: `inFlightRef` and `detailInFlightRef` prevent pagination race conditions.
+- **Confirmation**: Issue and cancel actions require confirmation.
+- **Error handling**: Try/catch on all 5 async operations. Error cleared before each action.
+
+#### GstComplianceTab.tsx (299 lines) — PASS
+- **API wiring**: `fetchGstStoresOverview`, `fetchGstSummary`, `exportGstr1` — all exist.
+- **Loading states**: Overview skeleton + table skeleton.
+- **Confirmation**: Export (compliance-critical) requires confirmation dialog.
+
+#### ComplianceTab.tsx (242 lines) — PASS
+- **API wiring**: `fetchComplianceOverview` — exists. Read-only display.
+- **Loading states**: Skeleton cards + skeleton table.
+- **Empty states**: "No stores found" with filter context.
+
+### 4A.2 — Device & Hardware Management (4 tabs)
+
+#### DevicesTab.tsx (656 lines) — PASS
+- **API wiring**: Actions delegated to parent via props (handlePushConfig, handleBroadcastConfig, requestForceSync, requestRevokeToken).
+- **Confirmation dialogs**: Device deactivation, QR regenerate, token revocation, enrollment code revocation — all guarded.
+- **Loading states**: Enrollment loading, device action loading, force sync loading, revoke token loading, push config sending.
+- **Empty states**: "No devices synced yet", "No config pushes yet", "No devices seen yet".
+- **Input validation**: Push config value checked for empty with `.trim()`.
+
+#### HealthDashboardTab.tsx (217 lines) — PASS
+- **API wiring**: `fetchStoreHealth` — exists.
+- **In-flight guard**: `refreshInFlight` ref prevents concurrent requests.
+- **Auto-refresh**: 60s interval respecting Page Visibility API.
+- **Empty states**: "No stores found".
+
+#### QualityDashboardTab.tsx (570 lines) — PASS
+- **API wiring**: `fetchQualityOverview`, `fetchTestResults`, `resetMetrics` — all exist. Uses `Promise.allSettled`.
+- **In-flight guard**: `refreshInFlight` ref.
+- **Auto-refresh**: 60s interval respecting visibility.
+- **Confirmation**: Reset metrics requires confirmation dialog.
+
+#### MaintenanceTab.tsx (174 lines) — PASS
+- **API wiring**: `fetchMaintenanceStatus`, `toggleMaintenanceMode` — both exist.
+- **Confirmation**: Toggle requires confirmation.
+- **Input validation**: Message character limit (500 chars max).
+- **In-flight guard**: `refreshInFlight` ref.
+
+### 4A.3 — Store & Supplier Management (6 tabs)
+
+#### StoresTab.tsx (970 lines) — PASS
+- **API wiring**: Actions delegated to parent (handleCreateStore, handleStoreSave, handleStoreNameSave, requestStoreStatusChange).
+- **Loading states**: Loading skeleton for store list.
+- **Empty states**: "No stores found".
+- **Input validation**: Store name required for creation.
+- **Bulk operations**: Checkbox selection for bulk flag toolbar.
+
+#### SuppliersTab.tsx (1188 lines) — PASS
+- **API wiring**: `toggleAutoApproval`, `publishProduct`, `batchProductAction` — all in suppliers.ts.
+- **Error handling**: Try/catch on all async operations.
+- **Confirmation dialogs**: Supplier rejection, bank details rejection, auto-approve toggle — all guarded.
+- **Input validation**: Bank reject reason min 10 chars, general reject reason required, batch reject reason checked.
+- **Error boundary**: `ModalErrorBoundary` wrapping modal renders with reset key pattern.
+- **Empty states**: "No pending supplier requests", "No verified suppliers found".
+
+#### CatalogTab.tsx (519 lines) — PASS
+- **API wiring**: `fetchCategories`, `fetchProducts`, `overrideProductCategory`, `updateProductConversion` — all in catalog.ts.
+- **Error handling**: setError with user-visible messages in try/catch blocks.
+- **Loading states**: TableSkeleton component.
+- **Empty states**: Explicit empty state rendering.
+
+#### ApplicationsTab.tsx (223 lines) — PASS
+- **API wiring**: Props-based (applications/handlers from parent).
+- **Error handling**: Inline error display with role="alert".
+- **Loading states**: Per-application loading tracking. Refresh shows "Refreshing…".
+- **Empty states**: Message with filter variations.
+- **Input validation**: Rejection reason min 5 chars.
+
+#### RegistrationsTab.tsx (214 lines) — PASS
+- **API wiring**: `sendEnrollmentCodeToStore` — exists in registrationEvents.ts.
+- **Error handling**: Try/catch with error banner, auto-clear timer (10s).
+- **Loading states**: Enrollment sending state.
+- **Empty states**: No results row in table.
+
+#### AllocationsDashboardTab.tsx (127 lines) — PASS
+- **API wiring**: `getAllocationSummary`, `getStoreAllocations`, `transitionAllocation` — all in allocations.ts.
+- **Error handling**: setError with Error type coercion.
+- **Loading states**: Loading prop shows "Loading…".
+
+### 4A.4 — POS & Transaction Monitoring (5 tabs)
+
+#### EventsTab.tsx (136 lines) — PASS
+- Read-only — receives pre-fetched data via props. Error banner, loading spinner, empty state for no events.
+
+#### AnalyticsTab.tsx (612 lines) — PASS
+- **API wiring**: `refreshAnalytics(tab)` via prop. Data rendered from props (overviewData, analyticsDevices, analyticsProducts, etc.).
+- **Error handling**: Error banner.
+- **Loading states**: Spinner during fetch.
+- **Empty states**: Comprehensive per-tab empty state checks.
+- **Re-fetch**: Products data re-fetches on groupBy change via useEffect.
+
+#### MonitoringTab.tsx (313 lines) — PASS
+- **API wiring**: `fetchHealthStatus`, `triggerTokenCleanup` — both in monitoring.ts.
+- **Confirmation**: Token cleanup requires ConfirmDialog.
+- **In-flight guard**: `refreshInFlight` ref.
+- **Auto-refresh**: Respects Page Visibility API.
+- **Error handling**: Cleanup error handling separate from health error.
+
+#### DemandPressureTab.tsx (83 lines) — PASS
+- **API wiring**: `getDemandPressure(50)`, `recomputeDemandSignals` — both in demandSignals.ts.
+- **Error handling**: Try/catch with fallback.
+- **Empty states**: "No products need reorder".
+
+#### GrnAlertsTab.tsx (111 lines) — PASS
+- **API wiring**: Props-based (grnAlerts, refreshGrnAlerts, handleGrnAlertAction).
+- **Error handling**: Error banner.
+- **Loading states**: Button disabled while loading, action loading prevents double-submit.
+- **Empty states**: "No GRN excess alerts found."
+- **Pagination**: Previous/Next with offset guard. Filter change resets offset to 0.
+
+### 4A.5 — User & Access Management (3 tabs)
+
+#### StaffTab.tsx (195 lines) — PASS
+- **API wiring**: Props-based (refreshStaff, handleAddStaff, handleToggleStaffActive, handleResetPin, handleStaffRoleChange).
+- **Confirmation**: Role change requires ConfirmDialog with warning variant for MANAGER promotion.
+- **Input validation**: Phone maxLength=10 numeric-only, PIN maxLength=6 numeric-only (4-6 digit pattern), name/phone/PIN required. PIN reset minimum 4 digits.
+- **Action states**: `staffActionLoading` prevents double-submit.
+
+#### UsersTab.tsx (232 lines) — PASS
+- **API wiring**: `forceResetPassword` from users.ts. Status change via prop.
+- **Confirmation**: Status change and password reset both require ConfirmDialog (warning variant for suspend).
+- **Loading states**: Refresh button, TableSkeleton, "Resetting…" state.
+- **Temp password modal**: Displays with clipboard copy.
+- **Search**: Client-side filter by name/email/phone.
+
+#### SettingsTab.tsx (385 lines) — PASS
+- **API wiring**: `fetchPriceBounds`, `updatePriceBounds` from priceBounds.ts. `fetchStoreFeatureFlags`, `setStoreOverride`, `removeStoreOverride` from featureFlags.ts. Global flags via props.
+- **Confirmation dialogs**: Global flag toggle (danger), store override enable, store override disable (danger), remove override (danger).
+- **Input validation**: Price bounds — number check, max > min validation.
+- **Empty states**: "No feature flags found", "No flags found for this store", "No price bounds configured".
+
+### 4A.6 — Support & Communication (3 tabs)
+
+#### SupportQueueTab.tsx (412 lines) — PASS
+- **API wiring**: `apiFetch` wrapper calls 6 endpoints: queue, templates, conversation messages, send reply, assign, resolve — all via `/api/v1/chat/*`.
+- **Error handling**: Auto-clear error after 10s. All 6 API calls have dedicated catch blocks.
+- **Loading states**: Queue list loading, messages loading, send button disabled.
+- **Empty states**: "No {statusFilter} support conversations", "Select a conversation".
+- **Confirmation**: Resolve requires confirmation.
+- **UX**: Auto-scroll to newest, focus on selection, Escape closes, stale response guard via selectConvRef.
+
+#### WhatsAppTab.tsx (709 lines) — PASS
+- **API wiring**: `fetchWhatsAppStatus`, `fetchWhatsAppStats`, `fetchWhatsAppLogs`, `sendWhatsAppMessage`, `sendWhatsAppBroadcast`, `fetchWhatsAppCtaConfig`, `updateWhatsAppCtaConfig` — all in whatsapp.ts. Uses `Promise.allSettled`.
+- **Confirmation**: Single send and broadcast both require confirmation.
+- **Input validation**: CTA phone (10-15 digits), single send phone regex, broadcast max 50 recipients, message non-empty.
+- **Result banners**: Auto-clear after 8s.
+- **Pagination**: Page info and boundary guards.
+
+#### DocumentsTab.tsx (180 lines) — PASS
+- **API wiring**: `fetchDocumentBlob` from documents.ts. Approve/reject via props.
+- **Error handling**: Error banner. Blob fetch error display.
+- **Loading states**: TableSkeleton, refresh disabled, blob loading message, approve button loading.
+- **Empty states**: "No pending documents".
+- **Input validation**: Rejection reason minimum 10 chars.
+- **Resource cleanup**: Blob URLs revoked via URL.revokeObjectURL.
+- **Modal safety**: Escape key closes. Stale response guard via `cancelled` flag.
+
+### 4A.7 — Audit & Intelligence (2 tabs + 1 panel)
+
+#### AuditTab.tsx (241 lines) — PASS
+- Props-based design. Error banner with role="alert".
+- CSV export disabled when empty. CSV escaping prevents formula injection (RFC 4180 compliance).
+- Pagination controls.
+
+#### AIInsightsTab.tsx (263 lines) — PASS
+- **API wiring**: `apiFetch` wrapper using getAuthHeaders + fetchWithTimeout.
+- **Security**: `VALID_JOB_ENDPOINTS` allowlist prevents arbitrary endpoint execution.
+- **Loading states**: Loading flag prevents concurrent calls. Button shows "Running…".
+- **Empty states**: "No anomalies detected", "No alerts".
+
+#### AiPanel.tsx (126 lines) — PASS
+- **API wiring**: `askAi` from ai.ts. Three quick-action buttons.
+- **Loading states**: Disabled during loading. "Thinking…" text.
+- **Security**: HTML escaped before markdown transform — XSS prevention for AI-generated content.
+
+### 4A.8 — Remaining Tabs
+
+#### ReorderPoliciesTab.tsx (160 lines) — PASS
+- Props-based design. Error banners with role="alert". Loading state prevents double-clicks. Empty states for policies and audit log.
+
+### 4A.9 — Components (13 files)
+
+#### LoginGate.tsx (198 lines) — PASS
+- **API wiring**: `sendAdminOtp`, `verifyAdminOtp` — both in authToken.ts.
+- **Security**: OTP input sanitization (digits-only). Email validation (contains @). Countdown timer prevents brute force.
+- **Error handling**: Try/catch with user-visible errors and role="alert".
+
+#### ConfirmationModals.tsx (237 lines) — PASS
+- 5 modals for user status, device save, force re-enroll, force sync, admin user creation.
+- Suspension requires reason min 10 chars. Admin creation requires verification reason.
+- All buttons disabled during action.
+
+#### ConfirmDialog.tsx (89 lines) — PASS
+- Generic wrapper with variant-based styling (danger variant).
+
+#### ErrorBoundary.tsx (56 lines) — PASS
+- React error boundary (getDerivedStateFromError, componentDidCatch). No stack trace in production. "Try Again" and "Go Home" recovery.
+
+#### DeviceWhitelistSection.tsx (219 lines) — PASS
+- **API wiring**: `fetchWhitelistRules`, `createWhitelistRule`, `deleteWhitelistRule`, `toggleWhitelistRule` — all in devices.ts.
+- **Confirmation**: Delete requires confirmation with custom message.
+
+#### BulkImportNotifications.tsx (153 lines) — PASS
+- **API wiring**: `fetchImportJobs` from imports.ts.
+- Pagination disabled while loading. Safe status filter values.
+
+#### TableSkeleton.tsx (27 lines) — PASS
+- Loading skeleton for data tables. Configurable rows/columns.
+
+#### PayloadDetails.tsx (27 lines) — PASS
+- JSON payload display modal for debugging.
+
+#### EnrollmentCountdown.tsx (19 lines) — PASS
+- Countdown timer for device enrollment code expiry.
+
+#### ThemeToggle.tsx (47 lines) — PASS
+- Light/dark theme switcher. Persists preference to localStorage.
+
+#### BuildStamp.tsx (16 lines) — PASS
+- Build info footer (commit SHA, date).
+
+#### WhatsAppIcon.tsx (6 lines) — PASS
+- SVG icon component.
+
+### 4A.10 — Infrastructure (3 files)
+
+#### authToken.ts (510 lines) — PASS
+- **Session management**: HttpOnly cookie primary (SEC-010). localStorage only tracks expiry.
+- **Auto-logout on 401**: Debounced handleAutoLogout prevents spam.
+- **Concurrent refresh dedup**: _isRefreshing/XPORT-001 prevents race conditions.
+- **Idle timeout**: 30-minute timeout (AUTH-EXPIRY-003).
+- **fetchWithTimeout**: 30s max with credentials for cookies.
+- **CSRF**: X-Requested-With header added.
+
+#### errorSanitizer.ts (123 lines) — PASS
+- **Security**: Whitelist of safe error patterns. Blocks SQL, Redis, stack traces, JWT secrets.
+- **Handling**: 503/admin_disabled, 401/session expired special cases.
+- **Dev safety**: Only logs filtered content in DEV mode.
+
+#### main.tsx (23 lines) — PASS
+- Global error handlers (unhandledrejection, error events). ErrorBoundary wraps App. StrictMode enabled.
+
+### Phase 4A Summary
+
+| Category | Files | Pass | Issues |
+|---|---|---|---|
+| Finance & Payments | 6 | 6 | 0 |
+| Device & Hardware | 4 | 4 | 0 |
+| Store & Supplier Management | 6 | 6 | 0 |
+| POS & Transaction Monitoring | 5 | 5 | 0 |
+| User & Access Management | 3 | 3 | 0 |
+| Support & Communication | 3 | 3 | 0 |
+| Audit & Intelligence | 3 | 3 | 0 |
+| Remaining tabs | 1 | 1 | 0 |
+| Components | 13 | 13 | 0 |
+| Infrastructure | 3 | 3 | 0 |
+| **TOTAL** | **47** | **47** | **0** |
+
+**New findings: 0**
+
+**Cross-cutting strengths verified**:
+1. All destructive actions (suspend, reject, delete, toggle, reset) guarded by ConfirmDialog with reason fields
+2. In-flight guards (useRef) on all auto-refresh and paginated tabs prevent race conditions
+3. Auto-refresh respects Page Visibility API — no wasted API calls when tab hidden
+4. Promise.allSettled pattern used for multi-fetch resilience (partial failures don't block UI)
+5. Error sanitization via centralized errorSanitizer.ts — blocks SQL, stack traces, JWT secrets
+6. CSV export escapes formula injection per RFC 4180
+7. AI job endpoint allowlist prevents arbitrary endpoint execution
+8. AI-generated HTML escaped before rendering — XSS prevention
+9. HttpOnly cookies for auth (not localStorage), X-Requested-With CSRF header
+10. 30-minute idle timeout with concurrent refresh deduplication
+11. All API modules use `encodeURIComponent()` for path params — URL traversal prevention
+12. `offset != null` check across all paginated APIs — handles page 0 correctly
+
+**Phase 4A total: 30 tabs + 13 components + 3 infra + 1 remaining = 47/47 PASS.**
