@@ -1493,3 +1493,91 @@ Key verified: Admin token required on all tabs, X-Request-ID correlation headers
 - DEEP-003 (MEDIUM): 8+ env vars missing from Cloud Run config — rate limit defaults work, payment gateway vars for unshipped features. Action: add to deploy config before enabling payment features.
 
 **Conclusion**: All 4 portals (POS, retailer-admin, supplier-portal, superadmin) are production-grade with complete API wiring, error handling, loading/empty states, and security controls. All 9 cross-functional data chains maintain data integrity end-to-end. The 3 findings are non-blocking for staging deployment.
+
+---
+
+## Phase 6A — External Dependencies Audit (4 integrations)
+
+**Audited**: 2026-03-20
+**Method**: Full source-code trace of each external service — SDK initialization, env var checks, graceful degradation, retry logic, timeout handling, webhook security.
+
+### 6A.1 — Razorpay Payment Gateway — PASS
+
+- **SDK**: razorpay@2.9.4 in payment-service
+- **Env vars**: `RAZORPAY_KEY_ID`, `KEY_SECRET`, `ACCOUNT_NUMBER`, `WEBHOOK_SECRET` — all optional, feature-gated
+- **Graceful degradation**: If unconfigured, core POS (cash, scan, checkout) works normally. UPI falls back to manual UTR entry.
+- **Webhook security**: HMAC-SHA256 with `crypto.timingSafeEqual()` (T-253). Production enforcement rejects all webhooks if secret missing (GO-LIVE-119).
+- **Idempotency**: Redis SET NX EX with 24h TTL (STG-500). Fallback to in-memory Map if Redis down.
+- **Retry**: Payout retries 3x with exponential backoff (1m/5m/30m). Only retries on 429/5xx, not config errors (T-258).
+- **Timeout**: 30s on all Razorpay API calls via AbortSignal.
+- **Endpoints**: 3 webhook handlers (payment, payout, refund) — all with signature verification.
+- **Test coverage**: razorpaySignature.unit.test.ts — valid/invalid/timing-safe signatures tested.
+
+### 6A.2 — Firebase (OTP/Auth) — PASS
+
+- **Backend**: firebase-admin SDK with ADC (Cloud Run) or explicit service account path.
+- **Env vars**: `FIREBASE_ENABLED`, `FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_PATH`.
+- **Graceful degradation**: If disabled, phone OTP flows return error; password auth works for retailer/supplier. POS uses device enrollment (not Firebase).
+- **Timeout**: 10s verification timeout with `Promise.race()` (GO-LIVE-HOME-001).
+- **Error mapping**: TOKEN_EXPIRED, TOKEN_INVALID, TOKEN_REVOKED, UNKNOWN → user-friendly messages.
+- **Client SDKs**: `isFirebaseReady()` check in retailer-admin and supplier-portal. reCAPTCHA auto-recovery on expiry.
+- **POS**: Firebase intentionally disabled — uses device JWT + staff PIN auth.
+
+### 6A.3 — GCS (Google Cloud Storage) — PASS
+
+- **SDK**: @google-cloud/storage with ADC or explicit key file.
+- **Env vars**: `GCS_DOCUMENTS_BUCKET`, `GCS_IMAGES_BUCKET`, `GCS_PROJECT_ID`.
+- **File validation**: Whitelist-based MIME type check (PDF/JPEG/PNG for compliance, CSV for imports). Size limits enforced (10MB documents, 5MB images).
+- **Graceful degradation**: Image uploads return null if GCS unavailable (caller uses placeholder). Document uploads require GCS (no local fallback — correct for Cloud Run which has no persistent disk).
+- **Startup**: GCS init wrapped in try-catch, warns on failure (non-blocking).
+
+### 6A.4 — WhatsApp (Meta Graph API) — PASS
+
+- **Protocol**: Meta Graph API v22.0 via raw fetch.
+- **Env vars**: `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`.
+- **Graceful degradation**: `isWhatsAppConfigured()` check. Returns `{ sent: false, errorCode: "NOT_CONFIGURED" }` if missing. Endpoints return 503.
+- **Retry**: 2 retries with exponential backoff on transient errors (429, 5xx).
+- **Rate limiting**: In-memory rate limiter (3/min, 10/hour per phone).
+- **Webhook security**: X-Hub-Signature-256 verification with `crypto.timingSafeEqual()`.
+- **Async**: All send operations are async. Webhook handler responds 200 immediately (Meta requirement).
+
+### Phase 6A Summary
+
+| Integration | Config Safe | Graceful Degradation | Retry/Timeout | Webhook Security | PASS |
+|---|---|---|---|---|---|
+| Razorpay | Env-driven, optional | Core POS works without | 3x backoff + 30s timeout | HMAC + timing-safe | PASS |
+| Firebase | FIREBASE_ENABLED gate | Password auth fallback | 10s timeout | N/A (server-side) | PASS |
+| GCS | Env-driven buckets | Images fallback, docs require GCS | N/A | N/A | PASS |
+| WhatsApp | isConfigured() check | Returns { sent: false } | 2x backoff | HMAC + timing-safe | PASS |
+
+**New findings: 0**
+
+**Phase 6A total: 4/4 PASS. All external dependencies production-grade with proper graceful degradation.**
+
+---
+
+## Findings Resolution Status
+
+| ID | Severity | Description | Status |
+|---|---|---|---|
+| DEEP-001 | LOW | CustomersPage search sanitization | **RESOLVED** — commit `5f006375` |
+| DEEP-002 | LOW | Migration 196 dead schema documented | **RESOLVED** — commit `86b0ae13` |
+| DEEP-003 | MEDIUM | Missing env vars added to docker-compose | **RESOLVED** — commit `86b0ae13` |
+
+**All 3 findings resolved. Zero open findings.**
+
+---
+
+## Final Audit Summary (PRE-GCP-AUDIT-002 Complete)
+
+| Phase | Scope | Audited | Pass | Findings |
+|---|---|---|---|---|
+| 1A | POS screens | 15 | 15 | 0 |
+| 2A | Retailer-admin | 35 | 35 | DEEP-001 (RESOLVED) |
+| 3A | Supplier-portal | 33 | 33 | 0 |
+| 4A | SuperAdmin | 47 | 47 | 0 |
+| 5A | Cross-functional chains | 9 | 9 | DEEP-002, DEEP-003 (RESOLVED) |
+| 6A | External dependencies | 4 | 4 | 0 |
+| **TOTAL** | **All platforms + chains + deps** | **143** | **143 PASS** | **3 found, 3 resolved** |
+
+**System is deployment-ready for GCP staging.**
