@@ -1,4 +1,7 @@
 -- V3-HARDEN-147: Schema support for principal procurement lane
+-- DEEP-002 AUDIT NOTE: invoice_dispatch_logs table (section 5) and invoice_pair_id column (section 4)
+-- are forward-looking schema — NOT yet used in application code. Safe to leave (empty table, NULL column).
+-- When implementing WhatsApp invoice dispatch, wire these to the dispatch service.
 -- Forward-only migration — adds columns/tables for the SuperMandi principal-sale model
 -- ROLLBACK: ALTER TABLE public.purchase_orders DROP COLUMN IF EXISTS procurement_lane, DROP COLUMN IF EXISTS linked_procurement_id, DROP COLUMN IF EXISTS invoice_pair_id; ALTER TABLE catalog.supplier_products DROP COLUMN IF EXISTS billing_model; DROP TABLE IF EXISTS public.invoice_dispatch_logs;
 
