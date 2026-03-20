@@ -310,17 +310,123 @@ No orphaned column references or missing tables.
 
 ---
 
-## Phases 2–5: PENDING
+## Phase 2 — Retailer-Admin Audit (32 pages)
 
-Phase 2 (Retailer-admin 30 pages), Phase 3 (Supplier portal 18 pages), Phase 4 (SuperAdmin 23 tabs), and Phase 5 (Cross-functional audit) are next.
+**Result: 32/32 PASS. Zero issues found.**
+
+| Category | Pages | Status |
+|---|---|---|
+| Auth (Login, Register, Forgot/Reset, Help) | 5 | PASS |
+| Dashboard & Core | 9 | PASS |
+| Sales & Finance | 9 | PASS |
+| Suppliers & Catalog | 5 | PASS |
+| Comms & Notifications | 2 | PASS |
+| Error/Fallback | 2 | PASS |
+
+Key verified: JWT store isolation via GO-LIVE-132 middleware, HttpOnly cookies (AUTH-STORAGE-001), 60-min idle timeout (V3-SESSION-025), LimitedModeGuard on all data pages, HTTPS enforcement (FIX-019).
+
+---
+
+## Phase 3 — Supplier Portal Audit (21 pages)
+
+**Result: 21/21 PASS. 2 MEDIUM issues noted.**
+
+| Category | Pages | Status |
+|---|---|---|
+| Auth (Login, Register, Onboard, Forgot/Reset, Pending) | 6 | PASS |
+| Dashboard (Products, Orders, Earnings, KYC, etc.) | 12 | PASS |
+| Other (Root redirect, Support, Upload) | 3 | PASS |
+
+**Issues (MEDIUM):**
+- **M-001**: Invoice PDF download uses raw `fetch()` instead of `apiFetch()` — may miss auth headers. Monitor in staging.
+- **M-002**: SSE reconnection behavior (Orders/Chat) untested under network degradation. Verify in E2E.
+
+Key verified: Next.js middleware auth on all dashboard routes, `basePath: /supplier`, `trailingSlash: true`, Firebase Phone Auth, no localStorage tokens (cookies only), supplier_id from JWT (never client-sent).
+
+---
+
+## Phase 4 — SuperAdmin Audit (30 tabs)
+
+**Result: 30/30 PASS. Zero issues found.**
+
+| Category | Tabs | Status |
+|---|---|---|
+| Core (Stores, Users, Suppliers, Applications, Catalog, Devices) | 6 | PASS |
+| Finance (Analytics, Payments, Invoices, Refunds) | 4 | PASS |
+| Operations (Staff, Audit, Compliance, GST, Documents, Events) | 6 | PASS |
+| Monitoring (Settings, Monitoring, Health, Maintenance, Quality) | 5 | PASS |
+| Phase 21 (DemandPressure, Allocations, ReorderPolicies) | 3 | PASS |
+| Communications (CreditProviders, WhatsApp, GrnAlerts, Support, AI) | 5 | PASS |
+| Registration | 1 | PASS |
+
+Key verified: Admin token required on all tabs, X-Request-ID correlation headers, confirmation dialogs on money-movement operations, Page Visibility API for auto-refresh, CSV injection prevention (AuditTab), blob URL lifecycle management (DocumentsTab).
+
+---
+
+## Phase 5 — Cross-Functional Audit (9 flows)
+
+**Result: 8/9 PASS. 1 HIGH + 2 MEDIUM issues.**
+
+| Flow | Status |
+|---|---|
+| 1. POS sale → retailer-admin invoices | PASS |
+| 2. Supplier product → catalog → POS scan | PASS |
+| 3. POS reorder → supplier order → GRN → stock-in | PASS |
+| 4. Customer credit (udhar) → retailer dashboard | PASS |
+| 5. Staff management chain (admin → retailer → POS PIN) | PASS |
+| 6. Store provisioning (admin → retailer → POS enroll) | PASS |
+| 7. Migrations 195–202 schema usage | 7/8 PASS |
+| 8. GCP environment variables | PASS (with warnings) |
+| 9. API Gateway routing | PASS |
+
+**Issues:**
+- **HIGH (HI-001)**: Migration 202 (RBAC permissions) — schema created but no backend routes reference new tables. Either wire RBAC checks or mark deferred to Phase 22.
+- **MEDIUM (MI-001)**: ADMIN_SERVICE_URL not documented in `.env.prod.example` — mandatory for Cloud Run fail-fast.
+- **MEDIUM (MI-002)**: Payment provider partial config only warns, doesn't fail-fast at startup. Partial Razorpay config (key without secret) will cause 500s at runtime.
+
+---
+
+## Complete Issue Registry
+
+| ID | Severity | Phase | Description | Status |
+|---|---|---|---|---|
+| **STG-503** | CRITICAL | Phase 1 | Zero-amount checkout guard missing in cartStore/usePaymentFlow | FIX-REQUIRED |
+| **HI-001** | HIGH | Phase 5 | Migration 202 RBAC schema unused by backend routes | VERIFY or DEFER |
+| **MI-001** | MEDIUM | Phase 5 | ADMIN_SERVICE_URL missing from .env.prod.example | DOCUMENT |
+| **MI-002** | MEDIUM | Phase 5 | Payment provider partial config doesn't fail-fast | HARDEN |
+| **M-001** | MEDIUM | Phase 3 | Supplier invoice PDF uses raw fetch() | MONITOR |
+| **M-002** | MEDIUM | Phase 3 | SSE reconnection untested under poor network | VERIFY in E2E |
+| **STG-496** | — | Phase 1 | Double-tap payment guard | ALREADY IMPLEMENTED ✅ |
+| **STG-527** | LOW | Phase 1 | ChatListScreen.tsx does not exist | DETERMINE intent |
+
+---
+
+## Grand Summary
+
+| Platform | Screens/Pages/Tabs | Pass | Issues |
+|---|---|---|---|
+| **POS** | 36 | 35 | 1 (STG-503) |
+| **Retailer-admin** | 32 | 32 | 0 |
+| **Supplier-portal** | 21 | 21 | 2 MEDIUM |
+| **SuperAdmin** | 30 | 30 | 0 |
+| **Cross-functional** | 9 flows | 8 | 1 HIGH + 2 MEDIUM |
+| **TOTAL** | **128 surfaces** | **126 PASS** | **1 CRITICAL + 1 HIGH + 4 MEDIUM** |
 
 ---
 
 ## Action Items Before GCP Staging Redeploy
 
-1. **STG-503**: Implement zero-amount checkout guard (BLOCKING)
-2. **STG-496**: Already implemented ✅ (double-tap guard in usePaymentFlow)
-3. **STG-527**: ChatListScreen.tsx does not exist — determine if intentionally removed or needs creation
-4. Set `EXPO_PUBLIC_APP_STORE_URL` env var before iOS launch (non-blocking for Android)
-5. Verify migrations 195–202 apply cleanly on staging Cloud SQL
-6. Run operator E2E on staging after deploy
+### BLOCKING
+1. **STG-503**: Implement zero-amount checkout guard in usePaymentFlow/PaymentScreenV3
+
+### HIGH PRIORITY
+2. **HI-001**: Verify migration 202 RBAC is intentionally deferred or wire permission checks
+3. **MI-002**: Make payment provider validation fail-fast (partial config → exit 1)
+
+### BEFORE PRODUCTION (non-blocking for staging)
+4. **MI-001**: Add ADMIN_SERVICE_URL to .env.prod.example
+5. **M-001**: Verify supplier invoice PDF auth in staging
+6. **M-002**: Test SSE reconnection under network throttling
+7. Set `EXPO_PUBLIC_APP_STORE_URL` before iOS launch
+8. Verify migrations 195–202 apply cleanly on staging Cloud SQL
+9. Run operator E2E on staging after deploy
