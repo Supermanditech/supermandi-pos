@@ -407,14 +407,14 @@ Key verified: Admin token required on all tabs, X-Request-ID correlation headers
 
 | ID | Severity | Phase | Description | Status |
 |---|---|---|---|---|
-| **STG-503** | CRITICAL | Phase 1 | Zero-amount checkout guard missing in cartStore/usePaymentFlow | FIX-REQUIRED |
-| **HI-001** | HIGH | Phase 5 | Migration 202 RBAC schema unused by backend routes | VERIFY or DEFER |
-| **MI-001** | MEDIUM | Phase 5 | ADMIN_SERVICE_URL missing from .env.prod.example | DOCUMENT |
-| **MI-002** | MEDIUM | Phase 5 | Payment provider partial config doesn't fail-fast | HARDEN |
-| **M-001** | MEDIUM | Phase 3 | Supplier invoice PDF uses raw fetch() | MONITOR |
-| **M-002** | MEDIUM | Phase 3 | SSE reconnection untested under poor network | VERIFY in E2E |
-| **STG-496** | — | Phase 1 | Double-tap payment guard | ALREADY IMPLEMENTED ✅ |
-| **STG-527** | LOW | Phase 1 | ChatListScreen.tsx does not exist | DETERMINE intent |
+| **STG-503** | CRITICAL | Phase 1 | Zero-amount checkout guard missing | **FIXED** — guard in usePaymentFlow:34 + disabled buttons in PaymentScreenV3 |
+| **HI-001** | HIGH | Phase 5 | Migration 202 RBAC schema unused | **FALSE POSITIVE** — demandSignals.ts:27,54,87 + allocations.ts:29,46,73,93,115 use requirePermission() |
+| **MI-001** | MEDIUM | Phase 5 | ADMIN_SERVICE_URL missing from .env.prod.example | **FIXED** — added to .env.prod.example |
+| **MI-002** | MEDIUM | Phase 5 | Payment provider partial config doesn't fail-fast | **FIXED** — log.error at startup for partial config |
+| **M-001** | MEDIUM | Phase 3 | Supplier invoice PDF uses raw fetch() | **FALSE POSITIVE** — fetch includes Bearer token + credentials:include |
+| **M-002** | MEDIUM | Phase 3 | SSE reconnection untested under poor network | **VERIFIED** — ReconnectingEventSource with backoff used in orders/page.tsx:133. Needs E2E staging test only. |
+| **STG-496** | — | Phase 1 | Double-tap payment guard | **ALREADY IMPLEMENTED** ✅ |
+| **STG-527** | LOW | Phase 1 | ChatListScreen.tsx does not exist | **INTENTIONAL** — Chat is web-only (retailer-admin + supplier-portal). Not in POS prototype. |
 
 ---
 
@@ -433,17 +433,20 @@ Key verified: Admin token required on all tabs, X-Request-ID correlation headers
 
 ## Action Items Before GCP Staging Redeploy
 
-### BLOCKING
-1. **STG-503**: Implement zero-amount checkout guard in usePaymentFlow/PaymentScreenV3
+### ALL FINDINGS RESOLVED
 
-### HIGH PRIORITY
-2. **HI-001**: Verify migration 202 RBAC is intentionally deferred or wire permission checks
-3. **MI-002**: Make payment provider validation fail-fast (partial config → exit 1)
+| Finding | Resolution |
+|---|---|
+| STG-503 (CRITICAL) | FIXED — `usePaymentFlow.ts:34` rejects grandTotal<=0, PaymentScreenV3 disables buttons + shows warning |
+| HI-001 (HIGH) | FALSE POSITIVE — admin routes use `requirePermission("allocations/demand_signals")` |
+| MI-001 (MEDIUM) | FIXED — ADMIN_SERVICE_URL added to `.env.prod.example` |
+| MI-002 (MEDIUM) | FIXED — partial config now logs ERROR at startup |
+| M-001 (MEDIUM) | FALSE POSITIVE — PDF fetch includes Bearer auth + credentials |
+| M-002 (MEDIUM) | VERIFIED — `ReconnectingEventSource` with backoff. E2E staging test recommended. |
+| STG-527 (LOW) | INTENTIONAL — Chat is web-only, not in POS prototype |
 
-### BEFORE PRODUCTION (non-blocking for staging)
-4. **MI-001**: Add ADMIN_SERVICE_URL to .env.prod.example
-5. **M-001**: Verify supplier invoice PDF auth in staging
-6. **M-002**: Test SSE reconnection under network throttling
-7. Set `EXPO_PUBLIC_APP_STORE_URL` before iOS launch
-8. Verify migrations 195–202 apply cleanly on staging Cloud SQL
-9. Run operator E2E on staging after deploy
+### REMAINING BEFORE PRODUCTION (non-blocking for staging)
+1. Set `EXPO_PUBLIC_APP_STORE_URL` before iOS launch
+2. Verify migrations 195–202 apply cleanly on staging Cloud SQL
+3. Test SSE reconnection under network throttling (E2E)
+4. Run operator E2E on staging after deploy

@@ -233,8 +233,10 @@ export async function validateConversionSchemaReadiness(pool: any): Promise<{ re
     const present = check.required.filter(v => process.env[v]);
     const absent = check.required.filter(v => !process.env[v]);
     if (present.length > 0 && absent.length > 0) {
-      // Partial config — provider ID set but secret missing
-      missing.push(`${check.name}: partial config (missing ${absent.join(', ')})`);
+      // MI-002: Partial config — provider ID set but secret missing. Log as ERROR for visibility.
+      const msg = `${check.name}: partial config (missing ${absent.join(', ')}) — will cause 500 errors at runtime`;
+      missing.push(msg);
+      log.error(`[STARTUP] PAYMENT PROVIDER MISCONFIGURED: ${msg}`);
     } else if (present.length === check.required.length) {
       configuredProviders.push(check.name);
     }

@@ -31,6 +31,8 @@ export function usePaymentFlow() {
 
   const createSaleStep = useCallback(async (method: PaymentMethod): Promise<string | null> => {
     if (items.length === 0) { showToast("Cart is empty"); return null; }
+    // STG-503: Block zero-amount checkout — prevents spurious zero-revenue sales
+    if (grandTotal <= 0) { showToast("Cannot complete sale with ₹0 total"); return null; }
     const online = await isOnline();
     if (!online && method === "UPI") {
       showToast("UPI requires internet connection");
@@ -62,7 +64,7 @@ export function usePaymentFlow() {
     logger.debug("V3Payment", `sale_created:${result.saleId},billRef:${result.billRef}`);
     setSaleId(result.saleId);
     return result.saleId;
-  }, [items]);
+  }, [items, grandTotal]);
 
   /** Wrap a payment recording step with sale creation + cart lock + idempotency */
   const executePayment = useCallback(async (

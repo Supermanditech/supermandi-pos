@@ -36,6 +36,8 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
   const grandTotal = total + gst;
   const itemCount = items.reduce((s, i) => s + i.quantity, 0);
   const totalDisplay = `₹${Math.round(grandTotal / 100).toLocaleString("en-IN")}`;
+  // STG-503: Block zero-amount checkout
+  const isZeroAmount = grandTotal <= 0;
 
   // Split payment state (stays in chooser since it's a combined flow)
   const [splitVisible, setSplitVisible] = useState(false);
@@ -92,9 +94,16 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
         <Text style={styles.totalAmount}>{totalDisplay}</Text>
         <Text style={styles.totalSub}>{itemCount} item{itemCount !== 1 ? "s" : ""}{isBulk ? " · incl. GST" : ""}</Text>
 
+        {/* STG-503: Zero-amount warning */}
+        {isZeroAmount ? (
+          <View style={{ backgroundColor: "#FEE2E2", padding: 10, borderRadius: 8, marginBottom: 12 }}>
+            <Text style={{ color: colors.error, fontSize: 13, fontWeight: "700", textAlign: "center" }}>Cannot complete sale with ₹0 total</Text>
+          </View>
+        ) : null}
+
         {/* V3-FIX-071: Method buttons navigate to child screens */}
         <View style={styles.methodGrid}>
-          <Pressable style={styles.methodBtn} onPress={onCash} accessibilityRole="button">
+          <Pressable style={[styles.methodBtn, isZeroAmount && { opacity: 0.4 }]} onPress={isZeroAmount ? undefined : onCash} accessibilityRole="button" disabled={isZeroAmount}>
             <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={1.5}>
               <Rect x={2} y={6} width={20} height={12} rx={2} />
               <Circle cx={12} cy={12} r={3} />
@@ -104,7 +113,7 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
             <Text style={styles.methodHint}>नकद</Text>
           </Pressable>
 
-          <Pressable style={styles.methodBtn} onPress={onUpi} accessibilityRole="button">
+          <Pressable style={[styles.methodBtn, isZeroAmount && { opacity: 0.4 }]} onPress={isZeroAmount ? undefined : onUpi} accessibilityRole="button" disabled={isZeroAmount}>
             <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={1.5}>
               <Rect x={5} y={2} width={14} height={20} rx={2} />
               <Line x1={12} y1={18} x2={12} y2={18.01} strokeWidth={2} />
@@ -114,7 +123,7 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
             <Text style={styles.methodHint}>यूपीआई</Text>
           </Pressable>
 
-          <Pressable style={styles.methodBtn} onPress={onUdhar} accessibilityRole="button">
+          <Pressable style={[styles.methodBtn, isZeroAmount && { opacity: 0.4 }]} onPress={isZeroAmount ? undefined : onUdhar} accessibilityRole="button" disabled={isZeroAmount}>
             <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={1.5}>
               <Path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
               <Path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
