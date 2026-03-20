@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 527,
+  "version": 528,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -8808,6 +8808,61 @@
         "parity_scanned": "Parity scan clean — 2 files, 0 issues at 2026-03-20T08:56:13.496Z",
         "parity_fixed": "No parity gaps found — nothing to fix",
         "single_commit": "fix(V3-BE-013): single commit, 2 files changed",
+        "ticket_parked": "Committing on codex/phase21-final-closure"
+      }
+    },
+    {
+      "ticket": "V3-REG-022",
+      "file": "backend/tests/contracts/crossSurfaceStaffAuth.unit.test.ts",
+      "start_line": 1,
+      "end_line": 155,
+      "checksum": "e24991f78cc241b6",
+      "description": "Cross-surface staff auth: owner creates staff on retailer-admin, POS verifies PIN via shared lookup hash + bcrypt",
+      "test_file": "backend/tests/contracts/crossSurfaceStaffAuth.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-20T09:29:46.337Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "Tests POST /retailer-admin/staff creation → POST /pos/staff/login verification via shared pinLookupHash",
+        "api_errors": "Tests wrong PIN (bcrypt fail), inactive staff (is_active=true filter), lockout (computeLockout), format rejection",
+        "store_isolation": "Tests PIN lookup hash is store-scoped: same PIN in different stores produces different hash",
+        "business_logic": "PIN uniqueness within store, lockout after 5 failures, PIN reset invalidates old PIN immediately",
+        "business_behaviour": "Full round-trip: create PIN (bcrypt+lookup_hash) → verify PIN (lookup_hash match + bcrypt.compare) → success",
+        "db_schema": "Uses platform.store_staff with pin_hash, pin_lookup_hash, is_active, locked_until, failed_login_count",
+        "impacted_files": "1 new file: crossSurfaceStaffAuth.unit.test.ts + FIX_LEDGER.json",
+        "fix_ledger_check": "123 fixes, zero drift, V3-REG-022 registered",
+        "no_agent_conflict": "Single session, no parallel agents",
+        "gcp_parity": "Test-only file, no GCP-specific code, compatible with staging",
+        "regression_check": "575/575 backend (28 suites), 67/67 gate, no regressions",
+        "test_guard": "crossSurfaceStaffAuth.unit.test.ts — 22 behavioral tests pass",
+        "single_commit": "fix(V3-REG-022): single commit, 1 new test file",
         "ticket_parked": "Committing on codex/phase21-final-closure"
       }
     }
