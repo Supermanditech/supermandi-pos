@@ -7,11 +7,13 @@ import { CatalogTab } from '../../tabs/CatalogTab';
 const mockFetchCategories = vi.fn();
 const mockFetchProducts = vi.fn();
 const mockOverrideProductCategory = vi.fn();
+const mockUpdateProductConversion = vi.fn();
 
 vi.mock('../../api/catalog', () => ({
   fetchCategories: (...args: unknown[]) => mockFetchCategories(...args),
   fetchProducts: (...args: unknown[]) => mockFetchProducts(...args),
   overrideProductCategory: (...args: unknown[]) => mockOverrideProductCategory(...args),
+  updateProductConversion: (...args: unknown[]) => mockUpdateProductConversion(...args),
 }));
 
 // Mock react-hot-toast
@@ -275,7 +277,7 @@ describe('CatalogTab', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Edit Product Category')).toBeTruthy();
+      expect(screen.getByText('Edit Product — Category & Conversion')).toBeTruthy();
       expect(screen.getByLabelText(/New Category/)).toBeTruthy();
     });
   });
@@ -351,12 +353,12 @@ describe('CatalogTab', () => {
     render(<CatalogTab />);
 
     await waitFor(() => fireEvent.click(screen.getByText('Edit Category')));
-    await waitFor(() => expect(screen.getByText('Edit Product Category')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Edit Product — Category & Conversion')).toBeTruthy());
 
     fireEvent.click(screen.getByText('Cancel'));
 
     await waitFor(() => {
-      expect(screen.queryByText('Edit Product Category')).toBeNull();
+      expect(screen.queryByText('Edit Product — Category & Conversion')).toBeNull();
     });
   });
 

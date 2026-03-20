@@ -98,8 +98,14 @@ jest.mock('lucide-react', () => {
     MessageSquare: mockIcon('MessageSquare'),
     CreditCard: mockIcon('CreditCard'),
     HelpCircle: mockIcon('HelpCircle'),
+    GitBranch: mockIcon('GitBranch'),
   };
 });
+
+// Mock ThemeToggle component
+jest.mock('../../../components/ThemeToggle', () => ({
+  ThemeToggle: () => <div data-testid="theme-toggle">ThemeToggle</div>,
+}));
 
 describe('DashboardLayout', () => {
   beforeEach(() => {
@@ -129,6 +135,11 @@ describe('DashboardLayout', () => {
     expect(screen.getByText('Earnings')).toBeInTheDocument();
     expect(screen.getByText('Invoices')).toBeInTheDocument();
     expect(screen.getByText('Notifications')).toBeInTheDocument();
+    expect(screen.getByText('Chat')).toBeInTheDocument();
+    expect(screen.getByText('BNPL Orders')).toBeInTheDocument();
+    expect(screen.getByText('Allocations')).toBeInTheDocument();
+    expect(screen.getByText('Profile')).toBeInTheDocument();
+    expect(screen.getByText('Help & Support')).toBeInTheDocument();
   });
 
   it('renders supplier business name', () => {

@@ -110,8 +110,8 @@ describe('AuthProvider initial state', () => {
     localStorage.setItem('retailer_active_store_id', storeId);
     localStorage.setItem(`retailer_${storeId}_user`, JSON.stringify({ id: 'u1', phone: '+91x', role: 'admin' }));
     localStorage.setItem(`retailer_${storeId}_store`, JSON.stringify({ id: storeId, code: 'OLD', name: 'Old Store' }));
-    // Set last activity to > 30 minutes ago
-    localStorage.setItem(`retailer_${storeId}_last_activity`, String(Date.now() - 31 * 60 * 1000));
+    // Set last activity to > 60 minutes ago (V3-SESSION-025: idle timeout is now 60 min)
+    localStorage.setItem(`retailer_${storeId}_last_activity`, String(Date.now() - 61 * 60 * 1000));
 
     mockedHasAuthCookie.mockReturnValue(true);
 
@@ -934,9 +934,9 @@ describe('Refresh skips when no auth cookie', () => {
 // ── Idle Timeout Warning and Logout (J20-TEST-005) ───────────────────────
 
 describe('Idle timeout warning and logout (J20-TEST-005)', () => {
-  // Constants matching AuthContext.tsx
-  const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-  const WARNING_BEFORE_MS = 5 * 60 * 1000; // 5 minutes before timeout
+  // Constants matching AuthContext.tsx (V3-SESSION-025: default 60 minutes)
+  const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes
+  const WARNING_BEFORE_MS = 5 * 60 * 1000; // 5 minutes before timeout (capped at IDLE_TIMEOUT_MS / 6)
   const IDLE_CHECK_INTERVAL = 30_000; // 30 seconds
 
   async function loginFirst() {

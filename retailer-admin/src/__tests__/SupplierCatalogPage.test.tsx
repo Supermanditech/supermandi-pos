@@ -231,7 +231,8 @@ describe('SupplierCatalogPage', () => {
       mockAuthFetch.mockReturnValue(makeFetchResponse([makeProduct({ bnplEligible: true, bnplMaxDays: 30 })]));
       renderPage();
       await waitFor(() => {
-        expect(screen.getByText(/BNPL 30d/)).toBeInTheDocument();
+        // V3-FIX-173: BNPL text appears in both the scat-bnpl-badge and inline B2B metadata
+        expect(screen.getAllByText(/BNPL 30d/).length).toBeGreaterThanOrEqual(1);
       });
     });
 
@@ -478,7 +479,7 @@ describe('SupplierCatalogPage', () => {
         expect(addCall![0]).toContain('/supplier-catalog/prod-001/add');
         expect(addCall![2]).toEqual(expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ sellPrice: 10000, initialStock: 0 }),
+          body: JSON.stringify({ sellPrice: 10000, initialStock: 0, conversionConfirmed: false }),
         }));
       });
     });
