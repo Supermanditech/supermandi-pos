@@ -184,7 +184,7 @@ posStaffRouter.post(
         });
       }
 
-      if (!/^\d{4,6}$/.test(pin)) {
+      if (!isValidPinFormat(pin)) {
         return res.status(400).json({
           error: { code: "INVALID_PIN_FORMAT", message: "PIN must be 4-6 digits" }
         });
