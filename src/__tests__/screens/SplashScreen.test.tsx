@@ -100,14 +100,15 @@ describe("SplashScreen", () => {
     });
   });
 
-  it("navigates to EnrollDevice when no session", async () => {
+  // V3: No session routes to V3Phone (OTP flow), not legacy EnrollDevice
+  it("navigates to V3Phone when no session", async () => {
     mockGetDeviceSession.mockResolvedValue(null);
     render(<SplashScreen />);
 
     act(() => { jest.advanceTimersByTime(1100); });
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("EnrollDevice");
+      expect(mockReplace).toHaveBeenCalledWith("V3Phone");
     });
   });
 

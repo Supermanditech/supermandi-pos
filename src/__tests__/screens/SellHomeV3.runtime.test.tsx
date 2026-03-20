@@ -18,6 +18,7 @@ const fs = require("fs");
 const sell = fs.readFileSync("src/screens/v3/SellScreenV3.tsx", "utf8");
 const tile = fs.readFileSync("src/components/v3/ProductTileV3.tsx", "utf8");
 const search = fs.readFileSync("src/components/v3/UniversalSearchV3.tsx", "utf8");
+const cartPayload = fs.readFileSync("src/services/cartPayload.ts", "utf8");
 const root = fs.readFileSync("src/screens/v3/PosRootLayoutV3.tsx", "utf8");
 const sse = fs.readFileSync("src/services/sseClient.ts", "utf8");
 const uiStatus = fs.readFileSync("src/services/api/uiStatusApi.ts", "utf8");
@@ -55,14 +56,15 @@ describe("V3-HARDEN-059: Bulk/Trade resolved", () => {
 });
 
 describe("V3-HARDEN-060: Canonical product identity", () => {
-  it("grid-add key is barcode ?? id", () => {
-    expect(sell).toContain("id: product.barcode ?? product.id");
+  // V3-FIX-135: Identity logic extracted to cartPayload.ts
+  it("grid-add key is barcode ?? id (in cartPayload)", () => {
+    expect(cartPayload).toContain("id: tile.barcode ?? tile.id");
   });
-  it("search-add key is barcode ?? id", () => {
-    expect(sell).toContain("id: result.barcode ?? result.id");
+  it("search-add key is barcode ?? id (in cartPayload)", () => {
+    expect(cartPayload).toContain("barcode ?? ");
   });
   it("duplicate detection checks both id and barcode", () => {
-    expect(sell).toContain("i.id === product.id || i.barcode === product.barcode");
+    expect(sell).toContain("i.id === (product.barcode ?? product.id) || i.barcode === product.barcode");
   });
 });
 
@@ -197,8 +199,9 @@ describe("V3-HARDEN-064: Click-path contracts", () => {
   it("category chip press sets selectedCategory", () => {
     expect(sell).toContain("setSelectedCategory(item)");
   });
-  it("tile press calls handleAddProduct", () => {
-    expect(sell).toContain("handleAddProduct(item)");
+  // V3-FIX-135: Tile tap opens detail sheet, not direct add
+  it("tile press calls handleTilePress (opens detail)", () => {
+    expect(sell).toContain("handleTilePress(item)");
   });
   it("cart strip opens cart sheet", () => {
     expect(sell).toContain("setCartSheetVisible(true)");

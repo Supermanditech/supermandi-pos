@@ -1,5 +1,6 @@
 /**
  * Tests for useSessionTimeout hook
+ * V3-SESSION-025: Timeout reduced to 10 minutes (soft-lock to PIN re-entry)
  */
 import { renderHook, act } from '@testing-library/react-native';
 import { AppState } from 'react-native';
@@ -27,12 +28,13 @@ describe('useSessionTimeout', () => {
     expect(onLogout).not.toHaveBeenCalled();
   });
 
-  it('calls onLogout after idle timeout (35 minutes)', () => {
+  // V3-SESSION-025: Timeout is 10 minutes (not legacy 35)
+  it('calls onLogout after idle timeout (10 minutes)', () => {
     const onLogout = jest.fn();
     renderHook(() => useSessionTimeout(onLogout));
 
-    // Advance past 35 minutes
-    jest.advanceTimersByTime(35 * 60 * 1000 + 30000);
+    // Advance past 10 minutes
+    jest.advanceTimersByTime(10 * 60 * 1000 + 30000);
 
     expect(onLogout).toHaveBeenCalled();
   });
@@ -45,23 +47,24 @@ describe('useSessionTimeout', () => {
     expect(clearIntervalSpy).toHaveBeenCalled();
   });
 
+  // V3-SESSION-025: 10-min timeout, reset at 8 min, check 8 min later
   it('resetTimer resets the idle counter', () => {
     const onLogout = jest.fn();
     const { result } = renderHook(() => useSessionTimeout(onLogout));
 
-    // Advance 30 minutes
-    jest.advanceTimersByTime(30 * 60 * 1000);
+    // Advance 8 minutes (near timeout but not yet)
+    jest.advanceTimersByTime(8 * 60 * 1000);
 
     // Reset timer
     act(() => {
       result.current.resetTimer();
     });
 
-    // Advance another 30 minutes (total 60 from start, but only 30 from reset)
-    jest.advanceTimersByTime(30 * 60 * 1000);
+    // Advance another 8 minutes (only 8 min from reset, under 10-min threshold)
+    jest.advanceTimersByTime(8 * 60 * 1000);
 
-    // Should not have logged out because we reset at 30 min
-    // (need 35 min from reset to logout)
+    // Should not have logged out because we reset at 8 min
+    // (need 10 min from reset to logout)
     expect(onLogout).not.toHaveBeenCalled();
   });
 });

@@ -472,13 +472,13 @@ describe("SellScreenV3 — runtime mounted tests (V3-HARDEN-063)", () => {
   // ═══ Cart identity / add-to-cart ═══════════════════════════════════════════
 
   describe("Cart identity and add-to-cart", () => {
-    it("tapping a tile calls addItem with barcode ?? id as identity", async () => {
+    // V3-FIX-135: Tile tap opens detail sheet, not direct add-to-cart
+    it("tapping a tile opens detail (does not directly add to cart)", async () => {
       mockProducts = [
         { id: "p1", name: "Coke", priceMinor: 2000, currency: "INR", barcode: "8901234", category: "Beverages", stock: 10 },
       ];
       render(<SellScreenV3 />);
 
-      // Switch to Beverages to see the product
       await waitFor(() => {
         expect(screen.getByText("Beverages")).toBeTruthy();
       });
@@ -489,12 +489,8 @@ describe("SellScreenV3 — runtime mounted tests (V3-HARDEN-063)", () => {
       });
       fireEvent.press(screen.getByText("Coke"));
 
-      expect(mockAddItem).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: "8901234", // barcode ?? id → barcode takes priority
-          name: "Coke",
-        })
-      );
+      // Tile press should NOT call addItem directly (V3-FIX-135)
+      expect(mockAddItem).not.toHaveBeenCalled();
     });
 
     it("shows cart strip with item count when items are in cart", async () => {
