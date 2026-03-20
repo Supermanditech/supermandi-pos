@@ -9075,6 +9075,7 @@
     "docker_ts_fix": "stockReconciliation import extension",
     "deploy_gate_fix": "staging-aware audit gate",
     "predeploy_gates_fix": "continue-on-error for live-staging gates",
-    "predeploy_all_gates": "all DB/staging gates continue-on-error"
+    "predeploy_all_gates": "all DB/staging gates continue-on-error",
+    "splash_enrollment_fix": "no session → EnrollDevice screen"
   }
 }
