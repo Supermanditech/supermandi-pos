@@ -10,7 +10,7 @@
  * Run as scheduled job (daily) or on-demand via admin API.
  */
 
-import { getPool } from "../db";
+import { getPool } from "../db/client.js";
 
 export interface ReconciliationResult {
   checked: number;
