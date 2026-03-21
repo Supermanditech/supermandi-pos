@@ -2330,6 +2330,23 @@ async function generateSaleInvoice(
       paymentMode,
     });
 
+    // GCP-STG-0086: Auto-send bill via WhatsApp if customer phone available
+    if (sale.customer_phone) {
+      try {
+        const { isWhatsAppConfigured, sendTextMessage, normalizePhone } = await import("../../../services/whatsappService");
+        if (isWhatsAppConfigured()) {
+          const phone = normalizePhone(sale.customer_phone);
+          if (phone.length >= 10) {
+            const billMsg = `🧾 *Bill Receipt*\n\nStore: ${store.name || "SuperMandi"}\nBill: ${sale.bill_ref || saleId}\nTotal: ₹${(Number(sale.total_minor) / 100).toFixed(2)}\nPayment: ${paymentMode}\nInvoice: ${invoice.invoiceNumber}\n\nThank you for shopping with us! 🙏`;
+            await sendTextMessage({ to: phone, body: billMsg });
+            log.info("[invoice-auto] WhatsApp receipt sent", { saleId, phone });
+          }
+        }
+      } catch (waErr) {
+        log.warn("[invoice-auto] WhatsApp auto-send failed (non-critical):", waErr);
+      }
+    }
+
     return invoice.id;
   } catch (err: any) {
     // Never throw — invoice failure must not affect payment

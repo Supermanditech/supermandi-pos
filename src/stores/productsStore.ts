@@ -208,10 +208,13 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     if (!query.trim()) return products;
 
     const lowercaseQuery = query.toLowerCase();
+    // GCP-STG-0093: Multi-parameter search — name, barcode, category, brand, description
     return products.filter(product =>
       product.name.toLowerCase().includes(lowercaseQuery) ||
       (product.barcode ? product.barcode.toLowerCase().includes(lowercaseQuery) : false) ||
-      product.category?.toLowerCase().includes(lowercaseQuery)
+      product.category?.toLowerCase().includes(lowercaseQuery) ||
+      (product as any).brand?.toLowerCase().includes(lowercaseQuery) ||
+      (product as any).description?.toLowerCase().includes(lowercaseQuery)
     );
   },
 

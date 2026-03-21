@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import { log } from "../lib/logger";
 // V3-HARDEN-133: Import ledger event matrix for enforcement
 import { validateLedgerConsistency, type LedgerEventType } from "./ledgerEventMatrix";
+import { emitStockEvent } from "./sseService"; // GCP-STG-0081
 
 export type InventoryMovementType = "RECEIVE" | "SELL" | "ADJUSTMENT";
 
@@ -341,6 +342,9 @@ export async function applyInventoryMovement(
      WHERE store_id = $1 AND product_id = $2`,
     [storeId, globalProductId, delta]
   );
+
+  // GCP-STG-0081: Emit real-time stock change SSE event to POS clients
+  try { emitStockEvent(storeId, { productId: globalProductId, newQuantity: nextQty, delta, movementType: input.movementType }); } catch { /* non-critical */ }
 
   return { previousQty: current, nextQty, delta };
 }
