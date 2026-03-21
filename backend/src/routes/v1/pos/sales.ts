@@ -69,6 +69,10 @@ type SaleItemInput = {
   name?: string;
   barcode?: string;
   batchNumber?: string;
+  // GCP-STG-0118: Item-level discount from cart edits
+  itemDiscount?: number;
+  itemDiscountMinor?: number;
+  item_discount?: number;
 };
 
 type BillPaymentMode = "UPI" | "CASH" | "DUE" | "UNKNOWN";
@@ -1277,14 +1281,18 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
         typeof item.barcode === "string" && item.barcode.trim()
           ? item.barcode.trim()
           : fallback?.barcode ?? null;
-      const lineTotal = item.priceMinor * item.quantity;
+      // GCP-STG-0118: Capture item-level discount from cart edits
+      const itemDiscountMinor = Math.max(0, Math.round(
+        item.itemDiscountMinor ?? item.itemDiscount ?? item.item_discount ?? 0
+      ));
+      const lineTotal = (item.priceMinor * item.quantity) - itemDiscountMinor;
       const itemProductId = fallback?.productId ?? item.globalProductId ?? item.variantId;
       // T-060: Store stock_quantity for confirm endpoint to use correct deduction
       const stockQty = item.stockQuantity !== item.quantity ? item.stockQuantity : null;
       await client.query(
         `
-        INSERT INTO sale_items (id, sale_id, store_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode, stock_quantity, batch_number)
-        VALUES ($1, $2, $3::uuid, $4::uuid, $5, $6, $7, $8, $9, $10, $11, $12)
+        INSERT INTO sale_items (id, sale_id, store_id, product_id, variant_id, quantity, price_minor, line_total_minor, discount_minor, item_name, barcode, stock_quantity, batch_number)
+        VALUES ($1, $2, $3::uuid, $4::uuid, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         `,
         [
           randomUUID(),
@@ -1295,6 +1303,7 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
           item.quantity,
           item.priceMinor,
           lineTotal,
+          itemDiscountMinor,
           itemName,
           itemBarcode,
           stockQty,
