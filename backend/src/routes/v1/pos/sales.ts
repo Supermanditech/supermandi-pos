@@ -1070,6 +1070,8 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
     await client.query("BEGIN");
     // Set SERIALIZABLE isolation to prevent race conditions in inventory deduction
     await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+    // GCP-STG-0084 FIX: Set RLS store context for defense-in-depth
+    await client.query("SELECT set_config('app.current_store_id', $1::text, true)", [storeId]);
 
     const resolvedItems: Array<{
       variantId: string;
@@ -1440,6 +1442,8 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
   try {
     await client.query("BEGIN");
     await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+    // GCP-STG-0084 FIX: Set RLS store context for defense-in-depth
+    await client.query("SELECT set_config('app.current_store_id', $1::text, true)", [storeId]);
 
     // SA-P1-006: Check store-level payment method restrictions
     const apmRes = await client.query(
@@ -1653,6 +1657,8 @@ posSalesRouter.post("/sales/:saleId/cancel", requireDeviceToken, requireActiveSt
     // AUD-060-D FIX: Use SERIALIZABLE isolation + FOR UPDATE to prevent cancel+pay race
     await client.query("BEGIN");
     await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+    // GCP-STG-0084 FIX: Set RLS store context for defense-in-depth
+    await client.query("SELECT set_config('app.current_store_id', $1::text, true)", [storeId]);
 
     // Get sale and verify it exists WITH ROW LOCK
     // AUD-060-D FIX: FOR UPDATE prevents concurrent payment from proceeding
@@ -1725,6 +1731,8 @@ posSalesRouter.post("/sales/:saleId/return", requireDeviceToken, requireActiveSt
   try {
     await client.query("BEGIN");
     await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+    // GCP-STG-0084 FIX: Set RLS store context for defense-in-depth
+    await client.query("SELECT set_config('app.current_store_id', $1::text, true)", [storeId]);
 
     // Get sale with lock
     const saleRes = await client.query(
@@ -1854,6 +1862,8 @@ posSalesRouter.post("/sales/:saleId/void", requireDeviceToken, requireActiveStor
   try {
     await client.query("BEGIN");
     await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+    // GCP-STG-0084 FIX: Set RLS store context for defense-in-depth
+    await client.query("SELECT set_config('app.current_store_id', $1::text, true)", [storeId]);
 
     // 1. Get sale with row lock — store isolation via JWT storeId
     const saleRes = await client.query(
@@ -2061,6 +2071,8 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, requireA
   try {
     await client.query("BEGIN");
     await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+    // GCP-STG-0084 FIX: Set RLS store context for defense-in-depth
+    await client.query("SELECT set_config('app.current_store_id', $1::text, true)", [storeId]);
 
     const paymentRes = await client.query(
       `
@@ -2356,6 +2368,8 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, requireActiveStore, fi
   try {
     await client.query("BEGIN");
     await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+    // GCP-STG-0084 FIX: Set RLS store context for defense-in-depth
+    await client.query("SELECT set_config('app.current_store_id', $1::text, true)", [storeId]);
 
     // AUD-060-D FIX: Get sale WITH ROW LOCK to prevent cancel+payment race
     const saleRes = await client.query(
@@ -2515,6 +2529,8 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
   try {
     await client.query("BEGIN");
     await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+    // GCP-STG-0084 FIX: Set RLS store context for defense-in-depth
+    await client.query("SELECT set_config('app.current_store_id', $1::text, true)", [storeId]);
 
     // AUD-060-D FIX: Get sale WITH ROW LOCK to prevent cancel+payment race
     const saleRes = await client.query(

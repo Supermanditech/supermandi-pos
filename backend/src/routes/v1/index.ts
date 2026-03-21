@@ -145,6 +145,9 @@ v1Router.use("/", configStatusRouter);
 // REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001: Public CTA config (no auth, safe display data only)
 v1Router.use("/public", publicConfigRouter);
 
+// GCP-STG-0084 FIX: Set RLS store context on all POS routes (from posDevice.storeId)
+import { setRlsStoreContext, setRlsAdminContext } from "../../middleware/rlsContext";
+v1Router.use("/pos", setRlsStoreContext);
 v1Router.use("/pos", posEventsRouter);
 v1Router.use("/pos", posScanRouter);
 v1Router.use("/pos", posSalesRouter);
@@ -208,6 +211,8 @@ v1Router.use("/admin", redisRateLimit({
 }));
 // GL-CRIT-0049: Apply audit middleware to all admin mutation routes
 v1Router.use("/admin", adminAuditMiddleware());
+// GCP-STG-0084 FIX: Set ADMIN_BYPASS RLS context so admin queries see all rows
+v1Router.use("/admin", setRlsAdminContext);
 v1Router.use("/admin", adminPosEventsRouter);
 v1Router.use("/admin", adminAiRouter);
 v1Router.use("/admin", adminStoresRouter);
