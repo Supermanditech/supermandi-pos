@@ -673,6 +673,24 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       })();
     }
 
+    // GCP-STG-0017: Auto-revoke other active devices for this store on new enrollment
+    // This prevents concurrent POS operation on same store (stock divergence, duplicate sales)
+    let revokedDeviceCount = 0;
+    try {
+      const revokeResult = await client.query(
+        `UPDATE pos_devices SET active = false, revoked_at = NOW(), revoke_reason = 'auto_revoked_on_new_enrollment'
+         WHERE store_id = $1 AND active = true AND id != $2
+         RETURNING id, label`,
+        [enrollment.store_id, deviceId]
+      );
+      revokedDeviceCount = revokeResult.rowCount || 0;
+      if (revokedDeviceCount > 0) {
+        log.info(`[GCP-STG-0017] Auto-revoked ${revokedDeviceCount} old device(s) for store ${enrollment.store_id}`);
+      }
+    } catch (err) {
+      log.warn("[GCP-STG-0017] Auto-revoke failed (non-blocking):", err);
+    }
+
     // STG-096: Query active device count for multi-device warning in frontend
     let activeDeviceCount = 1;
     try {

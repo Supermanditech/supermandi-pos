@@ -12181,5 +12181,6 @@
     "predeploy_gates_fix": "continue-on-error for live-staging gates",
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
-  }
+  },
+  "lastUpdated": "2026-03-21T18:34:07.113Z"
 }
