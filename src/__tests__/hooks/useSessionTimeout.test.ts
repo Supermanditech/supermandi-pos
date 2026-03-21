@@ -1,6 +1,6 @@
 /**
  * Tests for useSessionTimeout hook
- * V3-SESSION-025: Timeout reduced to 10 minutes (soft-lock to PIN re-entry)
+ * GCP-STG-0005: Timeout is 30 minutes for kirana POS (soft-lock to PIN re-entry)
  */
 import { renderHook, act } from '@testing-library/react-native';
 import { AppState } from 'react-native';
@@ -28,13 +28,13 @@ describe('useSessionTimeout', () => {
     expect(onLogout).not.toHaveBeenCalled();
   });
 
-  // V3-SESSION-025: Timeout is 10 minutes (not legacy 35)
-  it('calls onLogout after idle timeout (10 minutes)', () => {
+  // GCP-STG-0005: Timeout is 30 minutes
+  it('calls onLogout after idle timeout (30 minutes)', () => {
     const onLogout = jest.fn();
     renderHook(() => useSessionTimeout(onLogout));
 
-    // Advance past 10 minutes
-    jest.advanceTimersByTime(10 * 60 * 1000 + 30000);
+    // Advance past 30 minutes
+    jest.advanceTimersByTime(30 * 60 * 1000 + 30000);
 
     expect(onLogout).toHaveBeenCalled();
   });
@@ -47,24 +47,36 @@ describe('useSessionTimeout', () => {
     expect(clearIntervalSpy).toHaveBeenCalled();
   });
 
-  // V3-SESSION-025: 10-min timeout, reset at 8 min, check 8 min later
+  // GCP-STG-0005: 30-min timeout, reset at 20 min, check 20 min later
   it('resetTimer resets the idle counter', () => {
     const onLogout = jest.fn();
     const { result } = renderHook(() => useSessionTimeout(onLogout));
 
-    // Advance 8 minutes (near timeout but not yet)
-    jest.advanceTimersByTime(8 * 60 * 1000);
+    // Advance 20 minutes (near timeout but not yet)
+    jest.advanceTimersByTime(20 * 60 * 1000);
 
     // Reset timer
     act(() => {
       result.current.resetTimer();
     });
 
-    // Advance another 8 minutes (only 8 min from reset, under 10-min threshold)
-    jest.advanceTimersByTime(8 * 60 * 1000);
+    // Advance another 20 minutes (only 20 min from reset, under 30-min threshold)
+    jest.advanceTimersByTime(20 * 60 * 1000);
 
-    // Should not have logged out because we reset at 8 min
-    // (need 10 min from reset to logout)
+    // Should not have logged out because we reset at 20 min
+    // (need 30 min from reset to logout)
+    expect(onLogout).not.toHaveBeenCalled();
+  });
+
+  // GCP-STG-0005: isFocused=false prevents timeout (payment screen protection)
+  it('does not call onLogout when isFocused is false', () => {
+    const onLogout = jest.fn();
+    renderHook(() => useSessionTimeout(onLogout, false));
+
+    // Advance past 30 minutes
+    jest.advanceTimersByTime(30 * 60 * 1000 + 30000);
+
+    // Should NOT have logged out — payment screen is active
     expect(onLogout).not.toHaveBeenCalled();
   });
 });

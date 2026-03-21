@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import BottomNavV3, { type V3Tab } from "../../components/v3/BottomNavV3";
@@ -42,11 +42,14 @@ export default function PosRootLayoutV3() {
 
   // GCP-STG-0005: Wire idle timeout — 30min idle → soft-lock to PIN re-entry
   // Clears staff session (Layer 2) only. Device session (Layer 1) stays intact.
+  // isFocused=false when PaymentScreen/CheckoutScreen is pushed on top — prevents
+  // timeout from firing mid-payment (ISSUE-128 protection via useIsFocused).
+  const isFocused = useIsFocused();
   const handleIdleLock = useCallback(() => {
     useStaffSessionStore.getState().clearSession();
     navigation.reset({ index: 0, routes: [{ name: "V3StaffLogin" }] });
   }, [navigation]);
-  useSessionTimeout(handleIdleLock);
+  useSessionTimeout(handleIdleLock, isFocused);
 
   // V3-050: Offline detection — show banner when no network
   const [offline, setOffline] = useState(false);

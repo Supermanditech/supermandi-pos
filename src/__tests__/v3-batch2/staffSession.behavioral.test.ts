@@ -46,12 +46,11 @@ describe("V3-CLIENT-012: staffSessionStore hydration and lifecycle", () => {
     expect(store.getState().session).toBeNull();
   });
 
-  it("uses zustand persist middleware for durable hydration", () => {
-    // The persist middleware name is "staff-session"
+  // GCP-STG-0005: Staff session is intentionally NOT persisted (in-memory only)
+  // Removed persist middleware so staff session clears on app kill (two-layer model)
+  it("does not use persist middleware (in-memory only per two-layer model)", () => {
     const persistApi = (store as any).persist;
-    expect(persistApi).toBeDefined();
-    expect(typeof persistApi.getOptions).toBe("function");
-    expect(persistApi.getOptions().name).toBe("staff-session");
+    expect(persistApi).toBeUndefined();
   });
 });
 
