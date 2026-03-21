@@ -212,7 +212,7 @@ describe("EnrollDeviceScreen", () => {
     alertSpy.mockRestore();
   });
 
-  it("calls enrollDevice with label and navigates to SellScan on success", async () => {
+  it("calls enrollDevice with label and navigates to V3StaffLogin on success", async () => {
     render(<EnrollDeviceScreen />);
     // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
@@ -231,7 +231,7 @@ describe("EnrollDeviceScreen", () => {
       // Verify label is included in deviceMeta
       const callArgs = mockEnrollDevice.mock.calls[0][0];
       expect(callArgs.deviceMeta.label).toBe("Counter-1");
-      expect(mockReplace).toHaveBeenCalledWith("SellScan");
+      expect(mockReplace).toHaveBeenCalledWith("V3StaffLogin");
     }, { timeout: 3000 });
   });
 
@@ -280,12 +280,12 @@ describe("EnrollDeviceScreen", () => {
     alertSpy.mockRestore();
   });
 
-  it("redirects to SellScan if already enrolled", async () => {
+  it("redirects to V3StaffLogin if already enrolled", async () => {
     mockGetDeviceSession.mockResolvedValue({ deviceToken: "t", storeId: "s" });
     render(<EnrollDeviceScreen />);
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("SellScan");
+      expect(mockReplace).toHaveBeenCalledWith("V3StaffLogin");
     }, { timeout: 3000 });
   });
 
@@ -304,7 +304,8 @@ describe("EnrollDeviceScreen", () => {
   // PaymentSetup routing tests (upiVpa + AsyncStorage)
   // =========================================================================
 
-  it("navigates to PaymentSetup when upiVpa is missing and not prompted before", async () => {
+  // GCP-STG-0009: PaymentSetup detour removed — enrollment always goes to V3StaffLogin
+  it("navigates to V3StaffLogin even when upiVpa is missing (staff PIN first)", async () => {
     mockEnrollDevice.mockResolvedValue({
       deviceId: "d1",
       storeId: "s1",
@@ -312,13 +313,11 @@ describe("EnrollDeviceScreen", () => {
       storeName: "Test Store",
       storeCode: "TS",
       storeActive: true,
-      upiVpa: null, // No UPI VPA
+      upiVpa: null, // No UPI VPA — but staff login takes priority
     });
-    // AsyncStorage returns null (not prompted before)
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
 
     render(<EnrollDeviceScreen />);
-    // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
     await waitFor(() => {
       expect(screen.getByTestId("enroll-device-screen")).toBeTruthy();
     }, { timeout: 3000 });
@@ -330,11 +329,11 @@ describe("EnrollDeviceScreen", () => {
     });
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("PaymentSetup");
+      expect(mockReplace).toHaveBeenCalledWith("V3StaffLogin");
     });
   });
 
-  it("navigates to SellScan when upiVpa is missing but already prompted", async () => {
+  it("navigates to V3StaffLogin when upiVpa is missing but already prompted", async () => {
     mockEnrollDevice.mockResolvedValue({
       deviceId: "d1",
       storeId: "s1",
@@ -360,11 +359,11 @@ describe("EnrollDeviceScreen", () => {
     });
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("SellScan");
+      expect(mockReplace).toHaveBeenCalledWith("V3StaffLogin");
     }, { timeout: 3000 });
   });
 
-  it("navigates to SellScan when upiVpa is present (regardless of prompt state)", async () => {
+  it("navigates to V3StaffLogin when upiVpa is present (regardless of prompt state)", async () => {
     // Default mock has upiVpa: "test@upi"
     render(<EnrollDeviceScreen />);
     // MFA-002: Explicit timeout — default 1000ms too tight under heavy CI load
@@ -379,7 +378,7 @@ describe("EnrollDeviceScreen", () => {
     });
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("SellScan");
+      expect(mockReplace).toHaveBeenCalledWith("V3StaffLogin");
     }, { timeout: 3000 });
   });
 
@@ -415,7 +414,7 @@ describe("EnrollDeviceScreen", () => {
 
     await waitFor(() => {
       expect(mockEnrollDevice).toHaveBeenCalled();
-      expect(mockReplace).toHaveBeenCalledWith("SellScan");
+      expect(mockReplace).toHaveBeenCalledWith("V3StaffLogin");
     });
   });
 
