@@ -495,7 +495,7 @@ export async function listInventoryVariants(params: {
     log.warn(`[AUTOFIXED] Created ${missingLinks.length} missing retailer_variants links for store ${storeId}`);
   }
 
-  return res.rows.map((row) => {
+  const legacyResults = res.rows.map((row) => {
     const availability = computeAvailabilityFromRow(row, hasVariantStock);
     const stock = availability.available ?? 0;
     const price = Number(row.selling_price_minor ?? 0);
@@ -509,6 +509,57 @@ export async function listInventoryVariants(params: {
       stock: Number.isFinite(stock) ? Math.max(0, Math.floor(stock)) : 0
     };
   });
+
+  // GCP-STG-0128: Also query V3 catalog products (catalog.store_products + inventory.stock_balances)
+  // These products may not exist in legacy variants/retailer_variants tables
+  const legacyIds = new Set(legacyResults.map(r => r.id));
+  const catalogArgs: any[] = [storeId];
+  let catalogWhere = "";
+  if (barcode) {
+    catalogArgs.push(barcode);
+    catalogWhere = ` AND (cp.barcode = $${catalogArgs.length} OR sp.barcode = $${catalogArgs.length})`;
+  }
+  if (query) {
+    catalogArgs.push(`%${query}%`);
+    catalogWhere += ` AND (cp.name ILIKE $${catalogArgs.length} OR cp.barcode ILIKE $${catalogArgs.length})`;
+  }
+
+  const catalogRes = await client.query(
+    `
+    SELECT sp.product_id::text AS id,
+           cp.name,
+           COALESCE(cp.barcode, sp.barcode) AS supermandi_barcode,
+           sp.selling_price AS selling_price_minor,
+           COALESCE(sb.current_qty, sp.current_stock, 0) AS catalog_stock
+    FROM catalog.store_products sp
+    JOIN catalog.products cp ON cp.id = sp.product_id
+    LEFT JOIN inventory.stock_balances sb
+      ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
+    WHERE sp.store_id = $1::uuid
+      AND sp.is_active = true
+      ${catalogWhere}
+    ORDER BY cp.name ASC
+    `,
+    catalogArgs
+  );
+
+  const catalogResults = catalogRes.rows
+    .filter(row => !legacyIds.has(String(row.id))) // Avoid duplicates
+    .map(row => {
+      const stock = Number(row.catalog_stock ?? 0);
+      const price = Number(row.selling_price_minor ?? 0);
+      return {
+        id: String(row.id),
+        name: String(row.name ?? ""),
+        barcode: row.supermandi_barcode ? String(row.supermandi_barcode) : null,
+        sku: null,
+        price: Number.isFinite(price) ? price : 0,
+        currency: "INR",
+        stock: Number.isFinite(stock) ? Math.max(0, Math.floor(stock)) : 0
+      };
+    });
+
+  return [...legacyResults, ...catalogResults];
 }
 
 export async function ensureSaleAvailability(params: {
@@ -560,7 +611,14 @@ export async function ensureSaleAvailability(params: {
     [storeId, variantIds]
   );
 
-  if (res.rows.length !== variantIds.length) {
+  // GCP-STG-0125: Don't throw product_not_found for V3 catalog items that aren't
+  // in legacy variants table. ensureStoreInventoryAvailability already validated catalog stock.
+  // Only check stock for items that DO exist in legacy tables.
+  if (res.rows.length === 0 && variantIds.length > 0) {
+    // No items found at all — either all catalog items (skip) or truly missing
+    // If all IDs are UUID-format, they're catalog product IDs → skip legacy check entirely
+    const allUuids = variantIds.every(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+    if (allUuids) return; // All catalog items, already validated
     throw new Error("product_not_found");
   }
 
