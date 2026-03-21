@@ -11,6 +11,39 @@ import { asError } from "../../../lib/errorUtils";
 
 export const posInventoryRouter = Router();
 
+// GCP-STG-0134: Low-stock count for reorder badge on POS Store Hub
+posInventoryRouter.get("/inventory/low-stock-count", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = (req as any).posDevice?.storeId;
+  if (!storeId) return res.status(401).json({ error: "store not identified" });
+
+  try {
+    // Count products where current stock is below min_threshold (from reorder policies)
+    // or below 10 units (default low-stock threshold for stores without policies)
+    const result = await pool.query(
+      `SELECT COUNT(*)::int as count
+       FROM catalog.store_products sp
+       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
+       LEFT JOIN reorder.reorder_policies rp ON rp.store_id = sp.store_id AND rp.product_id = sp.product_id
+       WHERE sp.store_id = $1
+         AND sp.is_active = true
+         AND COALESCE(sb.current_qty, sp.current_stock, 0) <= COALESCE(rp.min_threshold, 10)`,
+      [storeId]
+    );
+    return res.json({ count: result.rows[0]?.count ?? 0 });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    // Graceful fallback if reorder schema not yet applied
+    if ((error as any).code === "42P01") {
+      return res.json({ count: 0 });
+    }
+    log.error("[LowStockCount] Error:", error.message);
+    return res.status(500).json({ error: "Failed to get low stock count" });
+  }
+});
+
 /**
  * BLK-SP1: PostgreSQL NUMERIC type serializes as string in JSON (e.g. "10.000").
  * This helper ensures stock values are always returned as JS numbers in API responses.
