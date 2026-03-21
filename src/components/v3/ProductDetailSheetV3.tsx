@@ -93,9 +93,8 @@ export default function ProductDetailSheetV3({
             <Pressable style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close details">
               <Text style={styles.closeBtnText}>✕</Text>
             </Pressable>
-            <Pressable style={styles.topAddBtn} onPress={handleAdd} accessibilityLabel={ctaLabel} testID="detail-top-add">
-              <Text style={styles.topAddText}>{ctaLabel} →</Text>
-            </Pressable>
+            {/* GCP-STG-0034: Removed redundant top "Add to Cart" button.
+                Single bottom CTA with price × qty is the correct pattern. */}
           </View>
 
           <ScrollView style={styles.body} showsVerticalScrollIndicator={false} contentContainerStyle={styles.bodyContent}>
