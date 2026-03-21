@@ -129,7 +129,9 @@ function getCategoryEmoji(cat?: string): string {
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     // V3-FIX-181: Premium tile with subtle elevation
+    // GCP-STG-0010: flex:1 ensures tiles fill equal column width in 3-column FlatList grid
     tile: {
+      flex: 1,
       backgroundColor: colors.surface,
       borderRadius: shell.cardRadius,
       padding: 10,
