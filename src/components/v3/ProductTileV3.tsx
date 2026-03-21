@@ -28,6 +28,10 @@ export interface ProductTileData {
   allowFractionalSell?: boolean;
   conversionConfirmed?: boolean;
   storeProductId?: string;       // canonical store product identity
+  // GCP-STG-0116: Rich tile metadata
+  description?: string;
+  netContentValue?: number;
+  netContentUnit?: string;
 }
 
 type ProductTileV3Props = {
@@ -91,6 +95,12 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress, onL
       </View>
 
       <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
+      {/* GCP-STG-0116: Pack size / net content for rich tile display */}
+      {product.netContentValue ? (
+        <Text style={styles.packSize}>{product.netContentValue}{product.netContentUnit ?? "g"}</Text>
+      ) : product.description ? (
+        <Text style={styles.packSize} numberOfLines={1}>{product.description}</Text>
+      ) : null}
       <Text style={styles.price}>{priceLabel}</Text>
 
       {product.caseSize ? (
@@ -218,6 +228,8 @@ function createStyles(colors: ColorPalette) {
       textAlign: "center",
       minHeight: (getChipFontSize() + 3) * 2,
     },
+    // GCP-STG-0116: Pack size / net content below name
+    packSize: { fontSize: 9, color: colors.textTertiary, textAlign: "center" as const, marginTop: 1 },
     // V3-HARDEN-111: Responsive price text
     price: {
       fontSize: getChipFontSize() + 3,

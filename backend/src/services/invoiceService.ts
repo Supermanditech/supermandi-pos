@@ -433,16 +433,33 @@ async function storeInvoicePdfInGcs(pool: Pool, invoiceId: string, invoiceNumber
     });
     const pdfBuffer = Buffer.concat(chunks);
 
+    // GCP-STG-0112: Sign PDF buffer + store structured JSON alongside
+    const crypto = await import("crypto");
+    const signatureKey = process.env.INVOICE_SIGNING_KEY || "supermandi-invoice-signing-key-v1";
+    const pdfSignature = crypto.createHmac("sha256", signatureKey).update(pdfBuffer).digest("hex");
+
+    // GCP-STG-0112: Structured JSON for machine-readable invoice data
+    const invoiceJson = JSON.stringify({
+      invoiceId,
+      invoiceNumber,
+      pdfSignature,
+      signedAt: new Date().toISOString(),
+      ...data,
+    });
+
     // Upload to GCS
     const bucket = process.env.GCS_DOCUMENTS_BUCKET || "supermandi-pos-documents";
     const sanitizedNumber = invoiceNumber.replace(/[^a-zA-Z0-9_-]/g, "_");
     const gcsPath = `invoices/${sanitizedNumber}.pdf`;
+    const jsonPath = `invoices/${sanitizedNumber}.json`;
     await uploadBuffer(bucket, gcsPath, pdfBuffer, "application/pdf");
+    // GCP-STG-0112: Store structured JSON alongside PDF
+    await uploadBuffer(bucket, jsonPath, Buffer.from(invoiceJson, "utf8"), "application/json");
 
-    // Update invoice record with GCS path
+    // Update invoice record with GCS path + signature
     await pool.query(
-      `UPDATE invoicing.invoices SET pdf_gcs_path = $1, pdf_stored_at = NOW() WHERE id = $2::uuid`,
-      [gcsPath, invoiceId]
+      `UPDATE invoicing.invoices SET pdf_gcs_path = $1, pdf_stored_at = NOW(), pdf_signature = $3 WHERE id = $2::uuid`,
+      [gcsPath, invoiceId, pdfSignature]
     );
   } catch (err: any) {
     // Log but don't rethrow — PDF storage is best-effort

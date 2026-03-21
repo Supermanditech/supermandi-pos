@@ -1551,3 +1551,41 @@ adminStoresRouter.get("/stores/:storeId/stock-adjustments", async (req, res) => 
     });
   }
 });
+
+// =============================================================================
+// GCP-STG-0113: Invoice settings per store (template + WhatsApp dispatch policy)
+// =============================================================================
+adminStoresRouter.get("/stores/:storeId/invoice-settings", requirePermission("stores", "read"), async (req, res) => {
+  try {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+    const { storeId } = req.params;
+    const result = await pool.query(
+      `SELECT invoice_settings as "invoiceSettings" FROM platform.stores WHERE id = $1::uuid`,
+      [storeId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: "store not found" });
+    return res.json({ invoiceSettings: result.rows[0].invoiceSettings ?? {} });
+  } catch (err) {
+    log.error("[GCP-STG-0113] GET invoice-settings error:", asError(err));
+    return res.status(500).json({ error: "Failed to load invoice settings" });
+  }
+});
+
+adminStoresRouter.patch("/stores/:storeId/invoice-settings", requirePermission("stores", "write"), async (req, res) => {
+  try {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+    const { storeId } = req.params;
+    const settings = req.body;
+    if (!settings || typeof settings !== "object") return res.status(400).json({ error: "Invoice settings object required" });
+    await pool.query(
+      `UPDATE platform.stores SET invoice_settings = $2::jsonb, updated_at = NOW() WHERE id = $1::uuid`,
+      [storeId, JSON.stringify(settings)]
+    );
+    return res.json({ success: true });
+  } catch (err) {
+    log.error("[GCP-STG-0113] PATCH invoice-settings error:", asError(err));
+    return res.status(500).json({ error: "Failed to update invoice settings" });
+  }
+});

@@ -256,13 +256,16 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
     // GCP-STG-0087: Resolve billing model from first item (all items in single order share same model)
     const orderBillingModel = validatedItems[0]?.billingModel || "SUPERMANDI_PRINCIPAL";
 
+    // GCP-STG-0110: Snapshot delivery terms version at PO creation
+    const deliveryTermsVersion = validatedItems[0]?.deliveryTermsVersion ?? 1;
+
     const orderResult = await client.query(
       `INSERT INTO orders.purchase_orders (
         id, order_number, store_id, supplier_id, order_type, status,
         total_amount, item_count, store_notes, delivery_address,
         expected_delivery_date, created_by_user_id, procurement_lane,
-        accepted_terms_snapshot, accepted_terms_version, payment_lane, billing_model
-      ) VALUES ($1, $2, $3, $4, $5, $12, $6, $7, $8, $9, $10, NULL, $11, $13, $15, $14, $16)
+        accepted_terms_snapshot, accepted_terms_version, payment_lane, billing_model, delivery_terms_version
+      ) VALUES ($1, $2, $3, $4, $5, $12, $6, $7, $8, $9, $10, NULL, $11, $13, $15, $14, $16, $17)
       RETURNING
         id,
         order_number as "orderNumber",
@@ -293,6 +296,8 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         Math.max(...termSnapItems.map(i => i.publishedTerms.version), 1),
         // GCP-STG-0087: Billing model from supplier product catalog
         orderBillingModel,
+        // GCP-STG-0110: Delivery terms version snapshot
+        deliveryTermsVersion,
       ]
     );
 

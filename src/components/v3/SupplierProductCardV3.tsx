@@ -91,7 +91,7 @@ export default function SupplierProductCardV3({ product, orderQtyCases, onPress 
           <View style={styles.tags}>
             <View style={styles.tag}><Text style={styles.tagText}>MRP ₹{(product.mrpMinor / 100).toFixed(0)}</Text></View>
             {product.ptsMinor ? <View style={styles.tag}><Text style={styles.tagText}>PTS ₹{(product.ptsMinor / 100).toFixed(2)}</Text></View> : null}
-            <View style={styles.tag}><Text style={styles.tagText}>Case: {product.caseSize} {product.unit}</Text></View>
+            <View style={styles.tag}><Text style={styles.tagText}>{product.unit === "kg" || product.unit === "ltr" ? "🧺" : product.caseSize > 1 ? "📦" : "📋"} {product.packSize || `${product.caseSize} ${product.unit}`}</Text></View>
             <View style={styles.tag}><Text style={styles.tagText}>MOQ: {product.moq} case</Text></View>
             <View style={styles.marginTag}><Text style={styles.marginText}>Margin {marginPct}%</Text></View>
           </View>

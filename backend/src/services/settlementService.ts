@@ -68,10 +68,24 @@ export async function createSettlement(
   pool: Pool,
   input: CreateSettlementInput
 ): Promise<SettlementRecord> {
+  // GCP-STG-0114: Fee safety bounds checking — commission must be non-negative and capped
+  const MAX_COMMISSION_PERCENT = parseFloat(process.env.MAX_COMMISSION_PERCENT || "30"); // configurable cap
+  if (input.commissionMinor < 0) throw new Error("commission_negative: Commission cannot be negative");
+  if (input.grossAmountMinor > 0) {
+    const commissionPercent = (input.commissionMinor / input.grossAmountMinor) * 100;
+    if (commissionPercent > MAX_COMMISSION_PERCENT) {
+      throw new Error(`commission_exceeds_cap: Commission ${commissionPercent.toFixed(1)}% exceeds max ${MAX_COMMISSION_PERCENT}%`);
+    }
+  }
+  if (input.grossAmountMinor < 0) throw new Error("gross_amount_negative: Gross amount cannot be negative");
+
   const gstOnCommission = Math.round(input.commissionMinor * 18 / 100); // 18% GST on services
   const tdsPercent = input.tdsPercent || 0;
+  if (tdsPercent < 0 || tdsPercent > 30) throw new Error("tds_percent_invalid: TDS must be 0-30%");
   const tdsMinor = tdsPercent > 0 ? Math.round(input.grossAmountMinor * tdsPercent / 100) : 0;
   const netPayout = input.grossAmountMinor - input.commissionMinor - gstOnCommission - tdsMinor;
+  // GCP-STG-0114: Net payout must not be negative (SuperMandi can't owe more than gross)
+  if (netPayout < 0) throw new Error("net_payout_negative: Net payout cannot be negative — check commission/TDS values");
 
   const result = await pool.query(
     `INSERT INTO invoicing.settlement_records (
