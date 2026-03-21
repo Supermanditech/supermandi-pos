@@ -29,7 +29,7 @@ import { printerService } from "../../services/printerService";
 import { startAutoSync } from "../../services/syncService";
 import { initOfflineDb } from "../../services/offline/localDb";
 import { syncOutbox } from "../../services/offline/sync";
-import { getDeviceSession } from "../../services/deviceSession";
+import { getDeviceSession, clearDeviceSession } from "../../services/deviceSession";
 import { fetchUiStatus } from "../../services/api/uiStatusApi";
 import { useStaffSessionStore } from "../../stores/staffSessionStore";
 import { getDeviceMeta } from "../../services/deviceInfo";
@@ -94,9 +94,11 @@ export default function SplashScreenV3() {
         // V3-API-005: Distinguish auth failure from network failure
         const errMsg = uiErr instanceof Error ? uiErr.message : String(uiErr);
         if (errMsg.includes("DEVICE_UNAUTHORIZED") || errMsg.includes("TOKEN_EXPIRED") || errMsg.includes("TOKEN_REVOKED")) {
-          // Auth failure — clear session, send to phone login
-          setStatusText("Session expired");
-          safeNavigate("V3Phone");
+          // GCP-STG-0038: Auth failure — clear stale device session, navigate to EnrollDevice
+          // V3Phone requires a working backend config-status endpoint; EnrollDevice is the safe fallback
+          await clearDeviceSession();
+          setStatusText("Session expired — please re-enroll");
+          safeNavigate("EnrollDevice");
           return;
         }
         // Network failure — proceed offline (offline-first)
