@@ -13,6 +13,8 @@ import MoreScreenV3 from "./MoreScreenV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { useCartStore } from "../../stores/cartStore";
+import { useStaffSessionStore } from "../../stores/staffSessionStore";
+import { useSessionTimeout } from "../../hooks/useSessionTimeout";
 import { isOnline } from "../../services/networkStatus";
 import { startSSEClient, stopSSEClient } from "../../services/sseClient";
 
@@ -37,6 +39,14 @@ export default function PosRootLayoutV3() {
 
   // Cart badge from existing store
   const cartCount = useCartStore((s) => s.items?.length ?? 0);
+
+  // GCP-STG-0005: Wire idle timeout — 30min idle → soft-lock to PIN re-entry
+  // Clears staff session (Layer 2) only. Device session (Layer 1) stays intact.
+  const handleIdleLock = useCallback(() => {
+    useStaffSessionStore.getState().clearSession();
+    navigation.reset({ index: 0, routes: [{ name: "V3StaffLogin" }] });
+  }, [navigation]);
+  useSessionTimeout(handleIdleLock);
 
   // V3-050: Offline detection — show banner when no network
   const [offline, setOffline] = useState(false);

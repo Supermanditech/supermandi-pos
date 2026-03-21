@@ -1,7 +1,8 @@
-// SA-P1-001: Staff session store (persisted via AsyncStorage)
+// GCP-STG-0005: Staff session store — IN-MEMORY ONLY (not persisted)
+// Staff session (Layer 2) is cleared on app kill, idle timeout, and Switch Staff.
+// Device session (Layer 1) persists in SecureStore/AsyncStorage independently.
+// On app restart, user must re-enter PIN (staff session gone) but device stays enrolled.
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type StaffRole = "CASHIER" | "STOCK_MANAGER" | "MANAGER";
 
@@ -19,15 +20,9 @@ type StaffSessionState = {
 };
 
 export const useStaffSessionStore = create<StaffSessionState>()(
-  persist(
-    (set) => ({
-      session: null,
-      setSession: (session) => set({ session }),
-      clearSession: () => set({ session: null }),
-    }),
-    {
-      name: "staff-session",
-      storage: createJSONStorage(() => AsyncStorage),
-    }
-  )
+  (set) => ({
+    session: null,
+    setSession: (session) => set({ session }),
+    clearSession: () => set({ session: null }),
+  })
 );

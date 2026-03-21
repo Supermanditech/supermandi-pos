@@ -6,9 +6,10 @@ import { useEffect, useRef, useCallback } from "react";
 import { AppState, Alert } from "react-native";
 import type { AppStateStatus } from "react-native";
 
-// V3-SESSION-025: Soft-lock after 10min idle, PIN re-entry (not full logout)
-const IDLE_WARNING_MS = 8 * 60 * 1000;  // 8 minutes (warn 2 min before lock)
-const IDLE_LOGOUT_MS = 10 * 60 * 1000;  // 10 minutes (soft-lock to PIN re-entry)
+// GCP-STG-0005: Soft-lock after 30min idle for kirana POS (not 10min)
+// PIN re-entry only — device session stays intact
+const IDLE_WARNING_MS = 25 * 60 * 1000;  // 25 minutes (warn 5 min before lock)
+const IDLE_LOGOUT_MS = 30 * 60 * 1000;  // 30 minutes (soft-lock to PIN re-entry)
 const CHECK_INTERVAL_MS = 15000;         // Check every 15 seconds
 
 // ISSUE-128: Accept isFocused flag — skip auto-logout when PaymentScreen is on top
@@ -39,7 +40,7 @@ export function useSessionTimeout(onLogout: () => void, isFocused = true) {
         warningShown.current = true;
         Alert.alert(
           "Session Expiring",
-          "You've been idle for 30 minutes. You will be logged out in 5 minutes.",
+          "You've been idle for 25 minutes. Screen will lock in 5 minutes — tap to stay logged in.",
           [{ text: "Stay Logged In", onPress: resetTimer }]
         );
       }
