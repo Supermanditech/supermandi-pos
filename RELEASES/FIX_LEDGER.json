@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 653,
+  "version": 655,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -14032,6 +14032,84 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T22:39:16.885Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0182-FIX",
+      "file": "supermandi-superadmin/src/App.tsx",
+      "start_line": 1,
+      "end_line": 2,
+      "checksum": "1fcef3a47c0bc0c5",
+      "description": "GCP-STG-0182-FIX",
+      "test_file": "supermandi-superadmin/src/__tests__/tabs/StaffTab.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "operator_approved": true,
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T22:48:02.888Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0174-FIX",
+      "file": "supermandi-superadmin/src/App.tsx",
+      "start_line": 1,
+      "end_line": 2,
+      "checksum": "1fcef3a47c0bc0c5",
+      "description": "GCP-STG-0174-FIX",
+      "test_file": "supermandi-superadmin/src/__tests__/tabs/StaffTab.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "operator_approved": true,
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T22:48:03.269Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 269,
@@ -14076,5 +14154,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-21T22:39:17.025Z"
+  "lastUpdated": "2026-03-21T22:48:03.413Z"
 }

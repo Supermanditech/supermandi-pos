@@ -40,17 +40,20 @@ adminUsersRouter.get("/users", requirePermission("users", "read"), async (req, r
       pool.query(`SELECT COUNT(*)::int as total FROM auth.users`),
       pool.query<AdminUserRecord>(`
         SELECT
-          id::TEXT as id,
-          email,
-          phone,
-          name,
-          actor_type,
-          actor_id::TEXT as actor_id,
-          status,
-          created_at,
-          updated_at
-        FROM auth.users
-        ORDER BY created_at DESC
+          u.id::TEXT as id,
+          u.email,
+          u.phone,
+          u.name,
+          u.actor_type,
+          u.actor_id::TEXT as actor_id,
+          u.status,
+          u.created_at,
+          u.updated_at,
+          s.name as store_name,
+          s.code as store_code
+        FROM auth.users u
+        LEFT JOIN platform.stores s ON s.id = u.actor_id AND u.actor_type = 'store'
+        ORDER BY u.created_at DESC
         LIMIT $1 OFFSET $2
       `, [limit, offset]),
     ]);

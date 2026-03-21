@@ -1589,6 +1589,17 @@ export default function App() {
 
   async function handleToggleStaffActive(staffId: string, currentlyActive: boolean) {
     if (!staffStoreId) return;
+    // GCP-STG-0182: Last-manager guard — prevent deactivating the only active MANAGER
+    if (currentlyActive) {
+      const staff = staffMembers.find((s) => s.id === staffId);
+      if (staff?.role === "MANAGER") {
+        const activeManagers = staffMembers.filter((s) => s.role === "MANAGER" && s.is_active);
+        if (activeManagers.length <= 1) {
+          setStaffError("Cannot deactivate the last active manager. Promote another staff member to MANAGER first.");
+          return;
+        }
+      }
+    }
     setStaffError("");
     setStaffActionLoading(staffId);
     try {
@@ -1627,11 +1638,13 @@ export default function App() {
     setStaffSuccess("");
     setStaffActionLoading(resetPinStaffId);
     try {
+      const staffName = staffMembers.find((s) => s.id === resetPinStaffId)?.name ?? "Staff";
       await resetStaffPin(staffStoreId, resetPinStaffId, resetPinValue);
+      // GCP-STG-0182: Echo new PIN in success message for admin confirmation
+      setStaffSuccess(`PIN reset for ${staffName}. New PIN: ${resetPinValue}`);
+      toast.success(`PIN reset for ${staffName}. New PIN: ${resetPinValue}`);
       setResetPinStaffId(null);
       setResetPinValue("");
-      setStaffSuccess("PIN reset successfully");
-      toast.success("PIN reset successfully");
     } catch (e: unknown) {
       setStaffError(e instanceof Error ? e.message : "Failed to reset PIN");
     } finally {
