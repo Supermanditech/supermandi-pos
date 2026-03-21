@@ -274,16 +274,27 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
                   <Text style={styles.resultBarcode}>{lastResult.barcode}</Text>
                 </View>
                 {/* V3-HARDEN-158: Procurement scan miss MUST NOT offer New Product */}
-                {context !== "supplier_catalog_procurement_scan" ? (
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  {context !== "supplier_catalog_procurement_scan" ? (
+                    <Pressable
+                      style={styles.createBtn}
+                      onPress={() => { onNewProduct(lastResult.barcode); onClose(); }}
+                      accessibilityLabel="Create new product"
+                      testID="scan-new-product-btn"
+                    >
+                      <Text style={styles.createBtnText}>New Product</Text>
+                    </Pressable>
+                  ) : null}
+                  {/* GCP-STG-0028: Continue button to dismiss not-found and scan next */}
                   <Pressable
-                    style={styles.createBtn}
-                    onPress={() => { onNewProduct(lastResult.barcode); onClose(); }}
-                    accessibilityLabel="Create new product"
-                    testID="scan-new-product-btn"
+                    style={styles.continueBtn}
+                    onPress={() => { setLastResult(null); setBarcodeInput(""); }}
+                    accessibilityLabel="Continue scanning"
+                    testID="scan-continue-btn"
                   >
-                    <Text style={styles.createBtnText}>New Product</Text>
+                    <Text style={styles.continueBtnText}>Continue</Text>
                   </Pressable>
-                ) : null}
+                </View>
               </View>
             )}
             <View style={styles.resultAction}>
@@ -350,6 +361,9 @@ function createStyles(colors: ColorPalette) {
     resultNewTitle: { fontSize: 16, fontWeight: "800", color: colors.warning },
     createBtn: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
     createBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+    // GCP-STG-0028: Continue button alongside New Product
+    continueBtn: { backgroundColor: "transparent", borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
+    continueBtnText: { color: colors.textSecondary, fontSize: 13, fontWeight: "700" },
     resultAction: { marginTop: 12, backgroundColor: colors.successSoft, borderRadius: 10, padding: 10, alignItems: "center" },
     resultActionText: { color: colors.success, fontSize: 13, fontWeight: "700" },
   });
