@@ -558,8 +558,10 @@ This link will expire in 1 hour. If you didn't request this, please ignore this 
 const emailRateLimits = new Map<string, { minute: number[]; hour: number[] }>();
 
 // GO-LIVE-135: Reduced limits to be more restrictive
-const RATE_LIMIT_PER_MINUTE = 2;
-const RATE_LIMIT_PER_HOUR = 5;
+// GCP-STG-0002: RATE_LIMIT_MULTIPLIER env var scales limits for staging (default 1)
+const RATE_LIMIT_MULTIPLIER = Math.max(1, parseInt(process.env.RATE_LIMIT_MULTIPLIER || '1', 10) || 1);
+const RATE_LIMIT_PER_MINUTE = 2 * RATE_LIMIT_MULTIPLIER;
+const RATE_LIMIT_PER_HOUR = 5 * RATE_LIMIT_MULTIPLIER;
 
 /**
  * Check if email sending is rate limited
