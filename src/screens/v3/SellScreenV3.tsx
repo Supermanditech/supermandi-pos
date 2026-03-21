@@ -257,6 +257,7 @@ export default function SellScreenV3() {
   );
 
   // GCP-STG-0024: Tap adds to cart directly (fast billing for kirana stores)
+  // GCP-STG-0127: Warn on add-to-cart when stock is low/zero (but still allow — kirana stock is often inaccurate)
   // Long-press opens detail sheet for price/qty/discount adjustments
   const handleTilePress = useCallback(
     (product: ProductTileData) => {
@@ -264,9 +265,17 @@ export default function SellScreenV3() {
         showToast("Retail setup needed — complete conversion setup before selling");
         return;
       }
+      // GCP-STG-0127: Stock warning (non-blocking — kirana stores sell even when stock shows 0)
+      if (product.stock != null && product.stock <= 0) {
+        showToast(`${product.name} may be out of stock`);
+      }
       const existing = cartItems.find((i) => i.id === (product.barcode ?? product.id) || i.barcode === product.barcode);
       if (existing) {
-        useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
+        const newQty = existing.quantity + 1;
+        if (product.stock != null && newQty > product.stock && product.stock > 0) {
+          showToast(`${product.name}: only ${product.stock} in stock`);
+        }
+        useCartStore.getState().updateQuantity(existing.id, newQty);
       } else {
         addItem({ ...buildCartItemFromTile(product, sellMode), quantity: 1 });
       }

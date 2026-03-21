@@ -32,6 +32,10 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
   const removeItem = useCartStore((s) => s.removeItem);
   const removeDiscount = useCartStore((s) => s.removeDiscount);
 
+  // GCP-STG-0050: Parked carts state
+  const parkedCount = useCartStore((s) => s.parkedCarts?.length ?? 0);
+  const [showParkedModal, setShowParkedModal] = useState(false);
+
   // V3-FIX-121: Cart line edit state
   const [editingItem, setEditingItem] = useState<CartItem | null>(null);
   const [editPrice, setEditPrice] = useState("");
@@ -167,10 +171,18 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
         </View>
       ) : null}
 
-      {/* V3-FIX-067: Action row matching prototype — Add More, Park, WhatsApp Share */}
+      {/* V3-FIX-067 + GCP-STG-0050: Action row — Add More, Recall, Park, Share */}
       <View style={styles.actions}>
         <Pressable style={styles.addMoreBtn} onPress={onClose} accessibilityLabel="Add more items">
           <Text style={styles.addMoreText}>+ Add More</Text>
+        </Pressable>
+        {/* GCP-STG-0050: Recall parked carts */}
+        <Pressable style={styles.parkBtn} accessibilityLabel="Recall parked cart" onPress={() => {
+          const parked = useCartStore.getState().parkedCarts ?? [];
+          if (parked.length === 0) { showToast("No parked carts"); return; }
+          setShowParkedModal(true);
+        }}>
+          <Text style={styles.parkText}>📋 Recall{parkedCount > 0 ? ` (${parkedCount})` : ""}</Text>
         </Pressable>
         <Pressable style={styles.parkBtn} accessibilityLabel="Park cart" onPress={() => {
           const parked = useCartStore.getState().parkedCarts ?? [];
@@ -259,6 +271,53 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* GCP-STG-0050: Parked carts recall modal */}
+      <Modal visible={showParkedModal} transparent animationType="slide" onRequestClose={() => setShowParkedModal(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: "60%" }}>
+            <Text style={{ fontSize: 18, fontWeight: "800", color: colors.textPrimary, marginBottom: 16 }}>Parked Carts</Text>
+            {(useCartStore.getState().parkedCarts ?? []).map((cart, idx) => (
+              <View key={idx} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textPrimary }}>
+                    {cart.items.length} items — ₹{Math.round(cart.items.reduce((s, i) => s + i.priceMinor * i.quantity, 0) / 100)}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 2 }}>
+                    Parked {Math.round((Date.now() - cart.parkedAt) / 60000)} min ago
+                  </Text>
+                </View>
+                <Pressable
+                  style={{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, marginLeft: 8 }}
+                  onPress={() => {
+                    useCartStore.getState().resumeParkedCart(idx);
+                    setShowParkedModal(false);
+                    showToast("Cart restored");
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Resume</Text>
+                </Pressable>
+                <Pressable
+                  style={{ paddingHorizontal: 12, paddingVertical: 8, marginLeft: 4 }}
+                  onPress={() => {
+                    useCartStore.getState().deleteParkedCart(idx);
+                    if ((useCartStore.getState().parkedCarts?.length ?? 0) === 0) setShowParkedModal(false);
+                    showToast("Parked cart deleted");
+                  }}
+                >
+                  <Text style={{ color: colors.error, fontWeight: "600", fontSize: 13 }}>Delete</Text>
+                </Pressable>
+              </View>
+            ))}
+            {parkedCount === 0 ? (
+              <Text style={{ color: colors.textTertiary, textAlign: "center", paddingVertical: 20 }}>No parked carts</Text>
+            ) : null}
+            <Pressable style={{ marginTop: 16, alignItems: "center", paddingVertical: 12 }} onPress={() => setShowParkedModal(false)}>
+              <Text style={{ color: colors.textSecondary, fontWeight: "600" }}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
       </Modal>
     </View>
   );
