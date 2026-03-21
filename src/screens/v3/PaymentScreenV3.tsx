@@ -189,7 +189,9 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
               <Pressable onPress={() => setSplitVisible(false)} style={{ flex: 1, padding: 14, borderRadius: 14, borderWidth: 2, borderColor: colors.border, alignItems: "center" }}>
                 <Text style={{ fontWeight: "700", color: colors.textSecondary }}>Cancel</Text>
               </Pressable>
-              <Pressable onPress={async () => {
+              <Pressable disabled={processing} onPress={async () => {
+                // GCP-STG-0049: Guard against rapid double-tap — prevent duplicate sale creation
+                if (createSaleInFlight.current || processing) return;
                 const totalRupees = Math.round(grandTotal / 100);
                 if (splitCashNum <= 0 || splitRemainder <= 0) { showToast("Enter valid cash amount"); return; }
                 if (splitCashNum + splitRemainder !== totalRupees) { showToast(`Must equal total ₹${totalRupees}`); return; }
@@ -214,8 +216,8 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
                   createSaleInFlight.current = false;
                   setProcessing(false);
                 }
-              }} style={{ flex: 2, padding: 14, borderRadius: 14, backgroundColor: colors.primary, alignItems: "center" }}>
-                <Text style={{ fontWeight: "800", color: "#fff" }}>Confirm Split</Text>
+              }} style={{ flex: 2, padding: 14, borderRadius: 14, backgroundColor: processing ? colors.border : colors.primary, alignItems: "center", opacity: processing ? 0.6 : 1 }}>
+                <Text style={{ fontWeight: "800", color: "#fff" }}>{processing ? "Processing..." : "Confirm Split"}</Text>
               </Pressable>
             </View>
           </ScrollView>

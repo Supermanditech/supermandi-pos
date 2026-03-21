@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 562,
+  "version": 563,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6781,7 +6781,7 @@
       "file": "src/screens/v3/PaymentScreenV3.tsx",
       "start_line": 1,
       "end_line": 249,
-      "checksum": "4ea99305b1c82cf2",
+      "checksum": "6c2e21e3f4733f06",
       "description": "Payment screen v3 — Cash/UPI/Udhar with quick amounts, GST total, Hindi labels + DA-009/010 udhar wiring + cart unlock + DA-033 split payment validation + createSplitPayment API wiring",
       "test_file": "src/__tests__/screens/payment-v3.stg-556.test.ts",
       "depends_on": null,
@@ -10120,8 +10120,8 @@
     {
       "ticket": "GCP-STG-0126",
       "file": "src/screens/v3/PaymentScreenV3.tsx",
-      "start_line": 242,
-      "end_line": 243,
+      "start_line": 244,
+      "end_line": 245,
       "checksum": "ed445dbab9ef0313",
       "description": "UDHAR label font reduced from 17 to 14 to prevent 2-line wrap in narrow card",
       "test_file": "src/__tests__/screens/PaymentScreenV3.test.tsx",
@@ -10154,7 +10154,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:55:48.878Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-21T11:35:43.673Z"
     },
     {
       "ticket": "GCP-STG-0050",
@@ -10271,6 +10272,45 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:30:19.204Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0049",
+      "file": "src/screens/v3/PaymentScreenV3.tsx",
+      "start_line": 192,
+      "end_line": 220,
+      "checksum": "f0b610dc16bc81a4",
+      "description": "Split payment double-tap guard: createSaleInFlight check + disabled button + processing state",
+      "test_file": "src/__tests__/screens/splitPaymentRace.gcp-stg-0049.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T11:35:15.392Z",
       "status": "ACTIVE"
     }
   ],
