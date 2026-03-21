@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 655,
+  "version": 656,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -14110,6 +14110,45 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T22:48:03.269Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0214-COMPLETION",
+      "file": "backend/src/routes/v1/supplier/auth.ts",
+      "start_line": 1111,
+      "end_line": 1130,
+      "checksum": "8006d1bf4c5a2ac8",
+      "description": "Block OTP reset completion for non-ACTIVE suppliers",
+      "test_file": "backend/tests/settlement.gcp-stg-0106.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "operator_approved": true,
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T23:25:26.784Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 269,
@@ -14154,5 +14193,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-21T22:48:03.413Z"
+  "lastUpdated": "2026-03-21T23:25:26.916Z"
 }

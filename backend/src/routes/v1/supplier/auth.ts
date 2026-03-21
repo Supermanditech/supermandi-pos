@@ -1107,15 +1107,23 @@ router.post("/auth/forgot-password/otp-reset", passwordResetRateLimiter, async (
       return;
     }
 
-    // Find supplier by phone
+    // Find supplier by phone — GCP-STG-0214: include verification_status for completion guard
     const result = await pool.query(
-      `SELECT id FROM supplier.suppliers WHERE primary_phone = $1`,
+      `SELECT id, verification_status FROM supplier.suppliers WHERE primary_phone = $1`,
       [phoneNormalized]
     );
 
     if (!result.rows[0]) {
       res.status(404).json({
         error: { code: 'USER_NOT_FOUND', message: 'No account found for this phone number' }
+      });
+      return;
+    }
+
+    // GCP-STG-0214: Block OTP reset completion for non-ACTIVE accounts
+    if (result.rows[0].verification_status !== 'ACTIVE') {
+      res.status(403).json({
+        error: { code: 'ACCOUNT_BLOCKED', message: 'Password reset not available. Your application must be approved first.' }
       });
       return;
     }
