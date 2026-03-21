@@ -9,7 +9,7 @@ import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { fetchAiHealth } from "./api/ai";
 import { hasValidSession, logout, refreshSession, startIdleTimeout, stopIdleTimeout, abortActiveRequests } from "./api/authToken";
 import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, fetchStoreSettings, updateStoreBnpl, updateStoreDiscountLimit, type StoreRecord } from "./api/stores";
-import { fetchDevices, patchDevice, forceReEnrollDevice, forceSyncDevice, type DeviceRecord, type ConfigPushRecord } from "./api/devices";
+import { fetchDevices, patchDevice, forceReEnrollDevice, forceSyncDevice, revokeDeviceToken, type DeviceRecord, type ConfigPushRecord } from "./api/devices";
 import { createDeviceEnrollment, revokeEnrollmentCode, fetchStoreEnrollments, resendEnrollmentCode, type DeviceEnrollmentResponse, type EnrollmentRecord } from "./api/deviceEnrollments";
 import {
   fetchAnalyticsOverview,
@@ -2649,23 +2649,30 @@ export default function App() {
   }
 
   async function executeDeviceReset(deviceId: string) {
+    // GCP-STG-0185: Handle both resetToken and revokeToken actions
+    const action = pendingDeviceAction?.action ?? "resetToken";
     setPendingDeviceAction(null);
     setDeviceActionError("");
     setDeviceSaving((prev) => ({ ...prev, [deviceId]: true }));
     try {
-      const updated = await patchDevice(deviceId, { resetToken: true });
-      setDeviceRecords((prev) => prev.map((d) => (d.id === deviceId ? updated : d)));
-      // GL-CRIT-0049: Log successful device token reset
-      logAdminAction('device_token_reset', 'device', deviceId, { label: updated.label });
-      // ISSUE-MICRO-064: Re-fetch devices to update total
+      if (action === "revokeToken") {
+        // GCP-STG-0185: Call dedicated revoke-token endpoint
+        await revokeDeviceToken(deviceId, "SuperAdmin revoked via Devices tab");
+        logAdminAction('device_token_revoke', 'device', deviceId, {});
+      } else {
+        const updated = await patchDevice(deviceId, { resetToken: true });
+        setDeviceRecords((prev) => prev.map((d) => (d.id === deviceId ? updated : d)));
+        logAdminAction('device_token_reset', 'device', deviceId, { label: updated.label });
+      }
+      setRevokingTokenDevices((prev) => ({ ...prev, [deviceId]: false }));
       void refreshDevices();
     } catch (e: unknown) {
-      const errorMsg = e instanceof Error ? e.message : "Failed to reset device token.";
+      const errorMsg = e instanceof Error ? e.message : `Failed to ${action === "revokeToken" ? "revoke" : "reset"} device token.`;
       setDeviceActionError(errorMsg);
-      // GL-CRIT-0049: Log failed device token reset
-      logAdminActionError('device_token_reset', 'device', deviceId, errorMsg);
+      logAdminActionError(action === "revokeToken" ? 'device_token_revoke' : 'device_token_reset', 'device', deviceId, errorMsg);
     } finally {
       setDeviceSaving((prev) => ({ ...prev, [deviceId]: false }));
+      setRevokingTokenDevices((prev) => ({ ...prev, [deviceId]: false }));
     }
   }
 
@@ -2777,6 +2784,15 @@ export default function App() {
     const storeId = createStoreId.trim();
     if (!name) {
       setCreateStoreError("Store name is required.");
+      return;
+    }
+    // GCP-STG-0186: Frontend name length validation matching backend (min 2, max 100)
+    if (name.length < 2) {
+      setCreateStoreError("Store name must be at least 2 characters.");
+      return;
+    }
+    if (name.length > 100) {
+      setCreateStoreError("Store name must be 100 characters or less.");
       return;
     }
     setCreateStoreError("");

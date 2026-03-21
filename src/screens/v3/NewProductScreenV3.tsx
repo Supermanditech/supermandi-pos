@@ -41,17 +41,19 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
     apiClient.get<any>(`/api/v1/pos/catalog/master/${encodeURIComponent(barcode)}`)
       .then((res) => {
         if (cancelled) return;
-        if (res?.found) {
-          const m: MasterResult = { found: true, name: res.name, brand: res.brand, category: res.category, packSize: res.packSize, mrpMinor: res.mrpMinor, hsnCode: res.hsnCode, gstPct: res.gstPct };
+        if (res?.found && res.product) {
+          // GCP-STG-0191: Unwrap res.product + handle snake_case from backend
+          const p = res.product;
+          const m: MasterResult = { found: true, name: p.name, brand: p.brand, category: p.category, packSize: p.pack_size ?? p.packSize, mrpMinor: p.mrp_minor ?? p.mrpMinor, hsnCode: p.hsn_code ?? p.hsnCode, gstPct: p.gst_pct ?? p.gstPct };
           setMasterResult(m);
           // Auto-fill form fields from master
-          if (res.name) setName(res.name);
-          if (res.brand) setBrand(res.brand);
-          if (res.category) setCategory(res.category);
-          if (res.packSize) setPackSize(res.packSize);
-          if (res.mrpMinor) setMrp(String(res.mrpMinor / 100));
-          if (res.hsnCode) setHsnCode(res.hsnCode);
-          if (res.gstPct != null) setGstPct(String(res.gstPct));
+          if (m.name) setName(m.name);
+          if (m.brand) setBrand(m.brand);
+          if (m.category) setCategory(m.category);
+          if (m.packSize) setPackSize(m.packSize);
+          if (m.mrpMinor) setMrp(String(m.mrpMinor / 100));
+          if (m.hsnCode) setHsnCode(m.hsnCode);
+          if (m.gstPct != null) setGstPct(String(m.gstPct));
         }
       })
       .catch((err) => {
