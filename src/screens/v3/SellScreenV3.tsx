@@ -367,9 +367,8 @@ export default function SellScreenV3() {
         ) : null}
       </View>
 
-      {/* V3-HARDEN-059: Bulk/Trade disabled until real store-side trade pricing contract exists
-         No production path should use invented 0.85 math */}
-      {/* <CustomerTypeToggle mode={sellMode} onModeChange={setSellMode} /> */}
+      {/* GCP-STG-0142: Retail/Bulk toggle — enabled now that B2B pricing exists (GCP-STG-0087) */}
+      <CustomerTypeToggle mode={sellMode} onModeChange={setSellMode} />
 
       {/* V3-FIX-039: Hide category chips when categoryBrowsingEnabled=false */}
       {categoryBrowsingEnabled ? <View style={styles.chipRow} testID="sell-category-chips">

@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 611,
+  "version": 612,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6670,7 +6670,7 @@
       "file": "src/screens/v3/SellScreenV3.tsx",
       "start_line": 1,
       "end_line": 563,
-      "checksum": "59364b0a5451fbac",
+      "checksum": "6e25c84bfbf5be3f",
       "description": "SellScreenV3 — product grid + Retail/Bulk toggle + CartSheetV3 wired + V3-HARDEN-106 testIDs",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
       "depends_on": null,
@@ -12138,6 +12138,42 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T18:30:16.263Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0142",
+      "file": "src/screens/v3/SellScreenV3.tsx",
+      "start_line": 370,
+      "end_line": 372,
+      "checksum": "02663de136d8a1f9",
+      "description": "Enable Retail/Bulk trade toggle on SELL screen (prototype compliance)",
+      "test_file": "backend/tests/sseEvents.gcp-stg-0108.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T18:50:26.038Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 269,
@@ -12182,5 +12218,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-21T18:34:07.113Z"
+  "lastUpdated": "2026-03-21T18:50:43.394Z"
 }
