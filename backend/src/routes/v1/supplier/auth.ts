@@ -841,7 +841,7 @@ router.post("/auth/forgot-password", passwordResetRateLimiter, async (req: Reque
 
     // Check if email exists
     const result = await pool.query(
-      `SELECT id, primary_email FROM supplier.suppliers WHERE primary_email = $1`,
+      `SELECT id, primary_email, verification_status FROM supplier.suppliers WHERE primary_email = $1`,
       [email.toLowerCase()]
     );
 
@@ -852,6 +852,12 @@ router.post("/auth/forgot-password", passwordResetRateLimiter, async (req: Reque
     }
 
     const supplier = result.rows[0];
+
+    // GCP-STG-0214: Block password reset for unapproved accounts
+    if (supplier.verification_status !== 'ACTIVE') {
+      res.json({ data: { success: true, message: 'Your application is under review. Password reset will be available after approval.' } });
+      return;
+    }
 
     // GO-LIVE-086: Generate cryptographically secure 64-char hex token (256 bits entropy)
     // Much stronger than previous 6-digit code (~20 bits)
@@ -1021,13 +1027,19 @@ router.post("/auth/forgot-password/otp-verify", passwordResetRateLimiter, async 
 
     // Find supplier by phone
     const result = await pool.query(
-      `SELECT id FROM supplier.suppliers WHERE primary_phone = $1`,
+      `SELECT id, verification_status FROM supplier.suppliers WHERE primary_phone = $1`,
       [phoneNormalized]
     );
 
     // Always return success to prevent phone enumeration
     if (!result.rows[0]) {
       res.json({ data: { success: true, message: 'If an account exists with this phone, you can proceed to verify OTP.' } });
+      return;
+    }
+
+    // GCP-STG-0214: Block OTP reset for unapproved accounts
+    if (result.rows[0].verification_status !== 'ACTIVE') {
+      res.json({ data: { success: true, message: 'Your application is under review. Password reset will be available after approval.' } });
       return;
     }
 

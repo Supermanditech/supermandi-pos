@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 576,
+  "version": 577,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -10820,6 +10820,45 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T14:06:41.983Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0214",
+      "file": "backend/src/routes/v1/supplier/auth.ts",
+      "start_line": 842,
+      "end_line": 862,
+      "checksum": "ef7ac779bd1144b0",
+      "description": "Block forgot-password email + OTP for unapproved suppliers (verification_status != ACTIVE)",
+      "test_file": "backend/tests/supplierResetBlock.gcp-stg-0214.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T14:10:24.547Z",
       "status": "ACTIVE"
     }
   ],
