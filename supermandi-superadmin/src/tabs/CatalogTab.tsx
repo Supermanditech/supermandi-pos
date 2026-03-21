@@ -48,6 +48,8 @@ export function CatalogTab() {
   const [editMarginFixed, setEditMarginFixed] = useState("");
   // GCP-STG-0075: Metadata editing state
   const [editName, setEditName] = useState("");
+  // GCP-STG-0087: Billing model state
+  const [editBillingModel, setEditBillingModel] = useState("SUPERMANDI_PRINCIPAL");
 
   // GCP-STG-0071: Reject modal state
   const [rejectingProduct, setRejectingProduct] = useState<CatalogProduct | null>(null);
@@ -141,6 +143,8 @@ export function CatalogTab() {
     // GCP-STG-0072: Margin fields — empty means no change
     setEditMarginPct("");
     setEditMarginFixed("");
+    // GCP-STG-0087: Billing model
+    setEditBillingModel((product as any).billingModel || "SUPERMANDI_PRINCIPAL");
   };
 
   // GCP-STG-0071: Approve product
@@ -217,6 +221,14 @@ export function CatalogTab() {
           marginPct: hasMarginPct ? parseFloat(editMarginPct) : undefined,
           marginFixedMinor: hasMarginFixed ? Math.round(parseFloat(editMarginFixed) * 100) : undefined,
         });
+      }
+
+      // GCP-STG-0087: Update billing model if changed
+      const billingModelChanged = editBillingModel !== ((editingProduct as any).billingModel || "SUPERMANDI_PRINCIPAL");
+      if (billingModelChanged) {
+        await editProductMetadata(editingProduct.id, {
+          billingModel: editBillingModel,
+        } as any);
       }
 
       // GCP-STG-0075: Update product name if changed
@@ -541,6 +553,43 @@ export function CatalogTab() {
                   }
                 </p>
               )}
+            </div>
+
+            {/* GCP-STG-0087: Billing Model Selector */}
+            <div style={{
+              background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8,
+              padding: '12px 16px', marginBottom: 16
+            }}>
+              <h4 style={{ margin: '0 0 8px', fontSize: 14, color: '#166534' }}>Billing Model</h4>
+              <div style={{ display: 'flex', gap: 16 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                  <input
+                    type="radio"
+                    name="billingModel"
+                    value="SUPERMANDI_PRINCIPAL"
+                    checked={editBillingModel === "SUPERMANDI_PRINCIPAL"}
+                    onChange={() => setEditBillingModel("SUPERMANDI_PRINCIPAL")}
+                    disabled={editSaving}
+                  />
+                  SuperMandi Principal
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                  <input
+                    type="radio"
+                    name="billingModel"
+                    value="DIRECT_SUPPLIER"
+                    checked={editBillingModel === "DIRECT_SUPPLIER"}
+                    onChange={() => setEditBillingModel("DIRECT_SUPPLIER")}
+                    disabled={editSaving}
+                  />
+                  Direct Supplier
+                </label>
+              </div>
+              <p style={{ fontSize: 11, color: '#6b7280', marginTop: 6, marginBottom: 0 }}>
+                {editBillingModel === "SUPERMANDI_PRINCIPAL"
+                  ? "SuperMandi buys from supplier and resells to retailer. Two invoices: purchase + sale."
+                  : "Supplier invoices retailer directly. SuperMandi charges platform commission fee."}
+              </p>
             </div>
 
             {/* V3-FIX-169: Conversion approval — editable "bought as / stocked as / sold as" */}

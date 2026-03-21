@@ -17,7 +17,7 @@
  * - margin_basis: "per_unit" | "per_pack" | "per_case"
  */
 
-export type BillingModel = "SUPERMANDI_PRINCIPAL";
+export type BillingModel = "SUPERMANDI_PRINCIPAL" | "DIRECT_SUPPLIER";
 
 export type PublishTarget = "all_stores" | "region" | "specific_stores";
 
@@ -58,8 +58,8 @@ export function validateCommercialization(config: Partial<CommercializationConfi
 } {
   const errors: string[] = [];
 
-  if (config.billingModel && config.billingModel !== "SUPERMANDI_PRINCIPAL") {
-    errors.push(`Invalid billing model: ${config.billingModel}. Only SUPERMANDI_PRINCIPAL is supported.`);
+  if (config.billingModel && !["SUPERMANDI_PRINCIPAL", "DIRECT_SUPPLIER"].includes(config.billingModel)) {
+    errors.push(`Invalid billing model: ${config.billingModel}. Must be SUPERMANDI_PRINCIPAL or DIRECT_SUPPLIER.`);
   }
 
   if (config.marginPct !== undefined && (config.marginPct < 0 || config.marginPct > 100)) {

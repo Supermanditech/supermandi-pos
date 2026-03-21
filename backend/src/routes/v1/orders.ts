@@ -104,11 +104,16 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
       totalPrice: number;
       productName: string;
       barcode: string | null;
+      billingModel: string;
+      hsnCode: string | null;
+      gstRate: number;
+      unit: string;
     }> = [];
 
     for (const item of items) {
       const productResult = await client.query(
         `SELECT sp.id, sp.supplier_id, sp.name, sp.barcode, sp.moq, sp.approval_status,
+                sp.billing_model, sp.hsn_code, sp.gst_rate, sp.unit,
                 spm.product_id
          FROM catalog.supplier_products sp
          LEFT JOIN catalog.supplier_product_map spm ON spm.supplier_product_id = sp.id
@@ -163,6 +168,10 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         totalPrice: lineTotal,
         productName: product.name,
         barcode: product.barcode || null,
+        billingModel: product.billing_model || "SUPERMANDI_PRINCIPAL",
+        hsnCode: product.hsn_code || null,
+        gstRate: product.gst_rate ? parseFloat(product.gst_rate) : 0,
+        unit: product.unit || "PCS",
       });
     }
 
@@ -244,13 +253,16 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
       items: termSnapItems,
     });
 
+    // GCP-STG-0087: Resolve billing model from first item (all items in single order share same model)
+    const orderBillingModel = validatedItems[0]?.billingModel || "SUPERMANDI_PRINCIPAL";
+
     const orderResult = await client.query(
       `INSERT INTO orders.purchase_orders (
         id, order_number, store_id, supplier_id, order_type, status,
         total_amount, item_count, store_notes, delivery_address,
         expected_delivery_date, created_by_user_id, procurement_lane,
-        accepted_terms_snapshot, accepted_terms_version, payment_lane
-      ) VALUES ($1, $2, $3, $4, $5, $12, $6, $7, $8, $9, $10, NULL, $11, $13, $15, $14)
+        accepted_terms_snapshot, accepted_terms_version, payment_lane, billing_model
+      ) VALUES ($1, $2, $3, $4, $5, $12, $6, $7, $8, $9, $10, NULL, $11, $13, $15, $14, $16)
       RETURNING
         id,
         order_number as "orderNumber",
@@ -264,6 +276,7 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         delivery_address as "deliveryAddress",
         expected_delivery_date as "expectedDeliveryDate",
         procurement_lane as "procurementLane",
+        billing_model as "billingModel",
         created_at as "createdAt",
         updated_at as "updatedAt"`,
       [
@@ -278,6 +291,8 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         procurementLane === "CATALOGUE_PRINCIPAL" ? "SUPERMANDI_PRINCIPAL" : null,
         // V3-FIX-175: Real published-term version from snapshot
         Math.max(...termSnapItems.map(i => i.publishedTerms.version), 1),
+        // GCP-STG-0087: Billing model from supplier product catalog
+        orderBillingModel,
       ]
     );
 
@@ -355,6 +370,30 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
     await client.query("COMMIT");
 
     log.info(`[SUP-POS-001] Order created: ${orderNumber}, storeId=${storeId}, supplierId=${supplierId}, items=${validatedItems.length}, total=${totalAmount}`);
+
+    // GCP-STG-0087: Auto-generate invoices for submitted orders (non-blocking)
+    if (orderStatus === "submitted") {
+      import("../../services/orderInvoiceService").then(({ generateOrderInvoices }) => {
+        generateOrderInvoices(pool, {
+          orderId,
+          storeId,
+          supplierId,
+          billingModel: orderBillingModel as "SUPERMANDI_PRINCIPAL" | "DIRECT_SUPPLIER",
+          totalAmount,
+          items: validatedItems.map((vi) => ({
+            supplierProductId: vi.supplierProductId,
+            productName: vi.productName,
+            quantity: vi.quantity,
+            unitPrice: vi.unitPrice,
+            hsnCode: vi.hsnCode || undefined,
+            gstRate: vi.gstRate,
+            unit: vi.unit,
+          })),
+        }).catch((err: any) => {
+          log.error(`[GCP-STG-0087] Auto-invoice failed for order ${orderId}:`, err?.message);
+        });
+      }).catch(() => {});
+    }
 
     return res.status(201).json({
       success: true,

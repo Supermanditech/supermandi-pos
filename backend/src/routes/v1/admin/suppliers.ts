@@ -1368,6 +1368,8 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
     procurementPackQty: adminProcurementPackQty,
     baseStockUnit: adminBaseStockUnit,
     splitSellEligible: adminSplitSellEligible,
+    // GCP-STG-0087: B2B billing model
+    billingModel,
   } = req.body || {};
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
   const adminId = (req as any).adminId;
@@ -1528,6 +1530,17 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
       changes.invoiceModel = { from: current.invoice_model, to: invoiceModel };
     }
 
+    // GCP-STG-0087: B2B billing model
+    if (billingModel !== undefined) {
+      if (!['SUPERMANDI_PRINCIPAL', 'DIRECT_SUPPLIER'].includes(billingModel)) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "billingModel must be 'SUPERMANDI_PRINCIPAL' or 'DIRECT_SUPPLIER'" });
+      }
+      updates.push(`billing_model = $${paramIndex++}`);
+      values.push(billingModel);
+      changes.billingModel = { from: current.billing_model, to: billingModel };
+    }
+
     if (hsnCode !== undefined) {
       updates.push(`hsn_code = $${paramIndex++}`);
       values.push(hsnCode || null);
@@ -1593,6 +1606,7 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
          bnpl_eligible as "bnplEligible",
          bnpl_max_days as "bnplMaxDays",
          invoice_model as "invoiceModel",
+         billing_model as "billingModel",
          hsn_code as "hsnCode",
          gst_rate as "gstRate"`,
       values

@@ -521,7 +521,8 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           sp.moq_tiers,
           sp.procurement_unit,
           sp.procurement_pack_qty,
-          sp.base_stock_unit
+          sp.base_stock_unit,
+          sp.billing_model
         FROM catalog.supplier_products sp
         JOIN supplier.suppliers s ON s.id = sp.supplier_id
         JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
@@ -597,7 +598,8 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           'moqTiers', moq_tiers,
           'procurementUnit', procurement_unit,
           'procurementPackQty', procurement_pack_qty,
-          'baseStockUnit', base_stock_unit
+          'baseStockUnit', base_stock_unit,
+          'billingModel', COALESCE(billing_model, 'SUPERMANDI_PRINCIPAL')
         ) ORDER BY is_preferred DESC, retailer_price ASC) AS suppliers
       FROM priced
       GROUP BY group_id

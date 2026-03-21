@@ -274,6 +274,7 @@ export async function editProductMetadata(
     marginPercent?: number;
     bnplEligible?: boolean;
     bnplMaxDays?: number;
+    billingModel?: string;
   }
 ): Promise<void> {
   const base = API_BASE;

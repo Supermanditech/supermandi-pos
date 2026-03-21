@@ -65,6 +65,8 @@ function catalogToSupplier(p: CatalogProduct): SupplierProduct {
     soldBy: raw.soldBy ?? raw.sold_by,
     rateUnit: raw.rateUnit ?? raw.rate_unit,
     productMode: raw.productMode ?? raw.product_mode,
+    // GCP-STG-0087: B2B billing model
+    billingModel: bestOffer.billingModel ?? "SUPERMANDI_PRINCIPAL",
   };
 }
 
@@ -327,6 +329,7 @@ export default function BuyScreenV3() {
             tradeDiscountPct: detailProduct.tradeDiscountPct,
             creditDays: detailProduct.creditDays,
             bnplAvailable: detailProduct.bnplAvailable,
+            billingModel: detailProduct.billingModel,
           }}
         />
       ) : null}

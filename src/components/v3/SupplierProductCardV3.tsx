@@ -45,6 +45,8 @@ export interface SupplierProduct {
   soldBy?: string;
   rateUnit?: string;
   productMode?: string;
+  // GCP-STG-0087: B2B billing model
+  billingModel?: string;
 }
 
 // V3-FIX-136: Card is browse-only — no inline qty/add controls

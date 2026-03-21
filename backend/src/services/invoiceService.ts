@@ -393,14 +393,21 @@ async function storeInvoicePdfInGcs(pool: Pool, invoiceId: string, invoiceNumber
     const invoice = await getInvoice(pool, invoiceId);
     if (!invoice) return;
 
-    // Generate PDF buffer
+    // Generate PDF buffer — pass flat fields from getInvoice to InvoicePdfData
     const doc = generateInvoicePdf({
       invoiceNumber: invoice.invoiceNumber,
       invoiceDate: invoice.invoiceDate,
       dueDate: invoice.dueDate,
+      invoiceModel: invoice.invoiceModel,
       invoiceType: invoice.invoiceType,
-      seller: invoice.seller,
-      buyer: invoice.buyer,
+      status: invoice.status || "issued",
+      fiscalYear: invoice.fiscalYear,
+      sellerName: invoice.sellerName,
+      sellerGstin: invoice.sellerGstin,
+      sellerAddress: invoice.sellerAddress,
+      buyerName: invoice.buyerName,
+      buyerGstin: invoice.buyerGstin,
+      buyerAddress: invoice.buyerAddress,
       items: invoice.items,
       subtotalMinor: invoice.subtotalMinor,
       discountMinor: invoice.discountMinor,
@@ -409,11 +416,11 @@ async function storeInvoicePdfInGcs(pool: Pool, invoiceId: string, invoiceNumber
       sgstMinor: invoice.sgstMinor,
       igstMinor: invoice.igstMinor,
       totalTaxMinor: invoice.totalTaxMinor,
-      totalMinor: invoice.totalMinor,
+      totalAmountMinor: invoice.totalAmountMinor,
+      amountPaidMinor: invoice.amountPaidMinor || 0,
+      balanceDueMinor: invoice.balanceDueMinor,
       platformFeeMinor: invoice.platformFeeMinor,
       payments: invoice.payments || [],
-      balanceDueMinor: invoice.balanceDueMinor,
-      notes: invoice.notes,
     });
 
     // Collect PDF into buffer

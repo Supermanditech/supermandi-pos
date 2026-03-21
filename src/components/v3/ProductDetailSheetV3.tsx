@@ -26,6 +26,7 @@ export interface ProcurementData {
   tradeDiscountPct?: number;
   creditDays?: number;
   bnplAvailable?: boolean;
+  billingModel?: string;
 }
 
 type ProductDetailSheetV3Props = {
@@ -216,6 +217,14 @@ export default function ProductDetailSheetV3({
                   <View style={styles.metaItem}>
                     <Text style={styles.metaLabel}>BNPL</Text>
                     <Text style={[styles.metaValue, { color: colors.primary }]}>Available</Text>
+                  </View>
+                ) : null}
+                {procurement.billingModel ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Model</Text>
+                    <Text style={[styles.metaValue, { color: procurement.billingModel === "DIRECT_SUPPLIER" ? "#0369a1" : "#166534" }]}>
+                      {procurement.billingModel === "DIRECT_SUPPLIER" ? "Direct" : "Principal"}
+                    </Text>
                   </View>
                 ) : null}
               </View>
