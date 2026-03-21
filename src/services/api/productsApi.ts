@@ -275,8 +275,8 @@ export async function listProducts(params?: { barcode?: string; q?: string; stor
       }
     }
 
-    // List all products with pagination
-    const limit = 100;
+    // GCP-STG-0083: List all products with pagination (500-item chunks)
+    const limit = 500;
     let offset = 0;
     const items: StoreProductsListItem[] = [];
     for (;;) {
@@ -303,6 +303,40 @@ export async function listProducts(params?: { barcode?: string; q?: string; stor
     // GO-LIVE: Log the error for debugging but return empty array for graceful degradation
     console.error(`[listProducts] Unexpected error:`, error);
     return [];
+  }
+}
+
+/**
+ * GCP-STG-0083: Progressive product loading — calls onPage after each chunk
+ * so the store can update UI incrementally instead of waiting for all pages.
+ */
+export async function listProductsProgressive(
+  onPage: (products: ApiProduct[], done: boolean) => void
+): Promise<void> {
+  const limit = 500;
+  let offset = 0;
+  for (;;) {
+    const listParams = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    try {
+      const res = await apiClient.get<{ success: boolean; data?: StoreProductsListItem[]; total?: number }>(`${STORE_PRODUCTS_BASE}/list?${listParams.toString()}`);
+      const page = Array.isArray(res?.data) ? res.data : [];
+      const mapped = page.map(mapStoreProductToApiProduct);
+
+      const isLast = page.length < limit;
+      const total = typeof res?.total === "number" ? res.total : null;
+      const isComplete = isLast || (total !== null && offset + page.length >= total);
+
+      onPage(mapped, isComplete);
+
+      if (isComplete) break;
+      offset += limit;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        console.log(`[listProductsProgressive] Page failed: ${error.message}`);
+      }
+      onPage([], true); // Signal completion on error
+      break;
+    }
   }
 }
 

@@ -72,60 +72,70 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      // 1) Try backend first
-      const remote = await productsApi.listProducts();
-      // V3-FIX-096: Preserve all product metadata from backend
-      const productsData: Product[] = remote.map((p) => {
-        const priceSources = productsApi.getProductPriceSources(p);
-        const resolved = productsApi.resolvePriceMinorFromSources(priceSources);
-        const raw = p as any;
-        return {
-          id: p.id,
-          storeProductId: raw.storeProductId ?? raw.store_product_id,
-          name: p.name,
-          priceMinor: resolved.priceMinor,
-          mrpMinor: raw.mrpMinor ?? raw.mrp_minor ?? (raw.mrp ? Math.round(raw.mrp * 100) : undefined),
-          purchasePriceMinor: raw.purchasePriceMinor ?? raw.purchase_price_minor,
-          currency: p.currency,
-          barcode: p.barcode ?? undefined,
-          category: raw.category ?? raw.categoryName,
-          stock: p.stock,
-          description: raw.description,
-          brand: raw.brand,
-          imageUrl: raw.imageUrl ?? raw.image_url,
-          unit: raw.unit,
-          hsnCode: raw.hsnCode ?? raw.hsn_code,
-          gstRate: raw.gstRate ?? raw.gst_rate,
-          netContentValue: raw.netContentValue ?? raw.net_content_value,
-          netContentUnit: raw.netContentUnit ?? raw.net_content_unit,
-          supplierId: raw.supplierId ?? raw.supplier_id,
-          supplierName: raw.supplierName ?? raw.supplier_name,
-          metadataUpdatedAt: raw.metadataUpdatedAt ?? raw.metadata_updated_at,
-          // V3-FIX-167: Canonical conversion profile
-          productMode: raw.productMode ?? raw.product_mode ?? raw.mode ?? undefined,
-          soldBy: raw.soldBy ?? raw.sold_by ?? undefined,
-          rateUnit: raw.rateUnit ?? raw.rate_unit ?? undefined,
-          procurementUnit: raw.procurementUnit ?? raw.procurement_unit ?? undefined,
-          procurementPackQty: raw.procurementPackQty ?? raw.procurement_pack_qty ?? undefined,
-          baseStockUnit: raw.baseStockUnit ?? raw.base_stock_unit ?? undefined,
-          allowFractionalSell: raw.allowFractionalSell ?? raw.allow_fractional_sell ?? undefined,
-          conversionPrecision: raw.conversionPrecision ?? raw.conversion_precision ?? undefined,
-          conversionConfirmed: raw.conversionConfirmed ?? raw.conversion_confirmed ?? undefined,
-        };
+      // GCP-STG-0083: Progressive loading — update store after each 500-item chunk
+      // First chunk renders immediately, rest loads in background
+      const allProducts: Product[] = [];
+
+      await productsApi.listProductsProgressive((pageItems, done) => {
+        // V3-FIX-096: Preserve all product metadata from backend
+        const mapped: Product[] = pageItems.map((p) => {
+          const priceSources = productsApi.getProductPriceSources(p);
+          const resolved = productsApi.resolvePriceMinorFromSources(priceSources);
+          const raw = p as any;
+          return {
+            id: p.id,
+            storeProductId: raw.storeProductId ?? raw.store_product_id,
+            name: p.name,
+            priceMinor: resolved.priceMinor,
+            mrpMinor: raw.mrpMinor ?? raw.mrp_minor ?? (raw.mrp ? Math.round(raw.mrp * 100) : undefined),
+            purchasePriceMinor: raw.purchasePriceMinor ?? raw.purchase_price_minor,
+            currency: p.currency,
+            barcode: p.barcode ?? undefined,
+            category: raw.category ?? raw.categoryName,
+            stock: p.stock,
+            description: raw.description,
+            brand: raw.brand,
+            imageUrl: raw.imageUrl ?? raw.image_url,
+            unit: raw.unit,
+            hsnCode: raw.hsnCode ?? raw.hsn_code,
+            gstRate: raw.gstRate ?? raw.gst_rate,
+            netContentValue: raw.netContentValue ?? raw.net_content_value,
+            netContentUnit: raw.netContentUnit ?? raw.net_content_unit,
+            supplierId: raw.supplierId ?? raw.supplier_id,
+            supplierName: raw.supplierName ?? raw.supplier_name,
+            metadataUpdatedAt: raw.metadataUpdatedAt ?? raw.metadata_updated_at,
+            // V3-FIX-167: Canonical conversion profile
+            productMode: raw.productMode ?? raw.product_mode ?? raw.mode ?? undefined,
+            soldBy: raw.soldBy ?? raw.sold_by ?? undefined,
+            rateUnit: raw.rateUnit ?? raw.rate_unit ?? undefined,
+            procurementUnit: raw.procurementUnit ?? raw.procurement_unit ?? undefined,
+            procurementPackQty: raw.procurementPackQty ?? raw.procurement_pack_qty ?? undefined,
+            baseStockUnit: raw.baseStockUnit ?? raw.base_stock_unit ?? undefined,
+            allowFractionalSell: raw.allowFractionalSell ?? raw.allow_fractional_sell ?? undefined,
+            conversionPrecision: raw.conversionPrecision ?? raw.conversion_precision ?? undefined,
+            conversionConfirmed: raw.conversionConfirmed ?? raw.conversion_confirmed ?? undefined,
+          };
+        });
+
+        allProducts.push(...mapped);
+
+        // GCP-STG-0083: Update store incrementally — first chunk visible immediately
+        set({
+          products: [...allProducts],
+          loading: !done,
+          error: null,
+          ...(done ? { lastSyncedAt: new Date().toISOString() } : {}),
+        });
+
+        if (mapped.length > 0) {
+          upsertStockFromProducts(mapped);
+        }
       });
 
-      await storeScopedStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(productsData));
-      upsertStockFromProducts(productsData);
-
-      set({
-        products: productsData,
-        loading: false,
-        error: null,
-        lastSyncedAt: new Date().toISOString(),
-      });
+      await storeScopedStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(allProducts));
 
       await eventLogger.log('PRODUCTS_LOADED', {
-        count: productsData.length,
+        count: allProducts.length,
         source: 'backend_api'
       });
 
