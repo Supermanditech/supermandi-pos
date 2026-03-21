@@ -48,7 +48,6 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",
-    "razorpay": "^2.9.4",
     "@google-cloud/translate": "^9.3.0",
     "@supermandi/common": "workspace:*",
     "@types/bcryptjs": "^2.4.6",
@@ -59,6 +58,7 @@
     "@types/morgan": "^1.9.9",
     "@types/multer": "^2.0.0",
     "@types/pg": "^8.10.9",
+    "@types/qrcode": "^1.5.6",
     "@types/uuid": "^9.0.7",
     "bcryptjs": "^2.4.3",
     "bullmq": "^4.18.3",
@@ -82,6 +82,8 @@
     "pdfkit": "^0.15.0",
     "pg": "^8.11.3",
     "pg-pool": "^3.6.1",
+    "qrcode": "^1.5.4",
+    "razorpay": "^2.9.4",
     "uuid": "^9.0.1",
     "winston": "^3.11.0",
     "zod": "^3.22.4"

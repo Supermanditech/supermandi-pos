@@ -376,6 +376,11 @@ export async function issueInvoice(pool: Pool, invoiceId: string): Promise<void>
     // Non-blocking — log but don't fail issuance
     console.error(`[GCP-STG-0074] PDF storage failed for invoice ${invoiceId}:`, err?.message);
   });
+
+  // GCP-STG-0078: Trigger e-invoice IRN generation (non-blocking)
+  triggerEInvoice(pool, invoiceId).catch((err) => {
+    console.error(`[GCP-STG-0078] E-invoice generation failed for invoice ${invoiceId}:`, err?.message);
+  });
 }
 
 // GCP-STG-0074: Generate PDF and store in GCS
@@ -435,6 +440,31 @@ async function storeInvoicePdfInGcs(pool: Pool, invoiceId: string, invoiceNumber
   } catch (err: any) {
     // Log but don't rethrow — PDF storage is best-effort
     console.error(`[GCP-STG-0074] storeInvoicePdfInGcs error:`, err?.message);
+  }
+}
+
+// GCP-STG-0078: Trigger e-invoice IRN generation if applicable
+async function triggerEInvoice(pool: Pool, invoiceId: string): Promise<void> {
+  try {
+    const { isEInvoiceApplicable, generateIrn } = await import("./eInvoiceService");
+
+    // Check if e-invoice is applicable for this invoice
+    const result = await pool.query(
+      `SELECT invoice_type, seller_gstin as "sellerGstin", buyer_gstin as "buyerGstin"
+       FROM invoicing.invoices WHERE id = $1::uuid`,
+      [invoiceId]
+    );
+    if (result.rows.length === 0) return;
+
+    const inv = result.rows[0];
+    if (!isEInvoiceApplicable({ sellerGstin: inv.sellerGstin, buyerGstin: inv.buyerGstin, invoiceType: inv.invoice_type })) {
+      return;
+    }
+
+    await generateIrn(pool, invoiceId);
+  } catch (err: any) {
+    // Non-blocking — log but don't fail issuance
+    console.error(`[GCP-STG-0078] triggerEInvoice error:`, err?.message);
   }
 }
 
@@ -524,7 +554,13 @@ export async function getInvoice(pool: Pool, invoiceId: string): Promise<any> {
       i.order_id as "orderId",
       i.created_at as "createdAt",
       i.issued_at as "issuedAt",
-      i.paid_at as "paidAt"
+      i.paid_at as "paidAt",
+      i.irn as "irn",
+      i.irn_status as "irnStatus",
+      i.irn_generated_at as "irnGeneratedAt",
+      i.signed_qr_string as "signedQrString",
+      i.ack_number as "ackNumber",
+      i.ack_date as "ackDate"
     FROM invoicing.invoices i
     WHERE i.id = $1::uuid`,
     [invoiceId]

@@ -6,6 +6,7 @@ import { getPool } from "../../../db/client";
 import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
 import { listInvoices, getInvoice } from "../../../services/invoiceService";
 import { generateInvoicePdf } from "../../../services/invoicePdfService";
+import { generateQrCodeBuffer } from "../../../services/eInvoiceService";
 
 export const supplierInvoicesRouter = Router();
 
@@ -88,7 +89,14 @@ supplierInvoicesRouter.get("/:invoiceId/pdf", requireSupplierAuth, async (req: S
       return;
     }
 
-    const doc = generateInvoicePdf(invoice);
+    // GCP-STG-0078: Include QR code if e-invoice signed QR exists
+    let qrCodeBuffer: Buffer | undefined;
+    if (invoice.signedQrString) {
+      const buf = await generateQrCodeBuffer(invoice.signedQrString);
+      if (buf) qrCodeBuffer = buf;
+    }
+
+    const doc = generateInvoicePdf({ ...invoice, qrCodeBuffer });
     // LIVE.BE.DOCUMENTS.CONTENT_DISPOSITION_SANITIZATION.001: Strip path traversal + special chars
     const filename = `${(invoice.invoiceNumber || "invoice").replace(/[/\\<>"'\r\n\t]/g, "-")}.pdf`;
 

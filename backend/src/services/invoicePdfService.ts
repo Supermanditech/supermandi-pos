@@ -17,6 +17,12 @@ export interface InvoicePdfData {
   status: string;
   fiscalYear?: string;
 
+  // E-invoice (GCP-STG-0078)
+  irn?: string;
+  ackNumber?: string;
+  ackDate?: string;
+  qrCodeBuffer?: Buffer; // PNG buffer for QR code image
+
   // Parties
   sellerName: string;
   sellerGstin?: string;
@@ -149,6 +155,18 @@ export function generateInvoicePdf(data: InvoicePdfData): InstanceType<typeof PD
   if (data.fiscalYear) {
     doc.font("Helvetica-Bold").text("F.Y.:", rightCol, 106);
     doc.font("Helvetica").text(data.fiscalYear, rightCol + 50, 106);
+  }
+
+  // GCP-STG-0078: IRN details (if e-invoice generated)
+  if (data.irn) {
+    let irnY = data.fiscalYear ? 122 : 106;
+    doc.fontSize(7).font("Helvetica-Bold").text("IRN:", rightCol, irnY);
+    doc.font("Helvetica").text(data.irn, rightCol + 25, irnY, { width: 200 });
+    irnY += 10;
+    if (data.ackNumber) {
+      doc.font("Helvetica-Bold").text("Ack:", rightCol, irnY);
+      doc.font("Helvetica").text(`${data.ackNumber}${data.ackDate ? ` (${data.ackDate})` : ""}`, rightCol + 25, irnY);
+    }
   }
 
   // =========================================================================
@@ -355,6 +373,30 @@ export function generateInvoicePdf(data: InvoicePdfData): InstanceType<typeof PD
         leftCol, y
       );
       y += 12;
+    }
+  }
+
+  // =========================================================================
+  // GCP-STG-0078: QR Code (if e-invoice signed QR available)
+  // =========================================================================
+  if (data.qrCodeBuffer) {
+    // Place QR code in bottom-left, above footer
+    const qrSize = 100;
+    const qrY = Math.min(y + 20, 650);
+
+    if (qrY > 700) {
+      doc.addPage();
+      doc.image(data.qrCodeBuffer, leftCol, 40, { width: qrSize, height: qrSize });
+      doc.fontSize(7).font("Helvetica").text("Scan for e-invoice verification", leftCol, 40 + qrSize + 2, { width: qrSize + 20 });
+      if (data.irn) {
+        doc.fontSize(6).text(`IRN: ${data.irn.substring(0, 32)}...`, leftCol, 40 + qrSize + 12, { width: 200 });
+      }
+    } else {
+      doc.image(data.qrCodeBuffer, leftCol, qrY, { width: qrSize, height: qrSize });
+      doc.fontSize(7).font("Helvetica").text("Scan for e-invoice verification", leftCol, qrY + qrSize + 2, { width: qrSize + 20 });
+      if (data.irn) {
+        doc.fontSize(6).text(`IRN: ${data.irn.substring(0, 32)}...`, leftCol, qrY + qrSize + 12, { width: 200 });
+      }
     }
   }
 

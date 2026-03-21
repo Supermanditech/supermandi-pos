@@ -15,6 +15,7 @@ import {
   type InvoiceItemInput,
 } from "../../../services/invoiceService";
 import { generateInvoicePdf } from "../../../services/invoicePdfService";
+import { generateIrn, cancelIrn, generateQrCodeBuffer, getEInvoiceConfig } from "../../../services/eInvoiceService";
 import { log } from "../../../lib/logger";
 
 export const adminInvoicesRouter = Router();
@@ -631,7 +632,20 @@ adminInvoicesRouter.get("/invoices/:invoiceId/pdf", requireAdminToken, requirePe
       return res.status(404).json({ error: "Invoice not found" });
     }
 
-    const pdfDoc = generateInvoicePdf(invoice);
+    // GCP-STG-0078: Generate QR code buffer if signed QR string exists
+    let qrCodeBuffer: Buffer | undefined;
+    if (invoice.signedQrString) {
+      const buf = await generateQrCodeBuffer(invoice.signedQrString);
+      if (buf) qrCodeBuffer = buf;
+    }
+
+    const pdfDoc = generateInvoicePdf({
+      ...invoice,
+      irn: invoice.irn,
+      ackNumber: invoice.ackNumber,
+      ackDate: invoice.ackDate,
+      qrCodeBuffer,
+    });
 
     // LIVE.BE.DOCUMENTS.CONTENT_DISPOSITION_SANITIZATION.001: Strip path traversal + special chars
     const filename = `${invoice.invoiceNumber.replace(/[/\\<>"'\r\n\t]/g, "-")}.pdf`;
@@ -642,5 +656,98 @@ adminInvoicesRouter.get("/invoices/:invoiceId/pdf", requireAdminToken, requirePe
   } catch (err: any) {
     log.error("[admin/invoices/pdf] Error:", err);
     return res.status(500).json({ error: "Failed to generate invoice PDF" });
+  }
+});
+
+// =============================================================================
+// GCP-STG-0078: E-Invoice Management
+// =============================================================================
+
+/**
+ * POST /api/v1/admin/invoices/:invoiceId/generate-irn
+ * Manually trigger IRN generation for an issued invoice
+ */
+adminInvoicesRouter.post("/invoices/:invoiceId/generate-irn", requireAdminToken, requirePermission("products", "approve"), async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const config = getEInvoiceConfig();
+  if (!config.enabled) {
+    return res.status(400).json({ error: "E-invoicing is not enabled. Set EINVOICE_ENABLED=true" });
+  }
+
+  try {
+    const result = await generateIrn(pool, req.params.invoiceId);
+    if (!result) {
+      return res.status(400).json({ error: "E-invoice not applicable or already generated" });
+    }
+    return res.json({ success: true, data: result });
+  } catch (err: any) {
+    log.error("[admin/invoices/generate-irn] Error:", err);
+    return res.status(500).json({ error: err.message || "Failed to generate IRN" });
+  }
+});
+
+/**
+ * POST /api/v1/admin/invoices/:invoiceId/cancel-irn
+ * Cancel an IRN within 24-hour window
+ */
+adminInvoicesRouter.post("/invoices/:invoiceId/cancel-irn", requireAdminToken, requirePermission("products", "approve"), async (req, res) => {
+  const { reason } = req.body || {};
+
+  if (!reason || typeof reason !== "string" || reason.trim().length < 5) {
+    return res.status(400).json({ error: "Cancellation reason is required (min 5 characters)" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    await cancelIrn(pool, req.params.invoiceId, reason.trim());
+    return res.json({ success: true, message: "IRN cancelled" });
+  } catch (err: any) {
+    log.error("[admin/invoices/cancel-irn] Error:", err);
+    return res.status(400).json({ error: err.message || "Failed to cancel IRN" });
+  }
+});
+
+/**
+ * GET /api/v1/admin/invoices/einvoice-status
+ * Get e-invoice configuration status and pending invoices
+ */
+adminInvoicesRouter.get("/invoices/einvoice-status", requireAdminToken, requirePermission("products", "read"), async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const config = getEInvoiceConfig();
+
+  try {
+    const pendingResult = await pool.query(
+      `SELECT COUNT(*)::int as count FROM invoicing.invoices WHERE irn_status IN ('pending', 'failed')`
+    );
+    const generatedResult = await pool.query(
+      `SELECT COUNT(*)::int as count FROM invoicing.invoices WHERE irn_status = 'generated'`
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        enabled: config.enabled,
+        sandbox: config.sandbox,
+        gstin: config.gstin,
+        pendingCount: pendingResult.rows[0]?.count || 0,
+        generatedCount: generatedResult.rows[0]?.count || 0,
+      },
+    });
+  } catch (err: any) {
+    log.error("[admin/invoices/einvoice-status] Error:", err);
+    // Graceful fallback if irn_status column doesn't exist yet
+    if (err.code === "42703") {
+      return res.json({
+        success: true,
+        data: { enabled: config.enabled, sandbox: config.sandbox, gstin: config.gstin, pendingCount: 0, generatedCount: 0 },
+      });
+    }
+    return res.status(500).json({ error: "Failed to get e-invoice status" });
   }
 });
