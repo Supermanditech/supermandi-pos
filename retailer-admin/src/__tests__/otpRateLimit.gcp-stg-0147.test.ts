@@ -18,17 +18,29 @@ describe("GCP-STG-0147: OTP rate limit handling", () => {
   });
 
   describe("LoginPage.tsx — auto-switch to password mode", () => {
-    test("sendOtp catch block auto-switches to password mode on rate limit", () => {
+    test("sendOtp catch block covers Firebase rate limit pattern", () => {
       expect(loginCode).toContain("Too many OTP attempts");
       expect(loginCode).toContain("setAuthMode('password')");
     });
 
-    test("verifyOtp catch block auto-switches on rate limit", () => {
+    test("sendOtp catch block covers backend 429 pattern", () => {
+      // Backend authRateLimiter returns "Too many authentication attempts"
+      const sendSection = loginCode.slice(
+        loginCode.indexOf("handleSendOtp"),
+        loginCode.indexOf("handleVerifyOtp")
+      );
+      expect(sendSection).toContain("Too many authentication");
+    });
+
+    test("verifyOtp catch block covers all rate limit patterns", () => {
       const verifySection = loginCode.slice(
         loginCode.indexOf("handleVerifyOtp"),
         loginCode.indexOf("handleStoreSelect")
       );
+      expect(verifySection).toContain("Too many OTP attempts");
       expect(verifySection).toContain("Too many attempts");
+      expect(verifySection).toContain("Too many authentication");
+      expect(verifySection).toContain("too-many-requests");
       expect(verifySection).toContain("setAuthMode('password')");
     });
 

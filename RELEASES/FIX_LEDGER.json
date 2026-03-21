@@ -10750,7 +10750,7 @@
       "start_line": 146,
       "end_line": 148,
       "checksum": "7a97fbe392f2f5ff",
-      "description": "OTP rate limit error suggests email/password fallback",
+      "description": "OTP rate limit error suggests email/password fallback (covers Firebase + backend 429)",
       "test_file": "retailer-admin/src/__tests__/otpRateLimit.gcp-stg-0147.test.ts",
       "depends_on": null,
       "migration": null,

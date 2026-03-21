@@ -192,7 +192,8 @@ export default function LoginPage() {
       const msg = err instanceof Error ? err.message : 'Failed to send OTP. Please try again.';
       setError(msg);
       // GCP-STG-0147: Auto-switch to email/password when OTP is rate-limited
-      if (msg.includes('Too many OTP attempts') || msg.includes('too-many-requests')) {
+      // Covers: Firebase 'Too many OTP attempts', Firebase code 'too-many-requests', backend 429 'Too many authentication attempts'
+      if (msg.includes('Too many OTP attempts') || msg.includes('Too many attempts') || msg.includes('Too many authentication') || msg.includes('too-many-requests')) {
         setAuthMode('password');
       }
     } finally {
@@ -261,7 +262,8 @@ export default function LoginPage() {
       const msg = err instanceof Error ? err.message : 'Login failed. Please try again.';
       setError(msg);
       // GCP-STG-0147: Auto-switch to email/password when OTP verify is rate-limited
-      if (msg.includes('Too many attempts') || msg.includes('too-many-requests')) {
+      // Covers: Firebase 'Too many attempts', Firebase code 'too-many-requests', backend 429 'Too many authentication attempts'
+      if (msg.includes('Too many OTP attempts') || msg.includes('Too many attempts') || msg.includes('Too many authentication') || msg.includes('too-many-requests')) {
         setAuthMode('password');
       }
     } finally {
