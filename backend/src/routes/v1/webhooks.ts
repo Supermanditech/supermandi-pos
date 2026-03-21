@@ -554,4 +554,153 @@ webhooksRouter.get("/health", async (req: Request, res: Response) => {
   });
 });
 
+// =============================================================================
+// GCP-STG-0088: PhonePe Callback Handler
+// =============================================================================
+
+/**
+ * POST /api/v1/webhooks/phonepe
+ * PhonePe sends callback with base64 response + X-VERIFY header
+ */
+webhooksRouter.post("/phonepe", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { verifyPhonePeCallback, logWebhookEvent } = await import("../../services/paymentGatewayService");
+  const { updatePaymentIntentStatus } = await import("../../services/procurementPaymentService");
+
+  const responseBase64 = req.body?.response;
+  const xVerify = req.headers["x-verify"] as string | undefined;
+
+  if (!responseBase64) {
+    return res.status(400).json({ error: "Missing response payload" });
+  }
+
+  const verification = verifyPhonePeCallback(responseBase64, xVerify || "");
+
+  // Log for audit
+  await logWebhookEvent(pool, "PHONEPE", "callback", null, verification.transactionId || null,
+    verification.valid ? "processed" : "rejected", req.body, verification.error);
+
+  if (!verification.valid) {
+    log.warn(`[GCP-STG-0088] PhonePe callback verification failed: ${verification.error}`);
+    return res.status(401).json({ error: verification.error });
+  }
+
+  // Update payment intent
+  if (verification.transactionId) {
+    try {
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const intentStatus = verification.status === "paid" ? "paid" : verification.status === "pending" ? "pending" : "failed";
+        await updatePaymentIntentStatus(client, verification.transactionId, intentStatus as any);
+        await client.query("COMMIT");
+      } catch (e) {
+        await client.query("ROLLBACK");
+        throw e;
+      } finally {
+        client.release();
+      }
+    } catch (err: any) {
+      log.error(`[GCP-STG-0088] PhonePe intent update failed:`, err?.message);
+    }
+  }
+
+  return res.json({ status: "ok", provider: "phonepe" });
+});
+
+// =============================================================================
+// GCP-STG-0088: PineLabs Callback Handler
+// =============================================================================
+
+/**
+ * POST /api/v1/webhooks/pinelabs
+ * PineLabs redirects back with form-encoded or JSON payload
+ */
+webhooksRouter.post("/pinelabs", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { verifyPineLabsCallback, logWebhookEvent } = await import("../../services/paymentGatewayService");
+  const { updatePaymentIntentStatus } = await import("../../services/procurementPaymentService");
+
+  const payload = req.body || {};
+  const verification = verifyPineLabsCallback(payload);
+
+  // Log for audit
+  await logWebhookEvent(pool, "PINE_LABS", "callback", null, verification.transactionId || null,
+    verification.valid ? "processed" : "rejected", payload, verification.error);
+
+  if (!verification.valid) {
+    log.warn(`[GCP-STG-0088] PineLabs callback verification failed: ${verification.error}`);
+    return res.status(401).json({ error: verification.error });
+  }
+
+  // Find and update payment intent by provider order ID
+  if (verification.transactionId) {
+    try {
+      const intentResult = await pool.query(
+        `SELECT id FROM procurement.payment_intents WHERE provider_order_id = $1 LIMIT 1`,
+        [verification.transactionId]
+      );
+      if (intentResult.rows.length > 0) {
+        const client = await pool.connect();
+        try {
+          await client.query("BEGIN");
+          const intentStatus = verification.status === "paid" ? "paid" : verification.status === "pending" ? "pending" : "failed";
+          await updatePaymentIntentStatus(client, intentResult.rows[0].id, intentStatus as any);
+          await client.query("COMMIT");
+        } catch (e) {
+          await client.query("ROLLBACK");
+          throw e;
+        } finally {
+          client.release();
+        }
+      }
+    } catch (err: any) {
+      log.error(`[GCP-STG-0088] PineLabs intent update failed:`, err?.message);
+    }
+  }
+
+  return res.json({ status: "ok", provider: "pinelabs" });
+});
+
+// =============================================================================
+// GCP-STG-0088: Universal Procurement Payment Callback
+// =============================================================================
+
+/**
+ * POST /api/v1/webhooks/procurement/payment-callback
+ * Universal callback endpoint — route by provider query param
+ */
+webhooksRouter.post("/procurement/payment-callback", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const provider = (req.query.provider as string || "").toUpperCase();
+  const intentId = req.query.intentId as string;
+
+  const { logWebhookEvent } = await import("../../services/paymentGatewayService");
+
+  await logWebhookEvent(pool, provider || "UNKNOWN", "payment-callback", intentId || null, null, "received", req.body);
+
+  log.info(`[GCP-STG-0088] Procurement callback: provider=${provider}, intentId=${intentId}`);
+
+  // Route to provider-specific handler
+  if (provider === "PHONEPE") {
+    // Forward to PhonePe handler logic
+    const { verifyPhonePeCallback } = await import("../../services/paymentGatewayService");
+    const verification = verifyPhonePeCallback(req.body?.response || "", (req.headers["x-verify"] as string) || "");
+    return res.json({ status: verification.valid ? "ok" : "failed", provider: "phonepe" });
+  }
+
+  if (provider === "PINELABS") {
+    return res.json({ status: "ok", provider: "pinelabs" });
+  }
+
+  // Default: acknowledge
+  return res.json({ status: "ok", provider: provider || "unknown" });
+});
+
 export default webhooksRouter;
