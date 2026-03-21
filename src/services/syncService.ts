@@ -2,6 +2,8 @@ import NetInfo from "@react-native-community/netinfo";
 import { syncOutbox } from "./offline/sync";
 import { refreshStockSnapshot } from "./stockService";
 import { isOnline } from "./networkStatus";
+// GCP-STG-0091: Wire product freshness check into active sync loop
+import { useProductsStore } from "../stores/productsStore";
 
 let unsubscribe: null | (() => void) = null;
 
@@ -57,12 +59,15 @@ function startStockSync(): void {
     try {
       if (await isOnline()) {
         await refreshStockSnapshot();
+        // GCP-STG-0091: Check product catalog freshness every sync tick
+        // Detects retailer web / CSV / supplier edits and reloads if stale
+        await useProductsStore.getState().checkAndRefresh();
       }
     } catch (error) {
       console.warn("[SyncService] STG-387: Stock sync failed:", error);
     }
   }, STOCK_SYNC_INTERVAL_MS);
-  console.log("[SyncService] STG-387: Stock sync started (30s interval)");
+  console.log("[SyncService] GCP-STG-0091: Stock + catalog sync started (30s interval)");
 }
 
 function stopStockSync(): void {
@@ -84,6 +89,8 @@ export async function syncNow(): Promise<void> {
   await Promise.all([
     refreshStockSnapshot(),
     syncOutboxWithRetry(),
+    // GCP-STG-0091: Also check catalog freshness on manual sync
+    useProductsStore.getState().checkAndRefresh(),
   ]);
 }
 
