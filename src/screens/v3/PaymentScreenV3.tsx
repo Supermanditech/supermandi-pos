@@ -239,7 +239,8 @@ function createStyles(colors: ColorPalette) {
     totalSub: { fontSize: 14, color: colors.textTertiary, fontWeight: "500", marginTop: 4 },
     methodGrid: { flexDirection: "row", gap: 12, marginTop: 28, width: "100%" },
     methodBtn: { flex: 1, padding: 24, borderRadius: 20, borderWidth: 2, borderColor: colors.border, alignItems: "center", backgroundColor: colors.surface },
-    methodLabel: { fontSize: 17, fontWeight: "800", color: colors.textSecondary, marginTop: 8, letterSpacing: -0.3 },
+    // GCP-STG-0126: Reduced from 17 to 14 — "UDHAR" was wrapping to 2 lines in narrow flex:1 card
+    methodLabel: { fontSize: 14, fontWeight: "800", color: colors.textSecondary, marginTop: 8, letterSpacing: -0.3 },
     methodHint: { fontSize: 10, color: colors.textTertiary, marginTop: 2 },
     secondaryRow: { flexDirection: "row", gap: 10, marginTop: 12, width: "100%" },
     secondaryBtn: { flex: 1, paddingVertical: 10, alignItems: "center" },

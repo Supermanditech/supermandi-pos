@@ -35,6 +35,7 @@ type ProductTileV3Props = {
   sellMode: SellMode;
   cartQty: number;
   onPress: () => void;
+  onLongPress?: () => void; // GCP-STG-0024: Long-press opens detail sheet
 };
 
 function getStockStatus(stock?: number): "in" | "low" | "out" | "unknown" {
@@ -44,7 +45,7 @@ function getStockStatus(stock?: number): "in" | "low" | "out" | "unknown" {
   return "in";
 }
 
-export default function ProductTileV3({ product, sellMode, cartQty, onPress }: ProductTileV3Props) {
+export default function ProductTileV3({ product, sellMode, cartQty, onPress, onLongPress }: ProductTileV3Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const stockStatus = getStockStatus(product.stock);
@@ -58,8 +59,9 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress }: P
     <Pressable
       style={[styles.tile, cartQty > 0 && styles.tileInCart]}
       onPress={onPress}
+      onLongPress={onLongPress}
       accessibilityRole="button"
-      accessibilityLabel={`${product.name}, ${priceLabel}, tap for details`}
+      accessibilityLabel={`${product.name}, ${priceLabel}, tap to add, hold for details`}
     >
       {cartQty > 0 ? (
         <View style={styles.cartBadge}>

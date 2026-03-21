@@ -256,8 +256,25 @@ export default function SellScreenV3() {
     [cartItems]
   );
 
-  // V3-FIX-135: Tile tap opens detail sheet (detail-first, no direct add)
+  // GCP-STG-0024: Tap adds to cart directly (fast billing for kirana stores)
+  // Long-press opens detail sheet for price/qty/discount adjustments
   const handleTilePress = useCallback(
+    (product: ProductTileData) => {
+      if (product.productMode === "LOOSE_BULK" && product.conversionConfirmed === false) {
+        showToast("Retail setup needed — complete conversion setup before selling");
+        return;
+      }
+      const existing = cartItems.find((i) => i.id === (product.barcode ?? product.id) || i.barcode === product.barcode);
+      if (existing) {
+        useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
+      } else {
+        addItem({ ...buildCartItemFromTile(product, sellMode), quantity: 1 });
+      }
+    },
+    [cartItems, addItem, sellMode]
+  );
+
+  const handleTileLongPress = useCallback(
     (product: ProductTileData) => {
       setDetailProduct(product);
     },
@@ -282,7 +299,7 @@ export default function SellScreenV3() {
     [cartItems, addItem, sellMode]
   );
 
-  // V3-FIX-135: Tile tap opens detail, not direct add
+  // GCP-STG-0024: Tap = add to cart, long-press = detail sheet
   const renderTile = useCallback(
     ({ item }: { item: ProductTileData }) => (
       <ProductTileV3
@@ -290,9 +307,10 @@ export default function SellScreenV3() {
         sellMode={sellMode}
         cartQty={getCartQty(item.barcode ?? item.id)}
         onPress={() => handleTilePress(item)}
+        onLongPress={() => handleTileLongPress(item)}
       />
     ),
-    [sellMode, getCartQty, handleTilePress]
+    [sellMode, getCartQty, handleTilePress, handleTileLongPress]
   );
 
   return (
