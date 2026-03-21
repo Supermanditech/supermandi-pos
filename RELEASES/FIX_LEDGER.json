@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 657,
+  "version": 658,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6450,8 +6450,8 @@
       "ticket": "STG-515",
       "file": "backend/src/routes/v1/pos/sales.ts",
       "start_line": 813,
-      "end_line": 3084,
-      "checksum": "1585322dc1477c72",
+      "end_line": 3090,
+      "checksum": "601b915c7ff149dd",
       "description": "instanceof Date check for TIMESTAMPTZ in bill detail",
       "test_file": "src/__tests__/screens/date-timezone.stg-515.test.ts",
       "depends_on": null,
@@ -10243,9 +10243,9 @@
     {
       "ticket": "GCP-STG-0077",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 2217,
-      "end_line": 2384,
-      "checksum": "e3a92de85fcb6061",
+      "start_line": 2221,
+      "end_line": 3090,
+      "checksum": "be328dbc83174f37",
       "description": "Auto-generate tax invoice after POS sale completion (fire-and-forget after cash/UPI/DUE payment COMMIT)",
       "test_file": "backend/tests/invoiceAutoGen.gcp-stg-0077.unit.test.ts",
       "depends_on": null,
@@ -10278,7 +10278,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:30:19.204Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-21T15:40:08.500Z"
+      "line_shifted_at": "2026-03-21T23:41:59.641Z"
     },
     {
       "ticket": "GCP-STG-0049",
@@ -11109,8 +11109,8 @@
     {
       "ticket": "GCP-STG-0118",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 1294,
-      "end_line": 1323,
+      "start_line": 1295,
+      "end_line": 1324,
       "checksum": "646b8fe57fcad039",
       "description": "sale_items INSERT: populate discount_minor from cart item discount, adjust line_total_minor",
       "test_file": "backend/src/routes/v1/pos/sales.ts",
@@ -11144,13 +11144,13 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T15:35:37.267Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-21T15:40:08.521Z"
+      "line_shifted_at": "2026-03-21T23:41:59.666Z"
     },
     {
       "ticket": "GCP-STG-0099",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 1018,
-      "end_line": 1028,
+      "start_line": 1019,
+      "end_line": 1029,
       "checksum": "726b526ff6483032",
       "description": "Backend guard: reject zero-amount sales with 422 ZERO_AMOUNT_SALE error",
       "test_file": "backend/src/routes/v1/pos/sales.ts",
@@ -11183,7 +11183,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T15:39:49.386Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-21T23:41:59.674Z"
     },
     {
       "ticket": "GCP-STG-0097",
@@ -14188,6 +14189,45 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T23:32:15.866Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0233",
+      "file": "backend/src/routes/v1/pos/sales.ts",
+      "start_line": 15,
+      "end_line": 16,
+      "checksum": "2dc2a6a9bfc011b1",
+      "description": "Log SALE_COMPLETED + PAYMENT_COMPLETED events to pos_events table",
+      "test_file": "backend/tests/settlement.gcp-stg-0106.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "operator_approved": true,
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T23:42:00.980Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 269,
@@ -14232,5 +14272,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-21T23:32:40.785Z"
+  "lastUpdated": "2026-03-21T23:42:01.099Z"
 }
