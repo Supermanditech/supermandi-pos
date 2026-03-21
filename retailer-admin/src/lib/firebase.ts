@@ -144,7 +144,8 @@ export async function sendOtp(phoneNumber: string, buttonId?: string): Promise<b
     if (errorCode === 'auth/invalid-app-credential' || errorCode === 'auth/captcha-check-failed') {
       userMessage = 'Unable to send OTP. Please reload and try again, or contact support.';
     } else if (errorCode === 'auth/too-many-requests') {
-      userMessage = 'Too many attempts. Please wait a few minutes and try again.';
+      // GCP-STG-0147: Suggest email/password fallback on OTP rate limit
+      userMessage = 'Too many OTP attempts. Try signing in with email & password instead, or wait a few minutes.';
     } else if (errorCode === 'auth/invalid-phone-number') {
       userMessage = 'Invalid phone number. Please check and try again.';
     } else if (errorCode === 'auth/quota-exceeded') {

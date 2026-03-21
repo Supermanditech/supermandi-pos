@@ -189,7 +189,12 @@ export default function LoginPage() {
       setResendCooldown(60);
       setOtpExpirySeconds(300);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
+      const msg = err instanceof Error ? err.message : 'Failed to send OTP. Please try again.';
+      setError(msg);
+      // GCP-STG-0147: Auto-switch to email/password when OTP is rate-limited
+      if (msg.includes('Too many OTP attempts') || msg.includes('too-many-requests')) {
+        setAuthMode('password');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -253,7 +258,12 @@ export default function LoginPage() {
         setStep('stores');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+      const msg = err instanceof Error ? err.message : 'Login failed. Please try again.';
+      setError(msg);
+      // GCP-STG-0147: Auto-switch to email/password when OTP verify is rate-limited
+      if (msg.includes('Too many attempts') || msg.includes('too-many-requests')) {
+        setAuthMode('password');
+      }
     } finally {
       setIsLoading(false);
     }
