@@ -457,6 +457,7 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
           daily_order_limit_paise,
           monthly_order_limit_paise,
           max_outstanding_dues_paise,
+          gstin,
           created_at,
           updated_at
         FROM platform.stores
@@ -544,6 +545,7 @@ adminStoresRouter.get("/stores/:storeId/settings", requirePermission("stores", "
         state,
         pincode,
         location,
+        gstin,
         -- Payment
         upi_vpa,
         upi_vpa_updated_at,
@@ -772,7 +774,7 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
     if (trimmed && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{1}[Z]{1}[A-Z0-9]{1}$/.test(trimmed)) {
       return res.status(400).json({ error: "gstin_invalid_format", message: "GSTIN must be 15-character alphanumeric (e.g., 27AABCU9603R1ZM)" });
     }
-    addUpdate("gst_number", trimmed || null);
+    addUpdate("gstin", trimmed || null);
   }
 
   // SA-P1-006: Allowed payment methods per store

@@ -45,8 +45,8 @@ interface StoresTabProps {
   requestStoreStatusChange: (storeId: string, storeName: string, action: "suspend" | "reactivate") => void;
   storeSuspendLoading: boolean;
   // Contact editing
-  getStoreContactDraft: (s: StoreRecord) => { address: string; contactName: string; contactPhone: string; contactEmail: string };
-  updateStoreContactDraft: (storeId: string, patch: Partial<{ address: string; contactName: string; contactPhone: string; contactEmail: string }>) => void;
+  getStoreContactDraft: (s: StoreRecord) => { address: string; contactName: string; contactPhone: string; contactEmail: string; gstin: string };
+  updateStoreContactDraft: (storeId: string, patch: Partial<{ address: string; contactName: string; contactPhone: string; contactEmail: string; gstin: string }>) => void;
   // Payment methods
   getStorePaymentDraft: (s: StoreRecord) => string[];
   toggleStorePaymentMethod: (storeId: string, method: string, current: string[]) => void;
@@ -567,6 +567,16 @@ export function StoresTab({
                                 value={contactDraft.address}
                                 onChange={(e) => updateStoreContactDraft(s.id, { address: e.target.value })}
                                 placeholder="Store address"
+                              />
+                            </div>
+                            <div>
+                              <label className="sa-form-label">GSTIN</label>
+                              <input
+                                className="tableInput"
+                                value={contactDraft.gstin}
+                                onChange={(e) => updateStoreContactDraft(s.id, { gstin: e.target.value.toUpperCase() })}
+                                placeholder="e.g. 27AABCU9603R1ZM"
+                                maxLength={15}
                               />
                             </div>
                           </div>

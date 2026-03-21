@@ -482,7 +482,7 @@ export default function App() {
   const [storeNameSaving, setStoreNameSaving] = useState<Record<string, boolean>>({});
   const [storeNameError, setStoreNameError] = useState<string>("");
   // P1-SADM-002: Store contact fields
-  const [storeContactEdits, setStoreContactEdits] = useState<Record<string, { address: string; contactName: string; contactPhone: string; contactEmail: string }>>({});
+  const [storeContactEdits, setStoreContactEdits] = useState<Record<string, { address: string; contactName: string; contactPhone: string; contactEmail: string; gstin: string }>>({});
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
   // SA-P1-006: Payment method edits per store
   const [storePaymentEdits, setStorePaymentEdits] = useState<Record<string, string[]>>({});
@@ -2324,7 +2324,7 @@ export default function App() {
   }
 
   // P1-SADM-002: Store contact editing
-  function updateStoreContactDraft(storeId: string, patch: Partial<{ address: string; contactName: string; contactPhone: string; contactEmail: string }>) {
+  function updateStoreContactDraft(storeId: string, patch: Partial<{ address: string; contactName: string; contactPhone: string; contactEmail: string; gstin: string }>) {
     setStoreContactEdits((prev) => {
       const existing = prev[storeId] ?? { address: "", contactName: "", contactPhone: "", contactEmail: "" };
       return { ...prev, [storeId]: { ...existing, ...patch } };
@@ -2336,7 +2336,8 @@ export default function App() {
       address: s.address ?? "",
       contactName: s.contact_name ?? "",
       contactPhone: s.contact_phone ?? "",
-      contactEmail: s.contact_email ?? ""
+      contactEmail: s.contact_email ?? "",
+      gstin: s.gstin ?? "",
     };
   }
 
@@ -2371,7 +2372,8 @@ export default function App() {
           address: contactDraft.address,
           contactName: contactDraft.contactName,
           contactPhone: contactDraft.contactPhone,
-          contactEmail: contactDraft.contactEmail
+          contactEmail: contactDraft.contactEmail,
+          gstin: contactDraft.gstin || undefined, // GCP-STG-0121
         } : {}),
         ...(paymentDraft ? { allowedPaymentMethods: paymentDraft } : {})
       });
