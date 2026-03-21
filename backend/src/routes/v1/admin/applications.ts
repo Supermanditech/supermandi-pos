@@ -395,6 +395,17 @@ adminApplicationsRouter.post(
         entityTable = 'approved_supplier_id';
       }
 
+      // GCP-STG-0151: Copy email from auth.applications to auth.users during approval
+      // Phone-only registrations (Firebase OTP) leave auth.users.email NULL.
+      // The application form captures the email — propagate it on approval.
+      if (app.email && app.phone) {
+        await client.query(
+          `UPDATE auth.users SET email = $1, updated_at = NOW()
+           WHERE phone = $2 AND (email IS NULL OR email = '')`,
+          [app.email, app.phone]
+        );
+      }
+
       // Update application status to ACTIVE
       const adminNote = notes ? `${notes} (by ${adminId})` : `Approved by ${adminId}`;
       await client.query(
