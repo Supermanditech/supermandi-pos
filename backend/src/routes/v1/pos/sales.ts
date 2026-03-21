@@ -47,6 +47,9 @@ import {
 // GO-LIVE-034: Import stock cache invalidation for returns
 import { invalidateStockCache } from "./inventory";
 import { log } from "../../../lib/logger";
+// GCP-STG-0077: Import invoice service for auto-generation after payment
+import { createInvoice, issueInvoice } from "../../../services/invoiceService";
+import type { Pool } from "pg";
 
 export const posSalesRouter = Router();
 
@@ -1578,6 +1581,9 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
 
     await client.query("COMMIT");
 
+    // GCP-STG-0077: Fire-and-forget invoice generation after successful payment confirmation
+    generateSaleInvoice(pool, saleId, storeId, paymentMode).catch(() => {});
+
     return res.json({
       saleId,
       status: newStatus,
@@ -2158,6 +2164,10 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, requireA
     );
 
     await client.query("COMMIT");
+
+    // GCP-STG-0077: Fire-and-forget invoice generation after successful UPI payment
+    generateSaleInvoice(pool, saleId, storeId, "UPI").catch(() => {});
+
     return res.json({ status: "PAID" });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -2184,6 +2194,122 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, requireA
     client.release();
   }
 });
+
+// =============================================================================
+// GCP-STG-0077: Auto-generate tax invoice after POS sale completion
+// Fire-and-forget — never blocks payment response. Logs errors, never throws.
+// =============================================================================
+async function generateSaleInvoice(
+  pool: Pool,
+  saleId: string,
+  storeId: string,
+  paymentMode: "CASH" | "UPI" | "DUE"
+): Promise<string | null> {
+  try {
+    // 1. Check if invoice already exists for this sale (idempotency)
+    const existing = await pool.query(
+      `SELECT id FROM invoicing.invoices WHERE order_id = $1 LIMIT 1`,
+      [saleId]
+    );
+    if (existing.rows.length > 0) {
+      return String(existing.rows[0].id);
+    }
+
+    // 2. Fetch store details (seller)
+    const storeRes = await pool.query(
+      `SELECT name, gstin, address_line1, address_line2, city, state
+       FROM platform.stores WHERE id = $1::uuid`,
+      [storeId]
+    );
+    const store = storeRes.rows[0];
+    if (!store) {
+      log.warn("[invoice-auto] Store not found for invoice generation", { saleId, storeId });
+      return null;
+    }
+
+    const storeAddress = [store.address_line1, store.address_line2, store.city, store.state]
+      .filter(Boolean).join(", ");
+
+    // 3. Fetch sale header (for customer info on DUE sales)
+    const saleRes = await pool.query(
+      `SELECT total_minor, customer_name, customer_phone, bill_ref
+       FROM sales WHERE id = $1 AND store_id = $2`,
+      [saleId, storeId]
+    );
+    const sale = saleRes.rows[0];
+    if (!sale) {
+      log.warn("[invoice-auto] Sale not found for invoice generation", { saleId });
+      return null;
+    }
+
+    // 4. Fetch sale items with product details for HSN/GST
+    const itemsRes = await pool.query(
+      `SELECT si.name, si.quantity, si.price_minor, si.discount_minor, si.line_total_minor,
+              sp.hsn_code, sp.gst_rate
+       FROM sale_items si
+       LEFT JOIN catalog.supplier_products sp ON sp.id = si.variant_id::uuid
+       WHERE si.sale_id = $1
+       ORDER BY si.created_at ASC`,
+      [saleId]
+    );
+
+    if (itemsRes.rows.length === 0) {
+      log.warn("[invoice-auto] No sale items found for invoice", { saleId });
+      return null;
+    }
+
+    // 5. Build invoice input
+    const buyerName = sale.customer_name || "Walk-in Customer";
+
+    const invoice = await createInvoice(pool, {
+      invoiceModel: "buy_resell",
+      invoiceType: "sale",
+      seller: {
+        type: "store",
+        id: storeId,
+        name: store.name || "Store",
+        gstin: store.gstin || undefined,
+        address: storeAddress || undefined,
+        state: store.state || undefined,
+      },
+      buyer: {
+        type: "store", // Walk-in customer mapped as generic buyer
+        name: buyerName,
+      },
+      items: itemsRes.rows.map((row) => ({
+        productName: row.name || "Unknown Product",
+        quantity: Number(row.quantity),
+        unitPriceMinor: Number(row.price_minor),
+        discountMinor: Number(row.discount_minor ?? 0),
+        hsnCode: row.hsn_code || undefined,
+        gstRate: row.gst_rate != null ? Number(row.gst_rate) : 0,
+      })),
+      orderId: saleId,
+      referenceNote: `POS Sale ${sale.bill_ref || saleId} — ${paymentMode}`,
+      createdBy: "pos-auto-invoice",
+    });
+
+    // 6. Issue immediately (draft → issued)
+    await issueInvoice(pool, invoice.id);
+
+    log.info("[invoice-auto] Invoice generated", {
+      saleId,
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      paymentMode,
+    });
+
+    return invoice.id;
+  } catch (err: any) {
+    // Never throw — invoice failure must not affect payment
+    log.error("[invoice-auto] Failed to generate invoice", {
+      saleId,
+      storeId,
+      error: err?.message,
+    });
+    return null;
+  }
+}
 
 // GO-LIVE-184: Rate limit cash payments to 30/min per store
 // SEC-001: POST /payments/cash requires ACTIVE store status
@@ -2308,6 +2434,10 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, requireActiveStore, fi
     );
 
     await client.query("COMMIT");
+
+    // GCP-STG-0077: Fire-and-forget invoice generation after successful cash payment
+    generateSaleInvoice(pool, saleId, storeId, "CASH").catch(() => {});
+
     return res.json({ status: "PAID" });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -2510,6 +2640,10 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
     );
 
     await client.query("COMMIT");
+
+    // GCP-STG-0077: Fire-and-forget invoice generation after successful due payment
+    generateSaleInvoice(pool, saleId, storeId, "DUE").catch(() => {});
+
     return res.json({ status: "DUE", paymentId });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -2831,5 +2965,50 @@ posSalesRouter.get("/payments/:paymentId/status", requireDeviceToken, async (req
   } catch (error) {
     log.error("[payments/status] Error:", error);
     return res.status(500).json({ error: "failed to get payment status" });
+  }
+});
+
+// GCP-STG-0077: GET /sales/:saleId/invoice — fetch auto-generated invoice for a POS sale
+posSalesRouter.get("/sales/:saleId/invoice", requireDeviceToken, async (req, res) => {
+  const saleId = typeof req.params.saleId === "string" ? req.params.saleId.trim() : "";
+  if (!saleId) return res.status(400).json({ error: "saleId is required" });
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromPosDevice(req, "pos/sales");
+
+  try {
+    // Verify sale belongs to store (store isolation)
+    const saleCheck = await pool.query(
+      `SELECT id FROM sales WHERE id = $1 AND store_id = $2`,
+      [saleId, storeId]
+    );
+    if (saleCheck.rows.length === 0) {
+      return res.status(404).json({ error: "sale_not_found" });
+    }
+
+    // Find invoice linked to this sale via order_id
+    const invoiceRes = await pool.query(
+      `SELECT id, invoice_number, status, total_amount_minor, created_at
+       FROM invoicing.invoices WHERE order_id = $1 LIMIT 1`,
+      [saleId]
+    );
+
+    if (invoiceRes.rows.length === 0) {
+      return res.status(404).json({ error: "invoice_not_found", message: "Invoice not yet generated for this sale" });
+    }
+
+    const inv = invoiceRes.rows[0];
+    return res.json({
+      invoiceId: String(inv.id),
+      invoiceNumber: String(inv.invoice_number),
+      status: String(inv.status),
+      totalAmountMinor: Number(inv.total_amount_minor),
+      createdAt: new Date(inv.created_at).toISOString(),
+    });
+  } catch (error) {
+    log.error("[sales/invoice] Error:", error);
+    return res.status(500).json({ error: "failed to get invoice" });
   }
 });
