@@ -16,26 +16,16 @@ type CartItemRowV3Props = {
   onEdit?: () => void;
 };
 
-function getCategoryEmoji(name: string): string {
-  const n = name.toLowerCase();
-  if (n.includes("tea") || n.includes("chai")) return "🍵";
-  if (n.includes("milk") || n.includes("doodh")) return "🥛";
-  if (n.includes("maggi") || n.includes("noodle")) return "🍜";
-  if (n.includes("bread") || n.includes("roti")) return "🍞";
-  if (n.includes("butter") || n.includes("ghee")) return "🧈";
-  if (n.includes("salt") || n.includes("namak")) return "🧂";
-  if (n.includes("oil") || n.includes("tel")) return "🫒";
-  if (n.includes("rice") || n.includes("chawal")) return "🍚";
-  if (n.includes("egg") || n.includes("anda")) return "🥚";
-  if (n.includes("chocolate") || n.includes("dairy milk")) return "🍫";
-  if (n.includes("surf") || n.includes("detergent")) return "🫧";
-  return "🍪";
-}
+// GCP-STG-0025: Use category-based emoji from ProductTileV3 (28 mappings)
+// instead of fragile name-based matching that defaults everything to 🍪
+import { getCategoryEmoji } from "./ProductTileV3";
 
 export default function CartItemRowV3({ item, onIncrement, onDecrement, onRemove, onEdit }: CartItemRowV3Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const emoji = getCategoryEmoji(item.name);
+  // GCP-STG-0025: Use category field for accurate emoji, fall back to name
+  const category = (item.metadata?.category as string) ?? item.name;
+  const emoji = getCategoryEmoji(category);
   const lineTotal = item.priceMinor * item.quantity;
   const caseSize = item.caseSize ?? (item.metadata?.caseSize as number | undefined);
   const unit = item.unitLabel ?? (item.metadata?.unit as string) ?? "pcs";
