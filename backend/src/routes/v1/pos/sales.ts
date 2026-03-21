@@ -2468,7 +2468,12 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, requireActiveStore, fi
 // GO-LIVE-184: Rate limit due payments to 30/min per store
 // SEC-001: POST /payments/due requires ACTIVE store status
 posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, financialOperationsRateLimiter, async (req, res) => {
-  const { saleId } = req.body as { saleId?: string };
+  // GCP-STG-0053: Accept customerName + customerPhone from body (POS sends them for DUE)
+  const { saleId, customerName, customerPhone } = req.body as {
+    saleId?: string;
+    customerName?: string;
+    customerPhone?: string;
+  };
 
   if (typeof saleId !== "string" || saleId.trim().length === 0) {
     return res.status(400).json({ error: "saleId is required" });
@@ -2515,6 +2520,19 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
         error: "sale_not_pending",
         message: `Sale is in ${sale.status} status and cannot accept payment`
       });
+    }
+
+    // GCP-STG-0053: Set customer info from request body if not already on sale
+    // POS sends customerName + customerPhone with the DUE payment request
+    const effectivePhone = sale.customer_phone || (typeof customerPhone === "string" ? customerPhone.trim() : null);
+    const effectiveName = sale.customer_name || (typeof customerName === "string" ? customerName.trim() : null);
+    if (effectivePhone && !sale.customer_phone) {
+      await client.query(
+        `UPDATE sales SET customer_name = $1, customer_phone = $2 WHERE id = $3 AND store_id = $4`,
+        [effectiveName, effectivePhone, saleId, storeId]
+      );
+      sale.customer_name = effectiveName;
+      sale.customer_phone = effectivePhone;
     }
 
     // DATA-004: Validate customer_phone for DUE payments — unrecoverable without it

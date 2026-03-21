@@ -1247,6 +1247,18 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
           const mode = type === "PAYMENT_CASH" ? "CASH" : "DUE";
           const status = mode === "CASH" ? "PAID" : "DUE";
 
+          // GCP-STG-0053: Set customer info on sale for DUE payments (from offline outbox)
+          if (type === "PAYMENT_DUE") {
+            const custName = asTrimmedString((payload as any)?.customerName);
+            const custPhone = asTrimmedString((payload as any)?.customerPhone);
+            if (custPhone) {
+              await client.query(
+                `UPDATE sales SET customer_name = COALESCE(customer_name, $1), customer_phone = COALESCE(customer_phone, $2) WHERE id = $3 AND store_id = $4`,
+                [custName, custPhone, saleId, storeId]
+              );
+            }
+          }
+
           // AUD-080-D COMPLETE FIX: Include amount_minor in exact match check, always update on mismatch
           // The NEWER event is authoritative - if amounts differ, the later event is a correction
           const existingPayment = await client.query(

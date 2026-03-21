@@ -137,10 +137,13 @@ export async function recordDuePayment(input: {
     throw new Error("sale not found");
   }
 
+  // GCP-STG-0053: Pass customer info to offline outbox for DUE sync
   await recordOfflineDuePayment({
     saleId: sale.id,
     billRef: sale.billRef,
-    amountMinor: sale.totalMinor
+    amountMinor: sale.totalMinor,
+    customerName: input.customerName,
+    customerPhone: input.customerPhone,
   });
   return { status: "DUE" };
 }

@@ -273,6 +273,9 @@ export async function recordOfflineDuePayment(input: {
   saleId: string;
   billRef: string;
   amountMinor: number;
+  // GCP-STG-0053: Customer fields for offline Udhar — required for backend DUE payment sync
+  customerName?: string;
+  customerPhone?: string;
 }): Promise<void> {
   const now = new Date().toISOString();
   await offlineDb.run(`UPDATE offline_sales SET status = ?, updated_at = ? WHERE id = ?`, [
@@ -285,6 +288,9 @@ export async function recordOfflineDuePayment(input: {
     saleId: input.saleId,
     billRef: input.billRef,
     amountMinor: input.amountMinor,
+    // GCP-STG-0053: Include customer info so backend can create DUE with customer_phone
+    customerName: input.customerName ?? null,
+    customerPhone: input.customerPhone ?? null,
     createdAt: now
   });
 }
