@@ -329,3 +329,42 @@ export async function requireDeviceTokenAllowInactive(
 
   next();
 }
+
+// GCP-STG-0008: Allow expired tokens for the token refresh endpoint only.
+// Revoked tokens are still rejected — a revoked device must re-enroll via OTP.
+// This enables silent refresh: expired token → POST /token/refresh → new expiry.
+export async function requireDeviceTokenAllowExpired(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const status = await resolveDeviceFromToken(req, res);
+  if (!status) return;
+  if (!enforceStoreBinding(req, res, status)) return;
+
+  if (!status.storeId) {
+    res.status(403).json({ error: { code: "DEVICE_NOT_ENROLLED", message: "Device is not enrolled to any store." } });
+    return;
+  }
+  if (!status.deviceActive) {
+    res.status(403).json({ error: { code: "DEVICE_INACTIVE", message: "Device is inactive." } });
+    return;
+  }
+  // Allow expired tokens through — this IS the refresh endpoint
+  // But reject revoked tokens — revocation is permanent until re-enrollment
+  if (status.tokenRevoked) {
+    res.status(401).json({
+      error: "token_revoked",
+      message: "Device token has been revoked. Please re-enroll the device.",
+      code: "TOKEN_REVOKED"
+    });
+    return;
+  }
+
+  (req as any).posDevice = {
+    deviceId: status.deviceId,
+    storeId: status.storeId
+  } satisfies PosDeviceContext;
+
+  next();
+}

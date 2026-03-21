@@ -2,7 +2,7 @@
 // Provides token refresh and revocation capabilities
 
 import { Router, Request, Response } from "express";
-import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { requireDeviceToken, requireDeviceTokenAllowExpired } from "../../../middleware/deviceToken";
 import { refreshDeviceToken, revokeDeviceToken, logTokenEvent } from "../../../middleware/tokenSecurity";
 import { getPool } from "../../../db/client";
 // GO-LIVE-188: Import rate limiter for token operations
@@ -17,7 +17,9 @@ export const tokenManagementRouter = Router();
  * Requires valid device token
  * GO-LIVE-188: Rate limit token refresh to prevent DoS
  */
-tokenManagementRouter.post("/token/refresh", requireDeviceToken, financialOperationsRateLimiter, async (req: Request, res: Response) => {
+// GCP-STG-0008: Use requireDeviceTokenAllowExpired so expired tokens can be refreshed
+// without requiring OTP re-enrollment. Revoked tokens are still rejected.
+tokenManagementRouter.post("/token/refresh", requireDeviceTokenAllowExpired, financialOperationsRateLimiter, async (req: Request, res: Response) => {
   const posDevice = (req as any).posDevice;
 
   if (!posDevice?.deviceId || !posDevice?.storeId) {
