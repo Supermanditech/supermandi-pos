@@ -128,6 +128,7 @@ export function getCategoryEmoji(cat?: string): string {
     Detergent: "🧹", Soap: "🧼", Personal: "🪥", Baby: "🍼",
     Frozen: "🧊", Condiments: "🥫", Pulses: "🫘", Dry_Fruits: "🥜",
     Health: "💊", Stationery: "📝", Pooja: "🪔", Masala: "🫙",
+    Vegetables: "🥬", Fruits: "🍎",
   };
   const key = cat ?? "";
   return map[key] ?? map[key.charAt(0).toUpperCase() + key.slice(1)] ?? "📦";
