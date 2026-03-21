@@ -191,3 +191,104 @@ export async function overrideProductCategory(
     change: json.change,
   };
 }
+
+// =============================================================================
+// GCP-STG-0071: Approve a supplier product
+// =============================================================================
+export async function approveProduct(productId: string): Promise<void> {
+  const base = API_BASE;
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/products/${encodeURIComponent(productId)}/approve`,
+    {
+      method: "POST",
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "application/json",
+      },
+    }
+  );
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+}
+
+// =============================================================================
+// GCP-STG-0071: Reject a supplier product
+// =============================================================================
+export async function rejectProduct(
+  productId: string,
+  reason: string
+): Promise<void> {
+  const base = API_BASE;
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/products/${encodeURIComponent(productId)}/reject`,
+    {
+      method: "POST",
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ reason }),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+}
+
+// =============================================================================
+// GCP-STG-0072: Set margin on a supplier product
+// =============================================================================
+export async function setProductMargin(
+  productId: string,
+  margin: { marginPct?: number; marginFixedMinor?: number }
+): Promise<{ retailPrice: number }> {
+  const base = API_BASE;
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/catalog/supplier-products/${encodeURIComponent(productId)}/margin`,
+    {
+      method: "POST",
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(margin),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+  const json = await res.json();
+  return { retailPrice: json.retailPrice };
+}
+
+// =============================================================================
+// GCP-STG-0075: Edit product metadata (name, category, margin, BNPL)
+// =============================================================================
+export async function editProductMetadata(
+  productId: string,
+  data: {
+    editedName?: string;
+    editedCategory?: string;
+    superMandiMarginMinor?: number;
+    marginPercent?: number;
+    bnplEligible?: boolean;
+    bnplMaxDays?: number;
+  }
+): Promise<void> {
+  const base = API_BASE;
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/products/${encodeURIComponent(productId)}/edit`,
+    {
+      method: "PUT",
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+}
