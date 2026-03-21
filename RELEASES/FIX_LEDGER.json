@@ -7298,8 +7298,8 @@
       "ticket": "STG-570",
       "file": "src/screens/v3/StockScreenV3.tsx",
       "start_line": 1,
-      "end_line": 167,
-      "checksum": "d134373fbce3cd29",
+      "end_line": 183,
+      "checksum": "094063edc7649e3c",
       "description": "Stock screen v3 — current/unsold/movement tabs, stats, search, opening stock, barcode labels",
       "test_file": "src/__tests__/screens/store-layer4.stg-567-570.test.ts",
       "depends_on": null,
@@ -10707,9 +10707,9 @@
     {
       "ticket": "GCP-STG-0057",
       "file": "src/screens/v3/StockScreenV3.tsx",
-      "start_line": 49,
-      "end_line": 63,
-      "checksum": "f07c0bba0fe93eda",
+      "start_line": 57,
+      "end_line": 71,
+      "checksum": "861816e345378e0f",
       "description": "Stock screen Unsold (dead stock) and Movement (low/out sorted) tab filtering",
       "test_file": "src/__tests__/screens/stockTabs.gcp-stg-0057.test.ts",
       "depends_on": null,
@@ -10741,7 +10741,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T13:12:18.594Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-21T13:25:15.527Z"
     }
   ],
   "machine_state_version": 269,

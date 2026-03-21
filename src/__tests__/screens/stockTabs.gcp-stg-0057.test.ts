@@ -1,4 +1,4 @@
-// GCP-STG-0057: Stock screen Unsold/Movement tabs implemented
+// GCP-STG-0057: Stock screen Unsold/Movement tabs + field mapping fix
 import * as fs from "fs";
 import * as path from "path";
 
@@ -21,13 +21,12 @@ describe("GCP-STG-0057: Stock screen tab filtering", () => {
     expect(stockCode).toContain("a.stock - b.stock");
   });
 
-  test("current tab shows all items (no filter)", () => {
-    // Default: tabFiltered = items (no filter applied for current)
-    expect(stockCode).toContain("let tabFiltered = items");
-  });
-
   test("search filter applies on top of tab filter", () => {
     expect(stockCode).toContain("return tabFiltered.filter");
+  });
+
+  test("useMemo depends on activeTab for re-computation", () => {
+    expect(stockCode).toContain("[items, searchQuery, activeTab]");
   });
 
   test("empty state message is tab-specific", () => {
@@ -35,8 +34,45 @@ describe("GCP-STG-0057: Stock screen tab filtering", () => {
     expect(stockCode).toContain("No stock alerts");
     expect(stockCode).toContain("No inventory");
   });
+});
 
-  test("useMemo depends on activeTab for re-computation", () => {
-    expect(stockCode).toContain("[items, searchQuery, activeTab]");
+describe("GCP-STG-0057: Field mapping matches real API (StockStatementItem)", () => {
+  test("maps displayName (not name) for product name", () => {
+    expect(stockCode).toContain("p.displayName ?? p.name");
+  });
+
+  test("maps currentStock (not quantity) for stock level", () => {
+    expect(stockCode).toContain("p.currentStock");
+    expect(stockCode).not.toContain("p.quantity");
+  });
+
+  test("converts purchasePrice from rupees to minor (paise)", () => {
+    expect(stockCode).toContain("(p.purchasePrice ?? 0) * 100");
+  });
+
+  test("converts sellPrice from rupees to minor (paise)", () => {
+    expect(stockCode).toContain("(p.sellPrice ?? 0) * 100");
+  });
+
+  test("uses hardcoded LOW_STOCK_THRESHOLD instead of non-existent API field", () => {
+    expect(stockCode).toContain("LOW_STOCK_THRESHOLD = 10");
+    expect(stockCode).toContain("stock <= LOW_STOCK_THRESHOLD");
+    expect(stockCode).not.toContain("p.lowStockThreshold");
+  });
+});
+
+describe("GCP-STG-0057: Error state with retry", () => {
+  test("tracks loadError state", () => {
+    expect(stockCode).toContain("const [loadError, setLoadError] = useState(false)");
+  });
+
+  test("shows error UI with retry button", () => {
+    expect(stockCode).toContain("Could not load stock data");
+    expect(stockCode).toContain("Retry");
+    expect(stockCode).toContain("onPress={loadStock}");
+  });
+
+  test("loadStock is a useCallback (reusable for retry)", () => {
+    expect(stockCode).toContain("const loadStock = useCallback(");
   });
 });

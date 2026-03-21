@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { View, Pressable, TextInput, FlatList, StyleSheet, Text, ActivityIndicator, Alert } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
@@ -21,29 +21,38 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
   const [activeTab, setActiveTab] = useState<"current" | "unsold" | "movement">("current");
   const [items, setItems] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const online = await isOnline();
-        if (!online) { showToast("Offline — stock data unavailable"); setLoading(false); return; }
-        const res = await getStockStatement(200, true);
-        const mapped: StockItem[] = (res.data ?? []).map((p: any) => ({
-          name: p.name ?? "Unknown",
+  const loadStock = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const online = await isOnline();
+      if (!online) { showToast("Offline — stock data unavailable"); setLoading(false); return; }
+      const res = await getStockStatement(200, true);
+      // GCP-STG-0057 FIX: Map real API fields (displayName, currentStock, sellPrice, purchasePrice)
+      const LOW_STOCK_THRESHOLD = 10;
+      const mapped: StockItem[] = (res.data ?? []).map((p: any) => {
+        const stock = Number(p.currentStock ?? 0);
+        return {
+          name: p.displayName ?? p.name ?? "Unknown",
           barcode: p.barcode ?? p.primaryBarcode ?? "",
-          costMinor: p.unitCostMinor ?? 0,
-          sellMinor: p.unitPriceMinor ?? p.priceMinor ?? 0,
-          stock: p.quantity ?? 0,
-          status: (p.quantity ?? 0) <= 0 ? "out" as const : (p.quantity ?? 0) <= (p.lowStockThreshold ?? 5) ? "low" as const : "in" as const,
-        }));
-        setItems(mapped);
-      } catch (err) {
-        showToast("Could not load stock data");
-      } finally {
-        setLoading(false);
-      }
-    })();
+          costMinor: Math.round((p.purchasePrice ?? 0) * 100),
+          sellMinor: Math.round((p.sellPrice ?? 0) * 100),
+          stock,
+          status: stock <= 0 ? "out" as const : stock <= LOW_STOCK_THRESHOLD ? "low" as const : "in" as const,
+        };
+      });
+      setItems(mapped);
+    } catch (err) {
+      setLoadError(true);
+      showToast("Could not load stock data");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { void loadStock(); }, [loadStock]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const filteredItems = useMemo(() => {
@@ -80,6 +89,17 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
           </Pressable>
         ))}
       </View>
+
+      {/* GCP-STG-0057 FIX: Error state with retry button */}
+      {!loading && loadError ? (
+        <View style={{ padding: 32, alignItems: "center" }}>
+          <Text style={{ fontSize: 36, marginBottom: 8 }}>⚠</Text>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: colors.error }}>Could not load stock data</Text>
+          <Pressable onPress={loadStock} style={{ marginTop: 12, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, backgroundColor: colors.primary }}>
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Retry</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={styles.statsRow}>
         <View style={styles.stat}><Text style={styles.statLabel}>Products</Text><Text style={styles.statVal}>{totalProducts}</Text></View>
