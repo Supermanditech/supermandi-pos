@@ -237,6 +237,7 @@ import { authRateLimiter, adminRateLimiter } from './middleware/rateLimiter';
 app.use('/api/v1/auth', authRateLimiter);
 app.use('/api/v1/retailer-admin/auth', authRateLimiter);
 app.use('/api/v1/supplier/auth', authRateLimiter);
+app.use('/api/v1/pos/auth', authRateLimiter); // GCP-STG-0004: POS OTP endpoints need auth-level rate limiting
 
 // PRA-REAUDIT: Mount admin rate limiter (was exported but never used)
 app.use('/api/v1/admin', adminRateLimiter);
