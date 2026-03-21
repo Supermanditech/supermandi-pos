@@ -362,7 +362,7 @@ adminApplicationsRouter.post(
         entityTable = 'approved_store_id';
       } else {
         // STBT-174: Create a supplier with correct field mapping
-        // verification_status must be 'verified' (not 'ACTIVE') per supplier verification flow
+        // GCP-STG-0124: verification_status must be 'ACTIVE' (not 'verified') per migration 097 CHECK constraint
         // bank_account_name from owner_name (closest available), bank_name from app.bank_name
         const supplierResult = await client.query(
           `INSERT INTO supplier.suppliers (
@@ -370,7 +370,7 @@ adminApplicationsRouter.post(
             primary_contact_name, address_line1, address_line2, city, state, pincode,
             bank_account_number, bank_ifsc, bank_account_name, bank_name,
             document_urls, verification_status, status, application_id
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'verified', 'active', $16)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'ACTIVE', 'active', $16)
           RETURNING id`,
           [
             app.business_name,

@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 532,
+  "version": 533,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -9091,6 +9091,51 @@
         "test_guard": "Config env var, existing rate limit tests cover logic",
         "single_commit": "fix(GCP-STG-0002): one commit one tag",
         "ticket_parked": "Will park after merge"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0124",
+      "file": "backend/src/routes/v1/admin/applications.ts",
+      "start_line": 364,
+      "end_line": 393,
+      "checksum": "ffc800c77dc7cbfd",
+      "description": "Supplier approval uses ACTIVE not verified per migration 097 CHECK constraint",
+      "test_file": "backend/src/__tests__/admin/applications.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T08:48:33.376Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "operator_approved": "Mode A pre-staging",
+        "parity_scanned": "Backend-only change, no parity gaps",
+        "backend_api": "Approval endpoint uses ACTIVE per migration 097",
+        "business_logic": "CHECK constraint satisfied: ACTIVE in (KYC_SUBMITTED, ACTIVE, NEEDS_FIX, SUSPENDED)"
       }
     }
   ],
