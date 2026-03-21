@@ -8,7 +8,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import SupplierProductCardV3, { type SupplierProduct } from "../../components/v3/SupplierProductCardV3";
 import ProductDetailSheetV3 from "../../components/v3/ProductDetailSheetV3";
-import type { ProductTileData } from "../../components/v3/ProductTileV3";
+import ProductTileV3, { type ProductTileData } from "../../components/v3/ProductTileV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { tabAccents, typeRhythm } from "../../theme/brand";
@@ -237,16 +237,18 @@ export default function BuyScreenV3() {
           <Text style={{ color: colors.textTertiary, fontSize: 13, marginTop: 12 }}>Loading catalogue...</Text>
         </View>
       ) : null}
-      {/* V3-HARDEN-150: Virtualized list for 5k+ supplier SKUs */}
+      {/* GCP-STG-0145: BUY tiles = SELL tiles — 3-column grid with ProductTileV3 */}
       {!loading ? <FlatList
         data={filteredProducts}
         keyExtractor={(p) => p.id}
+        numColumns={3}
+        columnWrapperStyle={{ gap: 8 }}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews
         windowSize={5}
-        maxToRenderPerBatch={10}
-        initialNumToRender={8}
+        maxToRenderPerBatch={12}
+        initialNumToRender={12}
         updateCellsBatchingPeriod={50}
         ListEmptyComponent={
           <View style={{ padding: 32, alignItems: "center" }}>
@@ -256,9 +258,20 @@ export default function BuyScreenV3() {
           </View>
         }
         renderItem={({ item }) => (
-          <SupplierProductCardV3
-            product={item}
-            orderQtyCases={orderQtys[item.id]}
+          <ProductTileV3
+            product={{
+              id: item.id,
+              name: item.name,
+              priceMrpMinor: item.mrpMinor,
+              priceTradeMinor: item.ptrMinor,
+              barcode: item.barcode,
+              brand: item.brand,
+              category: item.category,
+              unit: item.unit,
+              caseSize: item.caseSize,
+            }}
+            sellMode="bulk"
+            cartQty={orderQtys[item.id] ?? 0}
             onPress={() => setDetailProduct(item)}
           />
         )}

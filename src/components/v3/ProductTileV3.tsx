@@ -117,13 +117,20 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress }: P
   );
 }
 
-function getCategoryEmoji(cat?: string): string {
+// GCP-STG-0013+0144: Comprehensive category→emoji mapping
+// Case-insensitive lookup with fallback to generic box
+export function getCategoryEmoji(cat?: string): string {
   const map: Record<string, string> = {
     Biscuits: "🍪", Tea: "🍵", Noodles: "🍜", Cleaning: "🫧",
     Dairy: "🥛", Bakery: "🍞", Staples: "🧂", Oil: "🫒",
     Chocolate: "🍫", Snacks: "🍿", Beverages: "🥤",
+    Spices: "🌶️", Rice: "🍚", Flour: "🌾", Sugar: "🍬",
+    Detergent: "🧹", Soap: "🧼", Personal: "🪥", Baby: "🍼",
+    Frozen: "🧊", Condiments: "🥫", Pulses: "🫘", Dry_Fruits: "🥜",
+    Health: "💊", Stationery: "📝", Pooja: "🪔", Masala: "🫙",
   };
-  return map[cat ?? ""] ?? "📦";
+  const key = cat ?? "";
+  return map[key] ?? map[key.charAt(0).toUpperCase() + key.slice(1)] ?? "📦";
 }
 
 function createStyles(colors: ColorPalette) {
