@@ -17,6 +17,7 @@ import CounterPurchaseScreenV3 from "./CounterPurchaseScreenV3";
 import GRNScreenV3 from "./GRNScreenV3";
 import ReorderScreenV3 from "./ReorderScreenV3";
 import StockScreenV3 from "./StockScreenV3";
+import BarcodeSheetScreenV3 from "./BarcodeSheetScreenV3"; // GCP-STG-0062
 import KhataScreenV3 from "./KhataScreenV3";
 import SalesHistoryScreenV3 from "./SalesHistoryScreenV3";
 import FinanceScreenV3 from "./FinanceScreenV3";
@@ -134,6 +135,12 @@ export function V3StockWrapper() {
   const nav = useNavigation<Nav>();
   // V3-FIX-080: Opening Stock navigates to scan in stock_in context
   return <StockScreenV3 onClose={() => nav.goBack()} onOpeningStock={() => { nav.goBack(); nav.navigate("V3Scan" as any, { context: "stock_in" }); }} />;
+}
+
+// GCP-STG-0062: Barcode sheet screen wrapper
+export function V3BarcodeSheetWrapper() {
+  const nav = useNavigation<Nav>();
+  return <BarcodeSheetScreenV3 onClose={() => nav.goBack()} />;
 }
 
 export function V3KhataWrapper() {

@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 632,
+  "version": 633,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -13210,6 +13210,45 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T20:21:42.499Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0062",
+      "file": "src/screens/v3/BarcodeSheetScreenV3.tsx",
+      "start_line": 1,
+      "end_line": 10,
+      "checksum": "417f8ce12e30f77f",
+      "description": "Barcode label sheet screen — product selection, tier toggle, PDF generation via expo-print",
+      "test_file": "src/__tests__/screens/BarcodeSheetScreen.stg-267.i18n.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "operator_approved": true,
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T20:30:19.885Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 269,
@@ -13254,5 +13293,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-21T20:21:42.626Z"
+  "lastUpdated": "2026-03-21T20:30:35.982Z"
 }

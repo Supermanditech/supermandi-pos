@@ -44,7 +44,7 @@ import {
   V3PaymentWrapper, V3CashWrapper, V3UpiWrapper, V3UdharWrapper,
   V3SuccessWrapper, V3ScanWrapper, V3NewProductWrapper,
   V3CompareWrapper, V3CounterPurchaseWrapper, V3GRNWrapper, V3ReorderWrapper,
-  V3StockWrapper, V3KhataWrapper, V3FinanceWrapper, V3ReportsWrapper,
+  V3StockWrapper, V3BarcodeSheetWrapper, V3KhataWrapper, V3FinanceWrapper, V3ReportsWrapper,
   V3CustomersWrapper, V3SalesHistoryWrapper, V3SettingsWrapper,
 } from "./src/screens/v3/V3ScreenWrappers";
 
@@ -174,6 +174,7 @@ export default function App() {
           <Stack.Screen name="V3GRN" component={V3GRNWrapper} />
           <Stack.Screen name="V3Reorder" component={V3ReorderWrapper} />
           <Stack.Screen name="V3Stock" component={V3StockWrapper} />
+          <Stack.Screen name="BarcodeSheet" component={V3BarcodeSheetWrapper} />
           <Stack.Screen name="V3Khata" component={V3KhataWrapper} />
           <Stack.Screen name="V3Finance" component={V3FinanceWrapper} />
           <Stack.Screen name="V3Reports" component={V3ReportsWrapper} />
