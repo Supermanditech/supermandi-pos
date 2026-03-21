@@ -91,7 +91,15 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
   }, []);
 
   const changeReceived = useCallback((idx: number, delta: number) => {
-    setItems(prev => prev.map((it, i) => i === idx ? { ...it, received: Math.max(0, it.received + delta), checked: it.received + delta > 0 } : it));
+    setItems(prev => prev.map((it, i) => {
+      if (i !== idx) return it;
+      const newReceived = Math.max(0, it.received + delta);
+      // GCP-STG-0061: Warn when receiving more than ordered (allow override — kirana stores may get extras)
+      if (newReceived > it.ordered && it.ordered > 0 && delta > 0) {
+        showToast(`Receiving ${newReceived} of ${it.ordered} ordered — more than expected`);
+      }
+      return { ...it, received: newReceived, checked: newReceived > 0 };
+    }));
   }, []);
 
   const receivedCount = items.filter(i => i.checked).length;
@@ -206,7 +214,8 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
         ) : null}
 
         <View style={styles.footerActions}>
-          <Pressable style={styles.matchAllBtn} onPress={async () => { const online = await isOnline(); if (!online) { showToast("Offline — match all requires connection"); return; } setItems(prev => prev.map(it => ({ ...it, checked: true, received: it.ordered }))); showToast("All items matched to PO"); }}><Text style={styles.matchAllText}>Match All</Text></Pressable>
+          {/* GCP-STG-0137: Disable Match All when no items, show appropriate toast */}
+          <Pressable style={[styles.matchAllBtn, items.length === 0 && { opacity: 0.5 }]} disabled={items.length === 0} onPress={async () => { if (items.length === 0) { showToast("No items to match"); return; } const online = await isOnline(); if (!online) { showToast("Offline — match all requires connection"); return; } setItems(prev => prev.map(it => ({ ...it, checked: true, received: it.ordered }))); showToast("All items matched to PO"); }}><Text style={styles.matchAllText}>Match All</Text></Pressable>
           <Pressable style={styles.confirmBtn} onPress={async () => {
             // V3-FIX-170: Real GRN confirm — submit received items to backend
             const receivedItems = items.filter(i => i.checked && i.received > 0);
