@@ -39,6 +39,14 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
   // STG-503: Block zero-amount checkout
   const isZeroAmount = grandTotal <= 0;
 
+  // GCP-STG-0039: Selected method visual feedback before navigation
+  const [selectedMethod, setSelectedMethod] = useState<"CASH" | "UPI" | "DUE" | null>(null);
+  const handleMethodTap = useCallback((method: "CASH" | "UPI" | "DUE", nav: () => void) => {
+    if (isZeroAmount) return;
+    setSelectedMethod(method);
+    setTimeout(() => { nav(); setSelectedMethod(null); }, 150);
+  }, [isZeroAmount]);
+
   // Split payment state (stays in chooser since it's a combined flow)
   const [splitVisible, setSplitVisible] = useState(false);
   const [splitCash, setSplitCash] = useState("");
@@ -103,33 +111,36 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
 
         {/* V3-FIX-071: Method buttons navigate to child screens */}
         <View style={styles.methodGrid}>
-          <Pressable style={[styles.methodBtn, isZeroAmount && { opacity: 0.4 }]} onPress={isZeroAmount ? undefined : onCash} accessibilityRole="button" disabled={isZeroAmount}>
-            <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={1.5}>
+          <Pressable style={[styles.methodBtn, isZeroAmount && { opacity: 0.4 }, selectedMethod === "CASH" && { borderColor: colors.primary, backgroundColor: colors.primaryLight }]} onPress={() => handleMethodTap("CASH", onCash)} accessibilityRole="button" disabled={isZeroAmount}>
+            {selectedMethod === "CASH" && <Text style={styles.checkmark}>✓</Text>}
+            <Svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke={selectedMethod === "CASH" ? colors.primary : colors.textSecondary} strokeWidth={1.5}>
               <Rect x={2} y={6} width={20} height={12} rx={2} />
               <Circle cx={12} cy={12} r={3} />
               <Path d="M6 12h.01M18 12h.01" />
             </Svg>
-            <Text style={styles.methodLabel}>CASH</Text>
+            <Text style={[styles.methodLabel, selectedMethod === "CASH" && { color: colors.primary }]}>CASH</Text>
             <Text style={styles.methodHint}>नकद</Text>
           </Pressable>
 
-          <Pressable style={[styles.methodBtn, isZeroAmount && { opacity: 0.4 }]} onPress={isZeroAmount ? undefined : onUpi} accessibilityRole="button" disabled={isZeroAmount}>
-            <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={1.5}>
+          <Pressable style={[styles.methodBtn, isZeroAmount && { opacity: 0.4 }, selectedMethod === "UPI" && { borderColor: colors.primary, backgroundColor: colors.primaryLight }]} onPress={() => handleMethodTap("UPI", onUpi)} accessibilityRole="button" disabled={isZeroAmount}>
+            {selectedMethod === "UPI" && <Text style={styles.checkmark}>✓</Text>}
+            <Svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke={selectedMethod === "UPI" ? colors.primary : colors.textSecondary} strokeWidth={1.5}>
               <Rect x={5} y={2} width={14} height={20} rx={2} />
               <Line x1={12} y1={18} x2={12} y2={18.01} strokeWidth={2} />
               <Path d="M9 6h6" />
             </Svg>
-            <Text style={styles.methodLabel}>UPI</Text>
+            <Text style={[styles.methodLabel, selectedMethod === "UPI" && { color: colors.primary }]}>UPI</Text>
             <Text style={styles.methodHint}>यूपीआई</Text>
           </Pressable>
 
-          <Pressable style={[styles.methodBtn, isZeroAmount && { opacity: 0.4 }]} onPress={isZeroAmount ? undefined : onUdhar} accessibilityRole="button" disabled={isZeroAmount}>
-            <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={1.5}>
+          <Pressable style={[styles.methodBtn, isZeroAmount && { opacity: 0.4 }, selectedMethod === "DUE" && { borderColor: colors.primary, backgroundColor: colors.primaryLight }]} onPress={() => handleMethodTap("DUE", onUdhar)} accessibilityRole="button" disabled={isZeroAmount}>
+            {selectedMethod === "DUE" && <Text style={styles.checkmark}>✓</Text>}
+            <Svg width={40} height={40} viewBox="0 0 24 24" fill="none" stroke={selectedMethod === "DUE" ? colors.primary : colors.textSecondary} strokeWidth={1.5}>
               <Path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
               <Path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
               <Path d="M8 7h8M8 11h6" />
             </Svg>
-            <Text style={styles.methodLabel}>UDHAR</Text>
+            <Text style={[styles.methodLabel, selectedMethod === "DUE" && { color: colors.primary }]}>UDHAR</Text>
             <Text style={styles.methodHint}>उधार</Text>
           </Pressable>
         </View>
@@ -240,7 +251,10 @@ function createStyles(colors: ColorPalette) {
     totalAmount: { fontSize: 44, fontWeight: "900", color: colors.textPrimary, letterSpacing: -1, marginTop: 16 },
     totalSub: { fontSize: 14, color: colors.textTertiary, fontWeight: "500", marginTop: 4 },
     methodGrid: { flexDirection: "row", gap: 12, marginTop: 28, width: "100%" },
-    methodBtn: { flex: 1, padding: 24, borderRadius: 20, borderWidth: 2, borderColor: colors.border, alignItems: "center", backgroundColor: colors.surface },
+    // GCP-STG-0040: padding 28px per prototype (was 24)
+    methodBtn: { flex: 1, padding: 28, borderRadius: 20, borderWidth: 2, borderColor: colors.border, alignItems: "center", backgroundColor: colors.surface },
+    // GCP-STG-0039: Selection checkmark in top-right corner
+    checkmark: { position: "absolute", top: 8, right: 10, fontSize: 16, fontWeight: "800", color: colors.primary },
     // GCP-STG-0126: Reduced from 17 to 14 — "UDHAR" was wrapping to 2 lines in narrow flex:1 card
     methodLabel: { fontSize: 14, fontWeight: "800", color: colors.textSecondary, marginTop: 8, letterSpacing: -0.3 },
     methodHint: { fontSize: 10, color: colors.textTertiary, marginTop: 2 },
