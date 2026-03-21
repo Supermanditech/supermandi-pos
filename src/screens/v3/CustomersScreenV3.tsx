@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect, useState, useCallback } from "react";
-import { View, Pressable, TextInput, FlatList, ActivityIndicator, Modal, StyleSheet, Text, Linking } from "react-native";
+import { View, Pressable, TextInput, FlatList, ActivityIndicator, Modal, StyleSheet, Text, Linking, Alert } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -70,7 +70,10 @@ export default function CustomersScreenV3({ onClose }: Props) {
       <FlatList data={filteredCustomers} keyExtractor={(c) => c.name} contentContainerStyle={{ padding: 14 }}
         ListEmptyComponent={!loading ? <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>👥</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No customers yet</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Customers are added when you create due/credit sales</Text></View> : null}
         renderItem={({ item }) => (
-        <View style={styles.card}>
+        <Pressable style={styles.card} onPress={() => {
+          // GCP-STG-0065: Customer detail on tap
+          Alert.alert(item.name, `Visits: ${item.visits}\nTotal spent: ₹${item.total.toLocaleString("en-IN")}${item.phone ? `\nPhone: ${item.phone}` : ""}`, [{ text: "OK" }]);
+        }}>
           <View style={styles.avatar}><Text style={styles.initial}>{item.initial}</Text></View>
           <View style={{ flex: 1 }}><Text style={styles.name}>{item.name}</Text><Text style={styles.meta}>{item.visits} visits · ₹{item.total.toLocaleString("en-IN")} total</Text></View>
           {/* V3-FIX-091: WhatsApp only with real stored phone data */}
@@ -78,7 +81,7 @@ export default function CustomersScreenV3({ onClose }: Props) {
             <Pressable style={styles.waBtn} onPress={() => Linking.openURL(`https://wa.me/91${item.phone}`).catch(() => showToast("WhatsApp not available"))} accessibilityLabel={`WhatsApp ${item.name}`} testID={`wa-${item.name}`}><Svg width={10} height={10} viewBox="0 0 24 24" fill="#fff"><Path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479c0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" /></Svg></Pressable>
           ) : null}
           <Text style={styles.arrow}>›</Text>
-        </View>
+        </Pressable>
       )} />
 
       {/* V3-FIX-091: Cross-platform add customer modal */}

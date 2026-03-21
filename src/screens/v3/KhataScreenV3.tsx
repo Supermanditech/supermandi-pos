@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect, useState } from "react";
-import { View, Pressable, TextInput, ScrollView, ActivityIndicator, StyleSheet, Text, Alert } from "react-native";
+import { View, Pressable, TextInput, ScrollView, ActivityIndicator, StyleSheet, Text, Alert, Modal, Linking } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -21,6 +21,13 @@ type Props = { onClose: () => void };
 export default function KhataScreenV3({ onClose }: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  // GCP-STG-0063: Manual credit record modal state
+  const [recordVisible, setRecordVisible] = useState(false);
+  const [recordName, setRecordName] = useState("");
+  const [recordAmount, setRecordAmount] = useState("");
+  const [recordDesc, setRecordDesc] = useState("");
+  const storeName = "SuperMandi";
 
   // V3-024: Real khata data from store
   const khataCustomers = useKhataStore((s) => s.customers);
@@ -64,7 +71,10 @@ export default function KhataScreenV3({ onClose }: Props) {
       <View style={{ alignItems: "flex-end" }}>
         <Text style={[styles.kAmount, c.overdue && styles.kAmountOverdue]}>₹{c.amount.toLocaleString("en-IN")}</Text>
         <View style={styles.kActions}>
-          <Pressable style={styles.waSmBtn} onPress={() => showToast(`Reminder sent to ${c.name}`)}><Svg width={10} height={10} viewBox="0 0 24 24" fill="#fff"><Path d={WA_SVG} /></Svg></Pressable>
+          <Pressable style={styles.waSmBtn} onPress={() => {
+            const msg = encodeURIComponent(`Hi ${c.name}, you have ₹${c.amount.toLocaleString("en-IN")} pending from ${storeName}. Please settle at your convenience. — ${storeName}`);
+            Linking.openURL(`whatsapp://send?text=${msg}`).catch(() => showToast("WhatsApp not installed"));
+          }}><Svg width={10} height={10} viewBox="0 0 24 24" fill="#fff"><Path d={WA_SVG} /></Svg></Pressable>
           <Pressable style={styles.collectBtn} onPress={() => {
             Alert.alert("Collect Payment", `Record ₹${c.amount} collection from ${c.name}?`, [
               { text: "Cancel", style: "cancel" },
@@ -86,7 +96,7 @@ export default function KhataScreenV3({ onClose }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Khata</Text><Pressable style={styles.addBtn}><Text style={styles.addBtnText}>+ Record</Text></Pressable></View>
+      <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Khata</Text><Pressable style={styles.addBtn} onPress={() => setRecordVisible(true)}><Text style={styles.addBtnText}>+ Record</Text></Pressable></View>
       <View style={styles.summaryBar}><View><Text style={styles.sumLabel}>OUTSTANDING</Text><Text style={styles.sumVal}>₹{Math.round(totalOutstanding / 100).toLocaleString("en-IN")}</Text></View><View style={{ alignItems: "flex-end" }}><Text style={styles.sumLabel}>OVERDUE</Text><Text style={styles.sumVal}>₹{Math.round(totalOverdue / 100).toLocaleString("en-IN")}</Text></View></View>
       {khataLoading ? <ActivityIndicator size="small" color={colors.primary} style={{ padding: 10 }} /> : null}
       {/* V3-FIX-082: Wired search filter */}
@@ -117,6 +127,33 @@ export default function KhataScreenV3({ onClose }: Props) {
           Linking.openURL(`whatsapp://send?text=${msg}`).catch(() => showToast("WhatsApp not installed"));
         }}><Svg width={14} height={14} viewBox="0 0 24 24" fill="#fff"><Path d={WA_SVG} /><Path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.638l4.72-1.391A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" /></Svg><Text style={styles.bulkWaText}>Remind All Overdue</Text></Pressable>
       </View>
+
+      {/* GCP-STG-0063: Manual credit record modal */}
+      <Modal visible={recordVisible} transparent animationType="slide" onRequestClose={() => setRecordVisible(false)}>
+        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: colors.textPrimary, marginBottom: 16 }}>Record Credit Entry</Text>
+            <TextInput style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, marginBottom: 10, color: colors.textPrimary }} placeholder="Customer name" placeholderTextColor={colors.textTertiary} value={recordName} onChangeText={setRecordName} />
+            <TextInput style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, marginBottom: 10, color: colors.textPrimary }} placeholder="Amount (₹)" placeholderTextColor={colors.textTertiary} value={recordAmount} onChangeText={setRecordAmount} keyboardType="numeric" />
+            <TextInput style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, marginBottom: 16, color: colors.textPrimary }} placeholder="Description (optional)" placeholderTextColor={colors.textTertiary} value={recordDesc} onChangeText={setRecordDesc} />
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: colors.backgroundSecondary, alignItems: "center" }} onPress={() => setRecordVisible(false)}><Text style={{ fontWeight: "600", color: colors.textSecondary }}>Cancel</Text></Pressable>
+              <Pressable style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: colors.primary, alignItems: "center" }} onPress={async () => {
+                const amt = parseInt(recordAmount, 10);
+                if (!recordName.trim() || !amt || amt <= 0) { showToast("Name and valid amount required"); return; }
+                const online = await isOnline();
+                if (!online) { showToast("Requires connection"); return; }
+                try {
+                  await recordCollectionCash({ amountMinor: -amt * 100, reference: `${recordName.trim()}: ${recordDesc || "Manual credit"}` });
+                  showToast(`₹${amt} credit recorded for ${recordName.trim()}`);
+                  setRecordVisible(false); setRecordName(""); setRecordAmount(""); setRecordDesc("");
+                  void fetchKhataCustomers();
+                } catch { showToast("Failed to record credit"); }
+              }}><Text style={{ fontWeight: "700", color: "#fff" }}>Save</Text></Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

@@ -117,7 +117,10 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
         keyExtractor={(_, i) => String(i)}
         ListEmptyComponent={!loading ? <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>{activeTab === "unsold" ? "✅" : activeTab === "movement" ? "📊" : "📦"}</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>{activeTab === "unsold" ? "No dead stock" : activeTab === "movement" ? "No stock alerts" : "No inventory"}</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>{activeTab === "unsold" ? "All products have stock — great!" : activeTab === "movement" ? "All stock levels are healthy" : "Add products to see stock levels here"}</Text></View> : null}
         renderItem={({ item }) => (
-          <View style={styles.itemRow}>
+          <Pressable style={styles.itemRow} onPress={() => {
+            // GCP-STG-0058: Show product detail on tap
+            Alert.alert(item.name, `Stock: ${item.stock}\nCost: ₹${(item.costMinor / 100).toFixed(0)}\nSell: ₹${(item.sellMinor / 100).toFixed(0)}\nStatus: ${statusLabel(item.status)}${item.barcode ? `\nBarcode: ${item.barcode}` : ""}`, [{ text: "OK" }]);
+          }}>
             <View style={styles.itemImg}><Text style={{ fontSize: 18 }}>📦</Text></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.itemName}>{item.name}</Text>
@@ -127,7 +130,7 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
               <Text style={[styles.stockQty, { color: statusColor(item.status) }]}>{item.stock}</Text>
               <Text style={[styles.stockLabel, { color: statusColor(item.status) }]}>{statusLabel(item.status)}</Text>
             </View>
-          </View>
+          </Pressable>
         )}
         showsVerticalScrollIndicator={false}
       />

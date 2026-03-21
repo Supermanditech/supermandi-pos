@@ -142,22 +142,33 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
       ) : null}
 
       <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
-        {loading && <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />}
-        {!loading && loadError && (
+        {/* GCP-STG-0060: Ad-hoc Inward content */}
+        {activeTab === "adhoc" ? (
+          <View style={{ padding: 32, alignItems: "center" }}>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>📥</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>Ad-hoc Stock Inward</Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4, textAlign: "center" }}>Receive goods without a purchase order.{"\n"}Use Counter Purchase from the BUY tab to scan and record items.</Text>
+            <Pressable style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, backgroundColor: colors.primary }} onPress={onClose}>
+              <Text style={{ fontWeight: "700", color: "#fff", fontSize: 14 }}>Go to BUY → Counter Purchase</Text>
+            </Pressable>
+          </View>
+        ) : null}
+        {activeTab === "po" && loading && <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />}
+        {activeTab === "po" && !loading && loadError && (
           <View style={{ padding: 32, alignItems: "center" }}>
             <Text style={{ fontSize: 36, marginBottom: 8 }}>⚠</Text>
             <Text style={{ fontSize: 15, fontWeight: "700", color: colors.error }}>Could not load orders</Text>
             <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Check connection and try again</Text>
           </View>
         )}
-        {!loading && !loadError && items.length === 0 && (
+        {activeTab === "po" && !loading && !loadError && items.length === 0 && (
           <View style={{ padding: 32, alignItems: "center" }}>
             <Text style={{ fontSize: 36, marginBottom: 8 }}>📋</Text>
             <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No pending deliveries</Text>
             <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Place a purchase order to receive goods here</Text>
           </View>
         )}
-        {items.map((item, idx) => (
+        {activeTab === "po" && items.map((item, idx) => (
           <View key={item.barcode} style={[styles.itemRow, !item.checked && item.ordered > 0 && styles.itemRowPending]}>
             <Pressable style={[styles.check, item.checked && styles.checkChecked]} onPress={() => toggleCheck(idx)}>
               {item.checked ? <Text style={styles.checkMark}>✓</Text> : null}

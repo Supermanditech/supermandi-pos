@@ -2326,7 +2326,7 @@ export default function App() {
   // P1-SADM-002: Store contact editing
   function updateStoreContactDraft(storeId: string, patch: Partial<{ address: string; contactName: string; contactPhone: string; contactEmail: string; gstin: string }>) {
     setStoreContactEdits((prev) => {
-      const existing = prev[storeId] ?? { address: "", contactName: "", contactPhone: "", contactEmail: "" };
+      const existing = prev[storeId] ?? { address: "", contactName: "", contactPhone: "", contactEmail: "", gstin: "" };
       return { ...prev, [storeId]: { ...existing, ...patch } };
     });
   }

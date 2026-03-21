@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { View, Pressable, ScrollView, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { View, Pressable, ScrollView, ActivityIndicator, StyleSheet, Text, Alert } from "react-native";
 import Svg, { Rect, Path, Circle, Line } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -115,7 +115,10 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
           </View>
         ) : null}
         {recentOrders.map((order, i) => (
-          <View key={i} style={styles.orderCard}>
+          <Pressable key={i} style={styles.orderCard} onPress={() => {
+            // GCP-STG-0059: Show order detail on tap
+            Alert.alert(order.supplier, `${order.items} items · ₹${order.total.toLocaleString("en-IN")}\n${order.daysAgo} days ago\nStatus: ${order.status}`, [{ text: "OK" }]);
+          }}>
             <View style={{ flex: 1 }}>
               <Text style={styles.orderSupplier}>{order.supplier}</Text>
               <Text style={styles.orderMeta}>{order.daysAgo} days ago · {order.items} items</Text>
@@ -124,7 +127,7 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
               <Text style={styles.orderTotal}>₹{order.total.toLocaleString("en-IN")}</Text>
               <Text style={[styles.orderStatus, { color: order.status === "Delivered" ? colors.success : colors.warning }]}>{order.status} {order.status === "Delivered" ? "✓" : ""}</Text>
             </View>
-          </View>
+          </Pressable>
         ))}
       </ScrollView>
     </View>

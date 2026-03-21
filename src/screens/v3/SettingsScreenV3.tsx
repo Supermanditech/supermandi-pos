@@ -6,6 +6,7 @@ import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useStaffSessionStore } from "../../stores/staffSessionStore";
+import { useSyncStore } from "../../stores/syncStore"; // GCP-STG-0067
 import { clearDeviceSession } from "../../services/deviceSession";
 import { showToast } from "../../utils/showToast";
 import { listStaff, createStaff, toggleStaffActive, type StaffMember } from "../../services/api/staffApi";
@@ -30,6 +31,7 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
   // V3-HARDEN-127: Subscribed selectors for UPI/lastSync — re-renders on cross-surface changes
   const upiVpa = useSettingsStore((s) => s.upiVpa);
   const lastSyncAt = useSettingsStore((s) => s.lastSyncAt);
+  const outboxCount = useSyncStore((s) => s.outboxCount); // GCP-STG-0067
   const [expressCheckout, setExpressCheckout] = React.useState(true);
   const [soundEnabled, setSoundEnabled] = React.useState(true);
 
@@ -58,6 +60,8 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
   const [modalStep, setModalStep] = useState(0); // 0=name, 1=pin for add-staff; 0=pin, 1=confirm for owner-pin
   const [modalName, setModalName] = useState("");
   const [modalPin, setModalPin] = useState("");
+  // GCP-STG-0066: Staff role selection (default CASHIER)
+  const [modalRole, setModalRole] = useState<"CASHIER" | "STOCK_MANAGER" | "MANAGER">("CASHIER");
   const [modalConfirmPin, setModalConfirmPin] = useState("");
   const [modalError, setModalError] = useState("");
   // V3-FIX-124: UPI edit state
@@ -109,7 +113,7 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
         const ago = (Date.now() - new Date(lastSyncAt).getTime()) / 60000;
         return ago < 10 ? colors.success : ago < 60 ? colors.warning : colors.error;
       })() },
-      { icon: "📤", label: "Pending", value: "0 items" },
+      { icon: "📤", label: "Pending", value: `${outboxCount} item${outboxCount !== 1 ? "s" : ""}` },
     ]},
   ];
 
@@ -247,14 +251,23 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
                       keyboardType="number-pad" secureTextEntry maxLength={6} autoFocus testID="modal-staff-pin"
                     />
                     {modalError ? <Text style={{ color: colors.error, fontSize: 12, marginTop: 6 }}>{modalError}</Text> : null}
+                    {/* GCP-STG-0066: Role picker */}
+                    <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 12, marginBottom: 6, fontWeight: "600" }}>ROLE</Text>
+                    <View style={{ flexDirection: "row", gap: 6 }}>
+                      {(["CASHIER", "STOCK_MANAGER", "MANAGER"] as const).map((r) => (
+                        <Pressable key={r} onPress={() => setModalRole(r)} style={{ flex: 1, padding: 10, borderRadius: 10, borderWidth: 2, borderColor: modalRole === r ? colors.primary : colors.border, backgroundColor: modalRole === r ? colors.primaryLight : colors.surface, alignItems: "center" }}>
+                          <Text style={{ fontSize: 11, fontWeight: "700", color: modalRole === r ? colors.primary : colors.textSecondary }}>{r === "STOCK_MANAGER" ? "Stock Mgr" : r === "MANAGER" ? "Manager" : "Cashier"}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
                     <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>
-                      <Pressable onPress={() => { setModalStep(0); setModalPin(""); setModalError(""); }} style={{ flex: 1, padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, alignItems: "center" }}>
+                      <Pressable onPress={() => { setModalStep(0); setModalPin(""); setModalError(""); setModalRole("CASHIER"); }} style={{ flex: 1, padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, alignItems: "center" }}>
                         <Text style={{ fontWeight: "700", color: colors.textSecondary }}>Back</Text>
                       </Pressable>
                       <Pressable onPress={async () => {
                         if (!/^\d{4,6}$/.test(modalPin)) { setModalError("PIN must be 4-6 digits"); return; }
                         try {
-                          await createStaff({ name: modalName.trim(), pin: modalPin, role: "CASHIER" });
+                          await createStaff({ name: modalName.trim(), pin: modalPin, role: modalRole });
                           showToast(`Staff "${modalName.trim()}" created`);
                           setModalMode(null);
                         } catch (err: any) {
