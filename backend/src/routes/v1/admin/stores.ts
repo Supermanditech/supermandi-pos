@@ -692,6 +692,8 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
     contactName,
     contactPhone,
     contactEmail,
+    gstin, // GCP-STG-0121: GSTIN editable via SuperAdmin
+    gst_number: gstNumberSnake,
     location,
     posDeviceId,
     kycStatus,
@@ -762,6 +764,17 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
     addUpdate("contact_email", trimmedEmail);
   }
 
+  // GCP-STG-0121: GSTIN editable — required for B2B invoicing + GST compliance
+  const gstinValue = gstin ?? gstNumberSnake;
+  if (typeof gstinValue === "string") {
+    const trimmed = gstinValue.trim().toUpperCase();
+    // GSTIN format: 15 chars (2-digit state + 10-char PAN + 1 entity + 1 check)
+    if (trimmed && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{1}[Z]{1}[A-Z0-9]{1}$/.test(trimmed)) {
+      return res.status(400).json({ error: "gstin_invalid_format", message: "GSTIN must be 15-character alphanumeric (e.g., 27AABCU9603R1ZM)" });
+    }
+    addUpdate("gst_number", trimmed || null);
+  }
+
   // SA-P1-006: Allowed payment methods per store
   const apmValue = (allowedPaymentMethods ?? allowedPaymentMethodsSnake) as unknown;
   if (apmValue !== undefined) {
@@ -806,7 +819,7 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
       UPDATE platform.stores
       SET ${updates.join(", ")}
       WHERE ${isUuid ? `id = $${values.length + 1}::uuid` : `UPPER(code) = UPPER($${values.length + 1})`}
-      RETURNING id::TEXT as id, name, code, status, address, contact_name, contact_phone, contact_email, allowed_payment_methods, credit_enabled, credit_limit, created_at, updated_at
+      RETURNING id::TEXT as id, name, code, status, address, contact_name, contact_phone, contact_email, gst_number, allowed_payment_methods, credit_enabled, credit_limit, created_at, updated_at
     `;
     values.push(storeId);
 
@@ -824,6 +837,7 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
       contactName: store.contact_name,
       contactPhone: store.contact_phone,
       contactEmail: store.contact_email,
+      gstin: store.gst_number ?? null, // GCP-STG-0121
       allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'],
       creditEnabled: store.credit_enabled ?? false,
       creditLimit: store.credit_limit ?? 0
