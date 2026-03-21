@@ -36,6 +36,8 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
   const [transcript, setTranscript] = useState("");
   const [matchedProduct, setMatchedProduct] = useState("");
   const [matchedQty, setMatchedQty] = useState(1);
+  // GCP-STG-0027: Track matched product price for display
+  const [matchedPrice, setMatchedPrice] = useState(0);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // Pulse animation for mic icon
@@ -95,6 +97,11 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
         setTranscript(result.transcript ?? "");
         setMatchedProduct(productName);
         setMatchedQty(qty);
+        // GCP-STG-0027: Look up price for display
+        const products = useProductsStore.getState().products;
+        const priceMatch = products.find((p) => p.name.toLowerCase() === productName.toLowerCase())
+          ?? products.find((p) => p.name.toLowerCase().includes(productName.toLowerCase()));
+        setMatchedPrice(priceMatch?.priceMinor ?? 0);
         setState("matched");
         logger.debug("VoiceV3", `matched:${productName},qty:${qty}`);
       } else {
@@ -147,6 +154,7 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
     setState("listening");
     setTranscript("");
     setMatchedProduct("");
+    setMatchedPrice(0);
   }, []);
 
   if (!visible) return null;
@@ -181,10 +189,11 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
             <Text style={styles.transcript}>{transcript}</Text>
           ) : null}
 
-          {/* V3-FIX-068: Match result — real product name + qty only, no synthetic pricing */}
+          {/* GCP-STG-0027: Match result — product name × qty + estimated price */}
           {state === "matched" ? (
             <View style={styles.matchBox}>
               <Text style={styles.matchText}>✓ {matchedProduct} × {matchedQty}</Text>
+              {matchedPrice > 0 ? <Text style={styles.matchPrice}>₹{Math.round(matchedPrice * matchedQty / 100).toLocaleString("en-IN")}</Text> : null}
             </View>
           ) : null}
 
@@ -198,7 +207,7 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
           {state === "matched" ? (
             <View style={styles.actionRow}>
               <Pressable style={styles.confirmBtn} onPress={handleConfirm}>
-                <Text style={styles.confirmText}>Add</Text>
+                <Text style={styles.confirmText}>✓ Add</Text>
               </Pressable>
               <Pressable style={styles.retryBtn} onPress={handleRetry}>
                 <Text style={styles.retryText}>Retry</Text>
@@ -230,6 +239,7 @@ function createStyles(colors: ColorPalette) {
     transcript: { color: "#fff", fontSize: 20, fontWeight: "700", marginTop: 16, letterSpacing: -0.3 },
     matchBox: { backgroundColor: colors.success, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14, marginTop: 16 },
     matchText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+    matchPrice: { color: "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: "600", marginTop: 2 },
     actionRow: { flexDirection: "row", gap: 10, marginTop: 20, width: "100%" },
     confirmBtn: { flex: 1, backgroundColor: colors.success, paddingVertical: 14, borderRadius: 14, alignItems: "center" },
     confirmText: { color: "#fff", fontSize: 15, fontWeight: "800" },
