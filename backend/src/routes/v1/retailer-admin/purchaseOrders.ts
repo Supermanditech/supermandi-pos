@@ -181,9 +181,9 @@ retailerPurchaseOrdersRouter.post("/purchase-orders/:poId/buy-again", async (req
     const storeId = getStoreId(req);
     const { poId } = req.params;
 
-    // 1. Get original PO (store isolation)
+    // 1. Get original PO (store isolation) — schema: 006_orders_schema.sql
     const poRes = await pool.query(
-      `SELECT id, supplier_id, notes FROM orders.purchase_orders WHERE id = $1 AND store_id = $2`,
+      `SELECT id, supplier_id, store_notes FROM orders.purchase_orders WHERE id = $1 AND store_id = $2`,
       [poId, storeId]
     );
     if (poRes.rows.length === 0) {
@@ -192,11 +192,11 @@ retailerPurchaseOrdersRouter.post("/purchase-orders/:poId/buy-again", async (req
     }
     const originalPO = poRes.rows[0];
 
-    // 2. Get original PO items
+    // 2. Get original PO items — columns: order_id, ordered_quantity, unit_price (migration 006)
     const itemsRes = await pool.query(
-      `SELECT product_id, product_name, barcode, quantity, unit, unit_price_minor
-       FROM orders.purchase_order_items WHERE purchase_order_id = $1
-       ORDER BY sort_order ASC`,
+      `SELECT product_id, supplier_product_id, product_name, barcode, ordered_quantity, unit_price, line_total
+       FROM orders.purchase_order_items WHERE order_id = $1
+       ORDER BY created_at ASC`,
       [poId]
     );
 
@@ -205,24 +205,24 @@ retailerPurchaseOrdersRouter.post("/purchase-orders/:poId/buy-again", async (req
       return;
     }
 
-    // 3. Create new draft PO
+    // 3. Create new draft PO — columns: order_number, total_amount, store_notes (migration 006)
     const newPoId = randomUUID();
     const newPoNumber = `PO-${Date.now().toString(36).toUpperCase()}`;
-    const totalMinor = itemsRes.rows.reduce((sum: number, r: any) => sum + (Number(r.quantity) * Number(r.unit_price_minor || 0)), 0);
+    const totalAmount = itemsRes.rows.reduce((sum: number, r: any) => sum + Number(r.line_total || 0), 0);
 
     await pool.query(
-      `INSERT INTO orders.purchase_orders (id, store_id, po_number, supplier_id, status, total_minor, notes, items_count)
-       VALUES ($1, $2, $3, $4, 'draft', $5, $6, $7)`,
-      [newPoId, storeId, newPoNumber, originalPO.supplier_id, totalMinor, `Reorder from ${poId}`, itemsRes.rows.length]
+      `INSERT INTO orders.purchase_orders (id, store_id, order_number, supplier_id, status, total_amount, store_notes)
+       VALUES ($1, $2, $3, $4, 'draft', $5, $6)`,
+      [newPoId, storeId, newPoNumber, originalPO.supplier_id, totalAmount, `Reorder from ${poId}`]
     );
 
-    // 4. Copy items to new PO
-    for (let i = 0; i < itemsRes.rows.length; i++) {
-      const item = itemsRes.rows[i];
+    // 4. Copy items — columns: order_id, ordered_quantity, unit_price, supplier_product_id (migration 006)
+    for (const item of itemsRes.rows) {
+      const lineTotal = Number(item.ordered_quantity) * Number(item.unit_price || 0);
       await pool.query(
-        `INSERT INTO orders.purchase_order_items (id, purchase_order_id, product_id, product_name, barcode, quantity, unit, unit_price_minor, sort_order)
+        `INSERT INTO orders.purchase_order_items (id, order_id, supplier_product_id, product_id, product_name, barcode, ordered_quantity, unit_price, line_total)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [randomUUID(), newPoId, item.product_id, item.product_name, item.barcode, item.quantity, item.unit, item.unit_price_minor, i]
+        [randomUUID(), newPoId, item.supplier_product_id, item.product_id, item.product_name, item.barcode, item.ordered_quantity, item.unit_price, lineTotal]
       );
     }
 
@@ -233,7 +233,7 @@ retailerPurchaseOrdersRouter.post("/purchase-orders/:poId/buy-again", async (req
         poNumber: newPoNumber,
         status: "draft",
         itemsCount: itemsRes.rows.length,
-        totalMinor,
+        totalAmount,
       },
     });
   } catch (_error: unknown) {
