@@ -21,6 +21,17 @@ type AuthFailureListener = () => void;
 const authFailureListeners: AuthFailureListener[] = [];
 const RETAILER_ADMIN_AUTH_PATH = '/api/v1/retailer-admin/auth';
 
+// GCP-STG-0216+0217: Non-critical paths where 401 should NOT trigger logout
+// These endpoints may fail due to missing actorId (pre-store-selection) or
+// temporary token issues — logging out destroys the session unnecessarily
+const NON_CRITICAL_401_PATHS = [
+  '/feature-flags',
+  '/analytics',
+  '/chat',
+  '/config-status',
+  '/health',
+];
+
 export function onAuthFailure(listener: AuthFailureListener) {
   authFailureListeners.push(listener);
   return () => {
@@ -107,11 +118,14 @@ export async function authFetch(
     clearTimeout(timeoutId);
   }
 
-  // Handle 401 Unauthorized - trigger logout for non-auth API requests
-  // RET-C4-001: Broadened from /retailer-admin/ only to all /api/ paths
-  // Covers /api/v1/chat/, /api/v1/admin/, /api/v1/retailer-admin/ etc.
+  // Handle 401 Unauthorized - trigger logout only for CRITICAL auth failures
+  // GCP-STG-0216+0217: Don't auto-logout on non-critical 401s (feature-flags, analytics, chat)
+  // Only logout when core retailer-admin endpoints reject the token
   if (response.status === 401 && !isAuthRequest && url.includes('/api/')) {
-    notifyAuthFailure();
+    const isNonCritical = NON_CRITICAL_401_PATHS.some(p => url.includes(p));
+    if (!isNonCritical) {
+      notifyAuthFailure();
+    }
   }
 
   return response;
