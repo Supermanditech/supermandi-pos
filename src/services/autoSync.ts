@@ -13,7 +13,9 @@ import { refreshDeadletterCount } from "./deadletterService";
 import { checkAndExecuteForceSync } from "./forceSyncCheck";
 
 const SYNC_INTERVAL_KEY = "supermandi.autoSync.intervalMs";
-const DEFAULT_SYNC_INTERVAL_MS = 60000; // 60 seconds
+// GCP-STG-0091: Reduced from 60s to 30s for near-real-time product metadata sync
+// POS ↔ retailer web edits must reflect within seconds, not minutes
+const DEFAULT_SYNC_INTERVAL_MS = 30000; // 30 seconds
 
 let syncInterval: ReturnType<typeof setInterval> | null = null;
 let syncInFlight = false;
