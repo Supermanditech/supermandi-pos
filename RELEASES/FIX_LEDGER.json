@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 584,
+  "version": 585,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6408,7 +6408,7 @@
       "file": "backend/src/routes/v1/pos/sales.ts",
       "start_line": 733,
       "end_line": 2834,
-      "checksum": "da6593ffe30e9166",
+      "checksum": "ed381e40e51af5fd",
       "description": "instanceof Date check for TIMESTAMPTZ in bills list",
       "test_file": "src/__tests__/screens/date-timezone.stg-515.test.ts",
       "depends_on": null,
@@ -6449,7 +6449,7 @@
       "file": "backend/src/routes/v1/pos/sales.ts",
       "start_line": 813,
       "end_line": 3032,
-      "checksum": "2734fa21a49eefa1",
+      "checksum": "9e3988f00175887e",
       "description": "instanceof Date check for TIMESTAMPTZ in bill detail",
       "test_file": "src/__tests__/screens/date-timezone.stg-515.test.ts",
       "depends_on": null,
@@ -10239,8 +10239,8 @@
     {
       "ticket": "GCP-STG-0077",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 2207,
-      "end_line": 2322,
+      "start_line": 2217,
+      "end_line": 2332,
       "checksum": "680bdd8c8b2e820d",
       "description": "Auto-generate tax invoice after POS sale completion (fire-and-forget after cash/UPI/DUE payment COMMIT)",
       "test_file": "backend/tests/invoiceAutoGen.gcp-stg-0077.unit.test.ts",
@@ -10274,7 +10274,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:30:19.204Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-21T15:35:54.345Z"
+      "line_shifted_at": "2026-03-21T15:40:08.500Z"
     },
     {
       "ticket": "GCP-STG-0049",
@@ -11102,8 +11102,8 @@
     {
       "ticket": "GCP-STG-0118",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 1284,
-      "end_line": 1313,
+      "start_line": 1294,
+      "end_line": 1323,
       "checksum": "81ee1fcc3ab67ab0",
       "description": "sale_items INSERT: populate discount_minor from cart item discount, adjust line_total_minor",
       "test_file": "backend/src/routes/v1/pos/sales.ts",
@@ -11136,6 +11136,46 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T15:35:37.267Z",
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-21T15:40:08.521Z"
+    },
+    {
+      "ticket": "GCP-STG-0099",
+      "file": "backend/src/routes/v1/pos/sales.ts",
+      "start_line": 1018,
+      "end_line": 1028,
+      "checksum": "726b526ff6483032",
+      "description": "Backend guard: reject zero-amount sales with 422 ZERO_AMOUNT_SALE error",
+      "test_file": "backend/src/routes/v1/pos/sales.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T15:39:49.386Z",
       "status": "ACTIVE"
     }
   ],

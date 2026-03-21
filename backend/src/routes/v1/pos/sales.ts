@@ -1016,6 +1016,16 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
     }
   }
 
+  // GCP-STG-0099: Backend guard — reject zero-amount sales (defense-in-depth)
+  if (total <= 0) {
+    return res.status(422).json({
+      error: {
+        code: "ZERO_AMOUNT_SALE",
+        message: "Cannot create a sale with zero or negative total amount",
+      },
+    });
+  }
+
   if (requestedSaleId) {
     const existing = await pool.query(
       `
