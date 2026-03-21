@@ -107,9 +107,10 @@ const PUBLIC_PATHS = [
   '/api/v1/supplier/registration/',
   // Document upload (public for registration - application entity validated server-side)
   '/api/v1/documents/upload',
-  // Health
+  // Health + config
   '/health',
   '/healthz',
+  '/api/v1/config-status', // GCP-STG-0004: POS capability check (no auth)
 ];
 
 // LIVE.API.PLATFORM_STORES_PUBLIC_ACCESS_PARITY.001: GET-only public paths

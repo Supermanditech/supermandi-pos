@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 544,
+  "version": 545,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -9258,8 +9258,8 @@
     {
       "ticket": "GCP-STG-0218",
       "file": "backend/services/api-gateway/src/middleware/jwtAuth.ts",
-      "start_line": 265,
-      "end_line": 298,
+      "start_line": 266,
+      "end_line": 299,
       "checksum": "da0c3fbbeb46511a",
       "description": "actorId optional in JWT validation for pre-store-selection retailer tokens",
       "test_file": "backend/services/api-gateway/src/__tests__/jwtAuth.test.ts",
@@ -9292,7 +9292,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T08:55:46.271Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-21T09:35:11.970Z"
     },
     {
       "ticket": "GCP-STG-0216",
@@ -9565,6 +9566,45 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T09:30:32.378Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0004",
+      "file": "backend/services/api-gateway/src/config.ts",
+      "start_line": 311,
+      "end_line": 317,
+      "checksum": "106b76e6a41b157f",
+      "description": "config-status route added to gateway proxy config",
+      "test_file": "N/A",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T09:35:11.711Z",
       "status": "ACTIVE"
     }
   ],

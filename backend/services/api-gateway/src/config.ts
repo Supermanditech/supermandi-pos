@@ -308,6 +308,13 @@ export const config: GatewayConfig = {
       pathPrefix: '/api/v1/retailer-admin',
       stripPrefix: false,
     },
+    // GCP-STG-0004: Config status endpoint (public, no auth — POS checks OTP capability)
+    {
+      name: 'config-status',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/config-status',
+      stripPrefix: false,
+    },
     // MED-004: Demo routes -> main backend
     {
       name: 'demo',
