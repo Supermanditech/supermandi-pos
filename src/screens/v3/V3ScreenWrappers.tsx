@@ -116,7 +116,8 @@ export function V3CompareWrapper({ route }: any) {
 
 export function V3CounterPurchaseWrapper() {
   const nav = useNavigation<Nav>();
-  return <CounterPurchaseScreenV3 onClose={() => nav.goBack()} />;
+  // GCP-STG-0055: Wire camera scan to navigate to V3Scan with counter_purchase context
+  return <CounterPurchaseScreenV3 onClose={() => nav.goBack()} onCameraScan={() => nav.navigate("V3Scan", { context: "counter_purchase_scan" })} />;
 }
 
 export function V3GRNWrapper() {

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useRef } from "react";
 import { View, FlatList, TextInput, Pressable, KeyboardAvoidingView, Platform, StyleSheet, Text, ScrollView, ActivityIndicator, Modal, Linking } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
@@ -22,9 +22,11 @@ import { getSuppliers } from "../../services/api/suppliersApi";
 
 type CounterPurchaseScreenV3Props = {
   onClose: () => void;
+  // GCP-STG-0055: Camera scan navigation callback
+  onCameraScan?: () => void;
 };
 
-export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScreenV3Props) {
+export default function CounterPurchaseScreenV3({ onClose, onCameraScan }: CounterPurchaseScreenV3Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -36,6 +38,8 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
   const [supplierPickerVisible, setSupplierPickerVisible] = useState(false);
   const [supplierOptions, setSupplierOptions] = useState<Array<{ id: string; name: string }>>([]);
   const getProductByBarcode = useProductsStore((s) => s.getProductByBarcode);
+  // GCP-STG-0055: Ref for barcode input to focus on HID mode
+  const barcodeInputRef = useRef<TextInput>(null);
 
   const handleQtyChange = useCallback((idx: number, qty: number) => {
     setItems((prev) => prev.map((it, i) => i === idx ? { ...it, qtyCases: qty } : it));
@@ -227,18 +231,20 @@ export default function CounterPurchaseScreenV3({ onClose }: CounterPurchaseScre
       {/* Scan zone */}
       <View style={styles.scanZone}>
         <View style={styles.scanBtns}>
-          <Pressable style={styles.cameraScanBtn} accessibilityLabel="Camera scan">
+          {/* GCP-STG-0055: Wire Camera Scan to navigate to V3Scan with counter_purchase context */}
+          <Pressable style={styles.cameraScanBtn} accessibilityLabel="Camera scan" onPress={() => { if (onCameraScan) onCameraScan(); else showToast("Camera scan not available"); }}>
             <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2}><Rect x={3} y={3} width={18} height={18} rx={2} /><Path d="M7 7h.01M7 12h10M7 17h.01" /></Svg>
             <Text style={styles.scanBtnText}>Camera Scan</Text>
           </Pressable>
-          <Pressable style={styles.hidScanBtn} accessibilityLabel="HID scanner">
+          {/* GCP-STG-0055: Wire HID Scanner to focus barcode input for HID passthrough */}
+          <Pressable style={styles.hidScanBtn} accessibilityLabel="HID scanner" onPress={() => { barcodeInputRef.current?.focus(); showToast("HID mode — scan barcode now"); }}>
             <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth={2}><Rect x={2} y={4} width={20} height={16} rx={2} /><Path d="M6 8h.01M6 12h12M6 16h.01" /></Svg>
             <Text style={styles.hidBtnText}>HID Scanner</Text>
           </Pressable>
         </View>
         <View style={styles.scanInputRow}>
           <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth={2}><Rect x={3} y={3} width={18} height={18} rx={2} /></Svg>
-          <TextInput style={styles.scanInput} value={barcodeInput} onChangeText={setBarcodeInput} placeholder="Scan barcode or type product name..." placeholderTextColor={colors.textTertiary} autoFocus />
+          <TextInput ref={barcodeInputRef} style={styles.scanInput} value={barcodeInput} onChangeText={setBarcodeInput} placeholder="Scan barcode or type product name..." placeholderTextColor={colors.textTertiary} autoFocus />
           <View style={styles.readyDot} />
           <Text style={styles.readyText}>READY</Text>
           <Pressable style={styles.scanSubmit} onPress={() => handleBarcodeScan(barcodeInput)}><Text style={styles.scanSubmitText}>↵</Text></Pressable>
