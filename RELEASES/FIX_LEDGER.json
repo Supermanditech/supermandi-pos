@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 585,
+  "version": 586,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -11176,6 +11176,45 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T15:39:49.386Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0097",
+      "file": "backend/.env.cloudrun.example",
+      "start_line": 1,
+      "end_line": 110,
+      "checksum": "4a533688998c5b77",
+      "description": "Comprehensive Cloud Run env var parity reference: REQUIRED vs RECOMMENDED vs OPTIONAL categories with all 80+ env vars",
+      "test_file": "backend/.env.cloudrun.example",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T15:42:48.084Z",
       "status": "ACTIVE"
     }
   ],
