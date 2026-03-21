@@ -161,6 +161,29 @@ async function generatePrincipalInvoices(
     [purchaseInvoice.id, order.orderId]
   ).catch(() => {}); // Best-effort
 
+  // GCP-STG-0106: Create settlement record
+  try {
+    const { createSettlement } = await import("./settlementService");
+    const orderSubtotal = order.items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
+    // For principal model, commission = SuperMandi margin (already baked into retail price)
+    // The purchase invoice is at supplier price, sale invoice is at retail price
+    // Settlement to supplier = purchase invoice amount (what SM owes supplier)
+    await createSettlement(pool, {
+      supplierId: order.supplierId,
+      storeId: order.storeId,
+      orderId: order.orderId,
+      purchaseInvoiceId: purchaseInvoice.id,
+      saleInvoiceId: saleInvoice.id,
+      billingModel: "SUPERMANDI_PRINCIPAL",
+      grossAmountMinor: orderSubtotal,
+      commissionMinor: 0, // Principal model: margin is in pricing, not explicit commission
+      commissionPercent: 0,
+      notes: `Principal model — supplier payout = purchase invoice total`,
+    });
+  } catch (err: any) {
+    log.error(`[order-invoice] Settlement creation failed:`, err?.message);
+  }
+
   log.info(`[order-invoice] Principal invoices generated for order ${order.orderId}: purchase=${purchaseInvoice.invoiceNumber}, sale=${saleInvoice.invoiceNumber}`);
 }
 
@@ -253,6 +276,24 @@ async function generateDirectSupplierInvoices(
   ).catch((err: any) => {
     log.error(`[order-invoice] Platform fee record failed:`, err?.message);
   });
+
+  // GCP-STG-0106: Create settlement record for direct supplier model
+  try {
+    const { createSettlement } = await import("./settlementService");
+    await createSettlement(pool, {
+      supplierId: order.supplierId,
+      storeId: order.storeId,
+      orderId: order.orderId,
+      saleInvoiceId: directSaleInvoice.id,
+      billingModel: "DIRECT_SUPPLIER",
+      grossAmountMinor: orderSubtotal,
+      commissionMinor: platformFeeMinor,
+      commissionPercent: platformFeePercent,
+      notes: `Direct supplier — ${platformFeePercent}% commission deducted`,
+    });
+  } catch (err: any) {
+    log.error(`[order-invoice] Settlement creation failed:`, err?.message);
+  }
 
   log.info(`[order-invoice] Direct supplier invoices generated for order ${order.orderId}: sale=${directSaleInvoice.invoiceNumber}, commission=${commissionInvoice.invoiceNumber}`);
 }

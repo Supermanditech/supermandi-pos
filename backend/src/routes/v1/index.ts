@@ -93,6 +93,7 @@ import { adminDocumentsRouter } from "./admin/documents";  // DOCS-001: Admin do
 import { adminRegistrationEventsRouter } from "./admin/registrationEvents";  // RO-007: Registration events
 import { adminApplicationsRouter } from "./admin/applications";  // STAGING-FIX-014: Application approval
 import { adminInvoicesRouter } from "./admin/invoices";  // T-071: Buy-resell invoicing
+import { adminSettlementsRouter } from "./admin/settlements";  // GCP-STG-0106: Settlement dashboard
 import { adminCreditRouter } from "./admin/credit";  // CL-020: Credit approval
 import { authRouter } from "./auth";  // PORTAL-AUTH-001: Unified auth routes
 import { retailerRegisterRouter } from "./retailer/register";  // RO-001: Canonical registration
@@ -233,6 +234,7 @@ v1Router.use("/admin", adminGrnAlertsRouter);  // SA-P1-004: GRN excess alerts
 v1Router.use("/admin", adminFeatureFlagsRouter);  // SA-P0-005: Feature flag CRUD
 v1Router.use("/admin", adminApplicationsRouter);  // STAGING-FIX-014: Application approval
 v1Router.use("/admin", adminInvoicesRouter);  // T-071: Buy-resell invoicing
+v1Router.use("/admin", adminSettlementsRouter);  // GCP-STG-0106: Settlement dashboard
 v1Router.use("/admin", adminCreditRouter);  // CL-020: SuperAdmin credit approval
 v1Router.use("/admin", adminGstComplianceRouter);  // T-235: GST compliance + GSTR-1 export
 v1Router.use("/admin", adminComplianceRouter);  // SA-P2-004: Compliance status aggregation

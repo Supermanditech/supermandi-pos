@@ -13,6 +13,7 @@ import { supplierDashboardRouter } from "./dashboard";
 import { supplierKycRouter } from "./kyc";
 import { supplierPayoutsRouter } from "./payouts";
 import { supplierInvoicesRouter } from "./invoices";  // T-073: Supplier invoice views
+import { supplierSettlementsRouter } from "./settlements";  // GCP-STG-0106: Settlement history
 import { supplierNotificationsRouter } from "./notifications";  // Phase 8: Supplier notifications
 // GCP-STG-0209+0210: Mount BNPL visibility router (was defined but never imported)
 import { supplierBnplRouter } from "./bnplVisibility";
@@ -32,6 +33,7 @@ supplierRouter.use("/", supplierDashboardRouter);
 supplierRouter.use("/kyc", supplierKycRouter);
 supplierRouter.use("/payouts", supplierPayoutsRouter);
 supplierRouter.use("/invoices", supplierInvoicesRouter);  // T-073: Supplier invoice views
+supplierRouter.use("/settlements", supplierSettlementsRouter);  // GCP-STG-0106: Settlement history
 supplierRouter.use("/", supplierNotificationsRouter);  // Phase 8: Notifications
 // GCP-STG-0209+0210: BNPL backed-orders visibility
 supplierRouter.use("/bnpl", supplierBnplRouter);
