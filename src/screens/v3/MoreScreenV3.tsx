@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { View, Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { View, Pressable, ScrollView, StyleSheet, Text, Linking } from "react-native";
 import Svg, { Rect, Circle, Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { useThemeColors } from "../../theme";
@@ -30,16 +30,20 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
     });
   }, []);
 
+  // GCP-STG-0045: Derive overdue customer count from summary data
+  const overdueCount = summary ? ((summary as any).overdueCustomers ?? 0) : 0;
+
   const MENU_ITEMS = [
-    // V3-FIX-081: No hardcoded badge — badge hidden until real overdue count API is available
-    { icon: "📒", label: t("more.khata", "Khata (Udhar)"), bg: colors.primaryLight, screen: "khata" },
+    // GCP-STG-0045: Show overdue count badge when available
+    { icon: "📒", label: t("more.khata", "Khata (Udhar)"), bg: colors.primaryLight, screen: "khata", badge: overdueCount > 0 ? overdueCount : undefined },
     { icon: "👥", label: t("more.customers", "Customers"), bg: colors.successSoft, screen: "customers" },
     { icon: "📊", label: t("more.reports", "Reports"), bg: colors.warningSoft, screen: "reports" },
     { icon: "📦", label: t("more.stock", "Stock"), bg: colors.backgroundSecondary, screen: "stock" },
     { icon: "💳", label: t("more.finance", "Credit & Finance"), bg: tabAccents(colors).STORE.heroSoft, screen: "finance" },
     { icon: "🧾", label: t("more.salesHistory", "Sales History"), bg: colors.primaryLight, screen: "sales" },
     { icon: "⚙️", label: t("more.settings", "Settings"), bg: colors.backgroundSecondary, screen: "settings" },
-    // V3-DELETE-085: Help removed — no V3 Help screen exists. Will be added when V3-HARDEN-094 is implemented.
+    // GCP-STG-0046: Help menu item — links to external help URL
+    { icon: "❓", label: t("more.help", "Help"), bg: colors.backgroundSecondary, screen: "help" },
   ];
 
   return (
@@ -88,10 +92,15 @@ export default function MoreScreenV3({ onNavigate }: MoreScreenV3Props) {
         <Text style={styles.sectionTitle}>QUICK ACCESS</Text>
         <View style={styles.menuCard}>
           {MENU_ITEMS.map((item) => (
-            <Pressable key={item.label} style={styles.menuItem} onPress={() => onNavigate(item.screen)}>
+            <Pressable key={item.label} style={styles.menuItem} onPress={() => {
+              // GCP-STG-0046: Help opens external URL instead of in-app screen
+              if (item.screen === "help") { Linking.openURL("https://supermandi.tech/help"); return; }
+              onNavigate(item.screen);
+            }}>
               <View style={[styles.menuIcon, { backgroundColor: item.bg }]}><Text style={{ fontSize: 18 }}>{item.icon}</Text></View>
               <Text style={styles.menuLabel}>{item.label}</Text>
-              {/* V3-FIX-081: Badge hidden until real overdue count API — no (item as any).badge */}
+              {/* GCP-STG-0045: Show overdue count badge on Khata */}
+              {(item as any).badge ? <View style={styles.menuBadge}><Text style={styles.menuBadgeText}>{(item as any).badge}</Text></View> : null}
               <Text style={styles.menuArrow}>›</Text>
             </Pressable>
           ))}
@@ -131,10 +140,11 @@ function createStyles(colors: ColorPalette) {
     sectionTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, paddingHorizontal: getScreenPadding(), marginTop: 14, marginBottom: 8 },
     menuCard: { marginHorizontal: getScreenPadding(), backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
     menuItem: { flexDirection: "row", alignItems: "center", gap: 14, padding: 14, borderBottomWidth: 1, borderBottomColor: colors.backgroundSecondary },
+    // GCP-STG-0045: Overdue count badge
+    menuBadge: { backgroundColor: colors.error, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1, minWidth: 20, alignItems: "center" as const },
+    menuBadgeText: { color: "#fff", fontSize: 10, fontWeight: "700" as const },
     menuIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
     menuLabel: { flex: 1, fontSize: 14, fontWeight: "600" },
-    menuBadge: { backgroundColor: colors.error, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-    menuBadgeText: { color: colors.textInverse, fontSize: 9, fontWeight: "800" },
     menuArrow: { fontSize: 14, color: colors.border },
   });
 }

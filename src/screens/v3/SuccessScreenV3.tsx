@@ -17,6 +17,8 @@ import { shareBillWhatsApp } from "../../services/billing/billShare";
 import { logger } from "../../services/logger";
 
 // STG-557: Success screen v3 — profit display, streak, confetti, WhatsApp bill, new sale
+// GCP-STG-0042: In-memory daily sales streak counter
+const _streakCache: Record<string, string> = {};
 
 type SuccessScreenV3Props = {
   paymentMethod: "CASH" | "UPI" | "DUE";
@@ -40,6 +42,17 @@ export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, 
   const timeStr = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 
   const totalDisplay = `₹${Math.round(totalMinor / 100).toLocaleString("en-IN")}`;
+
+  // GCP-STG-0042: Daily sales streak counter (in-memory per session)
+  const [dailyCount, setDailyCount] = useState(0);
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const key = `streak_${today}`;
+    const stored = parseInt(_streakCache[key] ?? "0", 10);
+    const next = stored + 1;
+    _streakCache[key] = String(next);
+    setDailyCount(next);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowConfetti(false), 2000);
@@ -99,6 +112,11 @@ export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, 
         <Text style={styles.amount}>{totalDisplay}</Text>
         <Text style={styles.subtitle}>{METHOD_LABELS[paymentMethod]} · {itemCount} item{itemCount !== 1 ? "s" : ""}</Text>
 
+        {/* GCP-STG-0042: Daily sales streak motivational text */}
+        {dailyCount > 0 && (
+          <Text style={styles.streakText}>🔥 {dailyCount} sale{dailyCount !== 1 ? "s" : ""} today — keep going!</Text>
+        )}
+
         {/* V3-FIX-075: Bill ref display */}
         <View style={styles.billRefRow}>
           <Text style={styles.billRefText}>{billRef} · {timeStr}</Text>
@@ -116,7 +134,11 @@ export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, 
           </Pressable>
 
           <View style={styles.secondaryActions}>
-            <Pressable style={styles.secondaryBtn} onPress={() => showToast("Reprinting...")} accessibilityLabel="Reprint receipt">
+            <Pressable style={styles.secondaryBtn} onPress={() => {
+              const receiptText = `Bill: ${billRef}\n${METHOD_LABELS[paymentMethod]}\n${itemCount} items\nTotal: ${totalDisplay}\n\nThank you!\n— SuperMandi POS`;
+              showToast("Reprinting...");
+              printerService.printReceipt(receiptText).then((ok) => { if (!ok) showToast("Print failed"); }).catch(() => showToast("Print failed"));
+            }} accessibilityLabel="Reprint receipt">
               <Text style={styles.secondaryBtnText}>🖨️ Reprint</Text>
             </Pressable>
 
@@ -166,6 +188,8 @@ function createStyles(colors: ColorPalette) {
     title: { fontSize: 24, fontWeight: "900", color: colors.textPrimary, marginTop: 20, letterSpacing: -0.5 },
     amount: { fontSize: 36, fontWeight: "900", color: colors.textPrimary, marginTop: 8, letterSpacing: -1 },
     subtitle: { fontSize: 14, color: colors.textTertiary, fontWeight: "500", marginTop: 4 },
+    // GCP-STG-0042: Daily sales streak motivational text
+    streakText: { fontSize: 13, color: colors.success, fontWeight: "700", marginTop: 8 },
     billRefRow: { marginTop: 12, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.backgroundSecondary },
     billRefText: { fontSize: 11, fontWeight: "600", color: colors.textTertiary, textAlign: "center" },
     printStatus: { marginTop: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, backgroundColor: colors.backgroundSecondary },
