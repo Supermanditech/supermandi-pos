@@ -49,6 +49,7 @@ import BrandShortmark from "../components/BrandShortmark";
 type RootStackParamList = {
   EnrollDevice: { enrollmentCode?: string; code?: string } | undefined;
   SellScan: undefined;
+  V3StaffLogin: undefined; // GCP-STG-0009: Staff PIN login after enrollment
   PaymentSetup: undefined;
   ForceUpdate: { currentVersion?: string; requiredVersion?: string };
   DeviceBlocked: undefined;
@@ -205,7 +206,7 @@ export default function EnrollDeviceScreen() {
     // #404: label is set dynamically, not memoized — added at call site
   }), []);
 
-  // Check existing session on mount — skip to SellScan if already enrolled
+  // GCP-STG-0009: Check existing session — if already enrolled, go to staff login
   // ENROLL-SESSION-CHECK-RACE-CONDITION: wait for check before showing form to avoid flash
   useEffect(() => {
     let cancelled = false;
@@ -214,7 +215,7 @@ export default function EnrollDeviceScreen() {
         const session = await getDeviceSession();
         if (cancelled) return;
         if (session) {
-          navigation.replace("SellScan");
+          navigation.replace("V3StaffLogin");
         } else {
           setCheckingSession(false);
         }
@@ -403,14 +404,10 @@ export default function EnrollDeviceScreen() {
         Alert.alert("Store Inactive", POS_MESSAGES.storeInactive);
       }
 
-      // #329-332: Route to PaymentSetup if no UPI VPA set (prompted once)
-      const needsPaymentSetup = !res.upiVpa;
-      const alreadyPrompted = await AsyncStorage.getItem(getPaymentPromptedKey(res.storeId));
-      if (needsPaymentSetup && !alreadyPrompted) {
-        navigation.replace("PaymentSetup");
-      } else {
-        navigation.replace("SellScan");
-      }
+      // GCP-STG-0009: After enrollment, always navigate to staff PIN login first
+      // Staff PIN is mandatory before accessing the POS — security requirement
+      // PaymentSetup will be prompted after first staff login if needed
+      navigation.replace("V3StaffLogin");
     } catch (error) {
       let errorKey = "ENROLLMENT_FAILED";
       let rawMessage = "";
