@@ -12,7 +12,8 @@ import { showToast } from "../../utils/showToast";
 import { logger } from "../../services/logger";
 import { usePaymentFlow, type PaymentMethod } from "./usePaymentFlow";
 
-type Customer = { id: string; name: string; phone?: string };
+// GCP-STG-0041: Enhanced customer type with due balance for Udhar screen
+type Customer = { id: string; name: string; phone?: string; dueBalanceMinor?: number };
 
 type UdharScreenV3Props = {
   onBack: () => void;
@@ -28,14 +29,33 @@ export default function UdharScreenV3({ onBack, onComplete }: UdharScreenV3Props
   const [customerPhone, setCustomerPhone] = useState("");
   const [recentCustomers, setRecentCustomers] = useState<Customer[]>([]);
 
-  // V3-FIX-074: Load existing customers for quick-select
+  // GCP-STG-0041: Load existing customers + due balances for quick-select
   useEffect(() => {
-    apiClient.get<any>("/api/v1/pos/customers?limit=10&sort=last_purchase_desc")
-      .then((res) => {
-        const list = (res?.customers ?? res?.data ?? []) as Customer[];
-        setRecentCustomers(list.slice(0, 10));
-      })
-      .catch(() => {}); // Graceful — empty list on failure
+    (async () => {
+      try {
+        const [custRes, duesRes] = await Promise.all([
+          apiClient.get<any>("/api/v1/pos/customers?limit=10&sort=last_purchase_desc").catch(() => null),
+          apiClient.get<any>("/api/v1/pos/khata/customers").catch(() => null),
+        ]);
+        const custList = (custRes?.customers ?? custRes?.data ?? []) as Customer[];
+        // Build phone→balance map from khata data
+        const balanceMap = new Map<string, number>();
+        const khataCustomers = (duesRes?.customers ?? duesRes?.data ?? []) as any[];
+        for (const kc of khataCustomers) {
+          const phone = kc.phone ?? kc.customer_phone;
+          const bal = Number(kc.balanceMinor ?? kc.balance_minor ?? kc.totalDueMinor ?? 0);
+          if (phone && bal > 0) balanceMap.set(phone, bal);
+        }
+        // Merge due balances into customer list
+        const merged = custList.slice(0, 10).map((c) => ({
+          ...c,
+          dueBalanceMinor: c.phone ? (balanceMap.get(c.phone) ?? 0) : 0,
+        }));
+        setRecentCustomers(merged);
+      } catch {
+        // Graceful — empty list on failure
+      }
+    })();
   }, []);
 
   const handleSelectCustomer = useCallback((c: Customer) => {
@@ -85,24 +105,35 @@ export default function UdharScreenV3({ onBack, onComplete }: UdharScreenV3Props
           maxLength={10}
         />
 
-        {/* V3-FIX-074: Existing customer quick-select */}
+        {/* GCP-STG-0041: Customer cards with avatar, due balance, action buttons */}
         {recentCustomers.length > 0 ? (
           <View style={styles.recentSection}>
-            <Text style={styles.recentTitle}>RECENT CUSTOMERS</Text>
+            <Text style={styles.recentTitle}>OR SELECT EXISTING</Text>
             <FlatList
               data={recentCustomers}
               keyExtractor={(c) => c.id}
               horizontal
               showsHorizontalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={[styles.customerChip, customerName === item.name && styles.customerChipActive]}
-                  onPress={() => handleSelectCustomer(item)}
-                >
-                  <Text style={[styles.customerName, customerName === item.name && styles.customerNameActive]}>{item.name}</Text>
-                  {item.phone ? <Text style={styles.customerPhone}>{item.phone.slice(-4)}</Text> : null}
-                </Pressable>
-              )}
+              renderItem={({ item }) => {
+                const isSelected = customerName === item.name;
+                const initial = (item.name || "?").charAt(0).toUpperCase();
+                const dueDisplay = item.dueBalanceMinor && item.dueBalanceMinor > 0
+                  ? `₹${Math.round(item.dueBalanceMinor / 100).toLocaleString("en-IN")} existing`
+                  : null;
+                return (
+                  <Pressable
+                    style={[styles.customerCard, isSelected && styles.customerCardActive]}
+                    onPress={() => handleSelectCustomer(item)}
+                  >
+                    <View style={[styles.avatar, isSelected && styles.avatarActive]}>
+                      <Text style={[styles.avatarText, isSelected && styles.avatarTextActive]}>{initial}</Text>
+                    </View>
+                    <Text style={[styles.customerName, isSelected && styles.customerNameActive]} numberOfLines={1}>{item.name}</Text>
+                    {item.phone ? <Text style={styles.customerPhone}>{item.phone.slice(-4)}</Text> : null}
+                    {dueDisplay ? <Text style={styles.dueBalance}>{dueDisplay}</Text> : null}
+                  </Pressable>
+                );
+              }}
             />
           </View>
         ) : null}
@@ -136,11 +167,17 @@ function createStyles(colors: ColorPalette) {
     input: { padding: 14, borderRadius: 14, borderWidth: 2, borderColor: colors.border, fontSize: 15, fontWeight: "500", color: colors.textPrimary, backgroundColor: colors.surface, marginBottom: 10 },
     recentSection: { marginTop: 16 },
     recentTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, marginBottom: 8 },
-    customerChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border, marginRight: 8, backgroundColor: colors.surface },
-    customerChipActive: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
-    customerName: { fontSize: 13, fontWeight: "700", color: colors.textPrimary },
+    // GCP-STG-0041: Vertical customer cards with avatar
+    customerCard: { width: 100, paddingVertical: 12, paddingHorizontal: 8, borderRadius: 14, borderWidth: 1.5, borderColor: colors.border, marginRight: 10, backgroundColor: colors.surface, alignItems: "center" },
+    customerCardActive: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
+    avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center", marginBottom: 6 },
+    avatarActive: { backgroundColor: colors.primary },
+    avatarText: { fontSize: 18, fontWeight: "800", color: colors.textSecondary },
+    avatarTextActive: { color: "#fff" },
+    customerName: { fontSize: 14, fontWeight: "700", color: colors.textPrimary, textAlign: "center" },
     customerNameActive: { color: colors.primary },
     customerPhone: { fontSize: 10, color: colors.textTertiary, marginTop: 1 },
+    dueBalance: { fontSize: 10, fontWeight: "600", color: colors.warning ?? colors.error, marginTop: 3, textAlign: "center" },
     footer: { paddingHorizontal: 16, paddingBottom: 16, paddingTop: 8 },
     completeBtn: { backgroundColor: colors.success, paddingVertical: 16, borderRadius: 16, alignItems: "center" },
     completeBtnDisabled: { opacity: 0.6 },

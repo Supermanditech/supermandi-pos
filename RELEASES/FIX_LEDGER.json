@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 565,
+  "version": 566,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -10389,6 +10389,45 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:47:35.740Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0041",
+      "file": "src/screens/v3/UdharScreenV3.tsx",
+      "start_line": 1,
+      "end_line": 162,
+      "checksum": "003e4dae1099d832",
+      "description": "Udhar screen customer cards with 44px avatar circles, due balance, OR SELECT EXISTING title",
+      "test_file": "src/__tests__/screens/udharCustomerCards.gcp-stg-0041.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T11:51:19.844Z",
       "status": "ACTIVE"
     }
   ],
