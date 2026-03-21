@@ -94,6 +94,7 @@ const PUBLIC_PATHS = [
   '/api/v1/retailer-admin/auth/refresh',
   '/api/v1/retailer-admin/auth/select-store', // STG-053: Self-verifies JWT (accepts tokens without actorId)
   '/api/v1/retailer-admin/health',
+  '/api/v1/retailer-admin/feature-flags', // GCP-STG-0219: Feature flags are public (no auth needed)
   '/api/v1/retailer-admin/registration',
   // Supplier auth (public)
   '/api/v1/supplier/auth/register',
@@ -262,7 +263,9 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
     }
 
     // Validate required claims
-    if (!decoded.sub || !decoded.actorId || !decoded.actorType) {
+    // GCP-STG-0218: actorId is optional — retailer JWTs during select-store phase
+    // have sub + actorType but no actorId (store not yet selected)
+    if (!decoded.sub || !decoded.actorType) {
       // STG-427 FIX: Admin email OTP JWTs have {email, role, type} but not
       // {sub, actorId, actorType}. Allow admin JWTs to pass through to chat
       // and other JWT-required routes with appropriate gateway headers.
@@ -275,10 +278,19 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
         return next();
       }
 
+      // Also allow tokens with sub but missing actorType (pre-store-selection)
+      if (decoded.sub && !decoded.actorId && !decoded.actorType) {
+        req.headers['x-user-id'] = decoded.sub;
+        req.headers['x-actor-id'] = '';
+        req.headers['x-actor-type'] = 'user';
+        req.headers['x-permissions'] = JSON.stringify(decoded.permissions ?? []);
+        return next();
+      }
+
       res.status(401).json({
         error: {
           code: 'INVALID_TOKEN',
-          message: 'Token missing required claims (sub, actorId, actorType).',
+          message: 'Token missing required claims (sub, actorType).',
         },
         requestId: req.correlationId,
       });
@@ -288,9 +300,9 @@ export async function jwtAuthMiddleware(req: Request, res: Response, next: NextF
     // Set headers for downstream services
     // These headers are trusted because they come from the gateway
     req.headers['x-user-id'] = decoded.sub;
-    req.headers['x-actor-id'] = decoded.actorId;
+    req.headers['x-actor-id'] = decoded.actorId ?? ''; // GCP-STG-0218: may be empty pre-store-selection
     req.headers['x-actor-type'] = decoded.actorType;
-    req.headers['x-permissions'] = JSON.stringify(decoded.permissions);
+    req.headers['x-permissions'] = JSON.stringify(decoded.permissions ?? []);
 
     // SEC-003: Defense-in-depth — validate URL storeId matches JWT actorId
     // Retailer-admin routes embed storeId in path: /api/v1/retailer-admin/stores/:storeId/*
