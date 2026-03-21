@@ -331,15 +331,8 @@ export default function SellScreenV3() {
         if (parent) parent.navigate("MORE" as any);
       }} />
 
-      {/* V3-FIX-180: SELL mode identity strip — billing/cashier urgency */}
-      <View style={styles.modeStrip} testID="sell-mode-strip">
-        <Text style={styles.modeLabel}>💰 BILLING MODE</Text>
-        {cartCount > 0 ? (
-          <Text style={styles.modeCartHint}>{cartCount} item{cartCount !== 1 ? 's' : ''} · ₹{Math.round(cartTotal / 100).toLocaleString("en-IN")}</Text>
-        ) : (
-          <Text style={styles.modeHint}>Scan or tap to add</Text>
-        )}
-      </View>
+      {/* GCP-STG-0033: Removed redundant "BILLING MODE" strip — replaced by
+         Retail/Bulk toggle (GCP-STG-0142). Cart info is in the cart strip at bottom. */}
 
       {/* Search bar */}
       <View style={styles.searchBar} testID="sell-search-bar">

@@ -6670,7 +6670,7 @@
       "file": "src/screens/v3/SellScreenV3.tsx",
       "start_line": 1,
       "end_line": 563,
-      "checksum": "6e25c84bfbf5be3f",
+      "checksum": "05a1ef3ceffee042",
       "description": "SellScreenV3 — product grid + Retail/Bulk toggle + CartSheetV3 wired + V3-HARDEN-106 testIDs",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
       "depends_on": null,
@@ -12144,7 +12144,7 @@
       "file": "src/screens/v3/SellScreenV3.tsx",
       "start_line": 370,
       "end_line": 372,
-      "checksum": "02663de136d8a1f9",
+      "checksum": "cf34650ac857fc6c",
       "description": "Enable Retail/Bulk trade toggle on SELL screen (prototype compliance)",
       "test_file": "backend/tests/sseEvents.gcp-stg-0108.unit.test.ts",
       "depends_on": null,
@@ -12218,5 +12218,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-21T19:00:48.210Z"
+  "lastUpdated": "2026-03-21T19:11:56.400Z"
 }
