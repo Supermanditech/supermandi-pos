@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 575,
+  "version": 576,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -10781,6 +10781,45 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T13:36:52.523Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0209",
+      "file": "backend/src/routes/v1/supplier/index.ts",
+      "start_line": 1,
+      "end_line": 36,
+      "checksum": "843efbf30c06452b",
+      "description": "Mount supplierBnplRouter at /bnpl — was defined but never imported",
+      "test_file": "backend/tests/supplierRoutes.gcp-stg-0209.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T14:06:41.983Z",
       "status": "ACTIVE"
     }
   ],
