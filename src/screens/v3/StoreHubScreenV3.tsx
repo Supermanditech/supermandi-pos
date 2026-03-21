@@ -137,8 +137,8 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
 function createStyles(colors: ColorPalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    // V3-FIX-180: Branded STORE hero header with mode identity
-    header: { backgroundColor: tabAccents(colors).STORE.hero, paddingHorizontal: getScreenPadding(), paddingVertical: 16, flexDirection: "row", alignItems: "center", gap: 10 },
+    // GCP-STG-0133: Use primary blue header consistent with all tabs (was purple STORE.hero)
+    header: { backgroundColor: colors.primary, paddingHorizontal: getScreenPadding(), paddingVertical: 16, flexDirection: "row", alignItems: "center", gap: 10 },
     headerTitle: { color: colors.textInverse, fontSize: 18, fontWeight: "800", letterSpacing: -0.3 },
     body: { flex: 1 },
     grid: { flexDirection: "row", flexWrap: "wrap", padding: getScreenPadding(), gap: 12 },

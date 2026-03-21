@@ -36,6 +36,14 @@ export default function PosRootLayoutV3() {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<V3Tab>("SELL");
+  // GCP-STG-0132: Brief branded loading overlay during tab transitions
+  const [transitioning, setTransitioning] = useState(false);
+  const handleTabChange = useCallback((tab: V3Tab) => {
+    if (tab === activeTab) return;
+    setTransitioning(true);
+    setActiveTab(tab);
+    setTimeout(() => setTransitioning(false), 100);
+  }, [activeTab]);
 
   // Cart badge from existing store
   const cartCount = useCartStore((s) => s.items?.length ?? 0);
@@ -79,6 +87,12 @@ export default function PosRootLayoutV3() {
         </View>
       )}
       <View style={styles.content}>
+        {/* GCP-STG-0132: Branded transition overlay */}
+        {transitioning && (
+          <View style={styles.transitionOverlay}>
+            <Text style={{ fontSize: 20, fontWeight: "800", color: colors.primary }}>SuperMandi</Text>
+          </View>
+        )}
         {activeTab === "SELL" ? (
           <ScreenErrorBoundary screenName="SellV3">
             <SellScreenV3 />
@@ -109,7 +123,7 @@ export default function PosRootLayoutV3() {
 
       <BottomNavV3
         activeTab={activeTab}
-        onTabPress={setActiveTab}
+        onTabPress={handleTabChange}
         sellBadge={cartCount > 0 ? cartCount : undefined}
         moreBadge={undefined}
       />
@@ -127,6 +141,8 @@ function createStyles(colors: ColorPalette) {
       flex: 1,
     },
     // V3-FIX-179: Branded offline banner
+    // GCP-STG-0132: Branded transition overlay
+    transitionOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.background, alignItems: "center", justifyContent: "center", zIndex: 50 },
     offlineBanner: {
       backgroundColor: colors.warningSoft,
       paddingVertical: 6,

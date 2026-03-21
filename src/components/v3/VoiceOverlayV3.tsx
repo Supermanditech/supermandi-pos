@@ -177,8 +177,10 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
             </Svg>
           </Animated.View>
 
-          {/* State display */}
-          {state === "listening" ? (
+          {/* GCP-STG-0139: State display — show label for all states including idle */}
+          {state === "idle" ? (
+            <Text style={styles.stateText}>Tap mic to start</Text>
+          ) : state === "listening" ? (
             <Text style={styles.stateText}>Listening...</Text>
           ) : state === "processing" ? (
             <Text style={styles.stateText}>Processing...</Text>

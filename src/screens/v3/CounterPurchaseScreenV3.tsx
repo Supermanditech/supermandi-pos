@@ -244,7 +244,7 @@ export default function CounterPurchaseScreenV3({ onClose, onCameraScan }: Count
         </View>
         <View style={styles.scanInputRow}>
           <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth={2}><Rect x={3} y={3} width={18} height={18} rx={2} /></Svg>
-          <TextInput ref={barcodeInputRef} style={styles.scanInput} value={barcodeInput} onChangeText={setBarcodeInput} placeholder="Scan barcode or type product name..." placeholderTextColor={colors.textTertiary} autoFocus />
+          <TextInput ref={barcodeInputRef} style={styles.scanInput} value={barcodeInput} onChangeText={setBarcodeInput} placeholder="Enter barcode number..." placeholderTextColor={colors.textTertiary} keyboardType="numeric" autoFocus />
           <View style={styles.readyDot} />
           <Text style={styles.readyText}>READY</Text>
           <Pressable style={styles.scanSubmit} onPress={() => handleBarcodeScan(barcodeInput)}><Text style={styles.scanSubmitText}>↵</Text></Pressable>
