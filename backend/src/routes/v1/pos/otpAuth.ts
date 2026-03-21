@@ -169,27 +169,38 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
       return res.status(400).json({ error: { code: "MAX_DEVICES_REACHED", message: `This store already has ${maxDevices} active devices. Deactivate an old device first.` } });
     }
 
-    // GCP-STG-0007: Deactivate all other active devices for this store
-    // Prevents concurrent sessions — only one active device per store at a time
-    // Old devices will show "DEVICE_REVOKED" on next API call and must re-enroll
-    await pool.query(
-      `UPDATE pos_devices SET active = FALSE, token_revoked_at = NOW()
-       WHERE store_id = $1 AND active = TRUE`,
-      [store.id]
-    );
-
-    // Generate opaque device token
+    // GCP-STG-0007: Deactivate old devices + create new one in a TRANSACTION
+    // Prevents race condition: two simultaneous OTP verifies could both succeed
+    // without transaction, leaving two active devices for the same store.
     const token = crypto.randomBytes(32).toString("hex");
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
 
-    // V3-BE-004: UUID device ID (not string concatenation)
-    await pool.query(
-      `INSERT INTO pos_devices (id, store_id, device_token, label, active)
-       VALUES (gen_random_uuid(), $1, $2, $3, TRUE)`,
-      [store.id, token, `POS-${phone.slice(-4)}`]
-    );
+      // Deactivate all active devices for this store
+      await client.query(
+        `UPDATE pos_devices SET active = FALSE, token_revoked_at = NOW()
+         WHERE store_id = $1 AND active = TRUE`,
+        [store.id]
+      );
 
-    // Clean up OTP
-    await pool.query(`DELETE FROM pos_otp WHERE phone = $1`, [phone]);
+      // Create new device
+      await client.query(
+        `INSERT INTO pos_devices (id, store_id, device_token, label, active)
+         VALUES (gen_random_uuid(), $1, $2, $3, TRUE)`,
+        [store.id, token, `POS-${phone.slice(-4)}`]
+      );
+
+      // Clean up OTP
+      await client.query(`DELETE FROM pos_otp WHERE phone = $1`, [phone]);
+
+      await client.query("COMMIT");
+    } catch (txErr) {
+      await client.query("ROLLBACK");
+      throw txErr;
+    } finally {
+      client.release();
+    }
 
     res.json({
       token,
