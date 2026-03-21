@@ -2,6 +2,8 @@ import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { View, Pressable, TextInput, StyleSheet, Text, Modal } from "react-native";
 import Svg, { Rect, Path, Line } from "react-native-svg";
 import { useTranslation } from "react-i18next";
+// GCP-STG-0035: Camera preview for barcode scanning
+import { CameraView, useCameraPermissions } from "expo-camera";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -51,6 +53,8 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
   const [context, setContext] = useState<ScanContext>(defaultContext);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [lastResult, setLastResult] = useState<ScanResult | null>(null);
+  // GCP-STG-0035: Camera permissions + barcode scanning
+  const [cameraPermission, requestPermission] = useCameraPermissions();
 
   // V3-003: Real barcode lookup from productsStore + cartStore
   const getProductByBarcode = useProductsStore((s) => s.getProductByBarcode);
@@ -146,18 +150,32 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
           <View style={{ width: 30 }} />
         </View>
 
-        {/* Camera viewfinder area */}
+        {/* GCP-STG-0035: Camera viewfinder with live preview */}
         <View style={styles.viewfinder}>
-          <View style={styles.scanFrame}>
+          {cameraPermission?.granted ? (
+            <CameraView
+              style={StyleSheet.absoluteFill}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e", "code128", "code39", "qr"] }}
+              onBarcodeScanned={(result) => {
+                if (result.data) processScan(result.data);
+              }}
+            />
+          ) : (
+            <Pressable style={styles.permissionPrompt} onPress={requestPermission}>
+              <Text style={styles.viewfinderText}>
+                {cameraPermission === null ? "Loading camera..." : "Tap to enable camera"}
+              </Text>
+            </Pressable>
+          )}
+          <View style={styles.scanFrame} pointerEvents="none">
             {/* Corner markers */}
             <View style={[styles.corner, styles.cornerTL]} />
             <View style={[styles.corner, styles.cornerTR]} />
             <View style={[styles.corner, styles.cornerBL]} />
             <View style={[styles.corner, styles.cornerBR]} />
-            {/* Scan line animation placeholder */}
             <View style={styles.scanLine} />
           </View>
-          <Text style={styles.viewfinderText}>Point camera at barcode</Text>
           <View style={styles.hidStatus}>
             <View style={styles.hidDot} />
             <Text style={styles.hidText}>HID Scanner Active</Text>
@@ -334,6 +352,8 @@ function createStyles(colors: ColorPalette) {
     cornerBR: { bottom: -1, right: -1, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 8 },
     scanLine: { position: "absolute", top: "50%", left: 16, right: 16, height: 2, backgroundColor: colors.primary, borderRadius: 1 },
     viewfinderText: { color: "#fff", fontSize: 14, fontWeight: "500", marginTop: 20 },
+    // GCP-STG-0035: Camera permission prompt
+    permissionPrompt: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: "#111" },
     hidStatus: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 },
     hidDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#4ADE80" },
     hidText: { color: "#4ADE80", fontSize: 12, fontWeight: "600" },
