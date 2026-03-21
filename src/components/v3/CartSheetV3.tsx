@@ -42,10 +42,13 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
   const [editDiscountType, setEditDiscountType] = useState<"percentage" | "fixed">("percentage");
   const [editDiscountValue, setEditDiscountValue] = useState("");
   const [editDiscountReason, setEditDiscountReason] = useState("");
+  // GCP-STG-0082: "Update store price" checkbox state
+  const [updateStorePrice, setUpdateStorePrice] = useState(false);
 
   const openEditModal = useCallback((item: CartItem) => {
     setEditingItem(item);
     setEditPrice(String(item.priceMinor / 100));
+    setUpdateStorePrice(false); // GCP-STG-0082: Reset checkbox on open
     if (item.itemDiscount) {
       setEditDiscountType(item.itemDiscount.type);
       setEditDiscountValue(String(item.itemDiscount.type === "fixed" ? item.itemDiscount.value / 100 : item.itemDiscount.value));
@@ -65,6 +68,15 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
       const newPriceMinor = Math.round(newPriceRupees * 100);
       if (newPriceMinor !== editingItem.priceMinor) {
         updatePrice(editingItem.id, newPriceMinor);
+        // GCP-STG-0082: Sync price to store product catalog if checkbox checked
+        if (updateStorePrice && editingItem.metadata?.storeProductId) {
+          const { updateStoreProductPrice } = require("../../services/api/productsApi");
+          updateStoreProductPrice({
+            storeProductId: editingItem.metadata.storeProductId,
+            sellPriceMinor: newPriceMinor,
+          }).then(() => showToast("Store price updated"))
+            .catch(() => showToast("Cart updated, store price sync failed"));
+        }
       }
     }
     // Update item discount
@@ -84,7 +96,8 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
     }
     showToast(`${editingItem.name} updated`);
     setEditingItem(null);
-  }, [editingItem, editPrice, editDiscountType, editDiscountValue, editDiscountReason, updatePrice, applyItemDiscount, removeItemDiscount]);
+    setUpdateStorePrice(false);
+  }, [editingItem, editPrice, editDiscountType, editDiscountValue, editDiscountReason, updatePrice, applyItemDiscount, removeItemDiscount, updateStorePrice]);
 
   const isBulk = sellMode === "bulk";
   const subtotal = total;
@@ -224,6 +237,17 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
                 keyboardType="decimal-pad"
                 testID="cart-edit-price"
               />
+
+              {/* GCP-STG-0082: Update store price checkbox */}
+              <Pressable
+                style={{ flexDirection: "row", alignItems: "center", marginTop: 8, gap: 8 }}
+                onPress={() => setUpdateStorePrice(!updateStorePrice)}
+              >
+                <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: updateStorePrice ? colors.primary : colors.border, backgroundColor: updateStorePrice ? colors.primary : "transparent", alignItems: "center", justifyContent: "center" }}>
+                  {updateStorePrice ? <Text style={{ color: "#fff", fontSize: 12, fontWeight: "800" }}>✓</Text> : null}
+                </View>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, fontWeight: "600" }}>Make this my new default price</Text>
+              </Pressable>
 
               {/* Discount */}
               <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textTertiary, letterSpacing: 0.5, marginTop: 16, marginBottom: 4 }}>ITEM DISCOUNT</Text>

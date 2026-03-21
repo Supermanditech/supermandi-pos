@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 577,
+  "version": 578,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6706,8 +6706,8 @@
       "ticket": "STG-554",
       "file": "src/components/v3/CartSheetV3.tsx",
       "start_line": 1,
-      "end_line": 414,
-      "checksum": "9c3d2dc62ace2d62",
+      "end_line": 435,
+      "checksum": "f80df79d2e3d8540",
       "description": "Cart sheet v3 — expanded view with items, GST summary, qty controls, pay button",
       "test_file": "src/__tests__/screens/cart-sheet-v3.stg-554.test.ts",
       "depends_on": null,
@@ -10160,8 +10160,8 @@
     {
       "ticket": "GCP-STG-0050",
       "file": "src/components/v3/CartSheetV3.tsx",
-      "start_line": 170,
-      "end_line": 200,
+      "start_line": 183,
+      "end_line": 213,
       "checksum": "d1d68cc9fcd55f37",
       "description": "Parked cart recall UI — Recall button + modal with Resume/Delete for each parked cart",
       "test_file": "src/__tests__/screens/cart-sheet-v3.stg-554.test.ts",
@@ -10194,7 +10194,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:08:06.529Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-21T14:34:16.323Z"
     },
     {
       "ticket": "GCP-STG-0127",
@@ -10859,6 +10860,45 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T14:10:24.547Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0082",
+      "file": "src/components/v3/CartSheetV3.tsx",
+      "start_line": 62,
+      "end_line": 96,
+      "checksum": "c39e3dd2ded96011",
+      "description": "Cart price edit syncs to store catalog via updateStoreProductPrice API when checkbox checked",
+      "test_file": "src/__tests__/components/cartPriceSync.gcp-stg-0082.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T14:34:55.285Z",
       "status": "ACTIVE"
     }
   ],
