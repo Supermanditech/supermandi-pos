@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 572,
+  "version": 573,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6891,8 +6891,8 @@
       "ticket": "STG-559",
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 1,
-      "end_line": 370,
-      "checksum": "91804784b2815baa",
+      "end_line": 377,
+      "checksum": "e399a871471d7675",
       "description": "Scan screen v3 — context-aware barcode scan (Sell/Stock-In/New Product), HID+camera, result panel",
       "test_file": "src/__tests__/screens/scan-v3.stg-559.test.ts",
       "depends_on": null,
@@ -10511,8 +10511,8 @@
     {
       "ticket": "GCP-STG-0028",
       "file": "src/screens/v3/ScanScreenV3.tsx",
-      "start_line": 276,
-      "end_line": 298,
+      "start_line": 282,
+      "end_line": 304,
       "checksum": "e8ce6dbbd9d07d88",
       "description": "Continue button on scan not-found result to dismiss and scan next barcode",
       "test_file": "src/__tests__/screens/scanContinueBtn.gcp-stg-0028.test.ts",
@@ -10545,7 +10545,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T12:35:30.376Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-21T13:03:30.597Z"
     },
     {
       "ticket": "GCP-STG-0055",
@@ -10662,6 +10663,45 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T12:53:54.108Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0052",
+      "file": "src/screens/v3/ScanScreenV3.tsx",
+      "start_line": 252,
+      "end_line": 267,
+      "checksum": "3c016e64f88f6b17",
+      "description": "Scan quick-qty presets warn when exceeding available stock",
+      "test_file": "src/__tests__/screens/scanQtyStockCheck.gcp-stg-0052.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T13:04:04.085Z",
       "status": "ACTIVE"
     }
   ],

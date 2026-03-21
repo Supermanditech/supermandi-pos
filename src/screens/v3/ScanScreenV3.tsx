@@ -250,7 +250,13 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
                           key={p.label}
                           style={{ backgroundColor: colors.primary + '15', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: colors.primary + '30' }}
                           onPress={() => {
+                            // GCP-STG-0052: Validate stock before adding quick-qty preset
+                            const currentStock = product.stock ?? 0;
                             const existing = useCartStore.getState().items.find(i => i.barcode === lastResult!.barcode);
+                            const inCart = existing?.quantity ?? 0;
+                            if (currentStock > 0 && inCart + p.qty > currentStock) {
+                              showToast(`Only ${currentStock}${product.rateUnit ? product.rateUnit.toLowerCase() : ''} available`);
+                            }
                             if (existing) {
                               useCartStore.getState().updateQuantity(existing.id, existing.quantity + p.qty);
                             } else {
