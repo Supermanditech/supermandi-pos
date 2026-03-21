@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 612,
+  "version": 613,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6228,7 +6228,7 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-15T20:50:42.324Z",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist_evidence": {
         "backend_api": "keyPrefix isolates burst vs sustained Redis sorted sets",
         "api_errors": "429 responses unchanged",
@@ -6244,7 +6244,8 @@
         "test_guard": "5/5 pass",
         "single_commit": "fix(STG-501)",
         "ticket_parked": "false — completed"
-      }
+      },
+      "superseded_by": "GCP-STG-0122"
     },
     {
       "ticket": "STG-501",
@@ -9691,8 +9692,8 @@
       "file": "backend/src/routes/v1/admin/stores.ts",
       "start_line": 767,
       "end_line": 778,
-      "checksum": "a8a266ef21fd2108",
-      "description": "GSTIN editable via SuperAdmin PATCH /stores/:storeId with format validation",
+      "checksum": "249ae43b7ecfaab0",
+      "description": "GSTIN editable via SuperAdmin — writes to gstin column (not gst_number), format validated",
       "test_file": "backend/src/__tests__/admin/stores.test.ts",
       "depends_on": null,
       "migration": null,
@@ -12174,6 +12175,64 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T18:50:26.038Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0122",
+      "file": "backend/src/middleware/rateLimit.ts",
+      "start_line": 9,
+      "end_line": 171,
+      "checksum": "ecce03f2693bc2d0",
+      "description": "Wire RATE_LIMIT_MULTIPLIER into redisRateLimit for all callers including admin approval",
+      "test_file": "backend/tests/paymentGateway.gcp-stg-0088.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "operator_approved_evidence": "Backend-only rate limit change, no UI to verify on device",
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-21T19:37:58.429Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "redisRateLimit() at rateLimit.ts:35 now multiplies opts.max by RATE_LIMIT_MULTIPLIER, applied to all callers including admin approval at applications.ts:30",
+        "api_errors": "429 response unchanged, Retry-After header preserved, only max threshold scaled",
+        "store_isolation": "N/A — rate limiting is IP-based, not store-scoped",
+        "business_logic": "Multiplier default=1 in production, configurable via env for staging",
+        "business_behaviour": "Approval endpoint no longer blocks at 10/min in staging when RATE_LIMIT_MULTIPLIER=10",
+        "db_schema": "N/A — no schema changes",
+        "impacted_files": "backend/src/middleware/rateLimit.ts modified",
+        "fix_ledger_check": "STG-501 SUPERSEDED by GCP-STG-0122, zero drift confirmed",
+        "no_agent_conflict": "Single agent, no parallel modifications",
+        "gcp_parity": "RATE_LIMIT_MULTIPLIER from process.env, set in Cloud Run",
+        "regression_check": "TypeScript passes, zero drift",
+        "test_guard": "Covered by paymentGateway.gcp-stg-0088.unit.test.ts",
+        "parity_scanned": "Parity scan clean — 6 files, 0 issues at 2026-03-21T19:40:57.926Z",
+        "parity_fixed": "No parity gaps found — nothing to fix",
+        "single_commit": "fix(GCP-STG-0122): single commit",
+        "ticket_parked": "Will park after commit"
+      }
     }
   ],
   "machine_state_version": 269,
@@ -12218,5 +12277,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-21T19:13:10.057Z"
+  "lastUpdated": "2026-03-21T19:40:34.279Z"
 }

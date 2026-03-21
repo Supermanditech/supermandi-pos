@@ -2,6 +2,9 @@ import type { NextFunction, Request, Response } from "express";
 import { log } from "../lib/logger";
 import { checkRateLimit } from "../db/redis";
 
+// GCP-STG-0122: Apply RATE_LIMIT_MULTIPLIER to all Redis-backed rate limiters
+const RATE_LIMIT_MULTIPLIER = Math.max(1, parseInt(process.env.RATE_LIMIT_MULTIPLIER || "1", 10));
+
 // =============================================================================
 // SA-P2-011: Redis-backed persistent rate limiting
 // =============================================================================
@@ -27,6 +30,9 @@ export interface RedisRateLimitOptions {
  * never blocked due to Redis outages (fail-open).
  */
 export function redisRateLimit(opts: RedisRateLimitOptions) {
+  // GCP-STG-0122: Scale max by RATE_LIMIT_MULTIPLIER for staging/local-prod
+  const effectiveMax = opts.max * RATE_LIMIT_MULTIPLIER;
+
   // In-memory fallback state (used only when Redis is down)
   const fallbackHits = new Map<string, number[]>();
   let lastCleanup = Date.now();
@@ -61,7 +67,7 @@ export function redisRateLimit(opts: RedisRateLimitOptions) {
     const filtered = arr.filter((t) => now - t < opts.windowMs);
     filtered.push(now);
     fallbackHits.set(key, filtered);
-    return filtered.length > opts.max;
+    return filtered.length > effectiveMax;
   }
 
   return (req: Request, res: Response, next: NextFunction) => {
@@ -71,7 +77,7 @@ export function redisRateLimit(opts: RedisRateLimitOptions) {
     const windowSeconds = Math.ceil(opts.windowMs / 1000);
 
     // Attempt Redis-backed rate limit check
-    checkRateLimit(key, opts.max, windowSeconds)
+    checkRateLimit(key, effectiveMax, windowSeconds)
       .then((result) => {
         if (!result.allowed) {
           const retryAfterSeconds = result.resetAt
@@ -83,7 +89,7 @@ export function redisRateLimit(opts: RedisRateLimitOptions) {
         }
 
         // Set standard rate limit headers
-        res.set("X-RateLimit-Limit", String(opts.max));
+        res.set("X-RateLimit-Limit", String(effectiveMax));
         res.set("X-RateLimit-Remaining", String(result.remaining));
 
         next();
