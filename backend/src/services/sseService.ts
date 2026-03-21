@@ -157,7 +157,7 @@ export function stopSseHeartbeat(): void {
 /**
  * Get current SSE connection stats (for monitoring/health checks).
  */
-export function getSseStats(): { totalStores: number; totalConnections: number } {
+export function getSseStats(): { totalStores: number; totalConnections: number; globalConnections: number } {
   let totalConnections = 0;
   for (const clients of connectedClients.values()) {
     totalConnections += clients.size;
@@ -165,5 +165,161 @@ export function getSseStats(): { totalStores: number; totalConnections: number }
   return {
     totalStores: connectedClients.size,
     totalConnections,
+    globalConnections: globalClients.size,
   };
+}
+
+// =============================================================================
+// GCP-STG-0108: Global SSE clients (SuperAdmin, cross-store monitoring)
+// =============================================================================
+
+const globalClients = new Set<Response>();
+const MAX_GLOBAL_CONNECTIONS = 50;
+
+/**
+ * Register a global SSE client (not scoped to a store).
+ * Used by SuperAdmin dashboard for platform-wide events.
+ */
+export function registerGlobalSseClient(res: Response): () => void {
+  if (globalClients.size >= MAX_GLOBAL_CONNECTIONS) {
+    const oldest = globalClients.values().next().value;
+    if (oldest) {
+      try { oldest.end(); } catch {}
+      globalClients.delete(oldest);
+    }
+  }
+
+  globalClients.add(res);
+  log.info(`[SSE] Global client connected, total=${globalClients.size}`);
+
+  return () => {
+    globalClients.delete(res);
+    log.info(`[SSE] Global client disconnected, remaining=${globalClients.size}`);
+  };
+}
+
+/**
+ * Emit an event to all global (admin) SSE clients.
+ */
+export function emitGlobalEvent(event: string, data: unknown): void {
+  if (globalClients.size === 0) return;
+
+  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  const deadClients: Response[] = [];
+
+  for (const client of globalClients) {
+    try {
+      client.write(payload);
+    } catch {
+      deadClients.push(client);
+    }
+  }
+
+  for (const dead of deadClients) {
+    globalClients.delete(dead);
+    try { dead.end(); } catch {}
+  }
+}
+
+// =============================================================================
+// GCP-STG-0108: Supplier SSE clients (scoped by supplierId)
+// =============================================================================
+
+const supplierClients = new Map<string, Set<Response>>();
+const MAX_SUPPLIER_CONNECTIONS = 10;
+
+export function registerSupplierSseClient(supplierId: string, res: Response): () => void {
+  let clients = supplierClients.get(supplierId);
+  if (!clients) {
+    clients = new Set();
+    supplierClients.set(supplierId, clients);
+  }
+
+  if (clients.size >= MAX_SUPPLIER_CONNECTIONS) {
+    const oldest = clients.values().next().value;
+    if (oldest) {
+      try { oldest.end(); } catch {}
+      clients.delete(oldest);
+    }
+  }
+
+  clients.add(res);
+  return () => {
+    const sc = supplierClients.get(supplierId);
+    if (sc) {
+      sc.delete(res);
+      if (sc.size === 0) supplierClients.delete(supplierId);
+    }
+  };
+}
+
+export function emitSupplierEvent(supplierId: string, event: string, data: unknown): void {
+  const clients = supplierClients.get(supplierId);
+  if (!clients || clients.size === 0) return;
+
+  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  const deadClients: Response[] = [];
+
+  for (const client of clients) {
+    try { client.write(payload); } catch { deadClients.push(client); }
+  }
+
+  for (const dead of deadClients) {
+    clients.delete(dead);
+    try { dead.end(); } catch {}
+  }
+
+  if (clients.size === 0) supplierClients.delete(supplierId);
+}
+
+// =============================================================================
+// GCP-STG-0108: Convenience emitters for common event types
+// =============================================================================
+
+/** Emit order status change to store + admin + supplier */
+export function emitOrderEvent(storeId: string, supplierId: string | null, data: {
+  orderId: string;
+  orderNumber?: string;
+  status: string;
+  type: string;
+  [key: string]: unknown;
+}): void {
+  const event = `order.${data.type}`;
+  emitStoreEvent(storeId, event, data);
+  emitGlobalEvent(event, { ...data, storeId });
+  if (supplierId) emitSupplierEvent(supplierId, event, data);
+}
+
+/** Emit payment status to store + admin */
+export function emitPaymentEvent(storeId: string, data: {
+  paymentId: string;
+  orderId?: string;
+  status: string;
+  amountMinor?: number;
+  provider?: string;
+  [key: string]: unknown;
+}): void {
+  emitStoreEvent(storeId, "payment.status_changed", data);
+  emitGlobalEvent("payment.status_changed", { ...data, storeId });
+}
+
+/** Emit delivery update to store + admin + supplier */
+export function emitDeliveryEvent(storeId: string, supplierId: string | null, data: {
+  orderId: string;
+  status: string;
+  [key: string]: unknown;
+}): void {
+  const event = "delivery.status_changed";
+  emitStoreEvent(storeId, event, data);
+  emitGlobalEvent(event, { ...data, storeId });
+  if (supplierId) emitSupplierEvent(supplierId, event, data);
+}
+
+/** Emit stock change to store */
+export function emitStockEvent(storeId: string, data: {
+  productId: string;
+  newQuantity: number;
+  [key: string]: unknown;
+}): void {
+  emitStoreEvent(storeId, "stock_updated", data);
 }

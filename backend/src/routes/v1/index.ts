@@ -95,6 +95,8 @@ import { adminApplicationsRouter } from "./admin/applications";  // STAGING-FIX-
 import { adminInvoicesRouter } from "./admin/invoices";  // T-071: Buy-resell invoicing
 import { adminSettlementsRouter } from "./admin/settlements";  // GCP-STG-0106: Settlement dashboard
 import { adminPaymentGatewaysRouter } from "./admin/paymentGateways";  // GCP-STG-0088: Gateway config
+import { adminSseRouter } from "./admin/sseEvents";  // GCP-STG-0108: Admin SSE events
+import { retailerSseRouter } from "./retailer-admin/sseEvents";  // GCP-STG-0108: Retailer SSE events
 import { adminCreditRouter } from "./admin/credit";  // CL-020: Credit approval
 import { authRouter } from "./auth";  // PORTAL-AUTH-001: Unified auth routes
 import { retailerRegisterRouter } from "./retailer/register";  // RO-001: Canonical registration
@@ -237,6 +239,7 @@ v1Router.use("/admin", adminApplicationsRouter);  // STAGING-FIX-014: Applicatio
 v1Router.use("/admin", adminInvoicesRouter);  // T-071: Buy-resell invoicing
 v1Router.use("/admin", adminSettlementsRouter);  // GCP-STG-0106: Settlement dashboard
 v1Router.use("/admin", adminPaymentGatewaysRouter);  // GCP-STG-0088: Gateway config
+v1Router.use("/admin", adminSseRouter);  // GCP-STG-0108: Admin SSE events
 v1Router.use("/admin", adminCreditRouter);  // CL-020: SuperAdmin credit approval
 v1Router.use("/admin", adminGstComplianceRouter);  // T-235: GST compliance + GSTR-1 export
 v1Router.use("/admin", adminComplianceRouter);  // SA-P2-004: Compliance status aggregation
@@ -295,6 +298,7 @@ v1Router.use("/retailer-admin", retailerAdminDevicesRouter);  // RET-WEB-002: De
 v1Router.use("/retailer-admin", retailerAdminStaffRouter);  // V3-API-019: Owner staff CRUD
 v1Router.use("/retailer-admin", retailerAdminVariantsRouter);  // T-057: Retail variant CRUD
 v1Router.use("/retailer-admin", retailerInvoicesRouter);  // T-073: Retailer invoice views
+v1Router.use("/retailer-admin", retailerSseRouter);  // GCP-STG-0108: Retailer SSE events
 v1Router.use("/retailer-admin", retailerReorderRouter);  // CL-017: Retailer reorder
 v1Router.use("/retailer-admin", retailerBnplRouter);  // CL-019: Retailer BNPL view
 v1Router.use("/retailer-admin", retailerAdminCustomersRouter);  // T-218: Customer CRM

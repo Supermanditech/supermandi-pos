@@ -13,7 +13,7 @@
 
 import { getPool } from "../db/client";
 import { log } from "../lib/logger";
-import { emitStoreEvent } from "./sseService";
+import { emitStoreEvent, emitGlobalEvent, emitSupplierEvent } from "./sseService";
 import { isWhatsAppConfigured, sendTextMessage, normalizePhone } from "./whatsappService";
 import {
   LIFECYCLE_COMMUNICATION_RULES,
@@ -136,19 +136,36 @@ export async function publishLifecycleEvent(event: LifecycleEvent): Promise<{
   // Supplier SSE would use supplier's store context — emit on the order's store for now
   if (rules.admin.includes("in_app")) sseTargets.add("admin"); // Admin SSE channel
 
+  const eventData = {
+    eventId,
+    orderId: event.orderId,
+    eventType: event.eventType,
+    payload: event.payload,
+    timestamp: event.timestamp,
+  };
+  const sseEventName = `lifecycle:${event.eventType}`;
+
   for (const targetId of sseTargets) {
     try {
-      emitStoreEvent(targetId, `lifecycle:${event.eventType}`, {
-        eventId,
-        orderId: event.orderId,
-        eventType: event.eventType,
-        payload: event.payload,
-        timestamp: event.timestamp,
-      });
+      if (targetId === "admin") {
+        // GCP-STG-0108: Emit to global admin SSE clients
+        emitGlobalEvent(sseEventName, { ...eventData, storeId: event.storeId });
+      } else {
+        emitStoreEvent(targetId, sseEventName, eventData);
+      }
       sseDelivered = true;
       stats.sseDelivered++;
     } catch (err) {
       log.error("[LifecycleEvent] SSE delivery failed:", String(err));
+    }
+  }
+
+  // GCP-STG-0108: Also emit to supplier if order has a supplierId in payload
+  if (event.payload?.supplierId && rules.supplier.includes("in_app")) {
+    try {
+      emitSupplierEvent(event.payload.supplierId, sseEventName, eventData);
+    } catch (err) {
+      log.error("[LifecycleEvent] Supplier SSE delivery failed:", String(err));
     }
   }
 

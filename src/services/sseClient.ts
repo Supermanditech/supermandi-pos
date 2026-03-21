@@ -13,7 +13,12 @@ import { useSyncStore } from "../stores/syncStore";
 import { showToast } from "../utils/showToast";
 
 // SSE event types from server
-type SSEEventType = "product_updated" | "stock_updated" | "settings_updated" | "heartbeat";
+// GCP-STG-0108: Extended event types for order/payment/delivery
+type SSEEventType =
+  | "product_updated" | "stock_updated" | "settings_updated" | "heartbeat"
+  | "order.created" | "order.status_changed" | "order.delivery_confirmed"
+  | "payment.status_changed" | "delivery.status_changed"
+  | "lifecycle:order_created" | "lifecycle:dispatched" | "lifecycle:delivered";
 
 type SSEEvent = {
   type: SSEEventType;
@@ -142,6 +147,39 @@ async function handleEvent(event: SSEEvent): Promise<void> {
     case "heartbeat": {
       // Keep-alive — just update connection status
       useSyncStore.getState().setConnectionStatus("connected");
+      break;
+    }
+
+    // GCP-STG-0108: Order/payment/delivery event handlers
+    case "order.created":
+    case "order.status_changed":
+    case "order.delivery_confirmed":
+    case "lifecycle:order_created":
+    case "lifecycle:dispatched":
+    case "lifecycle:delivered": {
+      // Show toast notification for order events
+      const orderData = event.data as { orderId?: string; status?: string; orderNumber?: string };
+      const msg = event.type.includes("created") ? "New order received"
+        : event.type.includes("delivered") ? "Order delivered"
+        : event.type.includes("dispatched") ? "Order dispatched"
+        : `Order ${orderData.orderNumber || ""} updated`;
+      showToast(msg);
+      console.log(`[SSE] Order event: ${event.type}`, orderData);
+      break;
+    }
+
+    case "payment.status_changed": {
+      const paymentData = event.data as { status?: string; amountMinor?: number };
+      if (paymentData.status === "paid") {
+        showToast("Payment confirmed");
+      }
+      console.log(`[SSE] Payment event:`, paymentData);
+      break;
+    }
+
+    case "delivery.status_changed": {
+      const deliveryData = event.data as { orderId?: string; status?: string };
+      console.log(`[SSE] Delivery event:`, deliveryData);
       break;
     }
 
