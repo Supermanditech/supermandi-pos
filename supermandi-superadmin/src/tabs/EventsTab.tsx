@@ -4,6 +4,24 @@ import type { GroupKey } from "../types";
 import { PayloadDetails } from "../components/PayloadDetails";
 import { formatDateTime } from "../lib/formatters";
 
+// GCP-STG-0231: CSV export for events
+function escCsv(s: string): string {
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+}
+function exportEventsCsv(events: PosEvent[]): void {
+  const header = "Timestamp,Device ID,Store ID,Event Type,Payload";
+  const rows = events.map((e) =>
+    [formatDateTime(e.createdAt), e.deviceId ?? "", e.storeId ?? "", e.eventType, JSON.stringify(e.payload ?? {})].map(escCsv).join(",")
+  );
+  const csv = [header, ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `events-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
 interface EventsTabProps {
   filteredEvents: PosEvent[];
   pageEvents: PosEvent[];
@@ -34,6 +52,8 @@ export function EventsTab({
       <div className="cardHeader">
         <div className="cardTitle">Event Stream</div>
         <div className="muted">Showing {filteredEvents.length} events (newest first)</div>
+        {/* GCP-STG-0231: CSV export button */}
+        <button className="btnGhost btnSm" onClick={() => exportEventsCsv(filteredEvents)} disabled={filteredEvents.length === 0}>Export CSV</button>
       </div>
 
       {/* R7.SA.005: Error state display */}
