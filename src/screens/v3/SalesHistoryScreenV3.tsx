@@ -28,6 +28,8 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
+  // GCP-STG-0070: Date range filter
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "all">("today");
   const [selectedBill, setSelectedBill] = useState<{
     billRef: string; date: string; method: string; totalMinor: number;
     items: { name: string; qty: number; priceMinor: number }[];
@@ -36,10 +38,23 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
 
   useEffect(() => {
     (async () => {
+      setLoading(true);
       try {
         const online = await isOnline();
         if (!online) { showToast("Offline — sales history unavailable"); setLoading(false); return; }
-        const res = await apiClient.get<any>("/api/v1/pos/sales?limit=50&sort=created_at_desc");
+        // GCP-STG-0070: Build date range query params
+        let dateParam = "";
+        const now = new Date();
+        if (dateFilter === "today") {
+          dateParam = `&from=${now.toISOString().slice(0, 10)}`;
+        } else if (dateFilter === "week") {
+          const weekAgo = new Date(now.getTime() - 7 * 86400000);
+          dateParam = `&from=${weekAgo.toISOString().slice(0, 10)}`;
+        } else if (dateFilter === "month") {
+          const monthAgo = new Date(now.getTime() - 30 * 86400000);
+          dateParam = `&from=${monthAgo.toISOString().slice(0, 10)}`;
+        }
+        const res = await apiClient.get<any>(`/api/v1/pos/sales?limit=100&sort=created_at_desc${dateParam}`);
         const rows: SaleRow[] = (res?.sales ?? res?.data ?? []).map((s: any) => ({
           id: s.id,
           billRef: s.billRef ?? s.bill_ref ?? s.id?.substring(0, 8),
@@ -52,7 +67,7 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
       } catch { showToast("Could not load sales history"); }
       finally { setLoading(false); }
     })();
-  }, []);
+  }, [dateFilter]);
 
   const handleBillTap = async (sale: SaleRow) => {
     try {
@@ -96,6 +111,15 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
         <Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable>
         <Text style={styles.headerTitle}>Sales History</Text>
         <View style={{ width: 30 }} />
+      </View>
+
+      {/* GCP-STG-0070: Date range filter tabs */}
+      <View style={styles.filterRow}>
+        {(["today", "week", "month", "all"] as const).map((f) => (
+          <Pressable key={f} style={[styles.filterTab, dateFilter === f && styles.filterTabActive]} onPress={() => setDateFilter(f)}>
+            <Text style={[styles.filterText, dateFilter === f && styles.filterTextActive]}>{f === "today" ? "Today" : f === "week" ? "This Week" : f === "month" ? "This Month" : "All"}</Text>
+          </Pressable>
+        ))}
       </View>
 
       {loading ? <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} /> : null}
@@ -152,6 +176,12 @@ function createStyles(colors: ColorPalette) {
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
     headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
+    // GCP-STG-0070: Date filter tabs
+    filterRow: { flexDirection: "row", gap: 6, paddingHorizontal: getScreenPadding(), paddingVertical: 8, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+    filterTab: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center", backgroundColor: colors.backgroundSecondary },
+    filterTabActive: { backgroundColor: colors.primary },
+    filterText: { fontSize: 11, fontWeight: "600", color: colors.textSecondary },
+    filterTextActive: { color: "#fff" },
     row: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, backgroundColor: colors.surface, borderRadius: 14, marginBottom: 8, borderWidth: 1, borderColor: colors.border },
     modeIcon: { fontSize: 20 },
     billRef: { fontSize: 14, fontWeight: "700", color: colors.textPrimary },

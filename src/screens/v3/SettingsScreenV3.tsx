@@ -32,8 +32,12 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
   const upiVpa = useSettingsStore((s) => s.upiVpa);
   const lastSyncAt = useSettingsStore((s) => s.lastSyncAt);
   const outboxCount = useSyncStore((s) => s.outboxCount); // GCP-STG-0067
-  const [expressCheckout, setExpressCheckout] = React.useState(true);
-  const [soundEnabled, setSoundEnabled] = React.useState(true);
+  // GCP-STG-0068: Express checkout persisted in settingsStore
+  const expressCheckout = useSettingsStore((s) => s.expressCheckout);
+  const setExpressCheckout = useSettingsStore((s) => s.setExpressCheckout);
+  // GCP-STG-0069: Sound toggle persisted in settingsStore
+  const soundEnabled = useSettingsStore((s) => s.soundEnabled);
+  const setSoundEnabled = useSettingsStore((s) => s.setSoundEnabled);
 
   // V3-HARDEN-127: Refresh store UPI + lastSyncAt from backend on mount
   useEffect(() => {

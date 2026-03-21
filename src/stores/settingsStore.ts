@@ -28,8 +28,12 @@ type SettingsState = {
   themeMode: ThemeMode;
   // T-195: Thermal printer settings
   printerPaperWidth: 58 | 80; // mm
+  expressCheckout: boolean;   // GCP-STG-0068: Express checkout mode (persisted)
+  soundEnabled: boolean;      // GCP-STG-0069: Sound effects enabled (persisted)
   printerAutoPrint: boolean;  // Auto-print receipt after sale
   printerCopies: number;      // Number of copies (1-3)
+  setExpressCheckout: (enabled: boolean) => void; // GCP-STG-0068
+  setSoundEnabled: (enabled: boolean) => void;   // GCP-STG-0069
   setPrinterPaperWidth: (width: 58 | 80) => void;
   setPrinterAutoPrint: (enabled: boolean) => void;
   setPrinterCopies: (copies: number) => void;
@@ -74,9 +78,13 @@ export const useSettingsStore = create<SettingsState>()(
       themeMode: 'light' as ThemeMode,
       // T-195: Thermal printer defaults
       printerPaperWidth: 58,
+      expressCheckout: true,  // GCP-STG-0068
+      soundEnabled: true,     // GCP-STG-0069
       printerAutoPrint: false,
       printerCopies: 1,
       setPrinterPaperWidth: (width) => set({ printerPaperWidth: width }),
+      setExpressCheckout: (enabled) => set({ expressCheckout: Boolean(enabled) }),
+      setSoundEnabled: (enabled) => set({ soundEnabled: Boolean(enabled) }),
       setPrinterAutoPrint: (enabled) => set({ printerAutoPrint: Boolean(enabled) }),
       setPrinterCopies: (copies) => set({ printerCopies: Math.max(1, Math.min(3, copies)) }),
       setBuyEnabled: (enabled) => set({ buyEnabled: Boolean(enabled) }),

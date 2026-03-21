@@ -529,3 +529,63 @@ adminCatalogRouter.post(
     }
   }
 );
+
+// =============================================================================
+// GCP-STG-0076: Store-level product publish exclusion
+// =============================================================================
+
+// GET /admin/catalog/store-exclusions/:storeId — list excluded products for a store
+adminCatalogRouter.get("/catalog/store-exclusions/:storeId", requirePermission("catalog", "read"), async (req, res) => {
+  try {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "Database not available" });
+    const { storeId } = req.params;
+    const result = await pool.query(
+      `SELECT spe.id, spe.supplier_product_id as "supplierProductId", sp.name as "productName",
+              sp.barcode, spe.excluded_by as "excludedBy", spe.excluded_at as "excludedAt", spe.reason
+       FROM catalog.store_product_exclusions spe
+       JOIN catalog.supplier_products sp ON sp.id = spe.supplier_product_id
+       WHERE spe.store_id = $1::uuid
+       ORDER BY spe.excluded_at DESC`,
+      [storeId]
+    );
+    return res.json({ exclusions: result.rows });
+  } catch (err) {
+    log.error("[GCP-STG-0076] list exclusions error:", asError(err));
+    return res.status(500).json({ error: "Failed to list exclusions" });
+  }
+});
+
+// POST /admin/catalog/store-exclusions — exclude a product from a store
+adminCatalogRouter.post("/catalog/store-exclusions", requirePermission("catalog", "write"), async (req, res) => {
+  try {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "Database not available" });
+    const { storeId, supplierProductId, reason } = req.body;
+    if (!storeId || !supplierProductId) return res.status(400).json({ error: "storeId and supplierProductId required" });
+    const adminId = (req as any).adminId ?? "superadmin";
+    await pool.query(
+      `INSERT INTO catalog.store_product_exclusions (store_id, supplier_product_id, excluded_by, reason)
+       VALUES ($1::uuid, $2::uuid, $3, $4)
+       ON CONFLICT (store_id, supplier_product_id) DO NOTHING`,
+      [storeId, supplierProductId, adminId, reason ?? null]
+    );
+    return res.json({ success: true });
+  } catch (err) {
+    log.error("[GCP-STG-0076] exclude error:", asError(err));
+    return res.status(500).json({ error: "Failed to exclude product" });
+  }
+});
+
+// DELETE /admin/catalog/store-exclusions/:id — re-include a product in a store
+adminCatalogRouter.delete("/catalog/store-exclusions/:id", requirePermission("catalog", "write"), async (req, res) => {
+  try {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "Database not available" });
+    await pool.query("DELETE FROM catalog.store_product_exclusions WHERE id = $1::uuid", [req.params.id]);
+    return res.json({ success: true });
+  } catch (err) {
+    log.error("[GCP-STG-0076] re-include error:", asError(err));
+    return res.status(500).json({ error: "Failed to re-include product" });
+  }
+});
