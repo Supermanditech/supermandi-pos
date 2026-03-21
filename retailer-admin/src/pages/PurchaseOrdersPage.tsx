@@ -95,6 +95,8 @@ export default function PurchaseOrdersPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  // GCP-STG-0094: Buy Again state
+  const [buyAgainLoading, setBuyAgainLoading] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     if (!accessToken) return;
@@ -126,6 +128,27 @@ export default function PurchaseOrdersPage() {
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  // GCP-STG-0094: Buy Again — duplicate a delivered PO as new draft
+  const handleBuyAgain = useCallback(async (poId: string) => {
+    if (!accessToken || buyAgainLoading) return;
+    setBuyAgainLoading(poId);
+    try {
+      const res = await authFetch(`/api/v1/retailer-admin/purchase-orders/${poId}/buy-again`, accessToken, { method: 'POST' });
+      const data = await safeJson(res);
+      if (res.ok && data?.data?.id) {
+        // Refresh list to show new draft PO
+        await fetchOrders();
+        alert(`New draft PO created: ${data.data.poNumber || data.data.id}. Review and submit when ready.`);
+      } else {
+        alert(data?.error?.message || data?.error || 'Failed to create reorder. Please try again.');
+      }
+    } catch {
+      alert('Network error. Please try again.');
+    } finally {
+      setBuyAgainLoading(null);
+    }
+  }, [accessToken, buyAgainLoading, fetchOrders]);
 
   const closeDetailModal = () => {
     setDetailModalOpen(false);
@@ -258,6 +281,17 @@ export default function PurchaseOrdersPage() {
                         >
                           View
                         </button>
+                        {/* GCP-STG-0094: Buy Again for delivered/completed POs */}
+                        {(po.status === 'delivered' || po.status === 'partial_received') && (
+                          <button
+                            className="btn btn-primary btn-xs"
+                            style={{ marginLeft: 4 }}
+                            disabled={buyAgainLoading === po.id}
+                            onClick={(e) => { e.stopPropagation(); handleBuyAgain(po.id); }}
+                          >
+                            {buyAgainLoading === po.id ? 'Creating...' : 'Buy Again'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
