@@ -47,10 +47,20 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
 
   const [searchQuery, setSearchQuery] = useState("");
   const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) return items;
+    // GCP-STG-0057: Tab-specific filtering
+    let tabFiltered = items;
+    if (activeTab === "unsold") {
+      // Unsold = zero stock (dead SKUs sitting in catalog)
+      tabFiltered = items.filter((i) => i.stock <= 0);
+    } else if (activeTab === "movement") {
+      // Movement = low/out items sorted by stock ascending (most critical first)
+      tabFiltered = [...items].filter((i) => i.status === "low" || i.status === "out")
+        .sort((a, b) => a.stock - b.stock);
+    }
+    if (!searchQuery.trim()) return tabFiltered;
     const q = searchQuery.toLowerCase();
-    return items.filter((i) => i.name.toLowerCase().includes(q));
-  }, [items, searchQuery]);
+    return tabFiltered.filter((i) => i.name.toLowerCase().includes(q));
+  }, [items, searchQuery, activeTab]);
 
   const totalProducts = items.length;
   const lowCount = items.filter(i => i.status === "low").length;
@@ -85,7 +95,7 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
       <FlatList
         data={filteredItems}
         keyExtractor={(_, i) => String(i)}
-        ListEmptyComponent={!loading ? <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>📦</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No inventory</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Add products to see stock levels here</Text></View> : null}
+        ListEmptyComponent={!loading ? <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>{activeTab === "unsold" ? "✅" : activeTab === "movement" ? "📊" : "📦"}</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>{activeTab === "unsold" ? "No dead stock" : activeTab === "movement" ? "No stock alerts" : "No inventory"}</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>{activeTab === "unsold" ? "All products have stock — great!" : activeTab === "movement" ? "All stock levels are healthy" : "Add products to see stock levels here"}</Text></View> : null}
         renderItem={({ item }) => (
           <View style={styles.itemRow}>
             <View style={styles.itemImg}><Text style={{ fontSize: 18 }}>📦</Text></View>
