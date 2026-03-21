@@ -197,6 +197,8 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
             onSwitchStaff?.();
           }}><Text style={styles.switchText}>Switch Staff</Text></Pressable>
           <Pressable style={styles.logoutBtn} onPress={async () => {
+            // GCP-STG-0006: Clear cart on explicit logout (device unbind = new store = no cart)
+            try { const { useCartStore } = require("../../stores/cartStore"); useCartStore.getState().clearCart(true); } catch {}
             useStaffSessionStore.getState().clearSession();
             await clearDeviceSession();
             showToast("Logged out");
