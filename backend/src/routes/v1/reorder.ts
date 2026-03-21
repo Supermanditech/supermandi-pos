@@ -419,9 +419,7 @@ reorderRouter.get("/stores/:storeId/reorder/pending", requireDeviceToken, async 
         pr.expires_at as "expiresAt",
         pr.created_at as "createdAt",
         pr.updated_at as "updatedAt",
-        ssl.payment_terms as "paymentTerms",
-        ssl.credit_limit as "creditLimit",
-        ssl.credit_period_days as "creditPeriodDays"
+        ssl.payment_terms as "paymentTerms"
       FROM reorder.pending_reorders pr
       LEFT JOIN catalog.store_products sp ON sp.store_id = pr.store_id AND sp.product_id = pr.product_id
       LEFT JOIN catalog.products p ON p.id = pr.product_id
@@ -1230,8 +1228,6 @@ reorderRouter.get("/stores/:storeId/reorder/supplier-terms", requireDeviceToken,
           s.id as "supplierId",
           COALESCE(s.business_name, s.trade_name) as "supplierName",
           ssl.payment_terms as "paymentTerms",
-          ssl.credit_limit as "creditLimit",
-          ssl.credit_period_days as "creditPeriodDays",
           ssl.priority,
           ssl.status
         FROM supplier.suppliers s
@@ -1259,8 +1255,6 @@ reorderRouter.get("/stores/:storeId/reorder/supplier-terms", requireDeviceToken,
         s.id as "supplierId",
         COALESCE(s.business_name, s.trade_name) as "supplierName",
         ssl.payment_terms as "paymentTerms",
-        ssl.credit_limit as "creditLimit",
-        ssl.credit_period_days as "creditPeriodDays",
         ssl.priority,
         ssl.status
       FROM supplier.suppliers s
