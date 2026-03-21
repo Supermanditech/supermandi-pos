@@ -10163,7 +10163,7 @@
       "end_line": 200,
       "checksum": "d1d68cc9fcd55f37",
       "description": "Parked cart recall UI — Recall button + modal with Resume/Delete for each parked cart",
-      "test_file": "src/__tests__/components/CartSheetV3.test.tsx",
+      "test_file": "src/__tests__/screens/cart-sheet-v3.stg-554.test.ts",
       "depends_on": null,
       "migration": null,
       "checklist": {
