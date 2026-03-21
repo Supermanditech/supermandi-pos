@@ -363,12 +363,78 @@ export async function issueInvoice(pool: Pool, invoiceId: string): Promise<void>
     `UPDATE invoicing.invoices
      SET status = 'issued', issued_at = NOW(), updated_at = NOW()
      WHERE id = $1::uuid AND status = 'draft'
-     RETURNING id`,
+     RETURNING id, invoice_number`,
     [invoiceId]
   );
 
   if (result.rowCount === 0) {
     throw new Error("Invoice not found or not in draft status");
+  }
+
+  // GCP-STG-0074: Store PDF in GCS on issuance (non-blocking)
+  storeInvoicePdfInGcs(pool, invoiceId, result.rows[0].invoice_number).catch((err) => {
+    // Non-blocking — log but don't fail issuance
+    console.error(`[GCP-STG-0074] PDF storage failed for invoice ${invoiceId}:`, err?.message);
+  });
+}
+
+// GCP-STG-0074: Generate PDF and store in GCS
+async function storeInvoicePdfInGcs(pool: Pool, invoiceId: string, invoiceNumber: string): Promise<void> {
+  try {
+    const { uploadBuffer } = await import("@supermandi/common");
+    const { generateInvoicePdf } = await import("./invoicePdfService");
+
+    // Get full invoice data
+    const invoice = await getInvoice(pool, invoiceId);
+    if (!invoice) return;
+
+    // Generate PDF buffer
+    const doc = generateInvoicePdf({
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceDate: invoice.invoiceDate,
+      dueDate: invoice.dueDate,
+      invoiceType: invoice.invoiceType,
+      seller: invoice.seller,
+      buyer: invoice.buyer,
+      items: invoice.items,
+      subtotalMinor: invoice.subtotalMinor,
+      discountMinor: invoice.discountMinor,
+      taxableAmountMinor: invoice.taxableAmountMinor,
+      cgstMinor: invoice.cgstMinor,
+      sgstMinor: invoice.sgstMinor,
+      igstMinor: invoice.igstMinor,
+      totalTaxMinor: invoice.totalTaxMinor,
+      totalMinor: invoice.totalMinor,
+      platformFeeMinor: invoice.platformFeeMinor,
+      payments: invoice.payments || [],
+      balanceDueMinor: invoice.balanceDueMinor,
+      notes: invoice.notes,
+    });
+
+    // Collect PDF into buffer
+    const chunks: Buffer[] = [];
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    await new Promise<void>((resolve, reject) => {
+      doc.on("end", resolve);
+      doc.on("error", reject);
+      doc.end();
+    });
+    const pdfBuffer = Buffer.concat(chunks);
+
+    // Upload to GCS
+    const bucket = process.env.GCS_DOCUMENTS_BUCKET || "supermandi-pos-documents";
+    const sanitizedNumber = invoiceNumber.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const gcsPath = `invoices/${sanitizedNumber}.pdf`;
+    await uploadBuffer(bucket, gcsPath, pdfBuffer, "application/pdf");
+
+    // Update invoice record with GCS path
+    await pool.query(
+      `UPDATE invoicing.invoices SET pdf_gcs_path = $1, pdf_stored_at = NOW() WHERE id = $2::uuid`,
+      [gcsPath, invoiceId]
+    );
+  } catch (err: any) {
+    // Log but don't rethrow — PDF storage is best-effort
+    console.error(`[GCP-STG-0074] storeInvoicePdfInGcs error:`, err?.message);
   }
 }
 
