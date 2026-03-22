@@ -15322,7 +15322,7 @@
       "start_line": 35,
       "end_line": 235,
       "checksum": "977bb5ad99db774b",
-      "description": "Free-form cart discount input with TextInput + cartStore integration",
+      "description": "Free-form cart discount input with TextInput + cartStore integration (cart-level fixed discount)",
       "test_file": "src/__tests__/components/cartDiscount.gcp-stg-0315.test.ts",
       "depends_on": null,
       "migration": null,

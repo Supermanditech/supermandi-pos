@@ -30,7 +30,30 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
   const applyItemDiscount = useCartStore((s) => s.applyItemDiscount);
   const removeItemDiscount = useCartStore((s) => s.removeItemDiscount);
   const removeItem = useCartStore((s) => s.removeItem);
+  const setItemNotes = useCartStore((s) => s.setItemNotes); // GCP-STG-0317
   const removeDiscount = useCartStore((s) => s.removeDiscount);
+
+  const applyDiscount = useCartStore((s) => s.applyDiscount);
+
+  // GCP-STG-0315: Free-form cart discount input state
+  const [cartDiscountInput, setCartDiscountInput] = useState(() => {
+    // Initialize from existing discount if it's a fixed type
+    const d = useCartStore.getState().discount;
+    return d && d.type === "fixed" ? String(d.value / 100) : "";
+  });
+
+  const handleCartDiscountChange = useCallback((text: string) => {
+    // Allow only digits and one decimal point
+    const sanitized = text.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+    setCartDiscountInput(sanitized);
+    const parsed = parseFloat(sanitized);
+    if (!isNaN(parsed) && parsed > 0 && Number.isFinite(parsed)) {
+      const minorAmount = Math.round(parsed * 100);
+      applyDiscount({ type: "fixed", value: minorAmount, reason: "Cart discount" });
+    } else if (sanitized === "" || parsed === 0) {
+      removeDiscount();
+    }
+  }, [applyDiscount, removeDiscount]);
 
   // GCP-STG-0050: Parked carts state
   const parkedCount = useCartStore((s) => s.parkedCarts?.length ?? 0);
@@ -42,12 +65,15 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
   const [editDiscountType, setEditDiscountType] = useState<"percentage" | "fixed">("percentage");
   const [editDiscountValue, setEditDiscountValue] = useState("");
   const [editDiscountReason, setEditDiscountReason] = useState("");
+  // GCP-STG-0317: Per-item notes state
+  const [editItemNotes, setEditItemNotes] = useState("");
   // GCP-STG-0082: "Update store price" checkbox state
   const [updateStorePrice, setUpdateStorePrice] = useState(false);
 
   const openEditModal = useCallback((item: CartItem) => {
     setEditingItem(item);
     setEditPrice(String(item.priceMinor / 100));
+    setEditItemNotes(item.notes ?? ""); // GCP-STG-0317: Load existing notes
     setUpdateStorePrice(false); // GCP-STG-0082: Reset checkbox on open
     if (item.itemDiscount) {
       setEditDiscountType(item.itemDiscount.type);
@@ -94,10 +120,12 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
         removeItemDiscount(editingItem.id);
       }
     }
+    // GCP-STG-0317: Save per-item notes
+    setItemNotes(editingItem.id, editItemNotes);
     showToast(`${editingItem.name} updated`);
     setEditingItem(null);
     setUpdateStorePrice(false);
-  }, [editingItem, editPrice, editDiscountType, editDiscountValue, editDiscountReason, updatePrice, applyItemDiscount, removeItemDiscount, updateStorePrice]);
+  }, [editingItem, editPrice, editDiscountType, editDiscountValue, editDiscountReason, editItemNotes, updatePrice, applyItemDiscount, removeItemDiscount, setItemNotes, updateStorePrice]);
 
   const isBulk = sellMode === "bulk";
   const subtotal = total;
@@ -171,17 +199,38 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
             </View>
           </>
         ) : null}
+        {/* GCP-STG-0315: Free-form cart discount input */}
+        <View style={styles.cartDiscountRow} testID="cart-discount-row">
+          <Text style={styles.cartDiscountLabel}>Discount ₹</Text>
+          <TextInput
+            style={styles.cartDiscountInput}
+            value={cartDiscountInput}
+            onChangeText={handleCartDiscountChange}
+            keyboardType="numeric"
+            placeholder="0"
+            placeholderTextColor={colors.textTertiary}
+            testID="cart-discount-input"
+            accessibilityLabel="Cart discount amount"
+            maxLength={7}
+          />
+        </View>
+        {discountAmount > 0 ? (
+          <View style={styles.summaryRow}>
+            <Text style={[styles.summaryLabel, { color: colors.success }]}>Discount applied</Text>
+            <Text style={[styles.summaryValue, { color: colors.success }]}>-₹{Math.round(discountAmount / 100).toLocaleString("en-IN")}</Text>
+          </View>
+        ) : null}
         <View style={[styles.summaryRow, styles.totalRow]}>
           <Text style={styles.totalLabel}>Total{isBulk ? " (incl. GST)" : ""}</Text>
           <Text style={styles.totalValue}>₹{Math.round(grandTotal / 100).toLocaleString("en-IN")}</Text>
         </View>
       </View>
 
-      {/* V3-FIX-067: Discount summary (if applied) */}
-      {discount ? (
+      {/* V3-FIX-067: Discount summary (if applied via non-input method e.g. percentage) */}
+      {discount && discount.type === "percentage" ? (
         <View style={styles.discountRow}>
-          <Text style={styles.discountText}>Discount ({discount.type === "percentage" ? `${discount.value}%` : `₹${discount.value / 100}`})</Text>
-          <Pressable onPress={removeDiscount}><Text style={styles.discountRemove}>Remove</Text></Pressable>
+          <Text style={styles.discountText}>Discount ({discount.value}%)</Text>
+          <Pressable onPress={() => { removeDiscount(); setCartDiscountInput(""); }}><Text style={styles.discountRemove}>Remove</Text></Pressable>
         </View>
       ) : null}
 
@@ -282,6 +331,19 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
                 placeholder="Reason (optional)"
                 placeholderTextColor={colors.textTertiary}
                 testID="cart-edit-discount-reason"
+              />
+
+              {/* GCP-STG-0317: Per-item notes */}
+              <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textTertiary, letterSpacing: 0.5, marginTop: 16, marginBottom: 4 }}>NOTE</Text>
+              <TextInput
+                style={{ padding: 14, borderRadius: 12, borderWidth: 2, borderColor: colors.border, fontSize: 14, color: colors.textPrimary }}
+                value={editItemNotes}
+                onChangeText={setEditItemNotes}
+                placeholder="Add note (e.g. no ice, extra spicy)"
+                placeholderTextColor={colors.textTertiary}
+                maxLength={100}
+                testID="cart-edit-item-notes"
+                accessibilityLabel="Item note"
               />
 
               {/* Actions */}
@@ -424,6 +486,26 @@ function createStyles(colors: ColorPalette) {
       alignItems: "center",
     },
     shareText: { fontSize: 12, fontWeight: "700", color: colors.primary },
+    cartDiscountRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 6,
+    },
+    cartDiscountLabel: { fontSize: 13, color: colors.textTertiary, fontWeight: "600" },
+    cartDiscountInput: {
+      width: 90,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      textAlign: "right",
+      backgroundColor: colors.backgroundSecondary,
+    },
     discountRow: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: getScreenPadding(), paddingVertical: 4 },
     discountText: { fontSize: 12, color: colors.success },
     discountRemove: { fontSize: 12, color: colors.error, fontWeight: "600" },
