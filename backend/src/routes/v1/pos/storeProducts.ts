@@ -1839,6 +1839,7 @@ posStoreProductsRouter.get("/products/:productId/substitutes", requireDeviceToke
 
   try {
     const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
 
     // Get the category of the requested product
     const productResult = await pool.query(
@@ -1886,6 +1887,7 @@ posStoreProductsRouter.get("/products/:productId/substitutes", requireDeviceToke
     // Fallback: try without similarity (pg_trgm might not be installed)
     try {
       const pool = getPool();
+      if (!pool) return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
       const productResult = await pool.query(
         `SELECT p.category FROM catalog.products p WHERE p.id = $1`,
         [productId]

@@ -16417,7 +16417,7 @@
       "start_line": 367,
       "end_line": 405,
       "checksum": "1989d739598dff30",
-      "description": "SELL search WHERE + scoring includes Devanagari script matching via LEFT JOIN catalog.product_translations (locale=hi), pt.name ILIKE in WHERE, score 225 in CASE (Hindi translations JOIN)",
+      "description": "SELL search WHERE + scoring includes Devanagari script matching via LEFT JOIN catalog.product_translations (locale=hi), pt.name ILIKE in WHERE, score 225 in CASE (Hindi translations JOIN) (fully behavioral supertest)",
       "test_file": "backend/tests/devanagariSearch.gcp-stg-0328.unit.test.ts",
       "depends_on": null,
       "migration": null,
