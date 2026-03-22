@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 665,
+  "version": 666,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -14608,6 +14608,62 @@
         "navigation": "N/A",
         "i18n_keys": "N/A"
       }
+    },
+    {
+      "ticket": "GCP-STG-0314",
+      "file": "src/screens/v3/UpiScreenV3.tsx",
+      "start_line": 73,
+      "end_line": 84,
+      "checksum": "fa7e58478178330b",
+      "description": "UPI sale items include store_product_id + retail_variant_id from cart metadata, matching usePaymentFlow",
+      "test_file": "src/__tests__/screens/upiSaleMetadata.gcp-stg-0314.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T17:06:53.456Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "UPI mapping matches Cash/Udhar",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "business_logic": "store_product_id enables per-product analytics",
+        "business_behaviour": "UPI sales have same metadata as Cash/Udhar",
+        "impacted_files": "UpiScreenV3.tsx + test",
+        "fix_ledger_check": "255 fixes",
+        "no_agent_conflict": "single",
+        "gcp_parity": "N/A frontend",
+        "regression_check": "7/7 pass",
+        "test_guard": "upiSaleMetadata.gcp-stg-0314.test.ts 7/7",
+        "single_commit": "fix(GCP-STG-0314)",
+        "ticket_parked": "after commit"
+      }
     }
   ],
   "machine_state_version": 269,
@@ -14652,5 +14708,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T17:00:54.110Z"
+  "lastUpdated": "2026-03-22T17:06:53.605Z"
 }

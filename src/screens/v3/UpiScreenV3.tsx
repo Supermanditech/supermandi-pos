@@ -71,6 +71,7 @@ export default function UpiScreenV3({ onBack, onComplete }: UpiScreenV3Props) {
         useCartStore.getState().lockCart();
 
         // Create sale
+        // GCP-STG-0314: Include store_product_id + retail_variant_id matching usePaymentFlow
         const saleItems: SaleItemInput[] = items.map((item) => ({
           productId: item.barcode ?? item.id,
           barcode: item.barcode,
@@ -79,6 +80,8 @@ export default function UpiScreenV3({ onBack, onComplete }: UpiScreenV3Props) {
           priceMinor: item.priceMinor,
           itemDiscount: item.itemDiscount ?? null,
           batchNumber: item.batchNumber ?? null,
+          store_product_id: item.metadata?.storeProductId ?? undefined,
+          retail_variant_id: (item.metadata as any)?.retailVariantId ?? undefined,
         }));
         const discount = useCartStore.getState().discount;
         const saleResult = await createSale({
