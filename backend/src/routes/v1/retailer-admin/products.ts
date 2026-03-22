@@ -577,6 +577,9 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     manufacturerName, countryOfOrigin, shelfLifeDays, // SCALE-A1: Compliance fields
     netContentValue, netContentUnit, // SCALE-A2: Net content fields
     bnplEligible, // GCP-STG-0281: BNPL eligibility
+    // GCP-STG-0282: Conversion profile fields (previously ignored on PATCH)
+    procurementUnit, procurementPackQty, baseStockUnit,
+    allowFractionalSell, conversionPrecision,
   } = req.body;
 
   // AUD-025-B: Parse incoming timestamp for LWW comparison
@@ -678,7 +681,7 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     // AUD-025-B: Build LWW guard clause if timestamp provided AND metadata field is being updated
     const isMetadataUpdate = resolvedDisplayName || resolvedBrand;
     const lwwGuard = (isMetadataUpdate && validIncomingTimestamp)
-      ? `AND (metadata_updated_at IS NULL OR metadata_updated_at < $16)`
+      ? `AND (metadata_updated_at IS NULL OR metadata_updated_at < $21)`
       : "";
 
     // SYNC-PRD-001: Only update metadata_updated_at when display_name actually changes
@@ -701,6 +704,12 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
       resolvedBrand,
       // GCP-STG-0281: bnpl_eligible
       bnplEligible !== undefined ? (bnplEligible === true || bnplEligible === 'true') : null,
+      // GCP-STG-0282: Conversion profile fields
+      procurementUnit || null,
+      procurementPackQty != null ? parseInt(procurementPackQty) || null : null,
+      baseStockUnit || null,
+      allowFractionalSell !== undefined ? (allowFractionalSell === true || allowFractionalSell === 'true') : null,
+      conversionPrecision != null ? Math.min(Math.max(parseInt(conversionPrecision) || 2, 0), 6) : null,
     ];
     if (isMetadataUpdate && validIncomingTimestamp) {
       updateParams.push(validIncomingTimestamp.toISOString());
@@ -721,6 +730,11 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         display_name = COALESCE($13, display_name),
         brand = COALESCE($14, brand),
         bnpl_eligible = COALESCE($15, bnpl_eligible),
+        procurement_unit = COALESCE($16, procurement_unit),
+        procurement_pack_qty = COALESCE($17, procurement_pack_qty),
+        base_stock_unit = COALESCE($18, base_stock_unit),
+        allow_fractional_sell = COALESCE($19, allow_fractional_sell),
+        conversion_precision = COALESCE($20, conversion_precision),
         metadata_updated_at = CASE WHEN $13 IS NOT NULL OR $14 IS NOT NULL THEN NOW() ELSE metadata_updated_at END,
         metadata_updated_by = CASE WHEN $13 IS NOT NULL OR $14 IS NOT NULL THEN 'RETAILER_DASHBOARD' ELSE metadata_updated_by END,
         updated_at = NOW()

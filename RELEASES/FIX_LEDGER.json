@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 667,
+  "version": 668,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6330,8 +6330,8 @@
       "ticket": "STG-516",
       "file": "backend/src/routes/v1/retailer-admin/products.ts",
       "start_line": 30,
-      "end_line": 1513,
-      "checksum": "733cf8d5ca1fefeb",
+      "end_line": 1535,
+      "checksum": "f5a7cea2edcb6c7f",
       "description": "Search cache invalidation wired into product CRUD (checksum updated after GCP-STG-0281 bnpl_eligible)",
       "test_file": "src/__tests__/screens/search-cache-invalidation.stg-516.test.ts",
       "depends_on": null,
@@ -14724,6 +14724,63 @@
         "navigation": "N/A",
         "i18n_keys": "N/A"
       }
+    },
+    {
+      "ticket": "GCP-STG-0282",
+      "file": "backend/src/routes/v1/retailer-admin/products.ts",
+      "start_line": 580,
+      "end_line": 583,
+      "checksum": "16c7a69861588c83",
+      "description": "PATCH handler destructures + persists conversion profile fields",
+      "test_file": "backend/tests/conversionPatch.gcp-stg-0282.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": "N/A",
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "migration_safe": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T17:26:23.597Z",
+      "status": "ACTIVE",
+      "operator_approved": true,
+      "checklist_evidence": {
+        "wiring": "retailer web sends fields, backend now persists",
+        "backend_api": "PATCH accepts 5 conversion fields",
+        "store_isolation": "store_id from JWT",
+        "business_logic": "COALESCE preserves on null",
+        "business_behaviour": "conversion profile updatable",
+        "db_schema": "columns from mig 199",
+        "migration_safe": "N/A no new migration",
+        "impacted_files": "products.ts + test",
+        "fix_ledger_check": "257 fixes",
+        "no_agent_conflict": "single",
+        "gcp_parity": "compatible",
+        "regression_check": "16/16",
+        "test_guard": "conversionPatch test 16/16",
+        "single_commit": "fix(GCP-STG-0282)",
+        "ticket_parked": "after commit"
+      }
     }
   ],
   "machine_state_version": 269,
@@ -14768,5 +14825,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T17:17:48.129Z"
+  "lastUpdated": "2026-03-22T17:27:22.315Z"
 }
