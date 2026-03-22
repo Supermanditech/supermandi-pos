@@ -184,28 +184,9 @@ describe('SCALE-C1: Stock-in batch_number + expiry_date', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // 5. InwardStore — batchNumber and expiryDate on InwardItem
+  // 5. InwardStore — REMOVED: inwardStore.ts deleted (V3 uses GRN flow instead)
+  // Stock-in batch/expiry is now handled by backend stockIn.ts (tested in section 1)
   // ---------------------------------------------------------------------------
-  describe('inwardStore.ts type contract', () => {
-    const filePath = path.resolve(__dirname, '../../src/stores/inwardStore.ts');
-    let fileContent: string;
-
-    beforeAll(() => {
-      fileContent = fs.readFileSync(filePath, 'utf-8');
-    });
-
-    it('InwardItem interface includes batchNumber', () => {
-      expect(fileContent).toContain('batchNumber?: string | null');
-    });
-
-    it('InwardItem interface includes expiryDate', () => {
-      expect(fileContent).toContain('expiryDate?: string | null');
-    });
-
-    it('updateItem action accepts batchNumber and expiryDate updates', () => {
-      expect(fileContent).toContain('"batchNumber" | "expiryDate"');
-    });
-  });
 
   // ---------------------------------------------------------------------------
   // 6. inventoryApi.ts — InventoryTransactionItem carries batch/expiry

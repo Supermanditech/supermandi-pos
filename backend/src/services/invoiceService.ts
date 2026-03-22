@@ -444,7 +444,10 @@ async function storeInvoicePdfInGcs(pool: Pool, invoiceId: string, invoiceNumber
       invoiceNumber,
       pdfSignature,
       signedAt: new Date().toISOString(),
-      ...data,
+      totalAmount: invoice.totalAmount,
+      invoiceModel: invoice.invoiceModel,
+      invoiceType: invoice.invoiceType,
+      status: invoice.status,
     });
 
     // Upload to GCS
