@@ -1031,10 +1031,12 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
           // writes to inventory_ledger + stock_balances + store_products via applyInventoryMovement.
           // Calling decrementCatalogStock here caused DOUBLE stock deduction for every offline-synced sale.
 
+          // GCP-STG-0329: Pass saleId so applyBulkDeductions skips already-deducted products
           await applyBulkDeductions({
             client,
             storeId,
-            items: resolvedItems.map((item) => ({ variantId: item.variantId, quantity: item.quantity }))
+            items: resolvedItems.map((item) => ({ variantId: item.variantId, quantity: item.quantity })),
+            saleId
           });
 
           // GO-LIVE-034: Invalidate stock cache for all products in this offline sale

@@ -1339,9 +1339,11 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       }))
     });
 
-    // Stock deduction moved to confirmPayment endpoint
-    // Sale status is PENDING until payment is confirmed
-    // If payment fails, sale can be cancelled via cancelSale endpoint
+    // GCP-STG-0329: Stock deducted here at createSale via recordSaleInventoryMovements.
+    // confirmPayment calls applyBulkDeductions for additional bulk unit conversions,
+    // but guards against double-deduction by checking existing ledger entries.
+    // Sale status is PENDING until payment is confirmed.
+    // If payment fails, sale can be cancelled via cancelSale endpoint.
 
     await client.query("COMMIT");
   } catch (error) {
@@ -1534,10 +1536,12 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
     });
 
     // Deduct stock NOW (only after payment is confirmed and stock verified)
+    // GCP-STG-0329: Pass saleId so applyBulkDeductions skips already-deducted products
     await applyBulkDeductions({
       client,
       storeId,
-      items
+      items,
+      saleId
     });
 
     // DATA-004: Validate customer_phone for DUE payments — unrecoverable without it
@@ -2174,10 +2178,12 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, requireA
     });
 
     // Deduct stock NOW (only after payment is confirmed and stock verified)
+    // GCP-STG-0329: Pass saleId so applyBulkDeductions skips already-deducted products
     await applyBulkDeductions({
       client,
       storeId,
-      items
+      items,
+      saleId
     });
 
     // Update payment status
@@ -2465,10 +2471,12 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, requireActiveStore, fi
     });
 
     // Deduct stock NOW (only after payment is confirmed and stock verified)
+    // GCP-STG-0329: Pass saleId so applyBulkDeductions skips already-deducted products
     await applyBulkDeductions({
       client,
       storeId,
-      items
+      items,
+      saleId
     });
 
     const paymentId = randomUUID();
@@ -2674,10 +2682,12 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
     });
 
     // Deduct stock NOW (only after payment is confirmed and stock verified)
+    // GCP-STG-0329: Pass saleId so applyBulkDeductions skips already-deducted products
     await applyBulkDeductions({
       client,
       storeId,
-      items
+      items,
+      saleId
     });
 
     const paymentId = randomUUID();

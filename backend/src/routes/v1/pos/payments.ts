@@ -864,10 +864,12 @@ posPaymentsRouter.post(
           };
         });
         if (deductionItems.length > 0) {
+          // GCP-STG-0329: Pass saleId so applyBulkDeductions skips already-deducted products
           await applyBulkDeductions({
             client,
             storeId: storeId!,
             items: deductionItems,
+            saleId: payment.sale_id,
           });
           log.info(`[SM-013] STG-106: Stock deducted for split sale ${payment.sale_id}, ${deductionItems.length} items`);
         }

@@ -295,10 +295,26 @@ export async function applyBulkDeductions(params: {
   client: PoolClient;
   storeId: string;
   items: Array<{ variantId: string; quantity: number }>;
+  saleId?: string;
 }): Promise<void> {
-  const { client, storeId, items } = params;
+  const { client, storeId, items, saleId } = params;
   const variantIds = Array.from(new Set(items.map((item) => item.variantId)));
   if (variantIds.length === 0) return;
+
+  // GCP-STG-0329: Guard against double stock deduction.
+  // If saleId is provided, check which products already have a ledger entry
+  // from recordSaleInventoryMovements (transaction_type IN ('sale','SELL'), reference_type='sale').
+  // Skip bulk deduction for those products to prevent double-counting.
+  let alreadyDeductedProductIds = new Set<string>();
+  if (saleId) {
+    const ledgerCheck = await client.query(
+      `SELECT DISTINCT product_id FROM inventory.inventory_ledger
+       WHERE store_id = $1 AND reference_id = $2 AND reference_type = 'sale'
+         AND transaction_type IN ('sale', 'SELL')`,
+      [storeId, saleId]
+    );
+    alreadyDeductedProductIds = new Set(ledgerCheck.rows.map((r: any) => String(r.product_id)));
+  }
 
   const res = await client.query(
     `
@@ -338,6 +354,9 @@ export async function applyBulkDeductions(params: {
   }
 
   for (const [productId, payload] of byProduct.entries()) {
+    // GCP-STG-0329: Skip products already deducted by recordSaleInventoryMovements
+    if (alreadyDeductedProductIds.has(productId)) continue;
+
     await adjustBulkInventory({
       client,
       storeId,
