@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 672,
+  "version": 673,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -10957,7 +10957,7 @@
       "file": "backend/src/routes/v1/retailer-admin/purchaseOrders.ts",
       "start_line": 172,
       "end_line": 243,
-      "checksum": "0f579f97091f2b59",
+      "checksum": "fffe2ac4e5748271",
       "description": "Buy Again endpoint duplicates delivered PO as new draft with same items + supplier",
       "test_file": "backend/tests/buyAgain.gcp-stg-0094.unit.test.ts",
       "depends_on": null,
@@ -14986,6 +14986,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:00:11.325Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0286",
+      "file": "backend/migrations/218_gcp_stg_0286_poi_store_id_rls.sql",
+      "start_line": 1,
+      "end_line": 29,
+      "checksum": "7a38b772f8a317f8",
+      "description": "Add store_id to purchase_order_items with backfill + RLS policy",
+      "test_file": "backend/tests/poiStoreId.gcp-stg-0286.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T20:04:38.617Z",
       "status": "ACTIVE"
     }
   ],

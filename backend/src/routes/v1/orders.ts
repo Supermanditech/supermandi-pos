@@ -337,9 +337,9 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
       const itemId = randomUUID();
       const itemResult = await client.query(
         `INSERT INTO orders.purchase_order_items (
-          id, order_id, supplier_product_id, product_id,
+          id, order_id, store_id, supplier_product_id, product_id,
           ordered_quantity, received_quantity, unit_price, line_total, product_name, status
-        ) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8, 'pending')
+        ) VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $8, $9, 'pending')
         RETURNING
           id,
           order_id as "orderId",
@@ -351,7 +351,7 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
           line_total as "totalPrice",
           status,
           notes`,
-        [itemId, orderId, item.supplierProductId, item.productId, item.quantity, item.unitPrice, item.totalPrice, item.productName]
+        [itemId, orderId, storeId, item.supplierProductId, item.productId, item.quantity, item.unitPrice, item.totalPrice, item.productName]
       );
 
       insertedItems.push({

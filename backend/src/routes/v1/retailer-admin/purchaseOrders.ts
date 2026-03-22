@@ -220,9 +220,9 @@ retailerPurchaseOrdersRouter.post("/purchase-orders/:poId/buy-again", async (req
     for (const item of itemsRes.rows) {
       const lineTotal = Number(item.ordered_quantity) * Number(item.unit_price || 0);
       await pool.query(
-        `INSERT INTO orders.purchase_order_items (id, order_id, supplier_product_id, product_id, product_name, barcode, ordered_quantity, unit_price, line_total)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [randomUUID(), newPoId, item.supplier_product_id, item.product_id, item.product_name, item.barcode, item.ordered_quantity, item.unit_price, lineTotal]
+        `INSERT INTO orders.purchase_order_items (id, order_id, store_id, supplier_product_id, product_id, product_name, barcode, ordered_quantity, unit_price, line_total)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [randomUUID(), newPoId, storeId, item.supplier_product_id, item.product_id, item.product_name, item.barcode, item.ordered_quantity, item.unit_price, lineTotal]
       );
     }
 

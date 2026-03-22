@@ -605,10 +605,11 @@ reorderRouter.post("/stores/:storeId/reorder/pending/approve", requireDeviceToke
         for (const item of items) {
           await client.query(
             `INSERT INTO orders.purchase_order_items
-              (order_id, supplier_product_id, product_id, ordered_quantity, unit_price, line_total, status)
-             VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
+              (order_id, store_id, supplier_product_id, product_id, ordered_quantity, unit_price, line_total, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')`,
             [
               poId,
+              storeId,
               item.supplierProductId,
               item.productId,
               item.quantity || 0,
@@ -905,10 +906,11 @@ reorderRouter.post("/stores/:storeId/reorder/submit-po", requireDeviceToken, asy
       // Create PO item
       await client.query(
         `INSERT INTO orders.purchase_order_items
-          (order_id, supplier_product_id, product_id, ordered_quantity, unit_price, line_total, status)
-         VALUES ($1, $2, $3, $4, $5, $6, 'submitted')`,
+          (order_id, store_id, supplier_product_id, product_id, ordered_quantity, unit_price, line_total, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'submitted')`,
         [
           poId,
+          storeId,
           reorder.supplierProductId,
           reorder.productId,
           reorder.quantity || 0,
@@ -1147,9 +1149,9 @@ reorderRouter.post("/stores/:storeId/reorder/auto-approve", requireDeviceToken, 
         for (const item of items) {
           await client.query(
             `INSERT INTO orders.purchase_order_items
-              (order_id, supplier_product_id, product_id, ordered_quantity, unit_price, line_total, status)
-             VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
-            [poId, item.supplierProductId, item.productId, item.quantity || 0, item.unitPrice || 0, (item.quantity || 0) * (item.unitPrice || 0)]
+              (order_id, store_id, supplier_product_id, product_id, ordered_quantity, unit_price, line_total, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')`,
+            [poId, storeId, item.supplierProductId, item.productId, item.quantity || 0, item.unitPrice || 0, (item.quantity || 0) * (item.unitPrice || 0)]
           );
         }
 
