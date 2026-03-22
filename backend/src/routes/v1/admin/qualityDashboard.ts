@@ -50,13 +50,21 @@ qualityDashboardRouter.get('/overview', async (_req: Request, res: Response) => 
   const tableStats: Record<string, number> = {};
   try {
     if (pool) {
-      // MFA-005: Use allowlist Set + identifier quoting to prevent SQL injection pattern
-      const ALLOWED_TABLES = new Set(['stores', 'users', 'products', 'orders', 'transactions', 'devices', 'suppliers']);
-      for (const table of ALLOWED_TABLES) {
+      // MFA-005: Use allowlist Map + schema-qualified names to prevent SQL injection
+      const ALLOWED_TABLES = new Map([
+        ['stores', 'platform.stores'],
+        ['users', 'auth.users'],
+        ['products', 'catalog.products'],
+        ['purchase_orders', 'orders.purchase_orders'],
+        ['devices', 'public.pos_devices'],
+        ['suppliers', 'supplier.suppliers'],
+        ['sell_payments', 'payments.sell_payments'],
+      ]);
+      for (const [label, qualifiedName] of ALLOWED_TABLES) {
         try {
-          // Safe: table name validated against hardcoded Set, double-quoted as SQL identifier
-          const r = await pool.query(`SELECT COUNT(*) as c FROM "${table}"`);
-          tableStats[table] = parseInt(r.rows[0]?.c || '0', 10);
+          // Safe: table name validated against hardcoded Map, schema-qualified
+          const r = await pool.query(`SELECT COUNT(*) as c FROM ${qualifiedName}`);
+          tableStats[label] = parseInt(r.rows[0]?.c || '0', 10);
         } catch {
           tableStats[table] = -1; // table doesn't exist
         }

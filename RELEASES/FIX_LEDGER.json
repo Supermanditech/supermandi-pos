@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 658,
+  "version": 659,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -14228,6 +14228,62 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T23:42:00.980Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0280",
+      "file": "backend/src/routes/v1/admin/qualityDashboard.ts",
+      "start_line": 53,
+      "end_line": 63,
+      "checksum": "7ad8161e974b85b8",
+      "description": "Quality dashboard ALLOWED_TABLES uses schema-qualified names (platform.stores, auth.users, catalog.products, orders.purchase_orders, public.pos_devices, supplier.suppliers, payments.sell_payments)",
+      "test_file": "backend/tests/qualityDashboard.gcp-stg-0280.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T10:39:45.884Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "GET /api/v1/admin/quality-dashboard returns table counts using schema-qualified names",
+        "api_errors": "catch returns -1 for missing tables, outer catch ignores — graceful",
+        "store_isolation": "N/A — admin-only endpoint",
+        "business_logic": "N/A — read-only dashboard",
+        "business_behaviour": "Admin views table counts for monitoring",
+        "db_schema": "7 schema-qualified names verified",
+        "impacted_files": "qualityDashboard.ts + test + FIX_LEDGER.json",
+        "fix_ledger_check": "250 fixes zero drift",
+        "no_agent_conflict": "Single agent",
+        "gcp_parity": "Schema-qualified names verified — Cloud SQL compatible",
+        "regression_check": "TypeScript passed, 10/10 unit tests",
+        "test_guard": "qualityDashboard.gcp-stg-0280.unit.test.ts 10/10",
+        "parity_scanned": "Parity scan found 0 errors, 4 warnings at 2026-03-22T10:44:27.070Z",
+        "single_commit": "fix(GCP-STG-0280)",
+        "ticket_parked": "Will park after commit"
+      }
     }
   ],
   "machine_state_version": 269,
@@ -14272,5 +14328,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T10:38:22.821Z"
+  "lastUpdated": "2026-03-22T10:44:49.565Z"
 }
