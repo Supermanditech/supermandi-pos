@@ -11460,8 +11460,8 @@
     {
       "ticket": "GCP-STG-0078",
       "file": "backend/src/services/invoiceService.ts",
-      "start_line": 470,
-      "end_line": 493,
+      "start_line": 473,
+      "end_line": 496,
       "checksum": "4c6156d7fffe999c",
       "description": "triggerEInvoice helper: non-blocking e-invoice generation after invoice issuance",
       "test_file": "backend/tests/eInvoice.gcp-stg-0078.unit.test.ts",
@@ -11492,7 +11492,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T16:48:34.231Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-21T21:19:42.255Z"
+      "line_shifted_at": "2026-03-22T12:08:19.011Z"
     },
     {
       "ticket": "GCP-STG-0078",
@@ -14328,5 +14328,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T12:08:18.610Z"
+  "lastUpdated": "2026-03-22T15:15:25.160Z"
 }

@@ -8943,12 +8943,2304 @@ Specifically check: `dailyClosingStore`, `shiftStore`, `inwardStore` — these m
 
 ---
 
-## GRAND TOTAL: 280 TICKETS
+## GRAND TOTAL: 412 TICKETS (280 original + 8 deep audit + 10 supplier lifecycle + 13 scale/compat/auth/ledger + 7 WhatsApp/UPI/cart + 10 search + 9 ledger/parity/sync + 11 superadmin product mgmt + 14 B2B commercial + 12 scale stress + 12 order intelligence + 10 unit conversion + 16 SKU tiles/B2B/payment)
 
 | Severity | Count |
 |---|---|
-| P0 CRITICAL | 33 |
-| P1 HIGH | 114 |
-| P2 MEDIUM | 102 |
-| P3 LOW | 28 |
-| TOTAL | 280 |
+| P0 CRITICAL | 45 |
+| P1 HIGH | 158 |
+| P2 MEDIUM | 153 |
+| P3 LOW | 52 |
+| TOTAL | 412 |
+
+---
+
+## BATCH 18: Deep Audit Findings (2026-03-22)
+
+Source: Product Metadata Sync audit + Store Isolation audit + Ledger Integrity audit.
+Discovered by: Claude A audit, verified by Claude B before ticket creation.
+
+---
+
+## GCP-STG-0281 — bnplEligible Silently Dropped on Retailer Product Create + Edit (CRITICAL)
+
+**Ticket ID**: GCP-STG-0281
+**Severity**: P0 CRITICAL
+**Source**: Audit 1 — Product Metadata Sync, Step 2
+**Claude B Correction**: Column `bnpl_eligible` exists on `catalog.supplier_products` (migration 048), NOT on `catalog.store_products`. Need NEW migration to add column to store_products first, then wire backend POST/PATCH.
+
+**Problem**: Retailer web sends `bnplEligible` in payload (ProductsPage.tsx:657). Backend POST handler (products.ts:237-248) does NOT destructure it from req.body. Backend PATCH handler (products.ts:563-575) also does NOT destructure it. The column does NOT exist on `catalog.store_products` (only on `catalog.supplier_products` via migration 048). The retailer toggle is cosmetic — the value is silently discarded on every save.
+
+**Impact**: Stores cannot mark products as BNPL-eligible. The credit/BNPL system cannot filter eligible products.
+
+**Fix**:
+1. Add migration: `ALTER TABLE catalog.store_products ADD COLUMN IF NOT EXISTS bnpl_eligible BOOLEAN DEFAULT false`
+2. In `backend/src/routes/v1/retailer-admin/products.ts` POST handler: destructure `bnplEligible` from req.body, add to INSERT SQL for store_products
+3. In PATCH handler: destructure `bnplEligible`, add `bnpl_eligible = $N` to UPDATE SQL
+4. POS store-products/list should return `bnpl_eligible` so POS can filter BNPL-eligible items
+
+---
+
+## GCP-STG-0282 — Conversion Profile Fields Silently Ignored on Retailer Product Edit (HIGH)
+
+**Ticket ID**: GCP-STG-0282
+**Severity**: P1 HIGH
+**Source**: Audit 1 — Product Metadata Sync, Step 2 (renumbered from original 0283)
+
+**Problem**: Retailer web sends `procurementUnit`, `procurementPackQty`, `baseStockUnit`, `allowFractionalSell`, `conversionPrecision` on edit (ProductsPage.tsx:677-682). Backend POST handler correctly stores them (products.ts:409-441). Backend PATCH handler does NOT destructure them (products.ts:563-575) and does NOT include them in the UPDATE SQL (products.ts:702-721). Edits to conversion profile are silently discarded.
+
+**Impact**: Retailer cannot update a product's measurement/conversion profile after initial creation. Must delete and recreate the product.
+
+**Fix**: Add all 5 conversion fields to the PATCH handler's destructuring and UPDATE SQL in `backend/src/routes/v1/retailer-admin/products.ts`.
+
+---
+
+## GCP-STG-0283 — No Ledger-Sum vs stock_balances Reconciliation (HIGH)
+
+**Ticket ID**: GCP-STG-0283
+**Severity**: P1 HIGH
+**Source**: Audit 3 — Ledger Integrity, High Finding #1 (renumbered from original 0284)
+
+**Problem**: No code compares `SUM(delta_qty) FROM inventory.inventory_ledger GROUP BY store_id, product_id` against `stock_balances.current_qty`. If a bug causes one to drift without the other, there is no detection mechanism. The existing `stockReconciliation.ts` only reconciles the denormalized cache (`store_products.current_stock`) against `stock_balances`, not the authoritative ledger.
+
+**Impact**: Ledger drift is undetectable until a manual stock count reveals discrepancies.
+
+**Fix**:
+1. Add `GET /api/v1/admin/inventory/reconciliation/ledger-check` endpoint
+2. Compare ledger SUM vs stock_balances for all products in a store
+3. Return list of discrepancies with delta
+4. Optionally: add a scheduled job (cron) that runs daily and logs warnings
+
+---
+
+## GCP-STG-0284 — POS store-products/list Missing description, hsnCode, supplierId, supplierName (MEDIUM)
+
+**Ticket ID**: GCP-STG-0284
+**Severity**: P2 MEDIUM
+**Source**: Audit 1 — Product Metadata Sync, Step 3-4 (renumbered from original 0286)
+
+**Problem**: POS `/store-products/list` SQL (storeProducts.ts:741-794) does NOT select `p.description`, `p.hsn_code`, `sp.supplier_id`, or join supplier name. POS productsStore maps these fields (productsStore.ts:96,100,104) but they are always undefined. ProductTileV3 shows description as fallback text (line 101-102) but it's always empty. ProductDetailSheetV3 only shows HSN in BUY context from ProcurementData, not from product fields.
+
+**Impact**: POS displays incomplete product info. Description fallback text never works. HSN unavailable for invoice display in SELL context.
+
+**Fix**: Add `p.description`, `p.hsn_code AS "hsnCode"`, `sp.supplier_id AS "supplierId"`, and LEFT JOIN `supplier.suppliers s ON s.id = sp.supplier_id` with `s.business_name AS "supplierName"` to the store-products/list SELECT query.
+
+---
+
+## GCP-STG-0285 — CSV Bulk Import Silently Discards 8 Template Fields on Commit (MEDIUM)
+
+**Ticket ID**: GCP-STG-0285
+**Severity**: P2 MEDIUM
+**Source**: Audit 1 — Product Metadata Sync, Step 1-2 (renumbered from original 0287)
+
+**Problem**: CSV template includes `low_stock_alert`, `gst_percent`, `hsn`, `notes`, `sold_by`, `rate_unit`, `pack_size`, `pack_unit` columns. `commitSingleRow` in `csvImport.ts` (lines 575-618) does NOT write these to DB on create or update. Only stored: name, brand, unit, barcode, image_url, sell_price, mrp, purchase_price, mode, stock, procurement fields. The fields are parsed during validation but silently discarded during commit.
+
+**Impact**: Retailers who bulk-import products via CSV lose GST, HSN, notes, and display configuration. Must re-enter manually per product.
+
+**Fix**: Add all 8 fields to the `commitSingleRow` INSERT and UPDATE SQL in `csvImport.ts`. Map CSV column names to DB column names: `low_stock_alert` → `low_stock_alert_qty`, `gst_percent` → `default_gst_rate` (in catalog.products), `hsn` → `hsn_code`, etc.
+
+---
+
+## GCP-STG-0286 — orders.purchase_order_items Missing store_id Column + RLS (MEDIUM)
+
+**Ticket ID**: GCP-STG-0286
+**Severity**: P2 MEDIUM
+**Source**: Audit 2 — Store Isolation, Table 9 (renumbered from original 0288)
+
+**Problem**: `orders.purchase_order_items` has no `store_id` column and no RLS policy. Store isolation is enforced application-side only via JOIN to parent `purchase_orders`. All current queries properly scope via the parent, but there is no defense-in-depth at the DB layer. A future developer adding a direct query to `purchase_order_items` without joining `purchase_orders` would leak cross-store data.
+
+**Impact**: Low immediate risk (all current code is correct), but violates the defense-in-depth principle established by migrations 149/162/164/204.
+
+**Fix**:
+1. Add migration: `ALTER TABLE orders.purchase_order_items ADD COLUMN store_id UUID REFERENCES platform.stores(id)`
+2. Backfill from parent: `UPDATE orders.purchase_order_items poi SET store_id = po.store_id FROM orders.purchase_orders po WHERE poi.order_id = po.id`
+3. Add NOT NULL constraint after backfill
+4. Enable RLS + add policy matching other tables
+
+---
+
+## GCP-STG-0287 — Dual-Ledger Inconsistency: Stock-in and Refund Skip Legacy Ledger (MEDIUM)
+
+**Ticket ID**: GCP-STG-0287
+**Severity**: P2 MEDIUM
+**Source**: Audit 3 — Ledger Integrity, High Finding #2 (renumbered from original 0289)
+
+**Problem**: Sales write to BOTH `public.inventory_ledger` (legacy) and `inventory.inventory_ledger` (catalog). But stock-in (GRN) and refund paths only write to the catalog ledger. `fetchLedgerStock()` in `inventoryLedgerService.ts:352-373` reads only the legacy ledger. Over time, legacy ledger sums will drift from actual stock as stock-ins and refunds accumulate without legacy entries.
+
+**Impact**: Any reporting or reconciliation that relies on the legacy ledger will show incorrect stock levels.
+
+**Fix**: Either (a) add legacy ledger writes to stock-in and refund paths, OR (b) deprecate the legacy ledger entirely — migrate all reads to `inventory.inventory_ledger` and stop writing to the legacy table. Option (b) is preferred to eliminate the dual-write complexity.
+
+---
+
+## GCP-STG-0288 — POS store-products/list Missing lowStockAlertQty + notes (LOW)
+
+**Ticket ID**: GCP-STG-0288
+**Severity**: P3 LOW
+**Source**: Audit 1 — Product Metadata Sync, Step 3-4 (renumbered from original 0290)
+
+**Problem**: `lowStockAlertQty` and `notes` are stored in DB, returned by retailer-admin GET, but missing from POS `/store-products/list` API response. POS productsStore does not map them.
+
+**Impact**: Low — `lowStockAlertQty` is primarily a retailer dashboard feature (triggers low-stock badge in retailer web). `notes` are internal. Neither is currently displayed on POS. However, future POS features (e.g., reorder alerts, product notes for staff) would need these fields.
+
+**Fix**: Add `sp.low_stock_alert_qty AS "lowStockAlertQty"` and `sp.notes` to the store-products/list SELECT query. Map in POS productsStore.
+
+---
+
+**DROPPED TICKETS (Claude B cross-verification 2026-03-22):**
+- ~~GCP-STG-0282 (original)~~: Stock debit timing — DROPPED. Stock IS debited at confirmPayment (sales.ts:1536), not createSale. Claude A audit was incorrect.
+- ~~GCP-STG-0285 (original)~~: opening_stock CHECK constraint — DROPPED. Migration 035 already added 'opening_stock'. Migration 100 added 'bulk_sale'. No mismatch.
+
+---
+
+## BATCH 19: Supplier Product Lifecycle Audit (2026-03-22)
+
+Source: Supplier Listing → SuperAdmin Approval → Retailer POS end-to-end audit.
+Discovered by: Claude A audit across 4 audit tracks (listing, review, post-approval, scale).
+
+---
+
+## GCP-STG-0289 — Margin Column Disconnect: Admin Sets One Column, BUY Reads Another (CRITICAL)
+
+**Ticket ID**: GCP-STG-0289
+**Severity**: P0 CRITICAL
+**Source**: Audit 2 — SuperAdmin Review, Finding 2.5
+
+**Problem**: The SuperAdmin margin-setting endpoint (`POST /admin/catalog/supplier-products/:id/margin`) writes to `admin_margin_pct` and `admin_margin_fixed_minor` columns on `catalog.supplier_products`. However, the BUY catalog query (`catalog.ts:477-483`) reads from `supermandi_margin_minor` and `margin_percent` for pricing. These are DIFFERENT columns. The margin SuperAdmin sets via the CatalogTab edit modal never applies to the BUY catalog prices retailers see.
+
+**Impact**: SuperMandi's profit margin is not applied to retailer purchase prices. Retailers buy at supplier cost, SuperMandi earns zero margin.
+
+**Fix**:
+1. Verify if `admin_margin_pct` and `margin_percent` are the same column (aliased) or different
+2. If different: update the margin endpoint to write to the columns the BUY catalog reads, OR update the BUY catalog query to read from `admin_margin_pct`/`admin_margin_fixed_minor`
+3. Add a test that sets margin via admin → fetches buy-catalog → verifies margin is applied to retail price
+
+---
+
+## GCP-STG-0290 — No Publish Button in CatalogTab: Approved Products Never Reach SELL Catalog (CRITICAL)
+
+**Ticket ID**: GCP-STG-0290
+**Severity**: P0 CRITICAL
+**Source**: Audit 3 — Post-Approval → POS, Finding 3.1
+
+**Problem**: Backend has `POST /api/v1/admin/products/:productId/publish` endpoint (suppliers.ts:1668) that creates `catalog.store_products` entries from approved supplier products. However, CatalogTab.tsx has NO "Publish" button — only Approve, Reject, and Edit. Approval auto-maps to master catalog but does NOT create store_products. The SELL catalog endpoint reads from `store_products`, so approved supplier products NEVER appear in the SELL tab on POS.
+
+**Impact**: The entire SELL flow for supplier-sourced products is broken. Retailers can see products in BUY (which reads supplier_products directly) but cannot SELL them (which reads store_products). The publish step is a dead endpoint with no UI trigger.
+
+**Fix**:
+1. Add "Publish to Stores" button in CatalogTab.tsx for approved products that are not yet published
+2. Button calls `POST /admin/products/:productId/publish`
+3. Show publish status indicator (published/unpublished) in the product table
+4. Consider auto-publish on approval as an option (checkbox or setting)
+
+---
+
+## GCP-STG-0291 — Supplier Product POST Silently Drops hsn_code (HIGH)
+
+**Ticket ID**: GCP-STG-0291
+**Severity**: P1 HIGH
+**Source**: Audit 1 — Supplier Listing, Finding 3
+
+**Problem**: Supplier product form includes HSN code input (page.tsx:788). The `ProductInput` interface includes `hsnCode`. But the backend POST handler INSERT SQL (products.ts:561-592) does NOT include `hsn_code` in the column list. It IS in the RETURNING clause (line 626), so it always returns null. The supplier's HSN code is silently discarded on every product creation.
+
+**Impact**: HSN codes are required for GST invoicing. Without HSN on supplier products, downstream invoices (e-invoice IRN, tax invoices) cannot be generated correctly.
+
+**Fix**: Add `hsn_code` to the INSERT column list and VALUES in `backend/src/routes/v1/supplier/products.ts` POST handler.
+
+---
+
+## GCP-STG-0292 — Supplier Product Form Missing Brand Input Field (HIGH)
+
+**Ticket ID**: GCP-STG-0292
+**Severity**: P1 HIGH
+**Source**: Audit 1 — Supplier Listing, Finding 5
+
+**Problem**: The backend destructures `brand` from request body (products.ts:464) and inserts it into `catalog.supplier_products` (line 632). But the supplier product form UI (page.tsx:578-1027) has NO input field for `brand`. Suppliers can only set brand via CSV upload, not via the form.
+
+**Impact**: Products created via the form have no brand metadata. Brand is displayed on POS tiles (ProductTileV3), SuperAdmin catalog table, and search results. Missing brand = degraded product discovery.
+
+**Fix**: Add a `brand` text input field to the supplier product form in `supplier-portal/src/app/(dashboard)/products/page.tsx`, after the `name` field.
+
+---
+
+## GCP-STG-0293 — BUY Detail Sheet Receives barcode: undefined Despite Data Availability (HIGH)
+
+**Ticket ID**: GCP-STG-0293
+**Severity**: P1 HIGH
+**Source**: Audit 3 — Post-Approval → POS, Finding 3.4
+
+**Problem**: BuyScreenV3.tsx line 303 explicitly passes `barcode: undefined` to the ProductDetailSheetV3 component, even though barcode data is available in the supplier product data (`item.barcode`). The detail sheet has barcode display UI but receives nothing.
+
+**Impact**: Retailer taps a product in BUY tab to see details — barcode section shows nothing. Cannot verify product identity before ordering.
+
+**Fix**: Change `barcode: undefined` to `barcode: item.barcode` at BuyScreenV3.tsx:303.
+
+---
+
+## GCP-STG-0294 — BUY Tiles Missing imageUrl + netContent from Supplier Data (MEDIUM)
+
+**Ticket ID**: GCP-STG-0294
+**Severity**: P2 MEDIUM
+**Source**: Audit 3 — Post-Approval → POS, Finding 3.4
+
+**Problem**: BuyScreenV3 maps supplier products to ProductTileV3 props (lines 263-275) but does NOT pass `imageUrl` or `netContentValue`/`netContentUnit`. Both fields exist in `catalog.supplier_products` but are not included in the BUY catalog API response or the tile mapping.
+
+**Impact**: BUY tiles show generic category emoji instead of product images. Net content (e.g., "500g", "1L") not visible, reducing product identification accuracy.
+
+**Fix**:
+1. Add `sp.image_url`, `sp.net_content_value`, `sp.net_content_unit` to the buy-catalog SQL SELECT in `catalog.ts`
+2. Map `imageUrl`, `netContentValue`, `netContentUnit` in BuyScreenV3 tile props
+
+---
+
+## GCP-STG-0295 — POS Product Sync Limit Mismatch: Client Sends 500, Backend Caps at 200 (MEDIUM)
+
+**Ticket ID**: GCP-STG-0295
+**Severity**: P2 MEDIUM
+**Source**: Audit 4 — Scale, Finding 2
+
+**Problem**: POS `listProductsProgressive()` (productsApi.ts:279,316) requests `limit=500` per page. Backend `storeProducts.ts:720` caps at `Math.min(..., 200)`. This causes:
+1. 2.5x more HTTP round-trips than intended (100 instead of 40 for 20K products)
+2. Potential early termination bug: if backend doesn't return `total` in response, client sees `page.length (200) < requestedLimit (500)` and may break the loop after first page
+
+**Impact**: POS product sync is 2.5x slower than designed. May fail to load full catalog on some code paths.
+
+**Fix**: Either raise backend cap to 500 (`Math.min(..., 500)`) or lower client request to 200 to match. Add explicit `total` check to prevent early loop termination.
+
+---
+
+## GCP-STG-0296 — Supplier CSV Bulk Upload: One-by-One Inserts, No Transaction (MEDIUM)
+
+**Ticket ID**: GCP-STG-0296
+**Severity**: P2 MEDIUM
+**Source**: Audit 4 — Scale, Finding 5
+
+**Problem**: Supplier CSV upload (`products.ts:1222-1338`) processes each row with individual INSERT + barcode-lookup queries — 6000+ sequential DB queries for a 3000-row CSV. No transaction wrapping means partial imports on crash. No batch INSERT optimization.
+
+**Impact**: Large CSV uploads are extremely slow and risk partial state. A 3000-product import could take minutes and leave the catalog in an inconsistent state if interrupted.
+
+**Fix**:
+1. Wrap the import loop in `BEGIN`/`COMMIT` transaction
+2. Use multi-row `INSERT INTO ... VALUES (...), (...), (...)` batches (e.g., 100 rows at a time)
+3. Batch the barcode dedup check with `WHERE barcode = ANY($1::text[])`
+
+---
+
+## GCP-STG-0297 — Add description Column to catalog.supplier_products (LOW)
+
+**Ticket ID**: GCP-STG-0297
+**Severity**: P3 LOW
+**Source**: Audit 1 — Supplier Listing, Finding 3
+
+**Problem**: `description` is declared in the TypeScript `ProductInput` interface (api.ts:525), initialized in form state (page.tsx:92), but: (a) the UI input was removed with comment "no description column", (b) no `description` column exists on `catalog.supplier_products`, (c) the PATCH handler references `description` which may fail at runtime.
+
+**Impact**: Low — description is a nice-to-have field for detailed product info. No current feature depends on it.
+
+**Fix**:
+1. Add migration: `ALTER TABLE catalog.supplier_products ADD COLUMN IF NOT EXISTS description TEXT`
+2. Restore the description textarea in the supplier product form
+3. Add to POST INSERT column list
+4. Verify PATCH handler works with the new column
+
+---
+
+## GCP-STG-0298 — Duplicate Procurement Fields in Supplier Product Form (LOW)
+
+**Ticket ID**: GCP-STG-0298
+**Severity**: P3 LOW
+**Source**: Audit 1 — Supplier Listing, Finding 2
+
+**Problem**: `procurementUnit`, `procurementPackQty`, and `baseStockUnit` appear in BOTH the "Procurement Packaging" section (page.tsx:800-880) and the "Commercial Terms" section (page.tsx:938-962). Both bind to the same formData keys, so last-written wins. Confusing UX — supplier sees the same fields twice.
+
+**Impact**: Low — functional but confusing. May lead to supplier entering conflicting values in the two sections.
+
+**Fix**: Remove the duplicate fields from the "Commercial Terms" section. Keep only in "Procurement Packaging" where they logically belong.
+
+---
+
+## BATCH 20: Scale, Device Compatibility, Auth Flow, and Ledger Integrity Audit (2026-03-22)
+
+Source: 6 audit tracks — Supplier scale, Retailer scale, POS screen compat, 10K user scale, Registration→POS login, Ledger immutability+sync.
+
+---
+
+## GCP-STG-0299 — POS OTP Phone Format Mismatch: Raw 10-Digit vs +91 Prefix (CRITICAL)
+
+**Ticket ID**: GCP-STG-0299
+**Severity**: P0 CRITICAL
+**Source**: Audit 9 — Registration → POS Login, Blocker 2
+
+**Problem**: `auth.users.phone` stores phone numbers with `+91` prefix (e.g., `+919876543210`), set during retailer-admin portal login (auth.ts:304,330,478,513). POS OTP auth at `otpAuth.ts:44` receives raw 10-digit phone from client (validated at line 31-32: `!/^\d{10}$/.test(phone)`) and queries `WHERE u.phone = $1` with raw `9876543210`. The query will NEVER match because `+919876543210 != 9876543210`.
+
+**Impact**: POS V3 OTP login flow is completely non-functional. Any retailer trying to use phone-based OTP login on POS will get "Phone not registered" even if they are approved and have auth.users/store_users rows.
+
+**Fix**: In `otpAuth.ts`, normalize the 10-digit phone to `+91XXXXXXXXXX` format before querying: `const normalizedPhone = '+91' + phone;` then use `normalizedPhone` in the WHERE clause. Apply to both `send-otp` (line 44) and `verify-otp` (line 134).
+
+---
+
+## GCP-STG-0300 — auth.users + auth.store_users Not Created During SuperAdmin Approval (CRITICAL)
+
+**Ticket ID**: GCP-STG-0300
+**Severity**: P0 CRITICAL
+**Source**: Audit 9 — Registration → POS Login, Blocker 1
+
+**Problem**: The SuperAdmin approval endpoint (`POST /admin/applications/:id/approve`, applications.ts:261-534) creates `platform.stores` and generates an enrollment code, but does NOT create `auth.users` or `auth.store_users` entries. These rows are only created lazily when the retailer logs into the retailer-admin web portal (auth.ts:318-350). The POS V3 OTP flow (`otpAuth.ts:39-48`) queries `auth.users JOIN auth.store_users JOIN platform.stores` — if these rows don't exist, it returns 404 `PHONE_NOT_REGISTERED`.
+
+**Impact**: Any freshly-approved retailer who has never logged into the web portal cannot use POS OTP login. The primary enrollment-code flow (EnrollDevice) is unaffected — this only blocks the secondary OTP flow.
+
+**Fix**: In the approval handler (`applications.ts`), after creating `platform.stores`:
+1. `INSERT INTO auth.users (phone, email, role, status) VALUES ($phone, $email, 'retailer', 'active') ON CONFLICT (phone) DO NOTHING`
+2. `INSERT INTO auth.store_users (user_id, store_id, role) VALUES ($userId, $storeId, 'owner')`
+This ensures POS OTP flow works immediately after approval without requiring web portal login.
+
+---
+
+## GCP-STG-0301 — Add Orientation Lock to app.json — Landscape Breaks Entire UI (HIGH)
+
+**Ticket ID**: GCP-STG-0301
+**Severity**: P1 HIGH
+**Source**: Audit 7 — POS Screen Compatibility, Finding 1
+
+**Problem**: `app.json` does not include an `"orientation"` key. Expo defaults to `"default"` which allows both portrait and landscape. The entire V3 UI is designed for portrait (3-column grids, vertical card layouts, bottom nav). On Indian POS tablets (Sunmi, PAX) that can rotate, landscape mode produces a broken layout with stretched tiles and misaligned elements.
+
+**Impact**: Any user who rotates their device (accidentally or intentionally) sees a completely broken UI. Common on tablet POS devices used in retail.
+
+**Fix**: Add `"orientation": "portrait"` to the `expo` section of `app.json`.
+
+---
+
+## GCP-STG-0302 — Add SafeAreaView/useSafeAreaInsets to All V3 Main Screens (HIGH)
+
+**Ticket ID**: GCP-STG-0302
+**Severity**: P1 HIGH
+**Source**: Audit 7 — POS Screen Compatibility, Finding 2
+
+**Problem**: `SafeAreaProvider` wraps the app (App.tsx:7), but none of the V3 main screens use `SafeAreaView` or `useSafeAreaInsets`: PosRootLayoutV3, SellScreenV3, BuyScreenV3, PaymentScreenV3, CartSheetV3, BrandedHeader, BottomNavV3. On devices with notches, punch-hole cameras, or Android gesture navigation (common on Redmi, Realme, Samsung M-series), BrandedHeader content overlaps the status bar and bottom nav tabs overlap the gesture indicator bar.
+
+**Impact**: Content is cut off or hidden behind system UI elements on most modern Indian smartphones.
+
+**Fix**: Add `useSafeAreaInsets()` to BrandedHeader (paddingTop: insets.top) and BottomNavV3 (paddingBottom: insets.bottom). Alternatively, wrap PosRootLayoutV3 in SafeAreaView.
+
+---
+
+## GCP-STG-0303 — Cloud Run: Raise max-instances, Upgrade Cloud SQL Connection Limit (HIGH)
+
+**Ticket ID**: GCP-STG-0303
+**Severity**: P1 HIGH
+**Source**: Audit 8 — Scale 10K Users, Findings S8-02 + S8-04
+
+**Problem**: Two scaling bottlenecks:
+1. Cloud Run main-backend: max 3 instances × 80 default concurrency = 240 max concurrent requests. Insufficient for 10K users at peak (kirana rush hours could see 500+ concurrent).
+2. DB pool: 25 connections/instance × 3 instances = 75 of Cloud SQL's 100 connection limit. No headroom for scaling beyond 3 instances.
+
+**Impact**: At 10K users, the system will hit Cloud Run scaling limits during peak hours, causing 503 errors. If max-instances is raised without upgrading Cloud SQL, DB connections will be exhausted.
+
+**Fix**:
+1. `.github/workflows/deploy.yml`: Change main-backend `--max-instances=3` to `--max-instances=10`, set `--concurrency=100`
+2. Upgrade Cloud SQL to a tier supporting 200+ connections (or add PgBouncer as connection pooler)
+3. Set api-gateway `--min-instances=1` to avoid cold-start latency
+
+---
+
+## GCP-STG-0304 — BuyScreenV3 Hardcoded numColumns={3} → Use getGridColumns() (HIGH)
+
+**Ticket ID**: GCP-STG-0304
+**Severity**: P1 HIGH
+**Source**: Audit 7 — POS Screen Compatibility, Finding 3
+
+**Problem**: BuyScreenV3.tsx line 246 hardcodes `numColumns={3}` instead of using `getGridColumns()` from the responsive module. SellScreenV3 correctly uses `getGridColumns()` (line 407). On compact phones (<360dp), 3 columns creates cramped tiles. On wide POS terminals (600-800dp), it wastes space.
+
+**Impact**: BUY tab has inconsistent layout vs SELL tab on the same device. Small phones get unusably small tiles.
+
+**Fix**: Change `numColumns={3}` to `numColumns={getGridColumns()}` at BuyScreenV3.tsx:246. Import from `../theme/responsive`.
+
+---
+
+## GCP-STG-0305 — Add DB Trigger to Prevent UPDATE/DELETE on Ledger Financial Fields (HIGH)
+
+**Ticket ID**: GCP-STG-0305
+**Severity**: P1 HIGH
+**Source**: Audit 10 — Ledger Immutability, Finding 1
+
+**Problem**: `inventory.inventory_ledger` has no trigger or RLS policy preventing UPDATE or DELETE. Immutability relies entirely on code discipline. Two runtime code paths UPDATE rows for reversal tracking (`reversed_by_id`, `reversed_at` at inventoryLedgerService.ts:769 and refunds.ts:260), which is acceptable. But nothing prevents accidental UPDATE of financial fields (`delta_qty`, `stock_before`, `stock_after`, `unit_cost`).
+
+**Impact**: A bug or manual SQL could silently corrupt the financial ledger with no audit trail. Defense-in-depth requires DB-level protection.
+
+**Fix**: Add migration with a trigger:
+```sql
+CREATE OR REPLACE FUNCTION prevent_ledger_financial_mutation() RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.delta_qty != NEW.delta_qty OR OLD.stock_before != NEW.stock_before
+     OR OLD.stock_after != NEW.stock_after OR OLD.unit_cost != NEW.unit_cost THEN
+    RAISE EXCEPTION 'Cannot modify financial fields on inventory ledger entries';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER trg_ledger_immutable BEFORE UPDATE ON inventory.inventory_ledger
+  FOR EACH ROW EXECUTE FUNCTION prevent_ledger_financial_mutation();
+```
+
+---
+
+## GCP-STG-0306 — Add Search Debounce (300ms) to All POS Search Paths (MEDIUM)
+
+**Ticket ID**: GCP-STG-0306
+**Severity**: P2 MEDIUM
+**Source**: Audit 6 — Retailer Store Scale, Finding 3
+
+**Problem**: No search debounce exists on any POS search path:
+- SELL search (UniversalSearchV3.tsx:90): fires server-side API call on every keystroke
+- Stock search (StockScreenV3.tsx:112): filters 5000+ items client-side on every keystroke
+- productsStore.searchProducts() (line 206-219): synchronous client-side filter on every character
+
+**Impact**: At 5000+ products, every keystroke triggers either an API call (SELL) or a full array filter (Stock). This causes visible jank on low-end devices and unnecessary API load.
+
+**Fix**: Add 300ms debounce to `onQueryChange` in UniversalSearchV3.tsx and to the `onChangeText` handler in StockScreenV3.tsx. Use a `useRef` + `setTimeout` pattern or a `useDebouncedValue` hook.
+
+---
+
+## GCP-STG-0307 — Fix 30+ Sub-12px fontSize Instances Across V3 Components (MEDIUM)
+
+**Ticket ID**: GCP-STG-0307
+**Severity**: P2 MEDIUM
+**Source**: Audit 7 — POS Screen Compatibility, Finding 4
+
+**Problem**: 30+ instances of hardcoded fontSize 7-11 across V3 components. SupplierProductCardV3.tsx:162 uses fontSize 7 (unreadable). BottomNavV3.tsx:183 uses fontSize 9 for tab labels. None use the responsive `getChipFontSize()` function. These are below the WCAG minimum of 12px for body text.
+
+**Impact**: Text is unreadable on small Indian smartphones (5"-5.5" screens at 720p). Accessibility failure for users with impaired vision.
+
+**Fix**: Replace all hardcoded sub-12 fontSizes with `getChipFontSize()` from responsive module (minimum 11-12 depending on device class). For critical labels like nav tabs, enforce minimum 11px.
+
+---
+
+## GCP-STG-0308 — POS OTP send-otp Endpoint Needs Rate Limiter Middleware (MEDIUM)
+
+**Ticket ID**: GCP-STG-0308
+**Severity**: P2 MEDIUM
+**Source**: Audit 8 — Scale 10K Users, Finding S8-01
+
+**Problem**: The POS `/auth/send-otp` endpoint (otpAuth.ts:30) has no rate limiter middleware. Only the downstream SMS/WhatsApp service has rate limiting. An attacker could spam the endpoint to fill the `pos_otp` table and consume DB resources without triggering SMS rate limits.
+
+**Impact**: DoS vector — repeated OTP requests without rate limiting could exhaust DB write capacity and fill the OTP table.
+
+**Fix**: Add `posRateLimiter` middleware to the `/auth/send-otp` route, matching the enrollment rate limits: 5/min per IP, 3/min per phone number.
+
+---
+
+## GCP-STG-0309 — caseSize/packSize Not Populated from /store-products/list (MEDIUM)
+
+**Ticket ID**: GCP-STG-0309
+**Severity**: P2 MEDIUM
+**Source**: Audit 10 — Ledger/Sync, Finding 2
+
+**Problem**: `ProductTileV3` displays `caseSize` (line 106) and it's part of the `ProductTileData` interface. But the `/store-products/list` API response (storeProducts.ts:738-840) does NOT include `pack_size` or `case_size` from the database. The field is never populated on the POS sell grid even if configured in retailer admin.
+
+**Impact**: "Case of 12" / "Pack of 6" info doesn't display on POS tiles, reducing product identification for bulk items.
+
+**Fix**: Add `COALESCE(p.pack_size, sp.procurement_pack_qty) AS "caseSize"` to the store-products/list SQL SELECT query. Map in productsStore.ts.
+
+---
+
+## GCP-STG-0310 — Product Image Hardcoded 32x32px — Scale with Tile Size (LOW)
+
+**Ticket ID**: GCP-STG-0310
+**Severity**: P3 LOW
+**Source**: Audit 7 — POS Screen Compatibility, Finding 6
+
+**Problem**: ProductTileV3.tsx line 88 uses `width: 32, height: 32` for real product images. The image area uses `width: "100%", aspectRatio: 1` (lines 203-204) which is responsive, but the actual image render is fixed 32px. On larger tiles (POS tablets), the image looks tiny.
+
+**Impact**: Low — category emoji fallback covers most products currently. Will matter more when suppliers upload product images.
+
+**Fix**: Change image dimensions to use a percentage of tile width or `aspectRatio` matching the container.
+
+---
+
+## GCP-STG-0311 — POS OTP Doesn't Check auth.users.status — Deactivated Users Can Auth (LOW)
+
+**Ticket ID**: GCP-STG-0311
+**Severity**: P3 LOW
+**Source**: Audit 9 — Registration → POS Login, Blocker 3
+
+**Problem**: POS OTP `send-otp` (otpAuth.ts:39-48) and `verify-otp` (line 129-137) queries do NOT filter by `auth.users.status`. If a user is deactivated (`status != 'active'`), they can still authenticate via POS OTP. The retailer-admin auth explicitly checks `status = 'active'` (line 321, 488).
+
+**Impact**: Low — deactivated users can receive OTP and authenticate on POS. Their store may still be ACTIVE so they could transact. However, user deactivation is rare and store-level deactivation (checked at enrollment) is the primary control.
+
+**Fix**: Add `AND u.status = 'active'` to both OTP queries in otpAuth.ts.
+
+---
+
+## BATCH 21: WhatsApp Integration + UPI Payment Flow + Cart-to-Payment E2E Audit (2026-03-22)
+
+Source: 4 audit tracks — WhatsApp integration, UPI SELL flow, UPI BUY flow, Cart-to-Payment E2E with all input methods.
+
+---
+
+## GCP-STG-0312 — Cart: No Manual Quantity Input — Only +/- Stepper (HIGH)
+
+**Ticket ID**: GCP-STG-0312
+**Severity**: P1 HIGH
+**Source**: Audit 14 — Cart-to-Payment E2E, Cart Editing
+
+**Problem**: CartItemRowV3.tsx (lines 64-72) only provides +/- stepper buttons for quantity adjustment. There is no TextInput for direct quantity entry. For large quantities (e.g., 50 units of an item), the user must tap the + button 50 times.
+
+**Impact**: Severely impacts checkout speed for bulk purchases — common in kirana stores where retailers buy 24-48 units of fast-moving items. A 50-unit order takes ~25 seconds of tapping vs 2 seconds with direct input.
+
+**Fix**: Add a tappable quantity display between +/- buttons in CartItemRowV3. On tap, show a numeric TextInput (keyboardType="number-pad") that replaces the display. On blur/submit, validate (min 1, max stock) and update quantity.
+
+---
+
+## GCP-STG-0313 — GST Calculation Inconsistency: Per-Item vs Flat 18% (HIGH)
+
+**Ticket ID**: GCP-STG-0313
+**Severity**: P1 HIGH
+**Source**: Audit 14 — Cart-to-Payment E2E, Payment Methods
+
+**Problem**: Two different GST calculation methods are used:
+1. CartSheetV3.tsx (lines 105-108): Calculates GST per-item using `item.metadata.gstPct` with 18% fallback
+2. PaymentScreenV3.tsx (line 35) and usePaymentFlow.ts (line 23): Use flat 18% on total
+
+When cart contains items with different GST rates (e.g., 5% on essentials, 12% on processed food, 18% on packaged goods), the cart summary shows one GST amount but the payment screen shows a different amount. This is a financial accuracy issue.
+
+**Impact**: GST amount on receipt may not match what was displayed in cart. Tax compliance risk — incorrect GST breakdown could cause issues during GST filing.
+
+**Fix**: Unify to per-item GST calculation everywhere. PaymentScreenV3 and usePaymentFlow should compute GST by summing per-item GST amounts (using each item's gstPct with fallback to the product's `default_gst_rate` from DB, not a blanket 18%).
+
+---
+
+## GCP-STG-0314 — UPI Sale Missing store_product_id and retail_variant_id Metadata (HIGH)
+
+**Ticket ID**: GCP-STG-0314
+**Severity**: P1 HIGH
+**Source**: Audit 14 — Cart-to-Payment E2E, Payment Methods
+
+**Problem**: UpiScreenV3.tsx creates a sale independently (lines 74-89) with its own `createSale` call instead of using `usePaymentFlow.executePayment()`. The UPI path does NOT include `store_product_id` or `retail_variant_id` in sale item payloads (compare with usePaymentFlow.ts lines 54-55 which does include them for Cash/Udhar).
+
+**Impact**: UPI sales have less metadata than Cash/Udhar sales. Analytics, inventory tracking, and supplier reporting that depend on `store_product_id` will have gaps for all UPI transactions. This affects:
+- Product-level sales reports
+- Supplier commission calculation
+- Inventory movement tracking per product
+
+**Fix**: Refactor UpiScreenV3 to use `usePaymentFlow.executePayment("UPI", ...)` like Cash and Udhar screens, OR add `store_product_id` and `retail_variant_id` to the UPI sale creation payload.
+
+---
+
+## GCP-STG-0315 — Cart Discount Limited to Presets (10% or ₹50) — No Free-Form Input (MEDIUM)
+
+**Ticket ID**: GCP-STG-0315
+**Severity**: P2 MEDIUM
+**Source**: Audit 14 — Cart-to-Payment E2E, Cart Editing
+
+**Problem**: PaymentScreenV3.tsx (lines 154-158) shows cart-level discount via Alert.alert with only two preset options: "10% Off" and "Rs 50 Off". There is no free-form input for custom discount percentage or amount. Retailers commonly give ad-hoc discounts (e.g., 5% for regular customers, ₹20 off, round-down to nearest 10).
+
+**Impact**: Retailers cannot apply custom discounts at checkout, limiting pricing flexibility. They must either use the presets or manually override individual item prices — slower and more error-prone.
+
+**Fix**: Replace Alert.alert with a modal containing:
+1. Discount type toggle: % Off / ₹ Off
+2. TextInput for custom amount (keyboardType="decimal-pad")
+3. Optional reason field
+4. Preview of discounted total before applying
+
+---
+
+## GCP-STG-0316 — Scan Not-Found: Add "Search by Name" Option (MEDIUM)
+
+**Ticket ID**: GCP-STG-0316
+**Severity**: P2 MEDIUM
+**Source**: Audit 14 — Cart-to-Payment E2E, Scan Method
+
+**Problem**: When barcode scan doesn't find a product (ScanScreenV3.tsx:294-321), the result panel shows only two options: "New Product" (navigate to V3NewProduct) and "Continue" (dismiss). There is no option to search by name or try an alternate barcode. This forces the user to either create a new product entry or give up.
+
+**Impact**: Products with damaged/unreadable barcodes or alternate packaging barcodes cannot be found via scan. The retailer must exit scan mode, switch to search, and type the product name — breaking the fast-checkout flow.
+
+**Fix**: Add a third button "Search by Name" that:
+1. Pre-fills the search bar with any partial product info (e.g., from barcode prefix lookup)
+2. Opens UniversalSearchV3 inline or navigates to search tab
+3. If product found via search, auto-adds to cart and returns to scan mode
+
+---
+
+## GCP-STG-0317 — Add Per-Item Notes Field to Cart + Edit Modal (LOW)
+
+**Ticket ID**: GCP-STG-0317
+**Severity**: P3 LOW
+**Source**: Audit 14 — Cart-to-Payment E2E, Cart Editing
+
+**Problem**: CartItem interface in cartStore.ts has no `notes` field. Cart-level `setNote()` exists (cartStore.ts:804-808, max 140 chars) but has no visible UI in CartSheetV3. Per-item notes (e.g., "customer wants less spicy", "gift wrap", "deliver to counter 2") are not possible.
+
+**Impact**: Low — most kirana transactions don't need per-item notes. But for restaurants, bakeries, or custom orders, this would be useful.
+
+**Fix**:
+1. Add `notes?: string` to CartItem interface in cartStore.ts
+2. Add a TextInput for notes in the CartSheetV3 edit modal (below discount section)
+3. Include notes in sale_items when creating sale
+4. Display notes on receipt/bill
+
+---
+
+## GCP-STG-0318 — WhatsApp: No Incoming Message Handling (LOW)
+
+**Ticket ID**: GCP-STG-0318
+**Severity**: P3 LOW
+**Source**: Audit 11 — WhatsApp Integration, Webhook
+
+**Problem**: The WhatsApp webhook at `backend/src/routes/v1/webhooks/whatsappWebhook.ts` only processes delivery status updates (sent/delivered/read/failed). It does NOT handle incoming messages from customers. When a customer replies to a bill receipt or payment reminder, the message goes nowhere.
+
+**Impact**: Low — WhatsApp is currently used as a one-way notification channel. Customer replies are ignored. This is acceptable for the current use case (bill sharing, reminders) but limits future CRM capabilities.
+
+**Fix**:
+1. Add incoming message parsing to the webhook handler (check for `messages` array in payload)
+2. Store incoming messages in a `whatsapp.incoming_messages` table
+3. Route to SuperAdmin chat tab for manual response
+4. Future: auto-response for common queries ("balance?", "order status?")
+
+---
+
+## BATCH 22: Search Isolation + Multi-Parameter Search Audit (2026-03-22)
+
+Source: 4 audit tracks — Search isolation (SELL vs BUY), SELL search parameters, BUY search parameters, Search UX across all screens.
+
+---
+
+## GCP-STG-0319 — SELL Search Needs 300ms Debounce — Every Keystroke Fires Server API (HIGH)
+
+**Ticket ID**: GCP-STG-0319
+**Severity**: P1 HIGH
+**Source**: Audit 18 — Search UX, SellScreenV3
+
+**Problem**: `UniversalSearchV3.tsx` (lines 90-93) calls `onQueryChange` immediately on every keystroke with no debounce or setTimeout. `SellScreenV3.tsx:145` `handleSearchQuery` fires `searchStoreProducts()` API call on every character. Typing "maggi" fires 5 API calls (m, ma, mag, magg, maggi). CatalogTab correctly debounces at 300ms — SellScreen should match.
+
+**Impact**: Excessive server load — every SELL search generates N API calls where N = character count. With 10K users typing searches, this multiplies to potentially 50K+ unnecessary requests/hour.
+
+**Fix**: Add 300ms debounce to `handleSearchQuery` in SellScreenV3.tsx. Use a `useRef` + `setTimeout` pattern matching CatalogTab's implementation at `supermandi-superadmin/src/tabs/CatalogTab.tsx:110-117`.
+
+---
+
+## GCP-STG-0320 — BUY Search Should Use Server-Side Query Instead of Client-Only Filter (HIGH)
+
+**Ticket ID**: GCP-STG-0320
+**Severity**: P1 HIGH
+**Source**: Audit 17 — Supplier Catalog Search
+
+**Problem**: The BUY catalog backend (`catalog.ts:398-434`) supports rich server-side search with `q` param (searches name, barcode, supplier_sku, brand, unit, supplier business_name/trade_name, plus pack_size/moq for numeric tokens). But BuyScreenV3.tsx does NOT pass `q` to the server. It loads the full catalog once (`getBuyCatalog` at line 105) and filters client-side on only name+brand (line 160-161). Barcode, supplier name, MOQ, and all other server-side search fields go unused.
+
+**Impact**: Retailers cannot find supplier products by barcode, SKU, or supplier name in the BUY tab. With 3000+ supplier products, client-side name+brand filter is inadequate for fast product discovery.
+
+**Fix**: Wire BuyScreenV3 search input to pass `q` param to `getBuyCatalog()`. Replace `useMemo` client-side filter with server-side paginated search. Add debounce (300ms) since this becomes a server-side call.
+
+---
+
+## GCP-STG-0321 — Add Category Filter to SELL Search (MEDIUM)
+
+**Ticket ID**: GCP-STG-0321
+**Severity**: P2 MEDIUM
+**Source**: Audit 16 — Store Product Search Parameters
+
+**Problem**: SELL search (`storeProducts.ts:358-371`) does NOT support category filtering. The `p.category` field appears in SELECT (line 414) but NOT in the WHERE clause. There is no `?category=` query parameter on the search endpoint. Users cannot narrow search results by category (e.g., "show me only Dairy products matching 'Amul'").
+
+**Impact**: Medium — for stores with 5000+ products across 15+ categories, category filtering would significantly speed up product discovery. BUY catalog already has category filter via `?category=` param (catalog.ts:394).
+
+**Fix**: Add `?category=` query parameter to `/pos/store-products/search`. Add `AND p.category = $categoryParam` to WHERE clause when parameter is present. Add category chip filter row above search results in SellScreenV3 (matching BuyScreenV3's existing category chips).
+
+---
+
+## GCP-STG-0322 — Barcode Scan in supplier_catalog_procurement_scan Mode Should Search Supplier Products (MEDIUM)
+
+**Ticket ID**: GCP-STG-0322
+**Severity**: P2 MEDIUM
+**Source**: Audit 15 — Search Isolation, Barcode Scan
+
+**Problem**: All scan contexts in ScanScreenV3.tsx (`sell_scan`, `stock_in`, `supplier_catalog_procurement_scan`, `counter_purchase_scan`) look up from the same `productsStore` (loaded from `catalog.store_products`). The `supplier_catalog_procurement_scan` context finds product in store cache first, then hands barcode off to BuyScreenV3 for client-side matching against the already-loaded buy catalog.
+
+If a supplier product has a barcode that is NOT in the store's digitized catalog (e.g., a new supplier product the store hasn't purchased yet), scan will fail with "not found" even though the product exists in the supplier catalog.
+
+**Impact**: Retailers scanning supplier product barcodes during procurement get false "not found" results. They must manually search the BUY tab by name instead.
+
+**Fix**: When `context === 'supplier_catalog_procurement_scan'` and `productsStore.getProductByBarcode()` returns null, add a fallback API call to `GET /catalog/stores/:storeId/buy-catalog?q=BARCODE` to search the supplier catalog by barcode.
+
+---
+
+## GCP-STG-0323 — Stock/Customer/Khata: Fix Misleading Empty States (MEDIUM)
+
+**Ticket ID**: GCP-STG-0323
+**Severity**: P2 MEDIUM
+**Source**: Audit 18 — Search UX
+
+**Problem**: Three screens show the same empty state message whether the user has no data OR their search returned no results:
+- StockScreenV3 (line 118): Shows "No dead stock" / "No stock alerts" / "No inventory" regardless of search
+- CustomersScreenV3 (line 71): Shows "No customers yet" even when searching for a non-existent customer
+- KhataScreenV3 (lines 105-110): Shows "No credit entries" when search returns empty
+
+ProductsPage (retailer-admin) correctly distinguishes: "No products match your search" vs "No products yet".
+
+**Impact**: Users think they have no data when actually their search just had no matches. Confusing UX.
+
+**Fix**: For each screen, check if `searchQuery.trim()` is non-empty. If so, show "No results for '{query}'" instead of the generic empty message. Follow ProductsPage's pattern at `retailer-admin/src/pages/ProductsPage.tsx:1866-1877`.
+
+---
+
+## GCP-STG-0324 — SalesHistoryV3: Add Search by Bill Ref, Amount, or Payment Mode (MEDIUM)
+
+**Ticket ID**: GCP-STG-0324
+**Severity**: P2 MEDIUM
+**Source**: Audit 18 — Search UX, SalesHistoryScreenV3
+
+**Problem**: SalesHistoryScreenV3 has NO search functionality at all. Only date range filters (today/week/month/all) at line 118-123. Users cannot search by bill reference number, transaction amount, customer name, or payment mode.
+
+**Impact**: Retailers looking for a specific past sale must scroll through potentially hundreds of transactions. Common use case: customer returns with a bill number and retailer needs to find the transaction.
+
+**Fix**: Add a TextInput search bar above the sales list. Filter client-side on: bill reference (exact/partial), amount (exact match), customer name (ILIKE), payment mode (CASH/UPI/DUE filter chips).
+
+---
+
+## GCP-STG-0325 — Add `source` Column to `catalog.store_products` to Track Product Origin (MEDIUM)
+
+**Ticket ID**: GCP-STG-0325
+**Severity**: P2 MEDIUM
+**Source**: Audit 15 — Search Isolation, Store Product Sources
+
+**Problem**: `catalog.store_products` has no column indicating whether a product was digitized manually, imported via CSV, or created via GRN inward from a supplier purchase. Only `catalog.product_barcodes.source` tracks barcode provenance (`manual`/`supplier_sync`/`grn_scan`), but this is at the barcode level, not the product level.
+
+**Impact**: Cannot report on product catalog composition (e.g., "70% of store products came from supplier catalog, 30% manually added"). Cannot prioritize supplier-originated products differently in the UI.
+
+**Fix**: Add migration: `ALTER TABLE catalog.store_products ADD COLUMN source VARCHAR(20) DEFAULT 'manual' CHECK (source IN ('manual', 'csv_import', 'grn_inward', 'supplier_publish'))`. Update all INSERT paths to set the correct source value.
+
+---
+
+## GCP-STG-0326 — Add HSN Code to SELL + BUY Search WHERE Clauses (LOW)
+
+**Ticket ID**: GCP-STG-0326
+**Severity**: P3 LOW
+**Source**: Audit 16 + 17 — Search Parameters
+
+**Problem**: HSN code is not searchable in either SELL or BUY search. SELL search (storeProducts.ts) doesn't include `p.hsn_code` in the WHERE clause at all. BUY search (catalog.ts) includes `mp.hsn_code` in SELECT (line 502) but not in the WHERE. Retailers and SuperAdmin cannot search products by HSN code.
+
+**Impact**: Low — HSN search is mainly useful for GST compliance workflows (finding all products under a specific HSN chapter). Not a daily search use case.
+
+**Fix**: Add `OR COALESCE(p.hsn_code, '') ILIKE '%' || $idx || '%'` to SELL search WHERE clause. Add `OR COALESCE(sp.hsn_code, '') ILIKE $idx` to BUY search WHERE clause.
+
+---
+
+## GCP-STG-0327 — Standardize Barcode Search: SELL Uses Exact-Only, BUY Uses ILIKE Partial (LOW)
+
+**Ticket ID**: GCP-STG-0327
+**Severity**: P3 LOW
+**Source**: Audit 16 + 17 — Search Parameters
+
+**Problem**: Inconsistent barcode search behavior:
+- SELL search (storeProducts.ts:359): `p.primary_barcode = $idx` — exact match only
+- BUY search (catalog.ts:422): `sp.barcode ILIKE '%' || $idx || '%'` — partial substring match
+
+A user searching "890103" in SELL finds nothing (exact match fails). The same search in BUY finds all products with barcodes starting with "890103".
+
+**Impact**: Low — users typically scan full barcodes, not partial. But for manual barcode entry (damaged label, partial read), the inconsistency is confusing.
+
+**Fix**: Standardize to: exact match as primary (highest score), ILIKE partial as fallback (lower score). Apply same logic to both SELL and BUY search.
+
+---
+
+## GCP-STG-0328 — Add Devanagari Script Support to Search (LOW)
+
+**Ticket ID**: GCP-STG-0328
+**Severity**: P3 LOW
+**Source**: Audit 16 + 17 + 18 — Hindi Search
+
+**Problem**: Search localization (`searchLocalization.ts:26-104`) only maps ~40 romanized Hindi terms (e.g., "doodh" → "milk", "atta" → "flour"). Actual Devanagari script input (e.g., "दूध") is NOT handled. ILIKE would pass Devanagari through to Postgres, which would match only if the product name is stored in Devanagari — but product names are stored in English. The `catalog.product_translations` table has Hindi translations but is only queried by CatalogTab (catalog-service), not by POS store-products search.
+
+**Impact**: Low — most Indian POS users type in English or romanized Hindi. However, some users (especially in Hindi-belt states) prefer Devanagari input on their phone keyboard.
+
+**Fix**: In the POS store-products/search endpoint, add a LEFT JOIN to `catalog.product_translations pt ON pt.product_id = p.id AND pt.locale = 'hi'` and add `OR pt.name ILIKE '%' || $idx || '%'` to the WHERE clause. This enables Devanagari search without transliteration.
+
+---
+
+## BATCH 23: Ledger Logic + Field Parity + Sync Audit (2026-03-22)
+
+Source: 3 audit tracks — POS Ledger stock lifecycle (Audit 19), Product metadata field parity (Audit 20), Bi-directional sync mechanism (Audit 21).
+
+---
+
+## GCP-STG-0329 — CRITICAL: Double Stock Deduction for Bulk-Configured Products (CRITICAL)
+
+**Ticket ID**: GCP-STG-0329
+**Severity**: P0 CRITICAL
+**Source**: Audit 19 — Ledger Logic, Issue A
+
+**Problem**: For products with bulk unit configuration (`unit_base`/`size_base` on retail variants), stock is deducted TWICE per sale:
+1. At `createSale` via `recordSaleInventoryMovements` (sales.ts:1329) — writes `transaction_type='sale'` to `inventory.inventory_ledger`, decrements `stock_balances.current_qty` and `store_products.current_stock`
+2. At `confirmPayment` via `applyBulkDeductions` (sales.ts:1537) — writes `transaction_type='bulk_sale'` to `inventory.inventory_ledger`, decrements `stock_balances` and `store_products` AGAIN
+
+The comment at sales.ts:1342 says "Stock deduction moved to confirmPayment endpoint" but the deduction at createSale (line 1329) was NEVER removed. Both paths create separate ledger entries and both update the balance tables.
+
+The `applyBulkDeductions` path only fires when `unitDelta !== 0` (inventoryService.ts:353), which requires `unit_base`/`size_base` to be configured on the product's retail variants. Products without bulk configuration are deducted only once (at createSale).
+
+**Impact**: Every sale of a bulk-configured product permanently loses double the inventory. For example, selling 1kg of rice deducts 2kg from stock. This silently corrupts stock_balances over time. The `chk_stock_balance_qty CHECK (current_qty >= 0)` constraint prevents negative stock, so the double-deduction will eventually cause "out of stock" errors for products that physically have stock.
+
+**Fix**: Either:
+1. Remove `recordSaleInventoryMovements` call from `createSale` (line 1329) — let confirmPayment handle ALL stock deduction. This matches the comment at line 1342.
+2. OR: Add a guard in `applyBulkDeductions` to skip products that already have a `'sale'` ledger entry for the same `saleId`.
+3. Fix the stale comment at line 1342 to match whichever approach is taken.
+
+---
+
+## GCP-STG-0330 — CRITICAL: Ledgerless Stock Updates — GRN Receive + CSV Import Bypass Ledger (CRITICAL)
+
+**Ticket ID**: GCP-STG-0330
+**Severity**: P0 CRITICAL
+**Source**: Audit 19 — Ledger Logic, Issue B
+
+**Problem**: Multiple code paths update `inventory.stock_balances.current_qty` WITHOUT writing a corresponding `inventory.inventory_ledger` entry:
+
+1. **GRN receive via PO** (orders.ts:1862-1871): Updates `inventory.stock_balances` with `current_qty = current_qty + $received` and updates `catalog.store_products.current_stock`, but does NOT INSERT into `inventory.inventory_ledger`. Only writes to `orders.order_receive_items`.
+
+2. **CSV import stock** (csvImport.ts:562-569): Sets `inventory.stock_balances.current_qty = EXCLUDED.current_qty` (absolute set, not delta) without any ledger entry.
+
+3. **Supplier catalog add with initial stock** (suppliers.ts:1076-1090): Attempts to write ledger entry but uses wrong column name `change_qty` instead of `delta_qty`. This INSERT will fail at the DB level, leaving stock_balances updated but no ledger record.
+
+**Impact**: The reconciliation endpoints (`/inventory/stock/recompute` and `/inventory/stock/recompute-all`) derive stock from `SUM(delta_qty)` of all ledger entries. Products affected by these ledgerless updates will have `stock_balances.current_qty != SUM(ledger.delta_qty)`, causing reconciliation to produce INCORRECT results — it would "correct" stock_balances to the wrong value, erasing the GRN/CSV/supplier stock additions.
+
+**Fix**:
+1. `orders.ts:1862`: Add `INSERT INTO inventory.inventory_ledger (store_id, product_id, delta_qty, transaction_type, reference_type, reference_id, stock_before, stock_after) VALUES (...)` with `transaction_type='purchase_received'` before updating stock_balances
+2. `csvImport.ts:562`: Add ledger entry with `transaction_type='adjustment'` for each product where stock changes
+3. `suppliers.ts:1078`: Change `change_qty` to `delta_qty`
+
+---
+
+## GCP-STG-0331 — Opening Stock Not Idempotent — Duplicate Submission Doubles Stock (HIGH)
+
+**Ticket ID**: GCP-STG-0331
+**Severity**: P1 HIGH
+**Source**: Audit 19 — Ledger Logic, Issue C
+
+**Problem**: The `POST /pos/opening-stock` endpoint (openingStock.ts) has no guard against duplicate submission for the same product. Calling it twice for the same product creates two separate `opening_stock` ledger entries and doubles the stock in `stock_balances`. There is no check for existing `opening_stock` entries, no idempotency key, and no `ON CONFLICT` guard.
+
+**Impact**: Network retry, double-tap, or user confusion ("did it save?") can silently double a product's opening stock. The error is invisible until a physical stock count reveals the discrepancy.
+
+**Fix**: Before INSERT, check: `SELECT COUNT(*) FROM inventory.inventory_ledger WHERE store_id = $1 AND product_id = $2 AND transaction_type = 'opening_stock'`. If > 0, return 409 "Opening stock already set for this product. Use stock adjustment to correct."
+
+---
+
+## GCP-STG-0332 — suppliers.ts Uses Wrong Column Name `change_qty` — Ledger INSERT Fails (HIGH)
+
+**Ticket ID**: GCP-STG-0332
+**Severity**: P1 HIGH
+**Source**: Audit 19 — Ledger Logic, Issue E
+
+**Problem**: `backend/src/routes/v1/admin/suppliers.ts` line 1078 writes to `inventory.inventory_ledger` using column name `change_qty`. The actual column name is `delta_qty` (defined in migration 005_inventory_schema.sql). This INSERT statement fails at runtime with a Postgres "column does not exist" error.
+
+**Impact**: When SuperAdmin adds a supplier catalog product with initial stock, the ledger entry silently fails. The stock_balances update (line 1085-1090) may succeed, creating a ledgerless stock entry.
+
+**Fix**: Change `change_qty` to `delta_qty` at suppliers.ts:1078. Add `stock_before` and `stock_after` columns to satisfy the `chk_ledger_stock_consistency` CHECK constraint.
+
+---
+
+## GCP-STG-0333 — Stale Comment at sales.ts:1342 — Says "Moved to confirmPayment" But createSale Still Deducts (HIGH)
+
+**Ticket ID**: GCP-STG-0333
+**Severity**: P1 HIGH
+**Source**: Audit 19 — Ledger Logic, Issue D
+
+**Problem**: Comment at sales.ts:1342 says "Stock deduction moved to confirmPayment endpoint" but `recordSaleInventoryMovements` (line 1329) still runs inside `createSale`, deducting stock immediately when sale status is PENDING. This misleading comment has caused confusion in multiple audit rounds (Claude A initially believed stock was only deducted at confirmPayment based on this comment).
+
+**Impact**: Developers relying on this comment will make incorrect assumptions about when stock is deducted. This contributed to the double-deduction bug (GCP-STG-0329).
+
+**Fix**: After fixing GCP-STG-0329 (removing one of the two deduction paths), update the comment to accurately describe the remaining behavior. If createSale deduction is kept, change comment to: "Stock is deducted here at sale creation. confirmPayment handles bulk unit conversions only." If createSale deduction is removed, change to: "Stock deduction occurs at confirmPayment — see applyBulkDeductions."
+
+---
+
+## GCP-STG-0334 — Retailer Web GET /products Doesn't Return image_url — Uploaded Images Invisible (HIGH)
+
+**Ticket ID**: GCP-STG-0334
+**Severity**: P1 HIGH
+**Source**: Audit 20 — Field Parity Matrix, Bug #7
+
+**Problem**: The retailer-admin `GET /api/v1/retailer-admin/products` query (products.ts:126-163) SELECT clause does NOT include `sp.image_url` or `p.image_url`. The frontend `Product` interface declares `image_url` (ProductsPage.tsx:61) and renders a thumbnail (ProductsPage.tsx:1928-1933), but the field is always `undefined` from the API response. Product images can be uploaded via `POST /products/:id/image` (which works correctly and writes to `store_products.image_url`), but the product list never returns the URL.
+
+**Impact**: Retailer uploads product images via drag-and-drop (ProductsPage.tsx:1627-1675) but never sees them in the product table. The images exist in GCS but the web UI shows blank/placeholder thumbnails for every product.
+
+**Fix**: Add `COALESCE(sp.image_url, p.image_url) AS image_url` to the SELECT clause in the GET /products query at products.ts:126-163.
+
+---
+
+## GCP-STG-0335 — Price Conflict: No LWW Guard — Last Write Wins Silently (MEDIUM)
+
+**Ticket ID**: GCP-STG-0335
+**Severity**: P2 MEDIUM
+**Source**: Audit 21 — Sync Mechanism, Conflict Resolution
+
+**Problem**: The POS price edit endpoint (`PATCH /pos/store-products/price`, storeProducts.ts:906) does a blind `SET sell_price = $1, updated_at = NOW()` with no Last-Write-Wins guard. The retailer-admin PATCH also updates price without LWW (products.ts:704, COALESCE-based update). If a retailer edits price to ₹100 on the web portal AND a staff member edits the same product to ₹120 on POS within the same 30-second sync window, whichever write reaches the DB last silently wins with no notification to either user.
+
+By contrast, metadata (name/brand) and stock fields DO have LWW guards with `metadata_updated_at` / `stockUpdatedAt` timestamp comparisons that return HTTP 409 `stale_write` on conflict.
+
+**Impact**: Price changes can be silently overwritten. A manager sets a promotion price on the web portal, but a cashier's price correction on POS overwrites it (or vice versa) with no warning.
+
+**Fix**: Add `AND (price_updated_at IS NULL OR price_updated_at < $clientTimestamp)` guard to both POS and retailer-admin price UPDATE queries. Return 409 `stale_write` when the server's `price_updated_at` is newer than the client's. Add `price_updated_at TIMESTAMPTZ` column to `catalog.store_products` via migration.
+
+---
+
+## GCP-STG-0336 — No Incremental Product Sync — Every Freshness=Stale Triggers Full Catalog Reload (MEDIUM)
+
+**Ticket ID**: GCP-STG-0336
+**Severity**: P2 MEDIUM
+**Source**: Audit 21 — Sync Mechanism
+
+**Problem**: When the freshness endpoint returns `stale: true`, POS calls `loadProducts()` which does a FULL progressive reload of ALL products via `listProductsProgressive()`. There is no delta/diff endpoint that returns only products changed since the last sync. With 5000+ products, every freshness detection triggers ~25 API calls and ~2.5MB of data transfer, even if only 1 product changed.
+
+**Impact**: Excessive bandwidth usage on mobile data (common in Indian kirana stores). Unnecessary battery drain and CPU usage on POS device. With 30-second sync interval, a busy store with frequent price/stock changes could trigger multiple full reloads per hour.
+
+**Fix**: Add `GET /pos/store-products/delta?since=<ISO timestamp>` endpoint that returns only products with `updated_at > since` or `metadata_updated_at > since`. POS merges delta into local store instead of full reload. Keep full reload as fallback for first sync or when delta is too large (>50% of catalog).
+
+---
+
+## GCP-STG-0337 — Metadata LWW Guard Is Optional — Client Can Skip Conflict Detection (LOW)
+
+**Ticket ID**: GCP-STG-0337
+**Severity**: P3 LOW
+**Source**: Audit 21 — Sync Mechanism, Conflict Resolution
+
+**Problem**: The metadata LWW (Last-Write-Wins) guard in the POS metadata endpoint (storeProducts.ts:1248-1250) and retailer-admin PATCH (products.ts:675-677) uses an optional `metadataUpdatedAt` parameter. If the client omits this parameter, the SQL guard clause `AND (metadata_updated_at IS NULL OR metadata_updated_at < $N)` is not applied, and the update proceeds unconditionally. The POS metadata endpoint (line 1202-1205) logs a warning when the parameter is missing but does not reject the request.
+
+**Impact**: Low — all current frontend code sends `metadataUpdatedAt` when editing metadata. But a future client or direct API call without this parameter would bypass conflict detection entirely.
+
+**Fix**: Make `metadataUpdatedAt` a required parameter in the PATCH endpoints. Return 400 if omitted. Or add server-side logic: if parameter is omitted, the server fetches the current `metadata_updated_at` and uses it as the baseline (effectively making the guard mandatory).
+
+---
+
+## BATCH 24: SuperAdmin Product Management Audit (2026-03-22)
+
+Source: 4 audit tracks — SuperAdmin view supplier products (Audit 22), SuperAdmin edit (Audit 23), Margin application (Audit 24), Publish to stores (Audit 25).
+
+---
+
+## GCP-STG-0338 — CatalogTab GET Query Missing billing_model — Edit Modal Always Defaults to SUPERMANDI_PRINCIPAL (HIGH)
+
+**Ticket ID**: GCP-STG-0338
+**Severity**: P1 HIGH
+**Source**: Audit 22 — SuperAdmin View, Finding 5
+
+**Problem**: The CatalogTab GET `/api/v1/admin/catalog/products` query (catalog.ts:121-157) does NOT include `sp.billing_model` in the SELECT clause. The edit modal (CatalogTab.tsx:558-593) initializes billingModel from the product object via `(product as any).billingModel`, which is always `undefined` since the field was never fetched. It falls back to `"SUPERMANDI_PRINCIPAL"` as default.
+
+When SuperAdmin opens the edit modal for a product that was previously set to `DIRECT_SUPPLIER`, the radio button shows `SUPERMANDI_PRINCIPAL` instead. If the admin saves without noticing, the billing model is overwritten back to `SUPERMANDI_PRINCIPAL`.
+
+**Impact**: Every edit of a DIRECT_SUPPLIER product silently resets it to SUPERMANDI_PRINCIPAL. Affects commission calculation, invoice generation, and settlement flow.
+
+**Fix**: Add `sp.billing_model AS "billingModel"` to the SELECT clause in `backend/src/routes/v1/admin/catalog.ts:121-157`. The CatalogTab modal initialization at line 52 (`setEditBillingModel(...)`) will then correctly use the DB value.
+
+---
+
+## GCP-STG-0339 — Add Supplier Name Filter Dropdown to CatalogTab (HIGH)
+
+**Ticket ID**: GCP-STG-0339
+**Severity**: P1 HIGH
+**Source**: Audit 22 — SuperAdmin View
+
+**Problem**: CatalogTab shows products from ALL suppliers in a single mixed list. There is no supplier filter dropdown — SuperAdmin cannot isolate one supplier's catalog. With 50+ suppliers × 3000 SKUs each = 150,000+ products, finding products from a specific supplier requires scrolling through the mixed list or searching by exact product name.
+
+**Impact**: SuperAdmin cannot efficiently review, approve, or manage products from a specific supplier. Approval workflow is impractical at scale.
+
+**Fix**: Add a supplier dropdown filter above the product table. Populate from `GET /api/v1/admin/catalog/suppliers` (distinct suppliers with product counts). When selected, add `AND sp.supplier_id = $supplierId` to the backend query. Include "All Suppliers" default option.
+
+---
+
+## GCP-STG-0340 — Add Approval Status Filter to CatalogTab (HIGH)
+
+**Ticket ID**: GCP-STG-0340
+**Severity**: P1 HIGH
+**Source**: Audit 22 — SuperAdmin View
+
+**Problem**: CatalogTab shows ALL products regardless of approval status (pending, approved, rejected). There is no filter to show only pending products awaiting review. SuperAdmin must scan through approved products to find pending ones.
+
+**Impact**: With thousands of products, finding pending items for approval is like finding a needle in a haystack. Approval workflow is inefficient.
+
+**Fix**: Add status filter chips (All | Pending | Approved | Rejected) above the product table. When selected, add `AND sp.approval_status = $status` to the backend query. Show count per status in the chip labels.
+
+---
+
+## GCP-STG-0341 — Expose HSN, GST, BNPL, Delivery Days, Credit Days as Editable in CatalogTab Edit Modal (HIGH)
+
+**Ticket ID**: GCP-STG-0341
+**Severity**: P1 HIGH
+**Source**: Audit 23 — SuperAdmin Edit
+
+**Problem**: The backend PUT `/admin/products/:id/edit` endpoint (suppliers.ts:1349-1653) accepts 20+ fields including `hsnCode`, `gstRate`, `bnplEligible`, `deliverySlaDays`, `creditDays`, `ptrMinor`, `ptsMinor`, `tradeDiscountPct`, `scheme`, `financeEligible`, `moqTiers`. But the CatalogTab edit modal only exposes 11 fields. HSN and GST are shown as read-only in the info header despite the backend supporting their editing.
+
+**Impact**: SuperAdmin cannot correct HSN/GST errors, toggle BNPL eligibility, or set commercial terms without directly calling the API. These are critical for GST compliance (HSN), credit system (BNPL), and supplier commercial terms.
+
+**Fix**: Add editable inputs to the CatalogTab edit modal for: HSN code (text), GST rate (dropdown 0/5/12/18/28%), BNPL eligible (toggle), delivery days (number), credit days (number). Wire to the existing PUT `.../edit` endpoint which already accepts these fields. Move HSN and GST from info header to editable section.
+
+---
+
+## GCP-STG-0342 — Add Publish Button to CatalogTab for Approved Products (HIGH)
+
+**Ticket ID**: GCP-STG-0342
+**Severity**: P1 HIGH
+**Source**: Audit 25 — Publish to Stores
+
+**Problem**: The Publish button exists only in SuppliersTab (SuppliersTab.tsx:763-783), not in CatalogTab where SuperAdmin reviews and approves products. After approving a product in CatalogTab, SuperAdmin must switch to SuppliersTab to publish it. This is a disconnected UX — the approval and publish workflows span two different tabs.
+
+The backend endpoint `POST /admin/products/:productId/publish` (suppliers.ts:1668) works correctly, creating `catalog.store_products` entries for all linked stores with margin-applied pricing.
+
+**Impact**: Approved products may never get published because the publish action is in a different tab. Products stay in `supplier_products` (visible in BUY) but never reach `store_products` (invisible in SELL).
+
+**Fix**: Add a "Publish to Stores" button in CatalogTab for products with `approvalStatus === 'approved'`. Show publish status indicator (published/unpublished) in the product table. Button calls existing `POST /admin/products/:id/publish` endpoint.
+
+---
+
+## GCP-STG-0343 — Add B2B Commercial Fields to CatalogTab Product Table (MEDIUM)
+
+**Ticket ID**: GCP-STG-0343
+**Severity**: P2 MEDIUM
+**Source**: Audit 22 — SuperAdmin View, Finding 4
+
+**Problem**: Critical B2B commercial fields are completely invisible in CatalogTab — not fetched by the GET API and not displayed in either the table or the edit modal:
+- `ptr_minor` (Price to Retailer)
+- `pts_minor` (Price to Stockist)
+- `trade_discount_pct`
+- `scheme` (e.g., "10+1 Free")
+- `moq` (minimum order quantity)
+- `delivery_sla_days`
+- `credit_days`
+- `image_url`
+- `stock_quantity` (supplier's available stock)
+
+SuperAdmin cannot see the full commercial picture of a supplier product — only name, category, brand, cost, MRP.
+
+**Impact**: SuperAdmin makes approval and margin decisions without seeing trade discount, scheme, PTR/PTS, or supplier stock availability. Leads to uninformed pricing decisions.
+
+**Fix**: Add these columns to the GET `/admin/catalog/products` SQL SELECT. Display as expandable detail row or in the edit modal's info section.
+
+---
+
+## GCP-STG-0344 — Bulk Publish Uses Different Pricing Logic Than Single Publish (MEDIUM)
+
+**Ticket ID**: GCP-STG-0344
+**Severity**: P2 MEDIUM
+**Source**: Audit 25 — Publish to Stores
+
+**Problem**: Single publish (`POST /admin/products/:id/publish`, suppliers.ts:1728-1735) uses the canonical `calculateRetailerPrice()` pricing engine. Bulk publish (`POST /admin/products/publish-bulk`, suppliers.ts:1886-1888) uses inline math:
+```js
+if (p.supermandi_margin_minor > 0) margin = p.supermandi_margin_minor;
+else if (p.margin_percent > 0) margin = Math.round(p.purchase_price * p.margin_percent / 100);
+sell_price = p.purchase_price + margin;
+```
+
+The canonical pricing engine may handle edge cases (rounding, min/max price caps, MRP ceiling) that the inline math does not.
+
+**Impact**: Same product published via single vs bulk could get different `sell_price` in `store_products`. Creates pricing inconsistencies across stores.
+
+**Fix**: Replace the inline math in bulk publish (suppliers.ts:1886-1888) with a call to `calculateRetailerPrice()`, matching the single publish path.
+
+---
+
+## GCP-STG-0345 — Bulk Publish Missing Conversion/Mode Columns in store_products INSERT (MEDIUM)
+
+**Ticket ID**: GCP-STG-0345
+**Severity**: P2 MEDIUM
+**Source**: Audit 25 — Publish to Stores
+
+**Problem**: Single publish (suppliers.ts:1766-1781) inserts 15+ columns into `catalog.store_products` including `procurement_unit`, `procurement_pack_qty`, `base_stock_unit`, `allow_fractional_sell`, `conversion_confirmed`, `product_mode`, `sold_by`, `rate_unit`. Bulk publish (suppliers.ts:1902-1905) inserts only core columns — omitting all conversion and mode fields.
+
+**Impact**: Products published via bulk have incomplete metadata. They default to PACKAGED mode with no conversion profile, even if the supplier product is LOOSE_BULK with specific measurement units. POS qty stepping, fractional sell, and procurement packaging will be wrong for bulk-published products.
+
+**Fix**: Add the missing columns (`procurement_unit`, `procurement_pack_qty`, `base_stock_unit`, `allow_fractional_sell`, `conversion_confirmed`, `product_mode`, `sold_by`, `rate_unit`) to the bulk publish INSERT SQL, copying from the `supplier_products` source row.
+
+---
+
+## GCP-STG-0346 — Wire Bulk Publish UI Button in SuppliersTab (MEDIUM)
+
+**Ticket ID**: GCP-STG-0346
+**Severity**: P2 MEDIUM
+**Source**: Audit 25 — Publish to Stores
+
+**Problem**: The bulk publish backend endpoint (`POST /admin/products/publish-bulk`) exists at suppliers.ts:1827. The API client function `publishBulkProducts(supplierId)` exists in `supermandi-superadmin/src/api/suppliers.ts:338`. But there is NO UI button in SuppliersTab that calls this function. SuperAdmin must publish products one-by-one.
+
+**Impact**: With 3000 SKUs per supplier, publishing individually is impractical. The feature was built end-to-end (backend + API client) but the UI button was never added.
+
+**Fix**: Add a "Publish All Approved Products" button in SuppliersTab's supplier detail view. Show confirmation dialog with count of products to publish. Call `publishBulkProducts(supplierId)`. Show progress/success toast.
+
+---
+
+## GCP-STG-0347 — Add Unpublish/Remove Mechanism for Published Products (MEDIUM)
+
+**Ticket ID**: GCP-STG-0347
+**Severity**: P2 MEDIUM
+**Source**: Audit 25 — Publish to Stores
+
+**Problem**: Once a product is published to a store (via `INSERT INTO catalog.store_products`), there is no admin mechanism to remove or deactivate it. No `DELETE FROM catalog.store_products` endpoint exists in admin routes. No "unpublish", "remove from store", or product-level deactivation exists in the SuperAdmin frontend.
+
+**Impact**: If a supplier product is recalled, discontinued, or published in error, SuperAdmin cannot remove it from retailer stores. The product remains in the SELL catalog indefinitely.
+
+**Fix**: Add `POST /admin/products/:productId/unpublish` endpoint that sets `catalog.store_products.is_active = false` for all stores (or a specific store via query param). Add "Unpublish" button next to published products in CatalogTab/SuppliersTab.
+
+---
+
+## GCP-STG-0348 — CatalogTab GET Query Returns 5 Fields Never Displayed — Remove or Display (LOW)
+
+**Ticket ID**: GCP-STG-0348
+**Severity**: P3 LOW
+**Source**: Audit 22 — SuperAdmin View, Finding 1
+
+**Problem**: The GET `/admin/catalog/products` query (catalog.ts:121-157) SELECTs `netContentValue`, `netContentUnit`, `manufacturerName`, `countryOfOrigin`, `shelfLifeDays` but CatalogTab never renders any of them — not in the table, not in the edit modal. These fields consume bandwidth and API payload size for no benefit.
+
+**Impact**: Low — minor bandwidth waste. Each product row includes 5 unused fields across 50 products per page.
+
+**Fix**: Either (a) remove these 5 columns from the SELECT to reduce payload, or (b) display them in the edit modal's info section (alongside HSN/GST). Option (b) is preferred since net content and manufacturer info are useful for product review.
+
+---
+
+## BATCH 25: B2B Commercial Models Audit (2026-03-22)
+
+Source: 6 audit tracks — Billing model per-SKU (Audit 26), Cart split (Audit 27), Tax invoice generation (Audit 28), Invoice storage+distribution (Audit 29), Settlement flow (Audit 30), SuperAdmin controls (Audit 31).
+
+---
+
+## GCP-STG-0349 — CRITICAL: SUPERMANDI_PRINCIPAL Sale Invoice Uses Supplier Prices — No Margin Applied (CRITICAL)
+
+**Ticket ID**: GCP-STG-0349
+**Severity**: P0 CRITICAL
+**Source**: Audit 28 — Tax Invoice Generation, SUPERMANDI_PRINCIPAL Model
+
+**Problem**: In the SUPERMANDI_PRINCIPAL billing model, `orderInvoiceService.ts` generates two invoices:
+1. Purchase Invoice (Supplier → SuperMandi): lines 107-130
+2. Sale Invoice (SuperMandi → Retailer): lines 133-156
+
+Both invoices use the **identical `items` array** (line 124 and 150 both pass the same `items`). The sale invoice to the retailer shows supplier's original prices, NOT the margin-applied retail prices. In a buy-resell (principal) model, the sale invoice MUST show the retail price (supplier price + SuperMandi margin) because that is the price the retailer actually pays.
+
+**Impact**: GST compliance violation — the sale invoice amount doesn't match the actual payment amount. The retailer pays retail price but gets an invoice at supplier price. The difference (SuperMandi's margin) is unaccounted for in the invoice chain. This creates a GST input credit mismatch.
+
+**Fix**: In `generatePrincipalInvoices()` (orderInvoiceService.ts:133-156), create a separate `saleItems` array where each item's price is the margin-applied retail price (from `admin_retail_price_minor` or calculated from `supermandi_margin_minor`/`margin_percent`). Pass `saleItems` to the sale invoice instead of the raw `items` array.
+
+---
+
+## GCP-STG-0350 — CRITICAL: Cart Split by Billing Model is Dead Code — Mixed-Model Orders Get Wrong Billing Entity (CRITICAL)
+
+**Ticket ID**: GCP-STG-0350
+**Severity**: P0 CRITICAL
+**Source**: Audit 27 — Cart Split by Billing Model
+
+**Problem**: The `splitCartByBillingModel()` function exists at `orderInvoiceService.ts:305-324` but is NEVER called from any production code path — it is dead code, only referenced in unit tests.
+
+The POS BUY checkout (BuyScreenV3.tsx:463-468) groups cart items by **supplier only**, not by billing model. The backend order creation (orders.ts:256-257) takes the billing model from the **first item only**: `validatedItems[0]?.billingModel || "SUPERMANDI_PRINCIPAL"`. All items in one order get the same billing model regardless of their actual per-item model.
+
+If a supplier has 2 SKUs — one DIRECT_SUPPLIER and one SUPERMANDI_PRINCIPAL — and the retailer orders both in one cart, the entire order gets the first item's billing model. The second item generates the WRONG type of invoice (wrong seller entity, wrong tax treatment).
+
+**Impact**: Tax compliance violation — invoices show the wrong legal entity as seller for mixed-model orders. This affects GST filing, input credit claims, and audit trail.
+
+**Fix**:
+1. Wire `splitCartByBillingModel()` into the order creation flow at `orders.ts` — before creating the purchase order, split items by `supplierId::billingModel` key
+2. Create separate orders per billing model (even for the same supplier)
+3. Update BuyScreenV3 checkout to show split orders in the confirmation UI
+
+---
+
+## GCP-STG-0351 — Missing Migration: orders.purchase_orders.billing_model Column Never Explicitly Created (HIGH)
+
+**Ticket ID**: GCP-STG-0351
+**Severity**: P1 HIGH
+**Source**: Audit 26 — Billing Model, Finding 3
+
+**Problem**: The `orders.ts:267` INSERT writes to `billing_model` column on `orders.purchase_orders`. Migration 208 (gcp_stg_0087_b2b_commercial_models.sql:37-42) attempts to update the CHECK constraint on this column. But NO migration explicitly runs `ALTER TABLE orders.purchase_orders ADD COLUMN billing_model`. The original `CREATE TABLE` in migration 006 does NOT include this column.
+
+Migration 208 wraps the constraint update in `EXCEPTION WHEN OTHERS THEN NULL` (line 42), so the missing column doesn't cause a migration failure — the constraint update silently fails. But the INSERT at orders.ts:267 will throw a Postgres "column does not exist" error at runtime when creating a purchase order.
+
+**Impact**: Purchase order creation fails for any order where billing_model is included in the INSERT. This may have been masked if all orders defaulted to SUPERMANDI_PRINCIPAL and the column happened to exist from a manual DB operation.
+
+**Fix**: Add migration: `ALTER TABLE orders.purchase_orders ADD COLUMN IF NOT EXISTS billing_model VARCHAR(30) DEFAULT 'SUPERMANDI_PRINCIPAL' CHECK (billing_model IN ('SUPERMANDI_PRINCIPAL', 'DIRECT_SUPPLIER'))`.
+
+---
+
+## GCP-STG-0352 — Invoice PDF Missing "Place of Supply" Field — GST Compliance (HIGH)
+
+**Ticket ID**: GCP-STG-0352
+**Severity**: P1 HIGH
+**Source**: Audit 28 — Tax Invoice Generation
+
+**Problem**: The invoice PDF generated by `invoicePdfService.ts` does NOT include a "Place of Supply" field. This is a mandatory field on GST tax invoices per Rule 46 of CGST Rules. The e-invoice payload (`eInvoiceService.ts:287`) correctly includes `Pos: buyerStateCode`, and the GST calculation correctly determines inter/intra-state. But the printed/downloadable PDF lacks this label.
+
+**Impact**: Invoices are non-compliant with GST invoice rules. May cause issues during GST audit or when retailer claims input tax credit.
+
+**Fix**: Add "Place of Supply: {buyerState} ({stateCode})" to the invoice PDF header section in `invoicePdfService.ts`, below the buyer details block. Derive from buyer's state field or GSTIN first 2 digits.
+
+---
+
+## GCP-STG-0353 — Inter-State GST Detection Defaults to Intra-State — Wrong CGST/SGST vs IGST (HIGH)
+
+**Ticket ID**: GCP-STG-0353
+**Severity**: P1 HIGH
+**Source**: Audit 28 — Tax Invoice Generation
+
+**Problem**: The `calculateItemTax` function in `invoiceService.ts` (line 143) defaults `isInterState = false`. The `orderInvoiceService.ts` never passes seller/buyer state to determine inter-state status — it relies on the default. Only the e-invoice payload builder correctly derives inter-state from GSTIN state codes (first 2 digits).
+
+For inter-state transactions (e.g., supplier in Maharashtra, retailer in Rajasthan), the invoice will incorrectly show CGST 9% + SGST 9% instead of IGST 18%. This is a tax calculation error.
+
+**Impact**: Wrong GST component on inter-state invoices. Retailer claims CGST/SGST input credit instead of IGST, causing mismatch in GSTR-2B reconciliation.
+
+**Fix**: In `orderInvoiceService.ts`, before calling `calculateItemTax`, compare seller state code (first 2 digits of seller GSTIN) with buyer state code. If different, pass `isInterState: true`. Apply same logic to all invoice generation paths (principal and direct models).
+
+---
+
+## GCP-STG-0354 — Dual Payout Systems Not Integrated — settlement_records and supplier_payouts Independent (HIGH)
+
+**Ticket ID**: GCP-STG-0354
+**Severity**: P1 HIGH
+**Source**: Audit 30 — Settlement Flow
+
+**Problem**: Two independent payout systems exist:
+1. `invoicing.settlement_records` — managed by `settlementService.ts`, lifecycle: pending→approved→scheduled→paid→reconciled
+2. `payments.supplier_payouts` — managed by `supplierPayoutService.ts`, uses Razorpay Payout API
+
+These are NOT integrated:
+- Marking a settlement as "paid" (settlementService.ts:271-285) does NOT trigger an actual Razorpay payout
+- Processing a Razorpay payout (supplierPayoutService.ts) does NOT create or update a settlement record
+- Different admin routes: `/admin/settlements/` vs implied payout management
+
+**Impact**: Data inconsistency — a settlement can show "paid" without actual money transfer, or a payout can execute without a corresponding settlement record. Financial reconciliation requires manually cross-referencing two tables.
+
+**Fix**: Either (a) merge into one system — settlement approval triggers payout, payout completion updates settlement status, OR (b) add explicit cross-references: settlement_records.payout_id FK to supplier_payouts, and payout webhook updates settlement status automatically.
+
+---
+
+## GCP-STG-0355 — Add Settlements Management Tab to SuperAdmin UI (HIGH)
+
+**Ticket ID**: GCP-STG-0355
+**Severity**: P1 HIGH
+**Source**: Audit 30 — Settlement Flow + Audit 31 — SuperAdmin Controls
+
+**Problem**: The settlement management APIs exist and are fully functional:
+- `GET /admin/settlements` — list with filters
+- `GET /admin/settlements/summary` — global/per-supplier totals
+- `POST /admin/settlements/:id/approve` — approve settlement
+- `POST /admin/settlements/bulk-approve` — bulk approve per supplier
+- `POST /admin/settlements/:id/mark-paid` — record payout reference/UTR
+
+But there is NO SuperAdmin UI tab that renders these. The existing PaymentsTab only shows POS payment events (consumer→retailer transactions), not supplier settlements.
+
+**Impact**: SuperAdmin cannot manage supplier payouts from the web portal. Must use direct API calls or database access.
+
+**Fix**: Add a "Settlements" tab to SuperAdmin (App.tsx) with: filterable settlement table (by supplier, status, date range), summary cards (pending/approved/paid totals), approve/bulk-approve buttons, mark-paid modal with UTR input.
+
+---
+
+## GCP-STG-0356 — Add Supplier Visibility Toggle Per SKU (MEDIUM)
+
+**Ticket ID**: GCP-STG-0356
+**Severity**: P2 MEDIUM
+**Source**: Audit 31 — SuperAdmin Controls, #4
+
+**Problem**: The `catalogCommercialization.ts` TypeScript interface defines `supplierVisible: boolean` (line 31) with a default of `false` in `DEFAULT_COMMERCIALIZATION` (line 46). However:
+- No `supplier_visible` column exists on any database table — no migration adds it
+- No API route exposes setting this per-product
+- No UI toggle exists in CatalogTab or any other SuperAdmin screen
+
+In the SUPERMANDI_PRINCIPAL model, the retailer should NOT see the supplier's identity (SuperMandi acts as the seller). In DIRECT_SUPPLIER model, the supplier identity IS shown. Currently, supplier name is always visible in the BUY tab detail sheet (ProductDetailSheetV3:155-158) regardless of billing model.
+
+**Impact**: In principal model, revealing supplier identity undermines SuperMandi's role as intermediary. Retailers could attempt to buy directly from the supplier, bypassing SuperMandi's platform.
+
+**Fix**:
+1. Add migration: `ALTER TABLE catalog.supplier_products ADD COLUMN supplier_visible BOOLEAN DEFAULT false`
+2. Add toggle in CatalogTab edit modal
+3. In BUY catalog API (catalog.ts), conditionally omit `supplierName` when `supplier_visible = false`
+4. In ProductDetailSheetV3, hide supplier section when `supplierVisible === false`
+
+---
+
+## GCP-STG-0357 — Support Combined % + Fixed Margin (MEDIUM)
+
+**Ticket ID**: GCP-STG-0357
+**Severity**: P2 MEDIUM
+**Source**: Audit 31 — SuperAdmin Controls, #7
+
+**Problem**: The `catalogCommercialization.ts` service layer supports `marginMode: "both"` (applying percentage AND fixed margin together). But:
+- The admin catalog margin route (catalog.ts:383-387) applies them as mutually exclusive: if pct is set, uses pct; if fixed is set, uses fixed. Does not combine.
+- The CatalogTab edit modal UI explicitly clears one when the other is typed (CatalogTab.tsx:527 clears fixed when pct typed, :539 clears pct when fixed typed)
+
+Some pricing scenarios require both: e.g., 10% margin + ₹5 handling fee per unit.
+
+**Impact**: Limited pricing flexibility. SuperAdmin must choose between percentage and fixed markup — cannot combine for complex pricing models.
+
+**Fix**:
+1. Update CatalogTab margin UI: change from mutually-exclusive to additive. Show both inputs simultaneously with combined preview: `Retail = (Cost × (1 + pct/100)) + fixed`
+2. Update admin catalog margin route (catalog.ts:383-387): when both are set, calculate `retailPrice = Math.round(supplierPrice * (1 + pct/100)) + fixedMinor`
+3. Keep the option for "% only" or "fixed only" when only one is set
+
+---
+
+## GCP-STG-0358 — Add Invoice Template Settings UI to SuperAdmin (MEDIUM)
+
+**Ticket ID**: GCP-STG-0358
+**Severity**: P2 MEDIUM
+**Source**: Audit 31 — SuperAdmin Controls, #10
+
+**Problem**: The invoice template configuration system is fully built:
+- DB: `invoice_settings JSONB` column on `platform.stores` (migration 215) with fields: `logoUrl`, `headerText`, `footerText`, `termsAndConditions`, `showGstin`, `showHsn`, `showBarcode`, `customFields`, `autoSendWhatsApp`, `autoSendOnSale`
+- API: `GET /admin/stores/:storeId/invoice-settings` and `PUT /admin/stores/:storeId/invoice-settings` (stores.ts:1564, 1583)
+
+But NO SuperAdmin UI renders these settings. SuperAdmin cannot configure invoice logos, footer text, or terms per store.
+
+**Impact**: All invoices use default template. Stores cannot have branded invoices or customized terms/conditions.
+
+**Fix**: Add an "Invoice Settings" section to the StoresTab store detail view. Include: logo upload, header/footer text inputs, terms textarea, toggle checkboxes for GSTIN/HSN/barcode display, WhatsApp auto-send toggles.
+
+---
+
+## GCP-STG-0359 — Add WhatsApp Dispatch Policy UI to SuperAdmin (MEDIUM)
+
+**Ticket ID**: GCP-STG-0359
+**Severity**: P2 MEDIUM
+**Source**: Audit 31 — SuperAdmin Controls, #11
+
+**Problem**: The `invoice_settings` JSONB column (migration 215) includes WhatsApp dispatch policy fields: `autoSendWhatsApp`, `autoSendOnSale`, `autoSendOnPo`, `autoSendOnGrn`. The PUT endpoint accepts these. But no SuperAdmin UI exposes these toggles. The existing WhatsAppTab handles message logs and broadcast — not dispatch policy configuration.
+
+**Impact**: WhatsApp auto-dispatch behavior cannot be configured per store. All stores use default behavior (auto-send on POS sale if customer phone exists, no auto-send on PO/GRN).
+
+**Fix**: Add WhatsApp dispatch toggles to the StoresTab store detail (alongside invoice settings from GCP-STG-0358), OR add a "Dispatch Policy" section to WhatsAppTab with per-store configuration.
+
+---
+
+## GCP-STG-0360 — Add Bulk Approve/Publish UI to CatalogTab (MEDIUM)
+
+**Ticket ID**: GCP-STG-0360
+**Severity**: P2 MEDIUM
+**Source**: Audit 31 — SuperAdmin Controls, #14
+
+**Problem**: Bulk action APIs exist:
+- `POST /admin/applications/products/batch-action` (suppliers.ts:1095) — batch approve/reject
+- `POST /admin/products/publish-bulk` (suppliers.ts:1827) — publish all approved for a supplier
+- `POST /admin/settlements/bulk-approve` (settlements.ts:95) — bulk approve settlements
+
+The API client `publishBulkProducts(supplierId)` exists in `supermandi-superadmin/src/api/suppliers.ts:338`. But CatalogTab has NO bulk action UI — each product is approved/rejected/published individually.
+
+**Impact**: With 3000 SKUs per supplier, approving individually is impractical. The feature was built end-to-end (backend + API client) but the UI was never completed.
+
+**Fix**: Add checkbox selection to CatalogTab product rows. Add "Bulk Actions" toolbar: "Approve Selected", "Reject Selected", "Publish Selected to Stores". For supplier-level operations, add "Approve All Pending" and "Publish All Approved" per-supplier buttons.
+
+---
+
+## GCP-STG-0361 — POS App Needs Invoice PDF Download from Order History (MEDIUM)
+
+**Ticket ID**: GCP-STG-0361
+**Severity**: P2 MEDIUM
+**Source**: Audit 29 — Invoice Distribution
+
+**Problem**: The POS app has `GET /sales/:saleId/invoice` (sales.ts:3047-3089) which returns invoice metadata (invoiceId, invoiceNumber, status, totalAmountMinor). But there is NO PDF download route in POS routes and NO invoice PDF download button in any POS V3 screen. The FinanceScreenV3 only shows a "Bill Discounting" placeholder. SalesHistoryScreenV3 shows past sales but has no invoice/PDF action.
+
+Retailer admin web and supplier portal both have PDF download buttons. POS is the only platform without this capability.
+
+**Impact**: POS operators cannot download or print invoices from the device. Must switch to retailer web portal to access invoice PDFs.
+
+**Fix**: Add `GET /pos/invoices/:invoiceId/pdf` route (mirroring admin/invoices.ts:625 with POS auth + store isolation). Add "Invoice" button to SalesHistoryScreenV3 per-sale row. Use `expo-print` or `expo-sharing` to handle PDF on device.
+
+---
+
+## GCP-STG-0362 — invoice_dispatch_logs Table is Dead Schema — Never Used (LOW)
+
+**Ticket ID**: GCP-STG-0362
+**Severity**: P3 LOW
+**Source**: Audit 29 — Invoice Distribution
+
+**Problem**: Migration 196 (`196_principal_procurement_support.sql`) creates the `invoicing.invoice_dispatch_logs` table with columns: id, invoice_id, channel (whatsapp/email/sms), recipient_phone, recipient_email, status, dispatch_payload, error_message, dispatched_at, delivered_at, created_at. However, NO application code references this table — no INSERT, no SELECT, no route handler.
+
+The WhatsApp bill-share feature (whatsapp.ts:77) logs to `whatsapp.message_logs` instead. Invoice dispatch tracking was planned but never wired.
+
+**Impact**: Low — dead schema occupying DB space. No functional impact since WhatsApp sends are tracked in `whatsapp.message_logs`.
+
+**Fix**: Either (a) wire invoice dispatch to use this table (log all invoice sends — WhatsApp, email, print — to `invoice_dispatch_logs` for audit trail), OR (b) drop the table in a cleanup migration if the tracking via `whatsapp.message_logs` is sufficient.
+
+---
+
+## BATCH 26: Scale Stress Test — 10K SKU + 1000 Suppliers + 10K Users (2026-03-22)
+
+Source: 4 audit tracks — Retailer 10K SKU capacity (Audit 32), Supplier 1M products (Audit 33), Infrastructure 10K users (Audit 34), Crash prevention stress points (Audit 35).
+
+---
+
+## GCP-STG-0363 — CRITICAL: Retailer Web ProductsPage Loads Only First 200 Products — No Pagination UI (CRITICAL)
+
+**Ticket ID**: GCP-STG-0363
+**Severity**: P0 CRITICAL
+**Source**: Audit 32 — Retailer 10K SKU, Retailer Web Layer
+
+**Problem**: `retailer-admin/src/pages/ProductsPage.tsx` (lines 251-274) calls `GET /api/v1/retailer-admin/products` with no explicit limit or offset parameters. The backend (products.ts:93) defaults to `limit=200, offset=0`. Only the first 200 products are returned. The frontend has NO pagination UI — no "next page" button, no infinite scroll, no "load more". Products beyond the first 200 are completely invisible to the retailer.
+
+Additionally, the backend response returns `count: data.length` (page count, not total count), so the frontend has no way to know there are more products.
+
+**Impact**: Any store with >200 products loses visibility of most of their catalog on the web portal. Retailers cannot edit, view stock, or manage products beyond the first 200. This is a **go-live blocker** — most active stores will have 500-5000+ products.
+
+**Fix**:
+1. Add pagination controls to ProductsPage: Previous/Next buttons, page indicator, "Showing X-Y of Z" label
+2. Send `?limit=50&offset=N` params in the API call
+3. Backend must return `total` count (separate COUNT query) alongside paginated data
+4. Consider adding virtual scrolling (react-window) for the product table to handle large pages efficiently
+
+---
+
+## GCP-STG-0364 — CRITICAL: Cloud Run Must Scale for 10K Users — Raise max-instances + Set Concurrency + SSE Timeout (CRITICAL)
+
+**Ticket ID**: GCP-STG-0364
+**Severity**: P0 CRITICAL
+**Source**: Audit 34 — Infrastructure 10K Users + Audit 35 — Crash Prevention
+
+**Problem**: Current Cloud Run configuration in `.github/workflows/deploy.yml`:
+- **main-backend**: max-instances=3, no --concurrency flag (default 80), no --timeout flag (default 300s)
+- **api-gateway**: max-instances=3, min-instances=0 (cold start risk)
+- Maximum concurrent requests: 3 × 80 = **240** for main-backend
+
+With 10K users, even at 1 request/user, peak concurrent easily exceeds 500+. 240 max concurrent will cause 502/504 errors during peak hours. Additionally, SSE connections are killed every 300 seconds (5 minutes) by the default timeout, causing reconnect storms across 10K devices simultaneously.
+
+**Impact**: System becomes unusable under production load. Every connected POS device experiences dropped SSE connections every 5 minutes, triggering coordinated reconnect storms that further spike load.
+
+**Fix** (in `.github/workflows/deploy.yml`):
+1. main-backend: `--max-instances=15 --concurrency=100 --timeout=3600` (1hr for SSE)
+2. api-gateway: `--min-instances=1 --max-instances=10 --concurrency=100`
+3. All frontends: `--max-instances=5` (nginx serves static, needs less)
+4. Consider setting `--cpu-boost` for faster cold starts
+
+---
+
+## GCP-STG-0365 — CRITICAL: Cloud SQL Connection Limit — Upgrade Tier or Add PgBouncer (CRITICAL)
+
+**Ticket ID**: GCP-STG-0365
+**Severity**: P0 CRITICAL
+**Source**: Audit 34 — Infrastructure + Audit 35 — Crash Prevention
+
+**Problem**: Current configuration:
+- DB pool per instance: max 25 (Drizzle, client.ts:17) + ~10 (common pool) = **35 connections per instance**
+- Cloud Run max-instances: 3 → total = 3 × 35 = **105 connections**
+- Cloud SQL basic tier: **100 max connections**
+- **Already exceeded at current scale** (105 > 100)
+
+At the 15 instances recommended for 10K users: 15 × 35 = **525 connections** — 5× the limit. Cloud SQL will reject connections with "too many connections" errors. The 30s `connectionTimeoutMillis` means requests queue for 30 seconds before failing, causing cascading latency spikes.
+
+**Impact**: Database connection exhaustion causes all API requests to fail. Entire platform becomes unresponsive.
+
+**Fix** (choose one or both):
+1. **Upgrade Cloud SQL tier**: `db-custom-4-15360` supports 400+ connections. `db-custom-8-30720` supports 800+.
+2. **Add PgBouncer**: Deploy as a sidecar or Cloud SQL Auth Proxy with connection pooling. Set pool mode to `transaction`, max server connections = Cloud SQL limit, max client connections = much higher.
+3. **Reduce per-instance pool**: Lower `DB_POOL_MAX` from 25 to 10 per instance. 15 instances × 10 = 150, within upgraded tier limits.
+
+---
+
+## GCP-STG-0366 — POS AsyncStorage: Chunk Products or Use SQLite for 10K+ Product Cache (HIGH)
+
+**Ticket ID**: GCP-STG-0366
+**Severity**: P1 HIGH
+**Source**: Audit 35 — POS App Crash Scenarios, #1
+
+**Problem**: `productsStore.ts:135` writes ALL products to AsyncStorage as a single `JSON.stringify(allProducts)` call. At 10,000 products × ~500 bytes = ~5MB. Android AsyncStorage default per-key limit is ~6MB. This is dangerously close to the limit. Additionally, `JSON.stringify()` of a 5MB object blocks the JavaScript thread for 100-200ms, causing visible UI freeze. `JSON.parse()` on cache read (line 147) causes the same blocking.
+
+**Impact**: On low-end Android devices (2GB RAM, common in India — Redmi 10, Realme C-series), the 5MB stringify/parse can trigger ANR (Application Not Responding) dialogs. Exceeding the 6MB limit causes a silent write failure, losing the product cache entirely.
+
+**Fix** (options, in order of preference):
+1. **Use expo-sqlite** for product cache instead of AsyncStorage. SQLite handles millions of rows with indexed queries and no JSON serialization overhead.
+2. **Chunk storage**: Split products into 1000-item chunks across multiple AsyncStorage keys. Load/save per-chunk.
+3. **Compress**: Use LZ-string compression before AsyncStorage write (~60% reduction).
+
+---
+
+## GCP-STG-0367 — POS Search: Pre-Compute Lowercase, Add Debounce, Cap Results (HIGH)
+
+**Ticket ID**: GCP-STG-0367
+**Severity**: P1 HIGH
+**Source**: Audit 32 + 35 — POS App Search Performance
+
+**Problem**: `productsStore.ts:206-218` `searchProducts()` runs O(n) across 5 fields with `.toLowerCase().includes()` on every call. At 10K products, that's 50K string operations per invocation. `.toLowerCase()` is called fresh on every product, every keystroke — no pre-computation. Combined with no debounce, typing "maggi" triggers 5 × 50K = 250K string operations.
+
+Additionally, `SellScreenV3.tsx:222-248` `tileProducts` useMemo does O(n×m) comparison (10K products × cart items) on every cart change.
+
+**Impact**: Visible jank on mid-range Android devices. 10-20ms per keystroke for search, 20-50ms per cart-add for sort. Cumulative effect makes the app feel sluggish.
+
+**Fix**:
+1. Pre-compute lowercase search fields when products are loaded: `product._searchName = product.name.toLowerCase()` etc. Search against pre-computed fields.
+2. Add 150ms debounce to the search input handler
+3. Cap search results at 100 (return early once 100 matches found)
+4. Optimize tileProducts: replace `cartItems.some()` per product with a `Set<string>` lookup (O(1) per product instead of O(m))
+
+---
+
+## GCP-STG-0368 — Backend Search: Cap similarity() Tokens at 3 to Prevent Query Timeout (HIGH)
+
+**Ticket ID**: GCP-STG-0368
+**Severity**: P1 HIGH
+**Source**: Audit 35 — Backend Crash Scenarios, #5
+
+**Problem**: The store-products search endpoint (storeProducts.ts:354-386) tokenizes the search query into up to 10 tokens. Each token generates a WHERE clause with 3 `similarity()` function calls (on name, display_name, brand). With 10 tokens, that's 30 trigram similarity computations per search. Each `similarity()` call triggers a scan on the GIN trigram index. At 10K+ products per store, this can exceed the 30-second `statement_timeout`.
+
+Example: searching "tata salt iodized 1kg premium refined crystal" generates 7 tokens, each causing 3 similarity scans = 21 trigram operations.
+
+**Impact**: Complex multi-word searches timeout and return 500 errors. Users get no results for detailed searches.
+
+**Fix**: Cap processed tokens at 3 (the first 3 text tokens). For tokens 4+, use only ILIKE (no similarity). This reduces worst-case from 30 to 9 trigram operations. Also add `LIMIT 100` to the inner query before scoring.
+
+---
+
+## GCP-STG-0369 — SuperAdmin Catalog Categories Endpoint: Full Table Scan at 1M Rows (HIGH)
+
+**Ticket ID**: GCP-STG-0369
+**Severity**: P1 HIGH
+**Source**: Audit 33 — Supplier 1M Products
+
+**Problem**: The `/admin/catalog/categories` endpoint (catalog.ts:28) runs `SELECT category, COUNT(*) FROM catalog.supplier_products WHERE is_active = true GROUP BY category`. With 1M rows, this is a full sequential scan with aggregation — no index on `(is_active, category)` exists. Estimated execution: 2-5 seconds at 1M rows, risking the 30-second statement_timeout under concurrent load.
+
+This endpoint is called on every CatalogTab mount to populate the category chip filters.
+
+**Impact**: SuperAdmin CatalogTab takes seconds to load. Under concurrent admin usage, these heavy queries compete for DB connections.
+
+**Fix** (options):
+1. Add composite index: `CREATE INDEX idx_sp_active_category ON catalog.supplier_products (category) WHERE is_active = true`
+2. Use materialized view: `CREATE MATERIALIZED VIEW supplier_product_category_counts AS SELECT category, COUNT(*) FROM ... GROUP BY category`. Refresh on COMMIT trigger or periodic cron.
+3. Cache in Redis: Cache category counts for 5 minutes, bust on product approval/rejection.
+
+---
+
+## GCP-STG-0370 — POS FlatList: Add getItemLayout + Reduce tileProducts Sort Frequency (MEDIUM)
+
+**Ticket ID**: GCP-STG-0370
+**Severity**: P2 MEDIUM
+**Source**: Audit 35 — POS App Crash Scenarios, #4 + #7
+
+**Problem**: Two performance issues in SellScreenV3 product grid:
+
+1. **No `getItemLayout`** (SellScreenV3.tsx:404-418): FlatList with 10K items must dynamically measure each tile height. Without `getItemLayout`, scrolling deep into the list causes accumulated measurement overhead and frame drops. This is the #1 cause of scroll jank in large React Native lists.
+
+2. **O(n×m) sort on every cart change** (SellScreenV3.tsx:238-247): The `tileProducts` useMemo has `cartItems` as a dependency. Every tap-to-add triggers a re-sort of all 10K products, where each product checks `cartItems.some(c => c.id === p.id)` — O(n×m) where n=products, m=cart size.
+
+**Impact**: Scroll jank on large catalogs. Adding to cart causes 20-50ms freeze per tap on mid-range devices.
+
+**Fix**:
+1. Add `getItemLayout` with pre-calculated tile height: `getItemLayout={(_, index) => ({ length: TILE_HEIGHT, offset: TILE_HEIGHT * index, index })}`
+2. Replace `cartItems.some()` with `cartIdSet.has(p.id)` using a `useMemo(() => new Set(cartItems.map(c => c.id)), [cartItems])` — reduces from O(n×m) to O(n).
+
+---
+
+## GCP-STG-0371 — POS Sync: Add Per-Request Timeout via AbortController (MEDIUM)
+
+**Ticket ID**: GCP-STG-0371
+**Severity**: P2 MEDIUM
+**Source**: Audit 35 — POS App Crash Scenarios, #5
+
+**Problem**: `syncService.ts:58-69` calls `refreshStockSnapshot()` and `checkAndRefresh()` every 30 seconds. If the backend is slow or unresponsive, these calls hang indefinitely — no `AbortController`, no timeout wrapper. `productsApi.ts:318-341` progressive loading makes 20-50 sequential HTTP calls with no per-call timeout. If one call hangs, the entire sync hangs forever, blocking subsequent sync ticks.
+
+**Impact**: A single slow API response blocks all product sync. POS shows stale data indefinitely until app is force-killed.
+
+**Fix**: Wrap all sync API calls with `AbortController` and 30-second timeout:
+```js
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 30000);
+try { await fetch(url, { signal: controller.signal }); } finally { clearTimeout(timeout); }
+```
+Also abort on component unmount / app background.
+
+---
+
+## GCP-STG-0372 — Raise Backend /store-products/list Limit Cap from 200 to 500 (MEDIUM)
+
+**Ticket ID**: GCP-STG-0372
+**Severity**: P2 MEDIUM
+**Source**: Audit 32 — Retailer 10K SKU, Backend API
+
+**Problem**: POS `productsApi.ts:316` requests `limit=500` per page. Backend `storeProducts.ts:720` caps at `Math.min(..., 200)`. This silent mismatch causes 2.5× more HTTP round-trips than intended: 50 calls instead of 20 for 10K products. Each round-trip adds ~100-200ms latency overhead (DNS, TLS, HTTP headers, connection reuse).
+
+**Impact**: Product sync takes 10-15 seconds instead of 4-5 seconds for a 10K product store. On cellular networks (common in India), the overhead per request is higher.
+
+**Fix**: Raise the backend cap from 200 to 500: change `storeProducts.ts:720` from `Math.min(..., 200)` to `Math.min(..., 500)`. The response payload at 500 products × 800 bytes = ~400KB, which is within acceptable mobile payload size.
+
+---
+
+## GCP-STG-0373 — Bulk Publish: Batch INSERT Instead of One-by-One Per Store (MEDIUM)
+
+**Ticket ID**: GCP-STG-0373
+**Severity**: P2 MEDIUM
+**Source**: Audit 33 — Supplier 1M Products, Finding 6
+
+**Problem**: The publish endpoint (`POST /admin/products/:productId/publish`, suppliers.ts:1668) loops through each linked store and executes individual INSERT queries per store (line 1765-1781) plus a barcode INSERT per store (line 1785-1791). Publishing 1 product to 100 stores = 200+ individual queries. Publishing 1000 products to 100 stores = 200,000 queries.
+
+The bulk publish endpoint (suppliers.ts:1827) has the same one-by-one pattern, looping through products AND stores.
+
+**Impact**: Bulk publishing is extremely slow. A large supplier catalog publish could take minutes and hold database connections for the entire duration.
+
+**Fix**: Use multi-row INSERT: `INSERT INTO catalog.store_products (...) VALUES (...), (...), (...)` batches of 100 rows. Same for barcode inserts. Wrap each batch in a transaction. Estimated speedup: 10-50× (100 rows per query instead of 1).
+
+---
+
+## GCP-STG-0374 — Remove 2 Duplicate Indexes on store_products (LOW)
+
+**Ticket ID**: GCP-STG-0374
+**Severity**: P3 LOW
+**Source**: Audit 32 — Retailer 10K SKU, DB Layer
+
+**Problem**: Two duplicate indexes exist on `catalog.store_products`:
+1. `store_products_store_id_idx` (migration 104:59) duplicates `store_products_store_idx` (migration 004:152) — both are single-column `(store_id)` indexes
+2. `idx_store_products_name_trgm` (migration 147:9) duplicates `idx_store_products_display_name_trgm` (migration 036:18) — both are GIN trigram indexes on `display_name`
+
+Each duplicate index doubles the write overhead (INSERT/UPDATE must maintain both copies) and wastes disk space.
+
+**Impact**: Low — minor write performance overhead and ~2× index storage for these two columns. No correctness issue.
+
+**Fix**: Add migration to drop the duplicates:
+```sql
+DROP INDEX IF EXISTS catalog.store_products_store_id_idx;
+DROP INDEX IF EXISTS catalog.idx_store_products_name_trgm;
+```
+
+---
+
+## BATCH 27: Order Intelligence — Sales Tracking → Reorder → Supplier Fulfillment → Delivery (2026-03-22)
+
+Source: 5 audit tracks — Sales intelligence (Audit 36), Reorder flow (Audit 37), Delivery tracking (Audit 38), Buy Again (Audit 39), Real-time communication (Audit 40).
+
+---
+
+## GCP-STG-0375 — Auto-Reorder Trigger: Scheduled Job to Monitor Stock vs Reorder Policies (HIGH)
+
+**Ticket ID**: GCP-STG-0375
+**Severity**: P1 HIGH
+**Source**: Audit 37 — Reorder Flow, Gap 1
+
+**Problem**: The complete reorder infrastructure exists — `reorder.reorder_policies` table (with `min_stock`, `target_stock` per product per store), `reorder.pending_reorders` table, approval flow, PO creation from approved reorders, and configurable settings (`reorder_enabled`, `notify_on_low_stock`, `auto_approve_threshold`). But there is NO automated trigger that monitors `inventory.stock_balances.current_qty` against `reorder_policies.min_stock` and creates entries in `reorder.pending_reorders` when stock falls below threshold. The entire reorder suggestion pipeline has no input — the "pending reorders" list is always empty unless manually populated.
+
+**Impact**: The reorder system is fully built but never activates. Retailers see "No pending reorders" on POS ReorderScreenV3 and retailer web ReorderPage. The auto-reorder feature promised in the UI settings is non-functional.
+
+**Fix**: Create a scheduled job (Cloud Scheduler → Cloud Run endpoint, or a cron within the backend):
+1. Every 15 minutes, query: `SELECT sp.id, sp.store_id, sp.product_id, rp.min_stock, rp.target_stock, sb.current_qty FROM catalog.store_products sp JOIN reorder.reorder_policies rp ON ... JOIN inventory.stock_balances sb ON ... WHERE sb.current_qty <= rp.min_stock AND sp.is_active = true`
+2. For each result, INSERT into `reorder.pending_reorders` with `status='pending'`, `suggested_qty = target_stock - current_qty`
+3. Deduplicate: skip if a pending reorder already exists for the same product+store
+4. Emit SSE `stock_alert` event for real-time notification
+
+---
+
+## GCP-STG-0376 — Draft PO Auto-Submit: Reorder-Created Drafts Must Reach Suppliers (HIGH)
+
+**Ticket ID**: GCP-STG-0376
+**Severity**: P1 HIGH
+**Source**: Audit 37 — Reorder Flow, Gap 2
+
+**Problem**: When reorders are approved on POS (ReorderScreenV3) or via auto-approve (reorder.ts:1045), the system creates purchase orders with `status='draft'` (reorder.ts:597). However, the supplier portal's orders page filters out drafts (`WHERE po.status != 'draft'` at supplier/orders.ts:81). This means:
+1. Retailer approves reorder suggestion → PO created as draft
+2. Supplier never sees the PO (filtered out)
+3. PO sits as draft indefinitely — no one acts on it
+
+**Impact**: Approved reorders never reach suppliers. The entire reorder-to-procurement pipeline stalls at the draft stage.
+
+**Fix**: Either (a) change reorder PO creation to use `status='submitted'` instead of `'draft'` (reorder.ts:597), OR (b) add an auto-submit step after PO creation that transitions draft→submitted and emits `supplier_action_required` lifecycle event.
+
+---
+
+## GCP-STG-0377 — Expose Slow-Mover Report to SuperAdmin (HIGH)
+
+**Ticket ID**: GCP-STG-0377
+**Severity**: P1 HIGH
+**Source**: Audit 36 — Sales Intelligence, Gap 1
+
+**Problem**: `backend/src/services/ai/slowMoverService.ts` implements a comprehensive slow-mover detection algorithm that classifies products as dead_stock (zero sales in 30d), declining (30d sales < 50% of prior 30d), or stagnant (low movement). It recommends actions: discontinue/clearance for dead stock, promotional pricing for declining, shelf placement review for stagnant. However, this service is only exposed via `GET /pos/ai/slow-movers` which requires `requireDeviceToken` + `requireActiveStore` — POS device authentication. SuperAdmin has NO endpoint to see slow-moving inventory across all stores.
+
+**Impact**: SuperMandi platform team cannot identify slow-moving products across the network. Cannot make data-driven decisions about which products to promote, discount, or discontinue at the platform level.
+
+**Fix**: Add `GET /api/v1/admin/analytics/slow-movers?storeId=` endpoint (optional storeId filter for all-stores view). Calls `detectSlowMovers()` with admin-level access. Add "Slow Movers" sub-tab to AnalyticsTab showing dead_stock/declining/stagnant with recommended actions.
+
+---
+
+## GCP-STG-0378 — Add Supplier SSE Route — Service Exists But No Endpoint (HIGH)
+
+**Ticket ID**: GCP-STG-0378
+**Severity**: P1 HIGH
+**Source**: Audit 40 — Real-Time Communication, Gap 1
+
+**Problem**: `sseService.ts` has `registerSupplierSseClient(supplierId, res)` (line 231) with max 10 connections per supplier, heartbeat, and dead client cleanup. Convenience emitters like `emitOrderEvent()` and `emitDeliveryEvent()` broadcast to supplier channels. But there is NO route in `backend/src/routes/v1/supplier/` that exposes an SSE endpoint for the supplier portal to connect to. The supplier portal's `orders/page.tsx` (lines 124-150) subscribes to SSE events, but the actual SSE connection URL is not documented — it may be pointing to a non-existent endpoint.
+
+**Impact**: Supplier portal cannot receive real-time updates. Order status changes, new orders, and delivery confirmations only appear on page refresh.
+
+**Fix**: Add `GET /api/v1/supplier/events/stream` route (matching the pattern of `/admin/events/stream` and `/retailer-admin/events/stream`). Use `requireSupplierAuth` middleware, call `registerSupplierSseClient(req.supplierId, res)`. Mount in supplier route index.
+
+---
+
+## GCP-STG-0379 — Add SuperAdmin Notification Center (MEDIUM)
+
+**Ticket ID**: GCP-STG-0379
+**Severity**: P2 MEDIUM
+**Source**: Audit 40 — Real-Time Communication, Gap 2
+
+**Problem**: The retailer web has a full notification center (NotificationsPage.tsx with bell icon, mark-as-read, pagination). The supplier portal has the same. SuperAdmin has an SSE stream (adminSseRouter) but NO notifications page, NO bell icon, and NO notification list UI. Admin notifications are persisted in `notifications.notifications` table (via `sendAndPersistNotification` in fcmService.ts) but SuperAdmin cannot view them.
+
+**Impact**: SuperAdmin misses platform-critical alerts (new orders, GRN excess, stock alerts, payment events) because there is no visible notification surface.
+
+**Fix**: Add NotificationsTab to SuperAdmin (matching retailer/supplier pattern): bell icon in header with unread count badge, notification list with mark-as-read, filter by type (order/payment/stock/delivery).
+
+---
+
+## GCP-STG-0380 — Add POS Notification List Screen (MEDIUM)
+
+**Ticket ID**: GCP-STG-0380
+**Severity**: P2 MEDIUM
+**Source**: Audit 40 — Real-Time Communication, Gap 3
+
+**Problem**: POS app has full FCM push notification support — `expo-notifications` with token registration, 3 Android channels (default/orders/alerts), foreground+background listeners, and backend API for notification history (`fetchNotifications()`, `getUnreadCount()`, `markAsRead()`). But there is NO visible screen in `src/screens/v3/` to browse notification history. Push notifications arrive but the user cannot view past notifications after dismissing the toast.
+
+**Impact**: POS operators miss notifications that arrived while busy with customers. No way to review order updates, stock alerts, or delivery notifications from earlier in the day.
+
+**Fix**: Add `NotificationsScreenV3` to POS navigation. Add bell icon with unread badge to BrandedHeader. Screen shows notification list with mark-as-read, grouped by type, with pull-to-refresh.
+
+---
+
+## GCP-STG-0381 — Add Missing WhatsApp Templates for Lifecycle Events (MEDIUM)
+
+**Ticket ID**: GCP-STG-0381
+**Severity**: P2 MEDIUM
+**Source**: Audit 40 — Real-Time Communication, Gap 4
+
+**Problem**: The lifecycle event service (`lifecycleEventService.ts`) defines 10 event types with transport rules. WhatsApp templates exist for 6 events (order_created, supplier_action_required, supplier_rejected, dispatched, delivered, repeat_order_prompt). But 4 events have NO WhatsApp template:
+- `supplier_accepted` — retailer should know supplier confirmed
+- `partial_accept` — retailer should know partial fulfillment
+- `grn_completed` — supplier should know delivery was received
+- `delivery_due` — retailer should get reminder about expected delivery
+
+**Impact**: Key order lifecycle transitions are silently missed. Retailers don't know when suppliers confirm orders, and suppliers don't know when deliveries are received.
+
+**Fix**: Add WhatsApp templates to `lifecycleEventService.ts:58-86` for the 4 missing events. Register templates with Meta WhatsApp Business API. Update `LIFECYCLE_COMMUNICATION_RULES` in `storeDemandSignal.ts` to include `whatsapp` in the channel list for these events.
+
+---
+
+## GCP-STG-0382 — Add payment_completed Lifecycle Event (MEDIUM)
+
+**Ticket ID**: GCP-STG-0382
+**Severity**: P2 MEDIUM
+**Source**: Audit 40 — Real-Time Communication, Gap 5
+
+**Problem**: When a payment is completed (cash confirmed, UPI verified, or split payment finalized), the system emits an SSE `payment.status_changed` event via `emitPaymentEvent()`. But there is NO corresponding lifecycle event. This means:
+- No WhatsApp notification to supplier about payment received
+- No in-app notification persisted for payment events
+- No FCM push for payment completion
+
+The lifecycle event system handles order creation through delivery but skips the payment stage entirely.
+
+**Impact**: Suppliers cannot track payment status in real-time. Must manually check the supplier portal for payment updates.
+
+**Fix**: Add `payment_completed` to the lifecycle event types in `storeDemandSignal.ts`. Add WhatsApp template "payment_confirmation". Publish the event from the payment confirmation handlers in `sales.ts` (cash confirm, UPI confirm, split confirm).
+
+---
+
+## GCP-STG-0383 — Retailer Web: Allow PO Creation from PurchaseOrdersPage (MEDIUM)
+
+**Ticket ID**: GCP-STG-0383
+**Severity**: P2 MEDIUM
+**Source**: Audit 37 — Reorder Flow, Gap 3
+
+**Problem**: `retailer-admin/src/pages/PurchaseOrdersPage.tsx` is explicitly read-only (line 1-2 comment: "Read-only view of purchase orders placed from POS"). The page shows PO status, details, and has a "Buy Again" button on delivered POs, but retailers CANNOT create new purchase orders from the web portal. PO creation is only possible from POS via the BuyScreenV3 checkout flow or reorder approval.
+
+**Impact**: Retailers who prefer the web interface (larger screen, keyboard) cannot initiate purchase orders. They must use the POS device for all procurement — awkward if the POS device is in use for sales.
+
+**Fix**: Add "Create Purchase Order" button to PurchaseOrdersPage. Open a modal with supplier selector, product search (from buy catalog), quantity inputs, and submit. Call `POST /api/v1/retailer-admin/purchase-orders` (or create a new endpoint if none exists).
+
+---
+
+## GCP-STG-0384 — Add Per-Store Stock Level Browser to SuperAdmin (MEDIUM)
+
+**Ticket ID**: GCP-STG-0384
+**Severity**: P2 MEDIUM
+**Source**: Audit 36 — Sales Intelligence, Gap 2
+
+**Problem**: SuperAdmin has no simple "show me all stock levels for store X" view. Stock visibility is only available indirectly through:
+1. Demand signals drill-down (`/admin/demand-signals/store/:storeId`) — focuses on reorder urgency
+2. Analytics margins endpoint — includes stock but mixed with pricing data
+3. Stock reconciliation — focuses on divergence, not browsing
+
+There is no dedicated endpoint or UI for "SuperAdmin browses inventory of Store X: product name, current stock, last sale date, supplier".
+
+**Impact**: SuperAdmin cannot quickly check a store's inventory status. Must navigate through demand signals or analytics to find stock levels.
+
+**Fix**: Add `GET /api/v1/admin/stores/:storeId/inventory` endpoint returning: product name, current_qty, low_stock_alert_qty, last_sale_date, supplier_name, purchase_price, sell_price, category. Add "Inventory" sub-view to StoresTab store detail.
+
+---
+
+## GCP-STG-0385 — Add "Buy Again" Button on StoreHubScreenV3 Order Cards (LOW)
+
+**Ticket ID**: GCP-STG-0385
+**Severity**: P3 LOW
+**Source**: Audit 39 — Buy Again, Gap 1
+
+**Problem**: StoreHubScreenV3 (lines 30-41) shows recent purchase orders with supplier name, items, total, and delivery status. But individual order cards do NOT have a "Buy Again" or "Repeat Order" button. The Buy Again feature is only accessible from the ReorderScreenV3 footer button (line 139), which requires navigating to a different screen.
+
+**Impact**: Low — retailer can access Buy Again via Reorder screen. But having it directly on order cards in StoreHub would reduce taps and make repeat ordering faster.
+
+**Fix**: Add a "Repeat" icon button on each order card in StoreHubScreenV3. On tap, call `POST /pos/buy-again` with `orderId`, load draft into purchaseDraftStore, navigate to BuyScreenV3 with pre-filled cart.
+
+---
+
+## GCP-STG-0386 — DemandPressureTab: Add Per-Store Drill-Down UI (LOW)
+
+**Ticket ID**: GCP-STG-0386
+**Severity**: P3 LOW
+**Source**: Audit 36 — Sales Intelligence, Gap 5
+
+**Problem**: DemandPressureTab.tsx shows a cross-store demand pressure table with columns: Product name, Stores Needing Reorder / Total Stores, Avg Days of Stock, Pending Inbound. The backend supports per-store drill-down via `GET /admin/demand-signals/store/:storeId` (returns per-product demand signals for a specific store). But the DemandPressureTab UI has no click-to-drill — tapping a product row does nothing.
+
+**Impact**: Low — SuperAdmin sees aggregate pressure but cannot drill into which specific stores need reorder for a given product. Must switch to AllocationsDashboardTab for store-level detail.
+
+**Fix**: Add row click handler to DemandPressureTab that opens an expandable detail view showing: per-store breakdown (store name, current stock, daily velocity, days of stock, pending inbound, reorder needed Y/N). Call `GET /admin/demand-signals/store/:storeId` for each relevant store.
+
+---
+
+## BATCH 28: Bulk Buy → Retail Sell: Unit Conversion, Loose Products, Pack-to-Unit Flow (2026-03-22)
+
+Source: 5 audit tracks — Unit/conversion system (Audit 41), BUY bulk flow (Audit 42), SELL loose flow (Audit 43), Conversion chain tracing (Audit 44), Automation opportunities (Audit 45).
+
+---
+
+## GCP-STG-0387 — HIGH: GRN Potential Double-Expansion — BUY Already Expands Qty, GRN May Multiply Again (HIGH)
+
+**Ticket ID**: GCP-STG-0387
+**Severity**: P1 HIGH
+**Source**: Audit 42 + 44 — BUY Bulk Flow + Conversion Chain
+
+**Problem**: Two conversion multiplications happen in sequence:
+1. **BUY checkout** (BuyScreenV3.tsx:475): `quantity = orderQtys[p.id] * p.caseSize` — e.g., 5 cartons × 24 pcs/carton = 120 PCS sent to order API
+2. **GRN confirm** (GRNScreenV3.tsx:241): `landedQty = item.received * item.procurementPackQty` — if `procurementPackQty = 24` and `received = 120`, result = 2880
+
+If the PO item response carries `procurementPackQty` alongside the already-expanded quantity, the GRN would double-expand: 120 PCS × 24 = 2880 units instead of the correct 120 PCS. This depends on whether the backend order response includes `procurementPackQty` on the order item — if it does, stock is inflated 24×.
+
+The GRN code does have a guard (`procurementPackQty > 1`), but if the BUY flow already pre-expanded, this guard triggers incorrectly.
+
+**Impact**: Stock inflated by the pack multiplier factor (e.g., 24×). A store ordering 5 cartons of Maggi would show 2880 packs in stock instead of 120. This silently corrupts inventory.
+
+**Fix**: Choose ONE expansion point:
+1. **Option A (recommended)**: BUY sends qty in procurement units (5 cartons, not 120 pcs). Backend stores `quantity=5, procurement_unit=CARTON, pack_qty=24`. GRN expands at receive time.
+2. **Option B**: BUY pre-expands (current behavior). GRN must NOT multiply again — check if qty is already in base units.
+3. Add a `quantity_unit` field to `orders.purchase_order_items` to explicitly track whether qty is in procurement or base units.
+
+---
+
+## GCP-STG-0388 — HIGH: Backend stockIn.ts Has Zero Unit Conversion Awareness (HIGH)
+
+**Ticket ID**: GCP-STG-0388
+**Severity**: P1 HIGH
+**Source**: Audit 42 — BUY Bulk Flow
+
+**Problem**: The backend `POST /api/v1/pos/stock-in` endpoint (stockIn.ts) accepts `{ items: [{ barcode, quantity, buyPrice }] }` and uses the raw `quantity` as-is for stock increment: `deltaQty = Math.abs(quantity)` (line 263). It does NOT import or call `procurementToStock()` from `conversionEngine.ts`. The backend has zero awareness of procurement units, pack quantities, or unit conversion.
+
+All conversion logic lives exclusively on the frontend (GRNScreenV3.tsx:241 multiplies `received × procurementPackQty`). If ANY code path calls the stock-in API without the frontend multiplication (e.g., direct API call, CSV inward, admin tool), stock will be wrong — e.g., receiving "5" would add 5 to stock instead of 120 (5 cartons × 24).
+
+**Impact**: The backend cannot validate that the stock quantity makes sense for the product's procurement profile. Defense-in-depth violated — a single frontend bug corrupts inventory with no backend safety net.
+
+**Fix**: In `stockIn.ts`, after looking up the product:
+1. Read `procurement_unit`, `procurement_pack_qty`, `base_stock_unit` from `store_products`
+2. If request includes `procurementUnit` and `packQty`, call `procurementToStock(quantity, packQty)` from `conversionEngine.ts`
+3. If request does NOT include unit info, log a warning and use raw qty as fallback
+4. Store the converted qty in stock_balances, not the raw procurement qty
+
+---
+
+## GCP-STG-0389 — Supplier Portal `BOX` Unit Not in Backend CHECK Constraint (MEDIUM)
+
+**Ticket ID**: GCP-STG-0389
+**Severity**: P2 MEDIUM
+**Source**: Audit 41 — Unit System
+
+**Problem**: The supplier product form (`supplier-portal/src/app/(dashboard)/products/page.tsx:698`) offers `BOX` as a unit option in the dropdown. However, `BOX` is NOT in the backend's valid procurement units set:
+- `conversionEngine.ts:58-62` valid set: KG, GM, PCS, DOZEN, LTR, ML, CARTON, CASE, BAG, TIN, DRUM, TRAY, BOTTLE, PIECE, PACK
+- Migration `199_canonical_conversion_contract.sql:23-26` CHECK constraint: same set, no BOX
+
+If a supplier creates a product with `unit=BOX`, the `unit` column on `catalog.supplier_products` accepts it (no CHECK on that column), but if the system later tries to write `procurement_unit=BOX` to `catalog.store_products`, the CHECK constraint will reject it.
+
+**Impact**: Supplier can list products with `BOX` unit, but those products cannot be properly published to stores with conversion profiles. The backfill migration (199:129-144) would fail to map BOX to a canonical procurement unit.
+
+**Fix**: Either (a) add `BOX` to the CHECK constraint in migration 199 and to `conversionEngine.ts` valid sets, OR (b) remove `BOX` from the supplier portal dropdown and map existing BOX products to CARTON or CASE.
+
+---
+
+## GCP-STG-0390 — Reorder Suggestions Should Show Procurement Units ("2 × 50kg bags") (MEDIUM)
+
+**Ticket ID**: GCP-STG-0390
+**Severity**: P2 MEDIUM
+**Source**: Audit 45 — Automation Opportunities
+
+**Problem**: The reorder suggestion system (`storeDemandSignal.ts:103-117`, `smartReorderService.ts:74`, `buyAgainService.ts:148`) returns `suggestedQuantity` in raw base stock units only. For example, it suggests "Order 100 KG" instead of "Order 2 × 50kg bags". The retailer must mentally reverse-convert from base units to procurement units, which is error-prone.
+
+The data needed for conversion exists: `catalog.store_products` has `procurement_unit` and `procurement_pack_qty`. But `calculateReorderSuggestion()` returns only the raw number without conversion.
+
+**Impact**: Confusing UX — retailers order in cartons/bags/tins from suppliers but see reorder suggestions in pcs/kg/L. They must calculate how many cartons to order from a "120 pcs" suggestion.
+
+**Fix**: In `calculateReorderSuggestion()`, after computing `suggestedQuantity` in base units:
+1. Look up `procurement_pack_qty` for the product
+2. Compute `procurementUnits = Math.ceil(suggestedQuantity / procurement_pack_qty)`
+3. Return both: `{ suggestedQty: 100, suggestedProcurementQty: 2, procurementUnit: "BAG", packQty: 50 }`
+4. Display on POS/web: "Order 2 bags (100 KG)"
+
+---
+
+## GCP-STG-0391 — Add Broken Carton / Partial Pack Handling to GRN (MEDIUM)
+
+**Ticket ID**: GCP-STG-0391
+**Severity**: P2 MEDIUM
+**Source**: Audit 42 — BUY Bulk Flow
+
+**Problem**: The GRN screen (GRNScreenV3.tsx) has +/- buttons that increment received quantity by 1. The stock landing calculation multiplies `received × procurementPackQty` (e.g., 5 cartons × 24 = 120 pcs). If a carton arrives with only 23 items (1 damaged/missing), there is NO mechanism to record a short-count. The retailer must either:
+1. Accept 5 cartons and get 120 in stock (then manually adjust -1 via stock adjustment) — two separate operations
+2. Accept 4 cartons + reject 1 — loses the 23 good items from the damaged carton
+
+Neither option is correct for "5 cartons received, 1 item damaged = 119 good items".
+
+**Impact**: Inventory inaccuracy for every damaged/short shipment. Common in Indian kirana logistics where goods are manually handled and breakage/pilferage is frequent.
+
+**Fix**: Add a "short-count" modifier per GRN line item. After entering received qty in procurement units (5 cartons), add an optional field: "Damaged/missing: ___" that subtracts from the expanded total. Display: "5 cartons × 24 = 120, minus 1 damaged = 119 landed". Record the difference as a separate `adjustment` ledger entry with reason `'grn_short_count'`.
+
+---
+
+## GCP-STG-0392 — Batch-Level Stock Tracking: Multiple Batches Per Product with Separate Expiry (MEDIUM)
+
+**Ticket ID**: GCP-STG-0392
+**Severity**: P2 MEDIUM
+**Source**: Audit 45 — Automation Opportunities
+
+**Problem**: `catalog.store_products` has single `batch_number` and `expiry_date` columns (migrations 156, 182). These are overwritten on each GRN inward. If two batches of sugar arrive — batch A (expiry Dec 2026) and batch B (expiry Mar 2027) — only batch B's info survives. There is no batch-dimension on `inventory.stock_balances`.
+
+This means:
+- No FIFO (first-in-first-out) for perishable items
+- No FEFO (first-expiry-first-out) for food safety compliance
+- Cannot track which batch was sold to which customer (recall traceability)
+- Cannot alert when a specific batch is nearing expiry while other batches are fresh
+
+**Impact**: Food safety compliance gap. India's FSSAI regulations require batch traceability for packaged food. Cannot implement proper expiry management without batch-level stock.
+
+**Fix**: This is a significant schema change:
+1. Create `inventory.stock_batches` table: `(id, store_id, product_id, batch_number, expiry_date, current_qty NUMERIC(12,3), grn_id, received_at)`
+2. GRN inward creates a new batch row (not overwrites store_products)
+3. Sale deduction follows FEFO: deduct from batch with earliest expiry first
+4. `stock_balances.current_qty` remains as total (sum of all batches)
+5. Expiry alerts query `stock_batches WHERE expiry_date < NOW() + interval '30 days'`
+
+---
+
+## GCP-STG-0393 — POS NewProductScreenV3: Constrain Unit Input to Valid Picker (LOW)
+
+**Ticket ID**: GCP-STG-0393
+**Severity**: P3 LOW
+**Source**: Audit 41 — Unit System
+
+**Problem**: `src/screens/v3/NewProductScreenV3.tsx` (line 77, 254) uses a free-text `TextInput` for the unit field, defaulting to `"pcs"`. Retailers can type any string (e.g., "pieces", "kilos", "packet", "box") which won't match the backend's unit validation or conversion engine's canonical unit set (KG, GM, PCS, LTR, ML, etc.).
+
+**Impact**: Products created on POS with non-canonical units won't work with the conversion engine. Loose-sell detection, procurement conversion, and variant suggestions all depend on recognizing the unit.
+
+**Fix**: Replace the free-text input with a constrained picker/dropdown containing the valid base stock units: PCS, KG, GM, LTR, ML, DOZEN. Use `conversionEngine.normalizeUnitString()` as a fallback for legacy free-text entries.
+
+---
+
+## GCP-STG-0394 — Track Per-Product Popular Sell Quantities for Smart Presets (LOW)
+
+**Ticket ID**: GCP-STG-0394
+**Severity**: P3 LOW
+**Source**: Audit 45 — Automation Opportunities
+
+**Problem**: The system tracks which products sell frequently (`storeProducts.ts:1562-1600` returns top 12 by sale count) and has a "frequently bought together" co-occurrence analysis (`recommendationService.ts`). But it does NOT track what quantities customers typically buy per product. For example, if 80% of sugar sales are 1 kg and 15% are 500g, the presets should highlight 1 kg first — but the current presets are hardcoded in `conversionEngine.ts:219-266` (250g/500g/1kg/5kg for all KG products regardless of sales pattern).
+
+**Impact**: Low — hardcoded presets work for most kirana scenarios. But data-driven presets would reduce taps per sale.
+
+**Fix**: Add a background job that computes per-product quantity distribution from `sale_items` (GROUP BY product_id, quantity). Store top 5 quantities per product in a cache table or Redis. Use as dynamic presets in ProductDetailSheetV3, falling back to hardcoded presets when no sales data exists.
+
+---
+
+## GCP-STG-0395 — Add Kirana Product Templates / Onboarding Catalog for Common FMCG Products (LOW)
+
+**Ticket ID**: GCP-STG-0395
+**Severity**: P3 LOW
+**Source**: Audit 45 — Automation Opportunities
+
+**Problem**: When a retailer onboards, they start with an empty catalog. There is no "kirana starter kit" — no pre-configured templates for common FMCG products with standard units, pack sizes, conversion ratios, and HSN codes. Retailers must manually add every product or import via CSV, including setting up correct units, categories, and conversion profiles for each.
+
+Common kirana products like Maggi (carton of 48, PCS), Tata Salt (bag of 25kg, sell per kg), Amul Butter (carton of 30, PCS), etc. have well-known configurations that could be templated.
+
+**Impact**: Low — onboarding is slower than necessary but functional. Templates would reduce retailer setup time from hours to minutes.
+
+**Fix**: Create a `catalog.product_templates` table with pre-configured products: name, category, brand, unit, procurement_unit, procurement_pack_qty, base_stock_unit, hsn_code, default_gst_rate, suggested_retail_variants. Offer "Import from Templates" on the retailer web ImportPage and POS NewProduct screen. Seed with top 200 kirana FMCG products.
+
+---
+
+## GCP-STG-0396 — Auto-Calculate Variant Prices When Base Rate Unit Price Changes (LOW)
+
+**Ticket ID**: GCP-STG-0396
+**Severity**: P3 LOW
+**Source**: Audit 45 — Automation Opportunities
+
+**Problem**: When a retailer changes the per-kg sell price for a loose product (e.g., sugar from ₹85/kg to ₹90/kg), the retail variant prices (250g, 500g, etc.) are NOT automatically recalculated. Each variant has its own `sell_price_minor` in `catalog.retail_variants` that must be manually updated. The retailer must update per-kg price AND then separately update each variant's price — or forget and have inconsistent pricing.
+
+**Impact**: Low — most kirana stores don't use retail variants heavily. But for stores that do, price inconsistency between the per-kg rate and variant prices causes billing errors.
+
+**Fix**: When the base `sell_price` on `catalog.store_products` is updated via PATCH, automatically recalculate all active retail variant prices using the variant's `variant_qty` and `variant_unit`: `variant_price = Math.round(newBasePrice * variant_qty * getUnitMultiplier(variant_unit, base_stock_unit))`. Add a flag `auto_price_variants: boolean` (default true) to allow retailers to opt out.
+
+---
+
+## BATCH 29: SKU Tiles, B2B Purchase Flow, Payment Gateway Integration (2026-03-22)
+
+Source: 5 audit tracks — SELL tiles (Audit 46), BUY tiles (Audit 47), Supplier form (Audit 48), SuperAdmin flow (Audit 49), Purchase cart+payment (Audit 50).
+
+---
+
+## GCP-STG-0397 — BUY Checkout MOQ Not Enforced — Can Order Below Minimum Qty (HIGH)
+
+**Ticket ID**: GCP-STG-0397
+**Severity**: P1 HIGH
+**Source**: Audit 50 — Purchase Cart + Payment
+
+**Problem**: MOQ (Minimum Order Quantity) is displayed in the product detail sheet (BuyScreenV3.tsx:326) and on SupplierProductCardV3 (line 95: "MOQ: N case"). But the `handleQtyChange` function (BuyScreenV3.tsx:169-172) only enforces `Math.max(0, Math.round(cases))` — no MOQ floor check. A retailer can order 1 case when the supplier's MOQ is 5 cases.
+
+The backend `orders.ts` also does not validate qty against MOQ — it accepts whatever quantity the client sends.
+
+**Impact**: Suppliers receive orders below their minimum, which they may reject or cannot fulfill efficiently. This creates order churn and poor supplier experience.
+
+**Fix**:
+1. In `handleQtyChange` (BuyScreenV3.tsx:169): add `Math.max(product.moq ?? 1, Math.round(cases))`
+2. Show warning when qty is below MOQ: "Minimum order: {moq} cases"
+3. Backend validation in `orders.ts`: reject items where `quantity < moq * caseSize`
+
+---
+
+## GCP-STG-0398 — Volume/Tier Discounts Display-Only — Not Applied to Cart Total (HIGH)
+
+**Ticket ID**: GCP-STG-0398
+**Severity**: P1 HIGH
+**Source**: Audit 50 — Purchase Cart + Payment
+
+**Problem**: The BUY checkout terms section (BuyScreenV3.tsx:413-421) displays MOQ tier discounts from `p.moqTiers` (e.g., "Buy 10+: 5% off, Buy 50+: 10% off"). However, the cart total calculation (BuyScreenV3.tsx:167) is simply `qty * caseSize * ptrMinor` — no tier discount is applied. The discounts are cosmetic only.
+
+The supplier can set `moqTiers` as JSON (supplier form line 929), and the data flows to the BUY tile (SupplierProductCardV3 shows tiers). But at checkout, the total ignores them.
+
+**Impact**: Retailers see volume discounts but pay full price. Trust violation — retailers order large quantities expecting a discount that never applies.
+
+**Fix**:
+1. In BuyScreenV3 cart total calculation (line 167), look up the applicable tier for each product's qty: `const tier = moqTiers?.find(t => qty >= t.minQty)?.discountPct ?? 0`
+2. Apply: `itemTotal = qty * caseSize * ptrMinor * (1 - tier/100)`
+3. Show discount line in checkout summary: "Volume discount (10%): -₹X"
+
+---
+
+## GCP-STG-0399 — No Supplier Notification on New Purchase Order (HIGH)
+
+**Ticket ID**: GCP-STG-0399
+**Severity**: P1 HIGH
+**Source**: Audit 50 — Purchase Cart + Payment
+
+**Problem**: After a retailer submits a purchase order via BUY checkout, the backend (orders.ts) creates the PO, generates invoices, but does NOT notify the supplier. No WhatsApp message, no FCM push, no SSE event, no email. Suppliers must manually poll their portal to discover new orders.
+
+The lifecycle event service has a `supplier_action_required` event type with WhatsApp template "supplier_new_order" (lifecycleEventService.ts:67), but it is NOT triggered from the order creation flow.
+
+**Impact**: Suppliers miss orders. Delayed fulfillment. Retailers wonder why their order isn't being processed.
+
+**Fix**: In `orders.ts` after successful order creation, call `publishLifecycleEvent({ eventType: 'supplier_action_required', orderId, storeId, supplierId, payload: { orderNumber, itemCount, totalAmount } })`. This triggers WhatsApp, SSE, and in-app notification to the supplier.
+
+---
+
+## GCP-STG-0400 — SELL Tile/Detail: Add Profit Margin Indicator (HIGH)
+
+**Ticket ID**: GCP-STG-0400
+**Severity**: P1 HIGH
+**Source**: Audit 46 — SELL Tiles
+
+**Problem**: Neither ProductTileV3 nor ProductDetailSheetV3 (in SELL context) show profit margin — the difference between sell price and purchase price. The data is available: both `priceMinor` (sell) and `purchasePriceMinor` are in the product store. But no UI element displays margin percentage or absolute profit.
+
+Kirana retailers make pricing decisions based on margin. Without seeing margin, they cannot quickly identify low-margin products that need price adjustment.
+
+**Impact**: Retailers lack visibility into per-product profitability during daily selling operations. May sell products at a loss without realizing.
+
+**Fix**: Add a small margin indicator to ProductTileV3: if `purchasePriceMinor > 0`, show `margin = ((sell - purchase) / purchase * 100).toFixed(0)` as a small badge (e.g., "15%" in green, "2%" in yellow, "-5%" in red). In ProductDetailSheetV3 SELL context, show "Profit: ₹X (Y%)" below the price.
+
+---
+
+## GCP-STG-0401 — BUY Detail Sheet Missing 6 Fields from SupplierProduct (HIGH)
+
+**Ticket ID**: GCP-STG-0401
+**Severity**: P1 HIGH
+**Source**: Audit 47 — BUY Tiles
+
+**Problem**: BuyScreenV3.tsx (lines 320-333) maps SupplierProduct to the `procurement` prop passed to ProductDetailSheetV3, but only forwards 12 of 18+ available fields. Six fields are available on the SupplierProduct object (shown on SupplierProductCardV3) but NOT passed to the detail sheet:
+1. `deliveryTerms` — delivery conditions text
+2. `financeEligible` — credit financing availability
+3. `publishedTermsVersion` — terms version number
+4. `moqTiers` — volume discount tiers JSON
+5. `procurementUnit` — shipping unit (CARTON, BAG, etc.)
+6. `procurementPackQty` — items per procurement unit
+
+These fields are visible on the card tile but disappear when the retailer taps to see details.
+
+**Impact**: Retailers lose information when drilling into product details. Volume discount tiers and procurement unit info are critical for purchase decisions but only visible on the small card, not the full detail view.
+
+**Fix**: Add all 6 fields to the procurement prop in BuyScreenV3.tsx:320-333. Add display elements in ProductDetailSheetV3 metaGrid section for each.
+
+---
+
+## GCP-STG-0402 — BUY Cart Not Persisted — Lost on Screen Unmount (MEDIUM)
+
+**Ticket ID**: GCP-STG-0402
+**Severity**: P2 MEDIUM
+**Source**: Audit 50 — Purchase Cart
+
+**Problem**: The BUY cart uses local React state `useState<Record<string, number>>({})` (BuyScreenV3.tsx:81). When the retailer navigates away from BuyScreenV3 (e.g., to answer a phone call, handle a customer, check stock), the BUY cart state is lost. The SELL cart uses Zustand with AsyncStorage persistence — it survives navigation. The BUY cart does not.
+
+**Impact**: Retailers building a large purchase order (20+ items across multiple suppliers) lose their entire cart if they briefly leave the BUY tab. Must re-add all items.
+
+**Fix**: Move BUY cart to a Zustand store (`purchaseCartStore.ts`) with `storeScopedStorage` persistence (matching the SELL cart pattern). Include `orderQtys`, selected supplier filter, and search state. Clear on successful checkout, not on unmount.
+
+---
+
+## GCP-STG-0403 — BUY Checkout GST Averaged Instead of Per-Item (MEDIUM)
+
+**Ticket ID**: GCP-STG-0403
+**Severity**: P2 MEDIUM
+**Source**: Audit 50 — Purchase Cart
+
+**Problem**: BuyScreenV3.tsx (line 362) computes GST as: `subtotal * avgGstPct / (100 + avgGstPct)` where `avgGstPct` is the average across all items. This is incorrect when items have mixed GST rates (0% staples, 5% essentials, 12% processed food, 18% branded goods, 28% luxury). The averaged rate produces wrong GST amounts.
+
+Example: 1 item at 5% GST (₹100) + 1 item at 18% GST (₹100) = avg 11.5%. Averaged GST: ₹200 × 11.5/111.5 = ₹20.63. Correct per-item: (100×5/105) + (100×18/118) = ₹4.76 + ₹15.25 = ₹20.01. Difference: ₹0.62 per transaction.
+
+**Impact**: Inaccurate GST display on checkout. Over many transactions, cumulative error affects tax reporting.
+
+**Fix**: Replace averaged GST with per-item calculation:
+```js
+const totalGst = cartItems.reduce((sum, item) => {
+  const gst = item.gstPct ?? 18;
+  return sum + Math.round(item.lineTotal * gst / (100 + gst));
+}, 0);
+```
+
+---
+
+## GCP-STG-0404 — Add Order Confirmation Screen After BUY Checkout (MEDIUM)
+
+**Ticket ID**: GCP-STG-0404
+**Severity**: P2 MEDIUM
+**Source**: Audit 50 — Purchase Cart
+
+**Problem**: After successful BUY checkout, BuyScreenV3 shows a toast ("Order placed", line 499/508/510/516), clears the cart, and closes the checkout modal. There is NO order confirmation screen showing: order number, items ordered, payment status, expected delivery, or next steps.
+
+The SELL flow has a dedicated SuccessScreenV3 with bill number, WhatsApp share, and print options. The BUY flow has nothing comparable.
+
+**Impact**: Retailer has no confirmation of what was ordered. Must navigate to order history to verify. No immediate way to share order with supplier or track delivery.
+
+**Fix**: After successful order creation, navigate to a `BuyConfirmationScreenV3` showing: order number(s), items per supplier, total paid, payment method/status, estimated delivery per supplier, "Share via WhatsApp" button, "View Orders" navigation.
+
+---
+
+## GCP-STG-0405 — Supplier Form Missing Brand Input Field (MEDIUM)
+
+**Ticket ID**: GCP-STG-0405
+**Severity**: P2 MEDIUM
+**Source**: Audit 48 — Supplier Form
+
+**Problem**: The supplier product creation form (`supplier-portal/src/app/(dashboard)/products/page.tsx`) has NO brand input field. The backend destructures `brand` from request body (supplier/products.ts:464) and stores it in `catalog.supplier_products.brand`. The SuperAdmin CatalogTab displays brand in the product table (line 352). But suppliers cannot set brand via the form — only via CSV upload.
+
+**Impact**: Products created via the supplier portal have no brand metadata. Brand is prominently displayed on BUY tiles and used in search. Missing brand degrades product discovery.
+
+**Fix**: Add a `brand` text input field to the supplier product form, after the `name` field. Bind to `formData.brand`.
+
+---
+
+## GCP-STG-0406 — Supplier Form: Structured MOQ Tier Editor (MEDIUM)
+
+**Ticket ID**: GCP-STG-0406
+**Severity**: P2 MEDIUM
+**Source**: Audit 48 — Supplier Form
+
+**Problem**: The `moqTiers` field (supplier form line 929-935) requires suppliers to type raw JSON: `[{"minQty":10,"discountPct":5},{"minQty":50,"discountPct":10}]`. This is unusable for non-technical kirana suppliers. One syntax error and the data is invalid.
+
+**Impact**: Volume discount tiers are effectively unusable. Suppliers skip this field because they can't write JSON.
+
+**Fix**: Replace the JSON text input with a structured "Add Tier" UI:
+- Table with columns: Min Qty, Discount %
+- "Add Tier" button appends a new row with number inputs
+- Remove button per row
+- Serialize to JSON on form submit
+
+---
+
+## GCP-STG-0407 — Add Supplier Stock Availability Field (MEDIUM)
+
+**Ticket ID**: GCP-STG-0407
+**Severity**: P2 MEDIUM
+**Source**: Audit 48 — Supplier Form
+
+**Problem**: The supplier product form has no field for current stock quantity or availability status. Retailers browsing the BUY catalog cannot see if a supplier product is in stock or out of stock. The `stock_quantity` column exists on `catalog.supplier_products` (migration 004) but is never set by the supplier portal.
+
+**Impact**: Retailers may order products that are out of stock at the supplier, leading to unfulfillable orders and order cancellations.
+
+**Fix**: Add `stockQuantity` number input to the supplier product form (optional, default null = "availability not specified"). Add "In Stock" / "Out of Stock" / "Low Stock" indicator to SupplierProductCardV3. Backend: read `sp.stock_quantity` in buy-catalog query.
+
+---
+
+## GCP-STG-0408 — BUY Tile Image: Pass imageUrl Instead of Always Showing Box Emoji (MEDIUM)
+
+**Ticket ID**: GCP-STG-0408
+**Severity**: P2 MEDIUM
+**Source**: Audit 47 — BUY Tiles
+
+**Problem**: SupplierProductCardV3.tsx (line 76) always renders a box emoji in the `imgBox` area. The `SupplierProduct` interface does NOT include `imageUrl`. The backend buy-catalog query (catalog.ts:469-607) does NOT select `sp.image_url` from `catalog.supplier_products`. Even though suppliers can upload product images, the BUY tiles never show them.
+
+**Impact**: All BUY tile images look identical (box emoji). Retailers cannot visually identify products while browsing the supplier catalog.
+
+**Fix**:
+1. Add `sp.image_url AS "imageUrl"` to the buy-catalog SQL SELECT in catalog.ts
+2. Add `imageUrl?: string` to SupplierProduct interface
+3. In SupplierProductCardV3, render `<Image source={{ uri: imageUrl }}>` when available, fall back to box emoji
+
+---
+
+## GCP-STG-0409 — Add Delivery Address + Order Notes to BUY Checkout (LOW)
+
+**Ticket ID**: GCP-STG-0409
+**Severity**: P3 LOW
+**Source**: Audit 50 — Purchase Cart
+
+**Problem**: The BUY checkout modal has no delivery address field and no order notes field. The backend `CreateOrderParams` type supports both (`deliveryAddress`, `storeNotes` at orderApi.ts:143), but BuyScreenV3 never sets them. The store address exists in `platform.stores` and could be pre-filled.
+
+**Impact**: Low — delivery always goes to the store address which SuperMandi already knows. Notes are nice-to-have for special instructions ("deliver before 10am", "call before coming").
+
+**Fix**: Add collapsible "Delivery Details" section to checkout modal with: pre-filled store address (read-only or editable), order notes TextInput (max 200 chars). Pass to `createOrder()`.
+
+---
+
+## GCP-STG-0410 — SELL Detail: Add Expiry Date, Last Purchase Price, Days Since Last Sale (LOW)
+
+**Ticket ID**: GCP-STG-0410
+**Severity**: P3 LOW
+**Source**: Audit 46 — SELL Tiles
+
+**Problem**: ProductDetailSheetV3 in SELL context shows: image, name, brand, price, barcode, unit, case size, stock, qty selector. It does NOT show:
+1. **Expiry date** — `store_products.expiry_date` exists but not displayed
+2. **Last purchase price** — `purchase_price` is in the product store but not shown in SELL context
+3. **Days since last sale** — would require a new API field (last sale date per product)
+
+These are useful for retailers when deciding pricing, prioritizing near-expiry stock, and identifying slow-moving items.
+
+**Impact**: Low — retailers manage without these but they aid informed selling decisions.
+
+**Fix**: Add an "Info" section below stock in ProductDetailSheetV3 SELL context:
+- "Expiry: {date}" (if set, with color coding: red if <30 days)
+- "Cost: ₹{purchasePrice}" (to show margin context)
+- "Last sold: {N} days ago" (requires new field from sales velocity data)
+
+---
+
+## GCP-STG-0411 — BNPL Stub: Integrate Actual BNPL Provider (LOW)
+
+**Ticket ID**: GCP-STG-0411
+**Severity**: P3 LOW
+**Source**: Audit 50 — Purchase Cart + Payment
+
+**Problem**: The BNPL payment option appears in BUY checkout (BuyScreenV3.tsx:440: "Buy Now Pay Later"). But `procurementPaymentService.ts` (lines 169-175) is a stub — it just sets payment status to `pending` with no external API call. No BNPL provider is integrated (no Rupifi, no OkCredit, no KreditBee, no custom credit line).
+
+**Impact**: Low — BNPL is a future feature. The button exists but cannot complete a real BNPL transaction. Currently functions as "order on credit from SuperMandi" which may or may not be intended.
+
+**Fix**: After selecting a BNPL partner, integrate their SDK:
+1. On BNPL selection, call partner's credit-check API (check retailer's credit limit)
+2. If approved, create payment intent with partner's order ID
+3. Redirect to partner's approval flow if needed
+4. On confirmation, update payment status and proceed with order
+
+---
+
+## GCP-STG-0412 — Expose BANK/Card Payment in POS BUY UI (LOW)
+
+**Ticket ID**: GCP-STG-0412
+**Severity**: P3 LOW
+**Source**: Audit 50 — Purchase Cart + Payment
+
+**Problem**: The backend supports BANK payment mode via Razorpay (razorpayAdapter.ts) and Card via PineLabs (pinelabsAdapter.ts). The `procurementPaymentService.ts:51` maps BANK→RAZORPAY. But BuyScreenV3.tsx (line 432) only offers 4 payment methods: CASH, UPI, BNPL, CREDIT. BANK/Card is not in the UI despite being fully wired on the backend.
+
+**Impact**: Low — UPI covers most digital payment needs for kirana stores. But some retailers prefer net banking or card for larger orders.
+
+**Fix**: Add "Bank Transfer / Card" option to the payment method selector in BuyScreenV3. When selected, set `paymentMode: "BANK"`. The backend will resolve to Razorpay, create an order, and return a redirect URL.
