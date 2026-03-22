@@ -15,6 +15,8 @@ import {
   type CategorySummary,
   type CatalogProduct,
 } from "../api/catalog";
+// GCP-STG-0290: Publish approved products to retailer stores
+import { publishProduct } from "../api/suppliers";
 import toast from "react-hot-toast";
 import { TableSkeleton } from "../components/TableSkeleton";
 
@@ -181,6 +183,21 @@ export function CatalogTab() {
       toast.error(err instanceof Error ? err.message : "Failed to reject product");
     } finally {
       setRejectSaving(false);
+    }
+  };
+
+  // GCP-STG-0290: Publish approved product to linked retailer stores
+  const handlePublish = async (product: CatalogProduct) => {
+    if (actionInFlight) return;
+    setActionInFlight(product.id);
+    try {
+      const result = await publishProduct(product.id);
+      toast.success(`Published "${product.displayName}" to ${result.publishedToStores} store(s)`);
+      loadProducts(page, search, selectedCategory);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to publish product");
+    } finally {
+      setActionInFlight(null);
     }
   };
 
@@ -426,6 +443,17 @@ export function CatalogTab() {
                             style={{ color: "#dc2626", borderColor: "#dc2626" }}
                           >
                             Reject
+                          </button>
+                        )}
+                        {product.approvalStatus === "approved" && (
+                          <button
+                            className="btnSm btnPrimary"
+                            onClick={() => handlePublish(product)}
+                            disabled={actionInFlight === product.id}
+                            aria-label={`Publish ${product.displayName} to stores`}
+                            style={{ background: "#2563eb", borderColor: "#2563eb" }}
+                          >
+                            {actionInFlight === product.id ? "..." : "Publish"}
                           </button>
                         )}
                       </div>
