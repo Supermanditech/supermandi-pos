@@ -480,6 +480,7 @@ export async function getEmailVerificationStatus(): Promise<{ emailVerified: boo
 export interface Product {
   id: string;
   name: string;
+  brand?: string; // GCP-STG-0292
   description?: string;
   category?: string;
   barcode?: string;
@@ -522,6 +523,7 @@ export interface Product {
 
 export interface ProductInput {
   name: string;
+  brand?: string; // GCP-STG-0292: Brand name
   description?: string;
   category?: string;
   barcode?: string;

@@ -89,6 +89,7 @@ export default function ProductsPage() {
 
   const [formData, setFormData] = useState<ProductInput>({
     name: '',
+    brand: '', // GCP-STG-0292
     description: '',
     category: '',
     barcode: '',
@@ -236,6 +237,7 @@ export default function ProductsPage() {
     setIsDragOver(false);
     setFormData({
       name: '',
+      brand: '', // GCP-STG-0292
       description: '',
       category: '',
       barcode: '',
@@ -316,6 +318,7 @@ export default function ProductsPage() {
     setIsUploadingImage(false);
     setFormData({
       name: product.name,
+      brand: product.brand || '', // GCP-STG-0292
       description: product.description || '',
       category: product.category || '',
       barcode: product.barcode || '',
@@ -588,6 +591,21 @@ export default function ProductsPage() {
                   className="input"
                   placeholder="e.g., Premium Basmati Rice 5kg"
                   required
+                />
+              </div>
+
+              {/* GCP-STG-0292: Brand input */}
+              <div>
+                <label htmlFor="product-brand" className="label">Brand</label>
+                <input
+                  type="text"
+                  id="product-brand"
+                  name="brand"
+                  value={formData.brand || ''}
+                  onChange={handleChange}
+                  className="input"
+                  placeholder="e.g., Tata, Amul, Patanjali"
+                  maxLength={100}
                 />
               </div>
 

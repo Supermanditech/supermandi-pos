@@ -4673,7 +4673,7 @@
       "file": "supplier-portal/src/lib/api.ts",
       "start_line": 4,
       "end_line": 1473,
-      "checksum": "574e0b3ef26e6b25",
+      "checksum": "fd4736539f516ad5",
       "description": "HTTPS enforcement for supplier-portal in production",
       "test_file": "src/__tests__/screens/https-enforcement.stg-518.test.ts",
       "depends_on": null,
@@ -8018,7 +8018,7 @@
       "file": "supplier-portal/src/app/(dashboard)/products/page.tsx",
       "start_line": 90,
       "end_line": 1330,
-      "checksum": "6d9c98dfd2f90cc8",
+      "checksum": "7928b97cd3b11117",
       "description": "Supplier product form with procurement packaging fields (procurementUnit, procurementPackQty, baseStockUnit, splitSellEligible)",
       "test_file": "backend/tests/conversionEngine.v3-fix-167.unit.test.ts",
       "depends_on": null,
@@ -14947,5 +14947,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T17:57:09.969Z"
+  "lastUpdated": "2026-03-22T18:12:09.707Z"
 }
