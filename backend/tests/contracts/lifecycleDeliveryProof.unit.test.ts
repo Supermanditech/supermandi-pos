@@ -40,8 +40,11 @@ describe("Lifecycle delivery: allocation → publisher canonical path", () => {
 describe("Lifecycle delivery: publisher → SSE + WhatsApp + notification", () => {
   const src = readFileSync(resolve(__dirname, "../../src/services/lifecycleEventService.ts"), "utf8");
 
-  it("imports emitStoreEvent from sseService for real-time delivery", () => {
-    expect(src).toContain('import { emitStoreEvent } from "./sseService"');
+  it("imports SSE emitters from sseService for real-time delivery", () => {
+    expect(src).toContain('emitStoreEvent');
+    expect(src).toContain('emitGlobalEvent');
+    expect(src).toContain('emitSupplierEvent');
+    expect(src).toContain('from "./sseService"');
   });
 
   it("imports sendTextMessage + normalizePhone from whatsappService", () => {
@@ -49,8 +52,10 @@ describe("Lifecycle delivery: publisher → SSE + WhatsApp + notification", () =
     expect(src).toContain("normalizePhone");
   });
 
-  it("SSE fan-out: calls emitStoreEvent with lifecycle event data", () => {
+  it("SSE fan-out: calls store + global + supplier emitters with lifecycle event data", () => {
     expect(src).toContain("emitStoreEvent(targetId,");
+    expect(src).toContain("emitGlobalEvent(");
+    expect(src).toContain("emitSupplierEvent(");
     expect(src).toContain("`lifecycle:${event.eventType}`");
   });
 
