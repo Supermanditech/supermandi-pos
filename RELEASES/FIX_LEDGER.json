@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 669,
+  "version": 670,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -14842,6 +14842,67 @@
         "single_commit": "fix(GCP-STG-0283)",
         "ticket_parked": "after commit"
       }
+    },
+    {
+      "ticket": "GCP-STG-0291",
+      "file": "backend/src/routes/v1/supplier/products.ts",
+      "start_line": 480,
+      "end_line": 481,
+      "checksum": "404a69ecfa0d2f23",
+      "description": "Supplier POST destructures hsnCode and includes hsn_code in INSERT as $30",
+      "test_file": "backend/tests/supplierHsn.gcp-stg-0291.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "migration_safe": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T17:56:47.434Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "POST /supplier/products stores hsn_code",
+        "api_errors": "N/A",
+        "store_isolation": "N/A supplier scoped",
+        "business_logic": "hsn_code trimmed and null when empty",
+        "business_behaviour": "HSN persisted for GST invoicing",
+        "db_schema": "hsn_code column on supplier_products",
+        "impacted_files": "supplier/products.ts + test",
+        "fix_ledger_check": "259 fixes",
+        "no_agent_conflict": "single",
+        "gcp_parity": "compatible",
+        "regression_check": "4/4",
+        "test_guard": "supplierHsn test 4/4",
+        "single_commit": "fix(GCP-STG-0291)",
+        "ticket_parked": "after commit",
+        "ui_elements": "N/A backend",
+        "ux_states": "N/A",
+        "wiring": "supplier form sends hsnCode",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "migration_safe": "N/A no migration"
+      }
     }
   ],
   "machine_state_version": 269,
@@ -14886,5 +14947,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T17:38:53.223Z"
+  "lastUpdated": "2026-03-22T17:57:09.969Z"
 }

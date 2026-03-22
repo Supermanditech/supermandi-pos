@@ -477,6 +477,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
       ptrMinor, ptsMinor, tradeDiscountPct, scheme,
       deliverySlaDays, deliveryTerms, creditDays: supplierCreditDays, financeEligible,
       moqTiers, packageType,
+      hsnCode, // GCP-STG-0291: HSN code for GST compliance
     } = req.body;
 
     // Validation
@@ -588,9 +589,10 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         credit_days,
         finance_eligible,
         moq_tiers,
+        hsn_code,
         approval_status,
         is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, 'pending', true)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, 'pending', true)
       RETURNING
         id,
         name,
@@ -655,6 +657,7 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         supplierCreditDays != null ? parseInt(String(supplierCreditDays)) : null,
         financeEligible === true || financeEligible === 'true',
         moqTiers ? (typeof moqTiers === 'string' ? moqTiers : JSON.stringify(moqTiers)) : null,
+        hsnCode?.trim() || null, // GCP-STG-0291
       ]
     );
 
