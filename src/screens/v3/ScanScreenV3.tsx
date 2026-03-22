@@ -14,6 +14,9 @@ import { useCartStore } from "../../stores/cartStore";
 import { setHidScanHandler } from "../../services/hidScannerService";
 import { buildCartItem } from "../../services/cartPayload";
 import { logger } from "../../services/logger";
+// GCP-STG-0322: Supplier catalog fallback for procurement scan
+import { buyBarcodeSearch } from "../../services/api/catalogApi";
+import { getDeviceStoreId } from "../../services/deviceSession";
 
 // V3-FIX-157: Canonical scan-intent contract — all scan paths go through here
 import { normalizeBarcode, isDuplicateScan, type ScanIntent } from "../../services/scanIntent";
@@ -46,6 +49,10 @@ type ScanResult = {
   price?: number;
   stock?: number;
   isNew: boolean;
+  // GCP-STG-0322: Supplier catalog fallback metadata
+  isSupplierCatalog?: boolean;
+  supplierName?: string;
+  supplierCount?: number;
 };
 
 export default function ScanScreenV3({ visible, defaultContext = "sell_scan", onClose, onProductFound, onNewProduct, onSearchByName }: ScanScreenV3Props) {
@@ -55,12 +62,50 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
   const [context, setContext] = useState<ScanContext>(defaultContext);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [lastResult, setLastResult] = useState<ScanResult | null>(null);
+  // GCP-STG-0322: Loading state for supplier catalog fallback search
+  const [supplierSearching, setSupplierSearching] = useState(false);
   // GCP-STG-0035: Camera permissions + barcode scanning
   const [cameraPermission, requestPermission] = useCameraPermissions();
 
   // V3-003: Real barcode lookup from productsStore + cartStore
   const getProductByBarcode = useProductsStore((s) => s.getProductByBarcode);
   const addItem = useCartStore((s) => s.addItem);
+
+  // GCP-STG-0322: Async supplier catalog fallback when local lookup misses in procurement mode
+  const searchSupplierCatalog = useCallback(async (barcode: string) => {
+    setSupplierSearching(true);
+    try {
+      const storeId = await getDeviceStoreId();
+      if (!storeId) {
+        logger.debug("V3Scan", `supplier_fallback:no_storeId,barcode:${barcode}`);
+        setLastResult({ barcode, isNew: true });
+        return;
+      }
+      const product = await buyBarcodeSearch(storeId, barcode);
+      if (product) {
+        setLastResult({
+          barcode,
+          productName: product.name,
+          price: product.bestPrice,
+          isNew: false,
+          isSupplierCatalog: true,
+          supplierName: product.suppliers?.[0]?.supplierName ?? undefined,
+          supplierCount: product.supplierCount ?? product.suppliers?.length ?? 0,
+        });
+        showToast(`${product.name} — found in supplier catalogue`);
+        onProductFound(barcode, "supplier_catalog_procurement_scan");
+        logger.debug("V3Scan", `supplier_fallback:found,barcode:${barcode},product:${product.name}`);
+      } else {
+        setLastResult({ barcode, isNew: true });
+        logger.debug("V3Scan", `supplier_fallback:not_found,barcode:${barcode}`);
+      }
+    } catch (err) {
+      logger.debug("V3Scan", `supplier_fallback:error,barcode:${barcode},err:${err}`);
+      setLastResult({ barcode, isNew: true });
+    } finally {
+      setSupplierSearching(false);
+    }
+  }, [onProductFound]);
 
   // V3-FIX-157 + V3-FIX-160: One canonical scan pipeline for HID, camera, and manual entry
   const processScan = useCallback((rawBarcode: string) => {
@@ -116,11 +161,17 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
       logger.debug("V3Scan", `found:${code},product:${product.name},context:${context}`);
     } else {
       // Not found — intent-specific behavior
-      setLastResult({ barcode: code, isNew: true });
-      logger.debug("V3Scan", `not_found:${code},context:${context}`);
+      // GCP-STG-0322: In procurement mode, fallback to supplier catalog search before giving up
+      if (context === "supplier_catalog_procurement_scan") {
+        searchSupplierCatalog(code);
+        logger.debug("V3Scan", `not_found_local:${code},context:${context},trying_supplier_catalog`);
+      } else {
+        setLastResult({ barcode: code, isNew: true });
+        logger.debug("V3Scan", `not_found:${code},context:${context}`);
+      }
     }
     setBarcodeInput("");
-  }, [context, getProductByBarcode, addItem, onProductFound]);
+  }, [context, getProductByBarcode, addItem, onProductFound, searchSupplierCatalog]);
 
   // Manual submit and camera use the same pipeline
   const handleScanSubmit = useCallback(() => {
@@ -234,16 +285,35 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
           </View>
         ) : null}
 
+        {/* GCP-STG-0322: Supplier catalog search loading indicator */}
+        {supplierSearching ? (
+          <View style={styles.resultPanel}>
+            <View style={styles.resultNew}>
+              <Text style={{ fontSize: 28 }}>🔍</Text>
+              <View style={styles.resultInfo}>
+                <Text style={styles.resultNewTitle}>Searching supplier catalogue...</Text>
+                <Text style={styles.resultBarcode}>Looking up barcode in linked suppliers</Text>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
         {/* Last scan result */}
-        {lastResult ? (
+        {!supplierSearching && lastResult ? (
           <View style={styles.resultPanel}>
             {!lastResult.isNew ? (
               <>
                 <View style={styles.resultFound}>
-                  <View style={styles.resultEmoji}><Text style={{ fontSize: 28 }}>🍪</Text></View>
+                  <View style={styles.resultEmoji}><Text style={{ fontSize: 28 }}>{lastResult.isSupplierCatalog ? '📦' : '🍪'}</Text></View>
                   <View style={styles.resultInfo}>
                     <Text style={styles.resultName}>{lastResult.productName}</Text>
                     <Text style={styles.resultBarcode}>{lastResult.barcode}</Text>
+                    {/* GCP-STG-0322: Show supplier origin when found via supplier catalog fallback */}
+                    {lastResult.isSupplierCatalog ? (
+                      <Text style={[styles.resultBarcode, { color: colors.primary, fontWeight: "600", marginTop: 2 }]}>
+                        {lastResult.supplierName ? `via ${lastResult.supplierName}` : "Supplier catalogue"}{lastResult.supplierCount && lastResult.supplierCount > 1 ? ` (+${lastResult.supplierCount - 1} more)` : ""}
+                      </Text>
+                    ) : null}
                   </View>
                   <View style={styles.resultRight}>
                     <Text style={styles.resultPrice}>₹{((lastResult.price ?? 0) / 100).toFixed(0)}</Text>
@@ -337,8 +407,8 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
             <View style={styles.resultAction}>
               <Text style={styles.resultActionText}>
                 {!lastResult.isNew
-                  ? (context === "sell_scan" ? "✓ Added to cart!" : context === "stock_in" ? "✓ Stock recorded!" : context === "counter_purchase_scan" ? "✓ Ready for inward!" : context === "supplier_catalog_procurement_scan" ? "✓ Found in catalogue" : "✓ Product found")
-                  : context === "supplier_catalog_procurement_scan" ? "Product not available in supplier catalogue" : "Tap Create to add this product to your store"}
+                  ? (context === "sell_scan" ? "✓ Added to cart!" : context === "stock_in" ? "✓ Stock recorded!" : context === "counter_purchase_scan" ? "✓ Ready for inward!" : context === "supplier_catalog_procurement_scan" ? (lastResult.isSupplierCatalog ? "✓ Found in supplier catalogue" : "✓ Found in store catalogue") : "✓ Product found")
+                  : context === "supplier_catalog_procurement_scan" ? "Product not found in store or supplier catalogue" : "Tap Create to add this product to your store"}
               </Text>
             </View>
           </View>
