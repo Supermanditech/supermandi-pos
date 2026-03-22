@@ -1017,8 +1017,10 @@ if (command === 'check') {
         console.log(`  Running ${testList.length} related test file(s)...`);
         for (const testFile of testList) {
           try {
-            execSync(`npx jest --no-coverage --passWithNoFailures "${testFile}" 2>&1`, {
-              cwd: ROOT, encoding: 'utf8', timeout: 120000
+            const testCwd = testFile.startsWith('backend/') ? path.join(ROOT, 'backend') : ROOT;
+            const testPath = testFile.startsWith('backend/') ? testFile.replace(/^backend\//, '') : testFile;
+            execSync(`npx jest --no-coverage --passWithNoTests --forceExit "${testPath}" 2>&1`, {
+              cwd: testCwd, encoding: 'utf8', timeout: 120000
             });
             testResults.push({ file: testFile, status: 'PASS' });
           } catch (testErr) {
@@ -1034,7 +1036,7 @@ if (command === 'check') {
       if (runContractTests) {
         console.log('  Running contract tests (backend changes detected)...');
         try {
-          execSync('npm run test:contract 2>&1', { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
+          execSync('npx jest --no-coverage --passWithNoTests --forceExit tests/contracts/ 2>&1', { cwd: path.join(ROOT, 'backend'), encoding: 'utf8', timeout: 120000 });
           testResults.push({ file: 'contract tests', status: 'PASS' });
         } catch (testErr) {
           testResults.push({ file: 'contract tests', status: 'FAIL', error: 'Contract test suite failed' });
