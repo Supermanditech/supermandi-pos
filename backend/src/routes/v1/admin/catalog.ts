@@ -530,6 +530,58 @@ adminCatalogRouter.post(
   }
 );
 
+// GCP-STG-0283: Ledger-sum vs stock_balances reconciliation check
+adminCatalogRouter.get(
+  "/stock-reconciliation/ledger-check",
+  requireAdminToken,
+  async (req, res) => {
+    try {
+      const pool = getPool();
+      if (!pool) return res.status(503).json({ error: "Database not available" });
+      const storeId = typeof req.query.storeId === "string" ? req.query.storeId : undefined;
+
+      const storeFilter = storeId ? "AND sb.store_id = $1" : "";
+      const params = storeId ? [storeId] : [];
+
+      const result = await pool.query(
+        `SELECT
+          sb.store_id,
+          sb.product_id,
+          sb.current_qty AS balance_qty,
+          COALESCE(ledger.total_delta, 0) AS ledger_qty,
+          sb.current_qty - COALESCE(ledger.total_delta, 0) AS drift
+        FROM inventory.stock_balances sb
+        LEFT JOIN (
+          SELECT store_id, product_id, SUM(delta_qty) AS total_delta
+          FROM inventory.inventory_ledger
+          GROUP BY store_id, product_id
+        ) ledger ON ledger.store_id = sb.store_id AND ledger.product_id = sb.product_id
+        WHERE ABS(sb.current_qty - COALESCE(ledger.total_delta, 0)) > 0.001
+          ${storeFilter}
+        ORDER BY ABS(sb.current_qty - COALESCE(ledger.total_delta, 0)) DESC
+        LIMIT 200`,
+        params
+      );
+
+      res.json({
+        success: true,
+        discrepancies: result.rows.map((r: any) => ({
+          storeId: r.store_id,
+          productId: r.product_id,
+          balanceQty: parseFloat(r.balance_qty),
+          ledgerQty: parseFloat(r.ledger_qty),
+          drift: parseFloat(r.drift),
+        })),
+        count: result.rows.length,
+        checkedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      log.error("[GCP-STG-0283] Ledger reconciliation check failed:", asError(err));
+      res.status(500).json({ error: "Failed to check ledger reconciliation" });
+    }
+  }
+);
+
 // =============================================================================
 // GCP-STG-0076: Store-level product publish exclusion
 // =============================================================================
