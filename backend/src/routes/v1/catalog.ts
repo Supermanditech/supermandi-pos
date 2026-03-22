@@ -503,6 +503,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           mp.default_gst_rate AS mp_gst_rate,
           mp.image_url AS mp_image_url,
           mp.pack_size AS mp_pack_size,
+          sp.image_url AS sp_image_url,
           sp.net_content_value AS sp_net_content_value,
           sp.net_content_unit AS sp_net_content_unit,
           mp.net_content_value AS mp_net_content_value,
@@ -552,7 +553,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
         END AS "stockStatus",
         MIN(mp_hsn_code) AS "hsnCode",
         MIN(mp_gst_rate) AS "gstRate",
-        MIN(mp_image_url) AS "imageUrl",
+        MIN(COALESCE(mp_image_url, sp_image_url)) AS "imageUrl",
         MIN(mp_pack_size) AS "packSize",
         (
           SELECT supplier_name FROM priced p2
@@ -857,6 +858,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
           mp.default_gst_rate AS mp_gst_rate,
           mp.image_url AS mp_image_url,
           mp.pack_size AS mp_pack_size,
+          sp.image_url AS sp_image_url,
           sp.net_content_value AS sp_net_content_value,
           sp.net_content_unit AS sp_net_content_unit,
           mp.net_content_value AS mp_net_content_value,
@@ -895,7 +897,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
         END AS "stockStatus",
         MIN(mp_hsn_code) AS "hsnCode",
         MIN(mp_gst_rate) AS "gstRate",
-        MIN(mp_image_url) AS "imageUrl",
+        MIN(COALESCE(mp_image_url, sp_image_url)) AS "imageUrl",
         MIN(mp_pack_size) AS "packSize",
         (
           SELECT supplier_name FROM priced p2
