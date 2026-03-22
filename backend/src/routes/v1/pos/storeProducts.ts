@@ -768,10 +768,15 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
           sp.base_stock_unit,
           sp.allow_fractional_sell,
           sp.conversion_precision,
-          sp.conversion_confirmed
+          sp.conversion_confirmed,
+          p.description,
+          p.hsn_code,
+          sp.supplier_id,
+          sup.business_name AS supplier_name
         FROM catalog.store_products sp
         JOIN catalog.products p ON p.id = sp.product_id
         LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
+        LEFT JOIN supplier.suppliers sup ON sup.id = sp.supplier_id
         LEFT JOIN LATERAL (
           SELECT barcode FROM catalog.store_product_barcodes
           WHERE store_product_id = sp.id AND store_id = sp.store_id
@@ -837,6 +842,11 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
       allowFractionalSell: row.allow_fractional_sell || false,
       conversionPrecision: row.conversion_precision ?? 2,
       conversionConfirmed: row.conversion_confirmed || false,
+      // GCP-STG-0284: Additional fields for POS parity
+      description: row.description || null,
+      hsnCode: row.hsn_code || null,
+      supplierId: row.supplier_id || null,
+      supplierName: row.supplier_name || null,
     }));
 
     const total = countResult.rows[0]?.total || 0;
