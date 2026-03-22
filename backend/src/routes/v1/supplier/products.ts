@@ -1221,8 +1221,15 @@ router.post(
         return;
       }
 
-      // Process each row
-      for (let i = 0; i < records.length; i++) {
+      // GCP-STG-0296: Process rows in batched transactions (chunks of 200)
+      const SUPPLIER_CSV_CHUNK = 200;
+      for (let chunkStart = 0; chunkStart < records.length; chunkStart += SUPPLIER_CSV_CHUNK) {
+        const chunkEnd = Math.min(chunkStart + SUPPLIER_CSV_CHUNK, records.length);
+        const client = await pool.connect();
+        try {
+          await client.query("BEGIN");
+
+      for (let i = chunkStart; i < chunkEnd; i++) {
         const row = records[i];
         const rowNum = i + 2; // Account for header row
 
@@ -1300,8 +1307,9 @@ router.post(
           }
 
           // T-063: Dedup — check if barcode already exists for this supplier, update if so
+          // GCP-STG-0296: Use client (transaction) instead of pool for batch efficiency
           if (barcode) {
-            const existing = await pool.query(
+            const existing = await client.query(
               `SELECT id, approval_status FROM catalog.supplier_products
                WHERE supplier_id = $1 AND barcode = $2`,
               [req.supplierId, barcode]
@@ -1309,7 +1317,7 @@ router.post(
             if (existing.rows.length > 0) {
               // Update existing product (only if still pending — don't overwrite approved products)
               if (existing.rows[0].approval_status === 'pending') {
-                await pool.query(
+                await client.query(
                   `UPDATE catalog.supplier_products SET
                     name = $2, category = $3, brand = $4, supplier_sku = $5,
                     purchase_price = $6, mrp = $7, moq = $8, unit = $9, updated_at = NOW()
@@ -1320,7 +1328,7 @@ router.post(
               }
               // else: approved/rejected — skip silently (don't reset approval)
             } else {
-              await pool.query(
+              await client.query(
                 `INSERT INTO catalog.supplier_products (
                   supplier_id, name, category, brand, barcode, supplier_sku,
                   purchase_price, mrp, moq, unit, approval_status, is_active
@@ -1330,7 +1338,7 @@ router.post(
               );
             }
           } else {
-            await pool.query(
+            await client.query(
               `INSERT INTO catalog.supplier_products (
                 supplier_id, name, category, brand, barcode, supplier_sku,
                 purchase_price, mrp, moq, unit, approval_status, is_active
@@ -1348,7 +1356,21 @@ router.post(
           });
           results.skipped++;
         }
-      }
+      } // end row loop
+
+          await client.query("COMMIT");
+        } catch (chunkErr: any) {
+          await client.query("ROLLBACK").catch(() => {});
+          log.error(`[SupplierCSV] Chunk ${chunkStart}-${chunkEnd} failed:`, chunkErr.message);
+          // Mark all rows in this chunk as skipped
+          for (let j = chunkStart; j < chunkEnd; j++) {
+            results.skipped++;
+            results.errors.push({ row: j + 2, error: `Chunk transaction failed: ${chunkErr.message}` });
+          }
+        } finally {
+          client.release();
+        }
+      } // end chunk loop
 
       // T-066: Batch auto-approve if supplier has auto_approve_products enabled
       let autoApprovedCount = 0;
