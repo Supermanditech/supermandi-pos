@@ -21,8 +21,6 @@ import ErrorBoundary from "./src/components/ErrorBoundary";
 
 // V3-BOOT-001: Unified v3 splash replaces legacy SplashScreen
 import SplashScreenV3 from "./src/screens/v3/SplashScreenV3";
-// Legacy splash kept for reference but no longer mounted
-// import SplashScreen from "./src/screens/SplashScreen";
 import DeviceBlockedScreen from "./src/screens/DeviceBlockedScreen";
 import ForceUpdateScreen from "./src/screens/ForceUpdateScreen";
 import PaymentSetupScreen from "./src/screens/PaymentSetupScreen";
