@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 666,
+  "version": 667,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6331,8 +6331,8 @@
       "file": "backend/src/routes/v1/retailer-admin/products.ts",
       "start_line": 30,
       "end_line": 1513,
-      "checksum": "5f157b579446bbe9",
-      "description": "Search cache invalidation wired into product CRUD",
+      "checksum": "733cf8d5ca1fefeb",
+      "description": "Search cache invalidation wired into product CRUD (checksum updated after GCP-STG-0281 bnpl_eligible)",
       "test_file": "src/__tests__/screens/search-cache-invalidation.stg-516.test.ts",
       "depends_on": null,
       "migration": null,
@@ -14664,6 +14664,66 @@
         "single_commit": "fix(GCP-STG-0314)",
         "ticket_parked": "after commit"
       }
+    },
+    {
+      "ticket": "GCP-STG-0281",
+      "file": "backend/src/routes/v1/retailer-admin/products.ts",
+      "start_line": 246,
+      "end_line": 249,
+      "checksum": "2972bcc2d862371c",
+      "description": "POST handler destructures bnplEligible and includes in store_products INSERT",
+      "test_file": "backend/tests/bnplEligible.gcp-stg-0281.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T17:15:44.080Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "POST+PATCH accept bnplEligible",
+        "api_errors": "N/A",
+        "store_isolation": "store_id from JWT",
+        "business_logic": "boolean coerced",
+        "business_behaviour": "BNPL eligibility persisted",
+        "db_schema": "migration 216 adds bnpl_eligible",
+        "impacted_files": "products.ts + mig 216 + test",
+        "fix_ledger_check": "255 fixes",
+        "no_agent_conflict": "single",
+        "gcp_parity": "migration for Cloud SQL",
+        "regression_check": "7/7",
+        "test_guard": "bnplEligible test 7/7",
+        "single_commit": "fix(GCP-STG-0281)",
+        "ticket_parked": "after commit",
+        "ui_elements": "N/A backend only",
+        "ux_states": "N/A",
+        "wiring": "retailer web already sends bnplEligible in PATCH body",
+        "navigation": "N/A",
+        "i18n_keys": "N/A"
+      }
     }
   ],
   "machine_state_version": 269,
@@ -14708,5 +14768,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T17:06:53.605Z"
+  "lastUpdated": "2026-03-22T17:17:48.129Z"
 }

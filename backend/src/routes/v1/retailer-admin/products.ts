@@ -245,6 +245,8 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     // V3-FIX-167: Canonical conversion profile fields
     procurementUnit, procurementPackQty, baseStockUnit,
     allowFractionalSell, conversionPrecision,
+    // GCP-STG-0281: BNPL eligibility
+    bnplEligible,
   } = req.body;
 
   // AUD-059-A/B FIX: Input validation bounds
@@ -413,9 +415,10 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
         low_stock_alert_qty, notes, sold_by, rate_unit, supplier_id, taxonomy_id,
         display_name, metadata_updated_at, metadata_updated_by,
         procurement_unit, procurement_pack_qty, base_stock_unit,
-        allow_fractional_sell, conversion_precision, conversion_confirmed
+        allow_fractional_sell, conversion_precision, conversion_confirmed,
+        bnpl_eligible
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, $10, $11, $12, $13, $14, NOW(), 'RETAILER_DASHBOARD',
-        $15, $16, $17, $18, $19, true)
+        $15, $16, $17, $18, $19, true, $20)
       RETURNING id`,
       [
         storeId,
@@ -437,6 +440,7 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
         resolvedBaseStockUnit,
         allowFractionalSell === true || allowFractionalSell === 'true',
         conversionPrecision != null ? Math.min(Math.max(parseInt(conversionPrecision) || 2, 0), 6) : 2,
+        bnplEligible === true || bnplEligible === 'true',
       ]
     );
     const storeProductId = storeProductResult.rows[0].id;
@@ -572,6 +576,7 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     stockUpdatedAt, // RET-POS-SYNC-012: ISO timestamp for stock LWW comparison
     manufacturerName, countryOfOrigin, shelfLifeDays, // SCALE-A1: Compliance fields
     netContentValue, netContentUnit, // SCALE-A2: Net content fields
+    bnplEligible, // GCP-STG-0281: BNPL eligibility
   } = req.body;
 
   // AUD-025-B: Parse incoming timestamp for LWW comparison
@@ -673,7 +678,7 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     // AUD-025-B: Build LWW guard clause if timestamp provided AND metadata field is being updated
     const isMetadataUpdate = resolvedDisplayName || resolvedBrand;
     const lwwGuard = (isMetadataUpdate && validIncomingTimestamp)
-      ? `AND (metadata_updated_at IS NULL OR metadata_updated_at < $15)`
+      ? `AND (metadata_updated_at IS NULL OR metadata_updated_at < $16)`
       : "";
 
     // SYNC-PRD-001: Only update metadata_updated_at when display_name actually changes
@@ -694,6 +699,8 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
       mode || null,
       resolvedDisplayName,
       resolvedBrand,
+      // GCP-STG-0281: bnpl_eligible
+      bnplEligible !== undefined ? (bnplEligible === true || bnplEligible === 'true') : null,
     ];
     if (isMetadataUpdate && validIncomingTimestamp) {
       updateParams.push(validIncomingTimestamp.toISOString());
@@ -713,6 +720,7 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         product_mode = COALESCE($12, product_mode),
         display_name = COALESCE($13, display_name),
         brand = COALESCE($14, brand),
+        bnpl_eligible = COALESCE($15, bnpl_eligible),
         metadata_updated_at = CASE WHEN $13 IS NOT NULL OR $14 IS NOT NULL THEN NOW() ELSE metadata_updated_at END,
         metadata_updated_by = CASE WHEN $13 IS NOT NULL OR $14 IS NOT NULL THEN 'RETAILER_DASHBOARD' ELSE metadata_updated_by END,
         updated_at = NOW()
