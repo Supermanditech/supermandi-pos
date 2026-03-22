@@ -6931,7 +6931,7 @@
       "file": "src/components/v3/UniversalSearchV3.tsx",
       "start_line": 1,
       "end_line": 209,
-      "checksum": "957deb9200516705",
+      "checksum": "b86cc1d5c5bc497e",
       "description": "Universal search v3 — context-aware for sell (store inventory) and buy (supplier catalogue)",
       "test_file": "src/__tests__/screens/universal-search-v3.stg-560.test.ts",
       "depends_on": null,
@@ -14947,5 +14947,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T19:13:44.286Z"
+  "lastUpdated": "2026-03-22T19:17:51.578Z"
 }

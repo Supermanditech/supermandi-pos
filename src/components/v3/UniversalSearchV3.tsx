@@ -87,14 +87,20 @@ export default function UniversalSearchV3({ context, visible, onClose, onSelect,
     else { setQuery(""); }
   }, [visible]);
 
+  // GCP-STG-0306: 300ms debounce on search to prevent excessive API calls
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleQueryChange = useCallback((text: string) => {
     setQuery(text);
-    onQueryChange?.(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onQueryChange?.(text);
+    }, 300);
   }, [onQueryChange]);
 
   const handleChipTap = useCallback((term: string) => {
     setQuery(term);
-    onQueryChange?.(term);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    onQueryChange?.(term); // Chips fire immediately — no debounce for explicit selection
   }, [onQueryChange]);
 
   if (!visible) return null;
