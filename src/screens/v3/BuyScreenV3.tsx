@@ -3,7 +3,7 @@ import { View, FlatList, Pressable, ActivityIndicator, TextInput, StyleSheet, Te
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
-import { getScreenPadding, getChipPadding, getChipFontSize } from "../../theme/responsive";
+import { getScreenPadding, getChipPadding, getChipFontSize, getGridColumns } from "../../theme/responsive";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import SupplierProductCardV3, { type SupplierProduct } from "../../components/v3/SupplierProductCardV3";
@@ -243,7 +243,7 @@ export default function BuyScreenV3() {
       {!loading ? <FlatList
         data={filteredProducts}
         keyExtractor={(p) => p.id}
-        numColumns={3}
+        numColumns={getGridColumns()} // GCP-STG-0304: responsive grid matching SellScreenV3
         columnWrapperStyle={{ gap: 8 }}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}

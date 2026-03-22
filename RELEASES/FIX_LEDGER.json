@@ -6968,7 +6968,7 @@
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 1,
       "end_line": 580,
-      "checksum": "182085c817a8cd64",
+      "checksum": "47b9325f18c3b9ff",
       "description": "BUY tab v3 — supplier catalogue with wholesale metadata, supplier filter, categories, counter purchase CTA",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,
@@ -9971,7 +9971,7 @@
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 242,
       "end_line": 275,
-      "checksum": "77f1b2f208a725ea",
+      "checksum": "fb53241a32a85e1f",
       "description": "BUY screen uses 3-column grid with ProductTileV3 instead of single-column SupplierProductCardV3",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,
@@ -14947,5 +14947,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T18:23:49.991Z"
+  "lastUpdated": "2026-03-22T18:26:30.078Z"
 }
