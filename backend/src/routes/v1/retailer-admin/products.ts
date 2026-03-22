@@ -160,7 +160,8 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
         sp.base_stock_unit as "baseStockUnit",
         sp.allow_fractional_sell as "allowFractionalSell",
         sp.conversion_precision as "conversionPrecision",
-        sp.conversion_confirmed as "conversionConfirmed"
+        sp.conversion_confirmed as "conversionConfirmed",
+        COALESCE(sp.image_url, p.image_url) AS "imageUrl"
       FROM catalog.store_products sp
       INNER JOIN catalog.products p ON p.id = sp.product_id
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -194,6 +195,7 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
       mrp: safeNumber(row.mrp),
       stock: safeNumber(row.stock),
       supplierName: row.supplierId ? (supplierMap[row.supplierId] || null) : null,
+      image_url: row.imageUrl || null,
     }));
 
     // GO-LIVE-261: Add lastUpdated timestamp for data freshness

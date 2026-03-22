@@ -15614,7 +15614,7 @@
       "start_line": 164,
       "end_line": 198,
       "checksum": "7c04c772550985a3",
-      "description": "GET /products SELECT includes COALESCE(sp.image_url, p.image_url) + response mapping image_url",
+      "description": "GET /products SELECT includes COALESCE(sp.image_url, p.image_url) + response mapping image_url (retailer web)",
       "test_file": "backend/tests/retailerProductImage.gcp-stg-0334.unit.test.ts",
       "depends_on": null,
       "migration": null,
