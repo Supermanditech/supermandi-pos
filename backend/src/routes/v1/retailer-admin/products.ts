@@ -576,6 +576,7 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     alias, // Store-level display name
     metadataUpdatedAt, // AUD-025-B: ISO timestamp for last-write-wins comparison
     stockUpdatedAt, // RET-POS-SYNC-012: ISO timestamp for stock LWW comparison
+    priceUpdatedAt, // GCP-STG-0335: ISO timestamp for price LWW comparison
     manufacturerName, countryOfOrigin, shelfLifeDays, // SCALE-A1: Compliance fields
     netContentValue, netContentUnit, // SCALE-A2: Net content fields
     bnplEligible, // GCP-STG-0281: BNPL eligibility
@@ -682,9 +683,10 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
 
     // AUD-025-B: Build LWW guard clause if timestamp provided AND metadata field is being updated
     const isMetadataUpdate = resolvedDisplayName || resolvedBrand;
-    const lwwGuard = (isMetadataUpdate && validIncomingTimestamp)
-      ? `AND (metadata_updated_at IS NULL OR metadata_updated_at < $21)`
-      : "";
+    // GCP-STG-0335: Detect if this is a price update
+    const isPriceUpdate = sellPrice !== undefined || mrp !== undefined || purchasePrice !== undefined;
+    const incomingPriceTs = priceUpdatedAt ? new Date(priceUpdatedAt) : null;
+    const validPriceTs = incomingPriceTs && !isNaN(incomingPriceTs.getTime()) ? incomingPriceTs : null;
 
     // SYNC-PRD-001: Only update metadata_updated_at when display_name actually changes
     // AUD-025-B: Apply LWW guard when updating metadata with client timestamp
@@ -713,8 +715,19 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
       allowFractionalSell !== undefined ? (allowFractionalSell === true || allowFractionalSell === 'true') : null,
       conversionPrecision != null ? Math.min(Math.max(parseInt(conversionPrecision) || 2, 0), 6) : null,
     ];
+    // GCP-STG-0335: Dynamic param numbering for LWW guards (metadata + price)
+    let nextParam = 21; // $1-$20 are base params
+    let lwwGuard = "";
     if (isMetadataUpdate && validIncomingTimestamp) {
       updateParams.push(validIncomingTimestamp.toISOString());
+      lwwGuard = `AND (metadata_updated_at IS NULL OR metadata_updated_at < $${nextParam})`;
+      nextParam++;
+    }
+    let priceLwwGuard = "";
+    if (isPriceUpdate && validPriceTs) {
+      updateParams.push(validPriceTs.toISOString());
+      priceLwwGuard = `AND (price_updated_at IS NULL OR price_updated_at <= $${nextParam})`;
+      nextParam++;
     }
 
     const storeProductUpdate = await client.query(
@@ -739,30 +752,46 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         conversion_precision = COALESCE($20, conversion_precision),
         metadata_updated_at = CASE WHEN $13 IS NOT NULL OR $14 IS NOT NULL THEN NOW() ELSE metadata_updated_at END,
         metadata_updated_by = CASE WHEN $13 IS NOT NULL OR $14 IS NOT NULL THEN 'RETAILER_DASHBOARD' ELSE metadata_updated_by END,
+        price_updated_at = CASE WHEN $3 IS NOT NULL OR $4 IS NOT NULL OR $5 IS NOT NULL THEN NOW() ELSE price_updated_at END,
         updated_at = NOW()
-      WHERE id = $1 AND store_id = $2 ${lwwGuard}
-      RETURNING id, metadata_updated_at`,
+      WHERE id = $1 AND store_id = $2 ${lwwGuard} ${priceLwwGuard}
+      RETURNING id, metadata_updated_at, price_updated_at`,
       updateParams
     );
 
-    // AUD-025-B: Check for LWW conflict (0 rows updated when product exists)
-    if ((storeProductUpdate.rowCount ?? 0) === 0 && isMetadataUpdate && validIncomingTimestamp) {
-      // Product exists (we checked earlier), so this must be a timestamp conflict
-      const existsCheck = await client.query(
-        `SELECT id, metadata_updated_at FROM catalog.store_products WHERE id = $1 AND store_id = $2 AND is_active = true`,
-        [id, storeId]
-      );
-      if (existsCheck.rowCount && existsCheck.rowCount > 0) {
-        await client.query("ROLLBACK");
-        // AUD-025-B: Stale update rejected with spec-compliant response
-        return res.status(409).json({
-          error: "stale_write",
-          message: "Stale update rejected - server has newer data",
-          incomingMetadataUpdatedAt: validIncomingTimestamp.toISOString(),
-          currentMetadataUpdatedAt: existsCheck.rows[0].metadata_updated_at,
-          entity: "store_product",
-          storeProductId: existsCheck.rows[0].id
-        });
+    // AUD-025-B + GCP-STG-0335: Check for LWW conflict (0 rows updated when product exists)
+    if ((storeProductUpdate.rowCount ?? 0) === 0) {
+      const hasMetadataConflict = isMetadataUpdate && validIncomingTimestamp;
+      const hasPriceConflict = isPriceUpdate && validPriceTs;
+      if (hasMetadataConflict || hasPriceConflict) {
+        // Product exists (we checked earlier), so this must be a timestamp conflict
+        const existsCheck = await client.query(
+          `SELECT id, metadata_updated_at, price_updated_at FROM catalog.store_products WHERE id = $1 AND store_id = $2 AND is_active = true`,
+          [id, storeId]
+        );
+        if (existsCheck.rowCount && existsCheck.rowCount > 0) {
+          await client.query("ROLLBACK");
+          // GCP-STG-0335: Determine which conflict type to report
+          if (hasPriceConflict) {
+            return res.status(409).json({
+              error: "stale_write",
+              message: "Price conflict — product was updated since you loaded it",
+              incomingPriceUpdatedAt: validPriceTs!.toISOString(),
+              currentPriceUpdatedAt: existsCheck.rows[0].price_updated_at,
+              entity: "store_product",
+              storeProductId: existsCheck.rows[0].id
+            });
+          }
+          // AUD-025-B: Metadata stale write
+          return res.status(409).json({
+            error: "stale_write",
+            message: "Stale update rejected - server has newer data",
+            incomingMetadataUpdatedAt: validIncomingTimestamp!.toISOString(),
+            currentMetadataUpdatedAt: existsCheck.rows[0].metadata_updated_at,
+            entity: "store_product",
+            storeProductId: existsCheck.rows[0].id
+          });
+        }
       }
     }
 
@@ -838,7 +867,12 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
 
     return res.json({
       ok: true,
-      data: { id, productId },
+      data: {
+        id,
+        productId,
+        // GCP-STG-0335: Return price_updated_at for client LWW tracking
+        priceUpdatedAt: storeProductUpdate.rows[0]?.price_updated_at || null,
+      },
       message: "Product updated successfully",
     });
   } catch (_error: unknown) {
