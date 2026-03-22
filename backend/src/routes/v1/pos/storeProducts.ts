@@ -431,7 +431,9 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
           sp.conversion_precision,
           sp.conversion_confirmed,
           sp.low_stock_alert_qty,
-          sp.notes
+          sp.notes,
+          p.pack_size,
+          p.pack_unit
         FROM catalog.store_products sp
         JOIN catalog.products p ON p.id = sp.product_id
         LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -506,6 +508,9 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
         // GCP-STG-0288: low stock alert + notes
         lowStockAlertQty: row.low_stock_alert_qty != null ? Number(row.low_stock_alert_qty) : null,
         notes: row.notes || null,
+        // GCP-STG-0309: case/pack size
+        caseSize: row.pack_size != null ? Number(row.pack_size) : null,
+        packUnit: row.pack_unit || null,
       });
     }
 
@@ -580,7 +585,9 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         sp.conversion_precision,
         sp.conversion_confirmed,
         sp.low_stock_alert_qty,
-        sp.notes
+        sp.notes,
+        p.pack_size,
+        p.pack_unit
       FROM catalog.store_products sp
       JOIN catalog.products p ON p.id = sp.product_id
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -705,6 +712,9 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         // GCP-STG-0288: low stock alert + notes
         lowStockAlertQty: row.low_stock_alert_qty != null ? Number(row.low_stock_alert_qty) : undefined,
         notes: row.notes || undefined,
+        // GCP-STG-0309: case/pack size
+        caseSize: row.pack_size != null ? Number(row.pack_size) : undefined,
+        packUnit: row.pack_unit || undefined,
       },
       context: "SELL",
     };
@@ -784,7 +794,9 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
           sp.supplier_id,
           sup.business_name AS supplier_name,
           sp.low_stock_alert_qty,
-          sp.notes
+          sp.notes,
+          p.pack_size,
+          p.pack_unit
         FROM catalog.store_products sp
         JOIN catalog.products p ON p.id = sp.product_id
         LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -862,6 +874,9 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
       // GCP-STG-0288: low stock alert + notes
       lowStockAlertQty: row.low_stock_alert_qty != null ? Number(row.low_stock_alert_qty) : null,
       notes: row.notes || null,
+      // GCP-STG-0309: case/pack size
+      caseSize: row.pack_size != null ? Number(row.pack_size) : null,
+      packUnit: row.pack_unit || null,
     }));
 
     const total = countResult.rows[0]?.total || 0;

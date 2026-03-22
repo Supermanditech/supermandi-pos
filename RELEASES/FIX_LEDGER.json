@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 677,
+  "version": 678,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -15101,7 +15101,7 @@
       "file": "backend/src/routes/v1/pos/storeProducts.ts",
       "start_line": 540,
       "end_line": 710,
-      "checksum": "d4b3a927c44214fa",
+      "checksum": "07b2602adad83fb5",
       "description": "POS API returns lowStockAlertQty + notes in search/lookup/list endpoints",
       "test_file": "backend/tests/posReturnFields.gcp-stg-0288.unit.test.ts",
       "depends_on": null,
@@ -15166,6 +15166,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:44:56.242Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0309",
+      "file": "backend/src/routes/v1/pos/storeProducts.ts",
+      "start_line": 400,
+      "end_line": 870,
+      "checksum": "472ce50bd596e2b6",
+      "description": "POS API returns caseSize and packUnit from products.pack_size/pack_unit",
+      "test_file": "backend/tests/casePackSize.gcp-stg-0309.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T20:47:50.935Z",
       "status": "ACTIVE"
     }
   ],
