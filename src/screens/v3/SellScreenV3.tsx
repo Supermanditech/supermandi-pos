@@ -29,6 +29,8 @@ import { getDeviceStoreId } from "../../services/deviceSession";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { getFrequentProducts } from "../../services/api/productsApi";
 import { logger } from "../../services/logger";
+// GCP-STG-0316: Reactive search trigger from scan miss
+import { useSearchTriggerStore } from "../../stores/searchTriggerStore";
 
 // V3-FIX-052: V3 category-group contract — loaded from backend, fallback to canonical labels
 const FALLBACK_CATEGORIES = ["Frequent", "Beverages", "Snacks", "Dairy", "Staples", "Home Care"];
@@ -191,6 +193,17 @@ export default function SellScreenV3() {
     }
     setSearchLoading(false);
   }, []);
+
+  // GCP-STG-0316: React to scan-not-found "Search by Name" trigger
+  const searchTriggerBarcode = useSearchTriggerStore((s) => s.missedBarcode);
+  const searchTriggerTimestamp = useSearchTriggerStore((s) => s.timestamp);
+  useEffect(() => {
+    if (searchTriggerBarcode && searchTriggerTimestamp > 0) {
+      useSearchTriggerStore.getState().clearTrigger();
+      // Open the universal search overlay so the user can search by name
+      setSearchVisible(true);
+    }
+  }, [searchTriggerBarcode, searchTriggerTimestamp]);
 
   const cartItems = useCartStore((s) => s.items);
   const addItem = useCartStore((s) => s.addItem);

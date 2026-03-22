@@ -36,6 +36,8 @@ type ScanScreenV3Props = {
   onClose: () => void;
   onProductFound: (barcode: string, context: ScanContext) => void;
   onNewProduct: (barcode: string) => void;
+  // GCP-STG-0316: Optional callback to open search-by-name on scan miss
+  onSearchByName?: (scannedBarcode: string) => void;
 };
 
 type ScanResult = {
@@ -46,7 +48,7 @@ type ScanResult = {
   isNew: boolean;
 };
 
-export default function ScanScreenV3({ visible, defaultContext = "sell_scan", onClose, onProductFound, onNewProduct }: ScanScreenV3Props) {
+export default function ScanScreenV3({ visible, defaultContext = "sell_scan", onClose, onProductFound, onNewProduct, onSearchByName }: ScanScreenV3Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -298,7 +300,7 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
                   <Text style={styles.resultBarcode}>{lastResult.barcode}</Text>
                 </View>
                 {/* V3-HARDEN-158: Procurement scan miss MUST NOT offer New Product */}
-                <View style={{ flexDirection: "row", gap: 8 }}>
+                <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
                   {context !== "supplier_catalog_procurement_scan" ? (
                     <Pressable
                       style={styles.createBtn}
@@ -307,6 +309,17 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
                       testID="scan-new-product-btn"
                     >
                       <Text style={styles.createBtnText}>New Product</Text>
+                    </Pressable>
+                  ) : null}
+                  {/* GCP-STG-0316: Search by Name fallback on scan miss */}
+                  {onSearchByName ? (
+                    <Pressable
+                      style={styles.searchByNameBtn}
+                      onPress={() => { onSearchByName(lastResult.barcode); onClose(); }}
+                      accessibilityLabel="Search by name"
+                      testID="scan-search-by-name-btn"
+                    >
+                      <Text style={styles.searchByNameBtnText}>Search by Name</Text>
                     </Pressable>
                   ) : null}
                   {/* GCP-STG-0028: Continue button to dismiss not-found and scan next */}
@@ -387,6 +400,9 @@ function createStyles(colors: ColorPalette) {
     resultNewTitle: { fontSize: 16, fontWeight: "800", color: colors.warning },
     createBtn: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
     createBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+    // GCP-STG-0316: Search by Name button on scan miss
+    searchByNameBtn: { backgroundColor: colors.primaryLight ?? colors.primary + "18", borderWidth: 1.5, borderColor: colors.primary + "40", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
+    searchByNameBtnText: { color: colors.primary, fontSize: 13, fontWeight: "700" },
     // GCP-STG-0028: Continue button alongside New Product
     continueBtn: { backgroundColor: "transparent", borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
     continueBtnText: { color: colors.textSecondary, fontSize: 13, fontWeight: "700" },

@@ -29,6 +29,8 @@ type Nav = NativeStackNavigationProp<any>;
 
 // V3-FIX-157: Reactive scan result store for intent-specific routing
 import { useScanResultStore } from "../../stores/scanResultStore";
+// GCP-STG-0316: Search trigger store for scan-not-found → search-by-name handoff
+import { useSearchTriggerStore } from "../../stores/searchTriggerStore";
 
 // V3-FIX-071: Payment chooser navigates to child screens
 export function V3PaymentWrapper() {
@@ -99,6 +101,11 @@ export function V3ScanWrapper({ route }: any) {
       nav.goBack();
     }}
     onNewProduct={(barcode) => nav.navigate("V3NewProduct", { barcode })}
+    // GCP-STG-0316: Search by Name fallback — write to trigger store, parent screen reacts
+    onSearchByName={(barcode) => {
+      useSearchTriggerStore.getState().triggerSearch(barcode);
+      nav.goBack();
+    }}
   />;
 }
 

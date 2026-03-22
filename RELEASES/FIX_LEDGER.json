@@ -15394,7 +15394,7 @@
       "start_line": 302,
       "end_line": 326,
       "checksum": "0a702f745b72301e",
-      "description": "Scan not-found shows Search by Name button instead of toast-only",
+      "description": "Scan not-found shows Search by Name button instead of toast-only (SELL+BUY tabs)",
       "test_file": "src/__tests__/screens/scanNotFound.gcp-stg-0316.test.ts",
       "depends_on": null,
       "migration": null,

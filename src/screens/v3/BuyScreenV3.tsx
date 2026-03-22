@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useCallback, useEffect } from "react";
-import { View, FlatList, Pressable, ActivityIndicator, TextInput, StyleSheet, Text, Modal } from "react-native";
+import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import { View, FlatList, Pressable, ActivityIndicator, TextInput, StyleSheet, Text, Modal, Alert } from "react-native";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
@@ -20,6 +20,8 @@ import { getDeviceStoreId } from "../../services/deviceSession";
 import { logger } from "../../services/logger";
 // V3-FIX-157: Reactive scan result store for procurement scan handoff
 import { useScanResultStore } from "../../stores/scanResultStore";
+// GCP-STG-0316: Search trigger store for scan-not-found → search-by-name handoff
+import { useSearchTriggerStore } from "../../stores/searchTriggerStore";
 
 // V3-FIX-076: BUY tab — no fabricated wholesale metadata
 
@@ -80,6 +82,8 @@ export default function BuyScreenV3() {
   const [categories, setCategories] = useState<string[]>(["All"]);
   const [orderQtys, setOrderQtys] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  // GCP-STG-0316: Ref to focus search input on scan-not-found fallback
+  const searchInputRef = useRef<TextInput>(null);
   const [products, setProducts] = useState<SupplierProduct[]>([]);
   // V3-FIX-136: Detail-first product sheet state
   const [detailProduct, setDetailProduct] = useState<SupplierProduct | null>(null);
@@ -140,10 +144,35 @@ export default function BuyScreenV3() {
         setDetailProduct(match);
         showToast(`Found: ${match.name}`);
       } else {
-        showToast(`Scanned product not found in catalogue`);
+        // GCP-STG-0316: Show alert with "Search by Name" fallback instead of toast-only
+        Alert.alert(
+          "Product Not Found",
+          `Barcode "${scanBarcode}" is not in the supplier catalogue.`,
+          [
+            {
+              text: "Search by Name",
+              onPress: () => {
+                setSearchQuery("");
+                setTimeout(() => searchInputRef.current?.focus(), 100);
+              },
+            },
+            { text: "Dismiss", style: "cancel" },
+          ]
+        );
       }
     }
   }, [loading, products, scanBarcode, scanTimestamp]);
+
+  // GCP-STG-0316: React to scan-not-found "Search by Name" trigger from ScanScreenV3
+  const searchTriggerBarcode = useSearchTriggerStore((s) => s.missedBarcode);
+  const searchTriggerTs = useSearchTriggerStore((s) => s.timestamp);
+  useEffect(() => {
+    if (searchTriggerBarcode && searchTriggerTs > 0) {
+      useSearchTriggerStore.getState().clearTrigger();
+      setSearchQuery("");
+      setTimeout(() => searchInputRef.current?.focus(), 100);
+    }
+  }, [searchTriggerBarcode, searchTriggerTs]);
 
   // V3-FIX-076: Filter products by supplier, category, and search query
   const filteredProducts = useMemo(() => {
@@ -183,7 +212,7 @@ export default function BuyScreenV3() {
       <View style={styles.searchBar}>
         <View style={styles.searchInput}>
           <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth={2}><Circle cx={11} cy={11} r={8} /><Path d="M21 21l-4.35-4.35" /></Svg>
-          <TextInput style={styles.searchTextInput} value={searchQuery} onChangeText={setSearchQuery} placeholder="Search supplier products..." placeholderTextColor={colors.textTertiary} />
+          <TextInput ref={searchInputRef} style={styles.searchTextInput} value={searchQuery} onChangeText={setSearchQuery} placeholder="Search supplier products..." placeholderTextColor={colors.textTertiary} testID="buy-search-input" />
         </View>
         <Pressable style={styles.scanBtn} accessibilityLabel="Scan barcode" onPress={() => navigation.navigate("V3Scan", { defaultContext: "supplier_catalog_procurement_scan" })}>
           <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}><Rect x={3} y={3} width={18} height={18} rx={2} /><Path d="M7 7h.01M7 12h10M7 17h.01" /></Svg>
