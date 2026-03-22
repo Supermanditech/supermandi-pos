@@ -85,7 +85,7 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress, onL
       <View style={styles.imageArea}>
         {/* V3-FIX-054: Use real image when available, emoji fallback */}
         {product.imageUrl ? (
-          <Image source={{ uri: product.imageUrl }} style={{ width: 32, height: 32, borderRadius: 6 }} resizeMode="contain" />
+          <Image source={{ uri: product.imageUrl }} style={styles.productImage} resizeMode="contain" />
         ) : (
           <Text style={styles.emoji}>{emoji}</Text>
         )}
@@ -207,6 +207,12 @@ function createStyles(colors: ColorPalette) {
       alignItems: "center",
       justifyContent: "center",
       marginBottom: 6,
+    },
+    // GCP-STG-0310: Responsive product image (was hardcoded 32x32)
+    productImage: {
+      width: getChipFontSize() * 3,
+      height: getChipFontSize() * 3,
+      borderRadius: 6,
     },
     emoji: {
       fontSize: 34,
