@@ -11899,8 +11899,8 @@
       "file": "backend/src/services/sseService.ts",
       "start_line": 170,
       "end_line": 325,
-      "checksum": "271131ee922535c4",
-      "description": "Global + supplier SSE clients, convenience emitters for order/payment/delivery/stock events",
+      "checksum": "e0cc05152dc0f9b0",
+      "description": "Global + supplier SSE clients, convenience emitters for order/payment/delivery/stock events (ESLint: added comment to empty catch blocks)",
       "test_file": "backend/tests/sseEvents.gcp-stg-0108.unit.test.ts",
       "depends_on": null,
       "migration": null,
@@ -14328,5 +14328,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T10:48:06.032Z"
+  "lastUpdated": "2026-03-22T10:59:21.649Z"
 }

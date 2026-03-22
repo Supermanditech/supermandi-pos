@@ -184,7 +184,7 @@ export function registerGlobalSseClient(res: Response): () => void {
   if (globalClients.size >= MAX_GLOBAL_CONNECTIONS) {
     const oldest = globalClients.values().next().value;
     if (oldest) {
-      try { oldest.end(); } catch {}
+      try { oldest.end(); } catch { /* dead connection */ }
       globalClients.delete(oldest);
     }
   }
@@ -217,7 +217,7 @@ export function emitGlobalEvent(event: string, data: unknown): void {
 
   for (const dead of deadClients) {
     globalClients.delete(dead);
-    try { dead.end(); } catch {}
+    try { dead.end(); } catch { /* dead connection */ }
   }
 }
 
@@ -238,7 +238,7 @@ export function registerSupplierSseClient(supplierId: string, res: Response): ()
   if (clients.size >= MAX_SUPPLIER_CONNECTIONS) {
     const oldest = clients.values().next().value;
     if (oldest) {
-      try { oldest.end(); } catch {}
+      try { oldest.end(); } catch { /* dead connection */ }
       clients.delete(oldest);
     }
   }
@@ -266,7 +266,7 @@ export function emitSupplierEvent(supplierId: string, event: string, data: unkno
 
   for (const dead of deadClients) {
     clients.delete(dead);
-    try { dead.end(); } catch {}
+    try { dead.end(); } catch { /* dead connection */ }
   }
 
   if (clients.size === 0) supplierClients.delete(supplierId);
