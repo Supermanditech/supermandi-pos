@@ -147,9 +147,9 @@ retailerPurchaseOrdersRouter.get("/purchase-orders/:orderId", async (req: Reques
          poi.unit_price as "unitPriceMinor",
          poi.line_total as "totalMinor"
        FROM orders.purchase_order_items poi
-       WHERE poi.order_id = $1
+       WHERE poi.order_id = $1 AND poi.store_id = $2
        ORDER BY poi.created_at`,
-      [orderId]
+      [orderId, storeId]
     );
 
     const order = {

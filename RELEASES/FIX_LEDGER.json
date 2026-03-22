@@ -14994,7 +14994,7 @@
       "start_line": 1,
       "end_line": 29,
       "checksum": "7a38b772f8a317f8",
-      "description": "Add store_id to purchase_order_items with backfill + RLS policy",
+      "description": "Add store_id to purchase_order_items with backfill + RLS policy + GET detail query store_id filter (security fix)",
       "test_file": "backend/tests/poiStoreId.gcp-stg-0286.unit.test.ts",
       "depends_on": null,
       "migration": null,

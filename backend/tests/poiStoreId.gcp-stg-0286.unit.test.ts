@@ -54,4 +54,9 @@ describe("GCP-STG-0286: purchase_order_items store_id + RLS", () => {
   test("purchaseOrders.ts INSERT includes store_id", () => {
     expect(PO_SRC).toContain("order_id, store_id, supplier_product_id");
   });
+
+  test("purchaseOrders.ts GET detail query filters items by store_id", () => {
+    // The items query must include poi.store_id = $2 for store isolation
+    expect(PO_SRC).toContain("poi.order_id = $1 AND poi.store_id = $2");
+  });
 });
