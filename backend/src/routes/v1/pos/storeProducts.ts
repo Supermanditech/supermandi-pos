@@ -429,7 +429,9 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
           sp.base_stock_unit,
           sp.allow_fractional_sell,
           sp.conversion_precision,
-          sp.conversion_confirmed
+          sp.conversion_confirmed,
+          sp.low_stock_alert_qty,
+          sp.notes
         FROM catalog.store_products sp
         JOIN catalog.products p ON p.id = sp.product_id
         LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -501,6 +503,9 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
         allowFractionalSell: row.allow_fractional_sell || false,
         conversionPrecision: row.conversion_precision ?? 2,
         conversionConfirmed: row.conversion_confirmed ?? true,
+        // GCP-STG-0288: low stock alert + notes
+        lowStockAlertQty: row.low_stock_alert_qty != null ? Number(row.low_stock_alert_qty) : null,
+        notes: row.notes || null,
       });
     }
 
@@ -573,7 +578,9 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         sp.base_stock_unit,
         sp.allow_fractional_sell,
         sp.conversion_precision,
-        sp.conversion_confirmed
+        sp.conversion_confirmed,
+        sp.low_stock_alert_qty,
+        sp.notes
       FROM catalog.store_products sp
       JOIN catalog.products p ON p.id = sp.product_id
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -695,6 +702,9 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         allowFractionalSell: row.allow_fractional_sell || false,
         conversionPrecision: row.conversion_precision ?? 2,
         conversionConfirmed: row.conversion_confirmed || false,
+        // GCP-STG-0288: low stock alert + notes
+        lowStockAlertQty: row.low_stock_alert_qty != null ? Number(row.low_stock_alert_qty) : undefined,
+        notes: row.notes || undefined,
       },
       context: "SELL",
     };
@@ -772,7 +782,9 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
           p.description,
           p.hsn_code,
           sp.supplier_id,
-          sup.business_name AS supplier_name
+          sup.business_name AS supplier_name,
+          sp.low_stock_alert_qty,
+          sp.notes
         FROM catalog.store_products sp
         JOIN catalog.products p ON p.id = sp.product_id
         LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -847,6 +859,9 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
       hsnCode: row.hsn_code || null,
       supplierId: row.supplier_id || null,
       supplierName: row.supplier_name || null,
+      // GCP-STG-0288: low stock alert + notes
+      lowStockAlertQty: row.low_stock_alert_qty != null ? Number(row.low_stock_alert_qty) : null,
+      notes: row.notes || null,
     }));
 
     const total = countResult.rows[0]?.total || 0;
