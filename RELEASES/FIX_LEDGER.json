@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 659,
+  "version": 661,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -9848,8 +9848,8 @@
     {
       "ticket": "GCP-STG-0007",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 172,
-      "end_line": 204,
+      "start_line": 180,
+      "end_line": 212,
       "checksum": "10979bc48a685e70",
       "description": "Deactivate old devices + create new one in transaction on OTP verify (race-condition safe)",
       "test_file": "backend/src/__tests__/pos/otpAuth.test.ts",
@@ -9882,7 +9882,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:25:31.465Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-22T15:59:55.047Z"
     },
     {
       "ticket": "GCP-STG-0008",
@@ -14284,6 +14285,102 @@
         "single_commit": "fix(GCP-STG-0280)",
         "ticket_parked": "Will park after commit"
       }
+    },
+    {
+      "ticket": "GCP-STG-0299",
+      "file": "backend/src/routes/v1/pos/otpAuth.ts",
+      "start_line": 36,
+      "end_line": 49,
+      "checksum": "65c6d62d3c422934",
+      "description": "POS OTP send-otp: normalize 10-digit phone to E.164 (+91) before auth.users query",
+      "test_file": "backend/tests/otpAuth.gcp-stg-0299.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": false,
+        "api_errors": false,
+        "store_isolation": false,
+        "business_logic": false,
+        "business_behaviour": false,
+        "db_schema": false,
+        "migration_safe": "N/A",
+        "impacted_files": false,
+        "fix_ledger_check": false,
+        "no_agent_conflict": false,
+        "gcp_parity": false,
+        "regression_check": false,
+        "test_guard": false,
+        "single_commit": false,
+        "ticket_parked": false,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T15:42:08.235Z",
+      "status": "SUPERSEDED",
+      "superseded_by": "GCP-STG-0299",
+      "superseded_at": "2026-03-22T15:42:38.779Z"
+    },
+    {
+      "ticket": "GCP-STG-0299",
+      "file": "backend/src/routes/v1/pos/otpAuth.ts",
+      "start_line": 133,
+      "end_line": 146,
+      "checksum": "07861568f1493e48",
+      "description": "POS OTP verify-otp: normalize 10-digit phone to E.164 (+91) before auth.users query",
+      "test_file": "backend/tests/otpAuth.gcp-stg-0299.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T15:42:38.778Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "send-otp + verify-otp normalize phone to +91 E.164",
+        "api_errors": "PHONE_NOT_REGISTERED on no match, OTP_EXPIRED, OTP_RATE_LIMITED",
+        "store_isolation": "N/A — phone-based auth, no store_id in query",
+        "business_logic": "10-digit phone normalized to +91XXXXXXXXXX matching auth.users format",
+        "business_behaviour": "POS OTP login works for approved retailers",
+        "db_schema": "auth.users.phone stores +91 format",
+        "impacted_files": "otpAuth.ts + test",
+        "fix_ledger_check": "252 fixes zero drift",
+        "no_agent_conflict": "single agent",
+        "gcp_parity": "Backend-only, no localhost URLs, staging compatible",
+        "regression_check": "8/8 tests pass",
+        "test_guard": "otpAuth.gcp-stg-0299.unit.test.ts 8/8",
+        "single_commit": "fix(GCP-STG-0299)",
+        "ticket_parked": "after commit"
+      }
     }
   ],
   "machine_state_version": 269,
@@ -14328,5 +14425,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T15:23:39.667Z"
+  "lastUpdated": "2026-03-22T15:59:54.789Z"
 }

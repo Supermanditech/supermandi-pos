@@ -33,7 +33,11 @@ posOtpAuthRouter.post("/auth/send-otp", async (req, res) => {
     return res.status(400).json({ error: { code: "INVALID_PHONE", message: "Valid 10-digit phone number required" } });
   }
 
+  // GCP-STG-0299: Normalize 10-digit phone to E.164 (+91) for auth.users lookup
+  const normalizedPhone = `+91${phone}`;
+
   const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "SERVICE_UNAVAILABLE", message: "Database not available" } });
   try {
     // V3-BE-004: Query canonical schema — auth.users + auth.store_users + platform.stores
     const storeResult = await pool.query(
@@ -44,7 +48,7 @@ posOtpAuthRouter.post("/auth/send-otp", async (req, res) => {
        WHERE u.phone = $1 AND ps.status = 'ACTIVE'
        ORDER BY ps.created_at DESC
        LIMIT 10`,
-      [phone]
+      [normalizedPhone]
     );
 
     if (storeResult.rows.length === 0) {
@@ -99,6 +103,7 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
   }
 
   const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "SERVICE_UNAVAILABLE", message: "Database not available" } });
   try {
     // Verify OTP from pos_otp table
     const otpResult = await pool.query(
@@ -125,6 +130,9 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
       return res.status(400).json({ error: { code: "OTP_INVALID", message: "Invalid OTP" } });
     }
 
+    // GCP-STG-0299: Normalize 10-digit phone to E.164 for auth.users lookup
+    const normalizedPhone = `+91${phone}`;
+
     // V3-BE-004: Get ALL stores for this phone from canonical schema
     const storeResult = await pool.query(
       `SELECT ps.id, ps.name AS store_name, ps.code AS store_code, ps.status
@@ -133,7 +141,7 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
        JOIN platform.stores ps ON ps.id = su.store_id
        WHERE u.phone = $1 AND ps.status = 'ACTIVE'
        ORDER BY ps.created_at DESC`,
-      [phone]
+      [normalizedPhone]
     );
 
     if (storeResult.rows.length === 0) {
