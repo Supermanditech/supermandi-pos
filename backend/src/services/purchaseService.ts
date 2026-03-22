@@ -420,9 +420,9 @@ async function applyStorePurchaseUpdates(params: {
     await client.query(
       `INSERT INTO catalog.store_products (
          id, store_id, product_id, purchase_price, display_name,
-         taxonomy_id, is_active, metadata_updated_by, created_at, updated_at
+         taxonomy_id, is_active, metadata_updated_by, created_at, updated_at, source
        )
-       VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4, $5, true, 'PURCHASE', NOW(), NOW())
+       VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4, $5, true, 'PURCHASE', NOW(), NOW(), 'grn_inward')
        ON CONFLICT (store_id, product_id) DO UPDATE SET
          purchase_price = COALESCE(EXCLUDED.purchase_price, catalog.store_products.purchase_price),
          taxonomy_id = COALESCE(catalog.store_products.taxonomy_id, EXCLUDED.taxonomy_id),

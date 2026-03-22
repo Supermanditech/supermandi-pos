@@ -657,9 +657,9 @@ async function commitSingleRow(
           product_mode, current_stock, is_active, display_name, taxonomy_id,
           metadata_updated_at, metadata_updated_by,
           procurement_unit, procurement_pack_qty, base_stock_unit, conversion_confirmed,
-          sold_by, rate_unit, low_stock_alert_qty, notes
+          sold_by, rate_unit, low_stock_alert_qty, notes, source
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, NOW(), 'CSV_IMPORT',
-          $10, $11, $12, true, $13, $14, $15, $16) RETURNING id`,
+          $10, $11, $12, true, $13, $14, $15, $16, 'csv_import') RETURNING id`,
         [storeId, productId, sellPricePaise, row.mrp || null, purchasePricePaise, mode, stock, row.name, taxonomyId,
          resolvedProcUnit, resolvedPackQty, resolvedBaseUnit,
          row.sold_by || null, row.rate_unit || null, row.low_stock_alert || null, row.notes || null]
@@ -1396,8 +1396,8 @@ retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", csvUploadRateLi
           const spResult = await client.query(
             `INSERT INTO catalog.store_products (
               store_id, product_id, sell_price, purchase_price, product_mode, current_stock, is_active,
-              display_name, taxonomy_id, metadata_updated_at, metadata_updated_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8, NOW(), 'BULK_PASTE') RETURNING id`,
+              display_name, taxonomy_id, metadata_updated_at, metadata_updated_by, source
+            ) VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8, NOW(), 'BULK_PASTE', 'csv_import') RETURNING id`,
             [storeId, productId, sellPrice, purchasePrice, mode, stock, row.name, bulkTaxonomyId]
           );
           const storeProductId = spResult.rows[0].id;

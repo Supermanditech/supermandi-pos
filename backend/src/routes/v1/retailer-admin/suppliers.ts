@@ -1040,9 +1040,9 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
         store_id, product_id, display_name, sell_price, purchase_price,
         current_stock, is_active, supplier_id,
         procurement_unit, procurement_pack_qty, base_stock_unit,
-        allow_fractional_sell, conversion_confirmed
+        allow_fractional_sell, conversion_confirmed, source
       ) VALUES ($1, $2::uuid, $3, $4, $5, $6, true, $7::uuid,
-        $8, $9, $10, $11, $12)
+        $8, $9, $10, $11, $12, 'supplier_publish')
       RETURNING id`,
       [
         storeId,

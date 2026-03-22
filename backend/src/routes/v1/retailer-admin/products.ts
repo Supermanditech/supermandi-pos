@@ -418,9 +418,9 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
         display_name, metadata_updated_at, metadata_updated_by,
         procurement_unit, procurement_pack_qty, base_stock_unit,
         allow_fractional_sell, conversion_precision, conversion_confirmed,
-        bnpl_eligible
+        bnpl_eligible, source
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, $10, $11, $12, $13, $14, NOW(), 'RETAILER_DASHBOARD',
-        $15, $16, $17, $18, $19, true, $20)
+        $15, $16, $17, $18, $19, true, $20, 'manual')
       RETURNING id`,
       [
         storeId,
@@ -998,8 +998,8 @@ retailerAdminProductsRouter.post("/products/bulk", async (req: Request, res: Res
           `INSERT INTO catalog.store_products (
             store_id, product_id, sell_price, mrp, purchase_price,
             product_mode, current_stock, is_active,
-            display_name, metadata_updated_at, metadata_updated_by
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, NOW(), 'BULK_IMPORT')
+            display_name, metadata_updated_at, metadata_updated_by, source
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, NOW(), 'BULK_IMPORT', 'manual')
           RETURNING id`,
           [storeId, productId, pSellPrice, p.mrp ? safeNumber(p.mrp) : null, pPurchasePrice, productMode, pStock, p.name.trim()]
         );
@@ -1151,8 +1151,8 @@ retailerAdminProductsRouter.post("/products/loose", async (req: Request, res: Re
         store_id, product_id, sell_price, mrp, purchase_price,
         product_mode, current_stock, is_active,
         low_stock_alert_qty, notes, sold_by, rate_unit, supplier_id,
-        display_name, metadata_updated_at, metadata_updated_by
-      ) VALUES ($1, $2, $3, $4, $5, 'LOOSE_BULK', $6, true, $7, $8, $9, $10, $11, $12, NOW(), 'RETAILER_DASHBOARD')
+        display_name, metadata_updated_at, metadata_updated_by, source
+      ) VALUES ($1, $2, $3, $4, $5, 'LOOSE_BULK', $6, true, $7, $8, $9, $10, $11, $12, NOW(), 'RETAILER_DASHBOARD', 'manual')
       RETURNING id`,
       [
         storeId, productId,

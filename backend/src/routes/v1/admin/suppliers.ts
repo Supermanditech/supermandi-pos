@@ -1768,10 +1768,10 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
           current_stock, is_active, supplier_id,
           procurement_unit, procurement_pack_qty, base_stock_unit,
           allow_fractional_sell, conversion_confirmed,
-          product_mode, sold_by, rate_unit
+          product_mode, sold_by, rate_unit, source
         ) VALUES ($1, $2::uuid, $3, $4, $5, 0, true, $6::uuid,
           $7, $8, $9, $10, false,
-          $11, $12, $13)
+          $11, $12, $13, 'supplier_publish')
         RETURNING id`,
         [store.store_id, catalogProductId, product.name, retailerPrice,
          product.purchase_price, product.supplier_id,
@@ -1901,8 +1901,8 @@ adminSuppliersRouter.post("/products/publish-bulk", requireAdminToken, requirePe
           const ins = await client.query(
             `INSERT INTO catalog.store_products (
               store_id, product_id, display_name, sell_price, purchase_price,
-              current_stock, is_active, supplier_id
-            ) VALUES ($1, $2::uuid, $3, $4, $5, 0, true, $6::uuid) RETURNING id`,
+              current_stock, is_active, supplier_id, source
+            ) VALUES ($1, $2::uuid, $3, $4, $5, 0, true, $6::uuid, 'supplier_publish') RETURNING id`,
             [store.store_id, catalogProductId, p.name, p.purchase_price + margin,
              p.purchase_price, p.supplier_id]
           );

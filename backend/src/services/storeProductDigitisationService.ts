@@ -470,8 +470,8 @@ export async function createStoreProductFromDigitisation(
 
     await client.query(
       `
-      INSERT INTO catalog.store_products (id, store_id, product_id, sell_price, mrp, purchase_price, display_name, is_active, current_stock, taxonomy_id, metadata_updated_at, metadata_updated_by, product_mode, procurement_unit, procurement_pack_qty, base_stock_unit, conversion_confirmed)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, NOW(), 'POS_APP', $10, $11, $12, $13, $14)
+      INSERT INTO catalog.store_products (id, store_id, product_id, sell_price, mrp, purchase_price, display_name, is_active, current_stock, taxonomy_id, metadata_updated_at, metadata_updated_by, product_mode, procurement_unit, procurement_pack_qty, base_stock_unit, conversion_confirmed, source)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, NOW(), 'POS_APP', $10, $11, $12, $13, $14, 'manual')
       ON CONFLICT (store_id, product_id) DO UPDATE SET
         -- AUD-025-B: Preserve user-edited metadata fields if metadata_updated_at is set
         sell_price = CASE
