@@ -104,9 +104,9 @@ export default function KhataScreenV3({ onClose }: Props) {
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
         {!khataLoading && displayOverdue.length === 0 && displayPending.length === 0 ? (
           <View style={{ padding: 32, alignItems: "center" }}>
-            <Text style={{ fontSize: 36, marginBottom: 8 }}>📒</Text>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No credit entries</Text>
-            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Credit entries appear when you sell on due or add manual credit</Text>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>{searchQuery.trim() ? "🔍" : "📒"}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>{searchQuery.trim() ? `No results for '${searchQuery.trim()}'` : "No credit entries"}</Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>{searchQuery.trim() ? "Try a different search term" : "Credit entries appear when you sell on due or add manual credit"}</Text>
           </View>
         ) : (
           <>

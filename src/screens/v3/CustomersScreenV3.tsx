@@ -68,7 +68,7 @@ export default function CustomersScreenV3({ onClose }: Props) {
       <View style={styles.searchBar}><TextInput style={styles.searchInput} placeholder="Search customer..." placeholderTextColor={colors.textTertiary} value={searchQuery} onChangeText={setSearchQuery} /></View>
       {loading ? <ActivityIndicator size="small" color={colors.primary} style={{ padding: 20 }} /> : null}
       <FlatList data={filteredCustomers} keyExtractor={(c) => c.name} contentContainerStyle={{ padding: 14 }}
-        ListEmptyComponent={!loading ? <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>👥</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No customers yet</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Customers are added when you create due/credit sales</Text></View> : null}
+        ListEmptyComponent={!loading ? <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>{searchQuery.trim() ? "🔍" : "👥"}</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>{searchQuery.trim() ? `No results for '${searchQuery.trim()}'` : "No customers yet"}</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>{searchQuery.trim() ? "Try a different search term" : "Customers are added when you create due/credit sales"}</Text></View> : null}
         renderItem={({ item }) => (
         <Pressable style={styles.card} onPress={() => {
           // GCP-STG-0065: Customer detail on tap
