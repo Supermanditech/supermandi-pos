@@ -16343,7 +16343,7 @@
       "start_line": 1,
       "end_line": 17,
       "checksum": "a7950fda3221e5d8",
-      "description": "Add billing_model column to orders.purchase_orders — was never created by any migration despite orders.ts INSERT writing to it",
+      "description": "Add billing_model column to orders.purchase_orders — was never created by any migration despite orders.ts INSERT writing to it (with CHECK constraint)",
       "test_file": "backend/tests/poBillingModel.gcp-stg-0351.unit.test.ts",
       "depends_on": null,
       "migration": null,
