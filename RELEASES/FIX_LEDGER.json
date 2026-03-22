@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 664,
+  "version": 665,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6783,8 +6783,8 @@
       "file": "src/screens/v3/PaymentScreenV3.tsx",
       "start_line": 1,
       "end_line": 249,
-      "checksum": "2336afabc48e9349",
-      "description": "Payment screen v3 — Cash/UPI/Udhar with quick amounts, GST total, Hindi labels + DA-009/010 udhar wiring + cart unlock + DA-033 split payment validation + createSplitPayment API wiring",
+      "checksum": "7e5d2acfcc56c7c6",
+      "description": "Payment screen v3 — Cash/UPI/Udhar with quick amounts, GST total, Hindi labels + DA-009/010 udhar wiring + cart unlock + DA-033 split payment validation + createSplitPayment API wiring (checksum updated after GCP-STG-0313 per-item GST fix)",
       "test_file": "src/__tests__/screens/payment-v3.stg-556.test.ts",
       "depends_on": null,
       "migration": null,
@@ -8927,8 +8927,8 @@
     {
       "ticket": "STG-503",
       "file": "src/screens/v3/usePaymentFlow.ts",
-      "start_line": 32,
-      "end_line": 35,
+      "start_line": 36,
+      "end_line": 39,
       "checksum": "16dc690ba5325e36",
       "description": "STG-503: Zero-amount checkout guard — rejects grandTotal<=0 before sale creation",
       "test_file": "src/__tests__/screens/SellScreenV3.runtime.test.tsx",
@@ -8978,7 +8978,8 @@
         "test_guard": "SellScreenV3.runtime.test.tsx covers payment flow",
         "single_commit": "fix(STG-503): single commit",
         "ticket_parked": "Committing on main"
-      }
+      },
+      "line_shifted_at": "2026-03-22T17:00:05.748Z"
     },
     {
       "ticket": "DEEP-001",
@@ -10127,8 +10128,8 @@
     {
       "ticket": "GCP-STG-0126",
       "file": "src/screens/v3/PaymentScreenV3.tsx",
-      "start_line": 258,
-      "end_line": 259,
+      "start_line": 262,
+      "end_line": 263,
       "checksum": "ed445dbab9ef0313",
       "description": "UDHAR label font reduced from 17 to 14 to prevent 2-line wrap in narrow card",
       "test_file": "src/__tests__/screens/PaymentScreenV3.test.tsx",
@@ -10162,7 +10163,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:55:48.878Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-21T19:50:09.496Z"
+      "line_shifted_at": "2026-03-22T17:00:05.761Z"
     },
     {
       "ticket": "GCP-STG-0050",
@@ -10286,8 +10287,8 @@
     {
       "ticket": "GCP-STG-0049",
       "file": "src/screens/v3/PaymentScreenV3.tsx",
-      "start_line": 203,
-      "end_line": 231,
+      "start_line": 207,
+      "end_line": 235,
       "checksum": "f0b610dc16bc81a4",
       "description": "Split payment double-tap guard: createSaleInFlight check + disabled button + processing state",
       "test_file": "src/__tests__/screens/splitPaymentRace.gcp-stg-0049.test.ts",
@@ -10321,7 +10322,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:35:15.392Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-21T19:50:09.505Z"
+      "line_shifted_at": "2026-03-22T17:00:05.769Z"
     },
     {
       "ticket": "GCP-STG-0053",
@@ -12489,8 +12490,8 @@
     {
       "ticket": "GCP-STG-0039",
       "file": "src/screens/v3/PaymentScreenV3.tsx",
-      "start_line": 42,
-      "end_line": 48,
+      "start_line": 46,
+      "end_line": 52,
       "checksum": "a76122ab04df1513",
       "description": "Payment method selection visual feedback — checkmark, border, background",
       "test_file": "src/__tests__/PaymentScreenV3.test.tsx",
@@ -12544,13 +12545,14 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T19:55:04.356Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-22T17:00:05.788Z"
     },
     {
       "ticket": "GCP-STG-0040",
       "file": "src/screens/v3/PaymentScreenV3.tsx",
-      "start_line": 256,
-      "end_line": 257,
+      "start_line": 260,
+      "end_line": 261,
       "checksum": "bd11523f313d4ea1",
       "description": "Payment method icon 40x40 + padding 28 per prototype",
       "test_file": "src/__tests__/PaymentScreenV3.test.tsx",
@@ -12604,7 +12606,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T19:55:04.478Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-22T17:00:05.791Z"
     },
     {
       "ticket": "GCP-STG-0042",
@@ -14549,6 +14552,62 @@
         "single_commit": "fix(GCP-STG-0290)",
         "ticket_parked": "after commit"
       }
+    },
+    {
+      "ticket": "GCP-STG-0313",
+      "file": "src/screens/v3/usePaymentFlow.ts",
+      "start_line": 22,
+      "end_line": 27,
+      "checksum": "2fabd95d8d7238f8",
+      "description": "Per-item GST calculation with metadata.gstPct fallback to 18%, replacing flat total*0.18",
+      "test_file": "src/__tests__/screens/gstCalculation.gcp-stg-0313.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T16:59:12.615Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "per-item GST: gstPct ?? 18 per item",
+        "business_behaviour": "correct GST on mixed-rate carts",
+        "impacted_files": "usePaymentFlow.ts + PaymentScreenV3.tsx + test",
+        "fix_ledger_check": "254 fixes zero drift",
+        "no_agent_conflict": "single",
+        "gcp_parity": "N/A frontend",
+        "regression_check": "12/12 pass",
+        "test_guard": "gstCalculation.gcp-stg-0313.test.ts 12/12",
+        "single_commit": "fix(GCP-STG-0313)",
+        "ticket_parked": "after commit",
+        "ui_elements": "N/A - calculation logic only",
+        "ux_states": "N/A",
+        "wiring": "GST calc used by PaymentScreenV3 + usePaymentFlow + CartSheetV3",
+        "navigation": "N/A",
+        "i18n_keys": "N/A"
+      }
     }
   ],
   "machine_state_version": 269,
@@ -14593,5 +14652,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T16:52:41.290Z"
+  "lastUpdated": "2026-03-22T17:00:54.110Z"
 }

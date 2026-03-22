@@ -20,7 +20,11 @@ export function usePaymentFlow() {
   const total = useCartStore((s) => s.total);
   const sellMode = useCartStore((s) => s.sellMode);
   const isBulk = sellMode === "bulk";
-  const gst = isBulk ? Math.round(total * 0.18) : 0;
+  // GCP-STG-0313: Per-item GST calculation matching CartSheetV3 (not flat 18%)
+  const gst = isBulk ? items.reduce((sum, item) => {
+    const gstPct = (item as any).metadata?.gstPct ?? 18;
+    return sum + Math.round(item.priceMinor * item.quantity * gstPct / 100);
+  }, 0) : 0;
   const grandTotal = total + gst;
   const itemCount = items.reduce((s, i) => s + i.quantity, 0);
   const totalDisplay = `₹${Math.round(grandTotal / 100).toLocaleString("en-IN")}`;
