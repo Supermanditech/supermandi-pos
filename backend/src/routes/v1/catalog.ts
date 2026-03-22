@@ -84,6 +84,7 @@ catalogRouter.get("/stores/:storeId/catalog", requireDeviceToken, async (req: Re
         sp.display_name ILIKE $${paramIndex}
         OR p.name ILIKE $${paramIndex}
         OR p.primary_barcode ILIKE $${paramIndex}
+        OR COALESCE(p.hsn_code, '') ILIKE $${paramIndex}
       )`;
       params.push(`%${q.trim()}%`);
       paramIndex++;
@@ -426,6 +427,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
               OR COALESCE(sp.unit, '') ILIKE $${paramIndex}
               OR COALESCE(s.business_name, '') ILIKE $${paramIndex}
               OR COALESCE(s.trade_name, '') ILIKE $${paramIndex}
+              OR COALESCE(sp.hsn_code, '') ILIKE $${paramIndex}
             )`);
           }
           paramIndex++;

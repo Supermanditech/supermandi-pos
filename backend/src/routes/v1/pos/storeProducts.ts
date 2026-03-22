@@ -376,6 +376,7 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
         OR similarity(p.name, $${idx}) > 0.3
         OR similarity(COALESCE(sp.display_name, ''), $${idx}) > 0.3
         OR similarity(COALESCE(p.brand, ''), $${idx}) > 0.3
+        OR COALESCE(p.hsn_code, '') ILIKE '%' || $${idx} || '%'
       )`);
 
       // T-132: Enhanced scoring with display_name similarity for typo tolerance
@@ -913,12 +914,14 @@ posStoreProductsRouter.get("/store-products/freshness", requireDeviceToken, asyn
   }
 
   try {
-    // Get the latest updated_at across store_products, stock_balances, and metadata for this store
+    // Get the latest updated_at across store_products, stock_balances, metadata, and price for this store
     // SYNC-PRD-001: Include metadata_updated_at to detect name changes from Dashboard
+    // GCP-STG-0335: Include price_updated_at to detect price changes
     const result = await pool.query(
       `SELECT GREATEST(
         (SELECT MAX(updated_at) FROM catalog.store_products WHERE store_id = $1 AND is_active = true),
         (SELECT MAX(metadata_updated_at) FROM catalog.store_products WHERE store_id = $1 AND is_active = true),
+        (SELECT MAX(price_updated_at) FROM catalog.store_products WHERE store_id = $1 AND is_active = true),
         (SELECT MAX(updated_at) FROM inventory.stock_balances WHERE store_id = $1)
       ) as latest_updated_at`,
       [storeId]
@@ -955,11 +958,13 @@ posStoreProductsRouter.get("/store-products/freshness", requireDeviceToken, asyn
 posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, requireActiveStore, async (req, res) => {
   const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
   // ITER3-001: Accept storeProductId in addition to barcode/productId
-  const { barcode, productId, storeProductId, sellPrice } = req.body as {
+  // GCP-STG-0335: Accept expectedPriceUpdatedAt for LWW guard
+  const { barcode, productId, storeProductId, sellPrice, expectedPriceUpdatedAt } = req.body as {
     barcode?: string;
     productId?: string;
     storeProductId?: string;
     sellPrice: number;
+    expectedPriceUpdatedAt?: string;
   };
 
   // AUD-059-A FIX: Price bounds validation
@@ -991,56 +996,112 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, requir
     return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
   }
 
+  // GCP-STG-0335: Parse LWW timestamp for price conflict detection
+  const parsedPriceTs = expectedPriceUpdatedAt ? new Date(expectedPriceUpdatedAt) : null;
+  const validPriceTs = parsedPriceTs && !isNaN(parsedPriceTs.getTime()) ? parsedPriceTs : null;
+  // GCP-STG-0335: Build LWW guard clause — only applied when client sends a timestamp
+  const priceLwwGuard = validPriceTs
+    ? `AND (price_updated_at IS NULL OR price_updated_at <= $4)`
+    : "";
+  const priceLwwGuardSp = validPriceTs
+    ? `AND (sp.price_updated_at IS NULL OR sp.price_updated_at <= $4)`
+    : "";
+
   try {
     let updateResult;
+    const baseParams = [Math.round(sellPrice)];
 
     // ITER3-001: Priority order: storeProductId > productId > barcode
     if (storeProductId) {
       // Update by storeProductId directly (most precise)
+      const params = [...baseParams, storeProductId, storeId];
+      if (validPriceTs) params.push(validPriceTs.toISOString());
       updateResult = await pool.query(
         `UPDATE catalog.store_products
-         SET sell_price = $1, updated_at = NOW()
-         WHERE id = $2 AND store_id = $3 AND is_active = true
-         RETURNING id, product_id, sell_price, display_name, updated_at`,
-        [Math.round(sellPrice), storeProductId, storeId]
+         SET sell_price = $1, updated_at = NOW(), price_updated_at = NOW()
+         WHERE id = $2 AND store_id = $3 AND is_active = true ${priceLwwGuard}
+         RETURNING id, product_id, sell_price, display_name, updated_at, price_updated_at`,
+        params
       );
     } else if (productId) {
       // Update by productId directly
+      const params = [...baseParams, storeId, productId];
+      if (validPriceTs) params.push(validPriceTs.toISOString());
       updateResult = await pool.query(
         `UPDATE catalog.store_products
-         SET sell_price = $1, updated_at = NOW()
-         WHERE store_id = $2 AND product_id = $3 AND is_active = true
-         RETURNING id, product_id, sell_price, display_name, updated_at`,
-        [Math.round(sellPrice), storeId, productId]
+         SET sell_price = $1, updated_at = NOW(), price_updated_at = NOW()
+         WHERE store_id = $2 AND product_id = $3 AND is_active = true ${priceLwwGuard}
+         RETURNING id, product_id, sell_price, display_name, updated_at, price_updated_at`,
+        params
       );
     } else {
       // Find store_product by barcode, then update
+      const params = [...baseParams, storeId, barcode];
+      if (validPriceTs) params.push(validPriceTs.toISOString());
       updateResult = await pool.query(
         `UPDATE catalog.store_products sp
-         SET sell_price = $1, updated_at = NOW()
+         SET sell_price = $1, updated_at = NOW(), price_updated_at = NOW()
          FROM catalog.store_product_barcodes spb
          WHERE spb.store_id = $2 AND spb.barcode = $3
            AND sp.id = spb.store_product_id AND sp.store_id = spb.store_id
-           AND sp.is_active = true
-         RETURNING sp.id, sp.product_id, sp.sell_price, sp.display_name, sp.updated_at`,
-        [Math.round(sellPrice), storeId, barcode]
+           AND sp.is_active = true ${priceLwwGuardSp}
+         RETURNING sp.id, sp.product_id, sp.sell_price, sp.display_name, sp.updated_at, sp.price_updated_at`,
+        params
       );
 
       // Fallback: try primary_barcode
-      if ((updateResult.rowCount ?? 0) === 0) {
+      if ((updateResult.rowCount ?? 0) === 0 && !validPriceTs) {
         updateResult = await pool.query(
           `UPDATE catalog.store_products sp
-           SET sell_price = $1, updated_at = NOW()
+           SET sell_price = $1, updated_at = NOW(), price_updated_at = NOW()
            FROM catalog.products p
            WHERE p.primary_barcode = $3 AND sp.product_id = p.id
              AND sp.store_id = $2 AND sp.is_active = true
-           RETURNING sp.id, sp.product_id, sp.sell_price, sp.display_name, sp.updated_at`,
+           RETURNING sp.id, sp.product_id, sp.sell_price, sp.display_name, sp.updated_at, sp.price_updated_at`,
           [Math.round(sellPrice), storeId, barcode]
         );
       }
     }
 
+    // GCP-STG-0335: Distinguish 404 (not found) from 409 (stale write)
     if ((updateResult.rowCount ?? 0) === 0) {
+      if (validPriceTs) {
+        // Check if the product exists — if yes, this is a stale write conflict
+        let existsResult;
+        if (storeProductId) {
+          existsResult = await pool.query(
+            `SELECT id, price_updated_at FROM catalog.store_products WHERE id = $1 AND store_id = $2 AND is_active = true`,
+            [storeProductId, storeId]
+          );
+        } else if (productId) {
+          existsResult = await pool.query(
+            `SELECT id, price_updated_at FROM catalog.store_products WHERE store_id = $1 AND product_id = $2 AND is_active = true`,
+            [storeId, productId]
+          );
+        } else {
+          existsResult = await pool.query(
+            `SELECT sp.id, sp.price_updated_at FROM catalog.store_products sp
+             JOIN catalog.store_product_barcodes spb ON sp.id = spb.store_product_id AND sp.store_id = spb.store_id
+             WHERE spb.store_id = $1 AND spb.barcode = $2 AND sp.is_active = true
+             UNION ALL
+             SELECT sp.id, sp.price_updated_at FROM catalog.store_products sp
+             JOIN catalog.products p ON sp.product_id = p.id
+             WHERE p.primary_barcode = $2 AND sp.store_id = $1 AND sp.is_active = true
+             LIMIT 1`,
+            [storeId, barcode]
+          );
+        }
+        if (existsResult && (existsResult.rowCount ?? 0) > 0) {
+          return res.status(409).json({
+            error: "stale_write",
+            message: "Price conflict — product was updated since you loaded it",
+            expectedPriceUpdatedAt: validPriceTs.toISOString(),
+            currentPriceUpdatedAt: existsResult.rows[0].price_updated_at,
+            entity: "store_product",
+            storeProductId: existsResult.rows[0].id,
+          });
+        }
+      }
       return res.status(404).json({ error: "NOT_FOUND", message: "Product not found in store" });
     }
 
@@ -1061,6 +1122,8 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, requir
         name: updatedRow.display_name || undefined,
         currentStock,
         updatedAt: updatedRow.updated_at,
+        // GCP-STG-0335: Return price_updated_at so client can use it for next LWW check
+        priceUpdatedAt: updatedRow.price_updated_at,
       },
     });
   } catch (error) {
