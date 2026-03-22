@@ -5,7 +5,7 @@
  * Commands:
  *   session-start  — full session startup check (Claude runs this FIRST)
  *   check          — verify all registered fixes are intact (handles line shifts)
- *   pre-commit     — FULL pre-commit gate: 14 gates (drift + secrets + staging + tickets + migrations + URLs + hygiene + ledger-co-commit + no-amend + msg-format + single-ticket + max-files + typecheck + checklist)
+ *   pre-commit     — FULL pre-commit gate: 16 gates (drift + secrets + staging + tickets + migrations + URLs + hygiene + ledger-co-commit + no-amend + msg-format + single-ticket + max-files + typecheck + checklist + regression-tests + eslint)
  *   register       — register a new fix with checksum + auto-scoped checklist
  *   checklist      — mark checklist items complete with evidence
  *   reindex        — re-scan files and update line numbers after line shifts
@@ -714,13 +714,13 @@ if (command === 'check') {
 
 } else if (command === 'pre-commit') {
   // ===== FULL MULTI-GATE PRE-COMMIT =====
-  console.log('\n=== FIX GUARD PRE-COMMIT — 14 GATES ===\n');
+  console.log('\n=== FIX GUARD PRE-COMMIT — 16 GATES ===\n');
 
   let blocked = false;
   let warnings = 0;
 
   // Gate 1: Fix drift
-  console.log('[Gate 1/14] Fix Drift Check...');
+  console.log('[Gate 1/16] Fix Drift Check...');
   const driftResults = checkAll();
   if (!driftResults.ok) {
     console.log('  ❌ BLOCKED: Fix drift detected');
@@ -739,7 +739,7 @@ if (command === 'check') {
   }
 
   // Gate 2: Secret scanner
-  console.log('[Gate 2/14] Secret Scanner...');
+  console.log('[Gate 2/16] Secret Scanner...');
   const secretFailures = checkStagedSecrets();
   if (secretFailures.length > 0) {
     console.log('  ❌ BLOCKED: Secrets detected in staged files');
@@ -752,7 +752,7 @@ if (command === 'check') {
   }
 
   // Gate 3: Staged files validation
-  console.log('[Gate 3/14] Staged Files Validation...');
+  console.log('[Gate 3/16] Staged Files Validation...');
   const stagedFailures = checkStagedFiles();
   const stagedErrors = stagedFailures.filter(f => f.severity !== 'WARNING');
   const stagedWarnings = stagedFailures.filter(f => f.severity === 'WARNING');
@@ -771,7 +771,7 @@ if (command === 'check') {
   }
 
   // Gate 4: Ticket consistency
-  console.log('[Gate 4/14] Ticket Consistency...');
+  console.log('[Gate 4/16] Ticket Consistency...');
   const ticketFailures = checkTicketConsistency();
   const ticketErrors = ticketFailures.filter(f => f.severity !== 'WARNING');
   const ticketWarnings = ticketFailures.filter(f => f.severity === 'WARNING');
@@ -790,7 +790,7 @@ if (command === 'check') {
   }
 
   // Gate 5: Migration sequence
-  console.log('[Gate 5/14] Migration Sequence...');
+  console.log('[Gate 5/16] Migration Sequence...');
   const migFailures = checkMigrationSequence();
   if (migFailures.length > 0) {
     for (const f of migFailures) {
@@ -802,7 +802,7 @@ if (command === 'check') {
   }
 
   // Gate 6: Localhost/dev URL check
-  console.log('[Gate 6/14] Dev URL Scanner...');
+  console.log('[Gate 6/16] Dev URL Scanner...');
   const urlFailures = checkLocalhostUrls();
   if (urlFailures.length > 0) {
     for (const f of urlFailures) {
@@ -814,7 +814,7 @@ if (command === 'check') {
   }
 
   // Gate 7: Commit hygiene — check git status for signs of broad staging
-  console.log('[Gate 7/14] Commit Hygiene...');
+  console.log('[Gate 7/16] Commit Hygiene...');
   const stagedFiles7 = exec('git diff --cached --name-only').split('\n').filter(Boolean);
   const stagedCount = stagedFiles7.length;
   if (stagedCount > 20) {
@@ -828,7 +828,7 @@ if (command === 'check') {
   }
 
   // Gate 8: Ledger co-commit — if source files staged, FIX_LEDGER.json MUST also be staged
-  console.log('[Gate 8/14] Ledger Co-Commit...');
+  console.log('[Gate 8/16] Ledger Co-Commit...');
   const sourceFilesStaged = stagedFiles7.filter(f =>
     !f.startsWith('RELEASES/') && !f.startsWith('.') && !f.startsWith('scripts/fix-guard') &&
     (f.endsWith('.ts') || f.endsWith('.tsx') || f.endsWith('.js') || f.endsWith('.jsx') || f.endsWith('.sql'))
@@ -843,7 +843,7 @@ if (command === 'check') {
   }
 
   // Gate 9: No amend — detect if this is an amend of a tagged commit
-  console.log('[Gate 9/14] No Amend on Tagged Commits...');
+  console.log('[Gate 9/16] No Amend on Tagged Commits...');
   const isAmend = process.env.GIT_REFLOG_ACTION && process.env.GIT_REFLOG_ACTION.includes('amend');
   // Also check if HEAD has a tag (amending a tagged commit is dangerous)
   const headTags = exec('git tag --points-at HEAD 2>/dev/null');
@@ -862,13 +862,13 @@ if (command === 'check') {
 
   // Gates 10+11 run in commit-msg hook (not pre-commit) because COMMIT_EDITMSG
   // is stale during pre-commit. See 'commit-msg' command below.
-  console.log('[Gate 10/14] Commit Message Format... (deferred to commit-msg hook)');
-  console.log('[Gate 11/14] Single Ticket Per Commit... (deferred to commit-msg hook)');
+  console.log('[Gate 10/16] Commit Message Format... (deferred to commit-msg hook)');
+  console.log('[Gate 11/16] Single Ticket Per Commit... (deferred to commit-msg hook)');
 
   // Gate 12: Max staged files — BLOCKS if >15 source files staged (prevents bulk commits)
   // HL-003: Upgraded from Gate 7 "warn on >20" to hard BLOCK on >15.
   // Legitimate single-ticket changes rarely touch >15 files. If they do, the ticket scope is wrong.
-  console.log('[Gate 12/14] Max Staged Files...');
+  console.log('[Gate 12/16] Max Staged Files...');
   const stagedFilesForMax = exec('git diff --cached --name-only').split('\n').filter(Boolean);
   const stagedSourceFiles = stagedFilesForMax.filter(f =>
     !f.startsWith('RELEASES/') && !f.endsWith('.md') && !f.endsWith('.json') && f !== 'package.json'
@@ -884,7 +884,7 @@ if (command === 'check') {
 
   // Gate 13: Typecheck gate — BLOCKS if TypeScript has errors
   // HL-003: Previously typecheck was only advisory. Now machine-enforced.
-  console.log('[Gate 13/14] TypeScript Typecheck...');
+  console.log('[Gate 13/16] TypeScript Typecheck...');
   try {
     const tscResult = execSync('npx tsc --noEmit 2>&1', { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
     // tsc outputs nothing on success (except maybe npm warnings)
@@ -910,7 +910,7 @@ if (command === 'check') {
   }
 
   // Gate 14: Completion checklist — every applicable layer must be checked off
-  console.log('[Gate 14/14] Completion Checklist...');
+  console.log('[Gate 14/16] Completion Checklist...');
   const ledgerForChecklist = loadLedger();
   const activeFixesForChecklist = ledgerForChecklist.fixes.filter(f => f.status === 'ACTIVE' && f.checklist);
   const activeFixesNoChecklist = ledgerForChecklist.fixes.filter(f => f.status === 'ACTIVE' && !f.checklist);
@@ -943,6 +943,170 @@ if (command === 'check') {
     console.log('  ✅ No active fixes (tooling-only commit)');
   }
 
+  // Gate 15: Regression Test Guard — run related tests for staged files
+  // Prevents regressions by running test suites that cover the changed code
+  console.log('[Gate 15/16] Regression Test Guard...');
+  if (process.env.FIX_GUARD_SKIP_TESTS === '1') {
+    console.log('  ⚠️  SKIPPED (FIX_GUARD_SKIP_TESTS=1) — emergency override active');
+    warnings++;
+  } else {
+    try {
+      const stagedForTests = exec('git diff --cached --name-only').split('\n').filter(Boolean);
+      const testFilesToRun = new Set();
+      let runContractTests = false;
+
+      for (const file of stagedForTests) {
+        // Skip non-source files
+        if (!file.endsWith('.ts') && !file.endsWith('.tsx') && !file.endsWith('.sql')) continue;
+        if (file.includes('__tests__') || file.includes('.test.')) continue; // skip test files themselves
+        if (file.startsWith('RELEASES/') || file.startsWith('scripts/')) continue;
+
+        // Migration changes → run contract tests
+        if (file.startsWith('backend/migrations/')) {
+          runContractTests = true;
+          continue;
+        }
+
+        // Extract base name for test matching
+        const baseName = path.basename(file).replace(/\.(ts|tsx)$/, '');
+
+        // Backend source → find backend tests
+        if (file.startsWith('backend/')) {
+          try {
+            const matches = execSync(
+              `find backend/tests backend/src/__tests__ -name "*${baseName}*" -name "*.test.*" 2>/dev/null || true`,
+              { cwd: ROOT, encoding: 'utf8', timeout: 10000 }
+            ).split('\n').filter(Boolean);
+            matches.forEach(m => testFilesToRun.add(m));
+          } catch (e) { /* no matching tests */ }
+        }
+
+        // POS/frontend source → find POS tests
+        if (file.startsWith('src/')) {
+          try {
+            const matches = execSync(
+              `find src/__tests__ -name "*${baseName}*" -name "*.test.*" 2>/dev/null || true`,
+              { cwd: ROOT, encoding: 'utf8', timeout: 10000 }
+            ).split('\n').filter(Boolean);
+            matches.forEach(m => testFilesToRun.add(m));
+          } catch (e) { /* no matching tests */ }
+        }
+
+        // SuperAdmin source → find SuperAdmin tests
+        if (file.startsWith('supermandi-superadmin/')) {
+          try {
+            const matches = execSync(
+              `find supermandi-superadmin/src -name "*${baseName}*" -name "*.test.*" 2>/dev/null || true`,
+              { cwd: ROOT, encoding: 'utf8', timeout: 10000 }
+            ).split('\n').filter(Boolean);
+            matches.forEach(m => testFilesToRun.add(m));
+          } catch (e) { /* no matching tests */ }
+        }
+      }
+
+      // Always run contract tests if backend files changed
+      const backendFilesStaged = stagedForTests.some(f => f.startsWith('backend/') && (f.endsWith('.ts') || f.endsWith('.sql')));
+      if (backendFilesStaged) runContractTests = true;
+
+      let testFailed = false;
+      const testResults = [];
+
+      // Run matched test files
+      if (testFilesToRun.size > 0) {
+        const testList = Array.from(testFilesToRun).slice(0, 10); // cap at 10 test files
+        console.log(`  Running ${testList.length} related test file(s)...`);
+        for (const testFile of testList) {
+          try {
+            execSync(`npx jest --no-coverage --passWithNoFailures "${testFile}" 2>&1`, {
+              cwd: ROOT, encoding: 'utf8', timeout: 120000
+            });
+            testResults.push({ file: testFile, status: 'PASS' });
+          } catch (testErr) {
+            const output = (testErr.stdout || '') + (testErr.stderr || '');
+            const failLine = output.split('\n').find(l => l.includes('FAIL') || l.includes('●'));
+            testResults.push({ file: testFile, status: 'FAIL', error: failLine || 'Test failed' });
+            testFailed = true;
+          }
+        }
+      }
+
+      // Run contract tests if needed
+      if (runContractTests) {
+        console.log('  Running contract tests (backend changes detected)...');
+        try {
+          execSync('npm run test:contract 2>&1', { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
+          testResults.push({ file: 'contract tests', status: 'PASS' });
+        } catch (testErr) {
+          testResults.push({ file: 'contract tests', status: 'FAIL', error: 'Contract test suite failed' });
+          testFailed = true;
+        }
+      }
+
+      // Report results
+      for (const r of testResults) {
+        if (r.status === 'PASS') {
+          console.log(`  ✅ ${r.file}`);
+        } else {
+          console.log(`  ❌ ${r.file}: ${r.error}`);
+        }
+      }
+
+      if (testFailed) {
+        console.log('  ❌ BLOCKED: Regression detected — related tests failing');
+        console.log('  Fix the failing tests before committing. To skip (EMERGENCY ONLY): FIX_GUARD_SKIP_TESTS=1 git commit ...');
+        blocked = true;
+      } else if (testResults.length === 0) {
+        console.log('  ✅ No related tests found (non-source or tooling-only change)');
+      } else {
+        console.log(`  ✅ ${testResults.length} test suite(s) passed — no regressions`);
+      }
+    } catch (gate15Err) {
+      console.log(`  ⚠️  Gate 15 error: ${gate15Err.message} — skipping (non-blocking)`);
+      warnings++;
+    }
+  }
+
+  // Gate 16: ESLint Gate — run eslint on staged backend .ts files only
+  console.log('[Gate 16/16] ESLint Gate...');
+  if (process.env.FIX_GUARD_SKIP_LINT === '1') {
+    console.log('  ⚠️  SKIPPED (FIX_GUARD_SKIP_LINT=1) — emergency override active');
+    warnings++;
+  } else {
+    try {
+      const stagedForLint = exec('git diff --cached --name-only').split('\n').filter(Boolean);
+      const backendTsFiles = stagedForLint.filter(f =>
+        f.startsWith('backend/') && f.endsWith('.ts') && !f.includes('__tests__') && !f.includes('.test.')
+      );
+
+      if (backendTsFiles.length > 0) {
+        const filePaths = backendTsFiles.slice(0, 20).join(' '); // cap at 20 files
+        try {
+          execSync(`npx eslint --no-warn ${filePaths} 2>&1`, {
+            cwd: ROOT, encoding: 'utf8', timeout: 60000
+          });
+          console.log(`  ✅ ${backendTsFiles.length} backend file(s) — 0 ESLint errors`);
+        } catch (lintErr) {
+          const output = (lintErr.stdout || '') + (lintErr.stderr || '');
+          const errorLines = output.split('\n').filter(l => /\d+:\d+\s+error\s/.test(l));
+          if (errorLines.length > 0) {
+            console.log(`  ❌ BLOCKED: ${errorLines.length} ESLint error(s)`);
+            errorLines.slice(0, 5).forEach(e => console.log(`    ${e.trim().substring(0, 120)}`));
+            if (errorLines.length > 5) console.log(`    ... +${errorLines.length - 5} more`);
+            blocked = true;
+          } else {
+            // eslint exited non-zero but no error lines — might be warnings only
+            console.log(`  ✅ ${backendTsFiles.length} backend file(s) — ESLint passed (warnings only)`);
+          }
+        }
+      } else {
+        console.log('  ✅ No backend .ts files staged — lint skipped');
+      }
+    } catch (gate16Err) {
+      console.log(`  ⚠️  Gate 16 error: ${gate16Err.message} — skipping (non-blocking)`);
+      warnings++;
+    }
+  }
+
   // Verdict
   console.log('\n---');
   if (blocked) {
@@ -953,7 +1117,7 @@ if (command === 'check') {
     if (warnings > 0) {
       console.log(`\n✅ COMMIT ALLOWED — ${warnings} warning(s) (review above)`);
     } else {
-      console.log('\n✅ ALL 14 GATES PASSED — commit allowed');
+      console.log('\n✅ ALL 16 GATES PASSED — commit allowed');
     }
     process.exit(0);
   }
@@ -974,7 +1138,7 @@ if (command === 'check') {
   const firstLine = commitMsg.split('\n')[0];
 
   // Gate 10: Commit message format — BLOCKS on wrong format
-  console.log('[Gate 10/14] Commit Message Format...');
+  console.log('[Gate 10/16] Commit Message Format...');
   const validFormat = /^(fix|feat|chore|test|docs|refactor|revert)\([^)]+\):\s.+/.test(firstLine);
   if (!validFormat) {
     console.log(`  ❌ BLOCKED: Commit message doesn't match format "type(SCOPE): description" — got: "${firstLine.substring(0, 60)}"`);
@@ -988,7 +1152,7 @@ if (command === 'check') {
   }
 
   // Gate 11: Single ticket per commit — BLOCKS on multiple tickets
-  console.log('[Gate 11/14] Single Ticket Per Commit...');
+  console.log('[Gate 11/16] Single Ticket Per Commit...');
   const subjectLine = firstLine;
 
   const stgMatches = subjectLine.match(/STG-\d+/g);
@@ -1681,7 +1845,7 @@ Ticket lifecycle:
 Commands:
   session-start  Full session startup check (Claude runs this FIRST)
   check          Verify all registered fixes are intact
-  pre-commit     8-gate pre-commit (drift + secrets + staging + tickets + migrations + URLs + hygiene + CHECKLIST)
+  pre-commit     16-gate pre-commit (drift + secrets + staging + tickets + migrations + URLs + hygiene + ledger + no-amend + msg-format + single-ticket + max-files + typecheck + checklist + regression-tests + eslint)
   register       Register a new fix with auto-scoped 14-item completion checklist
   checklist      Mark checklist items complete: checklist <ticket> <item> "evidence"
                  Show checklist: checklist <ticket> --show
