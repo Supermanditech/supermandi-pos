@@ -28,6 +28,10 @@ export function CatalogTab() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  // GCP-STG-0339: Supplier filter state
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
+  // GCP-STG-0340: Approval status filter state
+  const [selectedApprovalStatus, setSelectedApprovalStatus] = useState<string>("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -76,7 +80,8 @@ export function CatalogTab() {
   }, []);
 
   // Load products
-  const loadProducts = useCallback(async (pageNum: number, searchTerm: string, category: string) => {
+  // GCP-STG-0339 + GCP-STG-0340: Accept supplierId and approvalStatus filters
+  const loadProducts = useCallback(async (pageNum: number, searchTerm: string, category: string, supplierId?: string, approvalStatus?: string) => {
     if (refreshInFlight.current) return;
     refreshInFlight.current = true;
     setLoading(true);
@@ -87,6 +92,8 @@ export function CatalogTab() {
         limit: LIMIT,
         q: searchTerm || undefined,
         category: category || undefined,
+        supplierId: supplierId || undefined,
+        approvalStatus: approvalStatus || undefined,
       });
       setProducts(result.data);
       setTotal(result.pagination.total);
@@ -105,8 +112,8 @@ export function CatalogTab() {
   }, [loadCategories]);
 
   useEffect(() => {
-    loadProducts(page, search, selectedCategory);
-  }, [page, search, selectedCategory, loadProducts]);
+    loadProducts(page, search, selectedCategory, selectedSupplierId, selectedApprovalStatus);
+  }, [page, search, selectedCategory, selectedSupplierId, selectedApprovalStatus, loadProducts]);
 
   // Debounced search
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -156,7 +163,7 @@ export function CatalogTab() {
     try {
       await approveProduct(product.id);
       toast.success(`Approved: ${product.displayName}`);
-      loadProducts(page, search, selectedCategory);
+      loadProducts(page, search, selectedCategory, selectedSupplierId, selectedApprovalStatus);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to approve product");
     } finally {
@@ -178,7 +185,7 @@ export function CatalogTab() {
       await rejectProduct(rejectingProduct.id, rejectReason.trim());
       toast.success(`Rejected: ${rejectingProduct.displayName}`);
       setRejectingProduct(null);
-      loadProducts(page, search, selectedCategory);
+      loadProducts(page, search, selectedCategory, selectedSupplierId, selectedApprovalStatus);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to reject product");
     } finally {
@@ -193,7 +200,7 @@ export function CatalogTab() {
     try {
       const result = await publishProduct(product.id);
       toast.success(`Published "${product.displayName}" to ${result.publishedToStores} store(s)`);
-      loadProducts(page, search, selectedCategory);
+      loadProducts(page, search, selectedCategory, selectedSupplierId, selectedApprovalStatus);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to publish product");
     } finally {
@@ -260,7 +267,7 @@ export function CatalogTab() {
       setEditingProduct(null);
 
       // Refresh both lists
-      loadProducts(page, search, selectedCategory);
+      loadProducts(page, search, selectedCategory, selectedSupplierId, selectedApprovalStatus);
       loadCategories();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to update product");
@@ -277,7 +284,7 @@ export function CatalogTab() {
       await overrideProductCategory(editingProduct.id, null);
       toast.success("Category override cleared");
       setEditingProduct(null);
-      loadProducts(page, search, selectedCategory);
+      loadProducts(page, search, selectedCategory, selectedSupplierId, selectedApprovalStatus);
       loadCategories();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to clear override");
@@ -324,15 +331,52 @@ export function CatalogTab() {
         </div>
       )}
 
-      {/* Search */}
-      <div style={{ marginBottom: 16 }}>
+      {/* GCP-STG-0340: Approval Status filter chips */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+        {(["", "pending", "approved", "rejected"] as const).map((status) => (
+          <button
+            key={status || "all"}
+            className={`btnSm ${selectedApprovalStatus === status ? "btnPrimary" : ""}`}
+            onClick={() => { setSelectedApprovalStatus(status); setPage(1); }}
+            aria-label={`Filter by status: ${status || "All"}`}
+          >
+            {status === "" ? "All Statuses" : status.charAt(0).toUpperCase() + status.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* GCP-STG-0339: Supplier Name filter dropdown + Search */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        <select
+          value={selectedSupplierId}
+          onChange={(e) => { setSelectedSupplierId(e.target.value); setPage(1); }}
+          className="sa-input"
+          style={{ maxWidth: 280 }}
+          aria-label="Filter by supplier"
+        >
+          <option value="">All Suppliers</option>
+          {/* Derive unique suppliers from loaded products + any already-loaded data */}
+          {(() => {
+            const seen = new Map<string, string>();
+            products.forEach((p) => {
+              if (p.supplierId && !seen.has(p.supplierId)) {
+                seen.set(p.supplierId, p.supplierName || "Unknown");
+              }
+            });
+            return Array.from(seen.entries())
+              .sort((a, b) => a[1].localeCompare(b[1]))
+              .map(([id, name]) => (
+                <option key={id} value={id}>{name}</option>
+              ));
+          })()}
+        </select>
         <input
           type="text"
           placeholder="Search by product name, barcode, or SKU..."
           defaultValue={search}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="sa-input"
-          style={{ width: "100%", maxWidth: 400 }}
+          style={{ flex: 1, minWidth: 200, maxWidth: 400 }}
           aria-label="Search products"
         />
       </div>
@@ -341,7 +385,7 @@ export function CatalogTab() {
       {error && (
         <div className="sa-error" role="alert" style={{ marginBottom: 16 }}>
           {error}
-          <button className="btnSm" onClick={() => loadProducts(page, search, selectedCategory)} style={{ marginLeft: 8 }}>
+          <button className="btnSm" onClick={() => loadProducts(page, search, selectedCategory, selectedSupplierId, selectedApprovalStatus)} style={{ marginLeft: 8 }}>
             Retry
           </button>
         </div>
@@ -353,7 +397,7 @@ export function CatalogTab() {
       {/* Empty state */}
       {!loading && !error && products.length === 0 && (
         <div className="sa-empty" role="status">
-          No products found{search ? ` matching "${search}"` : ""}{selectedCategory ? ` in category "${selectedCategory}"` : ""}.
+          No products found{search ? ` matching "${search}"` : ""}{selectedCategory ? ` in category "${selectedCategory}"` : ""}{selectedApprovalStatus ? ` with status "${selectedApprovalStatus}"` : ""}.
         </div>
       )}
 

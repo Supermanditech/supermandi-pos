@@ -135,6 +135,10 @@ export async function fetchProducts(params?: {
   limit?: number;
   q?: string;
   category?: string;
+  // GCP-STG-0339: Supplier filter
+  supplierId?: string;
+  // GCP-STG-0340: Approval status filter
+  approvalStatus?: string;
 }): Promise<CatalogProductsResponse> {
   const base = API_BASE;
   const url = new URL(`${base}/api/v1/admin/catalog/products`, window.location.origin);
@@ -143,6 +147,10 @@ export async function fetchProducts(params?: {
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.q) url.searchParams.set("q", params.q);
   if (params?.category) url.searchParams.set("category", params.category);
+  // GCP-STG-0339: Supplier ID filter
+  if (params?.supplierId) url.searchParams.set("supplierId", params.supplierId);
+  // GCP-STG-0340: Approval status filter
+  if (params?.approvalStatus) url.searchParams.set("approvalStatus", params.approvalStatus);
 
   const res = await fetchWithTimeout(url.toString(), {
     headers: getAuthHeaders(),

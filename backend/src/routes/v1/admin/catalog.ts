@@ -80,6 +80,10 @@ adminCatalogRouter.get(
 
     const q = req.query.q as string | undefined;
     const category = req.query.category as string | undefined;
+    // GCP-STG-0339: Supplier filter
+    const supplierId = req.query.supplierId as string | undefined;
+    // GCP-STG-0340: Approval status filter
+    const approvalStatus = req.query.approvalStatus as string | undefined;
     const page = Math.max(parseInt(req.query.page as string) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 200);
     const offset = (page - 1) * limit;
@@ -104,6 +108,21 @@ adminCatalogRouter.get(
       if (category && category.trim().length > 0) {
         whereClause += ` AND COALESCE(sp.edited_category, sp.category) = $${paramIndex}`;
         params.push(category.trim());
+        paramIndex++;
+      }
+
+      // GCP-STG-0339: Supplier ID filter
+      if (supplierId && supplierId.trim().length > 0 && isValidUUID(supplierId.trim())) {
+        whereClause += ` AND sp.supplier_id = $${paramIndex}::uuid`;
+        params.push(supplierId.trim());
+        paramIndex++;
+      }
+
+      // GCP-STG-0340: Approval status filter
+      const VALID_APPROVAL_STATUSES = ["pending", "approved", "rejected"];
+      if (approvalStatus && VALID_APPROVAL_STATUSES.includes(approvalStatus.trim().toLowerCase())) {
+        whereClause += ` AND sp.approval_status = $${paramIndex}`;
+        params.push(approvalStatus.trim().toLowerCase());
         paramIndex++;
       }
 
@@ -170,6 +189,8 @@ adminCatalogRouter.get(
         filters: {
           search: q?.trim() || null,
           category: category?.trim() || null,
+          supplierId: (supplierId && isValidUUID(supplierId.trim())) ? supplierId.trim() : null,
+          approvalStatus: (approvalStatus && VALID_APPROVAL_STATUSES.includes(approvalStatus.trim().toLowerCase())) ? approvalStatus.trim().toLowerCase() : null,
         },
       });
     } catch (_error: unknown) {
@@ -181,7 +202,7 @@ adminCatalogRouter.get(
           success: true,
           data: [],
           pagination: { page: 1, limit, total: 0, hasMore: false },
-          filters: { search: null, category: null },
+          filters: { search: null, category: null, supplierId: null, approvalStatus: null },
         });
       }
 
