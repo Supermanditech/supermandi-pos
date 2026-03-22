@@ -16599,7 +16599,7 @@
       "start_line": 121,
       "end_line": 127,
       "checksum": "3526dad96b172c65",
-      "description": "Approval status filter: ?approvalStatus=pending|approved|rejected adds AND sp.approval_status = $N to GET /catalog/products WHERE clause. Whitelist validates input.",
+      "description": "Approval status filter: ?approvalStatus=pending|approved|rejected adds AND sp.approval_status = $N to GET /catalog/products WHERE clause. Whitelist validates input. (chips + backend)",
       "test_file": "backend/tests/catalogStatusFilter.gcp-stg-0340.unit.test.ts",
       "depends_on": null,
       "migration": null,
