@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Pressable, StyleSheet, Text, Animated } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context"; // GCP-STG-0302
 import Svg, { Path, Circle, Line } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -74,11 +75,12 @@ const TAB_LABELS: Record<V3Tab, string> = {
 
 export default function BottomNavV3({ activeTab, onTabPress, sellBadge, buyBadge, moreBadge }: BottomNavV3Props) {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets(); // GCP-STG-0302
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const badges: Partial<Record<V3Tab, number | undefined>> = { SELL: sellBadge, BUY: buyBadge, MORE: moreBadge };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
       {/* V3-FIX-179: Subtle top accent line for brand presence */}
       <View style={styles.topAccent} />
       <View style={styles.tabRow}>

@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Pressable, StyleSheet, Text } from "react-native";
+import { View, Pressable, StyleSheet, Text, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context"; // GCP-STG-0302
 import Svg, { Rect, Circle } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -16,6 +17,7 @@ type BrandedHeaderProps = {
 
 export default function BrandedHeader({ onMenuPress }: BrandedHeaderProps) {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets(); // GCP-STG-0302
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const storeName = useSettingsStore((s) => s.storeName) ?? "SuperMandi";
   const [isOnline, setIsOnline] = React.useState(true);
@@ -26,7 +28,7 @@ export default function BrandedHeader({ onMenuPress }: BrandedHeaderProps) {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
       <View style={styles.left}>
         {/* SuperMandi shortmark — white on blue */}
         <Svg width={22} height={22} viewBox="0 0 32 32">
