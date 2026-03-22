@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 671,
+  "version": 672,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -14951,6 +14951,42 @@
         "fix_ledger_check": "registered",
         "no_agent_conflict": "no conflicts"
       }
+    },
+    {
+      "ticket": "GCP-STG-0285",
+      "file": "backend/src/routes/v1/retailer-admin/csvImport.ts",
+      "start_line": 404,
+      "end_line": 660,
+      "checksum": "543f05fc648d9d25",
+      "description": "CSV import stores all 8 parsed fields (sold_by, rate_unit, pack_size, pack_unit, low_stock_alert, gst_percent, hsn, notes) in both CREATE and UPDATE paths",
+      "test_file": "backend/tests/csvImportFields.gcp-stg-0285.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T20:00:11.325Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 269,

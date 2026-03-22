@@ -414,6 +414,15 @@ retailerAdminCsvImportRouter.post("/products/import/validate", async (req: Reque
         mode,
         // T-165: Image URL from CSV
         imageUrl: imageUrl || null,
+        // GCP-STG-0285: Preserve all 8 parsed fields for commitSingleRow
+        sold_by: row.sold_by?.trim()?.toUpperCase() || null,
+        rate_unit: row.rate_unit?.trim()?.toUpperCase() || null,
+        pack_size: row.pack_size ? parseInt(row.pack_size, 10) || null : null,
+        pack_unit: row.pack_unit?.trim() || null,
+        low_stock_alert: row.low_stock_alert ? parseInt(row.low_stock_alert, 10) || null : null,
+        gst_percent: row.gst_percent ? parseFloat(row.gst_percent) || null : null,
+        hsn: row.hsn?.trim() || null,
+        notes: row.notes?.trim() || null,
         // T-061: Variant-specific fields
         isVariant: isVariantRow,
         variantOf: row.variant_of?.trim() || null,
@@ -546,17 +555,28 @@ async function commitSingleRow(
           procurement_pack_qty = COALESCE($8, procurement_pack_qty),
           base_stock_unit = COALESCE($9, base_stock_unit),
           conversion_confirmed = COALESCE($10, conversion_confirmed),
+          sold_by = COALESCE($11, sold_by),
+          rate_unit = COALESCE($12, rate_unit),
+          low_stock_alert_qty = COALESCE($13, low_stock_alert_qty),
+          notes = COALESCE($14, notes),
           updated_at = NOW()
          WHERE id = $1`,
         [existingStoreProductId, sellPricePaise, row.mrp || null, purchasePricePaise, stock,
-         mode || null, updResolvedProc, updResolvedPackQty, updResolvedBase, true]
+         mode || null, updResolvedProc, updResolvedPackQty, updResolvedBase, true,
+         row.sold_by || null, row.rate_unit || null, row.low_stock_alert || null, row.notes || null]
       );
 
       await client.query(
         `UPDATE catalog.products SET
-          name = $2, brand = $3, unit = $4, updated_at = NOW()
+          name = $2, brand = $3, unit = $4,
+          pack_size = COALESCE($5, pack_size),
+          pack_unit = COALESCE($6, pack_unit),
+          hsn_code = COALESCE($7, hsn_code),
+          default_gst_rate = COALESCE($8, default_gst_rate),
+          updated_at = NOW()
          WHERE id = $1`,
-        [existingProductId, row.name, row.brand || null, row.unit || 'PCS']
+        [existingProductId, row.name, row.brand || null, row.unit || 'PCS',
+         row.pack_size || null, row.pack_unit || null, row.hsn || null, row.gst_percent || null]
       );
 
       await client.query(
@@ -572,15 +592,20 @@ async function commitSingleRow(
     } else {
       // Create new product
       // T-165: Include image_url if provided in CSV
+      // GCP-STG-0285: Include pack_size, pack_unit, hsn_code, default_gst_rate from CSV
       const prodResult = await client.query(
-        `INSERT INTO catalog.products (name, brand, unit, primary_barcode, image_url, is_active)
-         VALUES ($1, $2, $3, $4, $5, true) RETURNING id`,
+        `INSERT INTO catalog.products (name, brand, unit, primary_barcode, image_url, pack_size, pack_unit, hsn_code, default_gst_rate, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true) RETURNING id`,
         [
           row.name,
           row.brand || null,
           row.unit || 'PCS',
           mode === 'PACKAGED' && row.barcode ? row.barcode : null,
           row.imageUrl || null,
+          row.pack_size || null,
+          row.pack_unit || null,
+          row.hsn || null,
+          row.gst_percent || null,
         ]
       );
       const productId = prodResult.rows[0].id;
@@ -605,16 +630,19 @@ async function commitSingleRow(
       const resolvedProcUnit = csvProcurementUnit || resolvedBaseUnit;
       const resolvedPackQty = csvProcurementPackQty || 1;
 
+      // GCP-STG-0285: Include sold_by, rate_unit, low_stock_alert_qty, notes from CSV
       const spResult = await client.query(
         `INSERT INTO catalog.store_products (
           store_id, product_id, sell_price, mrp, purchase_price,
           product_mode, current_stock, is_active, display_name, taxonomy_id,
           metadata_updated_at, metadata_updated_by,
-          procurement_unit, procurement_pack_qty, base_stock_unit, conversion_confirmed
+          procurement_unit, procurement_pack_qty, base_stock_unit, conversion_confirmed,
+          sold_by, rate_unit, low_stock_alert_qty, notes
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, NOW(), 'CSV_IMPORT',
-          $10, $11, $12, true) RETURNING id`,
+          $10, $11, $12, true, $13, $14, $15, $16) RETURNING id`,
         [storeId, productId, sellPricePaise, row.mrp || null, purchasePricePaise, mode, stock, row.name, taxonomyId,
-         resolvedProcUnit, resolvedPackQty, resolvedBaseUnit]
+         resolvedProcUnit, resolvedPackQty, resolvedBaseUnit,
+         row.sold_by || null, row.rate_unit || null, row.low_stock_alert || null, row.notes || null]
       );
       const storeProductId = spResult.rows[0].id;
 
