@@ -395,14 +395,40 @@ adminApplicationsRouter.post(
         entityTable = 'approved_supplier_id';
       }
 
+      // GCP-STG-0300: Create auth.users + auth.store_users during approval
+      // POS OTP flow (otpAuth.ts) queries auth.users JOIN auth.store_users — these must
+      // exist immediately after approval, not lazily on first retailer-admin portal login.
+      if (app.entity_type === 'retailer' && approvedEntityId && app.phone) {
+        const normalizedPhone = app.phone.startsWith('+') ? app.phone : `+91${app.phone.replace(/^91/, '')}`;
+        const userResult = await client.query(
+          `INSERT INTO auth.users (phone, email, name, actor_type, actor_id, status)
+           VALUES ($1, $2, $3, 'store', $4::uuid, 'active')
+           ON CONFLICT (phone) DO UPDATE SET
+             email = COALESCE(NULLIF(auth.users.email, ''), EXCLUDED.email),
+             actor_id = COALESCE(auth.users.actor_id, EXCLUDED.actor_id),
+             updated_at = NOW()
+           RETURNING id`,
+          [normalizedPhone, app.email || null, app.owner_name || app.business_name, approvedEntityId]
+        );
+        const userId = userResult.rows[0]?.id;
+        if (userId) {
+          await client.query(
+            `INSERT INTO auth.store_users (store_id, user_id, role, is_owner)
+             VALUES ($1::uuid, $2::uuid, 'RETAILER_ADMIN', true)
+             ON CONFLICT (store_id, user_id) DO NOTHING`,
+            [approvedEntityId, userId]
+          );
+        }
+      }
+
       // GCP-STG-0151: Copy email from auth.applications to auth.users during approval
-      // Phone-only registrations (Firebase OTP) leave auth.users.email NULL.
-      // The application form captures the email — propagate it on approval.
+      // (kept as fallback for supplier approvals and edge cases)
       if (app.email && app.phone) {
+        const normalizedPhone0151 = app.phone.startsWith('+') ? app.phone : `+91${app.phone.replace(/^91/, '')}`;
         await client.query(
           `UPDATE auth.users SET email = $1, updated_at = NOW()
            WHERE phone = $2 AND (email IS NULL OR email = '')`,
-          [app.email, app.phone]
+          [app.email, normalizedPhone0151]
         );
       }
 

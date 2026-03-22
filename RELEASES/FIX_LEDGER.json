@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 661,
+  "version": 662,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -9412,7 +9412,9 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T09:01:44.792Z",
-      "status": "ACTIVE"
+      "status": "SUPERSEDED",
+      "superseded_by": "GCP-STG-0300",
+      "superseded_reason": "auth.users INSERT with ON CONFLICT now handles email copy"
     },
     {
       "ticket": "GCP-STG-0038",
@@ -14381,6 +14383,61 @@
         "single_commit": "fix(GCP-STG-0299)",
         "ticket_parked": "after commit"
       }
+    },
+    {
+      "ticket": "GCP-STG-0300",
+      "file": "backend/src/routes/v1/admin/applications.ts",
+      "start_line": 398,
+      "end_line": 430,
+      "checksum": "f0f1c41a03d7fbba",
+      "description": "Approval creates auth.users + auth.store_users with ON CONFLICT for idempotency. Phone normalized to +91 E.164.",
+      "test_file": "backend/tests/applicationApproval.gcp-stg-0300.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T16:23:55.318Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "POST /admin/applications/:id/approve creates auth.users+store_users",
+        "api_errors": "ON CONFLICT handles existing users idempotently",
+        "store_isolation": "N/A admin operation",
+        "business_logic": "Phone +91 normalized, actor_type=store, is_owner=true",
+        "business_behaviour": "POS OTP login works immediately after approval",
+        "db_schema": "auth.users + auth.store_users schemas verified",
+        "impacted_files": "applications.ts + test",
+        "fix_ledger_check": "251 fixes zero drift",
+        "no_agent_conflict": "single agent",
+        "gcp_parity": "staging compatible",
+        "regression_check": "5/5 pass + contract tests pass",
+        "test_guard": "applicationApproval.gcp-stg-0300.unit.test.ts 5/5",
+        "single_commit": "fix(GCP-STG-0300)",
+        "ticket_parked": "after commit"
+      }
     }
   ],
   "machine_state_version": 269,
@@ -14425,5 +14482,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T15:59:54.789Z"
+  "lastUpdated": "2026-03-22T16:24:41.421Z"
 }
