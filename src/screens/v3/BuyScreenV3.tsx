@@ -90,6 +90,10 @@ export default function BuyScreenV3() {
   const [loading, setLoading] = useState(true);
   const [suppliers, setSuppliers] = useState<string[]>(["All Suppliers"]);
   const [offline, setOffline] = useState(false);
+  // GCP-STG-0320: Server-side search results (null = use full catalog)
+  const [serverSearchResults, setServerSearchResults] = useState<SupplierProduct[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // V3-FIX-175: Procurement checkout state
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [paymentMode, setPaymentMode] = useState<"UPI" | "BANK" | "BNPL" | "CREDIT" | "CASH">("CASH");
@@ -174,9 +178,44 @@ export default function BuyScreenV3() {
     }
   }, [searchTriggerBarcode, searchTriggerTs]);
 
-  // V3-FIX-076: Filter products by supplier, category, and search query
+  // GCP-STG-0320: Server-side search with 300ms debounce
+  // When searchQuery has >=2 chars, call getBuyCatalog with q= parameter.
+  // When searchQuery is empty/short, clear server results and show full catalog.
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (trimmed.length < 2) {
+      // Clear server search — revert to full catalog browse
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      setServerSearchResults(null);
+      setSearchLoading(false);
+      return;
+    }
+    // Debounce 300ms before hitting server
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    setSearchLoading(true);
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const storeId = await getDeviceStoreId();
+        if (!storeId) { setSearchLoading(false); return; }
+        const result = await getBuyCatalog(storeId, { q: trimmed, limit: 50 });
+        const mapped = result.data.map(catalogToSupplier);
+        setServerSearchResults(mapped);
+      } catch (err) {
+        logger.debug("BuyV3", `server_search_failed:${String(err)}`);
+        // Fallback: keep showing current results, don't clear
+      }
+      setSearchLoading(false);
+    }, 300);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchQuery]);
+
+  // V3-FIX-076: Filter products by supplier and category
+  // GCP-STG-0320: Use server search results when available, otherwise full catalog
   const filteredProducts = useMemo(() => {
-    let list = products;
+    const baseList = serverSearchResults !== null ? serverSearchResults : products;
+    let list = baseList;
     if (selectedSupplier > 0) {
       const supplierName = suppliers[selectedSupplier];
       list = list.filter((p) => p.supplierName === supplierName);
@@ -185,12 +224,8 @@ export default function BuyScreenV3() {
       const cat = categories[selectedCategory];
       list = list.filter((p) => p.category === cat);
     }
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      list = list.filter((p) => p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q));
-    }
     return list;
-  }, [products, selectedSupplier, suppliers, selectedCategory, categories, searchQuery]);
+  }, [products, serverSearchResults, selectedSupplier, suppliers, selectedCategory, categories]);
 
   const cartItemCount = Object.values(orderQtys).reduce((s, v) => s + (v > 0 ? 1 : 0), 0);
   const cartTotal = products.reduce((s, p) => s + (orderQtys[p.id] ?? 0) * p.caseSize * p.ptrMinor, 0);
@@ -266,6 +301,13 @@ export default function BuyScreenV3() {
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 40 }}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={{ color: colors.textTertiary, fontSize: 13, marginTop: 12 }}>Loading catalogue...</Text>
+        </View>
+      ) : null}
+      {/* GCP-STG-0320: Search loading indicator */}
+      {searchLoading && !loading ? (
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 6 }} testID="buy-search-loading">
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={{ color: colors.textTertiary, fontSize: 12, marginLeft: 6 }}>Searching...</Text>
         </View>
       ) : null}
       {/* GCP-STG-0145: BUY tiles = SELL tiles — 3-column grid with ProductTileV3 */}
