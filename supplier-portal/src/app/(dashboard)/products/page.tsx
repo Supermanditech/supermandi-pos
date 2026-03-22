@@ -952,43 +952,7 @@ export default function ProductsPage() {
                     placeholder='[{"minQty":10,"discountPct":5},{"minQty":50,"discountPct":10}]' />
                   <p className="text-xs text-slate-400 mt-1">Optional: JSON array of tier discounts by minimum quantity</p>
                 </div>
-                <div className="col-span-2">
-                  <label htmlFor="product-packageType" className="label">Package Type (sets procurement unit)</label>
-                  <select id="product-packageType" name="procurementUnit"
-                    value={formData.procurementUnit || ''}
-                    onChange={handleChange}
-                    className="input">
-                    <option value="">Not specified</option>
-                    <option value="KG">Loose (KG)</option>
-                    <option value="CARTON">Carton</option>
-                    <option value="BOX">Box</option>
-                    <option value="CASE">Case</option>
-                    <option value="BAG">Bag</option>
-                    <option value="TIN">Tin</option>
-                    <option value="BOTTLE">Bottle</option>
-                    <option value="PCS">Per Unit (PCS)</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="product-procurementPackQty" className="label">Pack Qty (units per package)</label>
-                  <input type="number" id="product-procurementPackQty" name="procurementPackQty"
-                    value={formData.procurementPackQty ?? ''} onChange={handleChange}
-                    className="input" placeholder="e.g. 12" min="1" step="1" />
-                </div>
-                <div>
-                  <label htmlFor="product-baseStockUnit" className="label">Base Stock Unit</label>
-                  <select id="product-baseStockUnit" name="baseStockUnit"
-                    value={formData.baseStockUnit || ''}
-                    onChange={handleChange}
-                    className="input">
-                    <option value="">Auto (same as unit)</option>
-                    <option value="KG">KG</option>
-                    <option value="GM">GM</option>
-                    <option value="LTR">LTR</option>
-                    <option value="ML">ML</option>
-                    <option value="PCS">PCS</option>
-                  </select>
-                </div>
+                {/* GCP-STG-0298: Duplicate procurement fields removed — canonical fields are in "Procurement Packaging" section above */}
                 <div className="col-span-2 flex items-center gap-2">
                   <input type="checkbox" id="product-financeEligible" name="financeEligible"
                     checked={formData.financeEligible || false}
