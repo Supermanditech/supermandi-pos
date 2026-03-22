@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 676,
+  "version": 677,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -15130,6 +15130,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:42:34.926Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0297",
+      "file": "backend/migrations/219_gcp_stg_0297_supplier_products_description.sql",
+      "start_line": 1,
+      "end_line": 8,
+      "checksum": "a1cb995b0397777e",
+      "description": "Add description TEXT column to catalog.supplier_products",
+      "test_file": "backend/tests/supplierDescription.gcp-stg-0297.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T20:44:56.242Z",
       "status": "ACTIVE"
     }
   ],
