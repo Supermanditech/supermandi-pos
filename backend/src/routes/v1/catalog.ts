@@ -79,15 +79,24 @@ catalogRouter.get("/stores/:storeId/catalog", requireDeviceToken, async (req: Re
     let paramIndex = 2;
 
     // Search filter
+    // GCP-STG-0327: barcode exact match (primary) + ILIKE partial (fallback), consistent with SELL
     if (q && q.trim().length >= 2) {
-      whereClause += ` AND (
-        sp.display_name ILIKE $${paramIndex}
-        OR p.name ILIKE $${paramIndex}
-        OR p.primary_barcode ILIKE $${paramIndex}
-        OR COALESCE(p.hsn_code, '') ILIKE $${paramIndex}
-      )`;
-      params.push(`%${q.trim()}%`);
+      const trimmedQ = q.trim();
+      // Exact barcode match param (no wildcards)
+      params.push(trimmedQ);
+      const exactIdx = paramIndex;
       paramIndex++;
+      // ILIKE partial match param (with wildcards)
+      params.push(`%${trimmedQ}%`);
+      const likeIdx = paramIndex;
+      paramIndex++;
+      whereClause += ` AND (
+        p.primary_barcode = $${exactIdx}
+        OR sp.display_name ILIKE $${likeIdx}
+        OR p.name ILIKE $${likeIdx}
+        OR p.primary_barcode ILIKE $${likeIdx}
+        OR COALESCE(p.hsn_code, '') ILIKE $${likeIdx}
+      )`;
     }
 
     // Category filter
@@ -417,17 +426,23 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
               OR CAST(COALESCE(sp.moq, 0) AS TEXT) = $${paramIndex}
             )`);
           } else {
-            // Text token: match name, barcode, SKU, brand, unit, supplier name
+            // GCP-STG-0327: Text token — exact barcode match (primary) + ILIKE partial (fallback)
+            // Push exact token first (no wildcards), then wildcard version
+            params.push(token);
+            const exactIdx = paramIndex;
+            paramIndex++;
             params.push(`%${token}%`);
+            const likeIdx = paramIndex;
             tokenClauses.push(`(
-              COALESCE(sp.edited_name, sp.name) ILIKE $${paramIndex}
-              OR sp.barcode ILIKE $${paramIndex}
-              OR sp.supplier_sku ILIKE $${paramIndex}
-              OR COALESCE(sp.brand, '') ILIKE $${paramIndex}
-              OR COALESCE(sp.unit, '') ILIKE $${paramIndex}
-              OR COALESCE(s.business_name, '') ILIKE $${paramIndex}
-              OR COALESCE(s.trade_name, '') ILIKE $${paramIndex}
-              OR COALESCE(sp.hsn_code, '') ILIKE $${paramIndex}
+              sp.barcode = $${exactIdx}
+              OR COALESCE(sp.edited_name, sp.name) ILIKE $${likeIdx}
+              OR sp.barcode ILIKE $${likeIdx}
+              OR sp.supplier_sku ILIKE $${likeIdx}
+              OR COALESCE(sp.brand, '') ILIKE $${likeIdx}
+              OR COALESCE(sp.unit, '') ILIKE $${likeIdx}
+              OR COALESCE(s.business_name, '') ILIKE $${likeIdx}
+              OR COALESCE(s.trade_name, '') ILIKE $${likeIdx}
+              OR COALESCE(sp.hsn_code, '') ILIKE $${likeIdx}
             )`);
           }
           paramIndex++;

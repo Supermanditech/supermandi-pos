@@ -364,9 +364,12 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
       const idx = params.length; // $idx references this token
 
       // T-132 + V3-FIX-132: Fuzzy/typo-tolerant search + unit/content matching
+      // GCP-STG-0327: barcode exact (1000) + ILIKE partial fallback (600)
       tokenWhereClauses.push(`(
         p.primary_barcode = $${idx}
         OR spb.barcode = $${idx}
+        OR p.primary_barcode ILIKE '%' || $${idx} || '%'
+        OR spb.barcode ILIKE '%' || $${idx} || '%'
         OR p.name ILIKE '%' || $${idx} || '%'
         OR COALESCE(sp.display_name, '') ILIKE '%' || $${idx} || '%'
         OR COALESCE(p.brand, '') ILIKE '%' || $${idx} || '%'
@@ -377,11 +380,14 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
         OR similarity(COALESCE(sp.display_name, ''), $${idx}) > 0.3
         OR similarity(COALESCE(p.brand, ''), $${idx}) > 0.3
         OR COALESCE(p.hsn_code, '') ILIKE '%' || $${idx} || '%'
+        OR COALESCE(pt.name, '') ILIKE '%' || $${idx} || '%'
       )`);
 
       // T-132: Enhanced scoring with display_name similarity for typo tolerance
+      // GCP-STG-0327: barcode exact=1000, barcode ILIKE partial=600
       tokenScoreCases.push(`CASE
         WHEN p.primary_barcode = $${idx} OR spb.barcode = $${idx} THEN 1000
+        WHEN p.primary_barcode ILIKE '%' || $${idx} || '%' OR spb.barcode ILIKE '%' || $${idx} || '%' THEN 600
         WHEN LOWER(p.name) = LOWER($${idx}) THEN 800
         WHEN LOWER(COALESCE(sp.display_name, '')) = LOWER($${idx}) THEN 800
         WHEN LOWER(p.name) LIKE LOWER($${idx}) || '%' THEN 700
@@ -391,6 +397,7 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
         WHEN p.name ILIKE '%' || $${idx} || '%' THEN 300
         WHEN COALESCE(sp.display_name, '') ILIKE '%' || $${idx} || '%' THEN 300
         WHEN COALESCE(p.brand, '') ILIKE '%' || $${idx} || '%' THEN 250
+        WHEN COALESCE(pt.name, '') ILIKE '%' || $${idx} || '%' THEN 225
         WHEN similarity(p.name, $${idx}) > 0.3 THEN 200 + similarity(p.name, $${idx}) * 100
         WHEN similarity(COALESCE(sp.display_name, ''), $${idx}) > 0.3 THEN 200 + similarity(COALESCE(sp.display_name, ''), $${idx}) * 100
         WHEN similarity(COALESCE(p.brand, ''), $${idx}) > 0.3 THEN 150 + similarity(COALESCE(p.brand, ''), $${idx}) * 100
@@ -447,6 +454,7 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
         JOIN catalog.products p ON p.id = sp.product_id
         LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
         LEFT JOIN catalog.store_product_barcodes spb ON spb.store_product_id = sp.id AND spb.store_id = sp.store_id
+        LEFT JOIN catalog.product_translations pt ON pt.product_id = p.id AND pt.locale = 'hi'
         WHERE sp.store_id = $1
           AND sp.is_active = true
           AND p.is_active = true
