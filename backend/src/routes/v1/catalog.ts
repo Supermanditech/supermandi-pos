@@ -474,13 +474,13 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           sp.brand AS product_brand,
           sp.barcode AS product_barcode,
           sp.purchase_price,
-          sp.purchase_price + CASE
-            WHEN sp.supermandi_margin_minor IS NOT NULL AND sp.supermandi_margin_minor > 0
-              THEN sp.supermandi_margin_minor
-            WHEN sp.margin_percent IS NOT NULL AND sp.margin_percent > 0
-              THEN ROUND(sp.purchase_price * sp.margin_percent / 100)
+          COALESCE(sp.admin_retail_price_minor, sp.purchase_price + CASE
+            WHEN sp.admin_margin_fixed_minor IS NOT NULL AND sp.admin_margin_fixed_minor > 0
+              THEN sp.admin_margin_fixed_minor
+            WHEN sp.admin_margin_pct IS NOT NULL AND sp.admin_margin_pct > 0
+              THEN ROUND(sp.purchase_price * sp.admin_margin_pct / 100)
             ELSE 0
-          END AS retailer_price,
+          END) AS retailer_price,
           sp.moq,
           sp.unit,
           sp.mrp,
@@ -828,13 +828,13 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
           sp.brand AS product_brand,
           sp.barcode AS product_barcode,
           sp.purchase_price,
-          sp.purchase_price + CASE
-            WHEN sp.supermandi_margin_minor IS NOT NULL AND sp.supermandi_margin_minor > 0
-              THEN sp.supermandi_margin_minor
-            WHEN sp.margin_percent IS NOT NULL AND sp.margin_percent > 0
-              THEN ROUND(sp.purchase_price * sp.margin_percent / 100)
+          COALESCE(sp.admin_retail_price_minor, sp.purchase_price + CASE
+            WHEN sp.admin_margin_fixed_minor IS NOT NULL AND sp.admin_margin_fixed_minor > 0
+              THEN sp.admin_margin_fixed_minor
+            WHEN sp.admin_margin_pct IS NOT NULL AND sp.admin_margin_pct > 0
+              THEN ROUND(sp.purchase_price * sp.admin_margin_pct / 100)
             ELSE 0
-          END AS retailer_price,
+          END) AS retailer_price,
           sp.moq,
           sp.unit,
           sp.mrp,
