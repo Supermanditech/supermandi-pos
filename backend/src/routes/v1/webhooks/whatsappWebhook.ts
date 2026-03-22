@@ -89,6 +89,14 @@ whatsappWebhookRouter.post("/whatsapp", async (req: Request, res: Response) => {
             await processStatusUpdate(pool, status);
           }
         }
+
+        // GCP-STG-0318: Process incoming messages
+        const messages = value.messages;
+        if (Array.isArray(messages)) {
+          for (const msg of messages) {
+            await processIncomingMessage(pool, msg, value.contacts);
+          }
+        }
       }
     }
   } catch (err) {
@@ -184,5 +192,47 @@ function mapMetaStatus(metaStatus: string): string | null {
     case "read": return "read";
     case "failed": return "failed";
     default: return null;
+  }
+}
+
+// GCP-STG-0318: Store incoming WhatsApp messages
+async function processIncomingMessage(
+  pool: ReturnType<typeof getPool>,
+  msg: {
+    id?: string;
+    from?: string;
+    timestamp?: string;
+    type?: string;
+    text?: { body?: string };
+    image?: { id?: string };
+    document?: { id?: string };
+    context?: { message_id?: string };
+  },
+  contacts?: Array<{ profile?: { name?: string } }>
+): Promise<void> {
+  if (!pool || !msg.id || !msg.from) return;
+
+  const profileName = contacts?.[0]?.profile?.name || null;
+  const timestampWa = msg.timestamp
+    ? new Date(parseInt(msg.timestamp, 10) * 1000)
+    : new Date();
+  const textBody = msg.text?.body || null;
+  const mediaId = msg.image?.id || msg.document?.id || null;
+  const contextMsgId = msg.context?.message_id || null;
+
+  try {
+    await pool.query(
+      `INSERT INTO whatsapp.incoming_messages
+        (wamid, from_phone, message_type, text_body, media_id, timestamp_wa,
+         profile_name, context_message_id, raw_payload)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT (wamid) DO NOTHING`,
+      [
+        msg.id, msg.from, msg.type || "text", textBody, mediaId,
+        timestampWa, profileName, contextMsgId, JSON.stringify(msg),
+      ]
+    );
+  } catch (err) {
+    log.error(`[WA-001] Failed to store incoming message ${msg.id}:`, err);
   }
 }
