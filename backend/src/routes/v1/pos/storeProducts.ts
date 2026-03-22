@@ -717,7 +717,7 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
  */
 posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (req, res) => {
   const storeId = getStoreIdFromPosDevice(req, "pos/store-products");
-  const limit = Math.min(Math.max(parseInt(String(req.query.limit || "50"), 10) || 50, 1), 200);
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit || "50"), 10) || 50, 1), 500); // GCP-STG-0295: raised from 200 to 500 to match POS client
   const offset = Math.max(parseInt(String(req.query.offset || "0"), 10) || 0, 0);
   // SCALE-C3: FEFO sort — earliest expiry first, NULL expiry last, then alpha
   const sortFefo = req.query.sort === "fefo";
