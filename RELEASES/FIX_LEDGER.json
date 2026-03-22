@@ -16122,7 +16122,7 @@
       "start_line": 1,
       "end_line": 240,
       "checksum": "41ee079aafe577c6",
-      "description": "GCP-STG-0324: Search bar + payment mode filter chips on SalesHistoryScreenV3 — client-side filtering by billRef, amount, paymentMode",
+      "description": "GCP-STG-0324: Search bar + payment mode filter chips on SalesHistoryScreenV3 — client-side filtering by billRef, amount, paymentMode (bill ref + amount + payment mode)",
       "test_file": "src/__tests__/screens/salesHistorySearch.gcp-stg-0324.test.ts",
       "depends_on": null,
       "migration": null,

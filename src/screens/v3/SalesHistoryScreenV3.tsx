@@ -2,8 +2,8 @@
  * V3-FIX-093: Dedicated Sales History screen
  * Prototype: bill rows with payment type, amount, item/time metadata
  */
-import React, { useMemo, useState, useEffect } from "react";
-import { View, Pressable, FlatList, ActivityIndicator, StyleSheet, Text } from "react-native";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
+import { View, Pressable, FlatList, ActivityIndicator, StyleSheet, Text, TextInput } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
@@ -35,6 +35,9 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
     items: { name: string; qty: number; priceMinor: number }[];
   } | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  // GCP-STG-0324: Search by bill ref, amount, or payment mode
+  const [searchQuery, setSearchQuery] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -96,6 +99,28 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
     finally { setLoadingDetail(false); }
   };
 
+  // GCP-STG-0324: Client-side filtering by search query and payment mode
+  const filteredSales = useMemo(() => {
+    let result = sales;
+    if (paymentFilter) {
+      result = result.filter((s) => s.paymentMode.toUpperCase() === paymentFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      // Match amount as rupees (e.g. "150" matches totalMinor=15000)
+      const qNum = parseFloat(q);
+      const amountMatch = !isNaN(qNum) ? Math.round(qNum * 100) : null;
+      result = result.filter((s) => {
+        if (s.billRef.toLowerCase().includes(q)) return true;
+        if (amountMatch !== null && s.totalMinor === amountMatch) return true;
+        return false;
+      });
+    }
+    return result;
+  }, [sales, searchQuery, paymentFilter]);
+
+  const handleSearchChange = useCallback((text: string) => setSearchQuery(text), []);
+
   const modeIcon = (m: string) => m === "CASH" ? "💵" : m === "UPI" ? "📱" : m === "DUE" ? "📋" : "💰";
   const modeLabel = (m: string) => m === "CASH" ? "Cash" : m === "UPI" ? "UPI" : m === "DUE" ? "Udhar" : m;
 
@@ -122,17 +147,57 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
         ))}
       </View>
 
+      {/* GCP-STG-0324: Search bar */}
+      <View style={styles.searchRow}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search bill ref or amount..."
+          placeholderTextColor={colors.textTertiary}
+          value={searchQuery}
+          onChangeText={handleSearchChange}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          testID="sales-search-input"
+        />
+        {searchQuery.length > 0 ? (
+          <Pressable style={styles.clearBtn} onPress={() => setSearchQuery("")} testID="sales-search-clear">
+            <Text style={styles.clearBtnText}>✕</Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      {/* GCP-STG-0324: Payment mode filter chips */}
+      <View style={styles.chipRow}>
+        {([null, "CASH", "UPI", "DUE"] as const).map((mode) => (
+          <Pressable
+            key={mode ?? "all"}
+            style={[styles.chip, paymentFilter === mode && styles.chipActive]}
+            onPress={() => setPaymentFilter(mode)}
+            testID={`payment-chip-${mode ?? "all"}`}
+          >
+            <Text style={[styles.chipText, paymentFilter === mode && styles.chipTextActive]}>
+              {mode === null ? "All" : mode === "CASH" ? "Cash" : mode === "UPI" ? "UPI" : "Udhar"}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
       {loading ? <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} /> : null}
 
       <FlatList
-        data={sales}
+        data={filteredSales}
         keyExtractor={(s) => s.id}
         contentContainerStyle={{ padding: 14 }}
         ListEmptyComponent={!loading ? (
           <View style={{ padding: 32, alignItems: "center" }}>
-            <Text style={{ fontSize: 36, marginBottom: 8 }}>🧾</Text>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>No sales yet</Text>
-            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Complete a sale to see it here</Text>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>{(searchQuery || paymentFilter) ? "🔍" : "🧾"}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>
+              {(searchQuery || paymentFilter) ? "No matching sales" : "No sales yet"}
+            </Text>
+            <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>
+              {(searchQuery || paymentFilter) ? "Try a different search or filter" : "Complete a sale to see it here"}
+            </Text>
           </View>
         ) : null}
         renderItem={({ item }) => (
@@ -182,6 +247,17 @@ function createStyles(colors: ColorPalette) {
     filterTabActive: { backgroundColor: colors.primary },
     filterText: { fontSize: 11, fontWeight: "600", color: colors.textSecondary },
     filterTextActive: { color: "#fff" },
+    // GCP-STG-0324: Search bar styles
+    searchRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: getScreenPadding(), paddingTop: 8, paddingBottom: 4, backgroundColor: colors.surface },
+    searchInput: { flex: 1, height: 38, borderRadius: 10, backgroundColor: colors.backgroundSecondary, paddingHorizontal: 12, fontSize: 13, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border },
+    clearBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center", marginLeft: 6 },
+    clearBtnText: { fontSize: 12, color: colors.textSecondary, fontWeight: "700" },
+    // GCP-STG-0324: Payment mode chip styles
+    chipRow: { flexDirection: "row", gap: 6, paddingHorizontal: getScreenPadding(), paddingTop: 4, paddingBottom: 8, backgroundColor: colors.surface },
+    chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: colors.border },
+    chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    chipText: { fontSize: 12, fontWeight: "600", color: colors.textSecondary },
+    chipTextActive: { color: "#fff" },
     row: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, backgroundColor: colors.surface, borderRadius: 14, marginBottom: 8, borderWidth: 1, borderColor: colors.border },
     modeIcon: { fontSize: 20 },
     billRef: { fontSize: 14, fontWeight: "700", color: colors.textPrimary },
