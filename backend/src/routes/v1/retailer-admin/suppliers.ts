@@ -1075,8 +1075,8 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
     if (initialStock > 0) {
       // 1. Append ledger entry (audit trail — never deleted)
       await client.query(
-        `INSERT INTO inventory.inventory_ledger (store_id, product_id, change_qty, reason, reference_type, created_at)
-         VALUES ($1, $2::uuid, $3, 'supplier_catalog_add_opening_stock', 'catalog_add', NOW())`,
+        `INSERT INTO inventory.inventory_ledger (store_id, product_id, delta_qty, transaction_type, reference_type, stock_before, stock_after, notes)
+         VALUES ($1, $2::uuid, $3, 'opening_stock', 'manual', 0, $3, 'supplier_catalog_add_opening_stock')`,
         [storeId, catalogProductId, initialStock]
       );
       // 2. Upsert stock balance (derived from ledger)

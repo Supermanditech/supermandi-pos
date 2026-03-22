@@ -579,6 +579,26 @@ async function commitSingleRow(
          row.pack_size || null, row.pack_unit || null, row.hsn || null, row.gst_percent || null]
       );
 
+      // GCP-STG-0330: Fetch old stock BEFORE updating stock_balances so we can compute delta
+      const oldStockResult = await client.query(
+        `SELECT current_qty FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
+        [storeId, existingProductId]
+      );
+      const oldStock = oldStockResult.rows.length > 0 ? Number(oldStockResult.rows[0].current_qty) : 0;
+      const deltaQty = stock - oldStock;
+
+      // GCP-STG-0330: Write ledger entry for CSV update stock adjustment (was missing — ledgerless update)
+      if (deltaQty !== 0) {
+        await client.query(
+          `INSERT INTO inventory.inventory_ledger (
+            store_id, product_id, delta_qty, transaction_type,
+            reference_type, stock_before, stock_after, unit_cost,
+            source, source_id
+          ) VALUES ($1, $2, $3, 'adjustment', 'manual', $4, $5, $6, 'CSV_IMPORT', $7)`,
+          [storeId, existingProductId, deltaQty, oldStock, stock, purchasePricePaise, jobId]
+        );
+      }
+
       await client.query(
         `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
          VALUES ($1, $2, $3)
