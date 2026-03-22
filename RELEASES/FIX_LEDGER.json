@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 673,
+  "version": 674,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -4515,7 +4515,7 @@
       "file": "backend/src/routes/v1/orders.ts",
       "start_line": 1658,
       "end_line": 2217,
-      "checksum": "07a32f979c558b5a",
+      "checksum": "39f73f9caf6225f6",
       "description": "Reject GRN receive if total qty > ordered * 1.1 (10% tolerance)",
       "test_file": "src/__tests__/screens/grn-excess-qty.stg-509.test.ts",
       "depends_on": null,
@@ -15022,6 +15022,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:04:38.617Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0287",
+      "file": "backend/src/routes/v1/orders.ts",
+      "start_line": 1860,
+      "end_line": 1900,
+      "checksum": "1b613b7424a9ed41",
+      "description": "GRN receive writes to inventory_ledger (was missing) for dual-ledger invariant",
+      "test_file": "backend/tests/dualLedger.gcp-stg-0287.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T20:14:11.121Z",
       "status": "ACTIVE"
     }
   ],

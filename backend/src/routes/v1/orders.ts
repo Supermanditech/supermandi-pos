@@ -1859,7 +1859,26 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
 
         // Update inventory (stock balance)
         // T-177: Include stock_version increment for optimistic concurrency
+        // GCP-STG-0287: Write to BOTH inventory_ledger AND stock_balances (dual-ledger invariant)
         if (orderItem.product_id) {
+          // Read current stock for ledger audit trail
+          const sbRes = await client.query(
+            `SELECT current_qty FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
+            [storeId, orderItem.product_id]
+          );
+          const stockBefore = sbRes.rows[0]?.current_qty ?? 0;
+
+          // Write to inventory_ledger (audit trail) — was missing before GCP-STG-0287
+          await client.query(
+            `INSERT INTO inventory.inventory_ledger (
+              store_id, product_id, delta_qty, transaction_type,
+              reference_type, reference_id, stock_before, stock_after, unit_cost,
+              source, source_id
+            ) VALUES ($1, $2, $3, 'stock_in', 'purchase_order', $4, $5, $5 + $3, $6, 'GRN', $7)`,
+            [storeId, orderItem.product_id, item.quantityReceived,
+             orderId, stockBefore, orderItem.unit_price || 0, receiveId]
+          );
+
           await client.query(
             `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, stock_version)
              VALUES ($1, $2, $3, 1)
