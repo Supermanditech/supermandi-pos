@@ -15358,7 +15358,7 @@
       "start_line": 42,
       "end_line": 44,
       "checksum": "de4410a64a2f75fb",
-      "description": "Per-item notes field on CartItem + setItemNotes action in cart store",
+      "description": "Per-item notes field on CartItem + setItemNotes action in cart store (cartStore + CartSheetV3 + CartItemRowV3)",
       "test_file": "src/__tests__/components/cartItemNotes.gcp-stg-0317.test.ts",
       "depends_on": null,
       "migration": null,

@@ -62,6 +62,10 @@ export default function CartItemRowV3({ item, onIncrement, onDecrement, onRemove
             {item.quantity % caseSize ? ` + ${item.quantity % caseSize} loose` : ""}
           </Text>
         ) : null}
+        {/* GCP-STG-0317: Per-item notes */}
+        {item.notes ? (
+          <Text style={styles.noteLabel} numberOfLines={1} testID="cart-item-note">{item.notes}</Text>
+        ) : null}
         {item.priceResolutionError ? (
           <Text style={[styles.caseLabel, { color: colors.error }]}>{item.priceResolutionMessage ?? "Price needs review"}</Text>
         ) : null}
@@ -134,6 +138,7 @@ function createStyles(colors: ColorPalette) {
     name: { fontSize: 14, fontWeight: "700", color: colors.textPrimary, letterSpacing: -0.2 },
     detail: { fontSize: 11, color: colors.textTertiary, marginTop: 1 },
     caseLabel: { fontSize: 10, color: colors.success, fontWeight: "700", marginTop: 2 }, // GCP-STG-0307: raised from 9
+    noteLabel: { fontSize: 11, color: colors.textTertiary, fontStyle: "italic" as const, marginTop: 2 }, // GCP-STG-0317
     qtyBox: {
       flexDirection: "row",
       alignItems: "center",

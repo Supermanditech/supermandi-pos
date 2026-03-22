@@ -40,6 +40,8 @@ export interface CartItem {
   rateUnit?: string;            // consumer sell unit
   baseStockUnit?: string;       // canonical inventory unit
   allowFractionalSell?: boolean;
+  // GCP-STG-0317: Per-item notes (e.g. "no ice", "extra spicy")
+  notes?: string;
 }
 
 export interface ItemDiscount {
@@ -131,6 +133,7 @@ interface CartState {
   isCartLocked: () => boolean; // GL-CRIT-0011: Check if locked (respects timeout)
   setCustomer: (customer: CartCustomer | null) => void; // STG-103
   setNote: (note: CartNote | null) => void; // STG-112
+  setItemNotes: (itemId: string, notes: string) => void; // GCP-STG-0317: Per-item notes
   setSellMode: (mode: SellMode) => void; // STG-555
   resetForStore: () => void;
   normalizeItemsToStock: () => { changed: boolean; adjustments: StockAdjustment[] }; // GL-CRIT-0014: Return adjustments for notification
@@ -805,6 +808,19 @@ export const useCartStore = create<CartState>()(
   setNote: (note) => {
     const trimmed = note ? note.slice(0, 140) : null;
     set({ note: trimmed || null });
+  },
+
+  // GCP-STG-0317: Per-item notes (max 100 chars, trimmed)
+  setItemNotes: (itemId, notes) => {
+    if (get().locked) return;
+    const state = get();
+    const idx = state.items.findIndex(i => i.id === itemId);
+    if (idx < 0) return;
+    const trimmed = notes.slice(0, 100).trim();
+    const nextItem = { ...state.items[idx], notes: trimmed || undefined };
+    const newItems = [...state.items];
+    newItems[idx] = nextItem;
+    set({ items: newItems });
   },
 
   // STG-555: Switch between retail (MRP) and bulk (trade price + GST) mode
