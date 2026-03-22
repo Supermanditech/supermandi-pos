@@ -9853,7 +9853,7 @@
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
       "start_line": 180,
       "end_line": 212,
-      "checksum": "10979bc48a685e70",
+      "checksum": "0dc3841a1a1601c2",
       "description": "Deactivate old devices + create new one in transaction on OTP verify (race-condition safe)",
       "test_file": "backend/src/__tests__/pos/otpAuth.test.ts",
       "depends_on": null,
@@ -14337,7 +14337,7 @@
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
       "start_line": 133,
       "end_line": 146,
-      "checksum": "07861568f1493e48",
+      "checksum": "86680a3b846dfda7",
       "description": "POS OTP verify-otp: normalize 10-digit phone to E.164 (+91) before auth.users query",
       "test_file": "backend/tests/otpAuth.gcp-stg-0299.unit.test.ts",
       "depends_on": null,
@@ -14947,5 +14947,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T19:08:01.672Z"
+  "lastUpdated": "2026-03-22T19:13:44.286Z"
 }

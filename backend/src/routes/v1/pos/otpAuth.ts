@@ -14,6 +14,15 @@ import { getPool } from "../../../db/client";
 import { asError } from "../../../lib/errorUtils";
 import crypto from "crypto";
 import { sendTextMessage, isWhatsAppConfigured } from "../../../services/whatsappService";
+import { redisRateLimit } from "../../../middleware/rateLimit";
+
+// GCP-STG-0308: Rate limiter on send-otp to prevent OTP table flooding
+const otpSendLimiter = redisRateLimit({
+  keyPrefix: "rl:pos:otp:send",
+  windowMs: 60_000,
+  max: 5,
+  keyGenerator: (req) => req.ip || "unknown",
+});
 
 export const posOtpAuthRouter = Router();
 
@@ -27,7 +36,7 @@ function hashOtp(otp: string): string {
 }
 
 // ─── POST /pos/auth/send-otp ────────────────────────────────────────────────
-posOtpAuthRouter.post("/auth/send-otp", async (req, res) => {
+posOtpAuthRouter.post("/auth/send-otp", otpSendLimiter, async (req, res) => {
   const { phone } = req.body as { phone?: string };
   if (!phone || !/^\d{10}$/.test(phone)) {
     return res.status(400).json({ error: { code: "INVALID_PHONE", message: "Valid 10-digit phone number required" } });
