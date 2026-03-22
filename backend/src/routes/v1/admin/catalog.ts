@@ -148,7 +148,8 @@ adminCatalogRouter.get(
           sp.base_stock_unit AS "baseStockUnit",
           sp.split_sell_eligible AS "splitSellEligible",
           sp.sell_unit AS "sellUnit",
-          sp.default_retail_variants AS "defaultVariants"
+          sp.default_retail_variants AS "defaultVariants",
+          sp.billing_model AS "billingModel"
         FROM catalog.supplier_products sp
         LEFT JOIN supplier.suppliers s ON s.id = sp.supplier_id
         ${whereClause}
