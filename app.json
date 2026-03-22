@@ -4,6 +4,7 @@
     "slug": "supermandi-pos",
     "scheme": "supermandi",
     "version": "1.0.1",
+    "orientation": "portrait",
     "updates": {
       "enabled": false,
       "checkAutomatically": "NEVER",
