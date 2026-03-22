@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { View, Pressable, StyleSheet, Text } from "react-native";
+import React, { useMemo, useState, useRef } from "react";
+import { View, Pressable, StyleSheet, Text, TextInput } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
@@ -14,15 +14,20 @@ type CartItemRowV3Props = {
   onDecrement: () => void;
   onRemove: () => void;
   onEdit?: () => void;
+  onQuantityChange?: (qty: number) => void; // GCP-STG-0312: Direct quantity input
 };
 
 // GCP-STG-0025: Use category-based emoji from ProductTileV3 (28 mappings)
 // instead of fragile name-based matching that defaults everything to 🍪
 import { getCategoryEmoji } from "./ProductTileV3";
 
-export default function CartItemRowV3({ item, onIncrement, onDecrement, onRemove, onEdit }: CartItemRowV3Props) {
+export default function CartItemRowV3({ item, onIncrement, onDecrement, onRemove, onEdit, onQuantityChange }: CartItemRowV3Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  // GCP-STG-0312: Tap qty to enter directly
+  const [editingQty, setEditingQty] = useState(false);
+  const [qtyInput, setQtyInput] = useState(String(item.quantity));
+  const inputRef = useRef<TextInput>(null);
   // GCP-STG-0025: Use category field for accurate emoji, fall back to name
   const category = (item.metadata?.category as string) ?? item.name;
   const emoji = getCategoryEmoji(category);
@@ -65,7 +70,37 @@ export default function CartItemRowV3({ item, onIncrement, onDecrement, onRemove
         <Pressable style={styles.qtyBtn} onPress={item.quantity <= 1 ? onRemove : onDecrement} accessibilityLabel="Decrease quantity">
           <Text style={styles.qtyBtnText}>−</Text>
         </Pressable>
-        <Text style={styles.qtyValue}>{item.quantity}</Text>
+        {/* GCP-STG-0312: Tap qty to type directly */}
+        {editingQty ? (
+          <TextInput
+            ref={inputRef}
+            style={[styles.qtyValue, styles.qtyInput]}
+            value={qtyInput}
+            onChangeText={setQtyInput}
+            keyboardType="decimal-pad"
+            selectTextOnFocus
+            autoFocus
+            onBlur={() => {
+              const parsed = parseFloat(qtyInput);
+              if (parsed > 0 && Number.isFinite(parsed) && onQuantityChange) {
+                onQuantityChange(parsed);
+              }
+              setEditingQty(false);
+            }}
+            onSubmitEditing={() => {
+              const parsed = parseFloat(qtyInput);
+              if (parsed > 0 && Number.isFinite(parsed) && onQuantityChange) {
+                onQuantityChange(parsed);
+              }
+              setEditingQty(false);
+            }}
+            accessibilityLabel="Enter quantity"
+          />
+        ) : (
+          <Pressable onPress={() => { setQtyInput(String(item.quantity)); setEditingQty(true); }}>
+            <Text style={styles.qtyValue}>{item.quantity}</Text>
+          </Pressable>
+        )}
         <Pressable style={styles.qtyBtn} onPress={onIncrement} accessibilityLabel="Increase quantity">
           <Text style={styles.qtyBtnText}>+</Text>
         </Pressable>
@@ -113,7 +148,8 @@ function createStyles(colors: ColorPalette) {
       justifyContent: "center",
     },
     qtyBtnText: { fontSize: 18, fontWeight: "700", color: colors.primary },
-    qtyValue: { fontSize: 15, fontWeight: "800", minWidth: 24, textAlign: "center", color: colors.textPrimary },
+    qtyValue: { fontSize: 15, fontWeight: "800", minWidth: 24, textAlign: "center" as const, color: colors.textPrimary },
+    qtyInput: { borderBottomWidth: 1, borderBottomColor: colors.primary, paddingVertical: 2, minWidth: 36 },
     total: { fontSize: 15, fontWeight: "800", minWidth: 48, textAlign: "right", letterSpacing: -0.3, color: colors.textPrimary },
   });
 }

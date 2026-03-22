@@ -6709,7 +6709,7 @@
       "file": "src/components/v3/CartSheetV3.tsx",
       "start_line": 1,
       "end_line": 435,
-      "checksum": "f80df79d2e3d8540",
+      "checksum": "eeddd9e6d6d13fd7",
       "description": "Cart sheet v3 — expanded view with items, GST summary, qty controls, pay button",
       "test_file": "src/__tests__/screens/cart-sheet-v3.stg-554.test.ts",
       "depends_on": null,
@@ -10168,8 +10168,8 @@
     {
       "ticket": "GCP-STG-0050",
       "file": "src/components/v3/CartSheetV3.tsx",
-      "start_line": 183,
-      "end_line": 213,
+      "start_line": 184,
+      "end_line": 214,
       "checksum": "d1d68cc9fcd55f37",
       "description": "Parked cart recall UI — Recall button + modal with Resume/Delete for each parked cart",
       "test_file": "src/__tests__/screens/cart-sheet-v3.stg-554.test.ts",
@@ -10203,7 +10203,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:08:06.529Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-21T14:34:16.323Z"
+      "line_shifted_at": "2026-03-22T18:34:04.373Z"
     },
     {
       "ticket": "GCP-STG-0127",
@@ -14947,5 +14947,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T18:29:59.790Z"
+  "lastUpdated": "2026-03-22T18:34:39.825Z"
 }

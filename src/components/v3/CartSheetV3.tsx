@@ -125,6 +125,7 @@ export default function CartSheetV3({ visible, sellMode, onClose, onCheckout }: 
       onDecrement={() => handleDecrement(item.id, item.quantity)}
       onRemove={() => removeItem(item.id)}
       onEdit={() => openEditModal(item)}
+      onQuantityChange={(qty) => updateQuantity(item.id, qty)}
     />
   ), [handleIncrement, handleDecrement, removeItem, openEditModal]);
 
