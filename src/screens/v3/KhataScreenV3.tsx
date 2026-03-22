@@ -185,7 +185,7 @@ function createStyles(colors: ColorPalette) {
     kActions: { flexDirection: "row", gap: 4, marginTop: 4 },
     waSmBtn: { backgroundColor: "#25D366", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
     collectBtn: { backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-    collectText: { color: "#fff", fontSize: 9, fontWeight: "700" },
+    collectText: { color: "#fff", fontSize: 10, fontWeight: "700" }, // GCP-STG-0307: raised from 9
     footer: { padding: 12, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
     bulkWaBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 14, backgroundColor: "#25D366" },
     bulkWaText: { color: "#fff", fontSize: 14, fontWeight: "700" },

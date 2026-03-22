@@ -182,7 +182,7 @@ function createStyles(colors: ColorPalette) {
       borderColor: colors.surface,
     },
     badgeText: {
-      fontSize: 9,
+      fontSize: 11, // GCP-STG-0307: raised from 9 for readability on small screens
       fontWeight: "800",
       color: colors.textInverse,
     },

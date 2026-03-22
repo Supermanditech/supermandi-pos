@@ -124,7 +124,7 @@ function createStyles(colors: ColorPalette) {
     offerTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     provider: { fontSize: 10, fontWeight: "800", color: colors.primary, letterSpacing: 0.5 },
     bnplBadge: { backgroundColor: "#F5F3FF", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-    bnplText: { fontSize: 9, fontWeight: "700", color: "#7C3AED" },
+    bnplText: { fontSize: 10, fontWeight: "700", color: "#7C3AED" }, // GCP-STG-0307: raised from 9
     offerAmount: { fontSize: 24, fontWeight: "900", marginTop: 6, letterSpacing: -0.5 },
     offerDetail: { fontSize: 12, color: colors.textTertiary, lineHeight: 18, marginTop: 4 },
     applyBtn: { marginTop: 12, paddingVertical: 12, borderRadius: 12, backgroundColor: colors.primary, alignItems: "center" },

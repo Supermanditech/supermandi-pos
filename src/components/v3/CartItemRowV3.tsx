@@ -133,7 +133,7 @@ function createStyles(colors: ColorPalette) {
     info: { flex: 1, minWidth: 0 },
     name: { fontSize: 14, fontWeight: "700", color: colors.textPrimary, letterSpacing: -0.2 },
     detail: { fontSize: 11, color: colors.textTertiary, marginTop: 1 },
-    caseLabel: { fontSize: 9, color: colors.success, fontWeight: "700", marginTop: 2 },
+    caseLabel: { fontSize: 10, color: colors.success, fontWeight: "700", marginTop: 2 }, // GCP-STG-0307: raised from 9
     qtyBox: {
       flexDirection: "row",
       alignItems: "center",

@@ -212,8 +212,9 @@ function createStyles(colors: ColorPalette) {
       fontSize: 34,
     },
     // V3-HARDEN-111: Responsive brand label
+    // GCP-STG-0307: use Math.max to enforce minimum 10px
     brandLabel: {
-      fontSize: getChipFontSize() - 3,
+      fontSize: Math.max(getChipFontSize() - 3, 10),
       fontWeight: "700",
       color: colors.textTertiary,
       letterSpacing: 0.3,
@@ -229,7 +230,7 @@ function createStyles(colors: ColorPalette) {
       minHeight: (getChipFontSize() + 3) * 2,
     },
     // GCP-STG-0116: Pack size / net content below name
-    packSize: { fontSize: 9, color: colors.textTertiary, textAlign: "center" as const, marginTop: 1 },
+    packSize: { fontSize: 11, color: colors.textTertiary, textAlign: "center" as const, marginTop: 1 }, // GCP-STG-0307: raised from 9
     // V3-HARDEN-111: Responsive price text
     price: {
       fontSize: getChipFontSize() + 3,
@@ -239,14 +240,14 @@ function createStyles(colors: ColorPalette) {
     },
     // V3-HARDEN-111: Responsive case info
     caseInfo: {
-      fontSize: getChipFontSize() - 3,
+      fontSize: Math.max(getChipFontSize() - 3, 10), // GCP-STG-0307: min 10px
       color: colors.textTertiary,
       marginTop: 1,
     },
     // V3-FIX-181: Stock health + setup indicators using theme tokens
-    looseRate: { fontSize: getChipFontSize() - 3, color: colors.accent, textAlign: "center" as const },
-    stockLow: { fontSize: 9, color: colors.warning, textAlign: "center" as const, fontWeight: "700" as const },
-    stockOut: { fontSize: 9, color: colors.error, textAlign: "center" as const, fontWeight: "700" as const },
-    setupNeeded: { fontSize: 10, color: colors.warning, textAlign: "center" as const, marginTop: 2 },
+    looseRate: { fontSize: Math.max(getChipFontSize() - 3, 10), color: colors.accent, textAlign: "center" as const }, // GCP-STG-0307: min 10px
+    stockLow: { fontSize: 11, color: colors.warning, textAlign: "center" as const, fontWeight: "700" as const }, // GCP-STG-0307
+    stockOut: { fontSize: 11, color: colors.error, textAlign: "center" as const, fontWeight: "700" as const }, // GCP-STG-0307
+    setupNeeded: { fontSize: 11, color: colors.warning, textAlign: "center" as const, marginTop: 2 }, // GCP-STG-0307
   });
 }

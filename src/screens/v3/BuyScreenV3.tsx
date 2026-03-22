@@ -419,7 +419,7 @@ export default function BuyScreenV3() {
                           if (!applied) return null;
                           return <Text style={{ fontSize: 10, color: colors.success, fontWeight: '600' }}>MOQ tier: {applied.minQty}+ → -{applied.discountPct}%</Text>;
                         })()}
-                        {p.publishedTermsVersion ? <Text style={{ fontSize: 9, color: colors.textTertiary }}>v{p.publishedTermsVersion}</Text> : null}
+                        {p.publishedTermsVersion ? <Text style={{ fontSize: 10, color: colors.textTertiary }}>v{p.publishedTermsVersion}</Text> : null}
                       </View>
                     </View>
                   ))}

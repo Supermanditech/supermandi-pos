@@ -170,9 +170,9 @@ export default function CompareScreenV3({ visible, productName, productId, packS
                 {offer.bnplAvailable ? <View style={styles.bnplBadge}><Text style={styles.bnplText}>BNPL</Text></View> : null}
                 {offer.financeEligible && !offer.bnplAvailable ? <View style={styles.termBadge}><Text style={styles.termText}>Credit</Text></View> : null}
                 {offer.scheme ? <View style={styles.termBadge}><Text style={styles.termText}>{offer.scheme}</Text></View> : null}
-                {offer.deliveryTerms ? <View style={styles.termBadge}><Text style={[styles.termText, { fontSize: 9 }]}>{offer.deliveryTerms}</Text></View> : null}
+                {offer.deliveryTerms ? <View style={styles.termBadge}><Text style={[styles.termText, { fontSize: 10 }]}>{offer.deliveryTerms}</Text></View> : null}
                 {offer.procurementUnit ? <View style={styles.termBadge}><Text style={styles.termText}>{offer.procurementUnit}{offer.procurementPackQty && offer.procurementPackQty > 1 ? ` ×${offer.procurementPackQty}` : ''}{offer.baseStockUnit && offer.baseStockUnit !== offer.procurementUnit ? ` → ${offer.baseStockUnit}` : ''}</Text></View> : null}
-                {offer.publishedTermsVersion ? <View style={styles.termBadge}><Text style={[styles.termText, { fontSize: 8 }]}>v{offer.publishedTermsVersion}</Text></View> : null}
+                {offer.publishedTermsVersion ? <View style={styles.termBadge}><Text style={[styles.termText, { fontSize: 10 }]}>v{offer.publishedTermsVersion}</Text></View> : null}
               </View>
 
               <Text style={styles.calcLine}>
@@ -217,12 +217,12 @@ function createStyles(colors: ColorPalette) {
     offerPrice: { fontSize: 18, fontWeight: "900", color: colors.textPrimary },
     offerPriceBest: { color: colors.success },
     bestBadge: { backgroundColor: colors.successSoft, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginTop: 2 },
-    bestText: { fontSize: 9, fontWeight: "800", color: colors.success },
+    bestText: { fontSize: 10, fontWeight: "800", color: colors.success }, // GCP-STG-0307: raised from 9
     termRow: { flexDirection: "row", gap: 4, marginTop: 6 },
     termBadge: { backgroundColor: colors.backgroundSecondary, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-    termText: { fontSize: 9, fontWeight: "700", color: colors.textSecondary },
+    termText: { fontSize: 10, fontWeight: "700", color: colors.textSecondary }, // GCP-STG-0307: raised from 9
     bnplBadge: { backgroundColor: "#F5F3FF", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-    bnplText: { fontSize: 9, fontWeight: "700", color: "#7C3AED" },
+    bnplText: { fontSize: 10, fontWeight: "700", color: "#7C3AED" }, // GCP-STG-0307: raised from 9
     calcLine: { fontSize: 12, color: colors.textTertiary, marginTop: 6 },
     orderBtn: { marginTop: 10, paddingVertical: 12, borderRadius: 12, borderWidth: 2, borderColor: colors.primary, alignItems: "center" },
     orderBtnBest: { backgroundColor: colors.success, borderColor: colors.success },

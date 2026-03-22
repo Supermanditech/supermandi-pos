@@ -276,7 +276,7 @@ function createStyles(colors: ColorPalette) {
     scanInput: { flex: 1, flexDirection: "row", alignItems: "center", gap: 6, padding: 10, backgroundColor: colors.background, borderRadius: 12, borderWidth: 2, borderColor: colors.border },
     scanText: { flex: 1, fontSize: 13, fontWeight: "500", color: colors.textPrimary },
     hidDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success },
-    hidLabel: { fontSize: 9, color: colors.success, fontWeight: "700" },
+    hidLabel: { fontSize: 10, color: colors.success, fontWeight: "700" }, // GCP-STG-0307: raised from 9
     camBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center" },
     tabs: { flexDirection: "row", backgroundColor: colors.surface },
     tab: { flex: 1, padding: 10, alignItems: "center", borderBottomWidth: 3, borderBottomColor: "transparent" },

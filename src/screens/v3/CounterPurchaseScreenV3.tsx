@@ -381,10 +381,10 @@ function createStyles(colors: ColorPalette) {
     scanInputRow: { flexDirection: "row", alignItems: "center", gap: 6, padding: 10, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 2, borderColor: colors.primary },
     scanInput: { flex: 1, fontSize: 13, fontWeight: "600", color: colors.textPrimary },
     readyDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success },
-    readyText: { fontSize: 9, color: colors.success, fontWeight: "700" },
+    readyText: { fontSize: 10, color: colors.success, fontWeight: "700" }, // GCP-STG-0307: raised from 9
     scanSubmit: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
     scanSubmitText: { color: "#fff", fontSize: 14, fontWeight: "800" },
-    scanHint: { fontSize: 9, color: colors.textTertiary, textAlign: "center", marginTop: 4 },
+    scanHint: { fontSize: 10, color: colors.textTertiary, textAlign: "center", marginTop: 4 }, // GCP-STG-0307: raised from 9
     // Supplier
     supplierRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: getScreenPadding(), paddingTop: 6, backgroundColor: colors.surface },
     supplierLabel: { fontSize: 10, fontWeight: "700", color: colors.textTertiary },
@@ -393,9 +393,9 @@ function createStyles(colors: ColorPalette) {
     supplierAdd: { width: 32, height: 32, borderRadius: 10, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
     supplierAddText: { color: "#fff", fontSize: 16, fontWeight: "700" },
     invoiceRow: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: getScreenPadding(), paddingBottom: 6, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
-    invoiceLabel: { fontSize: 9, color: colors.textTertiary },
-    invoiceInput: { fontSize: 9, fontWeight: "600", borderBottomWidth: 1, borderBottomColor: colors.border, width: 100 },
-    invoiceDate: { fontSize: 9, color: colors.textTertiary, marginLeft: "auto" },
+    invoiceLabel: { fontSize: 10, color: colors.textTertiary }, // GCP-STG-0307: raised from 9
+    invoiceInput: { fontSize: 10, fontWeight: "600", borderBottomWidth: 1, borderBottomColor: colors.border, width: 100 }, // GCP-STG-0307: raised from 9
+    invoiceDate: { fontSize: 10, color: colors.textTertiary, marginLeft: "auto" }, // GCP-STG-0307: raised from 9
     // Items
     itemsList: { flex: 1, padding: getScreenPadding() },
     itemsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },

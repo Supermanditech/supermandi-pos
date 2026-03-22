@@ -117,13 +117,13 @@ export default function SupplierProductCardV3({ product, orderQtyCases, onPress 
               <View style={styles.successBadge}><Text style={styles.successBadgeText}>Credit</Text></View>
             ) : null}
             {product.deliveryTerms ? (
-              <View style={styles.infoBadge}><Text style={[styles.infoBadgeText, { fontSize: 9 }]}>{product.deliveryTerms}</Text></View>
+              <View style={styles.infoBadge}><Text style={[styles.infoBadgeText, { fontSize: 10 }]}>{product.deliveryTerms}</Text></View>
             ) : null}
             {product.procurementUnit && product.procurementUnit !== product.unit ? (
               <View style={styles.accentBadge}><Text style={styles.accentBadgeText}>{product.procurementUnit}{product.procurementPackQty && product.procurementPackQty > 1 ? ` ×${product.procurementPackQty}` : ''}</Text></View>
             ) : null}
             {product.publishedTermsVersion ? (
-              <View style={styles.neutralBadge}><Text style={[styles.neutralBadgeText, { fontSize: 8 }]}>v{product.publishedTermsVersion}</Text></View>
+              <View style={styles.neutralBadge}><Text style={[styles.neutralBadgeText, { fontSize: 10 }]}>v{product.publishedTermsVersion}</Text></View>
             ) : null}
           </View>
 
@@ -159,26 +159,26 @@ function createStyles(colors: ColorPalette) {
     row: { flexDirection: "row", gap: 12 },
     imgBox: { width: 56, height: 56, borderRadius: 12, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center" },
     emoji: { fontSize: 26 },
-    brandLabel: { fontSize: 7, fontWeight: "700", color: colors.textTertiary, marginTop: 1 },
+    brandLabel: { fontSize: 10, fontWeight: "700", color: colors.textTertiary, marginTop: 1 }, // GCP-STG-0307: raised from 7
     info: { flex: 1 },
     topRow: { flexDirection: "row", justifyContent: "space-between" },
     name: { ...typeRhythm.cardTitle, color: colors.textPrimary },
     meta: { ...typeRhythm.cardMeta, color: colors.textTertiary, marginTop: 1 },
     priceCol: { alignItems: "flex-end" },
     ptr: { fontSize: 16, fontWeight: "900", color: colors.success },
-    ptrLabel: { fontSize: 9, color: colors.textTertiary },
+    ptrLabel: { fontSize: 10, color: colors.textTertiary }, // GCP-STG-0307: raised from 9
     tags: { flexDirection: "row", gap: 4, marginTop: 6, flexWrap: "wrap" },
     tag: { backgroundColor: colors.backgroundSecondary, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-    tagText: { fontSize: 9, fontWeight: "600", color: colors.textSecondary },
+    tagText: { fontSize: 10, fontWeight: "600", color: colors.textSecondary }, // GCP-STG-0307: raised from 9
     marginTag: { backgroundColor: colors.successSoft, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-    marginText: { fontSize: 9, fontWeight: "800", color: colors.success },
+    marginText: { fontSize: 10, fontWeight: "800", color: colors.success }, // GCP-STG-0307: raised from 9
     terms: { flexDirection: "row", gap: 4, marginTop: 4 },
     schemeBadge: { backgroundColor: colors.warningSoft, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-    schemeText: { fontSize: 9, fontWeight: "700", color: colors.warningDark },
+    schemeText: { fontSize: 10, fontWeight: "700", color: colors.warningDark }, // GCP-STG-0307: raised from 9
     discBadge: { backgroundColor: colors.accentLight, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-    discText: { fontSize: 9, fontWeight: "700", color: colors.accentDark },
+    discText: { fontSize: 10, fontWeight: "700", color: colors.accentDark }, // GCP-STG-0307: raised from 9
     creditBadge: { backgroundColor: colors.primaryLight, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-    creditText: { fontSize: 9, fontWeight: "700", color: colors.primary },
+    creditText: { fontSize: 10, fontWeight: "700", color: colors.primary }, // GCP-STG-0307: raised from 9
     bottomRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 6 },
     stockLabel: { fontSize: 10, fontWeight: "700" },
     stockUrgent: { color: colors.error },
@@ -189,22 +189,22 @@ function createStyles(colors: ColorPalette) {
     qtyBtn: { width: 28, height: 28, alignItems: "center", justifyContent: "center" },
     qtyBtnText: { fontSize: 14, fontWeight: "700", color: colors.primary },
     qtyVal: { fontSize: 13, fontWeight: "800", minWidth: 20, textAlign: "center" },
-    casesLabel: { fontSize: 9, color: colors.textTertiary },
+    casesLabel: { fontSize: 10, color: colors.textTertiary }, // GCP-STG-0307: raised from 9
     addBtn: { backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
     addBtnText: { color: colors.textInverse, fontSize: 11, fontWeight: "700" },
-    calcLine: { fontSize: 9, color: colors.textTertiary, marginTop: 4 },
+    calcLine: { fontSize: 10, color: colors.textTertiary, marginTop: 4 }, // GCP-STG-0307: raised from 9
     // V3-FIX-136: Browse-only card styles
     cartBadge: { backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
     cartBadgeText: { color: colors.textInverse, fontSize: 10, fontWeight: "700" },
     tapHint: { fontSize: 11, color: colors.textTertiary, fontWeight: "500" },
     // V3-FIX-181: Semantic badge styles from chipColors tokens
     infoBadge: { backgroundColor: chipColors(colors).info.bg, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-    infoBadgeText: { fontSize: 9, fontWeight: "700", color: chipColors(colors).info.text },
+    infoBadgeText: { fontSize: 10, fontWeight: "700", color: chipColors(colors).info.text }, // GCP-STG-0307: raised from 9
     successBadge: { backgroundColor: chipColors(colors).status.bg, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-    successBadgeText: { fontSize: 9, fontWeight: "700", color: chipColors(colors).status.text },
+    successBadgeText: { fontSize: 10, fontWeight: "700", color: chipColors(colors).status.text }, // GCP-STG-0307: raised from 9
     accentBadge: { backgroundColor: chipColors(colors).accent.bg, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-    accentBadgeText: { fontSize: 9, fontWeight: "700", color: chipColors(colors).accent.text },
+    accentBadgeText: { fontSize: 10, fontWeight: "700", color: chipColors(colors).accent.text }, // GCP-STG-0307: raised from 9
     neutralBadge: { backgroundColor: chipColors(colors).neutral.bg, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-    neutralBadgeText: { fontSize: 9, fontWeight: "700", color: chipColors(colors).neutral.text },
+    neutralBadgeText: { fontSize: 10, fontWeight: "700", color: chipColors(colors).neutral.text }, // GCP-STG-0307: raised from 9
   });
 }
