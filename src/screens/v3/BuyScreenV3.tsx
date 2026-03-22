@@ -300,7 +300,7 @@ export default function BuyScreenV3() {
             name: detailProduct.name,
             priceMrpMinor: detailProduct.mrpMinor,
             priceTradeMinor: detailProduct.ptrMinor,
-            barcode: undefined,
+            barcode: detailProduct.barcode ?? undefined, // GCP-STG-0293: pass barcode from supplier data
             brand: detailProduct.brand,
             category: detailProduct.category,
             stock: detailProduct.currentStock,

@@ -6968,7 +6968,7 @@
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 1,
       "end_line": 580,
-      "checksum": "2e818e8009472ef5",
+      "checksum": "182085c817a8cd64",
       "description": "BUY tab v3 — supplier catalogue with wholesale metadata, supplier filter, categories, counter purchase CTA",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,
@@ -14947,5 +14947,5 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T18:12:09.707Z"
+  "lastUpdated": "2026-03-22T18:17:52.472Z"
 }
