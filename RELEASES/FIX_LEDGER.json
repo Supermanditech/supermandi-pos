@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 688,
+  "version": 690,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6330,8 +6330,8 @@
       "ticket": "STG-516",
       "file": "backend/src/routes/v1/retailer-admin/products.ts",
       "start_line": 30,
-      "end_line": 1535,
-      "checksum": "f5a7cea2edcb6c7f",
+      "end_line": 1537,
+      "checksum": "65bf66eae3932f14",
       "description": "Search cache invalidation wired into product CRUD (checksum updated after GCP-STG-0281 bnpl_eligible)",
       "test_file": "src/__tests__/screens/search-cache-invalidation.stg-516.test.ts",
       "depends_on": null,
@@ -14674,8 +14674,8 @@
     {
       "ticket": "GCP-STG-0281",
       "file": "backend/src/routes/v1/retailer-admin/products.ts",
-      "start_line": 246,
-      "end_line": 249,
+      "start_line": 248,
+      "end_line": 251,
       "checksum": "2972bcc2d862371c",
       "description": "POST handler destructures bnplEligible and includes in store_products INSERT",
       "test_file": "backend/tests/bnplEligible.gcp-stg-0281.unit.test.ts",
@@ -14729,13 +14729,14 @@
         "wiring": "retailer web already sends bnplEligible in PATCH body",
         "navigation": "N/A",
         "i18n_keys": "N/A"
-      }
+      },
+      "line_shifted_at": "2026-03-22T21:48:47.092Z"
     },
     {
       "ticket": "GCP-STG-0282",
       "file": "backend/src/routes/v1/retailer-admin/products.ts",
-      "start_line": 580,
-      "end_line": 583,
+      "start_line": 582,
+      "end_line": 585,
       "checksum": "16c7a69861588c83",
       "description": "PATCH handler destructures + persists conversion profile fields",
       "test_file": "backend/tests/conversionPatch.gcp-stg-0282.unit.test.ts",
@@ -14786,7 +14787,8 @@
         "test_guard": "conversionPatch test 16/16",
         "single_commit": "fix(GCP-STG-0282)",
         "ticket_parked": "after commit"
-      }
+      },
+      "line_shifted_at": "2026-03-22T21:48:47.097Z"
     },
     {
       "ticket": "GCP-STG-0283",
@@ -15568,6 +15570,78 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T21:39:40.762Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0331",
+      "file": "backend/src/routes/v1/pos/openingStock.ts",
+      "start_line": 45,
+      "end_line": 54,
+      "checksum": "27474f42f5dbdb4d",
+      "description": "Idempotency guard: check inventory_ledger for existing opening_stock before INSERT, skip duplicates, return 409 if all items are duplicates",
+      "test_file": "backend/tests/openingStockIdempotent.gcp-stg-0331.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T21:47:55.084Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0334",
+      "file": "backend/src/routes/v1/retailer-admin/products.ts",
+      "start_line": 164,
+      "end_line": 198,
+      "checksum": "7c04c772550985a3",
+      "description": "GET /products SELECT includes COALESCE(sp.image_url, p.image_url) + response mapping image_url",
+      "test_file": "backend/tests/retailerProductImage.gcp-stg-0334.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-22T21:50:12.113Z",
       "status": "ACTIVE"
     }
   ],

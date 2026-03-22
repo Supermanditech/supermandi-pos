@@ -35,8 +35,21 @@ posOpeningStockRouter.post(
       await client.query("BEGIN");
       let processedCount = 0;
 
+      const skippedDuplicates: string[] = [];
+
       for (const item of items) {
         if (!item.productId || typeof item.quantity !== "number" || item.quantity <= 0) {
+          continue;
+        }
+
+        // GCP-STG-0331: Idempotency guard — reject if opening_stock already exists for this product
+        const dupCheck = await client.query(
+          `SELECT COUNT(*)::int AS cnt FROM inventory.inventory_ledger
+           WHERE store_id = $1 AND product_id = $2 AND transaction_type = 'opening_stock'`,
+          [storeId, item.productId]
+        );
+        if (Number(dupCheck.rows[0]?.cnt) > 0) {
+          skippedDuplicates.push(item.productId);
           continue;
         }
 
@@ -86,7 +99,16 @@ posOpeningStockRouter.post(
       }
 
       await client.query("COMMIT");
-      return res.status(200).json({ processedCount });
+
+      // GCP-STG-0331: If ALL items were duplicates, return 409
+      if (processedCount === 0 && skippedDuplicates.length > 0) {
+        return res.status(409).json({
+          error: "Opening stock already set for this product. Use stock adjustment to correct.",
+          duplicateProductIds: skippedDuplicates,
+        });
+      }
+
+      return res.status(200).json({ processedCount, skippedDuplicates });
     } catch (err) {
       await client.query("ROLLBACK");
       log.error("[opening-stock] Error:", err);
