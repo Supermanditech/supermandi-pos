@@ -144,13 +144,15 @@ export default function SellScreenV3() {
   }, [checkAndRefresh]);
 
   // V3-006: Search handler — queries sellSearchApi
+  // GCP-STG-0321: Pass selectedCategory to backend search (skip virtual "Frequent")
   const handleSearchQuery = useCallback(async (query: string) => {
     if (query.length < 2) { setSearchResults([]); if (query.length === 1) showToast("Type at least 2 characters to search"); return; }
     setSearchLoading(true);
     try {
       const storeId = await getDeviceStoreId();
       if (!storeId) { setSearchResults([]); return; }
-      const groups = await searchStoreProducts(storeId, query, { limit: 20 });
+      const catParam = selectedCategory && selectedCategory !== "Frequent" ? selectedCategory : undefined;
+      const groups = await searchStoreProducts(storeId, query, { limit: 20, category: catParam });
       // V3-FIX-120: Flatten search groups into SearchResult[] preserving all metadata
       const flat: SearchResult[] = groups.flatMap((g) =>
         (g.matches ?? []).map((sku) => ({
@@ -192,7 +194,7 @@ export default function SellScreenV3() {
       setSearchResults([]);
     }
     setSearchLoading(false);
-  }, []);
+  }, [selectedCategory]);
 
   // GCP-STG-0316: React to scan-not-found "Search by Name" trigger
   const searchTriggerBarcode = useSearchTriggerStore((s) => s.missedBarcode);

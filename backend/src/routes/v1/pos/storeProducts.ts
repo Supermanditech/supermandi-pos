@@ -313,6 +313,8 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
   const q = String(req.query.q || "").trim();
   const limit = Math.min(Math.max(parseInt(String(req.query.limit || "30"), 10) || 30, 1), 100);
   const includeZeroStock = req.query.includeZeroStock !== "false";
+  // GCP-STG-0321: Optional category filter for SELL search
+  const categoryFilter = req.query.category ? String(req.query.category).trim() : "";
 
   // AUD-059-C FIX: Search query length bounds (prevent DoS with huge queries)
   const MAX_SEARCH_QUERY_LENGTH = 100;
@@ -330,7 +332,6 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
 
   try {
     const stockFilter = includeZeroStock ? "" : "AND COALESCE(sb.current_qty, sp.current_stock, 0) > 0";
-
     // V3-FIX-132: Tokenize with quantity normalization + Hindi alias expansion
     // Keep tokens >= 1 char (numbers from "1kg" are 1+ char), filter empties, cap at 5 raw
     const rawTokens = normalizeQuantityTokens(q).filter(t => t.length >= 1).slice(0, 5);
@@ -348,6 +349,13 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
     // Each token is checked against name, display_name, brand, primary_barcode, store barcodes
     // Any token matching is sufficient (OR across tokens)
     const params: Array<string | number> = [storeId];
+
+    // GCP-STG-0321: Category filter — case-insensitive exact match on p.category
+    let categoryClause = "";
+    if (categoryFilter) {
+      params.push(categoryFilter);
+      categoryClause = `AND LOWER(p.category) = LOWER($${params.length})`;
+    }
     const tokenWhereClauses: string[] = [];
     const tokenScoreCases: string[] = [];
 
@@ -451,6 +459,7 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
             )
           )
           ${stockFilter}
+          ${categoryClause}
           AND (
             ${whereClause}
           )

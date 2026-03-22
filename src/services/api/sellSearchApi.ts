@@ -109,15 +109,21 @@ export async function searchStoreProducts(
   options: {
     limit?: number;
     includeZeroStock?: boolean;
+    // GCP-STG-0321: Optional category filter for SELL search
+    category?: string;
   } = {}
 ): Promise<StoreSearchGroup[]> {
-  const { limit = 30, includeZeroStock = true } = options;
+  const { limit = 30, includeZeroStock = true, category } = options;
 
   const params = new URLSearchParams({
     q: query,
     limit: String(limit),
     includeZeroStock: String(includeZeroStock),
   });
+  // GCP-STG-0321: Pass category filter to backend
+  if (category) {
+    params.set("category", category);
+  }
 
   // SD-ONBOARD-002C: Use POS endpoint (device token → storeId)
   const response = await apiClient.get<StoreSearchResponse>(
