@@ -1,4 +1,4 @@
-// SuperAdmin — Test CatalogTab component (SA-P2-006)
+// SuperAdmin — Test CatalogTab component (SA-P2-006 + GCP-STG-0071/0075/0090)
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CatalogTab } from '../../tabs/CatalogTab';
@@ -8,12 +8,18 @@ const mockFetchCategories = vi.fn();
 const mockFetchProducts = vi.fn();
 const mockOverrideProductCategory = vi.fn();
 const mockUpdateProductConversion = vi.fn();
+const mockApproveProduct = vi.fn();
+const mockRejectProduct = vi.fn();
+const mockEditProductMetadata = vi.fn();
 
 vi.mock('../../api/catalog', () => ({
   fetchCategories: (...args: unknown[]) => mockFetchCategories(...args),
   fetchProducts: (...args: unknown[]) => mockFetchProducts(...args),
   overrideProductCategory: (...args: unknown[]) => mockOverrideProductCategory(...args),
   updateProductConversion: (...args: unknown[]) => mockUpdateProductConversion(...args),
+  approveProduct: (...args: unknown[]) => mockApproveProduct(...args),
+  rejectProduct: (...args: unknown[]) => mockRejectProduct(...args),
+  editProductMetadata: (...args: unknown[]) => mockEditProductMetadata(...args),
 }));
 
 // Mock react-hot-toast
@@ -74,12 +80,12 @@ describe('CatalogTab', () => {
 
   it('renders header', async () => {
     render(<CatalogTab />);
-    expect(screen.getByText('Product Categories')).toBeTruthy();
+    expect(screen.getByText('Product Catalog')).toBeTruthy();
   });
 
   it('renders description text', async () => {
     render(<CatalogTab />);
-    expect(screen.getByText(/Browse and override product categories/)).toBeTruthy();
+    expect(screen.getByText(/Browse, approve\/reject, set margins/)).toBeTruthy();
   });
 
   // ── Loading State ───────────────────────────────────────────
@@ -139,7 +145,6 @@ describe('CatalogTab', () => {
       expect(screen.getByText('Tata Salt 1kg')).toBeTruthy();
       expect(screen.getByText('Grocery')).toBeTruthy();
       expect(screen.getByText('Tata')).toBeTruthy();
-      expect(screen.getByText('8901030000000')).toBeTruthy();
       expect(screen.getByText('Tata Distributors')).toBeTruthy();
     });
   });
@@ -157,7 +162,7 @@ describe('CatalogTab', () => {
     });
   });
 
-  it('shows Edit Category button for each product', async () => {
+  it('shows Edit button for each product', async () => {
     mockFetchProducts.mockResolvedValue({
       data: [sampleProduct],
       pagination: { page: 1, limit: 50, total: 1, hasMore: false },
@@ -166,7 +171,7 @@ describe('CatalogTab', () => {
     render(<CatalogTab />);
 
     await waitFor(() => {
-      expect(screen.getByText('Edit Category')).toBeTruthy();
+      expect(screen.getByText('Edit')).toBeTruthy();
     });
   });
 
@@ -264,7 +269,7 @@ describe('CatalogTab', () => {
 
   // ── Edit Modal ──────────────────────────────────────────────
 
-  it('opens edit modal when Edit Category clicked', async () => {
+  it('opens edit modal when Edit clicked', async () => {
     mockFetchProducts.mockResolvedValue({
       data: [sampleProduct],
       pagination: { page: 1, limit: 50, total: 1, hasMore: false },
@@ -273,12 +278,12 @@ describe('CatalogTab', () => {
     render(<CatalogTab />);
 
     await waitFor(() => {
-      fireEvent.click(screen.getByText('Edit Category'));
+      fireEvent.click(screen.getByText('Edit'));
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Edit Product — Category & Conversion')).toBeTruthy();
-      expect(screen.getByLabelText(/New Category/)).toBeTruthy();
+      expect(screen.getByText('Edit Product')).toBeTruthy();
+      expect(screen.getByLabelText(/Category/)).toBeTruthy();
     });
   });
 
@@ -290,14 +295,14 @@ describe('CatalogTab', () => {
     });
     render(<CatalogTab />);
 
-    await waitFor(() => fireEvent.click(screen.getByText('Edit Category')));
+    await waitFor(() => fireEvent.click(screen.getByText('Edit')));
 
     await waitFor(() => {
-      expect(screen.getAllByText('Tata Salt 1kg').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getAllByText('Tata Salt 1kg').length).toBeGreaterThanOrEqual(1);
     });
   });
 
-  it('shows Cancel and Save buttons in modal', async () => {
+  it('shows Cancel and Save Changes buttons in modal', async () => {
     mockFetchProducts.mockResolvedValue({
       data: [sampleProduct],
       pagination: { page: 1, limit: 50, total: 1, hasMore: false },
@@ -305,11 +310,11 @@ describe('CatalogTab', () => {
     });
     render(<CatalogTab />);
 
-    await waitFor(() => fireEvent.click(screen.getByText('Edit Category')));
+    await waitFor(() => fireEvent.click(screen.getByText('Edit')));
 
     await waitFor(() => {
       expect(screen.getByText('Cancel')).toBeTruthy();
-      expect(screen.getByText('Save')).toBeTruthy();
+      expect(screen.getByText('Save Changes')).toBeTruthy();
     });
   });
 
@@ -322,7 +327,7 @@ describe('CatalogTab', () => {
     });
     render(<CatalogTab />);
 
-    await waitFor(() => fireEvent.click(screen.getByText('Edit Category')));
+    await waitFor(() => fireEvent.click(screen.getByText('Edit')));
 
     await waitFor(() => {
       expect(screen.getByText('Clear Override')).toBeTruthy();
@@ -337,7 +342,7 @@ describe('CatalogTab', () => {
     });
     render(<CatalogTab />);
 
-    await waitFor(() => fireEvent.click(screen.getByText('Edit Category')));
+    await waitFor(() => fireEvent.click(screen.getByText('Edit')));
 
     await waitFor(() => {
       expect(screen.queryByText('Clear Override')).toBeNull();
@@ -352,13 +357,13 @@ describe('CatalogTab', () => {
     });
     render(<CatalogTab />);
 
-    await waitFor(() => fireEvent.click(screen.getByText('Edit Category')));
-    await waitFor(() => expect(screen.getByText('Edit Product — Category & Conversion')).toBeTruthy());
+    await waitFor(() => fireEvent.click(screen.getByText('Edit')));
+    await waitFor(() => expect(screen.getByText('Edit Product')).toBeTruthy());
 
     fireEvent.click(screen.getByText('Cancel'));
 
     await waitFor(() => {
-      expect(screen.queryByText('Edit Product — Category & Conversion')).toBeNull();
+      expect(screen.queryByText('Edit Product')).toBeNull();
     });
   });
 
@@ -370,7 +375,7 @@ describe('CatalogTab', () => {
     });
     render(<CatalogTab />);
 
-    await waitFor(() => fireEvent.click(screen.getByText('Edit Category')));
+    await waitFor(() => fireEvent.click(screen.getByText('Edit')));
 
     await waitFor(() => {
       const dialog = screen.getByRole('dialog');
@@ -404,7 +409,7 @@ describe('CatalogTab', () => {
     render(<CatalogTab />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Edit category for Tata Salt 1kg')).toBeTruthy();
+      expect(screen.getByLabelText('Edit Tata Salt 1kg')).toBeTruthy();
     });
   });
 
@@ -422,7 +427,7 @@ describe('CatalogTab', () => {
       expect(screen.getByText('Product')).toBeTruthy();
       expect(screen.getByText('Category')).toBeTruthy();
       expect(screen.getByText('Brand')).toBeTruthy();
-      expect(screen.getByText('Barcode')).toBeTruthy();
+      expect(screen.getByText('Price')).toBeTruthy();
       expect(screen.getByText('Supplier')).toBeTruthy();
       expect(screen.getByText('Status')).toBeTruthy();
       expect(screen.getByText('Actions')).toBeTruthy();

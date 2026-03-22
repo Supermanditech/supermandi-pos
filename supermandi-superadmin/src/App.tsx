@@ -1591,9 +1591,9 @@ export default function App() {
     if (!staffStoreId) return;
     // GCP-STG-0182: Last-manager guard — prevent deactivating the only active MANAGER
     if (currentlyActive) {
-      const staff = staffMembers.find((s) => s.id === staffId);
+      const staff = staffList.find((s: StaffMember) => s.id === staffId);
       if (staff?.role === "MANAGER") {
-        const activeManagers = staffMembers.filter((s) => s.role === "MANAGER" && s.is_active);
+        const activeManagers = staffList.filter((s: StaffMember) => s.role === "MANAGER" && s.is_active);
         if (activeManagers.length <= 1) {
           setStaffError("Cannot deactivate the last active manager. Promote another staff member to MANAGER first.");
           return;
@@ -1638,7 +1638,7 @@ export default function App() {
     setStaffSuccess("");
     setStaffActionLoading(resetPinStaffId);
     try {
-      const staffName = staffMembers.find((s) => s.id === resetPinStaffId)?.name ?? "Staff";
+      const staffName = staffList.find((s: StaffMember) => s.id === resetPinStaffId)?.name ?? "Staff";
       await resetStaffPin(staffStoreId, resetPinStaffId, resetPinValue);
       // GCP-STG-0182: Echo new PIN in success message for admin confirmation
       setStaffSuccess(`PIN reset for ${staffName}. New PIN: ${resetPinValue}`);

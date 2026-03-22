@@ -44,7 +44,7 @@ function createDefaultProps(overrides: Partial<Parameters<typeof StoresTab>[0]> 
     loadStoreFeatureFlags: vi.fn(),
     requestStoreStatusChange: vi.fn(),
     storeSuspendLoading: false,
-    getStoreContactDraft: () => ({ address: '', contactName: '', contactPhone: '', contactEmail: '' }),
+    getStoreContactDraft: () => ({ address: '', contactName: '', contactPhone: '', contactEmail: '', gstin: '' }),
     updateStoreContactDraft: vi.fn(),
     getStorePaymentDraft: () => ['CASH'],
     toggleStorePaymentMethod: vi.fn(),
