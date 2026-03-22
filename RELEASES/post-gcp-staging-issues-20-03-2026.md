@@ -8955,6 +8955,50 @@ Specifically check: `dailyClosingStore`, `shiftStore`, `inwardStore` — these m
 
 ---
 
+## 12-LAYER VERIFICATION TEMPLATE (Mandatory for ALL audit tickets GCP-STG-0281 through 0412)
+
+> **Every ticket below MUST be verified across ALL applicable layers before PARKED.**
+> Claude A MUST check each layer when implementing. Claude B MUST verify each layer.
+> This template survives context loss — it is the authoritative reference.
+
+### Layers (check ALL that apply per ticket):
+
+| Layer | What to Verify |
+|-------|---------------|
+| **UI** | Every visible element (buttons, inputs, labels, icons, headers, footers) |
+| **UX** | 4-state check (loading/success/empty/error) + accessibility (aria-labels, roles) |
+| **Wiring** | Every button/action → handler → API call → state update → UI feedback |
+| **Navigation** | Every navigation.navigate() call → target screen exists + params correct |
+| **API** | Every API call → endpoint exists in backend → correct HTTP method/path/body |
+| **Backend** | Route handler → service → DB query → correct table/columns |
+| **DB** | Tables + columns exist in migrations → migration is sequential + applied |
+| **Migrations** | Referenced columns exist, FK constraints valid, indexes present |
+| **GCP Parity** | Backend env vars, secrets, Cloud SQL schema matches migrations |
+| **Business** | Edge cases (zero amount, negative qty, duplicate submission, concurrent access) |
+| **Dependencies** | External APIs (Razorpay, Firebase, GCS, WhatsApp) — graceful degradation |
+| **Store Isolation** | storeId derived from JWT only, never from client body/query |
+
+### Platform Scope Tags:
+
+| Tag | Meaning |
+|-----|---------|
+| **POS** | Expo/React Native POS app (src/) |
+| **RETAILER-WEB** | Vite+React retailer admin portal (retailer-admin/) |
+| **SUPERADMIN** | Vite+React SuperAdmin portal (supermandi-superadmin/) |
+| **SUPPLIER-WEB** | Next.js supplier portal (supplier-portal/) |
+| **BACKEND** | Node.js/Express backend services (backend/) |
+| **CROSS-PLATFORM** | Affects 2+ platforms — must verify consistency across all |
+| **INFRA** | Cloud Run, Cloud SQL, Redis, GCS, CI/CD pipeline |
+
+### Per-Ticket Format:
+
+Each ticket below includes:
+- **Platforms**: Which platforms are affected
+- **Layers**: Which of the 12 layers must be verified
+- These annotations ensure Claude A implements across ALL affected surfaces and Claude B verifies ALL layers
+
+---
+
 ## BATCH 18: Deep Audit Findings (2026-03-22)
 
 Source: Product Metadata Sync audit + Store Isolation audit + Ledger Integrity audit.
@@ -8966,6 +9010,8 @@ Discovered by: Claude A audit, verified by Claude B before ticket creation.
 
 **Ticket ID**: GCP-STG-0281
 **Severity**: P0 CRITICAL
+**Platforms**: RETAILER-WEB, BACKEND, POS, CROSS-PLATFORM
+**Layers**: UI, Wiring, API, Backend, DB, Migrations, Business
 **Source**: Audit 1 — Product Metadata Sync, Step 2
 **Claude B Correction**: Column `bnpl_eligible` exists on `catalog.supplier_products` (migration 048), NOT on `catalog.store_products`. Need NEW migration to add column to store_products first, then wire backend POST/PATCH.
 
@@ -8985,6 +9031,8 @@ Discovered by: Claude A audit, verified by Claude B before ticket creation.
 
 **Ticket ID**: GCP-STG-0282
 **Severity**: P1 HIGH
+**Platforms**: RETAILER-WEB, BACKEND
+**Layers**: Backend, API, DB, Business
 **Source**: Audit 1 — Product Metadata Sync, Step 2 (renumbered from original 0283)
 
 **Problem**: Retailer web sends `procurementUnit`, `procurementPackQty`, `baseStockUnit`, `allowFractionalSell`, `conversionPrecision` on edit (ProductsPage.tsx:677-682). Backend POST handler correctly stores them (products.ts:409-441). Backend PATCH handler does NOT destructure them (products.ts:563-575) and does NOT include them in the UPDATE SQL (products.ts:702-721). Edits to conversion profile are silently discarded.
@@ -8999,6 +9047,8 @@ Discovered by: Claude A audit, verified by Claude B before ticket creation.
 
 **Ticket ID**: GCP-STG-0283
 **Severity**: P1 HIGH
+**Platforms**: BACKEND, CROSS-PLATFORM
+**Layers**: Backend, API, DB, Business
 **Source**: Audit 3 — Ledger Integrity, High Finding #1 (renumbered from original 0284)
 
 **Problem**: No code compares `SUM(delta_qty) FROM inventory.inventory_ledger GROUP BY store_id, product_id` against `stock_balances.current_qty`. If a bug causes one to drift without the other, there is no detection mechanism. The existing `stockReconciliation.ts` only reconciles the denormalized cache (`store_products.current_stock`) against `stock_balances`, not the authoritative ledger.
@@ -9017,6 +9067,8 @@ Discovered by: Claude A audit, verified by Claude B before ticket creation.
 
 **Ticket ID**: GCP-STG-0284
 **Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: API, Backend, DB, Store Isolation
 **Source**: Audit 1 — Product Metadata Sync, Step 3-4 (renumbered from original 0286)
 
 **Problem**: POS `/store-products/list` SQL (storeProducts.ts:741-794) does NOT select `p.description`, `p.hsn_code`, `sp.supplier_id`, or join supplier name. POS productsStore maps these fields (productsStore.ts:96,100,104) but they are always undefined. ProductTileV3 shows description as fallback text (line 101-102) but it's always empty. ProductDetailSheetV3 only shows HSN in BUY context from ProcurementData, not from product fields.
@@ -9031,6 +9083,8 @@ Discovered by: Claude A audit, verified by Claude B before ticket creation.
 
 **Ticket ID**: GCP-STG-0285
 **Severity**: P2 MEDIUM
+**Platforms**: RETAILER-WEB, BACKEND
+**Layers**: Backend, API, DB, Business
 **Source**: Audit 1 — Product Metadata Sync, Step 1-2 (renumbered from original 0287)
 
 **Problem**: CSV template includes `low_stock_alert`, `gst_percent`, `hsn`, `notes`, `sold_by`, `rate_unit`, `pack_size`, `pack_unit` columns. `commitSingleRow` in `csvImport.ts` (lines 575-618) does NOT write these to DB on create or update. Only stored: name, brand, unit, barcode, image_url, sell_price, mrp, purchase_price, mode, stock, procurement fields. The fields are parsed during validation but silently discarded during commit.
@@ -9045,6 +9099,8 @@ Discovered by: Claude A audit, verified by Claude B before ticket creation.
 
 **Ticket ID**: GCP-STG-0286
 **Severity**: P2 MEDIUM
+**Platforms**: BACKEND, DB
+**Layers**: Backend, DB, Migrations, Store Isolation
 **Source**: Audit 2 — Store Isolation, Table 9 (renumbered from original 0288)
 
 **Problem**: `orders.purchase_order_items` has no `store_id` column and no RLS policy. Store isolation is enforced application-side only via JOIN to parent `purchase_orders`. All current queries properly scope via the parent, but there is no defense-in-depth at the DB layer. A future developer adding a direct query to `purchase_order_items` without joining `purchase_orders` would leak cross-store data.
@@ -9063,6 +9119,8 @@ Discovered by: Claude A audit, verified by Claude B before ticket creation.
 
 **Ticket ID**: GCP-STG-0287
 **Severity**: P2 MEDIUM
+**Platforms**: BACKEND, CROSS-PLATFORM
+**Layers**: Backend, DB, Business
 **Source**: Audit 3 — Ledger Integrity, High Finding #2 (renumbered from original 0289)
 
 **Problem**: Sales write to BOTH `public.inventory_ledger` (legacy) and `inventory.inventory_ledger` (catalog). But stock-in (GRN) and refund paths only write to the catalog ledger. `fetchLedgerStock()` in `inventoryLedgerService.ts:352-373` reads only the legacy ledger. Over time, legacy ledger sums will drift from actual stock as stock-ins and refunds accumulate without legacy entries.
@@ -9077,6 +9135,8 @@ Discovered by: Claude A audit, verified by Claude B before ticket creation.
 
 **Ticket ID**: GCP-STG-0288
 **Severity**: P3 LOW
+**Platforms**: POS, BACKEND
+**Layers**: API, Backend, DB, Store Isolation
 **Source**: Audit 1 — Product Metadata Sync, Step 3-4 (renumbered from original 0290)
 
 **Problem**: `lowStockAlertQty` and `notes` are stored in DB, returned by retailer-admin GET, but missing from POS `/store-products/list` API response. POS productsStore does not map them.
@@ -9104,6 +9164,8 @@ Discovered by: Claude A audit across 4 audit tracks (listing, review, post-appro
 
 **Ticket ID**: GCP-STG-0289
 **Severity**: P0 CRITICAL
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: Backend, DB, Business, Wiring
 **Source**: Audit 2 — SuperAdmin Review, Finding 2.5
 
 **Problem**: The SuperAdmin margin-setting endpoint (`POST /admin/catalog/supplier-products/:id/margin`) writes to `admin_margin_pct` and `admin_margin_fixed_minor` columns on `catalog.supplier_products`. However, the BUY catalog query (`catalog.ts:477-483`) reads from `supermandi_margin_minor` and `margin_percent` for pricing. These are DIFFERENT columns. The margin SuperAdmin sets via the CatalogTab edit modal never applies to the BUY catalog prices retailers see.
@@ -9121,6 +9183,8 @@ Discovered by: Claude A audit across 4 audit tracks (listing, review, post-appro
 
 **Ticket ID**: GCP-STG-0290
 **Severity**: P0 CRITICAL
+**Platforms**: SUPERADMIN, BACKEND, POS, CROSS-PLATFORM
+**Layers**: UI, Wiring, API, Backend, DB, Business
 **Source**: Audit 3 — Post-Approval → POS, Finding 3.1
 
 **Problem**: Backend has `POST /api/v1/admin/products/:productId/publish` endpoint (suppliers.ts:1668) that creates `catalog.store_products` entries from approved supplier products. However, CatalogTab.tsx has NO "Publish" button — only Approve, Reject, and Edit. Approval auto-maps to master catalog but does NOT create store_products. The SELL catalog endpoint reads from `store_products`, so approved supplier products NEVER appear in the SELL tab on POS.
@@ -9139,6 +9203,8 @@ Discovered by: Claude A audit across 4 audit tracks (listing, review, post-appro
 
 **Ticket ID**: GCP-STG-0291
 **Severity**: P1 HIGH
+**Platforms**: SUPPLIER-WEB, BACKEND
+**Layers**: Backend, DB, API, Business
 **Source**: Audit 1 — Supplier Listing, Finding 3
 
 **Problem**: Supplier product form includes HSN code input (page.tsx:788). The `ProductInput` interface includes `hsnCode`. But the backend POST handler INSERT SQL (products.ts:561-592) does NOT include `hsn_code` in the column list. It IS in the RETURNING clause (line 626), so it always returns null. The supplier's HSN code is silently discarded on every product creation.
@@ -9153,6 +9219,8 @@ Discovered by: Claude A audit across 4 audit tracks (listing, review, post-appro
 
 **Ticket ID**: GCP-STG-0292
 **Severity**: P1 HIGH
+**Platforms**: SUPPLIER-WEB
+**Layers**: UI, Wiring
 **Source**: Audit 1 — Supplier Listing, Finding 5
 
 **Problem**: The backend destructures `brand` from request body (products.ts:464) and inserts it into `catalog.supplier_products` (line 632). But the supplier product form UI (page.tsx:578-1027) has NO input field for `brand`. Suppliers can only set brand via CSV upload, not via the form.
@@ -9167,6 +9235,8 @@ Discovered by: Claude A audit across 4 audit tracks (listing, review, post-appro
 
 **Ticket ID**: GCP-STG-0293
 **Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, Wiring
 **Source**: Audit 3 — Post-Approval → POS, Finding 3.4
 
 **Problem**: BuyScreenV3.tsx line 303 explicitly passes `barcode: undefined` to the ProductDetailSheetV3 component, even though barcode data is available in the supplier product data (`item.barcode`). The detail sheet has barcode display UI but receives nothing.
@@ -9181,6 +9251,8 @@ Discovered by: Claude A audit across 4 audit tracks (listing, review, post-appro
 
 **Ticket ID**: GCP-STG-0294
 **Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: UI, API, Backend, DB
 **Source**: Audit 3 — Post-Approval → POS, Finding 3.4
 
 **Problem**: BuyScreenV3 maps supplier products to ProductTileV3 props (lines 263-275) but does NOT pass `imageUrl` or `netContentValue`/`netContentUnit`. Both fields exist in `catalog.supplier_products` but are not included in the BUY catalog API response or the tile mapping.
@@ -9197,6 +9269,8 @@ Discovered by: Claude A audit across 4 audit tracks (listing, review, post-appro
 
 **Ticket ID**: GCP-STG-0295
 **Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: API, Backend, Business
 **Source**: Audit 4 — Scale, Finding 2
 
 **Problem**: POS `listProductsProgressive()` (productsApi.ts:279,316) requests `limit=500` per page. Backend `storeProducts.ts:720` caps at `Math.min(..., 200)`. This causes:
@@ -9213,6 +9287,8 @@ Discovered by: Claude A audit across 4 audit tracks (listing, review, post-appro
 
 **Ticket ID**: GCP-STG-0296
 **Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, DB, Business
 **Source**: Audit 4 — Scale, Finding 5
 
 **Problem**: Supplier CSV upload (`products.ts:1222-1338`) processes each row with individual INSERT + barcode-lookup queries — 6000+ sequential DB queries for a 3000-row CSV. No transaction wrapping means partial imports on crash. No batch INSERT optimization.
@@ -9230,6 +9306,8 @@ Discovered by: Claude A audit across 4 audit tracks (listing, review, post-appro
 
 **Ticket ID**: GCP-STG-0297
 **Severity**: P3 LOW
+**Platforms**: SUPPLIER-WEB, BACKEND
+**Layers**: UI, API, Backend, DB, Migrations
 **Source**: Audit 1 — Supplier Listing, Finding 3
 
 **Problem**: `description` is declared in the TypeScript `ProductInput` interface (api.ts:525), initialized in form state (page.tsx:92), but: (a) the UI input was removed with comment "no description column", (b) no `description` column exists on `catalog.supplier_products`, (c) the PATCH handler references `description` which may fail at runtime.
@@ -9248,6 +9326,8 @@ Discovered by: Claude A audit across 4 audit tracks (listing, review, post-appro
 
 **Ticket ID**: GCP-STG-0298
 **Severity**: P3 LOW
+**Platforms**: SUPPLIER-WEB
+**Layers**: UI
 **Source**: Audit 1 — Supplier Listing, Finding 2
 
 **Problem**: `procurementUnit`, `procurementPackQty`, and `baseStockUnit` appear in BOTH the "Procurement Packaging" section (page.tsx:800-880) and the "Commercial Terms" section (page.tsx:938-962). Both bind to the same formData keys, so last-written wins. Confusing UX — supplier sees the same fields twice.
@@ -9268,6 +9348,8 @@ Source: 6 audit tracks — Supplier scale, Retailer scale, POS screen compat, 10
 
 **Ticket ID**: GCP-STG-0299
 **Severity**: P0 CRITICAL
+**Platforms**: POS, BACKEND
+**Layers**: Backend, API, Business
 **Source**: Audit 9 — Registration → POS Login, Blocker 2
 
 **Problem**: `auth.users.phone` stores phone numbers with `+91` prefix (e.g., `+919876543210`), set during retailer-admin portal login (auth.ts:304,330,478,513). POS OTP auth at `otpAuth.ts:44` receives raw 10-digit phone from client (validated at line 31-32: `!/^\d{10}$/.test(phone)`) and queries `WHERE u.phone = $1` with raw `9876543210`. The query will NEVER match because `+919876543210 != 9876543210`.
@@ -9282,6 +9364,8 @@ Source: 6 audit tracks — Supplier scale, Retailer scale, POS screen compat, 10
 
 **Ticket ID**: GCP-STG-0300
 **Severity**: P0 CRITICAL
+**Platforms**: BACKEND
+**Layers**: Backend, DB, Migrations, Business
 **Source**: Audit 9 — Registration → POS Login, Blocker 1
 
 **Problem**: The SuperAdmin approval endpoint (`POST /admin/applications/:id/approve`, applications.ts:261-534) creates `platform.stores` and generates an enrollment code, but does NOT create `auth.users` or `auth.store_users` entries. These rows are only created lazily when the retailer logs into the retailer-admin web portal (auth.ts:318-350). The POS V3 OTP flow (`otpAuth.ts:39-48`) queries `auth.users JOIN auth.store_users JOIN platform.stores` — if these rows don't exist, it returns 404 `PHONE_NOT_REGISTERED`.
@@ -9299,6 +9383,8 @@ This ensures POS OTP flow works immediately after approval without requiring web
 
 **Ticket ID**: GCP-STG-0301
 **Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, GCP Parity
 **Source**: Audit 7 — POS Screen Compatibility, Finding 1
 
 **Problem**: `app.json` does not include an `"orientation"` key. Expo defaults to `"default"` which allows both portrait and landscape. The entire V3 UI is designed for portrait (3-column grids, vertical card layouts, bottom nav). On Indian POS tablets (Sunmi, PAX) that can rotate, landscape mode produces a broken layout with stretched tiles and misaligned elements.
@@ -9313,6 +9399,8 @@ This ensures POS OTP flow works immediately after approval without requiring web
 
 **Ticket ID**: GCP-STG-0302
 **Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, UX
 **Source**: Audit 7 — POS Screen Compatibility, Finding 2
 
 **Problem**: `SafeAreaProvider` wraps the app (App.tsx:7), but none of the V3 main screens use `SafeAreaView` or `useSafeAreaInsets`: PosRootLayoutV3, SellScreenV3, BuyScreenV3, PaymentScreenV3, CartSheetV3, BrandedHeader, BottomNavV3. On devices with notches, punch-hole cameras, or Android gesture navigation (common on Redmi, Realme, Samsung M-series), BrandedHeader content overlaps the status bar and bottom nav tabs overlap the gesture indicator bar.
@@ -9327,6 +9415,8 @@ This ensures POS OTP flow works immediately after approval without requiring web
 
 **Ticket ID**: GCP-STG-0303
 **Severity**: P1 HIGH
+**Platforms**: INFRA
+**Layers**: GCP Parity, Dependencies
 **Source**: Audit 8 — Scale 10K Users, Findings S8-02 + S8-04
 
 **Problem**: Two scaling bottlenecks:
@@ -9346,6 +9436,8 @@ This ensures POS OTP flow works immediately after approval without requiring web
 
 **Ticket ID**: GCP-STG-0304
 **Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, UX
 **Source**: Audit 7 — POS Screen Compatibility, Finding 3
 
 **Problem**: BuyScreenV3.tsx line 246 hardcodes `numColumns={3}` instead of using `getGridColumns()` from the responsive module. SellScreenV3 correctly uses `getGridColumns()` (line 407). On compact phones (<360dp), 3 columns creates cramped tiles. On wide POS terminals (600-800dp), it wastes space.
@@ -9360,6 +9452,8 @@ This ensures POS OTP flow works immediately after approval without requiring web
 
 **Ticket ID**: GCP-STG-0305
 **Severity**: P1 HIGH
+**Platforms**: BACKEND, DB
+**Layers**: DB, Migrations, Business
 **Source**: Audit 10 — Ledger Immutability, Finding 1
 
 **Problem**: `inventory.inventory_ledger` has no trigger or RLS policy preventing UPDATE or DELETE. Immutability relies entirely on code discipline. Two runtime code paths UPDATE rows for reversal tracking (`reversed_by_id`, `reversed_at` at inventoryLedgerService.ts:769 and refunds.ts:260), which is acceptable. But nothing prevents accidental UPDATE of financial fields (`delta_qty`, `stock_before`, `stock_after`, `unit_cost`).
@@ -9387,6 +9481,8 @@ CREATE TRIGGER trg_ledger_immutable BEFORE UPDATE ON inventory.inventory_ledger
 
 **Ticket ID**: GCP-STG-0306
 **Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX, Wiring
 **Source**: Audit 6 — Retailer Store Scale, Finding 3
 
 **Problem**: No search debounce exists on any POS search path:
@@ -9404,6 +9500,8 @@ CREATE TRIGGER trg_ledger_immutable BEFORE UPDATE ON inventory.inventory_ledger
 
 **Ticket ID**: GCP-STG-0307
 **Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
 **Source**: Audit 7 — POS Screen Compatibility, Finding 4
 
 **Problem**: 30+ instances of hardcoded fontSize 7-11 across V3 components. SupplierProductCardV3.tsx:162 uses fontSize 7 (unreadable). BottomNavV3.tsx:183 uses fontSize 9 for tab labels. None use the responsive `getChipFontSize()` function. These are below the WCAG minimum of 12px for body text.
@@ -9418,6 +9516,8 @@ CREATE TRIGGER trg_ledger_immutable BEFORE UPDATE ON inventory.inventory_ledger
 
 **Ticket ID**: GCP-STG-0308
 **Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, API, Business
 **Source**: Audit 8 — Scale 10K Users, Finding S8-01
 
 **Problem**: The POS `/auth/send-otp` endpoint (otpAuth.ts:30) has no rate limiter middleware. Only the downstream SMS/WhatsApp service has rate limiting. An attacker could spam the endpoint to fill the `pos_otp` table and consume DB resources without triggering SMS rate limits.
@@ -9432,6 +9532,8 @@ CREATE TRIGGER trg_ledger_immutable BEFORE UPDATE ON inventory.inventory_ledger
 
 **Ticket ID**: GCP-STG-0309
 **Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: API, Backend, DB
 **Source**: Audit 10 — Ledger/Sync, Finding 2
 
 **Problem**: `ProductTileV3` displays `caseSize` (line 106) and it's part of the `ProductTileData` interface. But the `/store-products/list` API response (storeProducts.ts:738-840) does NOT include `pack_size` or `case_size` from the database. The field is never populated on the POS sell grid even if configured in retailer admin.
@@ -9446,6 +9548,8 @@ CREATE TRIGGER trg_ledger_immutable BEFORE UPDATE ON inventory.inventory_ledger
 
 **Ticket ID**: GCP-STG-0310
 **Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI
 **Source**: Audit 7 — POS Screen Compatibility, Finding 6
 
 **Problem**: ProductTileV3.tsx line 88 uses `width: 32, height: 32` for real product images. The image area uses `width: "100%", aspectRatio: 1` (lines 203-204) which is responsive, but the actual image render is fixed 32px. On larger tiles (POS tablets), the image looks tiny.
@@ -9460,6 +9564,8 @@ CREATE TRIGGER trg_ledger_immutable BEFORE UPDATE ON inventory.inventory_ledger
 
 **Ticket ID**: GCP-STG-0311
 **Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, Business
 **Source**: Audit 9 — Registration → POS Login, Blocker 3
 
 **Problem**: POS OTP `send-otp` (otpAuth.ts:39-48) and `verify-otp` (line 129-137) queries do NOT filter by `auth.users.status`. If a user is deactivated (`status != 'active'`), they can still authenticate via POS OTP. The retailer-admin auth explicitly checks `status = 'active'` (line 321, 488).
@@ -9480,6 +9586,8 @@ Source: 4 audit tracks — WhatsApp integration, UPI SELL flow, UPI BUY flow, Ca
 
 **Ticket ID**: GCP-STG-0312
 **Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, UX, Wiring
 **Source**: Audit 14 — Cart-to-Payment E2E, Cart Editing
 
 **Problem**: CartItemRowV3.tsx (lines 64-72) only provides +/- stepper buttons for quantity adjustment. There is no TextInput for direct quantity entry. For large quantities (e.g., 50 units of an item), the user must tap the + button 50 times.
@@ -9494,6 +9602,8 @@ Source: 4 audit tracks — WhatsApp integration, UPI SELL flow, UPI BUY flow, Ca
 
 **Ticket ID**: GCP-STG-0313
 **Severity**: P1 HIGH
+**Platforms**: POS, BACKEND, CROSS-PLATFORM
+**Layers**: Backend, Business, Wiring
 **Source**: Audit 14 — Cart-to-Payment E2E, Payment Methods
 
 **Problem**: Two different GST calculation methods are used:
@@ -9512,6 +9622,8 @@ When cart contains items with different GST rates (e.g., 5% on essentials, 12% o
 
 **Ticket ID**: GCP-STG-0314
 **Severity**: P1 HIGH
+**Platforms**: POS, BACKEND
+**Layers**: Wiring, API, Backend, DB, Business
 **Source**: Audit 14 — Cart-to-Payment E2E, Payment Methods
 
 **Problem**: UpiScreenV3.tsx creates a sale independently (lines 74-89) with its own `createSale` call instead of using `usePaymentFlow.executePayment()`. The UPI path does NOT include `store_product_id` or `retail_variant_id` in sale item payloads (compare with usePaymentFlow.ts lines 54-55 which does include them for Cash/Udhar).
@@ -9529,6 +9641,8 @@ When cart contains items with different GST rates (e.g., 5% on essentials, 12% o
 
 **Ticket ID**: GCP-STG-0315
 **Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX, Wiring
 **Source**: Audit 14 — Cart-to-Payment E2E, Cart Editing
 
 **Problem**: PaymentScreenV3.tsx (lines 154-158) shows cart-level discount via Alert.alert with only two preset options: "10% Off" and "Rs 50 Off". There is no free-form input for custom discount percentage or amount. Retailers commonly give ad-hoc discounts (e.g., 5% for regular customers, ₹20 off, round-down to nearest 10).
@@ -9547,6 +9661,8 @@ When cart contains items with different GST rates (e.g., 5% on essentials, 12% o
 
 **Ticket ID**: GCP-STG-0316
 **Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX, Wiring, Navigation
 **Source**: Audit 14 — Cart-to-Payment E2E, Scan Method
 
 **Problem**: When barcode scan doesn't find a product (ScanScreenV3.tsx:294-321), the result panel shows only two options: "New Product" (navigate to V3NewProduct) and "Continue" (dismiss). There is no option to search by name or try an alternate barcode. This forces the user to either create a new product entry or give up.
@@ -9564,6 +9680,8 @@ When cart contains items with different GST rates (e.g., 5% on essentials, 12% o
 
 **Ticket ID**: GCP-STG-0317
 **Severity**: P3 LOW
+**Platforms**: POS, BACKEND
+**Layers**: UI, API, Backend, DB
 **Source**: Audit 14 — Cart-to-Payment E2E, Cart Editing
 
 **Problem**: CartItem interface in cartStore.ts has no `notes` field. Cart-level `setNote()` exists (cartStore.ts:804-808, max 140 chars) but has no visible UI in CartSheetV3. Per-item notes (e.g., "customer wants less spicy", "gift wrap", "deliver to counter 2") are not possible.
@@ -9582,6 +9700,8 @@ When cart contains items with different GST rates (e.g., 5% on essentials, 12% o
 
 **Ticket ID**: GCP-STG-0318
 **Severity**: P3 LOW
+**Platforms**: BACKEND, SUPERADMIN
+**Layers**: Backend, API, DB, Dependencies
 **Source**: Audit 11 — WhatsApp Integration, Webhook
 
 **Problem**: The WhatsApp webhook at `backend/src/routes/v1/webhooks/whatsappWebhook.ts` only processes delivery status updates (sent/delivered/read/failed). It does NOT handle incoming messages from customers. When a customer replies to a bill receipt or payment reminder, the message goes nowhere.
@@ -9606,6 +9726,8 @@ Source: 4 audit tracks — Search isolation (SELL vs BUY), SELL search parameter
 
 **Ticket ID**: GCP-STG-0319
 **Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UX, Wiring
 **Source**: Audit 18 — Search UX, SellScreenV3
 
 **Problem**: `UniversalSearchV3.tsx` (lines 90-93) calls `onQueryChange` immediately on every keystroke with no debounce or setTimeout. `SellScreenV3.tsx:145` `handleSearchQuery` fires `searchStoreProducts()` API call on every character. Typing "maggi" fires 5 API calls (m, ma, mag, magg, maggi). CatalogTab correctly debounces at 300ms — SellScreen should match.
@@ -9620,6 +9742,8 @@ Source: 4 audit tracks — Search isolation (SELL vs BUY), SELL search parameter
 
 **Ticket ID**: GCP-STG-0320
 **Severity**: P1 HIGH
+**Platforms**: POS, BACKEND
+**Layers**: UI, Wiring, API, Backend
 **Source**: Audit 17 — Supplier Catalog Search
 
 **Problem**: The BUY catalog backend (`catalog.ts:398-434`) supports rich server-side search with `q` param (searches name, barcode, supplier_sku, brand, unit, supplier business_name/trade_name, plus pack_size/moq for numeric tokens). But BuyScreenV3.tsx does NOT pass `q` to the server. It loads the full catalog once (`getBuyCatalog` at line 105) and filters client-side on only name+brand (line 160-161). Barcode, supplier name, MOQ, and all other server-side search fields go unused.
@@ -9634,6 +9758,8 @@ Source: 4 audit tracks — Search isolation (SELL vs BUY), SELL search parameter
 
 **Ticket ID**: GCP-STG-0321
 **Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: UI, API, Backend
 **Source**: Audit 16 — Store Product Search Parameters
 
 **Problem**: SELL search (`storeProducts.ts:358-371`) does NOT support category filtering. The `p.category` field appears in SELECT (line 414) but NOT in the WHERE clause. There is no `?category=` query parameter on the search endpoint. Users cannot narrow search results by category (e.g., "show me only Dairy products matching 'Amul'").
@@ -9648,6 +9774,8 @@ Source: 4 audit tracks — Search isolation (SELL vs BUY), SELL search parameter
 
 **Ticket ID**: GCP-STG-0322
 **Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: Wiring, API, Backend
 **Source**: Audit 15 — Search Isolation, Barcode Scan
 
 **Problem**: All scan contexts in ScanScreenV3.tsx (`sell_scan`, `stock_in`, `supplier_catalog_procurement_scan`, `counter_purchase_scan`) look up from the same `productsStore` (loaded from `catalog.store_products`). The `supplier_catalog_procurement_scan` context finds product in store cache first, then hands barcode off to BuyScreenV3 for client-side matching against the already-loaded buy catalog.
@@ -9664,6 +9792,8 @@ If a supplier product has a barcode that is NOT in the store's digitized catalog
 
 **Ticket ID**: GCP-STG-0323
 **Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
 **Source**: Audit 18 — Search UX
 
 **Problem**: Three screens show the same empty state message whether the user has no data OR their search returned no results:
@@ -9683,6 +9813,8 @@ ProductsPage (retailer-admin) correctly distinguishes: "No products match your s
 
 **Ticket ID**: GCP-STG-0324
 **Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX, Wiring
 **Source**: Audit 18 — Search UX, SalesHistoryScreenV3
 
 **Problem**: SalesHistoryScreenV3 has NO search functionality at all. Only date range filters (today/week/month/all) at line 118-123. Users cannot search by bill reference number, transaction amount, customer name, or payment mode.
@@ -9697,6 +9829,8 @@ ProductsPage (retailer-admin) correctly distinguishes: "No products match your s
 
 **Ticket ID**: GCP-STG-0325
 **Severity**: P2 MEDIUM
+**Platforms**: BACKEND, CROSS-PLATFORM
+**Layers**: DB, Migrations, Backend
 **Source**: Audit 15 — Search Isolation, Store Product Sources
 
 **Problem**: `catalog.store_products` has no column indicating whether a product was digitized manually, imported via CSV, or created via GRN inward from a supplier purchase. Only `catalog.product_barcodes.source` tracks barcode provenance (`manual`/`supplier_sync`/`grn_scan`), but this is at the barcode level, not the product level.
@@ -9711,6 +9845,8 @@ ProductsPage (retailer-admin) correctly distinguishes: "No products match your s
 
 **Ticket ID**: GCP-STG-0326
 **Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, DB
 **Source**: Audit 16 + 17 — Search Parameters
 
 **Problem**: HSN code is not searchable in either SELL or BUY search. SELL search (storeProducts.ts) doesn't include `p.hsn_code` in the WHERE clause at all. BUY search (catalog.ts) includes `mp.hsn_code` in SELECT (line 502) but not in the WHERE. Retailers and SuperAdmin cannot search products by HSN code.
@@ -9725,6 +9861,8 @@ ProductsPage (retailer-admin) correctly distinguishes: "No products match your s
 
 **Ticket ID**: GCP-STG-0327
 **Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, Business
 **Source**: Audit 16 + 17 — Search Parameters
 
 **Problem**: Inconsistent barcode search behavior:
@@ -9743,6 +9881,8 @@ A user searching "890103" in SELL finds nothing (exact match fails). The same se
 
 **Ticket ID**: GCP-STG-0328
 **Severity**: P3 LOW
+**Platforms**: BACKEND, POS
+**Layers**: Backend, DB, API
 **Source**: Audit 16 + 17 + 18 — Hindi Search
 
 **Problem**: Search localization (`searchLocalization.ts:26-104`) only maps ~40 romanized Hindi terms (e.g., "doodh" → "milk", "atta" → "flour"). Actual Devanagari script input (e.g., "दूध") is NOT handled. ILIKE would pass Devanagari through to Postgres, which would match only if the product name is stored in Devanagari — but product names are stored in English. The `catalog.product_translations` table has Hindi translations but is only queried by CatalogTab (catalog-service), not by POS store-products search.
@@ -9763,6 +9903,8 @@ Source: 3 audit tracks — POS Ledger stock lifecycle (Audit 19), Product metada
 
 **Ticket ID**: GCP-STG-0329
 **Severity**: P0 CRITICAL
+**Platforms**: BACKEND
+**Layers**: Backend, DB, Business
 **Source**: Audit 19 — Ledger Logic, Issue A
 
 **Problem**: For products with bulk unit configuration (`unit_base`/`size_base` on retail variants), stock is deducted TWICE per sale:
@@ -9786,6 +9928,8 @@ The `applyBulkDeductions` path only fires when `unitDelta !== 0` (inventoryServi
 
 **Ticket ID**: GCP-STG-0330
 **Severity**: P0 CRITICAL
+**Platforms**: BACKEND
+**Layers**: Backend, DB, Business
 **Source**: Audit 19 — Ledger Logic, Issue B
 
 **Problem**: Multiple code paths update `inventory.stock_balances.current_qty` WITHOUT writing a corresponding `inventory.inventory_ledger` entry:
@@ -9809,6 +9953,8 @@ The `applyBulkDeductions` path only fires when `unitDelta !== 0` (inventoryServi
 
 **Ticket ID**: GCP-STG-0331
 **Severity**: P1 HIGH
+**Platforms**: BACKEND
+**Layers**: Backend, DB, Business
 **Source**: Audit 19 — Ledger Logic, Issue C
 
 **Problem**: The `POST /pos/opening-stock` endpoint (openingStock.ts) has no guard against duplicate submission for the same product. Calling it twice for the same product creates two separate `opening_stock` ledger entries and doubles the stock in `stock_balances`. There is no check for existing `opening_stock` entries, no idempotency key, and no `ON CONFLICT` guard.
@@ -9823,6 +9969,8 @@ The `applyBulkDeductions` path only fires when `unitDelta !== 0` (inventoryServi
 
 **Ticket ID**: GCP-STG-0332
 **Severity**: P1 HIGH
+**Platforms**: BACKEND
+**Layers**: Backend, DB
 **Source**: Audit 19 — Ledger Logic, Issue E
 
 **Problem**: `backend/src/routes/v1/admin/suppliers.ts` line 1078 writes to `inventory.inventory_ledger` using column name `change_qty`. The actual column name is `delta_qty` (defined in migration 005_inventory_schema.sql). This INSERT statement fails at runtime with a Postgres "column does not exist" error.
@@ -9837,6 +9985,8 @@ The `applyBulkDeductions` path only fires when `unitDelta !== 0` (inventoryServi
 
 **Ticket ID**: GCP-STG-0333
 **Severity**: P1 HIGH
+**Platforms**: BACKEND
+**Layers**: Backend
 **Source**: Audit 19 — Ledger Logic, Issue D
 
 **Problem**: Comment at sales.ts:1342 says "Stock deduction moved to confirmPayment endpoint" but `recordSaleInventoryMovements` (line 1329) still runs inside `createSale`, deducting stock immediately when sale status is PENDING. This misleading comment has caused confusion in multiple audit rounds (Claude A initially believed stock was only deducted at confirmPayment based on this comment).
@@ -9851,6 +10001,8 @@ The `applyBulkDeductions` path only fires when `unitDelta !== 0` (inventoryServi
 
 **Ticket ID**: GCP-STG-0334
 **Severity**: P1 HIGH
+**Platforms**: RETAILER-WEB, BACKEND
+**Layers**: API, Backend, DB
 **Source**: Audit 20 — Field Parity Matrix, Bug #7
 
 **Problem**: The retailer-admin `GET /api/v1/retailer-admin/products` query (products.ts:126-163) SELECT clause does NOT include `sp.image_url` or `p.image_url`. The frontend `Product` interface declares `image_url` (ProductsPage.tsx:61) and renders a thumbnail (ProductsPage.tsx:1928-1933), but the field is always `undefined` from the API response. Product images can be uploaded via `POST /products/:id/image` (which works correctly and writes to `store_products.image_url`), but the product list never returns the URL.
@@ -9865,6 +10017,8 @@ The `applyBulkDeductions` path only fires when `unitDelta !== 0` (inventoryServi
 
 **Ticket ID**: GCP-STG-0335
 **Severity**: P2 MEDIUM
+**Platforms**: POS, RETAILER-WEB, BACKEND, CROSS-PLATFORM
+**Layers**: Backend, DB, Migrations, Business
 **Source**: Audit 21 — Sync Mechanism, Conflict Resolution
 
 **Problem**: The POS price edit endpoint (`PATCH /pos/store-products/price`, storeProducts.ts:906) does a blind `SET sell_price = $1, updated_at = NOW()` with no Last-Write-Wins guard. The retailer-admin PATCH also updates price without LWW (products.ts:704, COALESCE-based update). If a retailer edits price to ₹100 on the web portal AND a staff member edits the same product to ₹120 on POS within the same 30-second sync window, whichever write reaches the DB last silently wins with no notification to either user.
@@ -9881,6 +10035,8 @@ By contrast, metadata (name/brand) and stock fields DO have LWW guards with `met
 
 **Ticket ID**: GCP-STG-0336
 **Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND, CROSS-PLATFORM
+**Layers**: API, Backend, Business
 **Source**: Audit 21 — Sync Mechanism
 
 **Problem**: When the freshness endpoint returns `stale: true`, POS calls `loadProducts()` which does a FULL progressive reload of ALL products via `listProductsProgressive()`. There is no delta/diff endpoint that returns only products changed since the last sync. With 5000+ products, every freshness detection triggers ~25 API calls and ~2.5MB of data transfer, even if only 1 product changed.
@@ -9895,6 +10051,8 @@ By contrast, metadata (name/brand) and stock fields DO have LWW guards with `met
 
 **Ticket ID**: GCP-STG-0337
 **Severity**: P3 LOW
+**Platforms**: POS, RETAILER-WEB, BACKEND
+**Layers**: API, Backend, Business
 **Source**: Audit 21 — Sync Mechanism, Conflict Resolution
 
 **Problem**: The metadata LWW (Last-Write-Wins) guard in the POS metadata endpoint (storeProducts.ts:1248-1250) and retailer-admin PATCH (products.ts:675-677) uses an optional `metadataUpdatedAt` parameter. If the client omits this parameter, the SQL guard clause `AND (metadata_updated_at IS NULL OR metadata_updated_at < $N)` is not applied, and the update proceeds unconditionally. The POS metadata endpoint (line 1202-1205) logs a warning when the parameter is missing but does not reject the request.
@@ -9915,6 +10073,8 @@ Source: 4 audit tracks — SuperAdmin view supplier products (Audit 22), SuperAd
 
 **Ticket ID**: GCP-STG-0338
 **Severity**: P1 HIGH
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: API, Backend, DB, Wiring
 **Source**: Audit 22 — SuperAdmin View, Finding 5
 
 **Problem**: The CatalogTab GET `/api/v1/admin/catalog/products` query (catalog.ts:121-157) does NOT include `sp.billing_model` in the SELECT clause. The edit modal (CatalogTab.tsx:558-593) initializes billingModel from the product object via `(product as any).billingModel`, which is always `undefined` since the field was never fetched. It falls back to `"SUPERMANDI_PRINCIPAL"` as default.
@@ -9931,6 +10091,8 @@ When SuperAdmin opens the edit modal for a product that was previously set to `D
 
 **Ticket ID**: GCP-STG-0339
 **Severity**: P1 HIGH
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: UI, API, Backend
 **Source**: Audit 22 — SuperAdmin View
 
 **Problem**: CatalogTab shows products from ALL suppliers in a single mixed list. There is no supplier filter dropdown — SuperAdmin cannot isolate one supplier's catalog. With 50+ suppliers × 3000 SKUs each = 150,000+ products, finding products from a specific supplier requires scrolling through the mixed list or searching by exact product name.
@@ -9945,6 +10107,8 @@ When SuperAdmin opens the edit modal for a product that was previously set to `D
 
 **Ticket ID**: GCP-STG-0340
 **Severity**: P1 HIGH
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: UI, API, Backend
 **Source**: Audit 22 — SuperAdmin View
 
 **Problem**: CatalogTab shows ALL products regardless of approval status (pending, approved, rejected). There is no filter to show only pending products awaiting review. SuperAdmin must scan through approved products to find pending ones.
@@ -9959,6 +10123,8 @@ When SuperAdmin opens the edit modal for a product that was previously set to `D
 
 **Ticket ID**: GCP-STG-0341
 **Severity**: P1 HIGH
+**Platforms**: SUPERADMIN
+**Layers**: UI, Wiring, API
 **Source**: Audit 23 — SuperAdmin Edit
 
 **Problem**: The backend PUT `/admin/products/:id/edit` endpoint (suppliers.ts:1349-1653) accepts 20+ fields including `hsnCode`, `gstRate`, `bnplEligible`, `deliverySlaDays`, `creditDays`, `ptrMinor`, `ptsMinor`, `tradeDiscountPct`, `scheme`, `financeEligible`, `moqTiers`. But the CatalogTab edit modal only exposes 11 fields. HSN and GST are shown as read-only in the info header despite the backend supporting their editing.
@@ -9973,6 +10139,8 @@ When SuperAdmin opens the edit modal for a product that was previously set to `D
 
 **Ticket ID**: GCP-STG-0342
 **Severity**: P1 HIGH
+**Platforms**: SUPERADMIN
+**Layers**: UI, Wiring, API
 **Source**: Audit 25 — Publish to Stores
 
 **Problem**: The Publish button exists only in SuppliersTab (SuppliersTab.tsx:763-783), not in CatalogTab where SuperAdmin reviews and approves products. After approving a product in CatalogTab, SuperAdmin must switch to SuppliersTab to publish it. This is a disconnected UX — the approval and publish workflows span two different tabs.
@@ -9989,6 +10157,8 @@ The backend endpoint `POST /admin/products/:productId/publish` (suppliers.ts:166
 
 **Ticket ID**: GCP-STG-0343
 **Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: UI, API, Backend, DB
 **Source**: Audit 22 — SuperAdmin View, Finding 4
 
 **Problem**: Critical B2B commercial fields are completely invisible in CatalogTab — not fetched by the GET API and not displayed in either the table or the edit modal:
@@ -10014,6 +10184,8 @@ SuperAdmin cannot see the full commercial picture of a supplier product — only
 
 **Ticket ID**: GCP-STG-0344
 **Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, Business
 **Source**: Audit 25 — Publish to Stores
 
 **Problem**: Single publish (`POST /admin/products/:id/publish`, suppliers.ts:1728-1735) uses the canonical `calculateRetailerPrice()` pricing engine. Bulk publish (`POST /admin/products/publish-bulk`, suppliers.ts:1886-1888) uses inline math:
@@ -10035,6 +10207,8 @@ The canonical pricing engine may handle edge cases (rounding, min/max price caps
 
 **Ticket ID**: GCP-STG-0345
 **Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, DB
 **Source**: Audit 25 — Publish to Stores
 
 **Problem**: Single publish (suppliers.ts:1766-1781) inserts 15+ columns into `catalog.store_products` including `procurement_unit`, `procurement_pack_qty`, `base_stock_unit`, `allow_fractional_sell`, `conversion_confirmed`, `product_mode`, `sold_by`, `rate_unit`. Bulk publish (suppliers.ts:1902-1905) inserts only core columns — omitting all conversion and mode fields.
@@ -10049,6 +10223,8 @@ The canonical pricing engine may handle edge cases (rounding, min/max price caps
 
 **Ticket ID**: GCP-STG-0346
 **Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN
+**Layers**: UI, Wiring
 **Source**: Audit 25 — Publish to Stores
 
 **Problem**: The bulk publish backend endpoint (`POST /admin/products/publish-bulk`) exists at suppliers.ts:1827. The API client function `publishBulkProducts(supplierId)` exists in `supermandi-superadmin/src/api/suppliers.ts:338`. But there is NO UI button in SuppliersTab that calls this function. SuperAdmin must publish products one-by-one.
@@ -10063,6 +10239,8 @@ The canonical pricing engine may handle edge cases (rounding, min/max price caps
 
 **Ticket ID**: GCP-STG-0347
 **Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: UI, API, Backend, DB
 **Source**: Audit 25 — Publish to Stores
 
 **Problem**: Once a product is published to a store (via `INSERT INTO catalog.store_products`), there is no admin mechanism to remove or deactivate it. No `DELETE FROM catalog.store_products` endpoint exists in admin routes. No "unpublish", "remove from store", or product-level deactivation exists in the SuperAdmin frontend.
@@ -10077,6 +10255,8 @@ The canonical pricing engine may handle edge cases (rounding, min/max price caps
 
 **Ticket ID**: GCP-STG-0348
 **Severity**: P3 LOW
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: API, Backend
 **Source**: Audit 22 — SuperAdmin View, Finding 1
 
 **Problem**: The GET `/admin/catalog/products` query (catalog.ts:121-157) SELECTs `netContentValue`, `netContentUnit`, `manufacturerName`, `countryOfOrigin`, `shelfLifeDays` but CatalogTab never renders any of them — not in the table, not in the edit modal. These fields consume bandwidth and API payload size for no benefit.
@@ -10097,6 +10277,8 @@ Source: 6 audit tracks — Billing model per-SKU (Audit 26), Cart split (Audit 2
 
 **Ticket ID**: GCP-STG-0349
 **Severity**: P0 CRITICAL
+**Platforms**: BACKEND
+**Layers**: Backend, Business, DB
 **Source**: Audit 28 — Tax Invoice Generation, SUPERMANDI_PRINCIPAL Model
 
 **Problem**: In the SUPERMANDI_PRINCIPAL billing model, `orderInvoiceService.ts` generates two invoices:
@@ -10115,6 +10297,8 @@ Both invoices use the **identical `items` array** (line 124 and 150 both pass th
 
 **Ticket ID**: GCP-STG-0350
 **Severity**: P0 CRITICAL
+**Platforms**: POS, BACKEND, CROSS-PLATFORM
+**Layers**: Wiring, API, Backend, DB, Business
 **Source**: Audit 27 — Cart Split by Billing Model
 
 **Problem**: The `splitCartByBillingModel()` function exists at `orderInvoiceService.ts:305-324` but is NEVER called from any production code path — it is dead code, only referenced in unit tests.
@@ -10136,6 +10320,8 @@ If a supplier has 2 SKUs — one DIRECT_SUPPLIER and one SUPERMANDI_PRINCIPAL �
 
 **Ticket ID**: GCP-STG-0351
 **Severity**: P1 HIGH
+**Platforms**: BACKEND, DB
+**Layers**: DB, Migrations, Backend
 **Source**: Audit 26 — Billing Model, Finding 3
 
 **Problem**: The `orders.ts:267` INSERT writes to `billing_model` column on `orders.purchase_orders`. Migration 208 (gcp_stg_0087_b2b_commercial_models.sql:37-42) attempts to update the CHECK constraint on this column. But NO migration explicitly runs `ALTER TABLE orders.purchase_orders ADD COLUMN billing_model`. The original `CREATE TABLE` in migration 006 does NOT include this column.
@@ -10152,6 +10338,8 @@ Migration 208 wraps the constraint update in `EXCEPTION WHEN OTHERS THEN NULL` (
 
 **Ticket ID**: GCP-STG-0352
 **Severity**: P1 HIGH
+**Platforms**: BACKEND
+**Layers**: Backend, Business, Dependencies
 **Source**: Audit 28 — Tax Invoice Generation
 
 **Problem**: The invoice PDF generated by `invoicePdfService.ts` does NOT include a "Place of Supply" field. This is a mandatory field on GST tax invoices per Rule 46 of CGST Rules. The e-invoice payload (`eInvoiceService.ts:287`) correctly includes `Pos: buyerStateCode`, and the GST calculation correctly determines inter/intra-state. But the printed/downloadable PDF lacks this label.
@@ -10166,6 +10354,8 @@ Migration 208 wraps the constraint update in `EXCEPTION WHEN OTHERS THEN NULL` (
 
 **Ticket ID**: GCP-STG-0353
 **Severity**: P1 HIGH
+**Platforms**: BACKEND
+**Layers**: Backend, Business
 **Source**: Audit 28 — Tax Invoice Generation
 
 **Problem**: The `calculateItemTax` function in `invoiceService.ts` (line 143) defaults `isInterState = false`. The `orderInvoiceService.ts` never passes seller/buyer state to determine inter-state status — it relies on the default. Only the e-invoice payload builder correctly derives inter-state from GSTIN state codes (first 2 digits).
@@ -10182,6 +10372,8 @@ For inter-state transactions (e.g., supplier in Maharashtra, retailer in Rajasth
 
 **Ticket ID**: GCP-STG-0354
 **Severity**: P1 HIGH
+**Platforms**: BACKEND
+**Layers**: Backend, DB, Business
 **Source**: Audit 30 — Settlement Flow
 
 **Problem**: Two independent payout systems exist:
@@ -10203,6 +10395,8 @@ These are NOT integrated:
 
 **Ticket ID**: GCP-STG-0355
 **Severity**: P1 HIGH
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: UI, UX, Wiring, API, Backend
 **Source**: Audit 30 — Settlement Flow + Audit 31 — SuperAdmin Controls
 
 **Problem**: The settlement management APIs exist and are fully functional:
@@ -10224,6 +10418,8 @@ But there is NO SuperAdmin UI tab that renders these. The existing PaymentsTab o
 
 **Ticket ID**: GCP-STG-0356
 **Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN, BACKEND, POS, CROSS-PLATFORM
+**Layers**: UI, API, Backend, DB, Migrations, Store Isolation
 **Source**: Audit 31 — SuperAdmin Controls, #4
 
 **Problem**: The `catalogCommercialization.ts` TypeScript interface defines `supplierVisible: boolean` (line 31) with a default of `false` in `DEFAULT_COMMERCIALIZATION` (line 46). However:
@@ -10247,6 +10443,8 @@ In the SUPERMANDI_PRINCIPAL model, the retailer should NOT see the supplier's id
 
 **Ticket ID**: GCP-STG-0357
 **Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: UI, Wiring, API, Backend, Business
 **Source**: Audit 31 — SuperAdmin Controls, #7
 
 **Problem**: The `catalogCommercialization.ts` service layer supports `marginMode: "both"` (applying percentage AND fixed margin together). But:
@@ -10268,6 +10466,8 @@ Some pricing scenarios require both: e.g., 10% margin + ₹5 handling fee per un
 
 **Ticket ID**: GCP-STG-0358
 **Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN
+**Layers**: UI, UX, Wiring, API
 **Source**: Audit 31 — SuperAdmin Controls, #10
 
 **Problem**: The invoice template configuration system is fully built:
@@ -10286,6 +10486,8 @@ But NO SuperAdmin UI renders these settings. SuperAdmin cannot configure invoice
 
 **Ticket ID**: GCP-STG-0359
 **Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN
+**Layers**: UI, UX, Wiring, API
 **Source**: Audit 31 — SuperAdmin Controls, #11
 
 **Problem**: The `invoice_settings` JSONB column (migration 215) includes WhatsApp dispatch policy fields: `autoSendWhatsApp`, `autoSendOnSale`, `autoSendOnPo`, `autoSendOnGrn`. The PUT endpoint accepts these. But no SuperAdmin UI exposes these toggles. The existing WhatsAppTab handles message logs and broadcast — not dispatch policy configuration.
@@ -10300,6 +10502,8 @@ But NO SuperAdmin UI renders these settings. SuperAdmin cannot configure invoice
 
 **Ticket ID**: GCP-STG-0360
 **Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN
+**Layers**: UI, Wiring, API
 **Source**: Audit 31 — SuperAdmin Controls, #14
 
 **Problem**: Bulk action APIs exist:
@@ -10319,6 +10523,8 @@ The API client `publishBulkProducts(supplierId)` exists in `supermandi-superadmi
 
 **Ticket ID**: GCP-STG-0361
 **Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: UI, Wiring, API, Backend, Store Isolation
 **Source**: Audit 29 — Invoice Distribution
 
 **Problem**: The POS app has `GET /sales/:saleId/invoice` (sales.ts:3047-3089) which returns invoice metadata (invoiceId, invoiceNumber, status, totalAmountMinor). But there is NO PDF download route in POS routes and NO invoice PDF download button in any POS V3 screen. The FinanceScreenV3 only shows a "Bill Discounting" placeholder. SalesHistoryScreenV3 shows past sales but has no invoice/PDF action.
@@ -10335,6 +10541,8 @@ Retailer admin web and supplier portal both have PDF download buttons. POS is th
 
 **Ticket ID**: GCP-STG-0362
 **Severity**: P3 LOW
+**Platforms**: BACKEND, DB
+**Layers**: DB, Migrations
 **Source**: Audit 29 — Invoice Distribution
 
 **Problem**: Migration 196 (`196_principal_procurement_support.sql`) creates the `invoicing.invoice_dispatch_logs` table with columns: id, invoice_id, channel (whatsapp/email/sms), recipient_phone, recipient_email, status, dispatch_payload, error_message, dispatched_at, delivered_at, created_at. However, NO application code references this table — no INSERT, no SELECT, no route handler.
@@ -10357,6 +10565,8 @@ Source: 4 audit tracks — Retailer 10K SKU capacity (Audit 32), Supplier 1M pro
 
 **Ticket ID**: GCP-STG-0363
 **Severity**: P0 CRITICAL
+**Platforms**: RETAILER-WEB, BACKEND, CROSS-PLATFORM
+**Layers**: UI, UX, Wiring, API, Backend
 **Source**: Audit 32 — Retailer 10K SKU, Retailer Web Layer
 
 **Problem**: `retailer-admin/src/pages/ProductsPage.tsx` (lines 251-274) calls `GET /api/v1/retailer-admin/products` with no explicit limit or offset parameters. The backend (products.ts:93) defaults to `limit=200, offset=0`. Only the first 200 products are returned. The frontend has NO pagination UI — no "next page" button, no infinite scroll, no "load more". Products beyond the first 200 are completely invisible to the retailer.
@@ -10377,6 +10587,8 @@ Additionally, the backend response returns `count: data.length` (page count, not
 
 **Ticket ID**: GCP-STG-0364
 **Severity**: P0 CRITICAL
+**Platforms**: INFRA
+**Layers**: GCP Parity, Dependencies
 **Source**: Audit 34 — Infrastructure 10K Users + Audit 35 — Crash Prevention
 
 **Problem**: Current Cloud Run configuration in `.github/workflows/deploy.yml`:
@@ -10400,6 +10612,8 @@ With 10K users, even at 1 request/user, peak concurrent easily exceeds 500+. 240
 
 **Ticket ID**: GCP-STG-0365
 **Severity**: P0 CRITICAL
+**Platforms**: INFRA, BACKEND
+**Layers**: GCP Parity, DB, Dependencies
 **Source**: Audit 34 — Infrastructure + Audit 35 — Crash Prevention
 
 **Problem**: Current configuration:
@@ -10423,6 +10637,8 @@ At the 15 instances recommended for 10K users: 15 × 35 = **525 connections** �
 
 **Ticket ID**: GCP-STG-0366
 **Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: Wiring, Business
 **Source**: Audit 35 — POS App Crash Scenarios, #1
 
 **Problem**: `productsStore.ts:135` writes ALL products to AsyncStorage as a single `JSON.stringify(allProducts)` call. At 10,000 products × ~500 bytes = ~5MB. Android AsyncStorage default per-key limit is ~6MB. This is dangerously close to the limit. Additionally, `JSON.stringify()` of a 5MB object blocks the JavaScript thread for 100-200ms, causing visible UI freeze. `JSON.parse()` on cache read (line 147) causes the same blocking.
@@ -10440,6 +10656,8 @@ At the 15 instances recommended for 10K users: 15 × 35 = **525 connections** �
 
 **Ticket ID**: GCP-STG-0367
 **Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, UX, Wiring, Business
 **Source**: Audit 32 + 35 — POS App Search Performance
 
 **Problem**: `productsStore.ts:206-218` `searchProducts()` runs O(n) across 5 fields with `.toLowerCase().includes()` on every call. At 10K products, that's 50K string operations per invocation. `.toLowerCase()` is called fresh on every product, every keystroke — no pre-computation. Combined with no debounce, typing "maggi" triggers 5 × 50K = 250K string operations.
@@ -10460,6 +10678,8 @@ Additionally, `SellScreenV3.tsx:222-248` `tileProducts` useMemo does O(n×m) com
 
 **Ticket ID**: GCP-STG-0368
 **Severity**: P1 HIGH
+**Platforms**: BACKEND
+**Layers**: Backend, Business
 **Source**: Audit 35 — Backend Crash Scenarios, #5
 
 **Problem**: The store-products search endpoint (storeProducts.ts:354-386) tokenizes the search query into up to 10 tokens. Each token generates a WHERE clause with 3 `similarity()` function calls (on name, display_name, brand). With 10 tokens, that's 30 trigram similarity computations per search. Each `similarity()` call triggers a scan on the GIN trigram index. At 10K+ products per store, this can exceed the 30-second `statement_timeout`.
@@ -10476,6 +10696,8 @@ Example: searching "tata salt iodized 1kg premium refined crystal" generates 7 t
 
 **Ticket ID**: GCP-STG-0369
 **Severity**: P1 HIGH
+**Platforms**: SUPERADMIN, BACKEND, DB
+**Layers**: Backend, DB, Business
 **Source**: Audit 33 — Supplier 1M Products
 
 **Problem**: The `/admin/catalog/categories` endpoint (catalog.ts:28) runs `SELECT category, COUNT(*) FROM catalog.supplier_products WHERE is_active = true GROUP BY category`. With 1M rows, this is a full sequential scan with aggregation — no index on `(is_active, category)` exists. Estimated execution: 2-5 seconds at 1M rows, risking the 30-second statement_timeout under concurrent load.
@@ -10495,6 +10717,8 @@ This endpoint is called on every CatalogTab mount to populate the category chip 
 
 **Ticket ID**: GCP-STG-0370
 **Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
 **Source**: Audit 35 — POS App Crash Scenarios, #4 + #7
 
 **Problem**: Two performance issues in SellScreenV3 product grid:
@@ -10515,6 +10739,8 @@ This endpoint is called on every CatalogTab mount to populate the category chip 
 
 **Ticket ID**: GCP-STG-0371
 **Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: Wiring, Business, Dependencies
 **Source**: Audit 35 — POS App Crash Scenarios, #5
 
 **Problem**: `syncService.ts:58-69` calls `refreshStockSnapshot()` and `checkAndRefresh()` every 30 seconds. If the backend is slow or unresponsive, these calls hang indefinitely — no `AbortController`, no timeout wrapper. `productsApi.ts:318-341` progressive loading makes 20-50 sequential HTTP calls with no per-call timeout. If one call hangs, the entire sync hangs forever, blocking subsequent sync ticks.
@@ -10535,6 +10761,8 @@ Also abort on component unmount / app background.
 
 **Ticket ID**: GCP-STG-0372
 **Severity**: P2 MEDIUM
+**Platforms**: BACKEND, POS
+**Layers**: API, Backend
 **Source**: Audit 32 — Retailer 10K SKU, Backend API
 
 **Problem**: POS `productsApi.ts:316` requests `limit=500` per page. Backend `storeProducts.ts:720` caps at `Math.min(..., 200)`. This silent mismatch causes 2.5× more HTTP round-trips than intended: 50 calls instead of 20 for 10K products. Each round-trip adds ~100-200ms latency overhead (DNS, TLS, HTTP headers, connection reuse).
@@ -10549,6 +10777,8 @@ Also abort on component unmount / app background.
 
 **Ticket ID**: GCP-STG-0373
 **Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, DB, Business
 **Source**: Audit 33 — Supplier 1M Products, Finding 6
 
 **Problem**: The publish endpoint (`POST /admin/products/:productId/publish`, suppliers.ts:1668) loops through each linked store and executes individual INSERT queries per store (line 1765-1781) plus a barcode INSERT per store (line 1785-1791). Publishing 1 product to 100 stores = 200+ individual queries. Publishing 1000 products to 100 stores = 200,000 queries.
@@ -10565,6 +10795,8 @@ The bulk publish endpoint (suppliers.ts:1827) has the same one-by-one pattern, l
 
 **Ticket ID**: GCP-STG-0374
 **Severity**: P3 LOW
+**Platforms**: DB
+**Layers**: DB, Migrations
 **Source**: Audit 32 — Retailer 10K SKU, DB Layer
 
 **Problem**: Two duplicate indexes exist on `catalog.store_products`:
@@ -10593,6 +10825,8 @@ Source: 5 audit tracks — Sales intelligence (Audit 36), Reorder flow (Audit 37
 
 **Ticket ID**: GCP-STG-0375
 **Severity**: P1 HIGH
+**Platforms**: BACKEND, INFRA, CROSS-PLATFORM
+**Layers**: Backend, DB, Business, GCP Parity
 **Source**: Audit 37 — Reorder Flow, Gap 1
 
 **Problem**: The complete reorder infrastructure exists — `reorder.reorder_policies` table (with `min_stock`, `target_stock` per product per store), `reorder.pending_reorders` table, approval flow, PO creation from approved reorders, and configurable settings (`reorder_enabled`, `notify_on_low_stock`, `auto_approve_threshold`). But there is NO automated trigger that monitors `inventory.stock_balances.current_qty` against `reorder_policies.min_stock` and creates entries in `reorder.pending_reorders` when stock falls below threshold. The entire reorder suggestion pipeline has no input — the "pending reorders" list is always empty unless manually populated.
@@ -10611,6 +10845,8 @@ Source: 5 audit tracks — Sales intelligence (Audit 36), Reorder flow (Audit 37
 
 **Ticket ID**: GCP-STG-0376
 **Severity**: P1 HIGH
+**Platforms**: BACKEND, POS, SUPPLIER-WEB, CROSS-PLATFORM
+**Layers**: Backend, Business, Wiring
 **Source**: Audit 37 — Reorder Flow, Gap 2
 
 **Problem**: When reorders are approved on POS (ReorderScreenV3) or via auto-approve (reorder.ts:1045), the system creates purchase orders with `status='draft'` (reorder.ts:597). However, the supplier portal's orders page filters out drafts (`WHERE po.status != 'draft'` at supplier/orders.ts:81). This means:
@@ -10628,6 +10864,8 @@ Source: 5 audit tracks — Sales intelligence (Audit 36), Reorder flow (Audit 37
 
 **Ticket ID**: GCP-STG-0377
 **Severity**: P1 HIGH
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: UI, API, Backend
 **Source**: Audit 36 — Sales Intelligence, Gap 1
 
 **Problem**: `backend/src/services/ai/slowMoverService.ts` implements a comprehensive slow-mover detection algorithm that classifies products as dead_stock (zero sales in 30d), declining (30d sales < 50% of prior 30d), or stagnant (low movement). It recommends actions: discontinue/clearance for dead stock, promotional pricing for declining, shelf placement review for stagnant. However, this service is only exposed via `GET /pos/ai/slow-movers` which requires `requireDeviceToken` + `requireActiveStore` — POS device authentication. SuperAdmin has NO endpoint to see slow-moving inventory across all stores.
@@ -10642,6 +10880,8 @@ Source: 5 audit tracks — Sales intelligence (Audit 36), Reorder flow (Audit 37
 
 **Ticket ID**: GCP-STG-0378
 **Severity**: P1 HIGH
+**Platforms**: SUPPLIER-WEB, BACKEND
+**Layers**: API, Backend, Wiring
 **Source**: Audit 40 — Real-Time Communication, Gap 1
 
 **Problem**: `sseService.ts` has `registerSupplierSseClient(supplierId, res)` (line 231) with max 10 connections per supplier, heartbeat, and dead client cleanup. Convenience emitters like `emitOrderEvent()` and `emitDeliveryEvent()` broadcast to supplier channels. But there is NO route in `backend/src/routes/v1/supplier/` that exposes an SSE endpoint for the supplier portal to connect to. The supplier portal's `orders/page.tsx` (lines 124-150) subscribes to SSE events, but the actual SSE connection URL is not documented — it may be pointing to a non-existent endpoint.
@@ -10656,6 +10896,8 @@ Source: 5 audit tracks — Sales intelligence (Audit 36), Reorder flow (Audit 37
 
 **Ticket ID**: GCP-STG-0379
 **Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN
+**Layers**: UI, UX, Wiring, API
 **Source**: Audit 40 — Real-Time Communication, Gap 2
 
 **Problem**: The retailer web has a full notification center (NotificationsPage.tsx with bell icon, mark-as-read, pagination). The supplier portal has the same. SuperAdmin has an SSE stream (adminSseRouter) but NO notifications page, NO bell icon, and NO notification list UI. Admin notifications are persisted in `notifications.notifications` table (via `sendAndPersistNotification` in fcmService.ts) but SuperAdmin cannot view them.
@@ -10670,6 +10912,8 @@ Source: 5 audit tracks — Sales intelligence (Audit 36), Reorder flow (Audit 37
 
 **Ticket ID**: GCP-STG-0380
 **Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX, Wiring, Navigation, API
 **Source**: Audit 40 — Real-Time Communication, Gap 3
 
 **Problem**: POS app has full FCM push notification support — `expo-notifications` with token registration, 3 Android channels (default/orders/alerts), foreground+background listeners, and backend API for notification history (`fetchNotifications()`, `getUnreadCount()`, `markAsRead()`). But there is NO visible screen in `src/screens/v3/` to browse notification history. Push notifications arrive but the user cannot view past notifications after dismissing the toast.
@@ -10684,6 +10928,8 @@ Source: 5 audit tracks — Sales intelligence (Audit 36), Reorder flow (Audit 37
 
 **Ticket ID**: GCP-STG-0381
 **Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, Dependencies
 **Source**: Audit 40 — Real-Time Communication, Gap 4
 
 **Problem**: The lifecycle event service (`lifecycleEventService.ts`) defines 10 event types with transport rules. WhatsApp templates exist for 6 events (order_created, supplier_action_required, supplier_rejected, dispatched, delivered, repeat_order_prompt). But 4 events have NO WhatsApp template:
@@ -10702,6 +10948,8 @@ Source: 5 audit tracks — Sales intelligence (Audit 36), Reorder flow (Audit 37
 
 **Ticket ID**: GCP-STG-0382
 **Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, API, Business, Dependencies
 **Source**: Audit 40 — Real-Time Communication, Gap 5
 
 **Problem**: When a payment is completed (cash confirmed, UPI verified, or split payment finalized), the system emits an SSE `payment.status_changed` event via `emitPaymentEvent()`. But there is NO corresponding lifecycle event. This means:
@@ -10721,6 +10969,8 @@ The lifecycle event system handles order creation through delivery but skips the
 
 **Ticket ID**: GCP-STG-0383
 **Severity**: P2 MEDIUM
+**Platforms**: RETAILER-WEB, BACKEND
+**Layers**: UI, UX, Wiring, API, Backend
 **Source**: Audit 37 — Reorder Flow, Gap 3
 
 **Problem**: `retailer-admin/src/pages/PurchaseOrdersPage.tsx` is explicitly read-only (line 1-2 comment: "Read-only view of purchase orders placed from POS"). The page shows PO status, details, and has a "Buy Again" button on delivered POs, but retailers CANNOT create new purchase orders from the web portal. PO creation is only possible from POS via the BuyScreenV3 checkout flow or reorder approval.
@@ -10735,6 +10985,8 @@ The lifecycle event system handles order creation through delivery but skips the
 
 **Ticket ID**: GCP-STG-0384
 **Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: UI, API, Backend, DB, Store Isolation
 **Source**: Audit 36 — Sales Intelligence, Gap 2
 
 **Problem**: SuperAdmin has no simple "show me all stock levels for store X" view. Stock visibility is only available indirectly through:
@@ -10754,6 +11006,8 @@ There is no dedicated endpoint or UI for "SuperAdmin browses inventory of Store 
 
 **Ticket ID**: GCP-STG-0385
 **Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, Wiring
 **Source**: Audit 39 — Buy Again, Gap 1
 
 **Problem**: StoreHubScreenV3 (lines 30-41) shows recent purchase orders with supplier name, items, total, and delivery status. But individual order cards do NOT have a "Buy Again" or "Repeat Order" button. The Buy Again feature is only accessible from the ReorderScreenV3 footer button (line 139), which requires navigating to a different screen.
@@ -10768,6 +11022,8 @@ There is no dedicated endpoint or UI for "SuperAdmin browses inventory of Store 
 
 **Ticket ID**: GCP-STG-0386
 **Severity**: P3 LOW
+**Platforms**: SUPERADMIN
+**Layers**: UI, UX, Wiring, API
 **Source**: Audit 36 — Sales Intelligence, Gap 5
 
 **Problem**: DemandPressureTab.tsx shows a cross-store demand pressure table with columns: Product name, Stores Needing Reorder / Total Stores, Avg Days of Stock, Pending Inbound. The backend supports per-store drill-down via `GET /admin/demand-signals/store/:storeId` (returns per-product demand signals for a specific store). But the DemandPressureTab UI has no click-to-drill — tapping a product row does nothing.
@@ -10788,6 +11044,8 @@ Source: 5 audit tracks — Unit/conversion system (Audit 41), BUY bulk flow (Aud
 
 **Ticket ID**: GCP-STG-0387
 **Severity**: P1 HIGH
+**Platforms**: POS, BACKEND, CROSS-PLATFORM
+**Layers**: Wiring, API, Backend, Business
 **Source**: Audit 42 + 44 — BUY Bulk Flow + Conversion Chain
 
 **Problem**: Two conversion multiplications happen in sequence:
@@ -10811,6 +11069,8 @@ The GRN code does have a guard (`procurementPackQty > 1`), but if the BUY flow a
 
 **Ticket ID**: GCP-STG-0388
 **Severity**: P1 HIGH
+**Platforms**: BACKEND
+**Layers**: Backend, API, Business
 **Source**: Audit 42 — BUY Bulk Flow
 
 **Problem**: The backend `POST /api/v1/pos/stock-in` endpoint (stockIn.ts) accepts `{ items: [{ barcode, quantity, buyPrice }] }` and uses the raw `quantity` as-is for stock increment: `deltaQty = Math.abs(quantity)` (line 263). It does NOT import or call `procurementToStock()` from `conversionEngine.ts`. The backend has zero awareness of procurement units, pack quantities, or unit conversion.
@@ -10831,6 +11091,8 @@ All conversion logic lives exclusively on the frontend (GRNScreenV3.tsx:241 mult
 
 **Ticket ID**: GCP-STG-0389
 **Severity**: P2 MEDIUM
+**Platforms**: SUPPLIER-WEB, BACKEND, DB
+**Layers**: UI, Backend, DB, Migrations
 **Source**: Audit 41 — Unit System
 
 **Problem**: The supplier product form (`supplier-portal/src/app/(dashboard)/products/page.tsx:698`) offers `BOX` as a unit option in the dropdown. However, `BOX` is NOT in the backend's valid procurement units set:
@@ -10849,6 +11111,8 @@ If a supplier creates a product with `unit=BOX`, the `unit` column on `catalog.s
 
 **Ticket ID**: GCP-STG-0390
 **Severity**: P2 MEDIUM
+**Platforms**: POS, RETAILER-WEB, BACKEND, CROSS-PLATFORM
+**Layers**: UI, API, Backend, Business
 **Source**: Audit 45 — Automation Opportunities
 
 **Problem**: The reorder suggestion system (`storeDemandSignal.ts:103-117`, `smartReorderService.ts:74`, `buyAgainService.ts:148`) returns `suggestedQuantity` in raw base stock units only. For example, it suggests "Order 100 KG" instead of "Order 2 × 50kg bags". The retailer must mentally reverse-convert from base units to procurement units, which is error-prone.
@@ -10869,6 +11133,8 @@ The data needed for conversion exists: `catalog.store_products` has `procurement
 
 **Ticket ID**: GCP-STG-0391
 **Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: UI, UX, Wiring, API, Backend, DB, Business
 **Source**: Audit 42 — BUY Bulk Flow
 
 **Problem**: The GRN screen (GRNScreenV3.tsx) has +/- buttons that increment received quantity by 1. The stock landing calculation multiplies `received × procurementPackQty` (e.g., 5 cartons × 24 = 120 pcs). If a carton arrives with only 23 items (1 damaged/missing), there is NO mechanism to record a short-count. The retailer must either:
@@ -10887,6 +11153,8 @@ Neither option is correct for "5 cartons received, 1 item damaged = 119 good ite
 
 **Ticket ID**: GCP-STG-0392
 **Severity**: P2 MEDIUM
+**Platforms**: BACKEND, DB, CROSS-PLATFORM
+**Layers**: DB, Migrations, Backend, Business
 **Source**: Audit 45 — Automation Opportunities
 
 **Problem**: `catalog.store_products` has single `batch_number` and `expiry_date` columns (migrations 156, 182). These are overwritten on each GRN inward. If two batches of sugar arrive — batch A (expiry Dec 2026) and batch B (expiry Mar 2027) — only batch B's info survives. There is no batch-dimension on `inventory.stock_balances`.
@@ -10912,6 +11180,8 @@ This means:
 
 **Ticket ID**: GCP-STG-0393
 **Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, Wiring
 **Source**: Audit 41 — Unit System
 
 **Problem**: `src/screens/v3/NewProductScreenV3.tsx` (line 77, 254) uses a free-text `TextInput` for the unit field, defaulting to `"pcs"`. Retailers can type any string (e.g., "pieces", "kilos", "packet", "box") which won't match the backend's unit validation or conversion engine's canonical unit set (KG, GM, PCS, LTR, ML, etc.).
@@ -10926,6 +11196,8 @@ This means:
 
 **Ticket ID**: GCP-STG-0394
 **Severity**: P3 LOW
+**Platforms**: POS, BACKEND
+**Layers**: Backend, DB, Business
 **Source**: Audit 45 — Automation Opportunities
 
 **Problem**: The system tracks which products sell frequently (`storeProducts.ts:1562-1600` returns top 12 by sale count) and has a "frequently bought together" co-occurrence analysis (`recommendationService.ts`). But it does NOT track what quantities customers typically buy per product. For example, if 80% of sugar sales are 1 kg and 15% are 500g, the presets should highlight 1 kg first — but the current presets are hardcoded in `conversionEngine.ts:219-266` (250g/500g/1kg/5kg for all KG products regardless of sales pattern).
@@ -10940,6 +11212,8 @@ This means:
 
 **Ticket ID**: GCP-STG-0395
 **Severity**: P3 LOW
+**Platforms**: BACKEND, RETAILER-WEB, POS, CROSS-PLATFORM
+**Layers**: UI, API, Backend, DB, Migrations
 **Source**: Audit 45 — Automation Opportunities
 
 **Problem**: When a retailer onboards, they start with an empty catalog. There is no "kirana starter kit" — no pre-configured templates for common FMCG products with standard units, pack sizes, conversion ratios, and HSN codes. Retailers must manually add every product or import via CSV, including setting up correct units, categories, and conversion profiles for each.
@@ -10956,6 +11230,8 @@ Common kirana products like Maggi (carton of 48, PCS), Tata Salt (bag of 25kg, s
 
 **Ticket ID**: GCP-STG-0396
 **Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, Business
 **Source**: Audit 45 — Automation Opportunities
 
 **Problem**: When a retailer changes the per-kg sell price for a loose product (e.g., sugar from ₹85/kg to ₹90/kg), the retail variant prices (250g, 500g, etc.) are NOT automatically recalculated. Each variant has its own `sell_price_minor` in `catalog.retail_variants` that must be manually updated. The retailer must update per-kg price AND then separately update each variant's price — or forget and have inconsistent pricing.
@@ -10976,6 +11252,8 @@ Source: 5 audit tracks — SELL tiles (Audit 46), BUY tiles (Audit 47), Supplier
 
 **Ticket ID**: GCP-STG-0397
 **Severity**: P1 HIGH
+**Platforms**: POS, BACKEND
+**Layers**: UI, UX, Wiring, API, Backend, Business
 **Source**: Audit 50 — Purchase Cart + Payment
 
 **Problem**: MOQ (Minimum Order Quantity) is displayed in the product detail sheet (BuyScreenV3.tsx:326) and on SupplierProductCardV3 (line 95: "MOQ: N case"). But the `handleQtyChange` function (BuyScreenV3.tsx:169-172) only enforces `Math.max(0, Math.round(cases))` — no MOQ floor check. A retailer can order 1 case when the supplier's MOQ is 5 cases.
@@ -10995,6 +11273,8 @@ The backend `orders.ts` also does not validate qty against MOQ — it accepts wh
 
 **Ticket ID**: GCP-STG-0398
 **Severity**: P1 HIGH
+**Platforms**: POS, BACKEND
+**Layers**: Wiring, API, Backend, Business
 **Source**: Audit 50 — Purchase Cart + Payment
 
 **Problem**: The BUY checkout terms section (BuyScreenV3.tsx:413-421) displays MOQ tier discounts from `p.moqTiers` (e.g., "Buy 10+: 5% off, Buy 50+: 10% off"). However, the cart total calculation (BuyScreenV3.tsx:167) is simply `qty * caseSize * ptrMinor` — no tier discount is applied. The discounts are cosmetic only.
@@ -11014,6 +11294,8 @@ The supplier can set `moqTiers` as JSON (supplier form line 929), and the data f
 
 **Ticket ID**: GCP-STG-0399
 **Severity**: P1 HIGH
+**Platforms**: BACKEND, SUPPLIER-WEB, CROSS-PLATFORM
+**Layers**: Backend, API, Business, Dependencies
 **Source**: Audit 50 — Purchase Cart + Payment
 
 **Problem**: After a retailer submits a purchase order via BUY checkout, the backend (orders.ts) creates the PO, generates invoices, but does NOT notify the supplier. No WhatsApp message, no FCM push, no SSE event, no email. Suppliers must manually poll their portal to discover new orders.
@@ -11030,6 +11312,8 @@ The lifecycle event service has a `supplier_action_required` event type with Wha
 
 **Ticket ID**: GCP-STG-0400
 **Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, Wiring
 **Source**: Audit 46 — SELL Tiles
 
 **Problem**: Neither ProductTileV3 nor ProductDetailSheetV3 (in SELL context) show profit margin — the difference between sell price and purchase price. The data is available: both `priceMinor` (sell) and `purchasePriceMinor` are in the product store. But no UI element displays margin percentage or absolute profit.
@@ -11046,6 +11330,8 @@ Kirana retailers make pricing decisions based on margin. Without seeing margin, 
 
 **Ticket ID**: GCP-STG-0401
 **Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, Wiring
 **Source**: Audit 47 — BUY Tiles
 
 **Problem**: BuyScreenV3.tsx (lines 320-333) maps SupplierProduct to the `procurement` prop passed to ProductDetailSheetV3, but only forwards 12 of 18+ available fields. Six fields are available on the SupplierProduct object (shown on SupplierProductCardV3) but NOT passed to the detail sheet:
@@ -11068,6 +11354,8 @@ These fields are visible on the card tile but disappear when the retailer taps t
 
 **Ticket ID**: GCP-STG-0402
 **Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: Wiring, Business
 **Source**: Audit 50 — Purchase Cart
 
 **Problem**: The BUY cart uses local React state `useState<Record<string, number>>({})` (BuyScreenV3.tsx:81). When the retailer navigates away from BuyScreenV3 (e.g., to answer a phone call, handle a customer, check stock), the BUY cart state is lost. The SELL cart uses Zustand with AsyncStorage persistence — it survives navigation. The BUY cart does not.
@@ -11082,6 +11370,8 @@ These fields are visible on the card tile but disappear when the retailer taps t
 
 **Ticket ID**: GCP-STG-0403
 **Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: Wiring, Business
 **Source**: Audit 50 — Purchase Cart
 
 **Problem**: BuyScreenV3.tsx (line 362) computes GST as: `subtotal * avgGstPct / (100 + avgGstPct)` where `avgGstPct` is the average across all items. This is incorrect when items have mixed GST rates (0% staples, 5% essentials, 12% processed food, 18% branded goods, 28% luxury). The averaged rate produces wrong GST amounts.
@@ -11104,6 +11394,8 @@ const totalGst = cartItems.reduce((sum, item) => {
 
 **Ticket ID**: GCP-STG-0404
 **Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX, Navigation
 **Source**: Audit 50 — Purchase Cart
 
 **Problem**: After successful BUY checkout, BuyScreenV3 shows a toast ("Order placed", line 499/508/510/516), clears the cart, and closes the checkout modal. There is NO order confirmation screen showing: order number, items ordered, payment status, expected delivery, or next steps.
@@ -11120,6 +11412,8 @@ The SELL flow has a dedicated SuccessScreenV3 with bill number, WhatsApp share, 
 
 **Ticket ID**: GCP-STG-0405
 **Severity**: P2 MEDIUM
+**Platforms**: SUPPLIER-WEB
+**Layers**: UI, Wiring
 **Source**: Audit 48 — Supplier Form
 
 **Problem**: The supplier product creation form (`supplier-portal/src/app/(dashboard)/products/page.tsx`) has NO brand input field. The backend destructures `brand` from request body (supplier/products.ts:464) and stores it in `catalog.supplier_products.brand`. The SuperAdmin CatalogTab displays brand in the product table (line 352). But suppliers cannot set brand via the form — only via CSV upload.
@@ -11134,6 +11428,8 @@ The SELL flow has a dedicated SuccessScreenV3 with bill number, WhatsApp share, 
 
 **Ticket ID**: GCP-STG-0406
 **Severity**: P2 MEDIUM
+**Platforms**: SUPPLIER-WEB
+**Layers**: UI, UX, Wiring
 **Source**: Audit 48 — Supplier Form
 
 **Problem**: The `moqTiers` field (supplier form line 929-935) requires suppliers to type raw JSON: `[{"minQty":10,"discountPct":5},{"minQty":50,"discountPct":10}]`. This is unusable for non-technical kirana suppliers. One syntax error and the data is invalid.
@@ -11152,6 +11448,8 @@ The SELL flow has a dedicated SuccessScreenV3 with bill number, WhatsApp share, 
 
 **Ticket ID**: GCP-STG-0407
 **Severity**: P2 MEDIUM
+**Platforms**: SUPPLIER-WEB, BACKEND, POS, CROSS-PLATFORM
+**Layers**: UI, API, Backend, DB
 **Source**: Audit 48 — Supplier Form
 
 **Problem**: The supplier product form has no field for current stock quantity or availability status. Retailers browsing the BUY catalog cannot see if a supplier product is in stock or out of stock. The `stock_quantity` column exists on `catalog.supplier_products` (migration 004) but is never set by the supplier portal.
@@ -11166,6 +11464,8 @@ The SELL flow has a dedicated SuccessScreenV3 with bill number, WhatsApp share, 
 
 **Ticket ID**: GCP-STG-0408
 **Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: UI, API, Backend, DB
 **Source**: Audit 47 — BUY Tiles
 
 **Problem**: SupplierProductCardV3.tsx (line 76) always renders a box emoji in the `imgBox` area. The `SupplierProduct` interface does NOT include `imageUrl`. The backend buy-catalog query (catalog.ts:469-607) does NOT select `sp.image_url` from `catalog.supplier_products`. Even though suppliers can upload product images, the BUY tiles never show them.
@@ -11183,6 +11483,8 @@ The SELL flow has a dedicated SuccessScreenV3 with bill number, WhatsApp share, 
 
 **Ticket ID**: GCP-STG-0409
 **Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX, Wiring, API
 **Source**: Audit 50 — Purchase Cart
 
 **Problem**: The BUY checkout modal has no delivery address field and no order notes field. The backend `CreateOrderParams` type supports both (`deliveryAddress`, `storeNotes` at orderApi.ts:143), but BuyScreenV3 never sets them. The store address exists in `platform.stores` and could be pre-filled.
@@ -11197,6 +11499,8 @@ The SELL flow has a dedicated SuccessScreenV3 with bill number, WhatsApp share, 
 
 **Ticket ID**: GCP-STG-0410
 **Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, API, Backend
 **Source**: Audit 46 — SELL Tiles
 
 **Problem**: ProductDetailSheetV3 in SELL context shows: image, name, brand, price, barcode, unit, case size, stock, qty selector. It does NOT show:
@@ -11219,6 +11523,8 @@ These are useful for retailers when deciding pricing, prioritizing near-expiry s
 
 **Ticket ID**: GCP-STG-0411
 **Severity**: P3 LOW
+**Platforms**: BACKEND, POS, CROSS-PLATFORM
+**Layers**: Backend, API, Dependencies, Business
 **Source**: Audit 50 — Purchase Cart + Payment
 
 **Problem**: The BNPL payment option appears in BUY checkout (BuyScreenV3.tsx:440: "Buy Now Pay Later"). But `procurementPaymentService.ts` (lines 169-175) is a stub — it just sets payment status to `pending` with no external API call. No BNPL provider is integrated (no Rupifi, no OkCredit, no KreditBee, no custom credit line).
@@ -11237,6 +11543,8 @@ These are useful for retailers when deciding pricing, prioritizing near-expiry s
 
 **Ticket ID**: GCP-STG-0412
 **Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, Wiring
 **Source**: Audit 50 — Purchase Cart + Payment
 
 **Problem**: The backend supports BANK payment mode via Razorpay (razorpayAdapter.ts) and Card via PineLabs (pinelabsAdapter.ts). The `procurementPaymentService.ts:51` maps BANK→RAZORPAY. But BuyScreenV3.tsx (line 432) only offers 4 payment methods: CASH, UPI, BNPL, CREDIT. BANK/Card is not in the UI despite being fully wired on the backend.
