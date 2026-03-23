@@ -4,6 +4,7 @@
  */
 import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { View, Pressable, TextInput, FlatList, StyleSheet, Text } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { recordDuePayment } from "../../services/api/posApi";
@@ -21,6 +22,7 @@ type UdharScreenV3Props = {
 };
 
 export default function UdharScreenV3({ onBack, onComplete }: UdharScreenV3Props) {
+  const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { grandTotal, itemCount, totalDisplay, isBulk, processing, executePayment } = usePaymentFlow();
@@ -74,7 +76,7 @@ export default function UdharScreenV3({ onBack, onComplete }: UdharScreenV3Props
   }, [executePayment, onComplete, customerName, customerPhone]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={onBack} accessibilityLabel="Back to payment methods">
           <Text style={styles.backText}>←</Text>
@@ -144,7 +146,7 @@ export default function UdharScreenV3({ onBack, onComplete }: UdharScreenV3Props
         )}
       </View>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable
           style={[styles.completeBtn, (!customerName.trim() || processing) && styles.completeBtnDisabled]}
           onPress={handleComplete}
