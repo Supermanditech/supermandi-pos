@@ -21353,7 +21353,7 @@
       "start_line": 411,
       "end_line": 435,
       "checksum": "e86fc6d6647cfafd",
-      "description": "Client-side pagination for product approval queue (page size 20) with Previous/Next controls",
+      "description": "Client-side pagination for product approval queue (page size 20) with Previous/Next controls (committed)",
       "test_file": "N/A",
       "registered_at": "2026-03-23T14:00:00.000Z",
       "status": "ACTIVE",
