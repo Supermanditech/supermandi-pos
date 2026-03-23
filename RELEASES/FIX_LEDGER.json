@@ -20308,7 +20308,7 @@
       "start_line": 1135,
       "end_line": 1184,
       "checksum": "ace0aef53ca35576",
-      "description": "GCP-STG-0359: WhatsApp Dispatch Policy UI — master toggle + descriptive labels + disabled sub-toggles when master off",
+      "description": "GCP-STG-0359: WhatsApp Dispatch Policy UI — master toggle + descriptive labels + disabled sub-toggles when master off (master toggle + sub-toggles)",
       "test_file": "supermandi-superadmin/src/__tests__/tabs/whatsappDispatch.gcp-stg-0359.test.tsx",
       "depends_on": "GCP-STG-0358",
       "migration": null,
