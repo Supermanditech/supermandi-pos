@@ -24,6 +24,8 @@ import { useScanResultStore } from "../../stores/scanResultStore";
 import { useSearchTriggerStore } from "../../stores/searchTriggerStore";
 // GCP-STG-0402: Persisted BUY cart — survives screen unmount
 import { usePurchaseCartStore } from "../../stores/purchaseCartStore";
+// GCP-STG-0409: Store name for delivery address display
+import { useSettingsStore } from "../../stores/settingsStore";
 
 // V3-FIX-076: BUY tab — no fabricated wholesale metadata
 
@@ -107,6 +109,11 @@ export default function BuyScreenV3() {
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [paymentMode, setPaymentMode] = useState<"UPI" | "BANK" | "BNPL" | "CREDIT" | "CASH">("CASH");
   const [ordering, setOrdering] = useState(false);
+  // GCP-STG-0409: Delivery notes for BUY checkout (max 200 chars)
+  const [deliveryNotes, setDeliveryNotes] = useState("");
+  // GCP-STG-0409: Store identity for read-only delivery address display
+  const storeName = useSettingsStore((s) => s.storeName);
+  const storeCode = useSettingsStore((s) => s.storeCode);
   // GCP-STG-0404: Order confirmation state — shown after successful checkout
   const [confirmationData, setConfirmationData] = useState<{
     orderNumbers: string[];
@@ -584,6 +591,26 @@ export default function BuyScreenV3() {
               </Pressable>
             ))}
 
+            {/* GCP-STG-0409: Delivery address (read-only from store session) + order notes */}
+            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary, marginTop: 10, marginBottom: 6 }}>Delivery Address</Text>
+            <View style={{ backgroundColor: colors.backgroundSecondary, borderRadius: 10, padding: 10, marginBottom: 8 }} testID="delivery-address-display">
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textPrimary }}>{storeName ?? 'Store'}{storeCode ? ` (${storeCode})` : ''}</Text>
+              <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 2 }}>Delivery to registered store address</Text>
+            </View>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary, marginBottom: 6 }}>Order Notes</Text>
+            <TextInput
+              testID="delivery-notes-input"
+              style={{ backgroundColor: colors.backgroundSecondary, borderRadius: 10, padding: 10, fontSize: 13, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, marginBottom: 8, minHeight: 48, textAlignVertical: 'top' }}
+              placeholder="Special instructions..."
+              placeholderTextColor={colors.textTertiary}
+              value={deliveryNotes}
+              onChangeText={(text) => setDeliveryNotes(text.slice(0, 200))}
+              maxLength={200}
+              multiline
+              numberOfLines={2}
+            />
+            <Text style={{ fontSize: 10, color: colors.textTertiary, textAlign: 'right', marginBottom: 4 }}>{deliveryNotes.length}/200</Text>
+
             {/* Action buttons */}
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
               <Pressable style={{ flex: 1, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }} onPress={() => setCheckoutVisible(false)} disabled={ordering}>
@@ -632,11 +659,14 @@ export default function BuyScreenV3() {
                       },
                     }));
                     // V3-FIX-176: Include payment mode in order
+                    // GCP-STG-0409: Pass delivery notes + store address to order
                     const order = await createOrder(sid, {
                       supplierId,
                       orderType: "catalogue_principal" as any,
                       items: orderItems,
                       paymentMode: paymentMode as any,
+                      storeNotes: deliveryNotes.trim() || undefined,
+                      deliveryAddress: `${storeName ?? 'Store'}${storeCode ? ` (${storeCode})` : ''}`,
                     });
                     await submitOrder(sid, order.id);
                     // GCP-STG-0404: Collect order numbers for confirmation screen
