@@ -18657,7 +18657,7 @@
       "start_line": 1823,
       "end_line": 1903,
       "checksum": "a1a04dfee12620ea",
-      "description": "Unpublish endpoint: POST /admin/products/:productId/unpublish — deactivates store_products (is_active=false), optional storeId query param, audit log",
+      "description": "Unpublish endpoint: POST /admin/products/:productId/unpublish — deactivates store_products (is_active=false), optional storeId query param, audit log (backend + UI button)",
       "test_file": "backend/tests/unpublish.gcp-stg-0347.unit.test.ts",
       "depends_on": null,
       "migration": null,

@@ -333,6 +333,26 @@ export async function publishProduct(productId: string): Promise<{
 }
 
 /**
+ * GCP-STG-0347: Unpublish a product from stores (deactivate store_products)
+ * Optional storeId to unpublish from a single store only
+ */
+export async function unpublishProduct(productId: string, storeId?: string): Promise<{
+  productId: string;
+  productName: string;
+  deactivatedFromStores: number;
+}> {
+  const base = requireApiBase();
+  const qs = storeId ? `?storeId=${encodeURIComponent(storeId)}` : "";
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/unpublish${qs}`, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify({})
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+/**
  * T-068: Bulk publish all approved products from a supplier to linked stores
  */
 export async function publishBulkProducts(supplierId: string): Promise<{

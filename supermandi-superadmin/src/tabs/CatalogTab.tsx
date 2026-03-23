@@ -16,7 +16,7 @@ import {
   type CatalogProduct,
 } from "../api/catalog";
 // GCP-STG-0290: Publish approved products to retailer stores
-import { publishProduct } from "../api/suppliers";
+import { publishProduct, unpublishProduct } from "../api/suppliers";
 import toast from "react-hot-toast";
 import { TableSkeleton } from "../components/TableSkeleton";
 
@@ -215,6 +215,22 @@ export function CatalogTab() {
       loadProducts(page, search, selectedCategory, selectedSupplierId, selectedApprovalStatus);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to publish product");
+    } finally {
+      setActionInFlight(null);
+    }
+  };
+
+  // GCP-STG-0347: Unpublish product from all stores
+  const handleUnpublish = async (product: CatalogProduct) => {
+    if (actionInFlight) return;
+    if (!confirm(`Unpublish "${product.displayName}" from all stores? This will deactivate it in every store catalog.`)) return;
+    setActionInFlight(product.id);
+    try {
+      const result = await unpublishProduct(product.id);
+      toast.success(`Unpublished "${product.displayName}" from ${result.deactivatedFromStores} store(s)`);
+      loadProducts(page, search, selectedCategory, selectedSupplierId, selectedApprovalStatus);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to unpublish product");
     } finally {
       setActionInFlight(null);
     }
@@ -580,6 +596,18 @@ export function CatalogTab() {
                             style={{ background: "#2563eb", borderColor: "#2563eb" }}
                           >
                             {actionInFlight === product.id ? "..." : "Publish"}
+                          </button>
+                        )}
+                        {/* GCP-STG-0347: Unpublish button for products published to stores */}
+                        {product.approvalStatus === "approved" && product.publishedToStores && product.publishedToStores > 0 && (
+                          <button
+                            className="btnSm"
+                            onClick={() => handleUnpublish(product)}
+                            disabled={actionInFlight === product.id}
+                            aria-label={`Unpublish ${product.displayName} from stores`}
+                            style={{ color: "#b45309", borderColor: "#b45309" }}
+                          >
+                            {actionInFlight === product.id ? "..." : "Unpublish"}
                           </button>
                         )}
                       </div>
