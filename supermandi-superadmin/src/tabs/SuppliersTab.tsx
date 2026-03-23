@@ -2,7 +2,7 @@
 // T-188: Batch approval/rejection for pending products
 import React, { Component, useEffect, useState } from "react";
 import type { PendingSupplierRequest, VerifiedSupplier, PendingProduct, BankChangeEntry } from "../api/suppliers";
-import { toggleAutoApproval, publishProduct, batchProductAction } from "../api/suppliers";
+import { toggleAutoApproval, publishProduct, publishBulkProducts, batchProductAction } from "../api/suppliers";
 import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 
 // STG-822: Use Indian comma grouping for currency display
@@ -169,6 +169,10 @@ export function SuppliersTab({
   const [publishLoading, setPublishLoading] = useState<Record<string, boolean>>({});
   const [publishResult, setPublishResult] = useState<Record<string, string>>({});
 
+  // GCP-STG-0346: Bulk publish state per supplier
+  const [bulkPublishLoading, setBulkPublishLoading] = useState<Record<string, boolean>>({});
+  const [bulkPublishResult, setBulkPublishResult] = useState<Record<string, string>>({});
+
   // FIX-050: Clear stale publish state when product list refreshes
   // R2-FIX SUP-017: Also clear stale product selections
   useEffect(() => {
@@ -274,6 +278,37 @@ export function SuppliersTab({
     } finally {
       setPublishLoading(prev => ({ ...prev, [productId]: false }));
     }
+  };
+
+  // GCP-STG-0346: Bulk publish all approved products for a supplier
+  const handleBulkPublish = async (supplierId: string, businessName: string) => {
+    setConfirmDialog({
+      title: "Publish All Approved Products",
+      message: `Publish all approved products for "${businessName}" to all linked stores?`,
+      confirmLabel: "Publish All",
+      variant: "info",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setBulkPublishLoading(prev => ({ ...prev, [supplierId]: true }));
+        setBulkPublishResult(prev => ({ ...prev, [supplierId]: "" }));
+        try {
+          const result = await publishBulkProducts(supplierId);
+          setBulkPublishResult(prev => ({
+            ...prev,
+            [supplierId]: `${result.productsProcessed} products published to ${result.totalPublishedToStores} stores`,
+          }));
+          refreshSuppliers();
+        } catch (err: unknown) {
+          setBulkPublishResult(prev => ({
+            ...prev,
+            [supplierId]: `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
+          }));
+        } finally {
+          setBulkPublishLoading(prev => ({ ...prev, [supplierId]: false }));
+          setTimeout(() => setBulkPublishResult(prev => ({ ...prev, [supplierId]: "" })), 5000);
+        }
+      },
+    });
   };
 
   return (
@@ -581,20 +616,37 @@ export function SuppliersTab({
                     </button>
                   </td>
                   <td>
-                    {s.verificationStatus === "SUSPENDED" ? (
-                      <button
-                        className="sa-btn-success-sm"
-                        onClick={() => requestSupplierStatusChange(s.id, s.businessName, "reactivate")}
-                      >
-                        Reactivate
-                      </button>
-                    ) : (
-                      <button
-                        className="sa-btn-danger-sm"
-                        onClick={() => requestSupplierStatusChange(s.id, s.businessName, "suspend")}
-                      >
-                        Suspend
-                      </button>
+                    <div className="sa-flex sa-gap-6 sa-flex-wrap">
+                      {s.verificationStatus === "SUSPENDED" ? (
+                        <button
+                          className="sa-btn-success-sm"
+                          onClick={() => requestSupplierStatusChange(s.id, s.businessName, "reactivate")}
+                        >
+                          Reactivate
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            className="sa-btn-danger-sm"
+                            onClick={() => requestSupplierStatusChange(s.id, s.businessName, "suspend")}
+                          >
+                            Suspend
+                          </button>
+                          {/* GCP-STG-0346: Bulk publish all approved products */}
+                          <button
+                            className="sa-btn-ghost-sm"
+                            onClick={() => handleBulkPublish(s.id, s.businessName)}
+                            disabled={bulkPublishLoading[s.id]}
+                          >
+                            {bulkPublishLoading[s.id] ? "Publishing..." : "Publish All Approved"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    {bulkPublishResult[s.id] && (
+                      <div className={`sa-text-xs sa-mt-4 ${bulkPublishResult[s.id].startsWith("Error") ? "sa-text-error" : "sa-text-success"}`}>
+                        {bulkPublishResult[s.id]}
+                      </div>
                     )}
                   </td>
                 </tr>
