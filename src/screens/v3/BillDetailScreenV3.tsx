@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { View, Pressable, ScrollView, StyleSheet, Text, Linking, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
@@ -22,6 +23,7 @@ type Props = {
 };
 
 export default function BillDetailScreenV3({ saleId, billRef, date, method, totalMinor, items, onClose }: Props) {
+  const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const total = Math.round(totalMinor / 100);
@@ -53,7 +55,7 @@ export default function BillDetailScreenV3({ saleId, billRef, date, method, tota
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable>
         <Text style={styles.headerTitle}>Bill Details</Text>
@@ -90,7 +92,7 @@ export default function BillDetailScreenV3({ saleId, billRef, date, method, tota
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable style={[styles.printBtn, printing && { opacity: 0.5 }]} disabled={printing} onPress={async () => {
           setPrinting(true);
           try {
