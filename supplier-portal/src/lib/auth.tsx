@@ -136,8 +136,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
+      // GCP-STG-0466: Show toast + logout on idle timeout
       if (elapsed > IDLE_TIMEOUT_MS) {
-        // Logging out due to inactivity
+        toast.error('Session expired due to inactivity. Please log in again.', { duration: 6000 });
         logout();
       }
 
