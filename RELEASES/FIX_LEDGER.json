@@ -21311,7 +21311,7 @@
       "start_line": 1350,
       "end_line": 1460,
       "checksum": "2f27fdbe04562852",
-      "description": "Per-section client-side pagination for supplier list (page size 20) across verified/pending/local groups",
+      "description": "Per-section client-side pagination for supplier list (page size 20) across verified/pending/local groups (committed)",
       "test_file": "N/A",
       "registered_at": "2026-03-23T14:00:00.000Z",
       "status": "ACTIVE",

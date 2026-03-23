@@ -248,6 +248,9 @@ export default function SuppliersPage() {
     pending: false,
     local: false,
   });
+  // GCP-STG-0419: Per-section pagination state
+  const SUPPLIERS_PAGE_SIZE = 20;
+  const [sectionPages, setSectionPages] = useState<Record<string, number>>({ verified: 0, pending: 0, local: 0 });
   // RCAT-SUP-UX-001: Locked supplier modal state
   const [lockedSupplierModal, setLockedSupplierModal] = useState<{ supplier: Supplier; status: 'verified' | 'pending' } | null>(null);
 
@@ -1347,6 +1350,7 @@ export default function SuppliersPage() {
                                 : 'No local suppliers added yet. Click "+ Add Supplier" to create one.'}
                         </div>
                       ) : (
+                        <>
                         <table className="table sup-table-m0">
                           <thead>
                             <tr>
@@ -1358,7 +1362,11 @@ export default function SuppliersPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {sectionSuppliers.map((supplier) => (
+                            {/* GCP-STG-0419: Paginate each supplier section */}
+                            {sectionSuppliers.slice(
+                              (sectionPages[config.key] || 0) * SUPPLIERS_PAGE_SIZE,
+                              ((sectionPages[config.key] || 0) + 1) * SUPPLIERS_PAGE_SIZE
+                            ).map((supplier) => (
                               <tr key={supplier.id}>
                                 <td className="sup-table-name">
                                   <div className="sup-name-row">
@@ -1429,6 +1437,33 @@ export default function SuppliersPage() {
                             ))}
                           </tbody>
                         </table>
+                        {/* GCP-STG-0419: Per-section pagination controls */}
+                        {(() => {
+                          const secTotalPages = Math.ceil(count / SUPPLIERS_PAGE_SIZE);
+                          const secPage = sectionPages[config.key] || 0;
+                          if (secTotalPages <= 1) return null;
+                          return (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderTop: '1px solid #E2E8F0' }}>
+                              <span style={{ fontSize: 13, color: '#64748B' }}>
+                                Showing {secPage * SUPPLIERS_PAGE_SIZE + 1}–{Math.min((secPage + 1) * SUPPLIERS_PAGE_SIZE, count)} of {count}
+                              </span>
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                <button className="btn btn-secondary btn-sm" disabled={secPage === 0}
+                                  onClick={() => setSectionPages(p => ({ ...p, [config.key]: secPage - 1 }))}>
+                                  Previous
+                                </button>
+                                <span style={{ fontSize: 13, lineHeight: '32px', color: '#475569' }}>
+                                  Page {secPage + 1} of {secTotalPages}
+                                </span>
+                                <button className="btn btn-secondary btn-sm" disabled={secPage >= secTotalPages - 1}
+                                  onClick={() => setSectionPages(p => ({ ...p, [config.key]: secPage + 1 }))}>
+                                  Next
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        </>
                       )}
                     </div>
                   )}
