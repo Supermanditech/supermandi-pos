@@ -199,9 +199,10 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
       );
 
       // Create new device
+      // GCP-STG-0484: Set token_expires_at to 90 days from now (matches FINDING-026 in enroll.ts)
       await client.query(
-        `INSERT INTO pos_devices (id, store_id, device_token, label, active)
-         VALUES (gen_random_uuid(), $1, $2, $3, TRUE)`,
+        `INSERT INTO pos_devices (id, store_id, device_token, label, active, token_expires_at, token_refreshed_at)
+         VALUES (gen_random_uuid(), $1, $2, $3, TRUE, NOW() + INTERVAL '90 days', NOW())`,
         [store.id, token, `POS-${phone.slice(-4)}`]
       );
 
