@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 930,
+  "version": 931,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -17380,7 +17380,7 @@
       "file": "src/stores/productsStore.ts",
       "start_line": 508,
       "end_line": 529,
-      "checksum": "63843c9446d7f1a2",
+      "checksum": "95788216a2defd8d",
       "description": "searchProducts uses pre-computed _search* fields with for-loop + early break at SEARCH_RESULT_CAP=100",
       "test_file": "src/__tests__/stores/searchPerf.gcp-stg-0367.test.ts",
       "depends_on": null,
@@ -24711,6 +24711,33 @@
         "parity_scanned": true,
         "parity_fixed": true
       }
+    },
+    {
+      "ticket": "GCP-STG-0528",
+      "file": "src/stores/productsStore.ts",
+      "start_line": 481,
+      "end_line": 485,
+      "checksum": "06e1167e2a3ad1a6",
+      "description": "Multi-barcode TODO comment at getProductByBarcode",
+      "test_file": "N/A",
+      "registered_at": "2026-03-23T22:08:32.431Z",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      }
     }
   ],
   "machine_state_version": 269,
@@ -24755,9 +24782,9 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-23T22:07:38.673Z",
+  "lastUpdated": "2026-03-23T22:08:32.432Z",
   "_commitNote": "GCP-STG-0417,0422,0425,0426,0428,0430,0431",
   "_note": "0429-behavioral",
   "_n": "0491",
-  "last_commit_note": "GCP-STG-0527"
+  "last_commit_note": "GCP-STG-0528"
 }

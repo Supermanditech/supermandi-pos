@@ -478,6 +478,9 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
 
   // V3-FIX-160 + GCP-STG-0507: Barcode lookup with O(1) Map index
   // Precedence: 1. barcode field (via Map) → 2. product ID fallback (linear scan)
+  // GCP-STG-0528: TODO — sync store_product_barcodes array from backend
+  // Currently only single barcode per product is synced. Multi-barcode
+  // lookup requires backend to include barcodes[] in /pos/store-products response
   getProductByBarcode: (barcode: string) => {
     const { products } = get();
     // GCP-STG-0507: O(1) lookup via pre-built Map index
