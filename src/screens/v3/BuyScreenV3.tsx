@@ -414,6 +414,13 @@ export default function BuyScreenV3() {
             creditDays: detailProduct.creditDays,
             bnplAvailable: detailProduct.bnplAvailable,
             billingModel: detailProduct.billingModel,
+            // GCP-STG-0401: 6 missing procurement fields
+            deliveryTerms: detailProduct.deliveryTerms,
+            financeEligible: detailProduct.financeEligible,
+            publishedTermsVersion: detailProduct.publishedTermsVersion,
+            moqTiers: detailProduct.moqTiers,
+            procurementUnit: detailProduct.procurementUnit,
+            procurementPackQty: detailProduct.procurementPackQty,
           }}
         />
       ) : null}
