@@ -17,6 +17,8 @@ import { blacklistToken } from "../../../db/redis";
 import { authRateLimiter } from "../../../middleware/posRateLimiter";
 // GO-LIVE-195: Enhanced auth protection with per-store-code limiting and progressive lockout
 import { enhancedAuthProtection } from "../../../middleware/authProtection";
+// GCP-STG-0491: Redis-backed rate limiter for password login endpoints
+import { redisRateLimit } from "../../../middleware/rateLimit";
 import { log } from "../../../lib/logger";
 // STG-055: Import email service for password reset emails
 import { sendPasswordResetEmail } from "../../../services/emailService";
@@ -69,10 +71,18 @@ function validatePassword(password: string): string | null {
   return null;
 }
 
-// Rate limiting for password login attempts
+// GCP-STG-0487: Rate limiting for password login attempts (30-min lockout matching SuperAdmin pattern)
 const loginAttempts = new Map<string, { count: number; lockedUntil: number }>();
 const MAX_LOGIN_ATTEMPTS = 5;
-const LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+const LOGIN_LOCKOUT_MS = 30 * 60 * 1000; // 30 minutes (GCP-STG-0487: parity with SuperAdmin/Supplier)
+
+// GCP-STG-0491: Redis-backed rate limiter for password login endpoint (10 attempts/min/IP)
+const passwordLoginRateLimiter = redisRateLimit({
+  keyPrefix: "rl:retailer:pw-login",
+  windowMs: 60_000,
+  max: 10,
+  keyGenerator: (req) => req.ip || "unknown",
+});
 
 function checkLoginAttempts(key: string): { allowed: boolean; waitMinutes?: number } {
   const attempts = loginAttempts.get(key);
@@ -816,7 +826,7 @@ router.post("/auth/register", enhancedAuthProtection(), authRateLimiter, async (
  * - email: Email address
  * - password: Password
  */
-router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, passwordLoginRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body as {
       email?: string;
@@ -852,9 +862,9 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
       return;
     }
 
-    // Find user by email
+    // GCP-STG-0487: Find user by email including DB-backed lockout fields
     const userResult = await pool.query(
-      `SELECT id, phone, email, name, password_hash FROM auth.users
+      `SELECT id, phone, email, name, password_hash, failed_login_count, locked_until FROM auth.users
        WHERE LOWER(email) = $1 AND status = 'active'`,
       [emailNormalized]
     );
@@ -863,6 +873,20 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
     if (!user) {
       recordLoginAttempt(loginKey, false);
       res.status(401).json({ error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password" } });
+      return;
+    }
+
+    // GCP-STG-0487: DB-backed lockout check (parity with supplier auth GO-LIVE-134)
+    if (user.locked_until && new Date(user.locked_until) > new Date()) {
+      const remainingMinutes = Math.ceil((new Date(user.locked_until).getTime() - Date.now()) / 60000);
+      log.warn(`[RetailerAuth] GCP-STG-0487: Account ${emailNormalized} is locked for ${remainingMinutes} more minutes`);
+      res.status(403).json({
+        error: {
+          code: 'ACCOUNT_LOCKED',
+          message: `Account is temporarily locked due to too many failed login attempts. Please try again in ${remainingMinutes} minutes.`,
+          lockedUntil: user.locked_until,
+        }
+      });
       return;
     }
 
@@ -877,14 +901,43 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
       return;
     }
 
+    const clientIp = req.ip || req.socket?.remoteAddress || null;
     const passwordValid = await bcrypt.compare(password, user.password_hash);
     if (!passwordValid) {
       recordLoginAttempt(loginKey, false);
-      res.status(401).json({ error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password" } });
+
+      // GCP-STG-0487: DB-backed failed attempt tracking (parity with supplier GO-LIVE-134)
+      const newCount = (user.failed_login_count || 0) + 1;
+      if (newCount >= MAX_LOGIN_ATTEMPTS) {
+        const lockedUntil = new Date(Date.now() + LOGIN_LOCKOUT_MS);
+        await pool.query(
+          `UPDATE auth.users SET failed_login_count = $1, locked_until = $2, last_failed_login_at = NOW(), last_login_ip = $3 WHERE id = $4`,
+          [newCount, lockedUntil, clientIp, user.id]
+        );
+        log.warn(`[RetailerAuth] GCP-STG-0487: Account ${emailNormalized} locked after ${newCount} failed attempts`);
+        res.status(403).json({
+          error: {
+            code: 'ACCOUNT_LOCKED',
+            message: `Account has been locked due to ${MAX_LOGIN_ATTEMPTS} failed login attempts. Please try again in 30 minutes.`,
+            lockedUntil,
+          }
+        });
+      } else {
+        await pool.query(
+          `UPDATE auth.users SET failed_login_count = $1, last_failed_login_at = NOW(), last_login_ip = $2 WHERE id = $3`,
+          [newCount, clientIp, user.id]
+        );
+        res.status(401).json({ error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password" } });
+      }
       return;
     }
 
-    // Login successful - clear attempts
+    // GCP-STG-0487: Clear DB-backed failed login attempts on successful login
+    await pool.query(
+      `UPDATE auth.users SET failed_login_count = 0, locked_until = NULL, last_login_ip = $1 WHERE id = $2`,
+      [clientIp, user.id]
+    );
+    // Login successful - clear in-memory attempts too
     recordLoginAttempt(loginKey, true);
 
     // Get all stores this user has access to (same as OTP flow)
