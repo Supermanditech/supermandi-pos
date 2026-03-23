@@ -6,6 +6,7 @@
 import React, { useMemo, useState, useCallback, useRef } from "react";
 import { View, Pressable, TextInput, KeyboardAvoidingView, Platform, StyleSheet, Text, ScrollView, Modal, Alert } from "react-native";
 import Svg, { Path, Rect, Circle, Line } from "react-native-svg";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -26,7 +27,8 @@ type PaymentScreenV3Props = {
 
 export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComplete }: PaymentScreenV3Props) {
   const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(colors, insets.top), [colors, insets.top]);
 
   const items = useCartStore((s) => s.items);
   const total = useCartStore((s) => s.total);
@@ -101,7 +103,8 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
         <View style={{ width: 30 }} />
       </View>
 
-      <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+      {/* GCP-STG-0432: Safe area bottom padding */}
+      <ScrollView style={styles.body} contentContainerStyle={[styles.bodyContent, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         {/* Total */}
         <Text style={styles.totalAmount}>{totalDisplay}</Text>
         <Text style={styles.totalSub}>{itemCount} item{itemCount !== 1 ? "s" : ""}{isBulk ? " · incl. GST" : ""}</Text>
@@ -243,9 +246,10 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
   );
 }
 
-function createStyles(colors: ColorPalette) {
+function createStyles(colors: ColorPalette, safeTop: number) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
+    // GCP-STG-0432: Dynamic paddingTop from safe area insets
+    container: { flex: 1, backgroundColor: colors.background, paddingTop: safeTop },
     header: { backgroundColor: colors.primary, paddingHorizontal: getScreenPadding(), paddingVertical: 14, flexDirection: "row", alignItems: "center" },
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
@@ -265,5 +269,6 @@ function createStyles(colors: ColorPalette) {
     secondaryRow: { flexDirection: "row", gap: 10, marginTop: 12, width: "100%" },
     secondaryBtn: { flex: 1, paddingVertical: 10, alignItems: "center" },
     secondaryText: { fontSize: 13, fontWeight: "600", color: colors.textTertiary },
+    // GCP-STG-0432: Safe area bottom padding for secondary row
   });
 }
