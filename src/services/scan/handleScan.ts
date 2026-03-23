@@ -19,6 +19,8 @@ import { useScanHistoryStore } from "../../stores/scanHistoryStore";
 import { logPosEvent } from "../cloudEventLogger";
 // GCP-STG-0534: GS1 barcode parser for GTIN extraction
 import { extractGTIN } from "./gs1Parser";
+// GCP-STG-0535: Offline scan queue for unknown barcodes
+import { enqueueScan } from "../offline/scanQueue";
 import { POS_MESSAGES } from "../../utils/uiStatus";
 import { upsertStockEntries } from "../stockService";
 
@@ -607,6 +609,8 @@ async function handleScan(
 
       if (offline.action === "PROMPT_PRICE") {
         if (offline.product_not_found_for_store === true) {
+          // GCP-STG-0535: Queue barcode for retry when back online
+          void enqueueScan(trimmed);
           // Product not found — only open modal for genuine barcode scans
           const looksLikeBarcode = /\d/.test(trimmed) || trimmed.length >= 8;
           if (source === "keyboard" || !looksLikeBarcode) {
