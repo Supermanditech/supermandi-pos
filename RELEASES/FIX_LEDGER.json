@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 905,
+  "version": 906,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -24025,6 +24025,58 @@
         "gcp_parity": "done",
         "regression_check": "manual",
         "test_guard": "done"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0495",
+      "file": "backend/src/routes/v1/publicConfig.ts",
+      "start_line": 66,
+      "end_line": 67,
+      "description": "Cache-Control header — already implemented by GCP-STG-0494 (no-op)",
+      "test_file": "backend/src/__tests__/ctaRateLimit.gcp-stg-0494.unit.test.ts",
+      "status": "ACTIVE",
+      "checksum": "871cd875faca2cf6",
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "checklist_evidence": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "backend_api": "Cache-Control already set by 0494",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "no-op",
+        "business_behaviour": "verified present",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": "publicConfig.ts",
+        "fix_ledger_check": "done",
+        "no_agent_conflict": "done",
+        "operator_approved": "Mode A",
+        "parity_scanned": "done",
+        "gcp_parity": "done",
+        "regression_check": "verified",
+        "test_guard": "covered by 0494 tests"
       }
     }
   ],
