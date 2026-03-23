@@ -1370,6 +1370,8 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
     splitSellEligible: adminSplitSellEligible,
     // GCP-STG-0087: B2B billing model
     billingModel,
+    // GCP-STG-0356: Supplier visibility toggle
+    supplierVisible,
   } = req.body || {};
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
   const adminId = (req as any).adminId;
@@ -1431,6 +1433,7 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
         sp.moq_tiers,
         sp.procurement_unit, sp.procurement_pack_qty,
         sp.base_stock_unit, sp.split_sell_eligible,
+        sp.supplier_visible,
         s.business_name as supplier_name,
         s.verification_status as supplier_status
        FROM catalog.supplier_products sp
@@ -1541,6 +1544,15 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
       changes.billingModel = { from: current.billing_model, to: billingModel };
     }
 
+    // GCP-STG-0356: Supplier visibility toggle
+    if (supplierVisible !== undefined) {
+      updates.push(`supplier_visible = $${paramIndex++}`);
+      values.push(supplierVisible === true);
+      if (current.supplier_visible !== (supplierVisible === true)) {
+        changes.supplierVisible = { from: current.supplier_visible, to: supplierVisible === true };
+      }
+    }
+
     if (hsnCode !== undefined) {
       updates.push(`hsn_code = $${paramIndex++}`);
       values.push(hsnCode || null);
@@ -1608,7 +1620,8 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
          invoice_model as "invoiceModel",
          billing_model as "billingModel",
          hsn_code as "hsnCode",
-         gst_rate as "gstRate"`,
+         gst_rate as "gstRate",
+         supplier_visible as "supplierVisible"`,
       values
     );
 
@@ -1644,7 +1657,8 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
       bnplEligible: updated.bnplEligible,
       bnplMaxDays: updated.bnplMaxDays,
       purchasePrice: purchasePrice,
-      retailerPrice: retailerPrice
+      retailerPrice: retailerPrice,
+      supplierVisible: updated.supplierVisible || false,
     });
   } catch (err: any) {
     await client.query("ROLLBACK");
@@ -1760,37 +1774,67 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
     const resolvedRateUnit = resolvedSellUnit;
     const resolvedProductMode = product.split_sell_eligible || resolvedSoldBy === 'WEIGHT' ? 'LOOSE_BULK' : 'PACKAGED';
 
-    for (const store of linkedStores.rows) {
-      // Add product to store catalog — V3-FIX-169: propagate full conversion + sell profile
+    // GCP-STG-0373: Batch INSERT instead of per-store loop
+    // Collect all store_ids and build multi-row VALUES clause (batches of 100)
+    const storeIds = linkedStores.rows.map((r: { store_id: string }) => r.store_id);
+    const BATCH_SIZE = 100;
+
+    // Shared per-product values (same for every store)
+    const sharedVals = [
+      catalogProductId, product.name, retailerPrice,
+      product.purchase_price, product.supplier_id,
+      resolvedProcurementUnit, resolvedPackQty, resolvedBaseStockUnit,
+      product.split_sell_eligible || false,
+      resolvedProductMode, resolvedSoldBy, resolvedRateUnit
+    ];
+
+    for (let batchStart = 0; batchStart < storeIds.length; batchStart += BATCH_SIZE) {
+      const batch = storeIds.slice(batchStart, batchStart + BATCH_SIZE);
+      const COLS_PER_ROW = 13; // $1=store_id + 12 shared columns per row
+      const valuesClauses: string[] = [];
+      const params: any[] = [];
+
+      for (let i = 0; i < batch.length; i++) {
+        const offset = i * COLS_PER_ROW;
+        const placeholders = Array.from({ length: COLS_PER_ROW }, (_, j) => `$${offset + j + 1}`);
+        // Cast product_id and supplier_id
+        placeholders[1] = `${placeholders[1]}::uuid`; // product_id
+        placeholders[5] = `${placeholders[5]}::uuid`; // supplier_id
+        valuesClauses.push(`(${placeholders.join(", ")}, 0, true, false, 'supplier_publish')`);
+        params.push(batch[i], ...sharedVals);
+      }
+
       const insertResult = await client.query(
         `INSERT INTO catalog.store_products (
           store_id, product_id, display_name, sell_price, purchase_price,
-          current_stock, is_active, supplier_id,
+          supplier_id,
           procurement_unit, procurement_pack_qty, base_stock_unit,
-          allow_fractional_sell, conversion_confirmed,
-          product_mode, sold_by, rate_unit, source
-        ) VALUES ($1, $2::uuid, $3, $4, $5, 0, true, $6::uuid,
-          $7, $8, $9, $10, false,
-          $11, $12, $13, 'supplier_publish')
-        RETURNING id`,
-        [store.store_id, catalogProductId, product.name, retailerPrice,
-         product.purchase_price, product.supplier_id,
-         resolvedProcurementUnit, resolvedPackQty, resolvedBaseStockUnit,
-         product.split_sell_eligible || false,
-         resolvedProductMode, resolvedSoldBy, resolvedRateUnit]
+          allow_fractional_sell,
+          product_mode, sold_by, rate_unit,
+          current_stock, is_active, conversion_confirmed, source
+        ) VALUES ${valuesClauses.join(", ")}
+        RETURNING id, store_id`,
+        params
       );
 
-      // Add barcode mapping
-      if (product.barcode) {
+      // Batch barcode INSERT for this batch's inserted rows
+      if (product.barcode && insertResult.rows.length > 0) {
+        const bcValuesClauses: string[] = [];
+        const bcParams: any[] = [];
+        for (let i = 0; i < insertResult.rows.length; i++) {
+          const off = i * 3;
+          bcValuesClauses.push(`($${off + 1}, $${off + 2}, $${off + 3}, 'admin_publish')`);
+          bcParams.push(insertResult.rows[i].store_id, insertResult.rows[i].id, product.barcode);
+        }
         await client.query(
           `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
-           VALUES ($1, $2, $3, 'admin_publish')
+           VALUES ${bcValuesClauses.join(", ")}
            ON CONFLICT (store_id, barcode) DO NOTHING`,
-          [store.store_id, insertResult.rows[0].id, product.barcode]
+          bcParams
         );
       }
 
-      publishedCount++;
+      publishedCount += batch.length;
     }
 
     // Audit log — use valid entity_type/action per chk_approval_logs constraints

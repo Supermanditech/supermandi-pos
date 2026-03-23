@@ -18842,7 +18842,7 @@
       "start_line": 1775,
       "end_line": 1824,
       "checksum": "2841746860d27229",
-      "description": "Batch INSERT for single-product publish: replaces per-store INSERT loop with multi-row VALUES (batches of 100). Preserves source=supplier_publish (GCP-STG-0325). Also batches barcode INSERTs.",
+      "description": "Batch INSERT for single-product publish: replaces per-store INSERT loop with multi-row VALUES (batches of 100). Preserves source=supplier_publish (GCP-STG-0325). Also batches barcode INSERTs. (100-row batches)",
       "test_file": "backend/tests/batchPublish.gcp-stg-0373.unit.test.ts",
       "depends_on": null,
       "migration": null,

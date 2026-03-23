@@ -32,7 +32,13 @@ function extractSourceValues(filePath: string): { line: number; source: string |
       const columns = colMatch[1];
       if (/\bsource\b/.test(columns)) {
         // Extract the source literal value from VALUES clause
-        const sourceVal = stmt.match(/'(manual|csv_import|grn_inward|supplier_publish)'/);
+        let sourceVal = stmt.match(/'(manual|csv_import|grn_inward|supplier_publish|admin_publish)'/);
+        // GCP-STG-0373: batch INSERT builds VALUES via valuesClauses — look in surrounding context
+        if (!sourceVal) {
+          const contextStart = Math.max(0, i - 30);
+          const contextBlock = lines.slice(contextStart, i + 20).join('\n');
+          sourceVal = contextBlock.match(/'(manual|csv_import|grn_inward|supplier_publish|admin_publish)'/);
+        }
         results.push({ line: i + 1, source: sourceVal ? sourceVal[1] : null });
       } else {
         results.push({ line: i + 1, source: null });
