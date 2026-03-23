@@ -327,6 +327,11 @@ adminWhatsAppRouter.put("/whatsapp/cta-config", async (req: Request, res: Respon
 
     const adminId = (req as any).adminId || "superadmin";
 
+    // GCP-STG-0501: Strip HTML tags from messages before storing
+    const sanitize = (s: string) => s.replace(/<[^>]*>/g, "").trim();
+    const cleanSuperadminMessage = sanitize(superadminMessage);
+    const cleanCompanyMessage = sanitize(companyMessage);
+
     // Upsert: update row id=1 if exists, else insert
     await pool.query(
       `INSERT INTO platform.whatsapp_cta_config
@@ -340,7 +345,7 @@ adminWhatsAppRouter.put("/whatsapp/cta-config", async (req: Request, res: Respon
           company_message = EXCLUDED.company_message,
           updated_at = NOW(),
           updated_by = EXCLUDED.updated_by`,
-      [enabled, superadminNumber.trim(), superadminMessage.trim(), companyNumber.trim(), companyMessage.trim(), adminId]
+      [enabled, superadminNumber.trim(), cleanSuperadminMessage, companyNumber.trim(), cleanCompanyMessage, adminId]
     );
 
     log.info(`[WA-CTA] CTA config updated by ${adminId}: enabled=${enabled}, superadminNumber=${superadminNumber.trim()}, companyNumber=${companyNumber.trim()}`);
