@@ -773,6 +773,44 @@ export async function sendRegistrationConfirmationEmail(
   }
 }
 
+// =============================================================================
+// GCP-STG-0462: Email config validation at startup
+// =============================================================================
+
+/**
+ * GCP-STG-0462: Validate email configuration at startup.
+ * Logs warnings for missing config — does NOT crash the process.
+ * Call from app.ts during startup.
+ */
+export function validateEmailConfig(): void {
+  const provider = (process.env.EMAIL_PROVIDER || 'disabled').toLowerCase();
+
+  if (provider === 'disabled') {
+    log.warn('[EmailService] GCP-STG-0462: EMAIL_PROVIDER is disabled — no emails will be sent');
+    return;
+  }
+
+  if (provider === 'resend') {
+    if (!process.env.RESEND_API_KEY) {
+      log.warn('[EmailService] GCP-STG-0462: EMAIL_PROVIDER=resend but RESEND_API_KEY is not set — email sending will fail');
+    } else {
+      log.info('[EmailService] GCP-STG-0462: Email config OK (provider=resend)');
+    }
+    return;
+  }
+
+  if (provider === 'smtp') {
+    if (!process.env.SMTP_HOST) {
+      log.warn('[EmailService] GCP-STG-0462: EMAIL_PROVIDER=smtp but SMTP_HOST is not set — email sending will fail');
+    } else {
+      log.info('[EmailService] GCP-STG-0462: Email config OK (provider=smtp)');
+    }
+    return;
+  }
+
+  log.warn(`[EmailService] GCP-STG-0462: Unknown EMAIL_PROVIDER="${provider}" — email sending will fail`);
+}
+
 // Cleanup old rate limit entries periodically
 setInterval(() => {
   const oneHourAgo = Date.now() - 60 * 60 * 1000;

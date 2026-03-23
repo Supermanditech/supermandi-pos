@@ -12,6 +12,8 @@ import { tracingMiddleware } from "./middleware/tracing";
 import { metricsMiddleware } from "./services/metricsCollector";
 import { errorReportingMiddleware } from "./services/errorReporter";
 import { getTranslationHealth } from "./services/translationService";
+// GCP-STG-0462: Email config validation at startup
+import { validateEmailConfig } from "./services/emailService";
 import { initializeFirebase } from "@supermandi/common";
 import { logger } from "./lib/logger";
 // REQ.AUDIT.W5.BACKEND.HEALTH-ENDPOINT-NO-DEPS-CHECK.001
@@ -50,6 +52,9 @@ import { validatePhase21Startup } from "./services/phase21StartupValidation";
 validatePhase21Startup().catch((err) => {
   logger.warn("[App] Phase 21 startup validation failed (non-blocking): " + String(err));
 });
+
+// GCP-STG-0462: Validate email service config at startup (warn-only, non-blocking)
+validateEmailConfig();
 
 // DEV-071: Capture build info at startup for /health endpoint
 // INFRA-003: Use env var baked at Docker build time (execSync fails in containers without .git)
