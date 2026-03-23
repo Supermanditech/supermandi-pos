@@ -16,6 +16,8 @@ import * as orderApi from "../../services/api/orderApi";
 import { recordManualInward } from "../../services/api/inventoryApi";
 import { apiClient } from "../../services/api/apiClient";
 import { getDeviceStoreId } from "../../services/deviceSession";
+// GCP-STG-0511: HID scan handler for barcode matching against PO items
+import { setHidScanHandler } from "../../services/hidScannerService";
 
 // V3-042: GRN v3 — wire real pending PO items from orderApi
 
@@ -98,6 +100,31 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
     })();
     return () => { mounted = false; };
   }, []);
+
+  // GCP-STG-0511: Wire HID scan handler to match scanned barcodes against PO items
+  useEffect(() => {
+    const handler = (barcode: string) => {
+      const trimmed = barcode.trim();
+      if (!trimmed) return;
+      const matchIdx = items.findIndex((it) => it.barcode === trimmed);
+      if (matchIdx >= 0) {
+        const matched = items[matchIdx];
+        setItems((prev) =>
+          prev.map((it, i) =>
+            i === matchIdx
+              ? { ...it, checked: true, received: Math.min(it.received + 1, it.ordered > 0 ? it.ordered : it.received + 1) }
+              : it
+          )
+        );
+        setLastScan({ productName: matched.name, qty: matched.received + 1 });
+        showToast(`${matched.name} — scanned`);
+      } else {
+        showToast("Barcode not in PO");
+      }
+    };
+    setHidScanHandler(handler);
+    return () => setHidScanHandler(null);
+  }, [items]);
 
   const toggleCheck = useCallback((idx: number) => {
     setItems(prev => prev.map((it, i) => i === idx ? { ...it, checked: !it.checked, received: !it.checked ? it.ordered : 0 } : it));

@@ -332,6 +332,19 @@ adminWhatsAppRouter.put("/whatsapp/cta-config", async (req: Request, res: Respon
     const cleanSuperadminMessage = sanitize(superadminMessage);
     const cleanCompanyMessage = sanitize(companyMessage);
 
+    // GCP-STG-0496: Snapshot current config into history before overwriting
+    try {
+      const current = await pool.query("SELECT * FROM platform.whatsapp_cta_config WHERE id = 1");
+      if (current.rows.length > 0) {
+        await pool.query(
+          "INSERT INTO platform.whatsapp_cta_config_history (config_snapshot, changed_by) VALUES ($1, $2)",
+          [JSON.stringify(current.rows[0]), adminId]
+        );
+      }
+    } catch (histErr) {
+      log.warn("[WA-CTA] Failed to snapshot config history:", histErr);
+    }
+
     // Upsert: update row id=1 if exists, else insert
     await pool.query(
       `INSERT INTO platform.whatsapp_cta_config
