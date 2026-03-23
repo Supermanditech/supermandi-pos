@@ -479,6 +479,14 @@
             flex-direction: column;
             align-items: flex-end;
             gap: 8px;
+            /* GCP-STG-0498: Safe area inset for iPhone home indicator */
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            /* GCP-STG-0504: Fade-in animation */
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .wa-fab-wrapper.wa-visible {
+            opacity: 1;
         }
 
         .wa-fab {
@@ -566,6 +574,11 @@
 
         .wa-chooser-item:hover {
             background: var(--gray-50);
+        }
+
+        /* GCP-STG-0499: Dark mode hover for chooser items */
+        .dark .wa-chooser-item:hover {
+            background: var(--gray-200, #1e293b);
         }
 
         .wa-chooser-item:focus-visible {
@@ -807,8 +820,9 @@
                 return; // keep hidden
             }
 
-            // Reveal the widget
+            // GCP-STG-0504: Reveal widget with fade-in animation
             wrapper.style.display = '';
+            requestAnimationFrame(function () { wrapper.classList.add('wa-visible'); });
 
             var isOpen = false;
 
@@ -872,15 +886,23 @@
             .then(function (res) { return res.ok ? res.json() : Promise.reject(res.status); })
             .then(function (data) {
                 if (!data || !data.enabled) return; // disabled — stay hidden
+                // GCP-STG-0500: Hindi localized default messages when browser language is Hindi
+                var isHindi = (navigator.language || '').toLowerCase().startsWith('hi');
+                var superadminMsg = isHindi
+                    ? (data.superadminMessage || 'नमस्ते! मुझे अपने SuperMandi खाते या प्लेटफ़ॉर्म सेटअप में मदद चाहिए।')
+                    : (data.superadminMessage || '');
+                var companyMsg = isHindi
+                    ? (data.companyMessage || 'नमस्ते! मुझे SuperMandi और साझेदारी के अवसरों के बारे में जानकारी चाहिए।')
+                    : (data.companyMessage || '');
                 initWaCta({
                     enabled: true,
                     superadmin: {
                         number:  data.superadminNumber || '',
-                        message: data.superadminMessage || ''
+                        message: superadminMsg
                     },
                     company: {
                         number:  data.companyNumber || '',
-                        message: data.companyMessage || ''
+                        message: companyMsg
                     }
                 });
             })
