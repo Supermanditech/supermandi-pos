@@ -4,6 +4,8 @@ import Svg, { Rect, Path, Line } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 // GCP-STG-0035: Camera preview for barcode scanning
 import { CameraView, useCameraPermissions } from "expo-camera";
+// GCP-STG-0414: Safe area insets for dynamic paddingTop
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -58,7 +60,9 @@ type ScanResult = {
 export default function ScanScreenV3({ visible, defaultContext = "sell_scan", onClose, onProductFound, onNewProduct, onSearchByName }: ScanScreenV3Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  // GCP-STG-0414: Use safe area insets instead of hardcoded paddingTop
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(colors, insets.top), [colors, insets.top]);
   const [context, setContext] = useState<ScanContext>(defaultContext);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [lastResult, setLastResult] = useState<ScanResult | null>(null);
@@ -418,10 +422,11 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
   );
 }
 
-function createStyles(colors: ColorPalette) {
+function createStyles(colors: ColorPalette, safeTop: number) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: "#0F172A" },
-    header: { flexDirection: "row", alignItems: "center", padding: getScreenPadding(), paddingTop: 48 },
+    // GCP-STG-0414: Dynamic paddingTop from safe area insets instead of hardcoded 48
+    header: { flexDirection: "row", alignItems: "center", padding: getScreenPadding(), paddingTop: safeTop + 8 },
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
     headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
