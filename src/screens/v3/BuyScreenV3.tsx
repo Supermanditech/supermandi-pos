@@ -230,10 +230,23 @@ export default function BuyScreenV3() {
   const cartItemCount = Object.values(orderQtys).reduce((s, v) => s + (v > 0 ? 1 : 0), 0);
   const cartTotal = products.reduce((s, p) => s + (orderQtys[p.id] ?? 0) * p.caseSize * p.ptrMinor, 0);
 
+  // GCP-STG-0397: Enforce MOQ floor — qty=0 removes from cart, qty>0 must be >= product.moq
   const handleQtyChange = useCallback((id: string, cases: number) => {
-    const qty = Math.max(0, Math.round(cases));
-    setOrderQtys((prev) => ({ ...prev, [id]: qty }));
-  }, []);
+    const rounded = Math.max(0, Math.round(cases));
+    if (rounded === 0) {
+      // Allow removal from cart
+      setOrderQtys((prev) => ({ ...prev, [id]: 0 }));
+      return;
+    }
+    const product = products.find((p) => p.id === id);
+    const moq = product?.moq ?? 1;
+    if (rounded < moq) {
+      showToast(`Minimum order is ${moq} case${moq > 1 ? "s" : ""}`);
+      setOrderQtys((prev) => ({ ...prev, [id]: moq }));
+      return;
+    }
+    setOrderQtys((prev) => ({ ...prev, [id]: rounded }));
+  }, [products]);
 
   return (
     <View style={styles.container}>

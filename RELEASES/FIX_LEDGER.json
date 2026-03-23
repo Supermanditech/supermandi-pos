@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 754,
+  "version": 756,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -4513,8 +4513,8 @@
     {
       "ticket": "STG-509",
       "file": "backend/src/routes/v1/orders.ts",
-      "start_line": 1694,
-      "end_line": 2253,
+      "start_line": 1719,
+      "end_line": 2278,
       "checksum": "39f73f9caf6225f6",
       "description": "Reject GRN receive if total qty > ordered * 1.1 (10% tolerance)",
       "test_file": "src/__tests__/screens/grn-excess-qty.stg-509.test.ts",
@@ -4564,7 +4564,7 @@
         "store_isolation": "storeId from JWT via getStoreIdFromDevice",
         "db_schema": "N/A — no schema changes"
       },
-      "line_shifted_at": "2026-03-23T00:30:22.883Z"
+      "line_shifted_at": "2026-03-23T07:15:32.456Z"
     },
     {
       "ticket": "STG-510",
@@ -6968,7 +6968,7 @@
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 1,
       "end_line": 660,
-      "checksum": "41cfcdf2ab077dfa",
+      "checksum": "1194c62b3117f73a",
       "description": "BUY tab v3 — supplier catalogue with wholesale metadata, supplier filter, categories, counter purchase CTA",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,
@@ -9973,8 +9973,8 @@
     {
       "ticket": "GCP-STG-0145",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 313,
-      "end_line": 346,
+      "start_line": 326,
+      "end_line": 359,
       "checksum": "fb53241a32a85e1f",
       "description": "BUY screen uses 3-column grid with ProductTileV3 instead of single-column SupplierProductCardV3",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
@@ -10008,7 +10008,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:41:40.330Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-22T22:03:19.835Z"
+      "line_shifted_at": "2026-03-23T07:18:09.250Z"
     },
     {
       "ticket": "GCP-STG-0144",
@@ -15044,8 +15044,8 @@
     {
       "ticket": "GCP-STG-0287",
       "file": "backend/src/routes/v1/orders.ts",
-      "start_line": 1896,
-      "end_line": 1936,
+      "start_line": 1921,
+      "end_line": 1961,
       "checksum": "1b613b7424a9ed41",
       "description": "GRN receive writes to inventory_ledger (was missing) for dual-ledger invariant",
       "test_file": "backend/tests/dualLedger.gcp-stg-0287.unit.test.ts",
@@ -15076,7 +15076,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:14:11.121Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T00:30:23.000Z"
+      "line_shifted_at": "2026-03-23T07:15:32.553Z"
     },
     {
       "ticket": "GCP-STG-0296",
@@ -17191,7 +17191,7 @@
       "file": "backend/src/routes/v1/orders.ts",
       "start_line": 195,
       "end_line": 440,
-      "checksum": "39913ac696feef90",
+      "checksum": "66e12de9a93e9daa",
       "description": "Cart split by billing model: groups items by billingModel, creates separate purchase orders per group. Single-model carts return backward-compatible single order response. Multi-model carts return array with splitByBillingModel flag.",
       "test_file": "backend/tests/cartSplitBillingModel.gcp-stg-0350.unit.test.ts",
       "depends_on": null,
@@ -17915,6 +17915,78 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:07:01.714Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0397",
+      "file": "src/screens/v3/BuyScreenV3.tsx",
+      "start_line": 233,
+      "end_line": 249,
+      "checksum": "e75696929d757ab1",
+      "description": "BUY checkout MOQ enforcement: handleQtyChange snaps qty to product.moq floor when qty>0 and qty<moq, shows toast warning. qty=0 still allows cart removal.",
+      "test_file": "backend/tests/moqEnforcement.gcp-stg-0397.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T07:18:54.532Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0399",
+      "file": "backend/src/routes/v1/orders.ts",
+      "start_line": 441,
+      "end_line": 457,
+      "checksum": "923bfe67de7a79b9",
+      "description": "Fire-and-forget supplier notification (supplier_action_required) after order COMMIT via publishLifecycleEvent",
+      "test_file": "backend/tests/supplierNotification.gcp-stg-0399.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T07:19:46.992Z",
       "status": "ACTIVE"
     }
   ],
