@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect, useState } from "react";
 import { View, Pressable, TextInput, ScrollView, ActivityIndicator, StyleSheet, Text, Alert, Modal, Linking } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -19,6 +20,7 @@ const WA_SVG = `M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.1
 type Props = { onClose: () => void };
 
 export default function KhataScreenV3({ onClose }: Props) {
+  const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -95,7 +97,7 @@ export default function KhataScreenV3({ onClose }: Props) {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Khata</Text><Pressable style={styles.addBtn} onPress={() => setRecordVisible(true)}><Text style={styles.addBtnText}>+ Record</Text></Pressable></View>
       <View style={styles.summaryBar}><View><Text style={styles.sumLabel}>OUTSTANDING</Text><Text style={styles.sumVal}>₹{Math.round(totalOutstanding / 100).toLocaleString("en-IN")}</Text></View><View style={{ alignItems: "flex-end" }}><Text style={styles.sumLabel}>OVERDUE</Text><Text style={styles.sumVal}>₹{Math.round(totalOverdue / 100).toLocaleString("en-IN")}</Text></View></View>
       {khataLoading ? <ActivityIndicator size="small" color={colors.primary} style={{ padding: 10 }} /> : null}
@@ -117,7 +119,7 @@ export default function KhataScreenV3({ onClose }: Props) {
           </>
         )}
       </ScrollView>
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         {/* V3-FIX-082: Real bulk WhatsApp reminder with customer list */}
         <Pressable style={styles.bulkWaBtn} onPress={() => {
           if (realOverdue.length === 0) { showToast("No overdue customers to remind"); return; }
