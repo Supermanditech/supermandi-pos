@@ -13,6 +13,8 @@ import { notifyGrnExcessAlert, notifyGrnMismatch, notifyOrderStatusChange } from
 import { checkSpendingLimits } from "../../services/spendingLimitService";
 import { log } from "../../lib/logger";
 import { asError } from "../../lib/errorUtils";
+// GCP-STG-0399: Supplier notification on new purchase order
+import { publishLifecycleEvent } from "../../services/lifecycleEventService";
 
 export const ordersRouter = Router();
 
@@ -435,6 +437,29 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
     }
 
     await client.query("COMMIT");
+
+    // GCP-STG-0399: Fire-and-forget supplier notification for each created order
+    for (const co of createdOrders) {
+      publishLifecycleEvent({
+        eventType: "supplier_action_required",
+        orderId: co.id,
+        storeId,
+        supplierId,
+        targets: [
+          { role: "supplier", channels: ["in_app", "whatsapp"] },
+          { role: "admin", channels: ["in_app"] },
+        ],
+        payload: {
+          orderNumber: co.orderNumber,
+          itemCount: Array.isArray(co.items) ? co.items.length : 0,
+          totalAmount: co.totalAmount,
+          supplierId,
+        },
+        timestamp: new Date().toISOString(),
+      }).catch((err: any) => {
+        log.error(`[GCP-STG-0399] Supplier notification failed for order ${co.id}:`, err?.message);
+      });
+    }
 
     // GCP-STG-0350: Return single order (backward-compatible) or array when split occurred
     if (createdOrders.length === 1) {

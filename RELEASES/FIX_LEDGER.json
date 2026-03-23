@@ -17959,7 +17959,7 @@
       "start_line": 441,
       "end_line": 457,
       "checksum": "923bfe67de7a79b9",
-      "description": "Fire-and-forget supplier notification (supplier_action_required) after order COMMIT via publishLifecycleEvent",
+      "description": "Fire-and-forget supplier notification (supplier_action_required) after order COMMIT via publishLifecycleEvent (fire-and-forget lifecycle event)",
       "test_file": "backend/tests/supplierNotification.gcp-stg-0399.unit.test.ts",
       "depends_on": null,
       "migration": null,
