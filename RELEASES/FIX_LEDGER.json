@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 942,
+  "version": 943,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -25056,5 +25056,5 @@
   "_commitNote": "GCP-STG-0417,0422,0425,0426,0428,0430,0431",
   "_note": "0429-behavioral",
   "_n": "0491",
-  "last_commit_note": "GCP-STG-0496"
+  "last_commit_note": "GCP-STG-0499"
 }
