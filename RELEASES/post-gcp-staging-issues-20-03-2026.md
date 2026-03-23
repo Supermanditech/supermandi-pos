@@ -12439,4 +12439,86 @@ Retailer admin (`products.ts:130`) returns `p.description` and supplier portal (
 
 ---
 
-<!-- next ticket: GCP-STG-0453 -->
+## BATCH 33: Final Pre-Deploy Deep Audit Findings (2026-03-23)
+
+Source: Comprehensive E2E deep-dive audit (Audit A-K) tracing all auth chains, payment flows, sync mechanisms, barcode scanning, device fit, and UPI integration across all 4 platforms after all 452 tickets implemented. 1 new finding.
+
+---
+
+## GCP-STG-0453 — MEDIUM: verify-otp Endpoint Missing u.is_active Check — Deactivated User Can Complete OTP (MEDIUM)
+
+**Ticket ID**: GCP-STG-0453
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, API, Business, Store Isolation
+**Source**: Final Pre-Deploy Deep Audit — Audit B, Step 9 — Auth Chain Integrity Check
+
+**Problem**: The POS OTP authentication flow has an inconsistency between the two OTP endpoints:
+
+1. `POST /pos/auth/send-otp` (otpAuth.ts:52-61) **DOES** check `u.is_active = true` in the WHERE clause:
+```sql
+WHERE u.phone = $1 AND ps.status = 'ACTIVE' AND u.is_active = true
+```
+
+2. `POST /pos/auth/verify-otp` (otpAuth.ts:146-154) **DOES NOT** check `u.is_active = true`:
+```sql
+WHERE u.phone = $1 AND ps.status = 'ACTIVE'
+-- Missing: AND u.is_active = true
+```
+
+**Race Condition Scenario**:
+1. User calls send-otp → passes is_active check → OTP sent ✅
+2. SuperAdmin deactivates user (sets is_active = false) during the OTP validity window (5 minutes)
+3. User calls verify-otp with correct OTP → NO is_active check → succeeds ❌
+4. User receives a valid device token for a store they've been deactivated from
+5. User can access POS APIs with this token until token expires or is revoked
+
+**Impact**: Medium — the race window is small (5 minutes max between send and verify), and deactivation is rare. But it violates the security principle that deactivated users should be immediately locked out. In a multi-staff environment, a terminated employee could exploit this window to access the POS after being deactivated.
+
+**Root Cause**: GCP-STG-0311 added the `u.is_active = true` check to send-otp but the same check was not added to verify-otp. The fix was applied to one endpoint but not the other.
+
+**Fix**:
+1. Open `backend/src/routes/v1/pos/otpAuth.ts`
+2. Find the verify-otp store lookup query at line 146-154
+3. Add `AND u.is_active = true` to the WHERE clause, matching the send-otp pattern
+4. The query should become:
+```sql
+SELECT ps.id, ps.name AS store_name, ps.code AS store_code, ps.status
+FROM auth.users u
+JOIN auth.store_users su ON su.user_id = u.id
+JOIN platform.stores ps ON ps.id = su.store_id
+WHERE u.phone = $1 AND ps.status = 'ACTIVE' AND u.is_active = true
+ORDER BY ps.created_at DESC
+```
+5. Update the 404 error message to be consistent: "Phone not registered or account deactivated"
+
+**Files to modify**: `backend/src/routes/v1/pos/otpAuth.ts` (line 151)
+
+**Test**: Behavioral test using supertest:
+- Mock pool with user where `is_active = false`
+- Call POST /pos/auth/verify-otp with valid phone + OTP
+- Verify 404 response (user deactivated)
+- Also test: `is_active = true` → proceeds normally
+
+**12-Layer Verification**:
+- L1 UI Elements: N/A (backend only) ✅
+- L2 UX States: 404 error returned correctly ✅
+- L3 Wiring: N/A ✅
+- L4 Navigation: N/A ✅
+- L5 API: WHERE clause updated ✅
+- L6 Backend: Single line SQL change ✅
+- L7 DB: No schema change ✅
+- L8 Migrations: N/A ✅
+- L9 GCP Parity: No env var change ✅
+- L10 Business: Deactivated users cannot complete OTP verification ✅
+- L11 Dependencies: N/A ✅
+- L12 Store Isolation: User-to-store binding enforced via auth.store_users JOIN ✅
+
+**Related Tickets**:
+- GCP-STG-0311: Added is_active check to send-otp (this ticket completes the pair)
+- GCP-STG-0299: Phone normalization with +91 (both endpoints use same normalization)
+- GCP-STG-0300: auth.users creation on approval (ensures is_active = true on creation)
+
+---
+
+<!-- next ticket: GCP-STG-0454 -->
