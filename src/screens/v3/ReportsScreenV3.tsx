@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator, Linking, Alert, Share } from "react-native";
 import Svg, { Path } from "react-native-svg";
+// GCP-STG-0442: Safe area insets for dynamic paddingTop
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding, getChipFontSize } from "../../theme/responsive";
@@ -16,6 +18,8 @@ type Props = { onClose: () => void };
 
 export default function ReportsScreenV3({ onClose }: Props) {
   const colors = useThemeColors();
+  // GCP-STG-0442: Use safe area insets instead of hardcoded padding
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<"today" | "week" | "month">("today");
   const [summary, setSummary] = useState<DailySummary | null>(null);
@@ -61,7 +65,7 @@ export default function ReportsScreenV3({ onClose }: Props) {
   const dueAmount = summary?.paymentBreakdown?.credit ?? 0;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Reports</Text><View style={{ width: 30 }} /></View>
       <View style={styles.tabs}>
         {(["today", "week", "month"] as const).map(t => (
@@ -103,7 +107,8 @@ export default function ReportsScreenV3({ onClose }: Props) {
             </View>
           ))}
         </View>
-        <View style={styles.actionRow}>
+        {/* GCP-STG-0442: Safe area bottom padding on last content row */}
+        <View style={[styles.actionRow, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <Pressable style={styles.actionBtn} onPress={async () => {
             const text = `Report: ${activeTab}\nSales: ₹${Math.round(salesTotal).toLocaleString("en-IN")}\nBills: ${billCount}\nCash: ₹${Math.round(cashAmount).toLocaleString("en-IN")}\nUPI: ₹${Math.round(upiAmount).toLocaleString("en-IN")}\nUdhar: ₹${Math.round(dueAmount).toLocaleString("en-IN")}`;
             try { await printerService.printReceipt(text); showToast("Report printed"); } catch { showToast("Print failed"); }
