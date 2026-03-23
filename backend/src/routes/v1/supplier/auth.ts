@@ -84,6 +84,14 @@ const loginRateLimiter = redisRateLimit({
   },
 });
 
+// GCP-STG-0491: IP-only rate limiter for password login (10 attempts/min/IP)
+const passwordLoginIpRateLimiter = redisRateLimit({
+  keyPrefix: "rl:supplier:pw-login",
+  windowMs: 60_000,
+  max: 10,
+  keyGenerator: (req) => req.ip || "unknown",
+});
+
 // Rate limiter for password reset requests (3 per 15 minutes per email)
 const passwordResetRateLimiter = redisRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -526,7 +534,7 @@ router.post("/auth/register", async (req: Request, res: Response, next: NextFunc
  * GO-LIVE-134: Account lockout after failed attempts
  * GO-LIVE-138: IP-based blocking after multiple failures
  */
-router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, passwordLoginIpRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
 
