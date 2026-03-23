@@ -14,6 +14,8 @@ import { getScreenPadding } from "../../theme/responsive";
 import { showToast } from "../../utils/showToast";
 import { useProductsStore, type Product } from "../../stores/productsStore";
 import { useCartStore } from "../../stores/cartStore";
+// GCP-STG-0532: Settings for scan tutorial flag
+import { useSettingsStore } from "../../stores/settingsStore";
 import { setHidScanHandler } from "../../services/hidScannerService";
 import { buildCartItem } from "../../services/cartPayload";
 import { logger } from "../../services/logger";
@@ -77,6 +79,9 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
   const scanCooldownRef = useRef(false);
   // GCP-STG-0530: Low-light warning after 5s of no scans
   const [showLightHint, setShowLightHint] = useState(false);
+  // GCP-STG-0532: First-time scan tutorial overlay
+  const [showTutorial, setShowTutorial] = useState(false);
+  const hasSeenScanTutorial = useSettingsStore((s) => s.hasSeenScanTutorial);
 
   // V3-003: Real barcode lookup from productsStore + cartStore
   const getProductByBarcode = useProductsStore((s) => s.getProductByBarcode);
@@ -124,6 +129,11 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
       setSupplierSearching(false);
     }
   }, [onProductFound]);
+
+  // GCP-STG-0532: Show tutorial on first visit
+  useEffect(() => {
+    if (visible && !hasSeenScanTutorial) setShowTutorial(true);
+  }, [visible, hasSeenScanTutorial]);
 
   // GCP-STG-0530: Show low-light hint after 5s if camera is active without torch
   useEffect(() => {
@@ -551,6 +561,25 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
             </View>
           </View>
         ) : null}
+
+        {/* GCP-STG-0532: First-time scan tutorial overlay */}
+        {showTutorial ? (
+          <View style={styles.tutorialOverlay}>
+            <View style={styles.tutorialCard}>
+              <Text style={{ fontSize: 18, fontWeight: "800", color: "#fff", marginBottom: 12 }}>How to Scan</Text>
+              <Text style={styles.tutorialStep}>1. Point camera at barcode or use HID scanner</Text>
+              <Text style={styles.tutorialStep}>2. Product auto-adds to cart if found</Text>
+              <Text style={styles.tutorialStep}>3. If not found, tap "New Product" to add it</Text>
+              <Pressable
+                style={styles.tutorialDismiss}
+                onPress={() => { setShowTutorial(false); useSettingsStore.getState().setHasSeenScanTutorial(true); }}
+                testID="tutorial-dismiss-btn"
+              >
+                <Text style={{ color: "#fff", fontSize: 14, fontWeight: "800" }}>Got it</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
       </View>
     </Modal>
   );
@@ -620,6 +649,11 @@ function createStyles(colors: ColorPalette, safeTop: number) {
     continueBtnText: { color: colors.textSecondary, fontSize: 13, fontWeight: "700" },
     resultAction: { marginTop: 12, backgroundColor: colors.successSoft, borderRadius: 10, padding: 10, alignItems: "center" },
     resultActionText: { color: colors.success, fontSize: 13, fontWeight: "700" },
+    // GCP-STG-0532: Tutorial overlay
+    tutorialOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.75)", alignItems: "center", justifyContent: "center", zIndex: 100 } as any,
+    tutorialCard: { backgroundColor: "#1E293B", borderRadius: 20, padding: 24, marginHorizontal: 32, alignItems: "center" as const },
+    tutorialStep: { color: "rgba(255,255,255,0.8)", fontSize: 14, fontWeight: "500" as const, marginBottom: 8, textAlign: "left" as const, alignSelf: "flex-start" as const },
+    tutorialDismiss: { marginTop: 16, backgroundColor: colors.primary, paddingHorizontal: 32, paddingVertical: 12, borderRadius: 12 },
     // GCP-STG-0530: Low-light warning hint
     lightHint: { color: "#FBBF24", fontSize: 12, fontWeight: "600", marginTop: 8, textAlign: "center" as const },
     // GCP-STG-0525: Running cart total bar

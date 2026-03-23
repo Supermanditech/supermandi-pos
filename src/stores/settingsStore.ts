@@ -32,6 +32,8 @@ type SettingsState = {
   soundEnabled: boolean;      // GCP-STG-0069: Sound effects enabled (persisted)
   printerAutoPrint: boolean;  // Auto-print receipt after sale
   printerCopies: number;      // Number of copies (1-3)
+  hasSeenScanTutorial: boolean; // GCP-STG-0532: First-time scan tutorial
+  setHasSeenScanTutorial: (seen: boolean) => void; // GCP-STG-0532
   setExpressCheckout: (enabled: boolean) => void; // GCP-STG-0068
   setSoundEnabled: (enabled: boolean) => void;   // GCP-STG-0069
   setPrinterPaperWidth: (width: 58 | 80) => void;
@@ -82,6 +84,8 @@ export const useSettingsStore = create<SettingsState>()(
       soundEnabled: true,     // GCP-STG-0069
       printerAutoPrint: false,
       printerCopies: 1,
+      hasSeenScanTutorial: false, // GCP-STG-0532
+      setHasSeenScanTutorial: (seen) => set({ hasSeenScanTutorial: Boolean(seen) }),
       setPrinterPaperWidth: (width) => set({ printerPaperWidth: width }),
       setExpressCheckout: (enabled) => set({ expressCheckout: Boolean(enabled) }),
       setSoundEnabled: (enabled) => set({ soundEnabled: Boolean(enabled) }),
