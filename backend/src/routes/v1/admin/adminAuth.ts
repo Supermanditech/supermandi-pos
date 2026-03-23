@@ -662,13 +662,14 @@ adminAuthRouter.post("/auth/logout", (req: Request, res: Response) => {
     try {
       // Decode without verification to get expiry (token may already be close to expiry)
       const decoded = jwt.decode(token) as { exp?: number; jti?: string } | null;
-      if (decoded?.exp) {
-        const remainingSeconds = decoded.exp - Math.floor(Date.now() / 1000);
-        if (remainingSeconds > 0) {
-          // Use jti if available, otherwise hash the token
-          const blacklistKey = decoded.jti || crypto.createHash('sha256').update(token).digest('hex');
-          blacklistToken(blacklistKey, remainingSeconds).catch(() => {});
-        }
+      // GCP-STG-0482: Always blacklist with TTL — use remaining lifetime or 24h fallback
+      const BLACKLIST_TTL_FALLBACK = 86400; // 24 hours
+      const remainingSeconds = decoded?.exp
+        ? Math.max(decoded.exp - Math.floor(Date.now() / 1000), 0)
+        : BLACKLIST_TTL_FALLBACK;
+      if (remainingSeconds > 0) {
+        const blacklistKey = decoded?.jti || crypto.createHash('sha256').update(token).digest('hex');
+        blacklistToken(blacklistKey, remainingSeconds).catch(() => {});
       }
     } catch {
       // Non-fatal — cookie clear is still the primary action
@@ -687,6 +688,20 @@ adminAuthRouter.post("/auth/logout", (req: Request, res: Response) => {
 
   res.clearCookie('admin_session', { path: '/api' });
   return res.json({ success: true });
+});
+
+// =========================================================================
+// GCP-STG-0471: SuperAdmin password login fallback (stub)
+// Implementation plan:
+//   1. Add password_hash column to admin_totp table (or new admin_credentials table)
+//   2. Accept { email, password } — check allowlist, bcrypt.compare, issue JWT
+//   3. Enforce same rate limiting and lockout as OTP flow
+// Currently returns 501 until password hashing infrastructure is in place.
+// =========================================================================
+adminAuthRouter.post("/auth/login-password", otpRateLimiter, (_req: Request, res: Response) => {
+  return res.status(501).json({
+    error: { code: "NOT_IMPLEMENTED", message: "Password login not yet enabled. Use email OTP login." }
+  });
 });
 
 // =========================================================================
