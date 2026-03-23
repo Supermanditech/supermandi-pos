@@ -5,6 +5,8 @@ import { logPosEvent } from "../services/cloudEventLogger";
 import { storeScopedStorage } from "../services/storeScope";
 import { capAddQuantity, capRequestedQuantity } from "../services/stockCap";
 import { resolveStockForCartItem } from "../services/stockService";
+// GCP-STG-0515: Toast for cart limit
+import { showToast } from "../utils/showToast";
 
 export interface CartItem {
   id: string;
@@ -351,6 +353,12 @@ export const useCartStore = create<CartState>()(
         const state = get();
         const existingIndex = state.items.findIndex(i => i.id === item.id);
         const existingItem = existingIndex >= 0 ? state.items[existingIndex] : null;
+        // GCP-STG-0515: Cart item count limit — prevent runaway cart growth
+        const MAX_CART_ITEMS = 500;
+        if (!existingItem && state.items.length >= MAX_CART_ITEMS) {
+          showToast('Cart full — complete sale first');
+          return;
+        }
         
         let newItems: CartItem[];
         let nextItem: CartItem;
