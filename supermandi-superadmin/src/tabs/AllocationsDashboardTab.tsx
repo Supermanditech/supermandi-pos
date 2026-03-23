@@ -13,6 +13,9 @@ export function AllocationsDashboardTab() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transitioning, setTransitioning] = useState<string | null>(null);
+  // GCP-STG-0426: Client-side pagination for drill-down (page size 20)
+  const ALLOC_PAGE_SIZE = 20;
+  const [allocPage, setAllocPage] = useState(0);
 
   const fetchSummary = useCallback(async () => {
     setLoading(true);
@@ -31,6 +34,7 @@ export function AllocationsDashboardTab() {
 
   const handleDrillDown = async (storeId: string) => {
     setSelectedStoreId(storeId);
+    setAllocPage(0);
     try {
       const data = await getStoreAllocations(storeId, { limit: 20 });
       setStoreAllocations(data.allocations);
@@ -99,7 +103,8 @@ export function AllocationsDashboardTab() {
             </tr>
           </thead>
           <tbody>
-            {storeAllocations.map((a) => (
+            {/* GCP-STG-0426: Paginated drill-down */}
+            {storeAllocations.slice(allocPage * ALLOC_PAGE_SIZE, (allocPage + 1) * ALLOC_PAGE_SIZE).map((a) => (
               <tr key={a.id}>
                 <td style={{ padding: 8, fontSize: 12, fontFamily: 'monospace' }}>{a.id.slice(0, 8)}</td>
                 <td style={{ padding: 8, fontSize: 12 }}>{a.retailerOrderId.slice(0, 8)}</td>
@@ -121,6 +126,17 @@ export function AllocationsDashboardTab() {
             ))}
           </tbody>
         </table>
+        {/* GCP-STG-0426: Pagination controls */}
+        {storeAllocations.length > ALLOC_PAGE_SIZE && (() => {
+          const totalPages = Math.ceil(storeAllocations.length / ALLOC_PAGE_SIZE);
+          return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, padding: '8px 0' }}>
+              <button disabled={allocPage === 0} onClick={() => setAllocPage(p => p - 1)}>Prev</button>
+              <span style={{ fontSize: 13, color: '#666' }}>Page {allocPage + 1} of {totalPages}</span>
+              <button disabled={allocPage >= totalPages - 1} onClick={() => setAllocPage(p => p + 1)}>Next</button>
+            </div>
+          );
+        })()}
       )}
     </div>
   );
