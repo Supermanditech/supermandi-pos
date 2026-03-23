@@ -71,6 +71,8 @@ function catalogToSupplier(p: CatalogProduct): SupplierProduct {
     productMode: raw.productMode ?? raw.product_mode,
     // GCP-STG-0087: B2B billing model
     billingModel: bestOffer.billingModel ?? "SUPERMANDI_PRINCIPAL",
+    // GCP-STG-0408: Pass product image URL to supplier card
+    imageUrl: p.imageUrl ?? undefined,
   };
 }
 

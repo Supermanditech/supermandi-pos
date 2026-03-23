@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { View, Pressable, StyleSheet, Text } from "react-native";
+import { View, Pressable, StyleSheet, Text, Image } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
@@ -47,6 +47,8 @@ export interface SupplierProduct {
   productMode?: string;
   // GCP-STG-0087: B2B billing model
   billingModel?: string;
+  // GCP-STG-0408: Product image URL for BUY tile
+  imageUrl?: string;
 }
 
 // V3-FIX-136: Card is browse-only — no inline qty/add controls
@@ -73,7 +75,15 @@ export default function SupplierProductCardV3({ product, orderQtyCases, onPress 
   return (
     <Pressable style={[styles.card, urgency === "urgent" && styles.cardUrgent]} onPress={onPress} accessibilityRole="button">
       <View style={styles.row}>
-        <View style={styles.imgBox}><Text style={styles.emoji}>📦</Text><Text style={styles.brandLabel}>{product.brand}</Text></View>
+        <View style={styles.imgBox}>
+          {/* GCP-STG-0408: Show product image when available, fall back to box emoji */}
+          {product.imageUrl ? (
+            <Image source={{ uri: product.imageUrl }} style={styles.productImage} resizeMode="contain" />
+          ) : (
+            <Text style={styles.emoji}>📦</Text>
+          )}
+          <Text style={styles.brandLabel}>{product.brand}</Text>
+        </View>
         <View style={styles.info}>
           {/* Name + PTR */}
           <View style={styles.topRow}>
@@ -159,6 +169,8 @@ function createStyles(colors: ColorPalette) {
     row: { flexDirection: "row", gap: 12 },
     imgBox: { width: 56, height: 56, borderRadius: 12, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center" },
     emoji: { fontSize: 26 },
+    // GCP-STG-0408: Responsive product image sized to fit imgBox
+    productImage: { width: 40, height: 40, borderRadius: 8 },
     brandLabel: { fontSize: 10, fontWeight: "700", color: colors.textTertiary, marginTop: 1 }, // GCP-STG-0307: raised from 7
     info: { flex: 1 },
     topRow: { flexDirection: "row", justifyContent: "space-between" },

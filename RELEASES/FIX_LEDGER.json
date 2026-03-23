@@ -19173,7 +19173,7 @@
       "start_line": 76,
       "end_line": 85,
       "checksum": "a57412381725f54d",
-      "description": "BUY tile: render Image when imageUrl present, fallback to box emoji",
+      "description": "BUY tile: render Image when imageUrl present, fallback to box emoji (conditional Image render)",
       "test_file": "src/__tests__/components/buyTileImage.gcp-stg-0408.test.ts",
       "depends_on": null,
       "migration": null,
