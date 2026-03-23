@@ -147,7 +147,8 @@ export interface CreateOrderParams {
   // POS-BUY-004: Allow creating orders as draft
   status?: "draft" | "submitted";
   // V3-FIX-176: Payment mode for procurement checkout
-  paymentMode?: "UPI" | "BANK" | "BNPL" | "CREDIT" | "CASH";
+  // GCP-STG-0412: Added CARD — backend procurementPaymentService maps CARD→RAZORPAY
+  paymentMode?: "UPI" | "BANK" | "BNPL" | "CREDIT" | "CASH" | "CARD";
 }
 
 export interface CreateOrderResponse {
@@ -217,7 +218,8 @@ export interface ListReceivesResponse {
 
 // GL-WF-004: Payment confirmation types
 // STG-204: Align with DB constraint (migration 171): UPI, BANK, BNPL, CREDIT, CASH
-export type BuyPaymentMode = "UPI" | "BANK" | "BNPL" | "CREDIT" | "CASH";
+// GCP-STG-0412: Added CARD to match backend PaymentMode and DB constraint
+export type BuyPaymentMode = "UPI" | "BANK" | "BNPL" | "CREDIT" | "CASH" | "CARD";
 
 export interface ConfirmPaymentResponse {
   success: boolean;

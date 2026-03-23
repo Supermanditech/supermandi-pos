@@ -26,6 +26,8 @@ import { useSearchTriggerStore } from "../../stores/searchTriggerStore";
 import { usePurchaseCartStore } from "../../stores/purchaseCartStore";
 // GCP-STG-0409: Store name for delivery address display
 import { useSettingsStore } from "../../stores/settingsStore";
+// GCP-STG-0411: BNPL credit application
+import { applyForBnpl, getBnplCreditLine } from "../../services/api/bnplApi";
 
 // V3-FIX-076: BUY tab — no fabricated wholesale metadata
 
@@ -107,8 +109,16 @@ export default function BuyScreenV3() {
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // V3-FIX-175: Procurement checkout state
   const [checkoutVisible, setCheckoutVisible] = useState(false);
-  const [paymentMode, setPaymentMode] = useState<"UPI" | "BANK" | "BNPL" | "CREDIT" | "CASH">("CASH");
+  const [paymentMode, setPaymentMode] = useState<"UPI" | "BANK" | "BNPL" | "CREDIT" | "CASH" | "CARD">("CASH");
   const [ordering, setOrdering] = useState(false);
+  // GCP-STG-0411: BNPL application form state
+  const [bnplHasCreditLine, setBnplHasCreditLine] = useState<boolean | null>(null);
+  const [bnplPendingApp, setBnplPendingApp] = useState(false);
+  const [bnplFormVisible, setBnplFormVisible] = useState(false);
+  const [bnplBusinessName, setBnplBusinessName] = useState("");
+  const [bnplGstin, setBnplGstin] = useState("");
+  const [bnplRequestedAmount, setBnplRequestedAmount] = useState("");
+  const [bnplApplying, setBnplApplying] = useState(false);
   // GCP-STG-0409: Delivery notes for BUY checkout (max 200 chars)
   const [deliveryNotes, setDeliveryNotes] = useState("");
   // GCP-STG-0409: Store identity for read-only delivery address display
@@ -576,7 +586,8 @@ export default function BuyScreenV3() {
 
             {/* V3-FIX-176: Payment mode selection */}
             <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary, marginBottom: 6 }}>Payment Method</Text>
-            {(["CASH", "UPI", "BNPL", "CREDIT"] as const).map((mode) => (
+            {/* GCP-STG-0412: Added BANK and CARD payment modes — backend fully supports via procurementPaymentService */}
+            {(["CASH", "UPI", "BNPL", "CREDIT", "BANK", "CARD"] as const).map((mode) => (
               <Pressable
                 key={mode}
                 style={{ flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: paymentMode === mode ? colors.primary + '15' : colors.background, borderRadius: 10, marginBottom: 4, borderWidth: 1, borderColor: paymentMode === mode ? colors.primary : colors.border }}
@@ -586,10 +597,55 @@ export default function BuyScreenV3() {
                   {paymentMode === mode ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary }} /> : null}
                 </View>
                 <Text style={{ fontSize: 14, fontWeight: paymentMode === mode ? '700' : '500', color: paymentMode === mode ? colors.primary : colors.textPrimary }}>
-                  {mode === "CASH" ? "Cash on Delivery" : mode === "UPI" ? "UPI / PhonePe" : mode === "BNPL" ? "Buy Now Pay Later" : "SuperMandi Credit"}
+                  {mode === "CASH" ? "Cash on Delivery" : mode === "UPI" ? "UPI / PhonePe" : mode === "BNPL" ? "Buy Now Pay Later" : mode === "CREDIT" ? "SuperMandi Credit" : mode === "BANK" ? "Bank Transfer" : "Card Payment"}
                 </Text>
               </Pressable>
             ))}
+
+            {/* GCP-STG-0411: BNPL application form — shown when BNPL selected and no credit line */}
+            {paymentMode === "BNPL" && bnplHasCreditLine === null && (
+              <Pressable style={{ backgroundColor: colors.primaryLight, borderRadius: 10, padding: 10, marginBottom: 8 }} onPress={async () => {
+                try {
+                  const res = await getBnplCreditLine();
+                  setBnplHasCreditLine(res.hasCreditLine);
+                  setBnplPendingApp(!!res.pendingApplication);
+                  if (!res.hasCreditLine && !res.pendingApplication) setBnplFormVisible(true);
+                } catch { setBnplHasCreditLine(false); setBnplFormVisible(true); }
+              }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary, textAlign: 'center' }}>Check BNPL eligibility</Text>
+              </Pressable>
+            )}
+            {paymentMode === "BNPL" && bnplHasCreditLine === false && bnplPendingApp && (
+              <View style={{ backgroundColor: '#FEF3C7', borderRadius: 10, padding: 10, marginBottom: 8 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#92400E' }}>BNPL application pending review</Text>
+                <Text style={{ fontSize: 11, color: '#92400E', marginTop: 2 }}>Your application is being reviewed by SuperMandi. You will be notified once approved.</Text>
+              </View>
+            )}
+            {paymentMode === "BNPL" && bnplFormVisible && !bnplPendingApp && (
+              <View style={{ backgroundColor: colors.backgroundSecondary, borderRadius: 10, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: colors.primary }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary, marginBottom: 8 }}>Apply for BNPL Credit</Text>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>Business Name *</Text>
+                <TextInput style={{ backgroundColor: colors.background, borderRadius: 8, padding: 8, fontSize: 13, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, marginBottom: 8 }} placeholder="Your business name" placeholderTextColor={colors.textTertiary} value={bnplBusinessName} onChangeText={setBnplBusinessName} maxLength={200} />
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>GSTIN (optional)</Text>
+                <TextInput style={{ backgroundColor: colors.background, borderRadius: 8, padding: 8, fontSize: 13, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, marginBottom: 8 }} placeholder="15-character GSTIN" placeholderTextColor={colors.textTertiary} value={bnplGstin} onChangeText={(t) => setBnplGstin(t.toUpperCase().slice(0, 15))} maxLength={15} autoCapitalize="characters" />
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>Requested Credit Limit (Rs) *</Text>
+                <TextInput style={{ backgroundColor: colors.background, borderRadius: 8, padding: 8, fontSize: 13, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, marginBottom: 10 }} placeholder="e.g. 50000" placeholderTextColor={colors.textTertiary} value={bnplRequestedAmount} onChangeText={(t) => setBnplRequestedAmount(t.replace(/[^0-9]/g, ''))} keyboardType="numeric" maxLength={8} />
+                <Pressable style={{ backgroundColor: colors.primary, borderRadius: 10, padding: 10, alignItems: 'center', opacity: bnplApplying ? 0.6 : 1 }} disabled={bnplApplying} onPress={async () => {
+                  if (!bnplBusinessName.trim()) { showToast("Business name is required"); return; }
+                  const amt = parseInt(bnplRequestedAmount, 10);
+                  if (!amt || amt <= 0) { showToast("Enter a valid credit amount"); return; }
+                  setBnplApplying(true);
+                  try {
+                    await applyForBnpl({ businessName: bnplBusinessName.trim(), gstin: bnplGstin.trim() || undefined, requestedAmountMinor: amt * 100 });
+                    showToast("BNPL application submitted");
+                    setBnplFormVisible(false);
+                    setBnplPendingApp(true);
+                  } catch (err: any) { showToast(err?.message ?? "Application failed"); } finally { setBnplApplying(false); }
+                }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textInverse }}>{bnplApplying ? "Submitting..." : "Submit Application"}</Text>
+                </Pressable>
+              </View>
+            )}
 
             {/* GCP-STG-0409: Delivery address (read-only from store session) + order notes */}
             <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary, marginTop: 10, marginBottom: 6 }}>Delivery Address</Text>
@@ -752,6 +808,8 @@ export default function BuyScreenV3() {
                   <Text style={{ fontSize: 12, color: colors.textSecondary }}>Payment</Text>
                   <Text style={{ fontSize: 12, fontWeight: '600', color: confirmationData.paymentStatus === 'authorized' ? colors.success : colors.textPrimary }} testID="confirmation-payment-status">
                     {confirmationData.paymentMode === 'CASH' ? 'Cash on Delivery'
+                      : confirmationData.paymentMode === 'BANK' ? 'Bank Transfer'
+                      : confirmationData.paymentMode === 'CARD' ? 'Card Payment'
                       : confirmationData.paymentStatus === 'authorized' ? 'Approved'
                       : confirmationData.paymentStatus === 'pending' ? 'Pending'
                       : confirmationData.paymentMode}
