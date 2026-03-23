@@ -83,6 +83,14 @@ const corsOptions: cors.CorsOptions = {
   origin: (() => {
     const originsEnv = process.env.CORS_ALLOWED_ORIGINS || process.env.ALLOWED_ORIGINS;
     if (originsEnv) {
+      // GCP-STG-0490: Block wildcard CORS in production, warn in staging
+      if (originsEnv.trim() === '*') {
+        if (process.env.NODE_ENV === 'production') {
+          logger.error('[config] FATAL: CORS_ALLOWED_ORIGINS="*" is forbidden in production. Set explicit origins: https://app.supermandi.tech,https://supplier.supermandi.tech,https://admin.supermandi.tech');
+          process.exit(1);
+        }
+        logger.warn('[config] GCP-STG-0490: CORS_ALLOWED_ORIGINS="*" detected — acceptable for staging but MUST be restricted for production');
+      }
       return originsEnv.split(',').map(o => o.trim()).filter(Boolean);
     }
     if (process.env.NODE_ENV !== 'development') {
