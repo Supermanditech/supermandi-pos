@@ -81,6 +81,8 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
   const [showLightHint, setShowLightHint] = useState(false);
   // GCP-STG-0532: First-time scan tutorial overlay
   const [showTutorial, setShowTutorial] = useState(false);
+  // GCP-STG-0533: Visual scan success flash
+  const [scanFlash, setScanFlash] = useState(false);
   const hasSeenScanTutorial = useSettingsStore((s) => s.hasSeenScanTutorial);
 
   // V3-003: Real barcode lookup from productsStore + cartStore
@@ -212,6 +214,9 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
         showToast(`${product.name} — found in store`);
         onProductFound(code, context);
       }
+      // GCP-STG-0533: Visual scan success flash on viewfinder frame
+      setScanFlash(true);
+      setTimeout(() => setScanFlash(false), 300);
       // GCP-STG-0516: Haptic feedback on successful scan
       try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
       // GCP-STG-0522: Scan beep alternative — double haptic pulse
@@ -300,7 +305,7 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
             <Text style={{ fontSize: 20 }}>{torchOn ? "🔦" : "🔦"}</Text>
             <Text style={styles.torchText}>{torchOn ? "ON" : "OFF"}</Text>
           </Pressable>
-          <View style={styles.scanFrame} pointerEvents="none">
+          <View style={[styles.scanFrame, scanFlash && { borderColor: '#22C55E', borderWidth: 3 }]} pointerEvents="none">
             {/* Corner markers */}
             <View style={[styles.corner, styles.cornerTL]} />
             <View style={[styles.corner, styles.cornerTR]} />
