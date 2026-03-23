@@ -168,7 +168,8 @@ adminCatalogRouter.get(
           sp.split_sell_eligible AS "splitSellEligible",
           sp.sell_unit AS "sellUnit",
           sp.default_retail_variants AS "defaultVariants",
-          sp.billing_model AS "billingModel"
+          sp.billing_model AS "billingModel",
+          (SELECT COUNT(*)::int FROM catalog.store_products stp WHERE stp.product_id = sp.id::uuid AND stp.is_active = true) AS "publishedToStores"
         FROM catalog.supplier_products sp
         LEFT JOIN supplier.suppliers s ON s.id = sp.supplier_id
         ${whereClause}
