@@ -28,6 +28,8 @@ import { usePurchaseCartStore } from "../../stores/purchaseCartStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 // GCP-STG-0411: BNPL credit application
 import { applyForBnpl, getBnplCreditLine } from "../../services/api/bnplApi";
+// GCP-STG-0512: Set scan runtime intent to PURCHASE on BUY screen
+import { setScanRuntime } from "../../services/scan/handleScan";
 
 // V3-FIX-076: BUY tab — no fabricated wholesale metadata
 
@@ -133,6 +135,12 @@ export default function BuyScreenV3() {
     paymentStatus: string;
     supplierCount: number;
   } | null>(null);
+
+  // GCP-STG-0512: Set scan runtime intent to PURCHASE while BUY screen is mounted
+  useEffect(() => {
+    setScanRuntime({ intent: "PURCHASE", mode: "SELL" });
+    return () => { setScanRuntime({ intent: "SELL", mode: "SELL" }); };
+  }, []);
 
   // V3-013: Fetch real catalog data
   useEffect(() => {
