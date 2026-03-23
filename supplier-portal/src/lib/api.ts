@@ -520,6 +520,7 @@ export interface Product {
   procurementPackQty?: number | null;
   baseStockUnit?: string | null;
   splitSellEligible?: boolean;
+  gstRate?: number | null; // GCP-STG-0429: GST rate percentage
 }
 
 export interface ProductInput {

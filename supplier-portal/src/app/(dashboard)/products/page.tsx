@@ -888,6 +888,16 @@ export default function ProductsPage() {
                     placeholder="e.g. 19023010"
                   />
                 </div>
+                {/* GCP-STG-0429: GST Rate read-only display (set by admin) */}
+                {editingProduct?.gstRate != null && editingProduct.gstRate > 0 && (
+                  <div>
+                    <label className="label">GST Rate</label>
+                    <div className="input bg-slate-50 text-slate-600 cursor-not-allowed">
+                      {editingProduct.gstRate}%
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">Set by SuperMandi admin</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1300,6 +1310,10 @@ export default function ProductsPage() {
                 <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                   MOQ
                 </th>
+                {/* GCP-STG-0429: GST Rate column */}
+                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">
+                  GST
+                </th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                   Status
                 </th>
@@ -1336,6 +1350,16 @@ export default function ProductsPage() {
                   </td>
                   <td className="py-3 px-4">
                     {product.moq} {product.unit}
+                  </td>
+                  {/* GCP-STG-0429: GST Rate badge */}
+                  <td className="py-3 px-4">
+                    {product.gstRate != null && product.gstRate > 0 ? (
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                        GST {product.gstRate}%
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400">-</span>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     <span

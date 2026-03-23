@@ -278,7 +278,8 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         procurement_pack_qty,
         base_stock_unit,
         hsn_code,
-        split_sell_eligible
+        split_sell_eligible,
+        gst_rate
       FROM catalog.supplier_products
       WHERE ${whereClause}
       ORDER BY created_at DESC
@@ -343,6 +344,7 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         baseStockUnit: p.base_stock_unit || null,
         hsnCode: p.hsn_code || null,
         splitSellEligible: p.split_sell_eligible || false,
+        gstRate: p.gst_rate != null ? Number(p.gst_rate) : null, // GCP-STG-0429
       })),
       // GL-WF-063: Pagination metadata
       pagination: {
@@ -382,7 +384,7 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
               delivery_sla_days, delivery_terms, credit_days, finance_eligible,
               delivery_days, bnpl_max_days, published_terms_version, published_at,
               moq_tiers, procurement_unit, procurement_pack_qty, base_stock_unit, hsn_code,
-              split_sell_eligible
+              split_sell_eligible, gst_rate
        FROM catalog.supplier_products
        WHERE id = $1::uuid AND supplier_id = $2`,
       [req.params.productId, req.supplierId]
@@ -427,6 +429,7 @@ router.get("/products/:productId", requireSupplierAuth, requireRegisteredSupplie
         baseStockUnit: p.base_stock_unit || null,
         hsnCode: p.hsn_code || null,
         splitSellEligible: p.split_sell_eligible || false,
+        gstRate: p.gst_rate != null ? Number(p.gst_rate) : null, // GCP-STG-0429
       },
     });
   } catch (error) {
