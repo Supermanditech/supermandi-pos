@@ -55,6 +55,37 @@ const JWT_SECRET = (() => {
   return secret;
 })();
 const JWT_EXPIRY = '24h';
+
+// GCP-STG-0480: Dual-secret JWT rotation support
+// Rotation protocol:
+//   1. Generate a new secret value
+//   2. Set JWT_SECRET_PREVIOUS = <current JWT_SECRET value>
+//   3. Set JWT_SECRET = <new secret value>
+//   4. Deploy — new tokens signed with new secret, old tokens still accepted via fallback
+//   5. After 24h (max token lifetime), remove JWT_SECRET_PREVIOUS
+// This allows zero-downtime secret rotation without invalidating active sessions.
+const JWT_SECRET_PREVIOUS = process.env.JWT_SECRET_PREVIOUS || '';
+
+/**
+ * GCP-STG-0480: Verify a JWT token with dual-secret fallback.
+ * Tries JWT_SECRET first; if verification fails and JWT_SECRET_PREVIOUS is set,
+ * retries with the previous secret. This enables seamless secret rotation.
+ */
+function verifyTokenWithRotation(token: string): { email: string; role: string; type?: string } {
+  const verifyOpts: jwt.VerifyOptions = { issuer: JWT_ISSUER, algorithms: ['HS256'], clockTolerance: 30 };
+  try {
+    return jwt.verify(token, JWT_SECRET, verifyOpts) as { email: string; role: string; type?: string };
+  } catch (primaryErr) {
+    if (JWT_SECRET_PREVIOUS) {
+      try {
+        return jwt.verify(token, JWT_SECRET_PREVIOUS, verifyOpts) as { email: string; role: string; type?: string };
+      } catch {
+        // Fall through — throw the original error from the primary secret
+      }
+    }
+    throw primaryErr;
+  }
+}
 // LIVE.BE.JWT_ADMIN_ISSUER_ENFORCEMENT.001: Enforce issuer on admin JWTs
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 
@@ -363,7 +394,8 @@ adminAuthRouter.get("/auth/check", (req: Request, res: Response) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER, algorithms: ['HS256'], clockTolerance: 30 }) as { email: string; role: string };
+    // GCP-STG-0480: Use dual-secret rotation-aware verification
+    const decoded = verifyTokenWithRotation(token);
     return res.json({
       valid: true,
       admin: {
@@ -397,9 +429,10 @@ adminAuthRouter.post("/auth/refresh", (req: Request, res: Response) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER, algorithms: ['HS256'], clockTolerance: 30 }) as { email: string; role: string; type: string };
+    // GCP-STG-0480: Use dual-secret rotation-aware verification
+    const decoded = verifyTokenWithRotation(token) as { email: string; role: string; type: string };
 
-    // Issue new token with fresh expiry
+    // Issue new token with fresh expiry (always signs with current JWT_SECRET)
     const newToken = jwt.sign(
       {
         email: decoded.email,

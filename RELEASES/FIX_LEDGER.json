@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 890,
+  "version": 892,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -9861,8 +9861,8 @@
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
       "start_line": 176,
       "end_line": 217,
-      "checksum": "2a1316f697551b5d",
-      "description": "Deactivate old devices + create new one in transaction on OTP verify (race-condition safe)",
+      "checksum": "a36c0926cc914ee9",
+      "description": "Deactivate old devices + create new one in transaction on OTP verify (race-condition safe) — checksum updated by GCP-STG-0484 (added token_expires_at to INSERT)",
       "test_file": "backend/src/__tests__/pos/otpAuth.test.ts",
       "depends_on": null,
       "migration": null,
@@ -22550,8 +22550,8 @@
     {
       "ticket": "GCP-STG-0461",
       "file": "backend/src/routes/v1/admin/adminAuth.ts",
-      "start_line": 238,
-      "end_line": 238,
+      "start_line": 269,
+      "end_line": 269,
       "checksum": "69ddd34ff1dca925",
       "description": "verify-email-otp route has otpRateLimiter middleware for IP-level brute-force protection",
       "test_file": "backend/tests/adminAuth.gcp-stg-0461.unit.test.ts",
@@ -22581,7 +22581,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:18:35.582Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T17:50:04.683Z"
     },
     {
       "ticket": "GCP-STG-0478",
@@ -22872,6 +22873,62 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:32:40.333Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0484",
+      "file": "backend/src/routes/v1/pos/otpAuth.ts",
+      "start_line": 201,
+      "end_line": 207,
+      "checksum": "1c43371cc26bb892",
+      "description": "POS device token expiry: INSERT via otpAuth sets token_expires_at = NOW() + 90 days",
+      "test_file": "backend/tests/deviceTokenExpiry.gcp-stg-0484.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T17:49:54.411Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "otpAuth.ts INSERT includes token_expires_at + token_refreshed_at",
+        "api_errors": "401 TOKEN_EXPIRED for expired tokens",
+        "store_isolation": "Device token per-store, store_id unchanged",
+        "business_logic": "90-day expiry with auto-renewal on auth",
+        "business_behaviour": "verify-otp creates device with expiry",
+        "db_schema": "token_expires_at exists from migration 044, backfill in 234",
+        "impacted_files": "otpAuth.ts + migration 234 + test + FIX_LEDGER",
+        "fix_ledger_check": "451 fixes intact",
+        "no_agent_conflict": "Only otpAuth.ts INSERT modified",
+        "operator_approved": "Mode A pre-staging, no operator needed",
+        "parity_scanned": "Backend-only change, no URL/GCP gap",
+        "gcp_parity": "No localhost URLs, SQL interval only",
+        "regression_check": "4 new tests pass",
+        "test_guard": "deviceTokenExpiry.gcp-stg-0484.unit.test.ts 4/4",
+        "single_commit": "fix(GCP-STG-0484)",
+        "ticket_parked": "pending commit"
+      }
     }
   ],
   "machine_state_version": 269,
