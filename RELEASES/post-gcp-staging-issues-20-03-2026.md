@@ -12766,4 +12766,298 @@ function validateEmailConfig() {
 
 ---
 
-<!-- next ticket: GCP-STG-0463 -->
+## GCP-STG-0463 — MEDIUM: No MFA/2FA for SuperAdmin — Single Factor Email OTP Only (MEDIUM)
+
+**Ticket ID**: GCP-STG-0463
+**Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: Backend, API, Business
+**Source**: Audit Q — Cross-Platform Auth Matrix, MFA/2FA row
+
+**Problem**: SuperAdmin has access to ALL platform data (all stores, all users, all financial data, all settlements). Yet authentication is single-factor: email OTP only. No TOTP (Google Authenticator), no hardware key (WebAuthn), no SMS backup. If an admin's email is compromised, the attacker has full platform access.
+
+**Impact**: Medium — email compromise gives full SuperAdmin access. Email allowlist limits the attack surface but does not eliminate it.
+
+**Fix**: Add TOTP-based 2FA for SuperAdmin:
+1. After email OTP verification, require TOTP code from authenticator app
+2. Store TOTP secret (encrypted) per admin user
+3. Add 2FA setup flow: generate QR code → scan → verify first code → enable
+4. Use `otplib` or `speakeasy` npm package for TOTP generation/verification
+
+**Files to modify**: `backend/src/routes/v1/admin/adminAuth.ts`, `supermandi-superadmin/src/components/LoginGate.tsx`
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅, L7 DB (new column) ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0464 — LOW: No MFA/2FA for Retailer Web or Supplier Portal (LOW)
+
+**Ticket ID**: GCP-STG-0464
+**Severity**: P3 LOW
+**Platforms**: RETAILER-WEB, SUPPLIER-WEB
+**Layers**: UI, Backend, Business
+**Source**: Audit Q — Cross-Platform Auth Matrix, MFA/2FA row
+
+**Problem**: Neither retailer web nor supplier portal offers MFA/2FA. Login is single-factor (Firebase phone OTP or email/password). For retailers managing inventory and finances, and suppliers managing product catalogs and orders, single-factor auth is the industry minimum but not ideal.
+
+**Impact**: Low — Firebase phone OTP is already considered a second factor (possession of phone). Email/password is single-factor but acceptable for kirana store operators at launch.
+
+**Fix**: Future enhancement — add optional TOTP 2FA for retailer admin and supplier admin accounts. Lower priority than SuperAdmin 2FA (0463).
+
+**Files to modify**: Retailer + supplier auth flows (future)
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅
+
+---
+
+## GCP-STG-0465 — MEDIUM: Retailer Web Has No Idle Auto-Logout (MEDIUM)
+
+**Ticket ID**: GCP-STG-0465
+**Severity**: P2 MEDIUM
+**Platforms**: RETAILER-WEB
+**Layers**: UI, UX, Business
+**Source**: Audit Q — Cross-Platform Auth Matrix, Auto-logout row
+
+**Problem**: SuperAdmin has 30-minute idle timeout with activity tracking (mousemove, keydown, click, scroll). POS has configurable idle timeout. But retailer web (`retailer-admin`) has NO idle auto-logout. A retailer who walks away from their computer (common in shop environments) leaves their session open indefinitely. Anyone with physical access to the computer can manage inventory, prices, and orders.
+
+**Impact**: Medium — shared computers in kirana shops are common. An employee or customer could access the retailer's product/pricing management.
+
+**Fix**: Port SuperAdmin's idle timeout pattern (`authToken.ts:442-510`) to retailer web:
+1. Track activity events (mousemove, keydown, click, scroll)
+2. Check every 30 seconds if idle for >30 minutes
+3. Auto-logout and redirect to login page
+4. Show "Session expired due to inactivity" message
+
+**Files to modify**: `retailer-admin/src/App.tsx` or new `idleTimeout.ts` hook
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0466 — MEDIUM: Supplier Portal Has No Idle Auto-Logout (MEDIUM)
+
+**Ticket ID**: GCP-STG-0466
+**Severity**: P2 MEDIUM
+**Platforms**: SUPPLIER-WEB
+**Layers**: UI, UX, Business
+**Source**: Audit Q — Cross-Platform Auth Matrix, Auto-logout row
+
+**Problem**: Same as GCP-STG-0465 but for supplier portal. No idle auto-logout. Suppliers managing product catalogs, orders, and earnings have sessions that never expire from inactivity.
+
+**Impact**: Medium — same shared-computer risk as retailer web.
+
+**Fix**: Same pattern as retailer web (0465) — port idle timeout from SuperAdmin.
+
+**Files to modify**: `supplier-portal/src/app/layout.tsx` or dashboard layout
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0467 — MEDIUM: POS OTP Delivery WhatsApp Only — No SMS Fallback (MEDIUM)
+
+**Ticket ID**: GCP-STG-0467
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND, POS
+**Layers**: Backend, Dependencies, Business
+**Source**: Audit M — OTP Logic, POS OTP Delivery
+
+**Problem**: `otpAuth.ts:79-95` delivers OTP exclusively via WhatsApp (`sendTextMessage` from whatsappService). If WhatsApp delivery fails (service down, user blocked WhatsApp business, user doesn't have WhatsApp), the OTP is logged to console but NOT delivered to the user. No SMS fallback, no email fallback.
+
+In India, ~95% of smartphone users have WhatsApp, but the remaining 5% (mostly feature phone users or those who deleted WhatsApp) cannot receive POS OTP at all.
+
+**Impact**: Medium — 5% of users cannot complete POS enrollment/login if WhatsApp is unavailable. Console logging is only useful for developers, not for production users.
+
+**Fix**: Add SMS fallback via Twilio, MSG91, or Gupshup (popular Indian SMS gateways):
+1. Try WhatsApp first (existing)
+2. If WhatsApp fails, try SMS via configured gateway
+3. If both fail, return 503 with "Unable to deliver OTP. Contact support."
+4. Add `SMS_PROVIDER` env var (msg91/twilio/disabled)
+
+**Files to modify**: `backend/src/routes/v1/pos/otpAuth.ts`, new `smsService.ts`
+
+**12-Layer Verification**: L6 Backend ✅, L11 Dependencies ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0468 — MEDIUM: Firebase App Check Not Enabled — API Abuse Possible (MEDIUM)
+
+**Ticket ID**: GCP-STG-0468
+**Severity**: P2 MEDIUM
+**Platforms**: RETAILER-WEB, SUPPLIER-WEB, INFRA
+**Layers**: Dependencies, GCP Parity, Business
+**Source**: Audit P — Firebase Project Configuration
+
+**Problem**: Firebase App Check is not enabled for the `supermandi-pos` Firebase project. Without App Check, any client can call Firebase Auth APIs (including `signInWithPhoneNumber`) without proving it's a legitimate app instance. An attacker could:
+1. Extract the Firebase config (public in client-side JS)
+2. Call `signInWithPhoneNumber` from their own app/script
+3. Consume the Firebase OTP quota (10K free/month)
+4. Potentially enumerate valid phone numbers
+
+**Impact**: Medium — Firebase API keys are already public (embedded in client JS). The risk is quota abuse and phone enumeration, not data access.
+
+**Fix**: Enable Firebase App Check with reCAPTCHA Enterprise:
+1. Firebase Console → App Check → Enable for Web apps
+2. Configure reCAPTCHA Enterprise provider
+3. Add App Check initialization to retailer-admin and supplier-portal Firebase config
+4. Backend: validate App Check tokens on Firebase-authenticated requests
+
+**Files to modify**: Firebase Console config, `retailer-admin/src/lib/firebase.ts`, `supplier-portal/src/lib/firebase.ts`
+
+**12-Layer Verification**: L9 GCP Parity ✅, L11 Dependencies ✅
+
+---
+
+## GCP-STG-0469 — LOW: Firebase Test Phone Numbers Not Configured for CI/Testing (LOW)
+
+**Ticket ID**: GCP-STG-0469
+**Severity**: P3 LOW
+**Platforms**: INFRA
+**Layers**: Dependencies, GCP Parity
+**Source**: Audit P — Firebase Project Configuration
+
+**Problem**: Firebase Console does not have test phone numbers configured. During CI testing, E2E tests, or QA, every OTP verification consumes a real SMS credit. Firebase allows up to 10 test phone numbers with fixed OTP codes (e.g., +91 1111111111 → OTP: 123456) for free testing.
+
+**Impact**: Low — testing without test numbers consumes paid SMS credits and creates real phone number noise. At scale, this adds cost.
+
+**Fix**: In Firebase Console → Authentication → Sign-in method → Phone → Test phone numbers:
+1. Add test numbers: +91 1111111111 through +91 1111111110
+2. Set fixed OTP: 123456
+3. Update E2E test configs to use these numbers
+
+**Files to modify**: Firebase Console only (no code change)
+
+**12-Layer Verification**: L9 GCP Parity ✅
+
+---
+
+## GCP-STG-0470 — MEDIUM: Release APK SHA-1 Fingerprint Needs Firebase Registration (MEDIUM)
+
+**Ticket ID**: GCP-STG-0470
+**Severity**: P2 MEDIUM
+**Platforms**: POS, INFRA
+**Layers**: Dependencies, GCP Parity
+**Source**: Audit P — Firebase Project Configuration
+
+**Problem**: Firebase Android phone auth requires the release APK's SHA-1 fingerprint to be registered in Firebase Console → Project Settings → Android app. If the POS app ever uses Firebase (currently dead code per GCP-STG-0455, but could be activated), phone auth will fail with `INVALID_APP_CREDENTIAL` if SHA-1 is not registered.
+
+Even if Firebase phone auth is not used, Google Play Services and other Google APIs may require SHA-1 registration.
+
+**Impact**: Medium — blocks Firebase phone auth activation. Currently no functional impact since POS uses custom OTP backend.
+
+**Fix**:
+1. Get release SHA-1: `cd android && ./gradlew signingReport`
+2. Register in Firebase Console → Project Settings → Android app → Add fingerprint
+3. Also register debug SHA-1 for development
+
+**Files to modify**: Firebase Console only
+
+**12-Layer Verification**: L9 GCP Parity ✅, L11 Dependencies ✅
+
+---
+
+## GCP-STG-0471 — LOW: SuperAdmin Has No Password Fallback — Email OTP Only (LOW)
+
+**Ticket ID**: GCP-STG-0471
+**Severity**: P3 LOW
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: UI, Backend, Business
+**Source**: Audit O — SuperAdmin Auth
+
+**Problem**: SuperAdmin login is email OTP only. No password alternative. If the email delivery service (Resend/SMTP) is down or misconfigured, SuperAdmin cannot log in at all. Retailer web and supplier portal both have password fallback when OTP fails.
+
+**Impact**: Low — email delivery services have 99.9%+ uptime. But during deployment/migration when email config may be wrong, SuperAdmin lockout is possible.
+
+**Fix**: Add optional password login for SuperAdmin:
+1. Add password hash column to admin user table (or use existing auth.users)
+2. Add `POST /admin/auth/login-password` endpoint with bcrypt verification
+3. Add "Login with password" toggle in LoginGate UI
+4. Password is secondary — email OTP remains primary
+
+**Files to modify**: `backend/src/routes/v1/admin/adminAuth.ts`, `supermandi-superadmin/src/components/LoginGate.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L5 API ✅, L6 Backend ✅, L7 DB ✅
+
+---
+
+## GCP-STG-0472 — MEDIUM: Firebase Free Tier 10K OTP/Month Limit — Cost Risk at 10K Users (MEDIUM)
+
+**Ticket ID**: GCP-STG-0472
+**Severity**: P2 MEDIUM
+**Platforms**: INFRA, CROSS-PLATFORM
+**Layers**: Dependencies, GCP Parity, Business
+**Source**: Audit P — Firebase Project Configuration, Quotas
+
+**Problem**: Firebase Spark (free) plan allows 10,000 phone verifications/month. Blaze (pay-as-you-go) charges $0.01-$0.06 per verification after the free tier. With 10K users:
+- Each user logs in ~1x/day on web = ~300K verifications/month
+- At $0.06/verification (India rate) = ~$18K/month
+- New registrations add to this
+
+The POS app avoids this cost (custom WhatsApp OTP), but retailer web + supplier portal use Firebase phone auth.
+
+**Impact**: Medium — significant monthly cost at scale. Need to budget or switch to custom OTP for web portals too.
+
+**Fix**: Either:
+1. Upgrade to Firebase Blaze plan and budget $15-20K/month for OTP
+2. Or migrate retailer + supplier web to custom backend OTP (like POS) with WhatsApp/SMS delivery
+3. Or implement session persistence so users don't re-authenticate daily (reduce verification frequency)
+
+**Files to modify**: Firebase Console (billing plan), or backend OTP endpoints + web auth flows
+
+**12-Layer Verification**: L9 GCP Parity ✅, L11 Dependencies ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0473 — LOW: SuperAdmin Email OTP Deleted from Storage if Email Send Fails (LOW)
+
+**Ticket ID**: GCP-STG-0473
+**Severity**: P3 LOW
+**Platforms**: BACKEND, SUPERADMIN
+**Layers**: Backend, Business
+**Source**: Audit M — OTP Logic, SuperAdmin Email OTP
+
+**Problem**: `adminAuth.ts:204-218` send-email-otp stores OTP in Redis, then attempts email delivery. If email delivery fails (Resend API error, SMTP timeout), the error is caught and returned to the user — but the OTP remains in Redis. The user sees an error and clicks "Resend". A new OTP is generated, overwriting the old one in Redis.
+
+However, if the email was partially delivered (SMTP accepted but delayed), the user might receive the OLD OTP after a delay and try to use it — but it's already been overwritten by the resend. This creates a confusing UX.
+
+**Impact**: Low — edge case. Email delivery usually either succeeds immediately or fails immediately. Partial delivery + delayed arrival is rare.
+
+**Fix**: On email send failure, delete the OTP from Redis so the state is clean:
+```typescript
+try { await sendVerificationEmail(...); } catch (err) {
+  await redis.del(`admin:otp:${email}`); // Clean up failed OTP
+  throw err;
+}
+```
+
+**Files to modify**: `backend/src/routes/v1/admin/adminAuth.ts` (line ~210)
+
+**12-Layer Verification**: L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0474 — LOW: POS OTP Concurrent Requests — UPSERT Means Only Last OTP Valid (LOW)
+
+**Ticket ID**: GCP-STG-0474
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, Business
+**Source**: Audit N — OTP Edge Cases, Concurrent Requests
+
+**Problem**: `otpAuth.ts:72-76` uses UPSERT (`ON CONFLICT (phone) DO UPDATE`) for OTP storage. If the same phone sends two send-otp requests simultaneously (e.g., double-tap, two browser tabs), only the LAST OTP is valid — the first one is silently overwritten. The user receives two OTP messages but only the second code works.
+
+**Impact**: Low — double-tap is the common cause. The second OTP delivery (WhatsApp message) arrives shortly after the first, so users naturally try the newer code.
+
+**Fix**: Add 30-second cooldown before generating a new OTP for the same phone:
+```sql
+SELECT expires_at FROM pos_otp WHERE phone = $1 AND expires_at > NOW() - interval '270 seconds'
+```
+If a valid OTP was created in the last 30 seconds, return the same OTP hash (don't regenerate).
+
+**Files to modify**: `backend/src/routes/v1/pos/otpAuth.ts` (before OTP generation)
+
+**12-Layer Verification**: L6 Backend ✅, L10 Business ✅
+
+---
+
+<!-- next ticket: GCP-STG-0475 -->
