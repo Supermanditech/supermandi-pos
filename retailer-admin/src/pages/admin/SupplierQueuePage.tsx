@@ -28,6 +28,9 @@ export default function SupplierQueuePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  // GCP-STG-0421: Pagination state
+  const SUPPLIER_QUEUE_PAGE_SIZE = 20;
+  const [currentPage, setCurrentPage] = useState(0);
 
   // Modal state
   const [selectedSupplier, setSelectedSupplier] = useState<PendingSupplier | null>(null);
@@ -197,7 +200,8 @@ export default function SupplierQueuePage() {
                 </tr>
               </thead>
               <tbody>
-                {pendingSuppliers.map((supplier) => (
+                {/* GCP-STG-0421: Paginate supplier queue */}
+                {pendingSuppliers.slice(currentPage * SUPPLIER_QUEUE_PAGE_SIZE, (currentPage + 1) * SUPPLIER_QUEUE_PAGE_SIZE).map((supplier) => (
                   <tr key={supplier.id}>
                     <td className="cell-bold">{supplier.businessName}</td>
                     <td className="cell-mono cell-sm">
@@ -240,6 +244,29 @@ export default function SupplierQueuePage() {
               </tbody>
             </table>
           )}
+          {/* GCP-STG-0421: Pagination controls */}
+          {(() => {
+            const totalPages = Math.ceil(pendingSuppliers.length / SUPPLIER_QUEUE_PAGE_SIZE);
+            if (totalPages <= 1) return null;
+            return (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderTop: '1px solid #E2E8F0' }}>
+                <span style={{ fontSize: 13, color: '#64748B' }}>
+                  Showing {currentPage * SUPPLIER_QUEUE_PAGE_SIZE + 1}–{Math.min((currentPage + 1) * SUPPLIER_QUEUE_PAGE_SIZE, pendingSuppliers.length)} of {pendingSuppliers.length}
+                </span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 0}>
+                    Previous
+                  </button>
+                  <span style={{ fontSize: 13, lineHeight: '32px', color: '#475569' }}>
+                    Page {currentPage + 1} of {totalPages}
+                  </span>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage >= totalPages - 1}>
+                    Next
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 

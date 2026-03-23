@@ -21395,7 +21395,7 @@
       "start_line": 243,
       "end_line": 270,
       "checksum": "c6fd25458d226a8e",
-      "description": "Client-side pagination for supplier approval queue (page size 20) with Previous/Next controls",
+      "description": "Client-side pagination for supplier approval queue (page size 20) with Previous/Next controls (committed)",
       "test_file": "N/A",
       "registered_at": "2026-03-23T14:00:00.000Z",
       "status": "ACTIVE",
