@@ -4,6 +4,7 @@
  */
 import React, { useMemo, useState, useCallback } from "react";
 import { View, Pressable, TextInput, StyleSheet, Text } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { recordCashPayment } from "../../services/api/posApi";
@@ -27,7 +28,8 @@ type CashScreenV3Props = {
 
 export default function CashScreenV3({ onBack, onComplete }: CashScreenV3Props) {
   const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(colors, insets.top), [colors, insets.top]);
   const { grandTotal, itemCount, totalDisplay, isBulk, processing, executePayment } = usePaymentFlow();
 
   const [cashReceived, setCashReceived] = useState("");
@@ -87,7 +89,8 @@ export default function CashScreenV3({ onBack, onComplete }: CashScreenV3Props) 
         </View>
       </View>
 
-      <View style={styles.footer}>
+      {/* GCP-STG-0433: Safe area bottom padding */}
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable
           style={[styles.completeBtn, processing && styles.completeBtnDisabled]}
           onPress={handleComplete}
@@ -101,9 +104,10 @@ export default function CashScreenV3({ onBack, onComplete }: CashScreenV3Props) 
   );
 }
 
-function createStyles(colors: ColorPalette) {
+function createStyles(colors: ColorPalette, safeTop: number) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
+    // GCP-STG-0433: Dynamic paddingTop from safe area insets
+    container: { flex: 1, backgroundColor: colors.background, paddingTop: safeTop },
     header: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 14, flexDirection: "row", alignItems: "center" },
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
