@@ -83,6 +83,9 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
   const addItem = useCartStore((s) => s.addItem);
   // GCP-STG-0521: Disambiguation state for multiple products with same barcode
   const [disambiguationMatches, setDisambiguationMatches] = useState<Product[]>([]);
+  // GCP-STG-0525: Running total in scan screen — mini cart summary
+  const cartItems = useCartStore((s) => s.items);
+  const cartTotal = cartItems.reduce((sum, i) => sum + i.priceMinor * i.quantity, 0);
 
   // GCP-STG-0322: Async supplier catalog fallback when local lookup misses in procurement mode
   const searchSupplierCatalog = useCallback(async (barcode: string) => {
@@ -238,6 +241,13 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
           <Text style={styles.headerTitle}>Scan Barcode</Text>
           <View style={{ width: 30 }} />
         </View>
+
+        {/* GCP-STG-0525: Running cart total */}
+        {cartItems.length > 0 && context === "sell_scan" ? (
+          <View style={styles.cartSummary}>
+            <Text style={styles.cartSummaryText}>Cart: {cartItems.length} item{cartItems.length !== 1 ? "s" : ""} · ₹{(cartTotal / 100).toFixed(0)}</Text>
+          </View>
+        ) : null}
 
         {/* GCP-STG-0035: Camera viewfinder with live preview */}
         <View style={styles.viewfinder}>
@@ -587,5 +597,8 @@ function createStyles(colors: ColorPalette, safeTop: number) {
     continueBtnText: { color: colors.textSecondary, fontSize: 13, fontWeight: "700" },
     resultAction: { marginTop: 12, backgroundColor: colors.successSoft, borderRadius: 10, padding: 10, alignItems: "center" },
     resultActionText: { color: colors.success, fontSize: 13, fontWeight: "700" },
+    // GCP-STG-0525: Running cart total bar
+    cartSummary: { backgroundColor: "rgba(37,99,235,0.15)", paddingVertical: 6, paddingHorizontal: getScreenPadding(), alignItems: "center" },
+    cartSummaryText: { color: "#fff", fontSize: 13, fontWeight: "700" },
   });
 }

@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 927,
+  "version": 928,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6854,7 +6854,7 @@
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 1,
       "end_line": 591,
-      "checksum": "db8789197abaf027",
+      "checksum": "50de29048f92aad6",
       "description": "Scan screen v3 — context-aware barcode scan (Sell/Stock-In/New Product), HID+camera, result panel (updated by GCP-STG-0322: supplier catalog fallback, GCP-STG-0414: safe area insets)",
       "test_file": "src/__tests__/screens/scan-v3.stg-559.test.ts",
       "depends_on": null,
@@ -10497,7 +10497,7 @@
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 475,
       "end_line": 512,
-      "checksum": "7327e71d3fd5122a",
+      "checksum": "745f75dd60bb50cd",
       "description": "Continue button on scan not-found result to dismiss and scan next barcode",
       "test_file": "src/__tests__/screens/scanContinueBtn.gcp-stg-0028.test.ts",
       "depends_on": null,
@@ -10656,7 +10656,7 @@
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 447,
       "end_line": 462,
-      "checksum": "3c016e64f88f6b17",
+      "checksum": "34d60fc34f7148da",
       "description": "Scan quick-qty presets warn when exceeding available stock",
       "test_file": "src/__tests__/screens/scanQtyStockCheck.gcp-stg-0052.test.ts",
       "depends_on": null,
@@ -15232,7 +15232,7 @@
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 477,
       "end_line": 501,
-      "checksum": "0a702f745b72301e",
+      "checksum": "5ad894a4d0b55788",
       "description": "Scan not-found shows Search by Name button instead of toast-only (SELL+BUY tabs)",
       "test_file": "src/__tests__/screens/scanNotFound.gcp-stg-0316.test.ts",
       "depends_on": null,
@@ -15778,7 +15778,7 @@
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 87,
       "end_line": 121,
-      "checksum": "739081e5f457f5cd",
+      "checksum": "7bf372ca0af3b366",
       "description": "Supplier catalog fallback: when procurement scan misses local store products, call buyBarcodeSearch API to search supplier catalog before showing not-found",
       "test_file": "src/__tests__/screens/scanSupplierFallback.gcp-stg-0322.test.ts",
       "depends_on": null,
@@ -19715,7 +19715,7 @@
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 525,
       "end_line": 529,
-      "checksum": "5df3b3129e072c8c",
+      "checksum": "374b9fccc86b328a",
       "description": "createStyles accepts safeTop param; header paddingTop uses safeTop+8 instead of hardcoded 48 (insets.top+8)",
       "test_file": "src/__tests__/screens/scanSafeArea.gcp-stg-0414.test.ts",
       "depends_on": null,
@@ -23867,7 +23867,7 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "3002ed163ce33573",
+      "checksum": "f9980a57b6e4c72a",
       "line_shifted_at": "2026-03-23T21:15:12.336Z"
     },
     {
@@ -24630,6 +24630,33 @@
         "parity_scanned": true,
         "parity_fixed": true
       }
+    },
+    {
+      "ticket": "GCP-STG-0525",
+      "file": "src/screens/v3/ScanScreenV3.tsx",
+      "start_line": 88,
+      "end_line": 92,
+      "checksum": "650b7fee9f87ae5b",
+      "description": "Running cart total bar below header in scan screen",
+      "test_file": "N/A",
+      "registered_at": "2026-03-23T22:05:48.017Z",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      }
     }
   ],
   "machine_state_version": 269,
@@ -24674,9 +24701,9 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-23T22:03:28.456Z",
+  "lastUpdated": "2026-03-23T22:05:48.018Z",
   "_commitNote": "GCP-STG-0417,0422,0425,0426,0428,0430,0431",
   "_note": "0429-behavioral",
   "_n": "0491",
-  "last_commit_note": "GCP-STG-0524"
+  "last_commit_note": "GCP-STG-0525"
 }
