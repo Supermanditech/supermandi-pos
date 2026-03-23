@@ -69,7 +69,13 @@ export default function BillDetailScreenV3({ saleId, billRef, date, method, tota
 
         <View style={styles.itemsSection}>
           <Text style={styles.sectionTitle}>ITEMS</Text>
-          {items.map((item, i) => (
+          {/* GCP-STG-0430: Empty state when items array is empty */}
+          {items.length === 0 ? (
+            <View style={{ alignItems: "center", paddingVertical: 32 }}>
+              <Text style={{ fontSize: 32, color: colors.textTertiary, marginBottom: 8 }}>📋</Text>
+              <Text style={{ fontSize: 14, color: colors.textTertiary, fontWeight: "500" }}>Items not available offline</Text>
+            </View>
+          ) : items.map((item, i) => (
             <View key={i} style={styles.itemRow}>
               <Text style={styles.itemName}>{item.name}</Text>
               <Text style={styles.itemQty}>×{item.qty}</Text>
