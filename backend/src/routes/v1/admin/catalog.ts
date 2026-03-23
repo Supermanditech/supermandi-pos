@@ -169,7 +169,16 @@ adminCatalogRouter.get(
           sp.sell_unit AS "sellUnit",
           sp.default_retail_variants AS "defaultVariants",
           sp.billing_model AS "billingModel",
-          (SELECT COUNT(*)::int FROM catalog.store_products stp WHERE stp.product_id = sp.id::uuid AND stp.is_active = true) AS "publishedToStores"
+          (SELECT COUNT(*)::int FROM catalog.store_products stp WHERE stp.product_id = sp.id::uuid AND stp.is_active = true) AS "publishedToStores",
+          sp.ptr_minor AS "ptrMinor",
+          sp.pts_minor AS "ptsMinor",
+          sp.trade_discount_pct AS "tradeDiscountPct",
+          sp.scheme,
+          sp.moq,
+          sp.delivery_sla_days AS "deliverySlaDays",
+          sp.credit_days AS "creditDays",
+          sp.image_url AS "imageUrl",
+          sp.stock_quantity AS "stockQuantity"
         FROM catalog.supplier_products sp
         LEFT JOIN supplier.suppliers s ON s.id = sp.supplier_id
         ${whereClause}

@@ -446,6 +446,8 @@ export function CatalogTab() {
                   <th>Category</th>
                   <th>Brand</th>
                   <th>Price</th>
+                  <th>B2B Terms</th>
+                  <th>Stock</th>
                   <th>Supplier</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -480,6 +482,35 @@ export function CatalogTab() {
                       <div style={{ fontSize: 13 }}>
                         <div>Cost: {formatPrice(product.purchasePrice)}</div>
                         {product.mrp != null && <div className="sa-text-muted" style={{ fontSize: 11 }}>MRP: {formatPrice(product.mrp)}</div>}
+                      </div>
+                    </td>
+                    {/* GCP-STG-0343: B2B commercial fields */}
+                    <td>
+                      <div style={{ fontSize: 12, lineHeight: 1.5 }}>
+                        {product.ptrMinor != null && <div>PTR: {formatPrice(product.ptrMinor)}</div>}
+                        {product.ptsMinor != null && <div>PTS: {formatPrice(product.ptsMinor)}</div>}
+                        {product.tradeDiscountPct != null && <div>Disc: {product.tradeDiscountPct}%</div>}
+                        {product.scheme && <div title={product.scheme}>Scheme: {product.scheme}</div>}
+                        {product.moq != null && product.moq > 1 && <div>MOQ: {product.moq}</div>}
+                        {product.deliverySlaDays != null && <div>{product.deliverySlaDays}d delivery</div>}
+                        {product.creditDays != null && product.creditDays > 0 && <div>{product.creditDays}d credit</div>}
+                        {!product.ptrMinor && !product.ptsMinor && !product.tradeDiscountPct && !product.scheme && "-"}
+                      </div>
+                    </td>
+                    {/* GCP-STG-0343: Stock + Image */}
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        {product.imageUrl && (
+                          <img
+                            src={product.imageUrl}
+                            alt=""
+                            style={{ width: 28, height: 28, objectFit: "cover", borderRadius: 4, flexShrink: 0 }}
+                            loading="lazy"
+                          />
+                        )}
+                        <span style={{ fontSize: 13 }}>
+                          {product.stockQuantity != null ? product.stockQuantity : "-"}
+                        </span>
                       </div>
                     </td>
                     <td>{product.supplierName}</td>

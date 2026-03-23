@@ -51,6 +51,14 @@ export type CatalogProduct = {
   defaultVariants?: string | null;
   // GCP-STG-0342: Published-to-stores count (0 = not yet published)
   publishedToStores?: number;
+  // GCP-STG-0343: B2B commercial fields
+  ptrMinor?: number | null;
+  ptsMinor?: number | null;
+  tradeDiscountPct?: number | null;
+  scheme?: string | null;
+  moq?: number | null;
+  imageUrl?: string | null;
+  stockQuantity?: number | null;
 };
 
 // V3-FIX-169: Update supplier product conversion metadata
