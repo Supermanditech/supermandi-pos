@@ -5,19 +5,19 @@
  */
 
 const mockQuery = jest.fn();
-jest.mock("../../db/client", () => ({
+jest.mock("../src/db/client", () => ({
   getPool: () => ({ query: mockQuery }),
 }));
-jest.mock("../../lib/logger", () => ({
+jest.mock("../src/lib/logger", () => ({
   log: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
-jest.mock("../../middleware/rateLimit", () => ({
+jest.mock("../src/middleware/rateLimit", () => ({
   redisRateLimit: () => (_req: any, _res: any, next: any) => next(),
 }));
 
 import express from "express";
 import request from "supertest";
-import { publicConfigRouter } from "../../routes/v1/publicConfig";
+import { publicConfigRouter } from "../src/routes/v1/publicConfig";
 
 const app = express();
 app.use(express.json());
