@@ -56,6 +56,12 @@ export function CatalogTab() {
   const [editName, setEditName] = useState("");
   // GCP-STG-0087: Billing model state
   const [editBillingModel, setEditBillingModel] = useState("SUPERMANDI_PRINCIPAL");
+  // GCP-STG-0341: HSN, GST, BNPL, Delivery Days, Credit Days
+  const [editHsnCode, setEditHsnCode] = useState("");
+  const [editGstRate, setEditGstRate] = useState("");
+  const [editBnplEligible, setEditBnplEligible] = useState(false);
+  const [editDeliveryDays, setEditDeliveryDays] = useState("");
+  const [editCreditDays, setEditCreditDays] = useState("");
 
   // GCP-STG-0071: Reject modal state
   const [rejectingProduct, setRejectingProduct] = useState<CatalogProduct | null>(null);
@@ -154,6 +160,12 @@ export function CatalogTab() {
     setEditMarginFixed("");
     // GCP-STG-0087: Billing model
     setEditBillingModel((product as any).billingModel || "SUPERMANDI_PRINCIPAL");
+    // GCP-STG-0341: HSN, GST, BNPL, Delivery Days, Credit Days
+    setEditHsnCode(product.hsnCode || "");
+    setEditGstRate(product.defaultGstRate != null ? String(product.defaultGstRate) : "");
+    setEditBnplEligible(product.bnplEligible || false);
+    setEditDeliveryDays(product.deliverySlaDays != null ? String(product.deliverySlaDays) : "");
+    setEditCreditDays(product.creditDays != null ? String(product.creditDays) : "");
   };
 
   // GCP-STG-0071: Approve product
@@ -247,20 +259,42 @@ export function CatalogTab() {
         });
       }
 
-      // GCP-STG-0087: Update billing model if changed
-      const billingModelChanged = editBillingModel !== ((editingProduct as any).billingModel || "SUPERMANDI_PRINCIPAL");
-      if (billingModelChanged) {
-        await editProductMetadata(editingProduct.id, {
-          billingModel: editBillingModel,
-        } as any);
+      // GCP-STG-0087 + GCP-STG-0075 + GCP-STG-0341: Collect all metadata changes into one PUT
+      const metadataPayload: Parameters<typeof editProductMetadata>[1] = {};
+      // Billing model
+      if (editBillingModel !== ((editingProduct as any).billingModel || "SUPERMANDI_PRINCIPAL")) {
+        metadataPayload.billingModel = editBillingModel;
       }
-
-      // GCP-STG-0075: Update product name if changed
-      const nameChanged = editName.trim() !== (editingProduct.displayName || editingProduct.name || "");
-      if (nameChanged) {
-        await editProductMetadata(editingProduct.id, {
-          editedName: editName.trim(),
-        });
+      // Product name
+      if (editName.trim() !== (editingProduct.displayName || editingProduct.name || "")) {
+        metadataPayload.editedName = editName.trim();
+      }
+      // GCP-STG-0341: HSN Code
+      if (editHsnCode !== (editingProduct.hsnCode || "")) {
+        metadataPayload.hsnCode = editHsnCode || undefined;
+      }
+      // GCP-STG-0341: GST Rate
+      const currentGst = editingProduct.defaultGstRate != null ? String(editingProduct.defaultGstRate) : "";
+      if (editGstRate !== currentGst) {
+        metadataPayload.gstRate = editGstRate ? Number(editGstRate) : undefined;
+      }
+      // GCP-STG-0341: BNPL Eligible
+      if (editBnplEligible !== (editingProduct.bnplEligible || false)) {
+        metadataPayload.bnplEligible = editBnplEligible;
+      }
+      // GCP-STG-0341: Delivery SLA Days
+      const currentDelivery = editingProduct.deliverySlaDays != null ? String(editingProduct.deliverySlaDays) : "";
+      if (editDeliveryDays !== currentDelivery) {
+        metadataPayload.deliverySlaDays = editDeliveryDays ? Number(editDeliveryDays) : undefined;
+      }
+      // GCP-STG-0341: Credit Days
+      const currentCredit = editingProduct.creditDays != null ? String(editingProduct.creditDays) : "";
+      if (editCreditDays !== currentCredit) {
+        metadataPayload.creditDays = editCreditDays ? Number(editCreditDays) : undefined;
+      }
+      // Send metadata update if any field changed
+      if (Object.keys(metadataPayload).length > 0) {
+        await editProductMetadata(editingProduct.id, metadataPayload);
       }
 
       toast.success("Product updated successfully");
@@ -457,6 +491,23 @@ export function CatalogTab() {
                       }>
                         {product.approvalStatus || "pending"}
                       </span>
+                      {/* GCP-STG-0342: Published/unpublished indicator for approved products */}
+                      {product.approvalStatus === "approved" && (
+                        <span
+                          className={product.publishedToStores && product.publishedToStores > 0 ? "sa-badge-success" : "sa-badge-warning"}
+                          style={{ marginLeft: 4, fontSize: 11 }}
+                          title={product.publishedToStores && product.publishedToStores > 0
+                            ? `Published to ${product.publishedToStores} store(s)`
+                            : "Not yet published to any store"}
+                          aria-label={product.publishedToStores && product.publishedToStores > 0
+                            ? `Published to ${product.publishedToStores} stores`
+                            : "Unpublished"}
+                        >
+                          {product.publishedToStores && product.publishedToStores > 0
+                            ? `${product.publishedToStores} store${product.publishedToStores > 1 ? "s" : ""}`
+                            : "Unpublished"}
+                        </span>
+                      )}
                     </td>
                     <td>
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
@@ -557,8 +608,6 @@ export function CatalogTab() {
               <div><strong>Supplier:</strong> {editingProduct.supplierName}</div>
               <div><strong>Purchase Price:</strong> {formatPrice(editingProduct.purchasePrice)}</div>
               {editingProduct.mrp != null && <div><strong>MRP:</strong> {formatPrice(editingProduct.mrp)}</div>}
-              {editingProduct.hsnCode && <div><strong>HSN:</strong> {editingProduct.hsnCode}</div>}
-              {editingProduct.defaultGstRate != null && <div><strong>GST:</strong> {editingProduct.defaultGstRate}%</div>}
             </div>
 
             {/* GCP-STG-0075: Product name override */}
@@ -581,6 +630,87 @@ export function CatalogTab() {
                   Original: {editingProduct.name}
                 </div>
               )}
+            </div>
+
+            {/* GCP-STG-0341: HSN, GST, BNPL, Delivery Days, Credit Days */}
+            <div style={{
+              background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: 8,
+              padding: '12px 16px', marginBottom: 16
+            }}>
+              <h4 style={{ margin: '0 0 8px', fontSize: 14, color: '#6b21a8' }}>Compliance &amp; Terms</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label htmlFor="edit-hsn" style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 2 }}>HSN Code:</label>
+                  <input
+                    id="edit-hsn"
+                    type="text"
+                    value={editHsnCode}
+                    onChange={(e) => setEditHsnCode(e.target.value)}
+                    className="sa-input"
+                    style={{ width: '100%', fontSize: 13 }}
+                    placeholder="e.g., 19011090"
+                    maxLength={12}
+                    disabled={editSaving}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-gst" style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 2 }}>GST Rate:</label>
+                  <select
+                    id="edit-gst"
+                    value={editGstRate}
+                    onChange={(e) => setEditGstRate(e.target.value)}
+                    className="sa-input"
+                    style={{ width: '100%', fontSize: 13 }}
+                    disabled={editSaving}
+                  >
+                    <option value="">Not set</option>
+                    <option value="0">0%</option>
+                    <option value="5">5%</option>
+                    <option value="12">12%</option>
+                    <option value="18">18%</option>
+                    <option value="28">28%</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="edit-delivery-days" style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 2 }}>Delivery SLA (days):</label>
+                  <input
+                    id="edit-delivery-days"
+                    type="number"
+                    value={editDeliveryDays}
+                    onChange={(e) => setEditDeliveryDays(e.target.value)}
+                    className="sa-input"
+                    style={{ width: '100%', fontSize: 13 }}
+                    placeholder="e.g., 3"
+                    min="0" max="365" step="1"
+                    disabled={editSaving}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-credit-days" style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 2 }}>Credit Days:</label>
+                  <input
+                    id="edit-credit-days"
+                    type="number"
+                    value={editCreditDays}
+                    onChange={(e) => setEditCreditDays(e.target.value)}
+                    className="sa-input"
+                    style={{ width: '100%', fontSize: 13 }}
+                    placeholder="e.g., 30"
+                    min="0" max="365" step="1"
+                    disabled={editSaving}
+                  />
+                </div>
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={editBnplEligible}
+                    onChange={(e) => setEditBnplEligible(e.target.checked)}
+                    disabled={editSaving}
+                  />
+                  BNPL Eligible (Buy Now Pay Later)
+                </label>
+              </div>
             </div>
 
             {/* GCP-STG-0072: Margin setting */}

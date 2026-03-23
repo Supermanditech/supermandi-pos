@@ -37,6 +37,10 @@ export type CatalogProduct = {
   manufacturerName?: string | null;
   countryOfOrigin?: string | null;
   shelfLifeDays?: number | null;
+  // GCP-STG-0281: BNPL + commercial terms
+  bnplEligible?: boolean | null;
+  deliverySlaDays?: number | null;
+  creditDays?: number | null;
   // V3-FIX-169: Conversion/procurement metadata
   unit?: string | null;
   procurementUnit?: string | null;
@@ -45,6 +49,8 @@ export type CatalogProduct = {
   splitSellEligible?: boolean | null;
   sellUnit?: string | null;
   defaultVariants?: string | null;
+  // GCP-STG-0342: Published-to-stores count (0 = not yet published)
+  publishedToStores?: number;
 };
 
 // V3-FIX-169: Update supplier product conversion metadata
@@ -283,6 +289,11 @@ export async function editProductMetadata(
     bnplEligible?: boolean;
     bnplMaxDays?: number;
     billingModel?: string;
+    // GCP-STG-0341: Editable compliance + commercial fields
+    hsnCode?: string;
+    gstRate?: number;
+    deliverySlaDays?: number;
+    creditDays?: number;
   }
 ): Promise<void> {
   const base = API_BASE;
