@@ -5,6 +5,7 @@ import { Pool } from "pg";
 import crypto from "crypto";
 import { log } from "../lib/logger";
 import { asError } from "../lib/errorUtils";
+import { markSettlementPaidByPayout } from "./settlementService"; // GCP-STG-0354
 
 // Environment configuration
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || "";
@@ -253,6 +254,9 @@ export async function processScheduledPayout(
         [payout.purchaseOrderId]
       );
 
+      // GCP-STG-0354: Cross-reference — mark linked settlement_records as paid
+      await markSettlementPaidByPayout(pool, payout.id, result.utr, payout.supplierId, payout.purchaseOrderId);
+
       await client.query("COMMIT");
       log.info(`[SM-018] Payout completed: payoutId=${payout.id}, razorpayId=${result.payoutId}, utr=${result.utr}`);
     } else {
@@ -424,7 +428,7 @@ export async function handlePayoutWebhook(
 
     // Find the payout record by Razorpay payout ID
     const payoutResult = await client.query(
-      `SELECT sp.id, sp.payment_id, sp.purchase_order_id
+      `SELECT sp.id, sp.payment_id, sp.purchase_order_id, sp.supplier_id
        FROM payments.supplier_payouts sp
        WHERE sp.payout_account_id = $1`,
       [razorpayPayoutId]
@@ -460,6 +464,9 @@ export async function handlePayoutWebhook(
          WHERE id = $1`,
         [payout.purchase_order_id]
       );
+
+      // GCP-STG-0354: Cross-reference — mark linked settlement_records as paid
+      await markSettlementPaidByPayout(pool, payout.id, utr, payout.supplier_id, payout.purchase_order_id);
 
       log.info(`[SM-018] Payout webhook: completed, payoutId=${payout.id}, utr=${utr}`);
     } else if (event === "payout.failed" || event === "payout.reversed") {

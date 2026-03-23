@@ -273,15 +273,69 @@ export async function markSettlementPaid(
   settlementId: string,
   payoutReference: string,
   payoutUtr?: string,
-  payoutMethod?: string
+  payoutMethod?: string,
+  payoutId?: string  // GCP-STG-0354: link to payments.supplier_payouts
 ): Promise<void> {
   await pool.query(
     `UPDATE invoicing.settlement_records
      SET status = 'paid', payout_reference = $2, payout_utr = $3,
-         payout_method = $4, paid_at = NOW(), updated_at = NOW()
+         payout_method = $4, paid_at = NOW(), updated_at = NOW(),
+         payout_id = COALESCE($5::uuid, payout_id)
      WHERE id = $1::uuid AND status IN ('approved', 'scheduled')`,
-    [settlementId, payoutReference, payoutUtr || null, payoutMethod || "razorpay"]
+    [settlementId, payoutReference, payoutUtr || null, payoutMethod || "razorpay", payoutId || null]
   );
+}
+
+// =============================================================================
+// GCP-STG-0354: Link settlement to payout + mark paid by payout ID
+// =============================================================================
+
+/**
+ * GCP-STG-0354: When a supplier payout completes (webhook), find any linked
+ * settlement_records and mark them paid. Looks up by payout_id FK first,
+ * then falls back to supplier_id + order overlap.
+ */
+export async function markSettlementPaidByPayout(
+  pool: Pool,
+  payoutId: string,
+  payoutUtr: string | undefined,
+  supplierId: string,
+  purchaseOrderId: string | undefined
+): Promise<number> {
+  // First: update any settlements already linked via payout_id FK
+  const directResult = await pool.query(
+    `UPDATE invoicing.settlement_records
+     SET status = 'paid', payout_utr = $2, payout_method = 'razorpay',
+         paid_at = NOW(), updated_at = NOW()
+     WHERE payout_id = $1::uuid AND status IN ('approved', 'scheduled')
+     RETURNING id`,
+    [payoutId, payoutUtr || null]
+  );
+
+  if (directResult.rowCount && directResult.rowCount > 0) {
+    log.info(`[settlement] GCP-STG-0354: Marked ${directResult.rowCount} settlement(s) paid via payout_id=${payoutId}`);
+    return directResult.rowCount;
+  }
+
+  // Fallback: match by supplier + order (for settlements created before payout_id column existed)
+  if (purchaseOrderId) {
+    const fallbackResult = await pool.query(
+      `UPDATE invoicing.settlement_records
+       SET status = 'paid', payout_id = $1::uuid, payout_utr = $3,
+           payout_method = 'razorpay', paid_at = NOW(), updated_at = NOW()
+       WHERE supplier_id = $2::uuid AND order_id = $4::uuid
+         AND status IN ('approved', 'scheduled')
+       RETURNING id`,
+      [payoutId, supplierId, payoutUtr || null, purchaseOrderId]
+    );
+
+    if (fallbackResult.rowCount && fallbackResult.rowCount > 0) {
+      log.info(`[settlement] GCP-STG-0354: Fallback-linked ${fallbackResult.rowCount} settlement(s) to payout_id=${payoutId}`);
+      return fallbackResult.rowCount;
+    }
+  }
+
+  return 0;
 }
 
 // =============================================================================
