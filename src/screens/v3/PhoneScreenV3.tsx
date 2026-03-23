@@ -22,6 +22,8 @@ export default function PhoneScreenV3() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  // GCP-STG-0479: Track if user tried entering more than 10 digits
+  const [showPhoneHint, setShowPhoneHint] = useState(false);
 
   const handleContinue = useCallback(async () => {
     const clean = phone.replace(/\D/g, "").slice(-10);
@@ -63,15 +65,29 @@ export default function PhoneScreenV3() {
             <TextInput
               style={styles.phoneInput}
               value={phone}
-              onChangeText={setPhone}
+              onChangeText={(text) => {
+                // GCP-STG-0479: Show hint when user types more than 10 digits
+                const digits = text.replace(/\D/g, "");
+                if (digits.length > 10) {
+                  setShowPhoneHint(true);
+                  setPhone(digits.slice(0, 10));
+                } else {
+                  setPhone(text);
+                  if (digits.length <= 10) setShowPhoneHint(false);
+                }
+              }}
               placeholder="98765 43210"
               placeholderTextColor={colors.textTertiary}
               keyboardType="phone-pad"
-              maxLength={10}
+              maxLength={12}
               autoFocus
               onSubmitEditing={handleContinue}
             />
           </View>
+          {/* GCP-STG-0479: Hint for excess digits */}
+          {showPhoneHint && (
+            <Text style={styles.phoneHint}>Enter 10-digit number without country code</Text>
+          )}
         </View>
 
         <Pressable
@@ -105,6 +121,7 @@ function createStyles(colors: ColorPalette) {
     continueBtn: { width: "100%", backgroundColor: colors.primary, paddingVertical: 16, borderRadius: 16, alignItems: "center", marginTop: 24 },
     btnDisabled: { opacity: 0.6 },
     continueText: { fontSize: 17, fontWeight: "800", color: "#fff" },
+    phoneHint: { fontSize: 12, color: "#E53E3E", marginTop: 4 },
     registerLink: { marginTop: 24 },
     registerText: { fontSize: 13, color: colors.textTertiary },
     registerBold: { color: colors.primary, fontWeight: "600" },
