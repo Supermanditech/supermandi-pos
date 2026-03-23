@@ -11,6 +11,7 @@ module.exports = {
     '^expo-modules-core$': '<rootDir>/src/__tests__/__mocks__/expo-modules-core.js',
     '^expo-linear-gradient$': '<rootDir>/src/__tests__/__mocks__/expo-linear-gradient.js',
     '^react-native-reanimated$': '<rootDir>/src/__tests__/__mocks__/react-native-reanimated.js',
+    '^react-native-safe-area-context$': '<rootDir>/src/__tests__/__mocks__/react-native-safe-area-context.js',
   },
   setupFiles: ['<rootDir>/src/__tests__/jest.setup.js'],
   coverageDirectory: 'coverage',
