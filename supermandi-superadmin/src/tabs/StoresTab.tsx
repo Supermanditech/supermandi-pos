@@ -186,6 +186,12 @@ export function StoresTab({
   handleDiscountLimitSave,
   discountLimitSaving,
 }: StoresTabProps) {
+  // GCP-STG-0425: Client-side pagination for store directory (page size 50)
+  const STORE_PAGE_SIZE = 50;
+  const [storePage, setStorePage] = React.useState(0);
+  const storeTotalPages = Math.max(1, Math.ceil(storeDirectory.length / STORE_PAGE_SIZE));
+  const pagedStoreDirectory = storeDirectory.slice(storePage * STORE_PAGE_SIZE, (storePage + 1) * STORE_PAGE_SIZE);
+
   // SA-P2-007: BNPL edit modal state
   const [bnplEditStoreId, setBnplEditStoreId] = React.useState<string | null>(null);
   const [bnplForm, setBnplForm] = React.useState({ bnplEnabled: false, bnplCreditLimitRupees: "0", bnplMaxDays: "7", creditEnabled: false, creditLimitRupees: "0" });
@@ -443,7 +449,8 @@ export function StoresTab({
               </tr>
             </thead>
             <tbody>
-              {storeDirectory.map((s) => {
+              {/* GCP-STG-0425: Render only current page of stores */}
+              {pagedStoreDirectory.map((s) => {
                 const contactDraft = getStoreContactDraft(s);
                 const isExpanded = expandedStoreId === s.id;
                 return (
@@ -821,6 +828,16 @@ export function StoresTab({
               })}
             </tbody>
           </table>
+          {/* GCP-STG-0425: Pagination controls for store directory */}
+          {storeTotalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, padding: '12px 0' }}>
+              <button className="btnSm" disabled={storePage === 0} onClick={() => setStorePage(p => p - 1)}>Prev</button>
+              <span className="muted" style={{ fontSize: 13 }}>
+                Page {storePage + 1} of {storeTotalPages} ({storeDirectory.length} stores)
+              </span>
+              <button className="btnSm" disabled={storePage >= storeTotalPages - 1} onClick={() => setStorePage(p => p + 1)}>Next</button>
+            </div>
+          )}
         </div>
       )}
 
