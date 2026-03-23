@@ -4,7 +4,7 @@
  * Uses: auth.users + auth.store_users + platform.stores (NOT legacy public.stores/users)
  * Device IDs: UUID (gen_random_uuid), not string concatenation
  * OTP: cryptographically strong (crypto.randomInt), SHA-256 hashed
- * Logging: no plaintext OTP outside __DEV__
+ * Logging: no plaintext OTP unless LOG_OTP_PLAINTEXT=true
  * Rate limiting: 5 attempts per OTP, 5-min expiry
  * Error responses: { error: { code, message } } format
  */
@@ -77,7 +77,8 @@ posOtpAuthRouter.post("/auth/send-otp", otpSendLimiter, async (req, res) => {
     );
 
     // Send OTP via WhatsApp (primary) with masked console fallback
-    if (__DEV__) {
+    // SECURITY: Never enable LOG_OTP_PLAINTEXT in staging or production
+    if (process.env.LOG_OTP_PLAINTEXT === 'true') {
       console.log(`[OTP-DEV] Phone: ${phone}, OTP: ${otp}`);
     } else {
       console.log(`[OTP] Phone: ${phone.slice(0, 3)}***${phone.slice(-2)}, OTP: ****** (expires: ${expiresAt.toISOString()})`);
@@ -100,9 +101,6 @@ posOtpAuthRouter.post("/auth/send-otp", otpSendLimiter, async (req, res) => {
     res.status(500).json({ error: { code: "OTP_SEND_FAILED", message: "Failed to send OTP" } });
   }
 });
-
-// Declare __DEV__ for TypeScript (React Native global)
-declare const __DEV__: boolean;
 
 // ─── POST /pos/auth/verify-otp ──────────────────────────────────────────────
 posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
