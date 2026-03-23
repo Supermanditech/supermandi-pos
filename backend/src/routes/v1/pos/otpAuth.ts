@@ -68,12 +68,12 @@ posOtpAuthRouter.post("/auth/send-otp", otpSendLimiter, async (req, res) => {
     const otp = generateOtp();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    // Store hashed OTP (upsert)
+    // GCP-STG-0459: Store OTP with normalizedPhone (+91 E.164) to match auth.users format
     await pool.query(
       `INSERT INTO pos_otp (phone, otp_hash, expires_at, created_at)
        VALUES ($1, $2, $3, NOW())
        ON CONFLICT (phone) DO UPDATE SET otp_hash = $2, expires_at = $3, attempts = 0, created_at = NOW()`,
-      [phone, hashOtp(otp), expiresAt]
+      [normalizedPhone, hashOtp(otp), expiresAt]
     );
 
     // Send OTP via WhatsApp (primary) with masked console fallback
@@ -114,10 +114,11 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: { code: "SERVICE_UNAVAILABLE", message: "Database not available" } });
   try {
-    // Verify OTP from pos_otp table
+    // GCP-STG-0459: Use normalizedPhone (+91 E.164) for pos_otp lookup (matches INSERT format)
+    const normalizedPhone = `+91${phone}`;
     const otpResult = await pool.query(
       `SELECT otp_hash, expires_at, attempts FROM pos_otp WHERE phone = $1`,
-      [phone]
+      [normalizedPhone]
     );
 
     if (otpResult.rows.length === 0) {
@@ -132,17 +133,15 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
       return res.status(429).json({ error: { code: "OTP_RATE_LIMITED", message: "Too many attempts. Request a new OTP." } });
     }
 
-    // Increment attempts before checking hash
-    await pool.query(`UPDATE pos_otp SET attempts = attempts + 1 WHERE phone = $1`, [phone]);
+    // GCP-STG-0459: Use normalizedPhone for UPDATE (matches INSERT/SELECT)
+    await pool.query(`UPDATE pos_otp SET attempts = attempts + 1 WHERE phone = $1`, [normalizedPhone]);
 
     if (hashOtp(otp) !== row.otp_hash) {
       return res.status(400).json({ error: { code: "OTP_INVALID", message: "Invalid OTP" } });
     }
 
-    // GCP-STG-0299: Normalize 10-digit phone to E.164 for auth.users lookup
-    const normalizedPhone = `+91${phone}`;
-
     // V3-BE-004: Get ALL stores for this phone from canonical schema
+    // (normalizedPhone already declared above — GCP-STG-0459 unified all pos_otp + auth.users to +91)
     const storeResult = await pool.query(
       `SELECT ps.id, ps.name AS store_name, ps.code AS store_code, ps.status
        FROM auth.users u
@@ -208,8 +207,8 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
         [store.id, token, `POS-${phone.slice(-4)}`]
       );
 
-      // Clean up OTP
-      await client.query(`DELETE FROM pos_otp WHERE phone = $1`, [phone]);
+      // GCP-STG-0459: Clean up OTP using normalizedPhone (+91 E.164 format)
+      await client.query(`DELETE FROM pos_otp WHERE phone = $1`, [normalizedPhone]);
 
       await client.query("COMMIT");
     } catch (txErr) {

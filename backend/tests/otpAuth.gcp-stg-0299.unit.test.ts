@@ -50,10 +50,10 @@ describe("GCP-STG-0299: POS OTP phone normalization", () => {
       expect(authQuery[0]).toContain("FROM auth.users");
       expect(authQuery[1]).toEqual(["+919876543210"]);
 
-      // Verify pos_otp INSERT used raw phone (for WhatsApp sending)
+      // GCP-STG-0459: pos_otp INSERT now uses +91 normalized phone (unified with auth.users)
       const otpQuery = mockQuery.mock.calls[1];
       expect(otpQuery[0]).toContain("INSERT INTO pos_otp");
-      expect(otpQuery[1][0]).toBe("9876543210");
+      expect(otpQuery[1][0]).toBe("+919876543210");
     });
 
     test("returns 404 PHONE_NOT_REGISTERED when no auth.users match", async () => {
@@ -123,8 +123,8 @@ describe("GCP-STG-0299: POS OTP phone normalization", () => {
         .post("/pos/auth/verify-otp")
         .send({ phone: "9876543210", otp: "123456", storeId: "store-1" });
 
-      // pos_otp query uses raw phone
-      expect(mockQuery.mock.calls[0][1]).toEqual(["9876543210"]);
+      // GCP-STG-0459: pos_otp query now uses +91 normalized phone
+      expect(mockQuery.mock.calls[0][1]).toEqual(["+919876543210"]);
 
       // auth.users query uses +91 normalized phone
       const authCall = mockQuery.mock.calls.find(
