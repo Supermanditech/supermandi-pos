@@ -153,6 +153,7 @@ adminCatalogRouter.get(
         `SELECT
           sp.id,
           sp.name,
+          sp.description,
           COALESCE(sp.edited_name, sp.name) AS "displayName",
           sp.category AS "originalCategory",
           sp.edited_category AS "editedCategory",
