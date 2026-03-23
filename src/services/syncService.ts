@@ -16,6 +16,45 @@ const BASE_RETRY_DELAY_MS = 1000;
 const STOCK_SYNC_INTERVAL_MS = 30 * 1000;
 let stockSyncInterval: ReturnType<typeof setInterval> | null = null;
 
+// GCP-STG-0371: Per-request timeout for sync API calls via AbortController
+const SYNC_TIMEOUT_MS = 30_000; // 30 seconds
+
+/**
+ * GCP-STG-0371: Wrap a promise with a timeout.
+ * Rejects with an AbortError-style message if the promise doesn't resolve in `ms`.
+ * Does NOT crash the app — callers catch AbortError gracefully.
+ */
+export function withSyncTimeout<T>(promise: Promise<T>, ms: number = SYNC_TIMEOUT_MS, label = "sync"): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        const err = new Error(`[GCP-STG-0371] ${label} timed out after ${ms}ms`);
+        err.name = "AbortError";
+        reject(err);
+      }
+    }, ms);
+
+    promise.then(
+      (value) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve(value);
+        }
+      },
+      (reason) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          reject(reason);
+        }
+      },
+    );
+  });
+}
+
 // STG-390: Track reconnection for price cache refresh
 type ReconnectCallback = () => void;
 let reconnectCallbacks: ReconnectCallback[] = [];
@@ -28,7 +67,8 @@ function getRetryDelay(retryCount: number): number {
 
 async function syncOutboxWithRetry(): Promise<void> {
   try {
-    await syncOutbox();
+    // GCP-STG-0371: Timeout outbox sync to prevent indefinite hang
+    await withSyncTimeout(syncOutbox(), SYNC_TIMEOUT_MS, "syncOutbox");
     outboxRetryCount = 0; // Reset on success
   } catch (error) {
     outboxRetryCount++;
@@ -58,13 +98,24 @@ function startStockSync(): void {
   stockSyncInterval = setInterval(async () => {
     try {
       if (await isOnline()) {
-        await refreshStockSnapshot();
+        // GCP-STG-0371: Timeout each sync call to prevent indefinite hang
+        await withSyncTimeout(refreshStockSnapshot(), SYNC_TIMEOUT_MS, "refreshStockSnapshot");
         // GCP-STG-0091: Check product catalog freshness every sync tick
         // Detects retailer web / CSV / supplier edits and reloads if stale
-        await useProductsStore.getState().checkAndRefresh();
+        await withSyncTimeout(
+          useProductsStore.getState().checkAndRefresh(),
+          SYNC_TIMEOUT_MS,
+          "checkAndRefresh",
+        );
       }
     } catch (error) {
-      console.warn("[SyncService] STG-387: Stock sync failed:", error);
+      // GCP-STG-0371: Gracefully handle AbortError (timeout) — log warning, don't crash
+      const isTimeout = error instanceof Error && error.name === "AbortError";
+      if (isTimeout) {
+        console.warn("[SyncService] GCP-STG-0371: Sync tick timed out:", error.message);
+      } else {
+        console.warn("[SyncService] STG-387: Stock sync failed:", error);
+      }
     }
   }, STOCK_SYNC_INTERVAL_MS);
   console.log("[SyncService] GCP-STG-0091: Stock + catalog sync started (30s interval)");
@@ -86,11 +137,16 @@ export async function syncNow(): Promise<void> {
     console.log("[SyncService] Cannot sync — offline");
     return;
   }
+  // GCP-STG-0371: Timeout each sync call to prevent indefinite hang on manual sync
   await Promise.all([
-    refreshStockSnapshot(),
-    syncOutboxWithRetry(),
+    withSyncTimeout(refreshStockSnapshot(), SYNC_TIMEOUT_MS, "syncNow:refreshStock"),
+    withSyncTimeout(syncOutboxWithRetry(), SYNC_TIMEOUT_MS, "syncNow:outbox"),
     // GCP-STG-0091: Also check catalog freshness on manual sync
-    useProductsStore.getState().checkAndRefresh(),
+    withSyncTimeout(
+      useProductsStore.getState().checkAndRefresh(),
+      SYNC_TIMEOUT_MS,
+      "syncNow:checkAndRefresh",
+    ),
   ]);
 }
 

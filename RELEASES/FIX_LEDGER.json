@@ -18693,7 +18693,7 @@
       "start_line": 19,
       "end_line": 56,
       "checksum": "cf852cd922a8ce32",
-      "description": "Per-request 30s timeout wrapper (withSyncTimeout) for all sync API calls — prevents indefinite hangs",
+      "description": "Per-request 30s timeout wrapper (withSyncTimeout) for all sync API calls — prevents indefinite hangs (30s timeout + AbortError handling)",
       "test_file": "src/__tests__/services/syncTimeout.gcp-stg-0371.test.ts",
       "depends_on": null,
       "migration": null,
