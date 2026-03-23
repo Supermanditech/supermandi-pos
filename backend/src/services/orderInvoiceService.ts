@@ -4,7 +4,7 @@
 //   DIRECT_SUPPLIER: Direct-sale invoice (supplier→retailer) + Commission invoice (SM→supplier)
 
 import type { Pool, PoolClient } from "pg";
-import { createInvoice, issueInvoice, type CreateInvoiceInput, type InvoiceItemInput } from "./invoiceService";
+import { createInvoice, issueInvoice, deriveInterState, type CreateInvoiceInput, type InvoiceItemInput } from "./invoiceService";
 import { log } from "../lib/logger";
 
 type BillingModel = "SUPERMANDI_PRINCIPAL" | "DIRECT_SUPPLIER";
@@ -59,7 +59,7 @@ export async function generateOrderInvoices(
 
     // Fetch store details
     const storeResult = await pool.query(
-      `SELECT id, name, gstin,
+      `SELECT id, name, gstin, state,
               COALESCE(address, '') || ' ' || COALESCE(city, '') || ' ' || COALESCE(state, '') as full_address
        FROM platform.stores WHERE id = $1::uuid`,
       [order.storeId]
@@ -104,6 +104,8 @@ async function generatePrincipalInvoices(
   items: InvoiceItemInput[]
 ): Promise<void> {
   // 1. Purchase invoice (Supplier → SuperMandi)
+  // GCP-STG-0353: Derive inter-state from GSTIN state codes
+  const purchaseIsInterState = deriveInterState(supplier.gstin, SUPERMANDI_ENTITY.gstin);
   const purchaseInput: CreateInvoiceInput = {
     invoiceModel: "buy_resell",
     invoiceType: "purchase",
@@ -124,12 +126,15 @@ async function generatePrincipalInvoices(
     items,
     orderId: order.orderId,
     referenceNote: `Auto-generated from PO for store ${store.name}`,
+    isInterState: purchaseIsInterState,
   };
 
   const purchaseInvoice = await createInvoice(pool, purchaseInput);
   await issueInvoice(pool, purchaseInvoice.id);
 
   // 2. Sale invoice (SuperMandi → Retailer) — same items but at retail price
+  // GCP-STG-0353: Derive inter-state from GSTIN state codes
+  const saleIsInterState = deriveInterState(SUPERMANDI_ENTITY.gstin, store.gstin);
   const saleInput: CreateInvoiceInput = {
     invoiceModel: "buy_resell",
     invoiceType: "sale",
@@ -150,6 +155,7 @@ async function generatePrincipalInvoices(
     items,
     orderId: order.orderId,
     referenceNote: `Auto-generated from PO (principal model)`,
+    isInterState: saleIsInterState,
   };
 
   const saleInvoice = await createInvoice(pool, saleInput);
@@ -201,6 +207,8 @@ async function generateDirectSupplierInvoices(
   items: InvoiceItemInput[]
 ): Promise<void> {
   // 1. Direct-sale invoice (Supplier → Retailer)
+  // GCP-STG-0353: Derive inter-state from GSTIN state codes
+  const directSaleIsInterState = deriveInterState(supplier.gstin, store.gstin);
   const directSaleInput: CreateInvoiceInput = {
     invoiceModel: "platform_fee",
     invoiceType: "sale",
@@ -221,12 +229,15 @@ async function generateDirectSupplierInvoices(
     items,
     orderId: order.orderId,
     referenceNote: `Direct supplier sale via SuperMandi platform`,
+    isInterState: directSaleIsInterState,
   };
 
   const directSaleInvoice = await createInvoice(pool, directSaleInput);
   await issueInvoice(pool, directSaleInvoice.id);
 
   // 2. Commission invoice (SuperMandi → Supplier)
+  // GCP-STG-0353: Derive inter-state from GSTIN state codes
+  const commissionIsInterState = deriveInterState(SUPERMANDI_ENTITY.gstin, supplier.gstin);
   const platformFeePercent = DEFAULT_PLATFORM_FEE_PERCENT;
   const commissionInput: CreateInvoiceInput = {
     invoiceModel: "platform_fee",
@@ -249,6 +260,7 @@ async function generateDirectSupplierInvoices(
     platformFeePercent,
     orderId: order.orderId,
     referenceNote: `Platform commission on sales to ${store.name}`,
+    isInterState: commissionIsInterState,
   };
 
   const commissionInvoice = await createInvoice(pool, commissionInput);

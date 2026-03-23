@@ -46,6 +46,7 @@ export interface CreateInvoiceInput {
   platformFeePercent?: number;
   createdBy?: string;
   fiscalYear?: string;
+  isInterState?: boolean; // GCP-STG-0353: explicit inter-state flag for IGST vs CGST+SGST
 }
 
 export interface Invoice {
@@ -168,6 +169,17 @@ export function calculateItemTax(
   };
 }
 
+/**
+ * GCP-STG-0353: Derive inter-state status from seller/buyer GSTIN.
+ * First 2 digits of GSTIN = state code. Different codes → inter-state → IGST.
+ * Same codes or either GSTIN missing → intra-state → CGST+SGST (safe default).
+ */
+export function deriveInterState(sellerGstin?: string, buyerGstin?: string): boolean {
+  if (!sellerGstin || !buyerGstin) return false; // Missing GSTIN → default intra-state
+  if (sellerGstin.length < 2 || buyerGstin.length < 2) return false;
+  return sellerGstin.substring(0, 2) !== buyerGstin.substring(0, 2);
+}
+
 // =============================================================================
 // Create Invoice
 // =============================================================================
@@ -207,12 +219,15 @@ export async function createInvoice(
 
     const processedItems: Array<InvoiceItemInput & TaxBreakdown & { sortOrder: number }> = [];
 
+    // GCP-STG-0353: Use explicit isInterState flag, or derive from seller/buyer GSTIN
+    const isInterState = input.isInterState ?? deriveInterState(input.seller.gstin, input.buyer.gstin);
+
     for (let i = 0; i < input.items.length; i++) {
       const item = input.items[i];
       const lineTotal = Math.round(item.quantity * item.unitPriceMinor);
       const discount = item.discountMinor || 0;
       const taxable = lineTotal - discount;
-      const tax = calculateItemTax(taxable, item.gstRate || 0);
+      const tax = calculateItemTax(taxable, item.gstRate || 0, isInterState);
 
       subtotal += lineTotal;
       totalDiscount += discount;
