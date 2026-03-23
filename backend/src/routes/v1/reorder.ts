@@ -11,6 +11,8 @@ import { requireDeviceToken, PosDeviceContext } from "../../middleware/deviceTok
 import { checkSpendingLimits } from "../../services/spendingLimitService";
 import { log } from "../../lib/logger";
 import { asError } from "../../lib/errorUtils";
+// GCP-STG-0376: Notify suppliers when reorder POs are auto-submitted
+import { publishLifecycleEvent } from "../../services/lifecycleEventService";
 
 export const reorderRouter = Router();
 
@@ -589,12 +591,12 @@ reorderRouter.post("/stores/:storeId/reorder/pending/approve", requireDeviceToke
           totalAmount += (item.quantity || 0) * (item.unitPrice || 0);
         }
 
-        // Create draft PO with source_reorder_ids
+        // GCP-STG-0376: Create PO as 'submitted' (not 'draft') so supplier portal shows it
         const reorderIds = items.map((i: { id: string }) => i.id);
         const poResult = await client.query(
           `INSERT INTO orders.purchase_orders
             (store_id, supplier_id, order_number, order_type, source_reorder_ids, status, total_amount, item_count)
-           VALUES ($1, $2, $3, 'reorder', $4, 'draft', $5, $6)
+           VALUES ($1, $2, $3, 'reorder', $4, 'submitted', $5, $6)
            RETURNING id, order_number as "orderNumber"`,
           [storeId, supplierId === "unknown" ? null : supplierId, orderNumber, reorderIds, totalAmount, items.length]
         );
@@ -648,6 +650,32 @@ reorderRouter.post("/stores/:storeId/reorder/pending/approve", requireDeviceToke
 
       await client.query("COMMIT");
 
+      // GCP-STG-0376: Fire-and-forget supplier notifications for auto-submitted POs
+      for (const po of draftPurchaseOrders) {
+        if (po.supplierId && po.supplierId !== "unknown") {
+          publishLifecycleEvent({
+            eventType: "supplier_action_required",
+            orderId: po.id,
+            storeId,
+            supplierId: po.supplierId,
+            targets: [
+              { role: "supplier", channels: ["in_app", "whatsapp"] },
+              { role: "admin", channels: ["in_app"] },
+            ],
+            payload: {
+              orderNumber: po.orderNumber,
+              itemCount: po.itemCount,
+              totalAmount: po.totalAmount,
+              supplierId: po.supplierId,
+              source: "reorder_auto_submit",
+            },
+            timestamp: new Date().toISOString(),
+          }).catch((err: any) => {
+            log.error(`[GCP-STG-0376] Supplier notification failed for PO ${po.id}:`, err?.message);
+          });
+        }
+      }
+
       const approvedCount = pendingRows.length;
       const failedCount = itemStatuses.filter((s) => s.status === "failed").length;
 
@@ -656,11 +684,11 @@ reorderRouter.post("/stores/:storeId/reorder/pending/approve", requireDeviceToke
         data: {
           approvedCount,
           failedCount,
-          draftPurchaseOrders,
+          submittedPurchaseOrders: draftPurchaseOrders,
           // STG-428: Per-item status for partial approval feedback
           itemStatuses,
         },
-        message: `Approved ${approvedCount} pending reorders. Created ${draftPurchaseOrders.length} draft purchase orders.${failedCount > 0 ? ` ${failedCount} items failed.` : ""}`,
+        message: `Approved ${approvedCount} pending reorders. Created ${draftPurchaseOrders.length} submitted purchase orders.${failedCount > 0 ? ` ${failedCount} items failed.` : ""}`,
       });
     } catch (innerError) {
       await client.query("ROLLBACK");
@@ -1135,11 +1163,12 @@ reorderRouter.post("/stores/:storeId/reorder/auto-approve", requireDeviceToken, 
           totalAmount += (item.quantity || 0) * (item.unitPrice || 0);
         }
 
+        // GCP-STG-0376: Create PO as 'submitted' (not 'draft') so supplier portal shows it
         const reorderIds = items.map((i: { id: string }) => i.id);
         const poResult = await client.query(
           `INSERT INTO orders.purchase_orders
             (store_id, supplier_id, order_number, order_type, source_reorder_ids, status, total_amount, item_count)
-           VALUES ($1, $2, $3, 'reorder', $4, 'draft', $5, $6)
+           VALUES ($1, $2, $3, 'reorder', $4, 'submitted', $5, $6)
            RETURNING id, order_number as "orderNumber"`,
           [storeId, supplierId === "unknown" ? null : supplierId, orderNumber, reorderIds, totalAmount, items.length]
         );
@@ -1174,12 +1203,38 @@ reorderRouter.post("/stores/:storeId/reorder/auto-approve", requireDeviceToken, 
 
       await client.query("COMMIT");
 
+      // GCP-STG-0376: Fire-and-forget supplier notifications for auto-submitted POs
+      for (const po of draftPurchaseOrders) {
+        if (po.supplierId && po.supplierId !== "unknown") {
+          publishLifecycleEvent({
+            eventType: "supplier_action_required",
+            orderId: po.id,
+            storeId,
+            supplierId: po.supplierId,
+            targets: [
+              { role: "supplier", channels: ["in_app", "whatsapp"] },
+              { role: "admin", channels: ["in_app"] },
+            ],
+            payload: {
+              orderNumber: po.orderNumber,
+              itemCount: po.itemCount,
+              totalAmount: po.totalAmount,
+              supplierId: po.supplierId,
+              source: "reorder_auto_submit",
+            },
+            timestamp: new Date().toISOString(),
+          }).catch((err: any) => {
+            log.error(`[GCP-STG-0376] Auto-approve supplier notification failed for PO ${po.id}:`, err?.message);
+          });
+        }
+      }
+
       return res.json({
         success: true,
         data: {
           autoApprovedCount: idsToApprove.length,
           threshold: thresholdValue,
-          draftPurchaseOrders,
+          submittedPurchaseOrders: draftPurchaseOrders,
         },
         message: `Auto-approved ${idsToApprove.length} pending reorders below ₹${thresholdValue} threshold`,
       });
