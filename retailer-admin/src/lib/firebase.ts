@@ -30,11 +30,28 @@ const isFirebaseConfigured = (): boolean => {
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 
+// GCP-STG-0475: Firebase config from env vars — staging uses supermandi-pos-staging project, production uses supermandi-pos
 // Initialize Firebase only if configured
 if (isFirebaseConfigured()) {
   try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
+
+    // GCP-STG-0468: Enable App Check with reCAPTCHA Enterprise for API abuse protection
+    // Requires VITE_RECAPTCHA_SITE_KEY env var and firebase/app-check package
+    const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+    if (recaptchaSiteKey) {
+      import('firebase/app-check').then(({ initializeAppCheck, ReCaptchaEnterpriseProvider }) => {
+        if (app) {
+          initializeAppCheck(app, {
+            provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey),
+            isTokenAutoRefreshEnabled: true,
+          });
+        }
+      }).catch(() => {
+        // firebase/app-check not available — App Check disabled
+      });
+    }
   } catch {
     // Firebase initialization failed - isFirebaseReady() will return false
   }
