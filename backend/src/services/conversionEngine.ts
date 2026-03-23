@@ -18,7 +18,7 @@
 export type ProcurementUnit =
   | 'KG' | 'GM' | 'PCS' | 'DOZEN' | 'LTR' | 'ML'
   | 'CARTON' | 'CASE' | 'BAG' | 'TIN' | 'DRUM'
-  | 'TRAY' | 'BOTTLE' | 'PIECE' | 'PACK';
+  | 'TRAY' | 'BOTTLE' | 'PIECE' | 'PACK' | 'BOX';
 
 /** Base stock units — canonical units for inventory tracking */
 export type BaseStockUnit = 'KG' | 'GM' | 'PCS' | 'LTR' | 'ML';
@@ -58,7 +58,7 @@ export interface RetailVariantSuggestion {
 export const VALID_PROCUREMENT_UNITS: ReadonlySet<string> = new Set([
   'KG', 'GM', 'PCS', 'DOZEN', 'LTR', 'ML',
   'CARTON', 'CASE', 'BAG', 'TIN', 'DRUM',
-  'TRAY', 'BOTTLE', 'PIECE', 'PACK',
+  'TRAY', 'BOTTLE', 'PIECE', 'PACK', 'BOX',
 ]);
 
 /** Valid base stock units */
@@ -77,7 +77,7 @@ const UNIT_FAMILIES: Record<string, string> = {
   // Packaging types are COUNT-family (1 CARTON = N pieces/units)
   CARTON: 'COUNT', CASE: 'COUNT', BAG: 'COUNT',
   TIN: 'COUNT', DRUM: 'COUNT', TRAY: 'COUNT',
-  BOTTLE: 'COUNT', PACK: 'COUNT',
+  BOTTLE: 'COUNT', PACK: 'COUNT', BOX: 'COUNT',
 };
 
 /**
@@ -93,7 +93,7 @@ const TO_FAMILY_BASE: Record<string, number> = {
   DOZEN: 12,   // 1 DOZEN = 12 PCS
   PIECE: 1,
   // Packaging types: multiplier is procurement_pack_qty, not fixed
-  CARTON: 1, CASE: 1, BAG: 1, TIN: 1, DRUM: 1, TRAY: 1, BOTTLE: 1, PACK: 1,
+  CARTON: 1, CASE: 1, BAG: 1, TIN: 1, DRUM: 1, TRAY: 1, BOTTLE: 1, PACK: 1, BOX: 1,
 };
 
 // ---- Core conversion functions ----
@@ -332,6 +332,8 @@ export function normalizeUnitString(raw: string): string {
     'PKT': 'PACK',
     'PACKET': 'PACK',
     'PACKETS': 'PACK',
+    'BX': 'BOX',
+    'BOXES': 'BOX',
   };
   return aliases[u] ?? u;
 }
