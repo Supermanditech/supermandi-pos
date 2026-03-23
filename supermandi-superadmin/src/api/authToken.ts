@@ -385,6 +385,8 @@ export async function verifyAdminOtp(email: string, otp: string): Promise<{
   error?: string;
   token?: string;
   admin?: { email: string; role: string };
+  // GCP-STG-0457: unlockAt timestamp for lockout countdown display
+  unlockAt?: number;
 }> {
   try {
     // STAGING-FIX-006: Use fetchWithTimeout (30s) instead of raw fetch
@@ -403,6 +405,8 @@ export async function verifyAdminOtp(email: string, otp: string): Promise<{
       return {
         success: false,
         error: data?.error?.message || `Failed to verify OTP (${res.status})`,
+        // GCP-STG-0457: Pass unlockAt from 429 lockout response
+        unlockAt: data?.error?.unlockAt,
       };
     }
 

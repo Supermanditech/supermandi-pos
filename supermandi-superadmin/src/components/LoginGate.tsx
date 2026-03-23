@@ -12,6 +12,8 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(0);
+  // GCP-STG-0457: Lockout countdown when account is locked after too many attempts
+  const [lockoutCountdown, setLockoutCountdown] = useState(0);
   const otpRef = useRef<HTMLInputElement>(null);
 
   // Auto-focus OTP input when switching to OTP step
@@ -27,6 +29,13 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
     const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
+
+  // GCP-STG-0457: Countdown timer for account lockout
+  useEffect(() => {
+    if (lockoutCountdown <= 0) return;
+    const timer = setTimeout(() => setLockoutCountdown(lockoutCountdown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [lockoutCountdown]);
 
   // R4-TS-001: Accept SyntheticEvent base type (works for both form submit and button click)
   async function handleSendOtp(e: React.SyntheticEvent) {
@@ -66,7 +75,15 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
     try {
       const result = await verifyAdminOtp(email.trim().toLowerCase(), trimmedOtp);
       if (!result.success) {
-        setError(result.error || "Invalid OTP. Check your email and try again.");
+        // GCP-STG-0457: Show lockout countdown when account is locked
+        if (result.unlockAt) {
+          const secondsLeft = Math.max(0, Math.ceil((result.unlockAt - Date.now()) / 1000));
+          setLockoutCountdown(secondsLeft);
+          const minutes = Math.ceil(secondsLeft / 60);
+          setError(`Account locked. Try again in ${minutes} minute${minutes !== 1 ? "s" : ""}.`);
+        } else {
+          setError(result.error || "Invalid OTP. Check your email and try again.");
+        }
         return;
       }
       onLogin();
@@ -156,14 +173,20 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
               />
             </div>
 
-            {error && <div className="loginError" role="alert">{error}</div>}
+            {/* GCP-STG-0457: Show lockout countdown or generic error */}
+            {lockoutCountdown > 0 && (
+              <div className="loginError" role="alert">
+                Account locked. Try again in {Math.ceil(lockoutCountdown / 60)} minute{Math.ceil(lockoutCountdown / 60) !== 1 ? "s" : ""} ({lockoutCountdown}s).
+              </div>
+            )}
+            {error && lockoutCountdown <= 0 && <div className="loginError" role="alert">{error}</div>}
 
             <button
               type="submit"
               className="loginButton"
-              disabled={loading || !otp.trim()}
+              disabled={loading || !otp.trim() || lockoutCountdown > 0}
             >
-              {loading ? "Verifying..." : "Verify OTP"}
+              {loading ? "Verifying..." : lockoutCountdown > 0 ? `Locked (${lockoutCountdown}s)` : "Verify OTP"}
             </button>
 
             <div className="sa-login-actions">

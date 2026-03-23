@@ -435,13 +435,15 @@ adminAuthRouter.post("/auth/verify-email-otp", otpRateLimiter, async (req: Reque
   }
 
   // Check if locked out
+  // GCP-STG-0457: Include unlockAt timestamp so frontend can show countdown
   const lockedUntil = await getLockout(normalizedEmail);
   if (lockedUntil && Date.now() < lockedUntil) {
     const waitMinutes = Math.ceil((lockedUntil - Date.now()) / 60000);
     return res.status(429).json({
       error: {
         code: "TOO_MANY_ATTEMPTS",
-        message: `Too many failed attempts. Please try again in ${waitMinutes} minutes.`
+        message: `Too many failed attempts. Please try again in ${waitMinutes} minutes.`,
+        unlockAt: lockedUntil,
       }
     });
   }
@@ -471,12 +473,15 @@ adminAuthRouter.post("/auth/verify-email-otp", otpRateLimiter, async (req: Reque
     // Check if max attempts reached
     if (stored.attempts >= MAX_VERIFY_ATTEMPTS) {
       await deleteOtp(normalizedEmail);
-      await setLockout(normalizedEmail, Date.now() + LOCKOUT_MS);
+      const lockoutUntil = Date.now() + LOCKOUT_MS;
+      await setLockout(normalizedEmail, lockoutUntil);
       log.warn(`[GO-LIVE-LOGIN-004] Admin OTP lockout for ${normalizedEmail} after ${stored.attempts} failed attempts`);
+      // GCP-STG-0457: Include unlockAt timestamp so frontend can show countdown
       return res.status(429).json({
         error: {
           code: "TOO_MANY_ATTEMPTS",
-          message: "Too many failed attempts. Please try again in 30 minutes."
+          message: "Too many failed attempts. Please try again in 30 minutes.",
+          unlockAt: lockoutUntil,
         }
       });
     }
