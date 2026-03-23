@@ -18769,7 +18769,7 @@
       "start_line": 1,
       "end_line": 33,
       "checksum": "ae22104eab7be02b",
-      "description": "Drop dead schema invoice_dispatch_logs — never used by application code",
+      "description": "Drop dead schema invoice_dispatch_logs — never used by application code (migration 228)",
       "test_file": "backend/tests/deadSchemaCleanup.gcp-stg-0362.unit.test.ts",
       "depends_on": null,
       "migration": null,
