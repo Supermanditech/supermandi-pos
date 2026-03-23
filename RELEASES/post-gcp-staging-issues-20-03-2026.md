@@ -13767,4 +13767,212 @@ In JS, use `wrapper.classList.add('visible')` instead of `wrapper.style.display 
 
 ---
 
-<!-- next ticket: GCP-STG-0506 -->
+## GCP-STG-0506 — MEDIUM: ScanIntent native listener fires during payment/modal — no screen-context guard (MEDIUM)
+
+**Ticket ID**: GCP-STG-0506
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: Business, UI
+**Source**: Audit W — HID Scanner
+
+**Problem**: `src/services/scan/scanIntent.ts:49` registers a global NativeEventEmitter listener at app startup that calls `onBarcodeScanned()` from handleScan.ts on every hardware scan broadcast. This fires regardless of which screen is active — including during payment flow, edit modals, and navigation transitions. A cashier accidentally pressing the scanner trigger during payment would add items to the cart.
+
+**Fix**: Add a `scanEnabled` flag checked in the native listener callback. Set to `false` when payment flow starts, `true` when returning to sell screen.
+
+**Files to modify**: `src/services/scan/scanIntent.ts`, `src/services/scan/handleScan.ts`, payment flow screens
+
+---
+
+## GCP-STG-0507 — MEDIUM: getProductByBarcode uses O(n) Array.find — slow at 10K products (MEDIUM)
+
+**Ticket ID**: GCP-STG-0507
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: Business
+**Source**: Audit AC — Performance
+
+**Problem**: `productsStore.ts:433` uses `products.find(p => p.barcode === barcode)` which is O(n) linear scan. With 10K products, this takes ~5-10ms per scan. For rapid scanning (5/second), this accumulates.
+
+**Fix**: Build `Map<barcode, Product>` index when products load. Lookup becomes O(1). Rebuild on product add/update.
+
+**Files to modify**: `src/stores/productsStore.ts`
+
+---
+
+## GCP-STG-0508 — MEDIUM: Two parallel scan pipelines can double-process same barcode (MEDIUM)
+
+**Ticket ID**: GCP-STG-0508
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: Business
+**Source**: Audit AB — Code Conflicts
+
+**Problem**: ScanScreenV3 registers HID handler via `setHidScanHandler()` AND the global ScanIntent native listener is always active. If a hardware scanner sends both a keyboard event AND a native intent broadcast, the same barcode is processed by BOTH pipelines — potentially adding the item to cart twice.
+
+**Fix**: When ScanScreenV3 is active, suppress ScanIntent native listener. Or: deduplicate at the `onBarcodeScanned` level using a shared recent-scan set.
+
+**Files to modify**: `src/services/scan/scanIntent.ts`, `src/services/scan/handleScan.ts`
+
+---
+
+## GCP-STG-0509 — LOW: Camera scanner has no torch/flashlight toggle (LOW)
+
+**Ticket ID**: GCP-STG-0509
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Audit X — Camera Scanner
+
+**Problem**: ScanScreenV3 camera has no torch button. Indian kirana stores often have poor lighting. Scanning in dark environments fails without flashlight assist.
+
+**Fix**: Add torch toggle button on camera viewfinder. `CameraView` supports `enableTorch` prop.
+
+**Files to modify**: `src/screens/v3/ScanScreenV3.tsx`
+
+---
+
+## GCP-STG-0510 — LOW: Camera scanner missing ITF-14 and DataMatrix barcode types (LOW)
+
+**Ticket ID**: GCP-STG-0510
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: Audit X — Camera Scanner
+
+**Problem**: `ScanScreenV3.tsx:216` configures 7 types: ean13, ean8, upc_a, upc_e, code128, code39, qr. Missing: `itf14` (carton-level barcodes for wholesale), `datamatrix` (GS1 DataMatrix on pharma/FMCG), `codabar`.
+
+**Fix**: Add `"itf14"`, `"datamatrix"`, `"codabar"` to `barcodeTypes` array.
+
+**Files to modify**: `src/screens/v3/ScanScreenV3.tsx` (line 216)
+
+---
+
+## GCP-STG-0511 — LOW: GRN screen shows "HID Scanner Active" but has no scan handler (LOW)
+
+**Ticket ID**: GCP-STG-0511
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, Business
+**Source**: Audit Z — SELL vs BUY Context
+
+**Problem**: `GRNScreenV3.tsx:141` displays a scan bar with "HID Scanner Active" green dot and "Scan barcode (HID ready)..." placeholder. But NO `setHidScanHandler` call exists — the TextInput is purely decorative. Cashiers expect to scan during GRN receiving.
+
+**Fix**: Wire `setHidScanHandler` to match scanned barcode against PO line items, auto-mark as received.
+
+**Files to modify**: `src/screens/v3/GRNScreenV3.tsx`
+
+---
+
+## GCP-STG-0512 — LOW: setScanRuntime never called in production — BUY scan dead code (LOW)
+
+**Ticket ID**: GCP-STG-0512
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: Audit Z — SELL vs BUY Context
+
+**Problem**: `handleScan.ts:74` initializes `runtime.intent = "SELL"` and `setScanRuntime()` is never called from any screen component. The PURCHASE/procurement scan path in handleScan.ts (lines 394-677) is dead code — can never be reached via UI.
+
+**Fix**: Call `setScanRuntime({ intent: "PURCHASE" })` when BuyScreen opens and reset to SELL when it closes.
+
+**Files to modify**: `src/screens/v3/BuyScreenV3.tsx`, `src/services/scan/handleScan.ts`
+
+---
+
+## GCP-STG-0513 — LOW: No barcode checksum validation — trusts scanner blindly (LOW)
+
+**Ticket ID**: GCP-STG-0513
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: Audit Y — Scan → Cart Chain
+
+**Problem**: Neither the camera nor HID path validates EAN-13/EAN-8/UPC-A check digits. A corrupted scan (wrong digit) would do a lookup on a nonexistent barcode and show "not found" — but the user wouldn't know the scan was corrupted vs. the product genuinely missing.
+
+**Fix**: For EAN-13/EAN-8/UPC-A formatted barcodes (all digits, correct length), validate the Luhn check digit. If invalid, show "Corrupted scan — try again" instead of "not found".
+
+**Files to modify**: `src/services/scanIntent.ts` or `src/services/scan/handleScan.ts`
+
+---
+
+## GCP-STG-0514 — LOW: HID buffer has no max length — unbounded growth possible (LOW)
+
+**Ticket ID**: GCP-STG-0514
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: Audit AA — Edge Cases
+
+**Problem**: `hidScannerService.ts:98` appends chars to `hidBuffer` without any length limit. A malfunctioning scanner or cable noise could produce thousands of characters before a terminator or idle timeout, causing memory pressure.
+
+**Fix**: Add `const HID_MAX_BUFFER = 100; if (hidBuffer.length >= HID_MAX_BUFFER) { resetHidBuffer(); return; }`
+
+**Files to modify**: `src/services/hidScannerService.ts`
+
+---
+
+## GCP-STG-0515 — LOW: No cart item count limit — unbounded cart possible (LOW)
+
+**Ticket ID**: GCP-STG-0515
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: Audit AA — Edge Cases
+
+**Problem**: `cartStore.addItem()` has no maximum item count check. A runaway scanner or bug could add thousands of items, causing UI render lag and potential OOM.
+
+**Fix**: Add `MAX_CART_ITEMS = 500` check before addItem. Show toast "Cart full — complete sale before adding more items".
+
+**Files to modify**: `src/stores/cartStore.ts`
+
+---
+
+## GCP-STG-0516 — LOW: Camera scan has no haptic/sound feedback (LOW)
+
+**Ticket ID**: GCP-STG-0516
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UX
+**Source**: Audit X — Camera Scanner
+
+**Problem**: handleScan.ts `triggerHaptic()` at line 177-187 provides haptic feedback, but this only runs in the handleScan path. The ScanScreenV3 `processScan` path (camera scans) does NOT trigger any haptic or audio feedback. Users don't get tactile confirmation that the camera actually read the barcode.
+
+**Fix**: Add `Haptics.notificationAsync(Success)` in `processScan()` after successful product lookup.
+
+**Files to modify**: `src/screens/v3/ScanScreenV3.tsx`
+
+---
+
+## GCP-STG-0517 — LOW: Two files named scanIntent.ts — confusing naming (LOW)
+
+**Ticket ID**: GCP-STG-0517
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Dependencies
+**Source**: Audit AB — Code Conflicts
+
+**Problem**: `src/services/scanIntent.ts` (types + duplicate suppression) and `src/services/scan/scanIntent.ts` (Android native ScanIntentModule listener) share the same filename in different directories. This causes confusion for developers and grep results.
+
+**Fix**: Rename `src/services/scan/scanIntent.ts` → `src/services/scan/nativeScanBridge.ts` to clarify purpose.
+
+**Files to modify**: `src/services/scan/scanIntent.ts` → rename, update App.tsx import
+
+---
+
+## GCP-STG-0518 — LOW: Concurrent lookup race — same barcode can trigger two API calls (LOW)
+
+**Ticket ID**: GCP-STG-0518
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: Audit AA — Edge Cases
+
+**Problem**: `handleScan.ts:457` calls `lookupStoreProductPreviewByScan()` without any in-flight guard. If duplicate suppression window (1s) expires and the same barcode is scanned while the first API call is still pending, two concurrent lookups occur. Both could add to cart.
+
+**Fix**: Add `inFlightBarcode` Set — skip lookup if barcode is already being looked up.
+
+**Files to modify**: `src/services/scan/handleScan.ts`
+
+---
+
+<!-- next ticket: GCP-STG-0519 -->
