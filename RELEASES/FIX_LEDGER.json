@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 904,
+  "version": 905,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -23972,6 +23972,58 @@
         "parity_scanned": "done",
         "gcp_parity": "done",
         "regression_check": "unit test 5/5",
+        "test_guard": "done"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0493",
+      "file": "supermandi-landing/index.html",
+      "start_line": 836,
+      "end_line": 850,
+      "description": "Click debounce on WhatsApp CTA chooser items (1s cooldown)",
+      "test_file": "e2e-tests/landing-whatsapp-cta.spec.ts",
+      "status": "ACTIVE",
+      "checksum": "f10e4bc080dc737d",
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "checklist_evidence": {
+        "ui_elements": "N/A",
+        "ux_states": "debounce prevents double-tap",
+        "wiring": "click handler guard",
+        "navigation": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "1s cooldown",
+        "business_behaviour": "done",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": "index.html",
+        "fix_ledger_check": "done",
+        "no_agent_conflict": "done",
+        "operator_approved": "Mode A",
+        "parity_scanned": "done",
+        "gcp_parity": "done",
+        "regression_check": "manual",
         "test_guard": "done"
       }
     }

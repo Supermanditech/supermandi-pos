@@ -833,9 +833,14 @@
                 if (isOpen) { closeChooser(); } else { openChooser(); }
             });
 
+            // GCP-STG-0493: Click debounce — prevent double-tap opening two tabs
+            var lastClickTs = 0;
+
             var items = chooser.querySelectorAll('.wa-chooser-item');
             items.forEach(function (btn) {
                 btn.addEventListener('click', function () {
+                    if (Date.now() - lastClickTs < 1000) return;
+                    lastClickTs = Date.now();
                     var target = btn.getAttribute('data-wa-target');
                     var cfg = target === 'superadmin' ? WA.superadmin : WA.company;
                     logClick(target);
