@@ -2,6 +2,8 @@ import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { View, TextInput, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator } from "react-native";
 import Svg, { Rect, Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
+// GCP-STG-0444: Safe area insets for dynamic paddingTop + paddingBottom
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import ExpandableDetails from "../../components/v3/ExpandableDetails";
@@ -34,6 +36,8 @@ type GRNScreenV3Props = { onClose: () => void };
 export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const colors = useThemeColors();
+  // GCP-STG-0444: Use safe area insets instead of hardcoded padding
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [items, setItems] = useState<GRNItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,7 +127,7 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
   const totalOrdered = items.reduce((s, i) => s + i.ordered, 0);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable>
         <Text style={styles.headerTitle}>Receive Stock</Text>
@@ -248,7 +252,8 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
         ) : null}
       </ScrollView>
 
-      <View style={styles.footer}>
+      {/* GCP-STG-0444: Safe area bottom padding */}
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Text style={styles.footerMeta}>Received: {receivedCount}/{items.length} items ({totalReceived}/{totalOrdered} units)</Text>
 
         {/* V3-FIX-170: Landed stock preview for bulk items */}
