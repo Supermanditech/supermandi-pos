@@ -48,7 +48,8 @@ import {
 
 import { useThemeColors } from "./src/theme";
 import { useSettingsStore, useSettingsHydrated } from "./src/stores/settingsStore";
-import { startScanIntentListener } from "./src/services/scan/scanIntent";
+// GCP-STG-0517: Renamed scan/scanIntent → scan/nativeScanBridge
+import { startScanIntentListener } from "./src/services/scan/nativeScanBridge";
 import { useProductsStore } from "./src/stores/productsStore";
 import { isCacheLoaded, getCachedSession } from "./src/services/deviceSession";
 import { registerForPushNotifications, setupNotificationListeners } from "./src/services/pushNotifications";
