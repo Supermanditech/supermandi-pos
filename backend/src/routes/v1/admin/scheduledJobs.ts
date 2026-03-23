@@ -133,6 +133,144 @@ adminScheduledJobsRouter.post('/jobs/token-cleanup', async (_req: Request, res: 
   }
 });
 
+// POST /admin/jobs/reorder-trigger-check — Scan all stores for low stock vs reorder policies
+// Called by Cloud Scheduler (e.g. daily) or manually by admin
+// GCP-STG-0375: Auto-reorder trigger — monitors stock vs reorder policies
+adminScheduledJobsRouter.post('/jobs/reorder-trigger-check', async (_req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: 'Database unavailable' });
+
+  const startedAt = new Date();
+  let totalEvaluated = 0;
+  let totalCreated = 0;
+  let totalSkipped = 0;
+  const storeResults: Array<{ storeId: string; evaluated: number; created: number; skipped: number }> = [];
+
+  try {
+    // Step 1: Get all stores with reorder_enabled = true
+    const storesResult = await pool.query(
+      `SELECT store_id FROM reorder.store_reorder_settings WHERE reorder_enabled = true`
+    );
+
+    for (const storeRow of storesResult.rows) {
+      const storeId = storeRow.store_id;
+      let storeEvaluated = 0;
+      let storeCreated = 0;
+      let storeSkipped = 0;
+
+      // Step 2: Find products where current stock <= min_stock threshold
+      // and no existing pending reorder for the same store+product
+      const lowStockResult = await pool.query(
+        `SELECT
+          rp.store_id,
+          rp.product_id,
+          COALESCE(sp.display_name, p.name, 'Unknown Product') AS product_name,
+          p.primary_barcode AS barcode,
+          COALESCE(sb.current_qty, sp.current_stock, 0)::int AS current_stock,
+          rp.min_stock,
+          rp.target_stock,
+          rp.max_reorder_qty,
+          rp.preferred_supplier_id
+        FROM reorder.reorder_policies rp
+        JOIN catalog.store_products sp ON sp.store_id = rp.store_id AND sp.product_id = rp.product_id
+        JOIN catalog.products p ON p.id = rp.product_id
+        LEFT JOIN inventory.stock_balances sb ON sb.store_id = rp.store_id AND sb.product_id = rp.product_id
+        WHERE rp.store_id = $1
+          AND rp.is_enabled = true
+          AND COALESCE(sb.current_qty, sp.current_stock, 0) <= rp.min_stock
+          AND NOT EXISTS (
+            SELECT 1 FROM reorder.pending_reorders pr
+            WHERE pr.store_id = rp.store_id
+              AND pr.product_id = rp.product_id
+              AND pr.status = 'pending'
+          )`,
+        [storeId]
+      );
+
+      storeEvaluated = lowStockResult.rows.length;
+
+      // Step 3: Insert pending reorders for each low-stock product
+      for (const row of lowStockResult.rows) {
+        const suggestedQty = Math.max(1, row.target_stock - row.current_stock);
+        const cappedQty = row.max_reorder_qty
+          ? Math.min(suggestedQty, row.max_reorder_qty)
+          : suggestedQty;
+
+        // Look up supplier product for price + supplier_product_id
+        let suggestedUnitPrice: number | null = null;
+        let supplierProductId: string | null = null;
+        if (row.preferred_supplier_id) {
+          const spResult = await pool.query(
+            `SELECT id, unit_price FROM catalog.supplier_products
+             WHERE supplier_id = $1 AND product_id = $2 AND is_active = true
+             LIMIT 1`,
+            [row.preferred_supplier_id, row.product_id]
+          );
+          if (spResult.rows.length > 0) {
+            supplierProductId = spResult.rows[0].id;
+            suggestedUnitPrice = spResult.rows[0].unit_price;
+          }
+        }
+
+        try {
+          await pool.query(
+            `INSERT INTO reorder.pending_reorders (
+              store_id, product_id, product_name, barcode,
+              current_stock, min_threshold, target_stock,
+              suggested_quantity, suggested_supplier_id,
+              suggested_unit_price, supplier_product_id,
+              status, expires_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', NOW() + INTERVAL '7 days')
+            ON CONFLICT DO NOTHING`,
+            [
+              row.store_id, row.product_id, row.product_name, row.barcode,
+              row.current_stock, row.min_stock, row.target_stock,
+              cappedQty, row.preferred_supplier_id,
+              suggestedUnitPrice, supplierProductId,
+            ]
+          );
+          storeCreated++;
+        } catch (insertErr) {
+          // Unique constraint violation = already exists (race condition), skip
+          storeSkipped++;
+        }
+      }
+
+      // Step 4: Log run to reorder_runs
+      try {
+        await pool.query(
+          `INSERT INTO reorder.reorder_runs (store_id, run_type, started_at, finished_at, evaluated_products, created_pending, skipped_existing, status)
+           VALUES ($1, 'cron', $2, NOW(), $3, $4, $5, 'success')`,
+          [storeId, startedAt, storeEvaluated, storeCreated, storeSkipped]
+        );
+      } catch (runLogErr) {
+        log.error('[ReorderTrigger] Failed to log reorder run:', runLogErr);
+      }
+
+      totalEvaluated += storeEvaluated;
+      totalCreated += storeCreated;
+      totalSkipped += storeSkipped;
+      storeResults.push({ storeId, evaluated: storeEvaluated, created: storeCreated, skipped: storeSkipped });
+    }
+
+    log.info(`[ReorderTrigger] Completed: ${storesResult.rows.length} stores, ${totalEvaluated} evaluated, ${totalCreated} created, ${totalSkipped} skipped`);
+
+    return res.json({
+      success: true,
+      data: {
+        storesProcessed: storesResult.rows.length,
+        totalEvaluated,
+        totalCreated,
+        totalSkipped,
+        stores: storeResults,
+      },
+    });
+  } catch (err) {
+    log.error('[ReorderTrigger] Error:', err);
+    return res.status(500).json({ error: 'Reorder trigger check failed' });
+  }
+});
+
 // GET /admin/monitoring/health — Comprehensive health check for T-223 monitoring
 adminScheduledJobsRouter.get('/monitoring/health', async (_req: Request, res: Response) => {
   const pool = getPool();

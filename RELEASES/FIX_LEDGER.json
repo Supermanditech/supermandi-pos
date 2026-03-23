@@ -18547,7 +18547,7 @@
       "start_line": 136,
       "end_line": 280,
       "checksum": "19d95a4dafc4a988",
-      "description": "Auto-reorder trigger scheduled job: POST /admin/jobs/reorder-trigger-check scans all stores with reorder_enabled, finds products where stock <= min_stock with no existing pending reorder, creates pending_reorders with suggested_qty = target - current (capped by max_reorder_qty), logs reorder_runs per store",
+      "description": "Auto-reorder trigger scheduled job: POST /admin/jobs/reorder-trigger-check scans all stores with reorder_enabled, finds products where stock <= min_stock with no existing pending reorder, creates pending_reorders with suggested_qty = target - current (capped by max_reorder_qty), logs reorder_runs per store (Cloud Scheduler ready)",
       "test_file": "backend/tests/autoReorderTrigger.gcp-stg-0375.unit.test.ts",
       "depends_on": null,
       "migration": null,
