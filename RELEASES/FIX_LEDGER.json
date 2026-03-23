@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 933,
+  "version": 934,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6854,7 +6854,7 @@
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 1,
       "end_line": 591,
-      "checksum": "3201946a3cf9aae3",
+      "checksum": "100fd6789224cf0a",
       "description": "Scan screen v3 — context-aware barcode scan (Sell/Stock-In/New Product), HID+camera, result panel (updated by GCP-STG-0322: supplier catalog fallback, GCP-STG-0414: safe area insets)",
       "test_file": "src/__tests__/screens/scan-v3.stg-559.test.ts",
       "depends_on": null,
@@ -19715,7 +19715,7 @@
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 525,
       "end_line": 529,
-      "checksum": "3181b3cd465be5b2",
+      "checksum": "dde65a933bab15dc",
       "description": "createStyles accepts safeTop param; header paddingTop uses safeTop+8 instead of hardcoded 48 (insets.top+8)",
       "test_file": "src/__tests__/screens/scanSafeArea.gcp-stg-0414.test.ts",
       "depends_on": null,
@@ -24792,6 +24792,33 @@
         "parity_scanned": true,
         "parity_fixed": true
       }
+    },
+    {
+      "ticket": "GCP-STG-0531",
+      "file": "src/screens/v3/ScanScreenV3.tsx",
+      "start_line": 524,
+      "end_line": 532,
+      "checksum": "985328f6dea6947a",
+      "description": "Retry lookup button in not-found result panel",
+      "test_file": "N/A",
+      "registered_at": "2026-03-23T22:13:38.043Z",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      }
     }
   ],
   "machine_state_version": 269,
@@ -24836,9 +24863,9 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-23T22:12:46.270Z",
+  "lastUpdated": "2026-03-23T22:13:38.044Z",
   "_commitNote": "GCP-STG-0417,0422,0425,0426,0428,0430,0431",
   "_note": "0429-behavioral",
   "_n": "0491",
-  "last_commit_note": "GCP-STG-0530"
+  "last_commit_note": "GCP-STG-0531"
 }

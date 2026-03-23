@@ -521,6 +521,15 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
                       <Text style={styles.searchByNameBtnText}>Search by Name</Text>
                     </Pressable>
                   ) : null}
+                  {/* GCP-STG-0531: Retry lookup button */}
+                  <Pressable
+                    style={styles.continueBtn}
+                    onPress={() => processScan(lastResult.barcode)}
+                    accessibilityLabel="Retry lookup"
+                    testID="scan-retry-btn"
+                  >
+                    <Text style={styles.continueBtnText}>Retry</Text>
+                  </Pressable>
                   {/* GCP-STG-0028: Continue button to dismiss not-found and scan next */}
                   <Pressable
                     style={styles.continueBtn}
