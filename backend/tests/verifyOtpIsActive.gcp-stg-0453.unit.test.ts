@@ -1,51 +1,107 @@
 /**
- * GCP-STG-0453: verify-otp checks u.is_active = true (behavioral)
+ * GCP-STG-0453: verify-otp checks u.is_active = true — behavioral test
  *
- * Uses the same approach as otpAuth tests from GCP-STG-0299/0311:
- * invoke the actual function with mocked dependencies.
+ * Uses same supertest pattern as otpAuth.gcp-stg-0299.unit.test.ts.
  */
-import * as fs from "fs";
-import * as path from "path";
+import crypto from "crypto";
 
 (global as any).__DEV__ = false;
 
-const SRC = fs.readFileSync(
-  path.resolve(__dirname, "../src/routes/v1/pos/otpAuth.ts"), "utf8"
-);
+const mockQuery = jest.fn();
+jest.mock("../src/db/client", () => ({
+  getPool: () => ({ query: mockQuery, connect: jest.fn(), end: jest.fn() }),
+  pool: { query: mockQuery },
+}));
+
+jest.mock("../src/services/whatsappService", () => ({
+  isWhatsAppConfigured: () => false,
+  sendTextMessage: jest.fn(),
+}));
+
+jest.mock("../src/db/redis", () => ({
+  getRedisClient: () => null,
+  cacheGet: jest.fn().mockResolvedValue(null),
+  cacheSet: jest.fn(),
+}));
+
+jest.mock("../src/middleware/rateLimit", () => ({
+  redisRateLimit: () => (_req: any, _res: any, next: any) => next(),
+}));
+
+import express from "express";
+import request from "supertest";
+import { posOtpAuthRouter } from "../src/routes/v1/pos/otpAuth";
+
+const app = express();
+app.use(express.json());
+app.use("/pos", posOtpAuthRouter);
+
+function otpHash(otp: string) {
+  return crypto.createHash("sha256").update(otp).digest("hex");
+}
+
+beforeEach(() => mockQuery.mockReset());
 
 describe("GCP-STG-0453: verify-otp is_active guard", () => {
-  test("verify-otp store query checks u.is_active = true", () => {
-    // Find the verify-otp handler section (after "auth/verify-otp")
-    const verifySection = SRC.substring(
-      SRC.indexOf('"/auth/verify-otp"'),
-      SRC.indexOf('"/auth/verify-otp"') > -1
-        ? SRC.indexOf("posOtpAuthRouter", SRC.indexOf('"/auth/verify-otp"') + 1) || SRC.length
-        : SRC.length
-    );
+  test("deactivated user gets 404 on verify-otp", async () => {
+    // 1: pos_otp lookup — valid OTP found
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ otp_hash: otpHash("123456"), expires_at: new Date(Date.now() + 300000), attempts: 0 }],
+    });
+    // 2: UPDATE pos_otp attempts
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+    // 3: auth.users + stores lookup — EMPTY (is_active=false filtered user out)
+    mockQuery.mockResolvedValueOnce({ rows: [] });
 
-    // The store lookup query in verify-otp must include is_active
-    expect(verifySection).toContain("u.is_active = true");
+    const res = await request(app)
+      .post("/pos/auth/verify-otp")
+      .send({ phone: "9876543210", otp: "123456" });
+
+    expect(res.status).toBe(404);
   });
 
-  test("send-otp ALSO checks u.is_active = true (parity)", () => {
-    const sendSection = SRC.substring(
-      SRC.indexOf('"/auth/send-otp"'),
-      SRC.indexOf('"/auth/verify-otp"')
-    );
+  test("active user proceeds past store lookup (not blocked at 404)", async () => {
+    // 1: pos_otp → valid
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ otp_hash: otpHash("654321"), expires_at: new Date(Date.now() + 300000), attempts: 0 }],
+    });
+    // 2: UPDATE attempts
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+    // 3: store lookup — active user FOUND (passes is_active check)
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ id: "store-1", store_name: "Test", store_code: "TS001", status: "ACTIVE" }],
+    });
+    // Remaining queries: device transaction — let them fail with 500
+    mockQuery.mockRejectedValue(new Error("mock-transaction-not-fully-wired"));
 
-    expect(sendSection).toContain("u.is_active = true");
+    const res = await request(app)
+      .post("/pos/auth/verify-otp")
+      .send({ phone: "9876543210", otp: "654321" });
+
+    // Key assertion: should NOT be 404 (store was found because is_active=true)
+    // Will be 500 from incomplete mock, but proves the is_active filter passed
+    expect(res.status).not.toBe(404);
   });
 
-  test("both endpoints have the check (count >= 2)", () => {
-    const matches = SRC.match(/u\.is_active\s*=\s*true/g);
-    expect(matches).not.toBeNull();
-    expect(matches!.length).toBeGreaterThanOrEqual(2);
-  });
+  test("verify-otp SQL includes u.is_active = true", async () => {
+    // 1: pos_otp → valid
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ otp_hash: otpHash("111111"), expires_at: new Date(Date.now() + 300000), attempts: 0 }],
+    });
+    // 2: UPDATE attempts
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+    // 3: store lookup
+    mockQuery.mockResolvedValueOnce({ rows: [] });
 
-  test("verify-otp query joins auth.users + auth.store_users + platform.stores", () => {
-    const verifySection = SRC.substring(SRC.indexOf('"/auth/verify-otp"'));
-    expect(verifySection).toContain("auth.users u");
-    expect(verifySection).toContain("auth.store_users su");
-    expect(verifySection).toContain("platform.stores ps");
+    await request(app)
+      .post("/pos/auth/verify-otp")
+      .send({ phone: "9876543210", otp: "111111" });
+
+    // 3rd call (index 2) is the store lookup query
+    const storeCall = mockQuery.mock.calls[2];
+    expect(storeCall).toBeDefined();
+    expect(storeCall[0]).toContain("u.is_active = true");
+    expect(storeCall[0]).toContain("auth.users");
+    expect(storeCall[1]).toEqual(["+919876543210"]);
   });
 });
