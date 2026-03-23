@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { View, FlatList, Pressable, StyleSheet, Text } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Rect, Circle } from "react-native-svg";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -22,7 +23,9 @@ export default function StoreSelectScreenV3() {
   const phone = route.params?.phone ?? "";
   const stores: Store[] = route.params?.stores ?? [];
   const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  // GCP-STG-0413: Use safe area insets instead of hardcoded paddingTop
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(colors, insets.top), [colors, insets.top]);
 
   const handleSelect = async (store: Store) => {
     try {
@@ -83,10 +86,11 @@ export default function StoreSelectScreenV3() {
   );
 }
 
-function createStyles(colors: ColorPalette) {
+function createStyles(colors: ColorPalette, safeTop: number) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: "#fff" },
-    header: { alignItems: "center", paddingTop: 60, paddingBottom: 24 },
+    // GCP-STG-0413: Dynamic paddingTop from safe area insets instead of hardcoded 60
+    header: { alignItems: "center", paddingTop: safeTop + 16, paddingBottom: 24 },
     title: { fontSize: 22, fontWeight: "900", color: colors.textPrimary, marginTop: 16, letterSpacing: -0.5 },
     subtitle: { fontSize: 14, color: colors.textTertiary, marginTop: 4 },
     list: { padding: getScreenPadding() },

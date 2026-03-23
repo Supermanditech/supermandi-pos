@@ -20,6 +20,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { View, Text, StyleSheet, Pressable, BackHandler, ActivityIndicator } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Rect, Circle } from "react-native-svg";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -41,6 +42,7 @@ const SESSION_TIMEOUT_MS = 5000;
 
 export default function SplashScreenV3() {
   const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
   const [statusText, setStatusText] = useState("Connecting to store...");
   const [errorState, setErrorState] = useState<string | null>(null);
   const hasNavigated = useRef(false);
@@ -152,7 +154,7 @@ export default function SplashScreenV3() {
   }, [errorState, handleRetry, safeNavigate]);
 
   return (
-    <View style={styles.container} testID="splash-screen" accessibilityLabel="SuperMandi loading screen">
+    <View style={[styles.container, { paddingTop: insets.top }]} testID="splash-screen" accessibilityLabel="SuperMandi loading screen">
       {/* SuperMandi shortmark */}
       <View testID="splash-logo" accessibilityLabel="SuperMandi logo">
         <Svg width={80} height={80} viewBox="0 0 32 32">
@@ -182,7 +184,7 @@ export default function SplashScreenV3() {
       </Text>
 
       {/* Bottom Continue CTA — always visible per prototype */}
-      <View style={styles.bottomArea}>
+      <View style={[styles.bottomArea, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable
           style={styles.continueBtn}
           onPress={handleContinue}

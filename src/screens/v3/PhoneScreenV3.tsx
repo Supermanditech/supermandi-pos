@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback } from "react";
 import { View, TextInput, Pressable, StyleSheet, Text, ActivityIndicator, Linking, KeyboardAvoidingView, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Rect, Circle } from "react-native-svg";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,6 +17,7 @@ import { logger } from "../../services/logger";
 
 export default function PhoneScreenV3() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
+  const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [phone, setPhone] = useState("");
@@ -40,7 +42,7 @@ export default function PhoneScreenV3() {
   }, [phone, navigation]);
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={[styles.container, { paddingTop: insets.top }]} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={styles.body}>
         {/* Logo */}
         <Svg width={64} height={64} viewBox="0 0 32 32">

@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback, useRef } from "react";
 import { View, TextInput, Pressable, StyleSheet, Text, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Rect, Circle } from "react-native-svg";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -18,6 +19,7 @@ import { logger } from "../../services/logger";
 
 export default function OTPScreenV3() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
+  const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const phone = route.params?.phone ?? "";
   React.useEffect(() => { if (!phone) { showToast("Phone number missing"); navigation.goBack(); } }, [phone, navigation]);
@@ -108,7 +110,7 @@ export default function OTPScreenV3() {
   }, [resendTimer]);
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={[styles.container, { paddingTop: insets.top }]} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={styles.body}>
         <Text style={styles.icon}>🔐</Text>
         <Text style={styles.title}>Verify OTP</Text>

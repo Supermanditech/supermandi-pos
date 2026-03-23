@@ -6,6 +6,7 @@
 
 import React, { useMemo, useState, useCallback } from "react";
 import { View, TextInput, Pressable, StyleSheet, Text, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Rect, Circle } from "react-native-svg";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -26,6 +27,7 @@ type Nav = NativeStackNavigationProp<any>;
 
 export default function StaffLoginScreenV3() {
   const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [pin, setPin] = useState("");
@@ -99,7 +101,7 @@ export default function StaffLoginScreenV3() {
   }, [navigation]);
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={[styles.container, { paddingTop: insets.top }]} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       {/* SuperMandi mark */}
       <Svg width={48} height={48} viewBox="0 0 32 32">
         <Rect x={2} y={2} width={28} height={28} rx={8} fill="#2563EB" />
