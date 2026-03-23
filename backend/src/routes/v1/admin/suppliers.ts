@@ -1821,6 +1821,89 @@ adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, req
 });
 
 /**
+ * POST /api/v1/admin/products/:productId/unpublish
+ * GCP-STG-0347: Unpublish/deactivate a product from stores
+ * Optional query param ?storeId= to unpublish from a specific store only
+ */
+adminSuppliersRouter.post("/products/:productId/unpublish", requireAdminToken, requirePermission("products", "approve"), async (req, res) => {
+  const { productId } = req.params;
+  const storeId = req.query.storeId as string | undefined;
+  const adminId = (req as any).adminId;
+
+  if (!adminId) {
+    return res.status(401).json({ error: "Admin ID required for audit trail" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Verify product exists
+    const productCheck = await client.query(
+      `SELECT sp.id, sp.name FROM catalog.supplier_products sp WHERE sp.id = $1::uuid`,
+      [productId]
+    );
+    if (productCheck.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    const product = productCheck.rows[0];
+
+    // Resolve catalog product_id via supplier_product_map
+    let catalogProductId: string = productId;
+    const mapResult = await client.query(
+      `SELECT product_id FROM catalog.supplier_product_map
+       WHERE supplier_product_id = $1::uuid LIMIT 1`,
+      [productId]
+    );
+    if (mapResult.rows.length > 0) {
+      catalogProductId = mapResult.rows[0].product_id;
+    }
+
+    // Deactivate store_products (soft-delete via is_active = false)
+    let deactivateQuery = `UPDATE catalog.store_products
+      SET is_active = false, updated_at = NOW()
+      WHERE product_id = $1::uuid AND is_active = true`;
+    const params: string[] = [catalogProductId];
+
+    if (storeId) {
+      deactivateQuery += ` AND store_id = $2::uuid`;
+      params.push(storeId);
+    }
+
+    const result = await client.query(deactivateQuery + " RETURNING id", params);
+    const deactivatedCount = result.rowCount ?? 0;
+
+    // Audit log
+    await client.query(
+      `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id, changes)
+       VALUES ('product', $1::uuid, 'approve', 'published', 'unpublished', $2, $3::jsonb)`,
+      [productId, adminId, JSON.stringify({ action: "unpublish", storeId: storeId || "all", deactivatedCount })]
+    );
+
+    await client.query("COMMIT");
+
+    log.info(`[GCP-STG-0347] Unpublished product ${product.name} from ${deactivatedCount} store(s) by admin ${adminId}`);
+
+    return res.json({
+      productId,
+      productName: product.name,
+      deactivatedFromStores: deactivatedCount,
+    });
+  } catch (err: any) {
+    await client.query("ROLLBACK");
+    log.error("[admin/products/unpublish] Error:", err);
+    return res.status(500).json({ error: "Failed to unpublish product" });
+  } finally {
+    client.release();
+  }
+});
+
+/**
  * POST /api/v1/admin/products/publish-bulk
  * T-068: Publish all approved products from a supplier to linked stores
  */
@@ -1856,10 +1939,13 @@ adminSuppliersRouter.post("/products/publish-bulk", requireAdminToken, requirePe
         await client.query("BEGIN");
 
         // Get product details — GCP-STG-0344: fetch mrp for MRP-cap in pricing engine
+        // GCP-STG-0345: fetch conversion/mode columns to match single-publish path
         const pResult = await client.query(
           `SELECT sp.id, sp.name, sp.barcode, sp.category, sp.unit,
                   sp.purchase_price, sp.supermandi_margin_minor, sp.margin_percent,
-                  sp.supplier_id, sp.mrp
+                  sp.supplier_id, sp.mrp,
+                  sp.procurement_unit, sp.procurement_pack_qty,
+                  sp.base_stock_unit, sp.split_sell_eligible, sp.sell_unit
            FROM catalog.supplier_products sp WHERE sp.id = $1`,
           [product.id]
         );
@@ -1902,14 +1988,32 @@ adminSuppliersRouter.post("/products/publish-bulk", requireAdminToken, requirePe
           [supplierId, catalogProductId]
         );
 
+        // GCP-STG-0345: Resolve conversion/mode columns — mirrors single-publish path (V3-FIX-169)
+        const { inferBaseStockUnit: inferBSU } = require("../../../services/conversionEngine");
+        const bulkBaseStockUnit = p.base_stock_unit || inferBSU(null, null, null, p.unit);
+        const bulkProcurementUnit = p.procurement_unit || bulkBaseStockUnit;
+        const bulkPackQty = p.procurement_pack_qty || 1;
+        const bulkSellUnit = p.sell_unit || bulkBaseStockUnit;
+        const bulkSoldBy = ['KG', 'GM', 'LTR', 'ML'].includes(bulkSellUnit) ? 'WEIGHT' : 'COUNT';
+        const bulkRateUnit = bulkSellUnit;
+        const bulkProductMode = p.split_sell_eligible || bulkSoldBy === 'WEIGHT' ? 'LOOSE_BULK' : 'PACKAGED';
+
         for (const store of stores.rows) {
           const ins = await client.query(
             `INSERT INTO catalog.store_products (
               store_id, product_id, display_name, sell_price, purchase_price,
-              current_stock, is_active, supplier_id, source
-            ) VALUES ($1, $2::uuid, $3, $4, $5, 0, true, $6::uuid, 'supplier_publish') RETURNING id`,
+              current_stock, is_active, supplier_id,
+              procurement_unit, procurement_pack_qty, base_stock_unit,
+              allow_fractional_sell, conversion_confirmed,
+              product_mode, sold_by, rate_unit, source
+            ) VALUES ($1, $2::uuid, $3, $4, $5, 0, true, $6::uuid,
+              $7, $8, $9, $10, false,
+              $11, $12, $13, 'supplier_publish') RETURNING id`,
             [store.store_id, catalogProductId, p.name, retailerPrice,
-             p.purchase_price, p.supplier_id]
+             p.purchase_price, p.supplier_id,
+             bulkProcurementUnit, bulkPackQty, bulkBaseStockUnit,
+             p.split_sell_eligible || false,
+             bulkProductMode, bulkSoldBy, bulkRateUnit]
           );
           if (p.barcode) {
             await client.query(

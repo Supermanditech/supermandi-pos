@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 773,
+  "version": 775,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -11006,7 +11006,7 @@
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
       "start_line": 1,
       "end_line": 519,
-      "checksum": "3d103507a27fdfa6",
+      "checksum": "9e9e8a7daad3ae4f",
       "description": "CatalogTab: approve/reject buttons, margin UI, full edit modal, price display, reject reason modal (updated GCP-STG-0339/0340/0342/0343: supplier dropdown + status filter chips + published badge + B2B columns)",
       "test_file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
       "depends_on": null,
@@ -16975,8 +16975,8 @@
     {
       "ticket": "GCP-STG-0342",
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
-      "start_line": 517,
-      "end_line": 541,
+      "start_line": 533,
+      "end_line": 557,
       "checksum": "066c470f15f62d01",
       "description": "GCP-STG-0342: Published/unpublished indicator badge for approved products in CatalogTab status column — shows store count or Unpublished with color-coded badges (badge + count)",
       "test_file": "supermandi-superadmin/src/__tests__/tabs/publishIndicator.gcp-stg-0342.test.tsx",
@@ -17007,7 +17007,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:08:48.491Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T02:08:22.371Z"
+      "line_shifted_at": "2026-03-23T08:36:56.124Z"
     },
     {
       "ticket": "GCP-STG-0342",
@@ -17630,8 +17630,8 @@
     {
       "ticket": "GCP-STG-0343",
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
-      "start_line": 456,
-      "end_line": 493,
+      "start_line": 472,
+      "end_line": 509,
       "checksum": "cca0a77ab5c35cc4",
       "description": "GCP-STG-0343: Add B2B Terms and Stock columns to CatalogTab product table — PTR, PTS, trade discount, scheme, MOQ, delivery/credit days, image thumbnail, stock quantity (9 fields in table)",
       "test_file": "backend/tests/catalogB2bFields.gcp-stg-0343.unit.test.ts",
@@ -17661,7 +17661,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T02:08:32.965Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T08:36:56.145Z"
     },
     {
       "ticket": "GCP-STG-0369",
@@ -18472,8 +18473,8 @@
     {
       "ticket": "GCP-STG-0344",
       "file": "backend/src/routes/v1/admin/suppliers.ts",
-      "start_line": 1885,
-      "end_line": 1898,
+      "start_line": 1971,
+      "end_line": 1984,
       "checksum": "bdd84877b87b1892",
       "description": "Bulk publish uses calculateRetailerPrice() instead of inline margin math — matches single-publish path, adds MRP cap + global default fallback (canonical pricing engine)",
       "test_file": "backend/tests/bulkPublishPricing.gcp-stg-0344.unit.test.ts",
@@ -18503,7 +18504,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:17:48.683Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T08:36:56.171Z"
     },
     {
       "ticket": "GCP-STG-0388",
@@ -18611,6 +18613,78 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:24:04.072Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0345",
+      "file": "backend/src/routes/v1/admin/suppliers.ts",
+      "start_line": 1858,
+      "end_line": 1934,
+      "checksum": "5bd1a7d9e6e035ce",
+      "description": "Bulk publish INSERT includes conversion/mode columns (procurement_unit, procurement_pack_qty, base_stock_unit, allow_fractional_sell, conversion_confirmed, product_mode, sold_by, rate_unit) — mirrors single-publish path V3-FIX-169",
+      "test_file": "backend/tests/bulkPublishColumns.gcp-stg-0345.unit.test.ts",
+      "depends_on": "GCP-STG-0344",
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T08:36:43.532Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0347",
+      "file": "backend/src/routes/v1/admin/suppliers.ts",
+      "start_line": 1823,
+      "end_line": 1903,
+      "checksum": "a1a04dfee12620ea",
+      "description": "Unpublish endpoint: POST /admin/products/:productId/unpublish — deactivates store_products (is_active=false), optional storeId query param, audit log",
+      "test_file": "backend/tests/unpublish.gcp-stg-0347.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T08:40:32.357Z",
       "status": "ACTIVE"
     }
   ],
