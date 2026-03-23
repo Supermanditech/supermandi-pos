@@ -172,6 +172,16 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
       [...params, limitNum, offsetNum]
     );
 
+    // GCP-STG-0363: Separate COUNT(*) query for total (pagination support)
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total
+      FROM catalog.store_products sp
+      INNER JOIN catalog.products p ON p.id = sp.product_id
+      ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult.rows[0]?.total || '0', 10);
+
     // Get supplier names if needed
     const supplierIds = result.rows
       .filter(r => r.supplierId)
@@ -199,10 +209,14 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
     }));
 
     // GO-LIVE-261: Add lastUpdated timestamp for data freshness
+    // GCP-STG-0363: Return total count, limit, offset for pagination
     return res.json({
       success: true,
       data,
       count: data.length,
+      total,
+      limit: limitNum,
+      offset: offsetNum,
       lastUpdated: new Date().toISOString(),
     });
   } catch (_error: unknown) {

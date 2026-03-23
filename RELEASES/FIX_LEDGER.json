@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 738,
+  "version": 741,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6331,7 +6331,7 @@
       "file": "backend/src/routes/v1/retailer-admin/products.ts",
       "start_line": 30,
       "end_line": 1537,
-      "checksum": "7fc108b79e9d8300",
+      "checksum": "da5bf826a14a8c6c",
       "description": "Search cache invalidation wired into product CRUD (checksum updated after GCP-STG-0325 source column)",
       "test_file": "src/__tests__/screens/search-cache-invalidation.stg-516.test.ts",
       "depends_on": null,
@@ -7959,7 +7959,7 @@
       "file": "retailer-admin/src/pages/ProductsPage.tsx",
       "start_line": 87,
       "end_line": 2087,
-      "checksum": "cbc2e2d3d89efd34",
+      "checksum": "812ef1fa235bb250",
       "description": "ProductFormData interface: canonical conversion profile fields (procurementUnit, procurementPackQty, baseStockUnit, allowFractionalSell)",
       "test_file": "backend/tests/conversionEngine.v3-fix-167.unit.test.ts",
       "depends_on": null,
@@ -14681,8 +14681,8 @@
     {
       "ticket": "GCP-STG-0281",
       "file": "backend/src/routes/v1/retailer-admin/products.ts",
-      "start_line": 248,
-      "end_line": 251,
+      "start_line": 262,
+      "end_line": 265,
       "checksum": "2972bcc2d862371c",
       "description": "POST handler destructures bnplEligible and includes in store_products INSERT",
       "test_file": "backend/tests/bnplEligible.gcp-stg-0281.unit.test.ts",
@@ -14737,13 +14737,13 @@
         "navigation": "N/A",
         "i18n_keys": "N/A"
       },
-      "line_shifted_at": "2026-03-22T21:48:47.092Z"
+      "line_shifted_at": "2026-03-23T01:57:39.121Z"
     },
     {
       "ticket": "GCP-STG-0282",
       "file": "backend/src/routes/v1/retailer-admin/products.ts",
-      "start_line": 583,
-      "end_line": 586,
+      "start_line": 597,
+      "end_line": 600,
       "checksum": "16c7a69861588c83",
       "description": "PATCH handler destructures + persists conversion profile fields",
       "test_file": "backend/tests/conversionPatch.gcp-stg-0282.unit.test.ts",
@@ -14795,7 +14795,7 @@
         "single_commit": "fix(GCP-STG-0282)",
         "ticket_parked": "after commit"
       },
-      "line_shifted_at": "2026-03-22T22:39:17.356Z"
+      "line_shifted_at": "2026-03-23T01:57:39.126Z"
     },
     {
       "ticket": "GCP-STG-0283",
@@ -15625,7 +15625,7 @@
       "file": "backend/src/routes/v1/retailer-admin/products.ts",
       "start_line": 164,
       "end_line": 198,
-      "checksum": "7c04c772550985a3",
+      "checksum": "b904b953b163f475",
       "description": "GET /products SELECT includes COALESCE(sp.image_url, p.image_url) + response mapping image_url (retailer web)",
       "test_file": "backend/tests/retailerProductImage.gcp-stg-0334.unit.test.ts",
       "depends_on": null,
@@ -15875,8 +15875,8 @@
     {
       "ticket": "GCP-STG-0325",
       "file": "backend/src/routes/v1/retailer-admin/products.ts",
-      "start_line": 414,
-      "end_line": 424,
+      "start_line": 428,
+      "end_line": 438,
       "checksum": "5d7f68e5c736aead",
       "description": "Products POST INSERT sets source=manual on store_products (10 INSERT paths)",
       "test_file": "backend/tests/storeProductSource.gcp-stg-0325.unit.test.ts",
@@ -15906,7 +15906,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:20:08.606Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T01:57:39.165Z"
     },
     {
       "ticket": "GCP-STG-0325",
@@ -16310,8 +16311,8 @@
     {
       "ticket": "GCP-STG-0335",
       "file": "backend/src/routes/v1/retailer-admin/products.ts",
-      "start_line": 684,
-      "end_line": 800,
+      "start_line": 698,
+      "end_line": 814,
       "checksum": "aae695df0213158b",
       "description": "Retailer-admin price update LWW guard: accepts priceUpdatedAt, dynamic param numbering for metadata+price guards, returns 409 stale_write on price conflict, sets price_updated_at conditionally (POS+retailer-admin)",
       "test_file": "backend/tests/priceLwwGuard.gcp-stg-0335.unit.test.ts",
@@ -16341,7 +16342,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:42:31.226Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T01:57:39.203Z"
     },
     {
       "ticket": "GCP-STG-0351",
@@ -17321,6 +17323,114 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:32:40.693Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0365",
+      "file": "backend/src/db/client.ts",
+      "start_line": 14,
+      "end_line": 27,
+      "checksum": "3f70ba7b543be7ed",
+      "description": "Reduced DB_POOL_MAX default from 25 to 10 and DB_POOL_MIN from 5 to 2 for Cloud SQL connection limit safety. 15 instances x (10+10) = 300, within 500-connection upgraded tier.",
+      "test_file": "backend/tests/dbPoolConfig.gcp-stg-0365.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T01:57:27.194Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0363",
+      "file": "backend/src/routes/v1/retailer-admin/products.ts",
+      "start_line": 175,
+      "end_line": 213,
+      "checksum": "c58b77e3455ce1fd",
+      "description": "COUNT(*) query + total/limit/offset in GET /products response for pagination",
+      "test_file": "backend/tests/retailerProductPagination.gcp-stg-0363.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T01:58:33.991Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0363",
+      "file": "retailer-admin/src/pages/ProductsPage.tsx",
+      "start_line": 181,
+      "end_line": 188,
+      "checksum": "04f60919ab125183",
+      "description": "Pagination state + PAGE_SIZE=50 + fetchProducts with limit/offset + pagination UI controls (Previous/Next, Showing X-Y of Z)",
+      "test_file": "backend/tests/retailerProductPagination.gcp-stg-0363.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T01:58:59.058Z",
       "status": "ACTIVE"
     }
   ],

@@ -179,6 +179,10 @@ export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [products, setProducts] = useState<Product[]>([]);
+  // GCP-STG-0363: Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const PAGE_SIZE = 50;
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   // RET-AUD-040: Track supplier fetch errors for user feedback
   const [supplierFetchError, setSupplierFetchError] = useState(false);
@@ -248,21 +252,29 @@ export default function ProductsPage() {
   // RCAT-CAT-001: Fetch products from API with optional category filter
   // ISSUE-MICRO-044: silent=true skips loading state to preserve scroll after mutations
   // ISSUE-MICRO-079: signal allows cancellation on unmount
-  const fetchProducts = async (categoryFilter?: string, options?: { signal?: AbortSignal; silent?: boolean }) => {
+  const fetchProducts = async (categoryFilter?: string, options?: { signal?: AbortSignal; silent?: boolean; page?: number }) => {
     if (!options?.silent) {
       setIsLoading(true);
     }
     setError('');
     try {
       const cat = categoryFilter || selectedCategory;
+      const page = options?.page ?? currentPage;
       const params = new URLSearchParams();
       if (cat && cat !== 'all') params.set('categoryId', cat);
-      const url = `/api/v1/retailer-admin/products${params.toString() ? '?' + params.toString() : ''}`;
+      // GCP-STG-0363: Pass limit/offset for server-side pagination
+      params.set('limit', String(PAGE_SIZE));
+      params.set('offset', String(page * PAGE_SIZE));
+      const url = `/api/v1/retailer-admin/products?${params.toString()}`;
       const response = await authFetch(url, accessToken, { signal: options?.signal });
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch products');
       const data = await safeJson(response);
       setProducts(data?.data || []);
+      // GCP-STG-0363: Store total count from backend for pagination
+      if (typeof data?.total === 'number') {
+        setTotalProducts(data.total);
+      }
     } catch (err) {
       // ISSUE-MICRO-079: Don't set error state on abort (component unmounted)
       if (err instanceof DOMException && err.name === 'AbortError') return;
@@ -354,13 +366,25 @@ export default function ProductsPage() {
   }, [accessToken]);
 
   // RCAT-CAT-001: Re-fetch products when category changes (also fires on mount)
+  // GCP-STG-0363: Reset to page 0 when category changes
   // ISSUE-MICRO-079: AbortController cancels stale category fetches
   useEffect(() => {
     if (!accessToken) return;
+    setCurrentPage(0);
     const controller = new AbortController();
-    fetchProducts(selectedCategory, { signal: controller.signal });
+    fetchProducts(selectedCategory, { signal: controller.signal, page: 0 });
     return () => controller.abort();
   }, [selectedCategory, accessToken]);
+
+  // GCP-STG-0363: Refetch when page changes (but not on initial mount — category effect handles that)
+  const pageInitRef = useRef(true);
+  useEffect(() => {
+    if (pageInitRef.current) { pageInitRef.current = false; return; }
+    if (!accessToken) return;
+    const controller = new AbortController();
+    fetchProducts(selectedCategory, { signal: controller.signal, page: currentPage });
+    return () => controller.abort();
+  }, [currentPage]);
 
   // FIX-021: Ref to avoid re-registering visibility handler on every category change
   const selectedCategoryRef = useRef(selectedCategory);
@@ -1789,7 +1813,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
               className={`prod-cat-btn${selectedCategory === 'all' ? ' prod-cat-btn--active' : ''}`}
               onClick={() => handleCategorySelect('all')}
             >
-              All ({products.length})
+              All ({totalProducts})
             </button>
             {categoriesLoading ? (
               <span className="sup-small-hint" style={{ padding: '0.5rem' }}>Loading categories...</span>
@@ -2051,6 +2075,48 @@ Loose Rice,, , 45, 40, , KG, 25`}
                 })}
               </tbody>
             </table>
+          )}
+
+          {/* GCP-STG-0363: Pagination controls */}
+          {!isLoading && totalProducts > 0 && (
+            <div
+              data-testid="pagination-controls"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.75rem 1rem',
+                borderTop: '1px solid var(--border-color, #e5e7eb)',
+                fontSize: '0.875rem',
+              }}
+            >
+              <span data-testid="pagination-info" className="text-sm-muted">
+                Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, totalProducts)} of {totalProducts}
+              </span>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button
+                  className="btn btn-secondary"
+                  style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                  disabled={currentPage === 0}
+                  onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                  data-testid="pagination-prev"
+                >
+                  Previous
+                </button>
+                <span className="text-sm-muted" data-testid="pagination-page">
+                  Page {currentPage + 1} of {Math.max(1, Math.ceil(totalProducts / PAGE_SIZE))}
+                </span>
+                <button
+                  className="btn btn-secondary"
+                  style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                  disabled={(currentPage + 1) * PAGE_SIZE >= totalProducts}
+                  onClick={() => setCurrentPage(p => p + 1)}
+                  data-testid="pagination-next"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           )}
         </div>
 
