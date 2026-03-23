@@ -22,6 +22,8 @@ import { logger } from "../../services/logger";
 import { useScanResultStore } from "../../stores/scanResultStore";
 // GCP-STG-0316: Search trigger store for scan-not-found → search-by-name handoff
 import { useSearchTriggerStore } from "../../stores/searchTriggerStore";
+// GCP-STG-0402: Persisted BUY cart — survives screen unmount
+import { usePurchaseCartStore } from "../../stores/purchaseCartStore";
 
 // V3-FIX-076: BUY tab — no fabricated wholesale metadata
 
@@ -77,10 +79,15 @@ export default function BuyScreenV3() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [selectedSupplier, setSelectedSupplier] = useState(0);
+  // GCP-STG-0402: BUY cart persisted via Zustand store (survives screen unmount)
+  const orderQtys = usePurchaseCartStore((s) => s.orderQtys);
+  const selectedSupplier = usePurchaseCartStore((s) => s.selectedSupplierIndex);
+  const storeSetOrderQty = usePurchaseCartStore((s) => s.setOrderQty);
+  const storeClearOrderQtys = usePurchaseCartStore((s) => s.clearOrderQtys);
+  const storeSetSelectedSupplier = usePurchaseCartStore((s) => s.setSelectedSupplierIndex);
+  const setSelectedSupplier = storeSetSelectedSupplier;
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [categories, setCategories] = useState<string[]>(["All"]);
-  const [orderQtys, setOrderQtys] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
   // GCP-STG-0316: Ref to focus search input on scan-not-found fallback
   const searchInputRef = useRef<TextInput>(null);
@@ -254,18 +261,18 @@ export default function BuyScreenV3() {
     const rounded = Math.max(0, Math.round(cases));
     if (rounded === 0) {
       // Allow removal from cart
-      setOrderQtys((prev) => ({ ...prev, [id]: 0 }));
+      storeSetOrderQty(id, 0);
       return;
     }
     const product = products.find((p) => p.id === id);
     const moq = product?.moq ?? 1;
     if (rounded < moq) {
       showToast(`Minimum order is ${moq} case${moq > 1 ? "s" : ""}`);
-      setOrderQtys((prev) => ({ ...prev, [id]: moq }));
+      storeSetOrderQty(id, moq);
       return;
     }
-    setOrderQtys((prev) => ({ ...prev, [id]: rounded }));
-  }, [products]);
+    storeSetOrderQty(id, rounded);
+  }, [products, storeSetOrderQty]);
 
   return (
     <View style={styles.container}>
@@ -640,7 +647,7 @@ export default function BuyScreenV3() {
                   if (paymentMode === "CASH") {
                     showToast(`Order placed (Cash on Delivery): ${totalItems} items · ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")}`);
                   }
-                  setOrderQtys({});
+                  storeClearOrderQtys();
                   setCheckoutVisible(false);
                 } catch (err: any) {
                   showToast(err?.message ?? "Failed to place order");

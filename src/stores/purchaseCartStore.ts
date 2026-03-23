@@ -63,6 +63,11 @@ export interface DraftPOItem {
 interface PurchaseCartState {
   items: PurchaseCartItem[];
 
+  // GCP-STG-0402: BUY screen order quantities persisted across navigation
+  // orderQtys maps productId → case count (mirrors BuyScreenV3's old useState)
+  orderQtys: Record<string, number>;
+  selectedSupplierIndex: number;
+
   // Actions
   addItem: (item: Omit<PurchaseCartItem, "quantity"> & { quantity?: number }) => void;
   updateQuantity: (supplierProductId: string, quantity: number) => void;
@@ -71,6 +76,11 @@ interface PurchaseCartState {
   clear: () => void;
   loadDraftPOs: (drafts: DraftPOItem[]) => void;
   resetForStore: () => void;
+
+  // GCP-STG-0402: BUY screen order qty actions
+  setOrderQty: (productId: string, qty: number) => void;
+  clearOrderQtys: () => void;
+  setSelectedSupplierIndex: (index: number) => void;
 
   // Computed getters
   getItemsBySupplier: () => SupplierGroup[];
@@ -153,6 +163,20 @@ export const usePurchaseCartStore = create<PurchaseCartState>()(
     (set, get) => ({
       items: [],
 
+      // GCP-STG-0402: Persisted BUY screen order quantities
+      orderQtys: {},
+      selectedSupplierIndex: 0,
+
+      setOrderQty: (productId: string, qty: number) => {
+        set((state) => ({
+          orderQtys: { ...state.orderQtys, [productId]: qty },
+        }));
+      },
+
+      clearOrderQtys: () => set({ orderQtys: {}, selectedSupplierIndex: 0 }),
+
+      setSelectedSupplierIndex: (index: number) => set({ selectedSupplierIndex: index }),
+
       addItem: (item) => {
         const quantity = normalizeQuantity(item.quantity ?? item.moq, item.moq);
         const newItem: PurchaseCartItem = {
@@ -223,7 +247,7 @@ export const usePurchaseCartStore = create<PurchaseCartState>()(
         }));
       },
 
-      clear: () => set({ items: [] }),
+      clear: () => set({ items: [], orderQtys: {}, selectedSupplierIndex: 0 }),
 
       loadDraftPOs: (drafts) => {
         const newItems: PurchaseCartItem[] = drafts.map((draft) => ({
@@ -265,7 +289,7 @@ export const usePurchaseCartStore = create<PurchaseCartState>()(
         });
       },
 
-      resetForStore: () => set({ items: [] }),
+      resetForStore: () => set({ items: [], orderQtys: {}, selectedSupplierIndex: 0 }),
 
       getItemsBySupplier: () => calculateSupplierGroups(get().items),
 
@@ -285,6 +309,9 @@ export const usePurchaseCartStore = create<PurchaseCartState>()(
       storage: createJSONStorage(() => storeScopedStorage),
       partialize: (state) => ({
         items: state.items,
+        // GCP-STG-0402: Persist BUY screen order quantities across navigation
+        orderQtys: state.orderQtys,
+        selectedSupplierIndex: state.selectedSupplierIndex,
       }),
     }
   )
