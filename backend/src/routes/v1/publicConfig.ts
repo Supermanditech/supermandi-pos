@@ -5,15 +5,25 @@
 import { Router } from "express";
 import { getPool } from "../../db/client";
 import { log } from "../../lib/logger";
+import { redisRateLimit } from "../../middleware/rateLimit";
 
 export const publicConfigRouter = Router();
+
+// GCP-STG-0494: Rate limit public CTA config — 30 req/min/IP
+const ctaRateLimiter = redisRateLimit({
+  windowMs: 60_000,
+  max: 30,
+  keyPrefix: "public-cta",
+});
 
 // =============================================================================
 // GET /public/whatsapp-cta-config
 // Returns the WhatsApp CTA config for the landing page.
 // No auth required — returns only safe, non-secret display config.
+// GCP-STG-0494: Rate limited + Cache-Control header
+// GCP-STG-0501: X-Content-Type-Options: nosniff
 // =============================================================================
-publicConfigRouter.get("/whatsapp-cta-config", async (_req, res) => {
+publicConfigRouter.get("/whatsapp-cta-config", ctaRateLimiter, async (_req, res) => {
   try {
     const pool = getPool();
     if (!pool) {
@@ -30,6 +40,11 @@ publicConfigRouter.get("/whatsapp-cta-config", async (_req, res) => {
        FROM platform.whatsapp_cta_config
        ORDER BY id ASC LIMIT 1`
     );
+
+    // GCP-STG-0494: Cache-Control for CDN / browser caching
+    res.set("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
+    // GCP-STG-0501: Prevent MIME-type sniffing
+    res.set("X-Content-Type-Options", "nosniff");
 
     if (result.rows.length === 0) {
       // Table seeded but empty (should not happen after migration) — disable widget
