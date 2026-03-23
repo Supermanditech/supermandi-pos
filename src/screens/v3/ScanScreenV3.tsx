@@ -75,6 +75,8 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
   const [torchOn, setTorchOn] = useState(false);
   // GCP-STG-0520: Camera scan cooldown to prevent rapid-fire duplicate scans
   const scanCooldownRef = useRef(false);
+  // GCP-STG-0530: Low-light warning after 5s of no scans
+  const [showLightHint, setShowLightHint] = useState(false);
 
   // V3-003: Real barcode lookup from productsStore + cartStore
   const getProductByBarcode = useProductsStore((s) => s.getProductByBarcode);
@@ -122,6 +124,13 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
       setSupplierSearching(false);
     }
   }, [onProductFound]);
+
+  // GCP-STG-0530: Show low-light hint after 5s if camera is active without torch
+  useEffect(() => {
+    if (!visible || !cameraPermission?.granted || torchOn) { setShowLightHint(false); return; }
+    const timer = setTimeout(() => setShowLightHint(true), 5000);
+    return () => clearTimeout(timer);
+  }, [visible, cameraPermission?.granted, torchOn, lastResult]);
 
   // V3-FIX-157 + V3-FIX-160: One canonical scan pipeline for HID, camera, and manual entry
   const processScan = useCallback((rawBarcode: string) => {
@@ -289,6 +298,8 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
             <View style={[styles.corner, styles.cornerBR]} />
             <View style={styles.scanLine} />
           </View>
+          {/* GCP-STG-0530: Low-light warning hint */}
+          {showLightHint ? <Text style={styles.lightHint}>Low light? Tap flashlight to enable</Text> : null}
           <View style={styles.hidStatus}>
             <View style={styles.hidDot} />
             <Text style={styles.hidText}>HID Scanner Active</Text>
@@ -600,6 +611,8 @@ function createStyles(colors: ColorPalette, safeTop: number) {
     continueBtnText: { color: colors.textSecondary, fontSize: 13, fontWeight: "700" },
     resultAction: { marginTop: 12, backgroundColor: colors.successSoft, borderRadius: 10, padding: 10, alignItems: "center" },
     resultActionText: { color: colors.success, fontSize: 13, fontWeight: "700" },
+    // GCP-STG-0530: Low-light warning hint
+    lightHint: { color: "#FBBF24", fontSize: 12, fontWeight: "600", marginTop: 8, textAlign: "center" as const },
     // GCP-STG-0525: Running cart total bar
     cartSummary: { backgroundColor: "rgba(37,99,235,0.15)", paddingVertical: 6, paddingHorizontal: getScreenPadding(), alignItems: "center" },
     cartSummaryText: { color: "#fff", fontSize: 13, fontWeight: "700" },
