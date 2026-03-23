@@ -1504,9 +1504,12 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, req
     });
   }
 
-  // PRA-080/CONC-001: Warn when LWW timestamp missing (helps identify clients needing update)
+  // GCP-STG-0337: LWW guard is mandatory — reject if metadataUpdatedAt missing or invalid
   if (!validIncomingTimestamp) {
-    log.warn(`[METADATA] LWW timestamp missing for product update (store=${storeId}, barcode=${barcode || 'N/A'}, productId=${productId || 'N/A'})`);
+    return res.status(400).json({
+      error: "VALIDATION_ERROR",
+      message: "metadataUpdatedAt is required for conflict detection"
+    });
   }
 
   const pool = getPool();
@@ -1709,6 +1712,14 @@ posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", require
   // Parse incoming timestamp for LWW comparison (AUD-025-B fix)
   const incomingTimestamp = metadataUpdatedAt ? new Date(metadataUpdatedAt) : null;
   const validIncomingTimestamp = incomingTimestamp && !isNaN(incomingTimestamp.getTime()) ? incomingTimestamp : null;
+
+  // GCP-STG-0337: LWW guard is mandatory — reject if metadataUpdatedAt missing or invalid
+  if (!validIncomingTimestamp) {
+    return res.status(400).json({
+      error: "VALIDATION_ERROR",
+      message: "metadataUpdatedAt is required for conflict detection"
+    });
+  }
 
   const trimmedName = typeof displayName === "string" ? displayName.trim() : null;
   const trimmedBrand = typeof brand === "string" ? brand.trim() : null; // MT-8

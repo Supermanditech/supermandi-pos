@@ -603,6 +603,13 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
   const incomingTimestamp = metadataUpdatedAt ? new Date(metadataUpdatedAt) : null;
   const validIncomingTimestamp = incomingTimestamp && !isNaN(incomingTimestamp.getTime()) ? incomingTimestamp : null;
 
+  // GCP-STG-0337: LWW guard is mandatory — reject if metadataUpdatedAt missing or invalid
+  if (!validIncomingTimestamp) {
+    return res.status(400).json({
+      error: { code: "VALIDATION_ERROR", message: "metadataUpdatedAt is required for conflict detection" }
+    });
+  }
+
   // GO-LIVE-162: Validate category ID format if provided
   if (categoryId !== undefined && categoryId !== null && categoryId !== '') {
     const categoryValidation = validateCategoryId(categoryId);
