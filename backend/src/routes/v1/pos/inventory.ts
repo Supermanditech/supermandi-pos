@@ -822,6 +822,53 @@ posInventoryRouter.get("/inventory/statement/export", requireDeviceToken, async 
 });
 
 // =============================================================================
+// GCP-STG-0392: BATCH BREAKDOWN PER PRODUCT
+// =============================================================================
+
+/**
+ * GET /api/v1/pos/inventory/batches/:productId
+ * Returns all stock batches for a given product in the current store.
+ * Sorted by expiry_date ASC (nearest expiry first — FEFO).
+ */
+posInventoryRouter.get("/inventory/batches/:productId", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) return res.status(400).json({ error: "Store not configured" });
+
+  const { productId } = req.params;
+  if (!productId) return res.status(400).json({ error: "productId is required" });
+
+  try {
+    const result = await pool.query(
+      `SELECT
+        id,
+        batch_number AS "batchNumber",
+        expiry_date AS "expiryDate",
+        current_qty AS "currentQty",
+        grn_receive_id AS "grnReceiveId",
+        received_at AS "receivedAt"
+      FROM inventory.stock_batches
+      WHERE store_id = $1 AND product_id = $2 AND current_qty > 0
+      ORDER BY expiry_date ASC NULLS LAST, received_at ASC`,
+      [storeId, productId]
+    );
+
+    return res.json({
+      success: true,
+      productId,
+      batches: result.rows,
+      totalBatchQty: result.rows.reduce((sum: number, r: any) => sum + parseFloat(r.currentQty || 0), 0),
+    });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[StockBatches] Error:", error.message);
+    return res.status(500).json({ error: "Failed to get stock batches" });
+  }
+});
+
+// =============================================================================
 // T-062: INVENTORY VALUATION SUMMARY
 // =============================================================================
 

@@ -437,3 +437,29 @@ export async function getStockStatement(
 
   return response;
 }
+
+// GCP-STG-0392: Batch breakdown per product
+export type StockBatch = {
+  id: string;
+  batchNumber: string | null;
+  expiryDate: string | null;
+  currentQty: number;
+  grnReceiveId: string | null;
+  receivedAt: string;
+};
+
+export type StockBatchesResponse = {
+  success: boolean;
+  productId: string;
+  batches: StockBatch[];
+  totalBatchQty: number;
+};
+
+export async function getStockBatches(productId: string): Promise<StockBatchesResponse> {
+  const storeId = await getDeviceStoreId();
+  if (!storeId) throw new Error("Store not configured");
+  if (!(await isOnline())) {
+    return { success: false, productId, batches: [], totalBatchQty: 0 };
+  }
+  return apiClient.get<StockBatchesResponse>(`/api/v1/pos/inventory/batches/${productId}`);
+}

@@ -1,17 +1,19 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
-import { View, Pressable, TextInput, FlatList, StyleSheet, Text, ActivityIndicator, Alert } from "react-native";
+import { View, Pressable, TextInput, FlatList, StyleSheet, Text, ActivityIndicator, Alert, Modal, ScrollView } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding, getChipFontSize } from "../../theme/responsive";
-import { getStockStatement } from "../../services/api/inventoryApi";
+import { getStockStatement, getStockBatches } from "../../services/api/inventoryApi";
+import type { StockBatch } from "../../services/api/inventoryApi";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 
 // V3-044: Stock screen v3 — wire real getStockStatement API
 
 // V3-FIX-080: Carry barcode for label printing
-type StockItem = { name: string; barcode: string; costMinor: number; sellMinor: number; stock: number; status: "in" | "low" | "out" };
+// GCP-STG-0392: Added productId for batch lookup
+type StockItem = { productId: string; name: string; barcode: string; costMinor: number; sellMinor: number; stock: number; status: "in" | "low" | "out" };
 
 type Props = { onClose: () => void; onOpeningStock?: () => void };
 
@@ -35,6 +37,7 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
       const mapped: StockItem[] = (res.data ?? []).map((p: any) => {
         const stock = Number(p.currentStock ?? 0);
         return {
+          productId: p.productId ?? p.id ?? "",
           name: p.displayName ?? p.name ?? "Unknown",
           barcode: p.barcode ?? p.primaryBarcode ?? "",
           costMinor: Math.round((p.purchasePrice ?? 0) * 100),
@@ -78,6 +81,36 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
   const statusColor = (s: string) => s === "in" ? colors.success : s === "low" ? colors.warning : colors.error;
   const statusLabel = (s: string) => s === "in" ? "In stock" : s === "low" ? "Low" : "Out";
 
+  // GCP-STG-0392: Batch breakdown modal state
+  const [batchModalItem, setBatchModalItem] = useState<StockItem | null>(null);
+  const [batches, setBatches] = useState<StockBatch[]>([]);
+  const [batchLoading, setBatchLoading] = useState(false);
+
+  const openBatchModal = useCallback(async (item: StockItem) => {
+    setBatchModalItem(item);
+    setBatches([]);
+    setBatchLoading(true);
+    try {
+      const res = await getStockBatches(item.productId);
+      setBatches(res.batches ?? []);
+    } catch {
+      showToast("Could not load batch data");
+    } finally {
+      setBatchLoading(false);
+    }
+  }, []);
+
+  const formatExpiryDate = (d: string | null) => {
+    if (!d) return "N/A";
+    const date = new Date(d);
+    const now = new Date();
+    const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const formatted = `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getFullYear()}`;
+    if (diffDays < 0) return `${formatted} (EXPIRED)`;
+    if (diffDays <= 30) return `${formatted} (${diffDays}d)`;
+    return formatted;
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Stock & Inventory</Text><View style={{ width: 30 }} /></View>
@@ -118,8 +151,8 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
         ListEmptyComponent={!loading ? <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>{searchQuery.trim() ? "🔍" : activeTab === "unsold" ? "✅" : activeTab === "movement" ? "📊" : "📦"}</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>{searchQuery.trim() ? `No results for '${searchQuery.trim()}'` : activeTab === "unsold" ? "No dead stock" : activeTab === "movement" ? "No stock alerts" : "No inventory"}</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>{searchQuery.trim() ? "Try a different search term" : activeTab === "unsold" ? "All products have stock — great!" : activeTab === "movement" ? "All stock levels are healthy" : "Add products to see stock levels here"}</Text></View> : null}
         renderItem={({ item }) => (
           <Pressable style={styles.itemRow} onPress={() => {
-            // GCP-STG-0058: Show product detail on tap
-            Alert.alert(item.name, `Stock: ${item.stock}\nCost: ₹${(item.costMinor / 100).toFixed(0)}\nSell: ₹${(item.sellMinor / 100).toFixed(0)}\nStatus: ${statusLabel(item.status)}${item.barcode ? `\nBarcode: ${item.barcode}` : ""}`, [{ text: "OK" }]);
+            // GCP-STG-0392: Open batch breakdown modal (replaces simple Alert)
+            void openBatchModal(item);
           }}>
             <View style={styles.itemImg}><Text style={{ fontSize: 18 }}>📦</Text></View>
             <View style={{ flex: 1 }}>
@@ -134,6 +167,60 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
         )}
         showsVerticalScrollIndicator={false}
       />
+
+      {/* GCP-STG-0392: Batch breakdown modal */}
+      <Modal visible={!!batchModalItem} transparent animationType="slide" onRequestClose={() => setBatchModalItem(null)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "70%", padding: 16 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: colors.textPrimary, flex: 1 }}>{batchModalItem?.name ?? ""}</Text>
+              <Pressable onPress={() => setBatchModalItem(null)} style={{ padding: 4 }}>
+                <Text style={{ fontSize: 18, color: colors.textTertiary }}>X</Text>
+              </Pressable>
+            </View>
+            {batchModalItem ? (
+              <View style={{ marginBottom: 12, padding: 10, backgroundColor: colors.surface, borderRadius: 10 }}>
+                <Text style={{ fontSize: 13, color: colors.textSecondary }}>
+                  Total Stock: {batchModalItem.stock} | Cost: Rs.{(batchModalItem.costMinor / 100).toFixed(0)} | Sell: Rs.{(batchModalItem.sellMinor / 100).toFixed(0)}
+                </Text>
+                {batchModalItem.barcode ? <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 2 }}>Barcode: {batchModalItem.barcode}</Text> : null}
+              </View>
+            ) : null}
+            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textPrimary, marginBottom: 8 }}>Batch Breakdown</Text>
+            {batchLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} />
+            ) : batches.length === 0 ? (
+              <View style={{ padding: 20, alignItems: "center" }}>
+                <Text style={{ fontSize: 13, color: colors.textTertiary }}>No batch records found</Text>
+                <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Batch data is recorded when goods are received with batch/expiry info</Text>
+              </View>
+            ) : (
+              <ScrollView style={{ maxHeight: 300 }}>
+                {batches.map((b, idx) => {
+                  const isExpired = b.expiryDate ? new Date(b.expiryDate) < new Date() : false;
+                  return (
+                    <View key={b.id || idx} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: isExpired ? "rgba(255,0,0,0.05)" : "transparent" }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontWeight: "600", color: colors.textPrimary }}>{b.batchNumber || "No batch #"}</Text>
+                        <Text style={{ fontSize: 12, color: isExpired ? colors.error : colors.textTertiary, marginTop: 2 }}>
+                          Expiry: {formatExpiryDate(b.expiryDate)}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 1 }}>
+                          Received: {b.receivedAt ? new Date(b.receivedAt).toLocaleDateString() : "N/A"}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: "flex-end" }}>
+                        <Text style={{ fontSize: 16, fontWeight: "900", color: isExpired ? colors.error : colors.textPrimary }}>{b.currentQty}</Text>
+                        <Text style={{ fontSize: 10, color: colors.textTertiary }}>qty</Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* V3-FIX-080: Real actions instead of placeholder alerts */}
       <View style={styles.footer}>

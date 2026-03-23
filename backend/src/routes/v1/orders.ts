@@ -1956,6 +1956,23 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
             [storeId, orderItem.product_id, item.quantityReceived]
           );
 
+          // GCP-STG-0392: Insert batch-level stock record (if batch_number or expiry_date provided)
+          if (item.batchNumber || item.expiryDate) {
+            await client.query(
+              `INSERT INTO inventory.stock_batches
+                (store_id, product_id, batch_number, expiry_date, current_qty, grn_receive_id)
+               VALUES ($1, $2, $3, $4, $5, $6)`,
+              [
+                storeId,
+                orderItem.product_id,
+                item.batchNumber || null,
+                item.expiryDate || null,
+                item.quantityReceived,
+                receiveId,
+              ]
+            );
+          }
+
           // Also update catalog.store_products if it exists
           await client.query(
             `UPDATE catalog.store_products
