@@ -31,6 +31,9 @@ export interface InvoicePdfData {
   buyerGstin?: string;
   buyerAddress?: string;
 
+  // GCP-STG-0352: Place of Supply (GST compliance Rule 46)
+  placeOfSupply?: string; // e.g. "Maharashtra (27)" — if omitted, derived from buyerGstin
+
   // Items
   items: Array<{
     productName: string;
@@ -76,6 +79,47 @@ export interface InvoicePdfData {
 // =============================================================================
 // Helpers
 // =============================================================================
+
+// GCP-STG-0352: GST state code → state name mapping (GSTIN first 2 digits)
+// Source: CBIC notification, same codes as gstCompliance.ts STATE_CODES (reversed)
+const GST_STATE_CODE_MAP: Record<string, string> = {
+  "01": "Jammu and Kashmir", "02": "Himachal Pradesh", "03": "Punjab",
+  "04": "Chandigarh", "05": "Uttarakhand", "06": "Haryana",
+  "07": "Delhi", "08": "Rajasthan", "09": "Uttar Pradesh",
+  "10": "Bihar", "11": "Sikkim", "12": "Arunachal Pradesh",
+  "13": "Nagaland", "14": "Manipur", "15": "Mizoram",
+  "16": "Tripura", "17": "Meghalaya", "18": "Assam",
+  "19": "West Bengal", "20": "Jharkhand", "21": "Odisha",
+  "22": "Chhattisgarh", "23": "Madhya Pradesh", "24": "Gujarat",
+  "25": "Daman and Diu", "26": "Dadra and Nagar Haveli", "27": "Maharashtra",
+  "29": "Karnataka", "30": "Goa", "31": "Lakshadweep",
+  "32": "Kerala", "33": "Tamil Nadu", "34": "Puducherry",
+  "35": "Andaman and Nicobar", "36": "Telangana", "37": "Andhra Pradesh",
+  "38": "Ladakh",
+};
+
+/**
+ * GCP-STG-0352: Derive "Place of Supply" from explicit field, buyer GSTIN, or seller GSTIN.
+ * Returns formatted string e.g. "Maharashtra (27)" or null if undeterminable.
+ */
+export function derivePlaceOfSupply(
+  placeOfSupply?: string,
+  buyerGstin?: string,
+  sellerGstin?: string,
+): string | null {
+  // 1. Explicit value takes precedence
+  if (placeOfSupply) return placeOfSupply;
+
+  // 2. Derive from buyer GSTIN first 2 digits (standard GST state code)
+  const gstin = buyerGstin || sellerGstin;
+  if (gstin && gstin.length >= 2) {
+    const code = gstin.substring(0, 2);
+    const stateName = GST_STATE_CODE_MAP[code];
+    if (stateName) return `${stateName} (${code})`;
+  }
+
+  return null;
+}
 
 function formatAmount(minor: number): string {
   const rupees = (minor / 100).toFixed(2);
@@ -200,9 +244,23 @@ export function generateInvoicePdf(data: InvoicePdfData): InstanceType<typeof PD
   }
 
   // =========================================================================
+  // GCP-STG-0352: Place of Supply (GST Rule 46 mandatory field)
+  // =========================================================================
+  const pos = derivePlaceOfSupply(data.placeOfSupply, data.buyerGstin, data.sellerGstin);
+  if (pos) {
+    y = y + boxHeight + 4;
+    doc.fontSize(8).font("Helvetica-Bold").text("Place of Supply:", leftCol, y);
+    doc.font("Helvetica").text(pos, leftCol + 90, y);
+    y += 14;
+  } else {
+    y = 230;
+  }
+
+  // =========================================================================
   // Items table
   // =========================================================================
-  y = 230;
+  // Ensure items table starts below Place of Supply (or at default 230)
+  if (y < 230) y = 230;
 
   // Column widths
   const cols = {
