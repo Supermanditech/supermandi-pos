@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { View, Pressable, ScrollView, KeyboardAvoidingView, Platform, StyleSheet, Text, Alert, TextInput, Modal } from "react-native";
 import { useTranslation } from "react-i18next";
+// GCP-STG-0443: Safe area insets for dynamic paddingTop
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
@@ -20,6 +22,8 @@ type Props = { onClose: () => void; onSwitchStaff?: () => void; onLogout?: () =>
 export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
+  // GCP-STG-0443: Use safe area insets instead of hardcoded padding
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const language = useSettingsStore((s) => s.language);
   const setLanguage = useSettingsStore((s) => s.setLanguage);
@@ -122,7 +126,7 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Settings</Text><View style={{ width: 30 }} /></View>
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
         {SECTIONS.map((sec) => (
@@ -198,7 +202,8 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
           );
         })()}
 
-        <View style={styles.footerActions}>
+        {/* GCP-STG-0443: Safe area bottom padding */}
+        <View style={[styles.footerActions, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <Pressable style={styles.switchBtn} onPress={() => {
             useStaffSessionStore.getState().clearSession();
             showToast("Staff session cleared");
