@@ -21479,7 +21479,7 @@
       "start_line": 132,
       "end_line": 220,
       "checksum": "43a8d627c7abdaf2",
-      "description": "Client-side pagination for users tab (page size 20) with filter-then-paginate and Previous/Next controls",
+      "description": "Client-side pagination for users tab (page size 20) with filter-then-paginate and Previous/Next controls (committed)",
       "test_file": "N/A",
       "registered_at": "2026-03-23T14:00:00.000Z",
       "status": "ACTIVE",

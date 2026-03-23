@@ -1,6 +1,6 @@
 // SA-001: Users management tab extracted from App.tsx
 // SA-P2-010: Force password reset for retailer users
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 import type { UserRecord } from "../api/users";
 import { forceResetPassword } from "../api/users";
@@ -27,6 +27,9 @@ interface UsersTabProps {
   requestCreateUser: () => void;
 }
 
+/** GCP-STG-0424: Page size for users list pagination */
+const USERS_PAGE_SIZE = 20;
+
 export function UsersTab({
   userRecords, usersLoading, usersError, userSearch, userStatusSaving,
   userActionError, showCreateUser, createUserForm, createUserLoading,
@@ -34,6 +37,9 @@ export function UsersTab({
   setCreateUserForm, refreshUsers, requestUserStatusChange, requestCreateUser,
 }: UsersTabProps) {
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
+  // GCP-STG-0424: Pagination state — reset page when search changes
+  const [currentPage, setCurrentPage] = useState(0);
+  useEffect(() => { setCurrentPage(0); }, [userSearch]);
   // SA-P2-010: Force password reset state
   const [resetPasswordLoading, setResetPasswordLoading] = useState<string | null>(null);
   const [resetPasswordResult, setResetPasswordResult] = useState<{ userName: string; tempPassword: string } | null>(null);
@@ -130,7 +136,16 @@ export function UsersTab({
             <tr><th>Name</th><th>Email</th><th>Phone</th><th>Type</th><th>Status</th><th>Created</th><th>Actions</th></tr>
           </thead>
           <tbody>
-            {userRecords.filter((u) => { if (!userSearch.trim()) return true; const q = userSearch.toLowerCase().trim(); return u.name.toLowerCase().includes(q) || (u.email && u.email.toLowerCase().includes(q)) || (u.phone && u.phone.includes(q)); }).map((user) => (
+            {/* GCP-STG-0424: Filter then paginate */}
+            {(() => {
+              const filtered = userRecords.filter((u) => { if (!userSearch.trim()) return true; const q = userSearch.toLowerCase().trim(); return u.name.toLowerCase().includes(q) || (u.email && u.email.toLowerCase().includes(q)) || (u.phone && u.phone.includes(q)); });
+              const totalFiltered = filtered.length;
+              const totalPages = Math.ceil(totalFiltered / USERS_PAGE_SIZE);
+              // Reset page if out of bounds after filter change
+              const safePage = currentPage >= totalPages ? 0 : currentPage;
+              const paged = filtered.slice(safePage * USERS_PAGE_SIZE, (safePage + 1) * USERS_PAGE_SIZE);
+              return (<>
+                {paged.map((user) => (
               <tr key={user.id}>
                 <td>{user.name}</td>
                 <td>{user.email ?? "-"}</td>
@@ -179,12 +194,33 @@ export function UsersTab({
                 </td>
               </tr>
             ))}
-            {userRecords.length === 0 && !usersLoading && (
+            {totalFiltered === 0 && !usersLoading && (
               <tr><td colSpan={7} className="sa-text-center sa-text-muted">No users found</td></tr>
             )}
+              </>);
+            })()}
           </tbody>
         </table>
         )}
+        {/* GCP-STG-0424: Pagination controls */}
+        {(() => {
+          const filtered = userRecords.filter((u) => { if (!userSearch.trim()) return true; const q = userSearch.toLowerCase().trim(); return u.name.toLowerCase().includes(q) || (u.email && u.email.toLowerCase().includes(q)) || (u.phone && u.phone.includes(q)); });
+          const totalPages = Math.ceil(filtered.length / USERS_PAGE_SIZE);
+          if (totalPages <= 1) return null;
+          const safePage = currentPage >= totalPages ? 0 : currentPage;
+          return (
+            <div className="sa-flex sa-gap-12" style={{ justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+              <span className="muted" style={{ fontSize: 13 }}>
+                Showing {safePage * USERS_PAGE_SIZE + 1}–{Math.min((safePage + 1) * USERS_PAGE_SIZE, filtered.length)} of {filtered.length}
+              </span>
+              <div className="sa-flex sa-gap-8" style={{ alignItems: 'center' }}>
+                <button onClick={() => setCurrentPage(p => p - 1)} disabled={safePage === 0}>Previous</button>
+                <span className="muted" style={{ fontSize: 13 }}>Page {safePage + 1} of {totalPages}</span>
+                <button onClick={() => setCurrentPage(p => p + 1)} disabled={safePage >= totalPages - 1}>Next</button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
       {/* SA-P2-010: Password reset error */}
       {resetPasswordError && (
