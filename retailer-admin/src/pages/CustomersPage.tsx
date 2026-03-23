@@ -39,6 +39,9 @@ function sanitizeSearchInput(raw: string): string {
     .slice(0, 100);                     // cap at 100 chars (matches backend validateSearchQuery)
 }
 
+/** GCP-STG-0416: Page size for customer list pagination */
+const CUSTOMERS_PAGE_SIZE = 50;
+
 export default function CustomersPage() {
   const { accessToken } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -47,6 +50,8 @@ export default function CustomersPage() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();
+  // GCP-STG-0416: Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
 
   // Detail view state
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -54,11 +59,11 @@ export default function CustomersPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
 
-  const fetchCustomers = useCallback(async (q?: string) => {
+  const fetchCustomers = useCallback(async (q?: string, page = 0) => {
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams({ limit: '50' });
+      const params = new URLSearchParams({ limit: String(CUSTOMERS_PAGE_SIZE), offset: String(page * CUSTOMERS_PAGE_SIZE) });
       // REQ.AUDIT.W5.RETAILER.CUSTOMERS-SEARCH-NO-INPUT-SANITIZE.001: trim whitespace
       if (q && q.trim()) params.set('q', q.trim());
       const response = await authFetch(`/api/v1/retailer-admin/customers?${params}`, accessToken);
@@ -98,14 +103,33 @@ export default function CustomersPage() {
     fetchCustomers();
   }, [fetchCustomers]);
 
+  // GCP-STG-0416: Reset to first page when search changes
   // Debounced search
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => {
-      fetchCustomers(search || undefined);
+      setCurrentPage(0);
+      fetchCustomers(search || undefined, 0);
     }, 300);
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [search, fetchCustomers]);
+
+  // GCP-STG-0416: Pagination handlers
+  const totalPages = Math.ceil(total / CUSTOMERS_PAGE_SIZE);
+  const handlePrevPage = () => {
+    if (currentPage > 0) {
+      const newPage = currentPage - 1;
+      setCurrentPage(newPage);
+      fetchCustomers(search || undefined, newPage);
+    }
+  };
+  const handleNextPage = () => {
+    if (currentPage < totalPages - 1) {
+      const newPage = currentPage + 1;
+      setCurrentPage(newPage);
+      fetchCustomers(search || undefined, newPage);
+    }
+  };
 
   // Detail view
   if (selectedCustomer) {
@@ -220,7 +244,7 @@ export default function CustomersPage() {
               aria-label="Search customers by name or phone"
             />
           </div>
-          <button onClick={() => fetchCustomers(search || undefined)} disabled={loading} className="btn btn-secondary btn-icon">
+          <button onClick={() => fetchCustomers(search || undefined, currentPage)} disabled={loading} className="btn btn-secondary btn-icon">
             <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
           </button>
         </div>
@@ -272,6 +296,26 @@ export default function CustomersPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* GCP-STG-0416: Pagination controls */}
+      {!loading && totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, padding: '8px 0' }}>
+          <span style={{ fontSize: 13, color: '#64748B' }}>
+            Showing {currentPage * CUSTOMERS_PAGE_SIZE + 1}–{Math.min((currentPage + 1) * CUSTOMERS_PAGE_SIZE, total)} of {total}
+          </span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-secondary btn-sm" onClick={handlePrevPage} disabled={currentPage === 0}>
+              Previous
+            </button>
+            <span style={{ fontSize: 13, lineHeight: '32px', color: '#475569' }}>
+              Page {currentPage + 1} of {totalPages}
+            </span>
+            <button className="btn btn-secondary btn-sm" onClick={handleNextPage} disabled={currentPage >= totalPages - 1}>
+              Next
+            </button>
+          </div>
         </div>
       )}
 
