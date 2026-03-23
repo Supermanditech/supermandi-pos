@@ -11,7 +11,7 @@ import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
 import { showToast } from "../../utils/showToast";
-import { useProductsStore } from "../../stores/productsStore";
+import { useProductsStore, type Product } from "../../stores/productsStore";
 import { useCartStore } from "../../stores/cartStore";
 import { setHidScanHandler } from "../../services/hidScannerService";
 import { buildCartItem } from "../../services/cartPayload";
@@ -73,7 +73,11 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
 
   // V3-003: Real barcode lookup from productsStore + cartStore
   const getProductByBarcode = useProductsStore((s) => s.getProductByBarcode);
+  // GCP-STG-0521: Plural lookup for disambiguation when multiple products share a barcode
+  const getProductsByBarcode = useProductsStore((s) => s.getProductsByBarcode);
   const addItem = useCartStore((s) => s.addItem);
+  // GCP-STG-0521: Disambiguation state for multiple products with same barcode
+  const [disambiguationMatches, setDisambiguationMatches] = useState<Product[]>([]);
 
   // GCP-STG-0322: Async supplier catalog fallback when local lookup misses in procurement mode
   const searchSupplierCatalog = useCallback(async (barcode: string) => {
@@ -117,7 +121,21 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
     if (!code) return;
     if (isDuplicateScan(code)) return;
 
+    // GCP-STG-0521: Check for multiple products with the same barcode
+    const matches = getProductsByBarcode ? getProductsByBarcode(code) : [];
     const product = getProductByBarcode(code);
+
+    // GCP-STG-0521: If multiple products share this barcode, show disambiguation picker
+    if (matches.length > 1 && context === "sell_scan") {
+      setDisambiguationMatches(matches);
+      setLastResult({
+        barcode: code, productName: `${matches.length} products found`, isNew: false,
+      });
+      showToast(`${matches.length} products match barcode — choose one`);
+      setBarcodeInput("");
+      return;
+    }
+
     if (product) {
       setLastResult({
         barcode: code, productName: product.name,
@@ -175,7 +193,7 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
       }
     }
     setBarcodeInput("");
-  }, [context, getProductByBarcode, addItem, onProductFound, searchSupplierCatalog]);
+  }, [context, getProductByBarcode, getProductsByBarcode, addItem, onProductFound, searchSupplierCatalog]);
 
   // Manual submit and camera use the same pipeline
   const handleScanSubmit = useCallback(() => {
@@ -302,8 +320,66 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
           </View>
         ) : null}
 
+        {/* GCP-STG-0521: Disambiguation picker when multiple products share a barcode */}
+        {disambiguationMatches.length > 1 ? (
+          <View style={styles.resultPanel}>
+            <Text style={{ fontSize: 14, fontWeight: "800", color: colors.textPrimary, marginBottom: 8 }}>
+              Multiple products found — select one:
+            </Text>
+            {disambiguationMatches.map((p, idx) => (
+              <Pressable
+                key={p.id}
+                testID={`disambiguation-item-${idx}`}
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 10,
+                  paddingVertical: 10, paddingHorizontal: 8,
+                  borderBottomWidth: idx < disambiguationMatches.length - 1 ? 1 : 0,
+                  borderBottomColor: colors.border,
+                }}
+                onPress={() => {
+                  // Add selected product to cart
+                  const existing = useCartStore.getState().items.find(i => i.barcode === p.barcode || i.id === p.id);
+                  if (existing) {
+                    useCartStore.getState().updateQuantity(existing.id, existing.quantity + 1);
+                    showToast(`${p.name} x${existing.quantity + 1}`);
+                  } else {
+                    addItem(buildCartItem(p));
+                    showToast(`${p.name} added to cart`);
+                  }
+                  setDisambiguationMatches([]);
+                  setLastResult({
+                    barcode: p.barcode ?? p.id, productName: p.name,
+                    price: p.priceMinor, stock: p.stock ?? undefined, isNew: false,
+                  });
+                  onProductFound(p.barcode ?? p.id, context);
+                }}
+              >
+                <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: colors.backgroundSecondary, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 16 }}>🍪</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textPrimary }} numberOfLines={1}>{p.name}</Text>
+                  <Text style={{ fontSize: 11, color: colors.textTertiary }}>
+                    {[p.brand, p.unit, p.netContentValue && p.netContentUnit ? `${p.netContentValue}${p.netContentUnit}` : null].filter(Boolean).join(" · ") || p.id}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 16, fontWeight: "900", color: colors.primary }}>
+                  ₹{((p.priceMinor ?? 0) / 100).toFixed(0)}
+                </Text>
+              </Pressable>
+            ))}
+            <Pressable
+              style={{ marginTop: 8, alignItems: "center", paddingVertical: 8 }}
+              onPress={() => { setDisambiguationMatches([]); setLastResult(null); }}
+              testID="disambiguation-cancel"
+            >
+              <Text style={{ color: colors.textTertiary, fontSize: 13, fontWeight: "600" }}>Cancel</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         {/* Last scan result */}
-        {!supplierSearching && lastResult ? (
+        {!supplierSearching && disambiguationMatches.length <= 1 && lastResult ? (
           <View style={styles.resultPanel}>
             {!lastResult.isNew ? (
               <>

@@ -9,6 +9,50 @@ import { getDeviceToken } from "../services/deviceSession";
 
 const PRODUCTS_CACHE_KEY = 'supermandi.cache.products.v1';
 
+// GCP-STG-0507: O(1) barcode Map index — rebuilt whenever products array changes
+let _barcodeIndex: Map<string, Product> = new Map();
+// GCP-STG-0521: Multi-product barcode index for disambiguation (multiple products same barcode)
+let _barcodeMultiIndex: Map<string, Product[]> = new Map();
+
+/**
+ * GCP-STG-0507: Build O(1) barcode lookup index from products array.
+ * Called after every set({ products: ... }).
+ */
+export function buildBarcodeIndex(products: Product[]): Map<string, Product> {
+  const map = new Map<string, Product>();
+  for (const p of products) {
+    if (p.barcode) map.set(p.barcode, p);
+  }
+  return map;
+}
+
+/**
+ * GCP-STG-0521: Build multi-product barcode index for disambiguation.
+ * Maps barcode -> Product[] for cases where multiple products share the same barcode.
+ */
+export function buildBarcodeMultiIndex(products: Product[]): Map<string, Product[]> {
+  const map = new Map<string, Product[]>();
+  for (const p of products) {
+    if (p.barcode) {
+      const existing = map.get(p.barcode);
+      if (existing) {
+        existing.push(p);
+      } else {
+        map.set(p.barcode, [p]);
+      }
+    }
+  }
+  return map;
+}
+
+/**
+ * GCP-STG-0507 + GCP-STG-0521: Rebuild both barcode indexes.
+ */
+function rebuildBarcodeIndexes(products: Product[]): void {
+  _barcodeIndex = buildBarcodeIndex(products);
+  _barcodeMultiIndex = buildBarcodeMultiIndex(products);
+}
+
 // GCP-STG-0366: Chunked AsyncStorage for 10K+ products
 // Single JSON blob at 10K products (~5MB) blocks JS thread and risks AsyncStorage limits.
 // Chunk into 1000-product blocks with a metadata key for reassembly.
@@ -195,6 +239,8 @@ interface ProductsState {
   loadProducts: () => Promise<void>;
   checkAndRefresh: () => Promise<void>;
   getProductByBarcode: (barcode: string) => Product | undefined;
+  // GCP-STG-0521: Return all products matching a barcode (for disambiguation)
+  getProductsByBarcode: (barcode: string) => Product[];
   searchProducts: (query: string) => Product[];
   resetForStore: () => void;
 }
@@ -267,12 +313,15 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
         allProducts.push(...mapped);
 
         // GCP-STG-0083: Update store incrementally — first chunk visible immediately
+        const snapshot = [...allProducts];
         set({
-          products: [...allProducts],
+          products: snapshot,
           loading: !done,
           error: null,
           ...(done ? { lastSyncedAt: new Date().toISOString() } : {}),
         });
+        // GCP-STG-0507: Rebuild barcode indexes after products update
+        rebuildBarcodeIndexes(snapshot);
 
         if (mapped.length > 0) {
           upsertStockFromProducts(mapped);
@@ -295,6 +344,8 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
           // GCP-STG-0367: Pre-compute search fields on cache load
           productsData.forEach(attachSearchFields);
           set({ products: productsData, loading: false, error: null });
+          // GCP-STG-0507: Rebuild barcode indexes from cache
+          rebuildBarcodeIndexes(productsData);
           upsertStockFromProducts(productsData);
           await eventLogger.log('PRODUCTS_LOADED', {
             count: productsData.length,
@@ -399,6 +450,8 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
             const merged = Array.from(byId.values());
             const now = new Date().toISOString();
             set({ products: merged, lastSyncedAt: now });
+            // GCP-STG-0507: Rebuild barcode indexes after delta sync
+            rebuildBarcodeIndexes(merged);
 
             // Persist merged cache + update stock — GCP-STG-0366: chunked write
             await writeProductsChunked(merged);
@@ -423,17 +476,32 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     }
   },
 
-  // V3-FIX-160: Barcode lookup with explicit precedence:
-  // 1. Store override barcode (exact match on barcode field)
-  // 2. Manufacturer barcode (exact match on barcode field — same column, different origin)
-  // 3. Product ID as barcode fallback (for generated SM- labels)
+  // V3-FIX-160 + GCP-STG-0507: Barcode lookup with O(1) Map index
+  // Precedence: 1. barcode field (via Map) → 2. product ID fallback (linear scan)
   getProductByBarcode: (barcode: string) => {
     const { products } = get();
-    // Primary: exact barcode match (covers both store override and manufacturer)
+    // GCP-STG-0507: O(1) lookup via pre-built Map index
+    if (_barcodeIndex.size > 0) {
+      const byBarcode = _barcodeIndex.get(barcode);
+      if (byBarcode) return byBarcode;
+      // Fallback: product ID (still linear — only for SM- labels)
+      return products.find(p => p.id === barcode) ?? undefined;
+    }
+    // Fallback to linear scan if index not yet built
     const byBarcode = products.find(product => product.barcode === barcode);
     if (byBarcode) return byBarcode;
-    // Fallback: generated label barcode (SM- prefix or product ID)
     return products.find(product => product.id === barcode) ?? undefined;
+  },
+
+  // GCP-STG-0521: Return ALL products matching a barcode (for disambiguation when duplicates exist)
+  getProductsByBarcode: (barcode: string) => {
+    // Use multi-index if available
+    if (_barcodeMultiIndex.size > 0) {
+      return _barcodeMultiIndex.get(barcode) ?? [];
+    }
+    // Fallback to linear filter
+    const { products } = get();
+    return products.filter(p => p.barcode === barcode);
   },
 
   // GCP-STG-0367: Pre-computed lowercase fields + capped results + for-loop early break
@@ -467,6 +535,9 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       error: null,
       lastSyncedAt: null,
     });
+    // GCP-STG-0507: Clear barcode indexes on store reset
+    _barcodeIndex = new Map();
+    _barcodeMultiIndex = new Map();
   }
 }));
 
