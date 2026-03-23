@@ -1,6 +1,7 @@
 // SA-001: Stores tab extracted from App.tsx
 import React from "react";
-import type { StoreRecord, StoreSettings } from "../api/stores";
+import type { StoreRecord, StoreSettings, InvoiceSettings } from "../api/stores";
+import { fetchInvoiceSettings, updateInvoiceSettings } from "../api/stores";
 import type { GlobalFeatureFlag, StoreFeatureFlag } from "../api/featureFlags";
 import type { EnrollmentRecord } from "../api/deviceEnrollments";
 import { formatDateTime } from "../lib/formatters";
@@ -688,6 +689,8 @@ export function StoresTab({
                               <span className="sa-text-sm sa-text-muted">No enrollment codes yet</span>
                             )}
                           </div>
+                          {/* GCP-STG-0358: Invoice Template Settings */}
+                          <InvoiceSettingsSection storeId={s.id} />
                           {/* SA-P1-014: Store Settings (read-only audit view) */}
                           <div className="sa-mt-12">
                             <div className="sa-flex sa-gap-8 sa-items-center sa-mb-6">
@@ -976,5 +979,222 @@ export function StoresTab({
       {/* SA-P2-008: Bulk Import Notification */}
       <BulkImportNotifications />
     </section>
+  );
+}
+
+// =============================================================================
+// GCP-STG-0358: Invoice Template Settings — self-contained section per store
+// =============================================================================
+
+const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
+  logoUrl: null,
+  headerText: null,
+  footerText: "Thank you for your business!",
+  termsAndConditions: null,
+  showGstin: true,
+  showHsn: true,
+  autoSendWhatsApp: false,
+  autoSendOnSale: false,
+  autoSendOnPo: false,
+  autoSendOnGrn: false,
+};
+
+function InvoiceSettingsSection({ storeId }: { storeId: string }) {
+  const [settings, setSettings] = React.useState<InvoiceSettings | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [success, setSuccess] = React.useState("");
+  const [draft, setDraft] = React.useState<InvoiceSettings>(DEFAULT_INVOICE_SETTINGS);
+
+  async function loadSettings() {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const data = await fetchInvoiceSettings(storeId);
+      const merged = { ...DEFAULT_INVOICE_SETTINGS, ...data };
+      setSettings(merged);
+      setDraft(merged);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load invoice settings");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      await updateInvoiceSettings(storeId, draft);
+      setSettings({ ...draft });
+      setSuccess("Invoice settings saved.");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save invoice settings");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function updateDraft(patch: Partial<InvoiceSettings>) {
+    setDraft((prev) => ({ ...prev, ...patch }));
+  }
+
+  const isDirty = settings !== null && JSON.stringify(draft) !== JSON.stringify(settings);
+
+  return (
+    <div className="sa-mt-12" data-testid="invoice-settings-section">
+      <div className="sa-flex sa-gap-8 sa-items-center sa-mb-6">
+        <label className="sa-form-label" style={{ margin: 0 }}>Invoice Settings</label>
+        {!settings && !loading && (
+          <button
+            className="sa-btn-ghost-sm"
+            onClick={loadSettings}
+            data-testid="invoice-settings-load-btn"
+            title="Load invoice template settings"
+          >
+            View Invoice Settings
+          </button>
+        )}
+      </div>
+
+      {loading && <div className="muted">Loading invoice settings...</div>}
+      {error && <div className="banner sa-mt-6" role="alert" data-testid="invoice-settings-error">{error}</div>}
+      {success && <div className="muted sa-mt-6" data-testid="invoice-settings-success">{success}</div>}
+
+      {settings && !loading && (
+        <div style={{ border: "1px solid var(--color-border)", borderRadius: 6, padding: 12 }} data-testid="invoice-settings-form">
+          {/* Header Text */}
+          <div className="sa-mb-12">
+            <label className="sa-form-label">Header Text</label>
+            <input
+              className="tableInput"
+              type="text"
+              value={draft.headerText ?? ""}
+              onChange={(e) => updateDraft({ headerText: e.target.value || null })}
+              placeholder="Invoice header text"
+              data-testid="invoice-header-text"
+            />
+          </div>
+
+          {/* Footer Text */}
+          <div className="sa-mb-12">
+            <label className="sa-form-label">Footer Text</label>
+            <input
+              className="tableInput"
+              type="text"
+              value={draft.footerText ?? ""}
+              onChange={(e) => updateDraft({ footerText: e.target.value || null })}
+              placeholder="Thank you for your business!"
+              data-testid="invoice-footer-text"
+            />
+          </div>
+
+          {/* Terms & Conditions */}
+          <div className="sa-mb-12">
+            <label className="sa-form-label">Terms &amp; Conditions</label>
+            <textarea
+              className="tableInput"
+              rows={3}
+              value={draft.termsAndConditions ?? ""}
+              onChange={(e) => updateDraft({ termsAndConditions: e.target.value || null })}
+              placeholder="Terms and conditions for invoices..."
+              style={{ resize: "vertical", width: "100%" }}
+              data-testid="invoice-terms"
+            />
+          </div>
+
+          {/* Checkboxes — Display options */}
+          <div className="sa-mb-12">
+            <label className="sa-form-label" style={{ marginBottom: 6 }}>Display Options</label>
+            <div className="sa-flex sa-gap-12" style={{ flexWrap: "wrap" }}>
+              <label className="sa-flex sa-gap-6" style={{ cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={draft.showGstin}
+                  onChange={(e) => updateDraft({ showGstin: e.target.checked })}
+                  data-testid="invoice-show-gstin"
+                />
+                Show GSTIN
+              </label>
+              <label className="sa-flex sa-gap-6" style={{ cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={draft.showHsn}
+                  onChange={(e) => updateDraft({ showHsn: e.target.checked })}
+                  data-testid="invoice-show-hsn"
+                />
+                Show HSN
+              </label>
+            </div>
+          </div>
+
+          {/* GCP-STG-0359: WhatsApp Dispatch Policy */}
+          <div className="sa-mb-12" data-testid="whatsapp-dispatch-policy">
+            <label className="sa-form-label" style={{ marginBottom: 6 }}>WhatsApp Dispatch Policy</label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <label className="sa-flex sa-gap-6" style={{ cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={draft.autoSendWhatsApp}
+                  onChange={(e) => updateDraft({ autoSendWhatsApp: e.target.checked })}
+                  data-testid="invoice-auto-send-whatsapp"
+                />
+                <span>Enable WhatsApp auto-dispatch (master toggle)</span>
+              </label>
+              <div style={{ paddingLeft: 20, display: "flex", flexDirection: "column", gap: 6, opacity: draft.autoSendWhatsApp ? 1 : 0.5 }}>
+                <label className="sa-flex sa-gap-6" style={{ cursor: draft.autoSendWhatsApp ? "pointer" : "not-allowed" }}>
+                  <input
+                    type="checkbox"
+                    checked={draft.autoSendOnSale}
+                    onChange={(e) => updateDraft({ autoSendOnSale: e.target.checked })}
+                    disabled={!draft.autoSendWhatsApp}
+                    data-testid="invoice-auto-send-on-sale"
+                  />
+                  <span>Auto-send invoice on POS sale</span>
+                </label>
+                <label className="sa-flex sa-gap-6" style={{ cursor: draft.autoSendWhatsApp ? "pointer" : "not-allowed" }}>
+                  <input
+                    type="checkbox"
+                    checked={draft.autoSendOnPo}
+                    onChange={(e) => updateDraft({ autoSendOnPo: e.target.checked })}
+                    disabled={!draft.autoSendWhatsApp}
+                    data-testid="invoice-auto-send-on-po"
+                  />
+                  <span>Auto-send PO to supplier</span>
+                </label>
+                <label className="sa-flex sa-gap-6" style={{ cursor: draft.autoSendWhatsApp ? "pointer" : "not-allowed" }}>
+                  <input
+                    type="checkbox"
+                    checked={draft.autoSendOnGrn}
+                    onChange={(e) => updateDraft({ autoSendOnGrn: e.target.checked })}
+                    disabled={!draft.autoSendWhatsApp}
+                    data-testid="invoice-auto-send-on-grn"
+                  />
+                  <span>Auto-send GRN confirmation</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Save button */}
+          <div className="sa-flex sa-gap-8" style={{ alignItems: "center" }}>
+            <button
+              className="btnSm"
+              onClick={handleSave}
+              disabled={saving || !isDirty}
+              data-testid="invoice-settings-save-btn"
+              style={{ fontWeight: 600 }}
+            >
+              {saving ? "Saving..." : "Save Invoice Settings"}
+            </button>
+            {isDirty && <span className="muted" style={{ fontSize: 12 }}>Unsaved changes</span>}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

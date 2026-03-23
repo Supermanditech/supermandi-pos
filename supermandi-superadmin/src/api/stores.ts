@@ -419,3 +419,73 @@ export async function updateStoreDiscountLimit(
   }
   return data.store as DiscountLimitUpdateResult;
 }
+
+// =============================================================================
+// GCP-STG-0358: Invoice Template Settings
+// =============================================================================
+
+export type InvoiceSettings = {
+  logoUrl: string | null;
+  headerText: string | null;
+  footerText: string | null;
+  termsAndConditions: string | null;
+  showGstin: boolean;
+  showHsn: boolean;
+  autoSendWhatsApp: boolean;
+  autoSendOnSale: boolean;
+  autoSendOnPo: boolean;
+  autoSendOnGrn: boolean;
+};
+
+/**
+ * Fetch invoice template settings for a store
+ */
+export async function fetchInvoiceSettings(storeId: string): Promise<InvoiceSettings> {
+  const base = requireApiBase();
+
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/invoice-settings`,
+    {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        ...getAuthHeaders(),
+      },
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = await res.json();
+  return (data?.invoiceSettings ?? {}) as InvoiceSettings;
+}
+
+/**
+ * Update invoice template settings for a store
+ */
+export async function updateInvoiceSettings(
+  storeId: string,
+  settings: Partial<InvoiceSettings>
+): Promise<void> {
+  const base = requireApiBase();
+
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/invoice-settings`,
+    {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(settings),
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+}
