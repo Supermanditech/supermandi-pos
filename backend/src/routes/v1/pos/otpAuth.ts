@@ -66,6 +66,20 @@ posOtpAuthRouter.post("/auth/send-otp", otpSendLimiter, async (req, res) => {
       return res.status(404).json({ error: { code: "PHONE_NOT_REGISTERED", message: "Phone not registered or store not approved. Register at supermandi.tech" } });
     }
 
+    // GCP-STG-0477: Opportunistic cleanup of expired OTP entries (older than 1 hour)
+    await pool.query(
+      `DELETE FROM pos_otp WHERE expires_at < NOW() - INTERVAL '1 hour'`
+    );
+
+    // GCP-STG-0474: Concurrent request cooldown — skip if OTP was sent in last 30 seconds
+    const recentOtp = await pool.query(
+      `SELECT created_at FROM pos_otp WHERE phone = $1 AND expires_at > NOW() AND created_at > NOW() - INTERVAL '30 seconds'`,
+      [normalizedPhone]
+    );
+    if (recentOtp.rows.length > 0) {
+      return res.json({ success: true, message: "OTP already sent. Please wait 30 seconds." });
+    }
+
     // Generate OTP
     const otp = generateOtp();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
