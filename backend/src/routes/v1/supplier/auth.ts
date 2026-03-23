@@ -16,6 +16,8 @@ import { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest } from "..
 // T-184: Redis token blacklist for immediate revocation at gateway level
 import { blacklistToken } from "../../../db/redis";
 import { log } from "../../../lib/logger";
+// GCP-STG-0464: Shared TOTP 2FA utilities
+import { generateTotpSecret, verifyTotp, buildTotpUri } from "../../../lib/totp";
 
 // GO-LIVE-LOGIN: Import Firebase verification for phone-based auth
 let verifyFirebaseIdToken: ((idToken: string) => Promise<{ success: boolean; payload?: { phone_number?: string; uid?: string }; error?: string; code?: string }>) | null = null;
@@ -705,6 +707,26 @@ router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, passwordLog
     // GO-LIVE-138: Clear IP failure tracking on successful login
     if (clientIp) {
       clearIpFailures(clientIp);
+    }
+
+    // GCP-STG-0464: Check if supplier has TOTP 2FA enabled
+    try {
+      const totpResult = await pool.query(
+        'SELECT user_id, totp_enabled FROM auth.user_totp WHERE user_id = $1',
+        [supplier.id]
+      );
+      if (totpResult.rows[0]?.totp_enabled) {
+        log.info(`[GCP-STG-0464] TOTP required for supplier ${supplier.id}, deferring JWT`);
+        res.json({
+          success: true,
+          requiresTOTP: true,
+          userId: supplier.id,
+        });
+        return;
+      }
+    } catch (totpErr) {
+      // If auth.user_totp table doesn't exist yet (pre-migration), skip TOTP check gracefully
+      log.warn(`[GCP-STG-0464] Supplier TOTP check failed (table may not exist yet):`, totpErr);
     }
 
     // GO-LIVE-084: Generate JWT token with JTI for revocation support
@@ -1881,6 +1903,25 @@ router.post("/auth/firebase-login", checkIpBlockMiddleware, loginRateLimiter, as
       clearIpFailures(clientIp);
     }
 
+    // GCP-STG-0464: Check if supplier has TOTP 2FA enabled
+    try {
+      const totpFbResult = await pool.query(
+        'SELECT user_id, totp_enabled FROM auth.user_totp WHERE user_id = $1',
+        [supplier.id]
+      );
+      if (totpFbResult.rows[0]?.totp_enabled) {
+        log.info(`[GCP-STG-0464] TOTP required for supplier firebase ${supplier.id}, deferring JWT`);
+        res.json({
+          success: true,
+          requiresTOTP: true,
+          userId: supplier.id,
+        });
+        return;
+      }
+    } catch (totpErr) {
+      log.warn(`[GCP-STG-0464] Supplier firebase TOTP check failed (table may not exist yet):`, totpErr);
+    }
+
     // Generate JWT
     const jti = randomUUID();
     const jwtPayload = {
@@ -2049,6 +2090,225 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
         accessToken,
         expiresIn: 86400,
         tokenType: 'Bearer',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// =========================================================================
+// GCP-STG-0464: TOTP 2FA routes for supplier portal
+// =========================================================================
+
+/**
+ * GCP-STG-0464: TOTP database helpers (auth.user_totp table — shared with retailer)
+ */
+interface SupplierTotpRow {
+  user_id: string;
+  totp_secret: string;
+  totp_enabled: boolean;
+}
+
+async function getSupplierTotpRecord(userId: string): Promise<SupplierTotpRow | null> {
+  const pool = getPool();
+  if (!pool) throw new Error('Database pool not available');
+  const result = await pool.query(
+    'SELECT user_id, totp_secret, totp_enabled FROM auth.user_totp WHERE user_id = $1',
+    [userId]
+  );
+  return result.rows[0] || null;
+}
+
+async function upsertSupplierTotpSecret(userId: string, secret: string): Promise<void> {
+  const pool = getPool();
+  if (!pool) throw new Error('Database pool not available');
+  await pool.query(
+    `INSERT INTO auth.user_totp (user_id, totp_secret, totp_enabled, updated_at)
+     VALUES ($1, $2, FALSE, NOW())
+     ON CONFLICT (user_id)
+     DO UPDATE SET totp_secret = $2, totp_enabled = FALSE, updated_at = NOW()`,
+    [userId, secret]
+  );
+}
+
+async function enableSupplierTotp(userId: string): Promise<void> {
+  const pool = getPool();
+  if (!pool) throw new Error('Database pool not available');
+  await pool.query(
+    'UPDATE auth.user_totp SET totp_enabled = TRUE, updated_at = NOW() WHERE user_id = $1',
+    [userId]
+  );
+}
+
+/**
+ * POST /api/v1/supplier/auth/totp/setup
+ * GCP-STG-0464: Generate TOTP secret + otpauth URI for QR code.
+ * Requires valid supplier JWT.
+ */
+router.post("/auth/totp/setup", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const supplierId = req.supplierId;
+    if (!supplierId) {
+      res.status(401).json({ error: { code: "NO_TOKEN", message: "Authentication required" } });
+      return;
+    }
+
+    const secret = generateTotpSecret();
+    const label = req.supplierEmail || `supplier:${supplierId}`;
+    const otpauthUri = buildTotpUri(secret, label);
+
+    await upsertSupplierTotpSecret(supplierId, secret);
+
+    log.info(`[GCP-STG-0464] Supplier TOTP setup initiated for ${supplierId}`);
+
+    res.json({
+      success: true,
+      secret,
+      otpauthUri,
+      message: "Scan the QR code with Google Authenticator, then verify with a code.",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/supplier/auth/totp/verify-setup
+ * GCP-STG-0464: Verify first TOTP code to enable 2FA.
+ * Requires valid supplier JWT + a valid TOTP code.
+ */
+router.post("/auth/totp/verify-setup", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const supplierId = req.supplierId;
+    if (!supplierId) {
+      res.status(401).json({ error: { code: "NO_TOKEN", message: "Authentication required" } });
+      return;
+    }
+
+    const { code } = req.body as { code?: string };
+    if (!code || !/^\d{6}$/.test(code)) {
+      res.status(400).json({ error: { code: "INVALID_CODE", message: "A 6-digit TOTP code is required" } });
+      return;
+    }
+
+    const record = await getSupplierTotpRecord(supplierId);
+    if (!record) {
+      res.status(400).json({ error: { code: "NO_TOTP_SECRET", message: "No TOTP setup found. Call /totp/setup first." } });
+      return;
+    }
+
+    if (record.totp_enabled) {
+      res.json({ success: true, message: "TOTP is already enabled." });
+      return;
+    }
+
+    if (!verifyTotp(record.totp_secret, code)) {
+      res.status(400).json({ error: { code: "INVALID_TOTP", message: "Invalid TOTP code. Please try again." } });
+      return;
+    }
+
+    await enableSupplierTotp(supplierId);
+    log.info(`[GCP-STG-0464] Supplier TOTP enabled for ${supplierId}`);
+
+    res.json({ success: true, message: "TOTP 2FA has been enabled for your account." });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/supplier/auth/totp/verify
+ * GCP-STG-0464: Complete login with TOTP code (second factor).
+ * Called when login returns { requiresTOTP: true, userId }.
+ * Does NOT require JWT — the supplier hasn't received one yet.
+ */
+router.post("/auth/totp/verify", loginRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId, code } = req.body as { userId?: string; code?: string };
+
+    if (!userId || !code) {
+      res.status(400).json({ error: { code: "MISSING_FIELDS", message: "userId and TOTP code are required" } });
+      return;
+    }
+
+    if (!/^\d{6}$/.test(code)) {
+      res.status(400).json({ error: { code: "INVALID_CODE", message: "A 6-digit TOTP code is required" } });
+      return;
+    }
+
+    const record = await getSupplierTotpRecord(userId);
+    if (!record?.totp_enabled) {
+      res.status(400).json({ error: { code: "TOTP_NOT_ENABLED", message: "TOTP is not enabled for this account" } });
+      return;
+    }
+
+    if (!verifyTotp(record.totp_secret, code)) {
+      log.warn(`[GCP-STG-0464] Invalid supplier TOTP code for ${userId}`);
+      res.status(400).json({ error: { code: "INVALID_TOTP", message: "Invalid TOTP code. Please try again." } });
+      return;
+    }
+
+    // TOTP verified — look up supplier and issue JWT
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    const result = await pool.query(
+      `SELECT id, primary_email, business_name, gstin, verification_status
+       FROM supplier.suppliers WHERE id = $1 AND status = 'active'`,
+      [userId]
+    );
+    const supplier = result.rows[0];
+    if (!supplier) {
+      res.status(400).json({ error: { code: "USER_NOT_FOUND", message: "Supplier not found" } });
+      return;
+    }
+
+    const jti = randomUUID();
+    const jwtPayload = {
+      sub: supplier.id,
+      actorType: 'SUPPLIER',
+      actorId: supplier.id,
+      email: supplier.primary_email,
+      permissions: ['supplier:read', 'supplier:write', 'products:read', 'products:write'],
+      jti,
+    };
+
+    const token = jwt.sign(jwtPayload, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      expiresIn: JWT_EXPIRES_IN,
+    });
+
+    const refreshJti = randomUUID();
+    const refreshPayload = {
+      sub: supplier.id,
+      type: 'refresh',
+      actorType: 'SUPPLIER',
+      jti: refreshJti,
+    };
+    const refreshToken = jwt.sign(refreshPayload, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      expiresIn: '7d',
+    });
+
+    log.info(`[GCP-STG-0464] Supplier TOTP login successful for ${userId}`);
+
+    setAuthCookies(res, token, refreshToken, 86400, 7 * 86400);
+
+    res.json({
+      data: {
+        token,
+        refreshToken,
+        supplier: {
+          id: supplier.id,
+          email: supplier.primary_email,
+          businessName: supplier.business_name,
+          gstin: supplier.gstin,
+          verificationStatus: supplier.verification_status,
+        },
       },
     });
   } catch (error) {

@@ -20,6 +20,8 @@ import { enhancedAuthProtection } from "../../../middleware/authProtection";
 // GCP-STG-0491: Redis-backed rate limiter for password login endpoints
 import { redisRateLimit } from "../../../middleware/rateLimit";
 import { log } from "../../../lib/logger";
+// GCP-STG-0464: Shared TOTP 2FA utilities
+import { generateTotpSecret, verifyTotp, buildTotpUri } from "../../../lib/totp";
 // STG-055: Import email service for password reset emails
 import { sendPasswordResetEmail } from "../../../services/emailService";
 
@@ -360,6 +362,25 @@ router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, a
       );
     }
 
+    // GCP-STG-0464: Check if user has TOTP 2FA enabled
+    try {
+      const totpFbResult = await pool.query(
+        'SELECT user_id, totp_enabled FROM auth.user_totp WHERE user_id = $1',
+        [user.id]
+      );
+      if (totpFbResult.rows[0]?.totp_enabled) {
+        log.info(`[GCP-STG-0464] TOTP required for retailer firebase user ${user.id}, deferring JWT`);
+        res.json({
+          success: true,
+          requiresTOTP: true,
+          userId: user.id,
+        });
+        return;
+      }
+    } catch (totpErr) {
+      log.warn(`[GCP-STG-0464] Retailer firebase TOTP check failed (table may not exist yet):`, totpErr);
+    }
+
     // GO-LIVE-137: Generate proper JWT token with JTI for revocation support
     const jti = randomUUID();
     const jwtPayload = {
@@ -565,6 +586,25 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
       uniqueStoresMap.set(store.id, store);
     }
     const stores = Array.from(uniqueStoresMap.values());
+
+    // GCP-STG-0464: Check if user has TOTP 2FA enabled
+    try {
+      const totpOtpResult = await pool.query(
+        'SELECT user_id, totp_enabled FROM auth.user_totp WHERE user_id = $1',
+        [user.id]
+      );
+      if (totpOtpResult.rows[0]?.totp_enabled) {
+        log.info(`[GCP-STG-0464] TOTP required for retailer OTP user ${user.id}, deferring JWT`);
+        res.json({
+          success: true,
+          requiresTOTP: true,
+          userId: user.id,
+        });
+        return;
+      }
+    } catch (totpErr) {
+      log.warn(`[GCP-STG-0464] Retailer OTP TOTP check failed (table may not exist yet):`, totpErr);
+    }
 
     // STG-053: Include actorId (store.id) in JWT when user has exactly 1 store
     // Gateway requires actorId to set x-actor-id header for downstream services
@@ -939,6 +979,26 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, passwordLo
     );
     // Login successful - clear in-memory attempts too
     recordLoginAttempt(loginKey, true);
+
+    // GCP-STG-0464: Check if user has TOTP 2FA enabled
+    try {
+      const totpResult = await pool.query(
+        'SELECT user_id, totp_enabled FROM auth.user_totp WHERE user_id = $1',
+        [user.id]
+      );
+      if (totpResult.rows[0]?.totp_enabled) {
+        log.info(`[GCP-STG-0464] TOTP required for retailer user ${user.id}, deferring JWT`);
+        res.json({
+          success: true,
+          requiresTOTP: true,
+          userId: user.id,
+        });
+        return;
+      }
+    } catch (totpErr) {
+      // If auth.user_totp table doesn't exist yet (pre-migration), skip TOTP check gracefully
+      log.warn(`[GCP-STG-0464] Retailer TOTP check failed (table may not exist yet):`, totpErr);
+    }
 
     // Get all stores this user has access to (same as OTP flow)
     const storesResult = await pool.query(
@@ -1933,6 +1993,271 @@ router.post("/auth/logout-all", async (req: Request, res: Response, next: NextFu
         success: true,
         message: 'All sessions logged out. Please login again.',
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// =========================================================================
+// GCP-STG-0464: TOTP 2FA routes for retailer web
+// =========================================================================
+
+/**
+ * GCP-STG-0464: TOTP database helpers (auth.user_totp table)
+ */
+interface UserTotpRow {
+  user_id: string;
+  totp_secret: string;
+  totp_enabled: boolean;
+}
+
+async function getUserTotpRecord(userId: string): Promise<UserTotpRow | null> {
+  const pool = getPool();
+  if (!pool) throw new Error('Database pool not available');
+  const result = await pool.query(
+    'SELECT user_id, totp_secret, totp_enabled FROM auth.user_totp WHERE user_id = $1',
+    [userId]
+  );
+  return result.rows[0] || null;
+}
+
+async function upsertUserTotpSecret(userId: string, secret: string): Promise<void> {
+  const pool = getPool();
+  if (!pool) throw new Error('Database pool not available');
+  await pool.query(
+    `INSERT INTO auth.user_totp (user_id, totp_secret, totp_enabled, updated_at)
+     VALUES ($1, $2, FALSE, NOW())
+     ON CONFLICT (user_id)
+     DO UPDATE SET totp_secret = $2, totp_enabled = FALSE, updated_at = NOW()`,
+    [userId, secret]
+  );
+}
+
+async function enableUserTotp(userId: string): Promise<void> {
+  const pool = getPool();
+  if (!pool) throw new Error('Database pool not available');
+  await pool.query(
+    'UPDATE auth.user_totp SET totp_enabled = TRUE, updated_at = NOW() WHERE user_id = $1',
+    [userId]
+  );
+}
+
+/**
+ * Helper: extract and verify retailer JWT from request, return decoded payload or null.
+ */
+function extractRetailerToken(req: Request): { sub: string; actorType: string } | null {
+  const authHeader = req.headers.authorization;
+  let token: string | undefined;
+  if (authHeader?.startsWith('Bearer ')) {
+    token = authHeader.slice(7);
+  } else {
+    // Fall back to HttpOnly cookie
+    const cookieHeader = req.headers.cookie;
+    if (cookieHeader) {
+      const match = cookieHeader.match(/(?:^|;\s*)sm_access_token=([^;]*)/);
+      if (match && match[1]) {
+        token = decodeURIComponent(match[1]);
+      }
+    }
+  }
+  if (!token) return null;
+  try {
+    return jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER, algorithms: ['HS256'] }) as { sub: string; actorType: string };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * POST /api/v1/retailer-admin/auth/totp/setup
+ * GCP-STG-0464: Generate TOTP secret + otpauth URI for QR code.
+ * Requires valid retailer JWT.
+ */
+router.post("/auth/totp/setup", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const decoded = extractRetailerToken(req);
+    if (!decoded) {
+      res.status(401).json({ error: { code: "NO_TOKEN", message: "Authentication required" } });
+      return;
+    }
+
+    const userId = decoded.sub;
+    const secret = generateTotpSecret();
+    const otpauthUri = buildTotpUri(secret, `retailer:${userId}`);
+
+    await upsertUserTotpSecret(userId, secret);
+
+    log.info(`[GCP-STG-0464] Retailer TOTP setup initiated for user ${userId}`);
+
+    res.json({
+      success: true,
+      secret,
+      otpauthUri,
+      message: "Scan the QR code with Google Authenticator, then verify with a code.",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/retailer-admin/auth/totp/verify-setup
+ * GCP-STG-0464: Verify first TOTP code to enable 2FA.
+ * Requires valid retailer JWT + a valid TOTP code.
+ */
+router.post("/auth/totp/verify-setup", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const decoded = extractRetailerToken(req);
+    if (!decoded) {
+      res.status(401).json({ error: { code: "NO_TOKEN", message: "Authentication required" } });
+      return;
+    }
+
+    const { code } = req.body as { code?: string };
+    if (!code || !/^\d{6}$/.test(code)) {
+      res.status(400).json({ error: { code: "INVALID_CODE", message: "A 6-digit TOTP code is required" } });
+      return;
+    }
+
+    const userId = decoded.sub;
+    const record = await getUserTotpRecord(userId);
+    if (!record) {
+      res.status(400).json({ error: { code: "NO_TOTP_SECRET", message: "No TOTP setup found. Call /totp/setup first." } });
+      return;
+    }
+
+    if (record.totp_enabled) {
+      res.json({ success: true, message: "TOTP is already enabled." });
+      return;
+    }
+
+    if (!verifyTotp(record.totp_secret, code)) {
+      res.status(400).json({ error: { code: "INVALID_TOTP", message: "Invalid TOTP code. Please try again." } });
+      return;
+    }
+
+    await enableUserTotp(userId);
+    log.info(`[GCP-STG-0464] Retailer TOTP enabled for user ${userId}`);
+
+    res.json({ success: true, message: "TOTP 2FA has been enabled for your account." });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/retailer-admin/auth/totp/verify
+ * GCP-STG-0464: Complete login with TOTP code (second factor).
+ * Called when login returns { requiresTOTP: true, userId }.
+ * Does NOT require JWT — the user hasn't received one yet.
+ */
+router.post("/auth/totp/verify", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId, code } = req.body as { userId?: string; code?: string };
+
+    if (!userId || !code) {
+      res.status(400).json({ error: { code: "MISSING_FIELDS", message: "userId and TOTP code are required" } });
+      return;
+    }
+
+    if (!/^\d{6}$/.test(code)) {
+      res.status(400).json({ error: { code: "INVALID_CODE", message: "A 6-digit TOTP code is required" } });
+      return;
+    }
+
+    const record = await getUserTotpRecord(userId);
+    if (!record?.totp_enabled) {
+      res.status(400).json({ error: { code: "TOTP_NOT_ENABLED", message: "TOTP is not enabled for this account" } });
+      return;
+    }
+
+    if (!verifyTotp(record.totp_secret, code)) {
+      log.warn(`[GCP-STG-0464] Invalid retailer TOTP code for user ${userId}`);
+      res.status(400).json({ error: { code: "INVALID_TOTP", message: "Invalid TOTP code. Please try again." } });
+      return;
+    }
+
+    // TOTP verified — look up user and issue JWT
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    const userResult = await pool.query(
+      `SELECT id, phone, email, name FROM auth.users WHERE id = $1 AND status = 'active'`,
+      [userId]
+    );
+    const user = userResult.rows[0];
+    if (!user) {
+      res.status(400).json({ error: { code: "USER_NOT_FOUND", message: "User not found" } });
+      return;
+    }
+
+    // Get stores for JWT payload
+    const storesResult = await pool.query(
+      `SELECT s.id, s.code, s.name, s.status
+       FROM platform.stores s
+       INNER JOIN auth.store_users su ON s.id = su.store_id
+       WHERE su.user_id = $1 AND su.is_active = true AND s.retailer_portal_enabled = true AND s.deleted_at IS NULL
+       ORDER BY s.name`,
+      [userId]
+    );
+    const stores = storesResult.rows;
+    const primaryStoreId = stores.length === 1 ? stores[0].id : undefined;
+
+    const jti = randomUUID();
+    const jwtPayload: Record<string, any> = {
+      sub: user.id,
+      actorType: 'STORE',
+      permissions: ['retailer:read', 'retailer:write', 'inventory:read', 'inventory:write'],
+      jti,
+    };
+    if (primaryStoreId) {
+      jwtPayload.actorId = primaryStoreId;
+    }
+
+    const accessToken = jwt.sign(jwtPayload, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      expiresIn: JWT_EXPIRES_IN,
+    });
+
+    const refreshJti = randomUUID();
+    const refreshPayload: Record<string, any> = {
+      sub: user.id,
+      type: 'refresh',
+      actorType: 'STORE',
+      jti: refreshJti,
+    };
+    if (primaryStoreId) {
+      refreshPayload.storeId = primaryStoreId;
+    }
+    const refreshToken = jwt.sign(refreshPayload, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      expiresIn: '7d',
+    });
+
+    log.info(`[GCP-STG-0464] Retailer TOTP login successful for user ${userId}`);
+
+    setAuthCookies(res, accessToken, refreshToken, 86400, 7 * 86400);
+
+    res.json({
+      success: true,
+      token: accessToken,
+      refreshToken,
+      expiresIn: 86400,
+      tokenType: 'Bearer',
+      user: {
+        id: user.id,
+        phone: user.phone ? maskPhoneNumber(user.phone) : undefined,
+        role: "RETAILER_ADMIN",
+      },
+      stores: stores.map((s: { id: string; code: string; name: string }) => ({
+        id: s.id,
+        code: s.code,
+        name: s.name,
+      })),
     });
   } catch (error) {
     next(error);
