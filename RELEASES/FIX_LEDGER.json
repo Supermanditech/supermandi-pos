@@ -18218,7 +18218,7 @@
       "start_line": 1,
       "end_line": 12,
       "checksum": "630f6c94e2e8b30d",
-      "description": "Drop 2 duplicate indexes: store_products_store_id_idx (dup of store_products_store_idx) and idx_store_products_name_trgm (dup of idx_store_products_display_name_trgm)",
+      "description": "Drop 2 duplicate indexes: store_products_store_id_idx (dup of store_products_store_idx) and idx_store_products_name_trgm (dup of idx_store_products_display_name_trgm) (write overhead reduction)",
       "test_file": "backend/tests/duplicateIndexes.gcp-stg-0374.unit.test.ts",
       "depends_on": null,
       "migration": null,
