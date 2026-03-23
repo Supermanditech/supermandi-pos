@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { View, TextInput, Pressable, ScrollView, StyleSheet, Text, Image, Modal, FlatList } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 
@@ -30,6 +31,7 @@ type NewProductScreenV3Props = {
 type MasterResult = { found: boolean; name?: string; brand?: string; category?: string; packSize?: string; mrpMinor?: number; hsnCode?: string; gstPct?: number };
 
 export default function NewProductScreenV3({ barcode, onClose, onProductAdded }: NewProductScreenV3Props) {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -179,7 +181,7 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={onClose} accessibilityLabel="Back">
@@ -429,7 +431,7 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
       </ScrollView>
 
       {/* Submit button */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]} onPress={handleSubmit} disabled={!canSubmit} accessibilityRole="button">
           <Text style={styles.submitText}>Add to Store & Cart</Text>
         </Pressable>
