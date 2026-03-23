@@ -85,8 +85,13 @@ export function resetHidTracking(): void {
   hidLastValue = "";
 }
 
+// GCP-STG-0514: Maximum HID buffer length to prevent runaway accumulation
+const HID_MAX_BUFFER = 100;
+
 const appendHidChars = (chars: string, now: number) => {
   if (!chars) return;
+  // GCP-STG-0514: Reject input if buffer exceeds max length
+  if (hidBuffer.length >= HID_MAX_BUFFER) { resetHidBuffer(); return; }
   if (!hidBuffer || (hidLastInputAt && now - hidLastInputAt > HID_MAX_INTERVAL_MS)) {
     resetHidBuffer();
     hidStartAt = now;
