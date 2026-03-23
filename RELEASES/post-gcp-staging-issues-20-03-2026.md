@@ -13975,4 +13975,310 @@ In JS, use `wrapper.classList.add('visible')` instead of `wrapper.style.display 
 
 ---
 
-<!-- next ticket: GCP-STG-0519 -->
+## GCP-STG-0519 — MEDIUM: feedHidKey/feedHidText never called — no actual HID keyboard listener wired (MEDIUM)
+
+**Ticket ID**: GCP-STG-0519
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: Business, Dependencies
+**Source**: Audit W — HID Scanner
+
+**Problem**: `hidScannerService.ts` exports `feedHidKey()` and `feedHidText()` for processing HID keyboard-emulation scanner input. But NO component in the entire codebase calls these functions. There is no `addEventListener('keydown')` or React Native `onKeyPress` handler wired to feed keystrokes into the HID buffer. HID scanning only works via the Android native `ScanIntentModule` broadcast — if a scanner doesn't support intent broadcast (older USB scanners that act as pure keyboards), it will NOT work at all.
+
+**Fix**: Add a global `document.addEventListener('keydown', (e) => feedHidKey(e.key))` for web, or a React Native `onKeyPress` handler on the root view for Android. Alternatively, register a hidden TextInput that captures HID keyboard input and feeds into `feedHidText()`.
+
+**Files to modify**: `App.tsx` or new `src/components/HidKeyboardCapture.tsx`, `src/services/hidScannerService.ts`
+
+**12-Layer Verification**: L6 Backend ✅, L11 Dependencies ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0520 — LOW: Camera barcode detection fully continuous — no per-detection cooldown (LOW)
+
+**Ticket ID**: GCP-STG-0520
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UX, Business
+**Source**: Audit X — Camera Scanner
+
+**Problem**: `ScanScreenV3.tsx:217-219` `onBarcodeScanned` fires continuously on every frame that detects a barcode. The only protection is `isDuplicateScan()` with 300ms window from `scanIntent.ts:83`. For the same barcode held in view, this means the camera fires every 300ms, flooding the pipeline. expo-camera has no built-in `interval` or `once` mode — each frame triggers the callback.
+
+**Fix**: Add a 2-second cooldown after successful scan before re-enabling detection. Use a `scanCooldown` ref: `const cooldownRef = useRef(false); if (cooldownRef.current) return; cooldownRef.current = true; setTimeout(() => cooldownRef.current = false, 2000);`
+
+**Files to modify**: `src/screens/v3/ScanScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0521 — MEDIUM: Multiple products with same barcode — returns first match only, no disambiguation (MEDIUM)
+
+**Ticket ID**: GCP-STG-0521
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: Business
+**Source**: Audit Y — Scan → Cart Chain
+
+**Problem**: `productsStore.ts:433` uses `products.find()` which returns the first match. If a store has two products with the same barcode (e.g., store-assigned barcode reused, or a manufacturer barcode collision on different pack sizes — 500ml and 1L both with parent EAN), the second product is UNREACHABLE via scan. The cashier always gets the first one with no way to pick the other.
+
+**Fix**: When `products.filter(p => p.barcode === barcode).length > 1`, show a disambiguation picker: "Multiple products found for this barcode — select one." List all matches with name, pack size, and price.
+
+**Files to modify**: `src/stores/productsStore.ts`, `src/screens/v3/ScanScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0522 — LOW: Scan beep/sound feedback missing — cashier has no audio confirmation (LOW)
+
+**Ticket ID**: GCP-STG-0522
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UX
+**Source**: Audit — Go-Live Functionality
+
+**Problem**: Successful scan triggers haptic vibration via `expo-haptics` at `handleScan.ts:180` but NO audio beep. In noisy kirana store environments (traffic, conversations, TV), haptic feedback is often not noticed. Every commercial POS system plays an audible beep on scan. This is the single most-requested POS UX feature globally.
+
+**Fix**: Add a short beep sound using `expo-av` Audio.Sound on successful scan. Include a `scan_beep.mp3` asset (~2KB). Play on scan success (product found + added to cart). Different tone for scan failure (product not found). Add toggle in Settings to disable sound.
+
+**Files to modify**: `src/services/scan/handleScan.ts`, `src/screens/v3/ScanScreenV3.tsx`, new `src/assets/sounds/scan_beep.mp3`, `src/screens/v3/SettingsScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0523 — LOW: No scan history log — last 50 scans for debugging/audit (LOW)
+
+**Ticket ID**: GCP-STG-0523
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: Audit — Go-Live Functionality
+
+**Problem**: No queryable scan history exists on the device. When a cashier reports "I scanned item X but it added item Y", there's no way to verify what barcode was actually scanned, what lookup result was returned, or whether it was a duplicate. Debug logs are only in console (lost on restart).
+
+**Fix**: Add `scanHistoryStore` (Zustand + AsyncStorage) that records last 50 scans: `{ barcode, timestamp, result: 'found'|'not_found'|'duplicate'|'error', productName?, source: 'hid'|'camera'|'manual' }`. Show in Settings → Scan History as scrollable list. Include "Copy to Clipboard" for support sharing.
+
+**Files to modify**: New `src/stores/scanHistoryStore.ts`, `src/screens/v3/SettingsScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0524 — LOW: No scan analytics — scans/day, not-found rate, conversion metrics (LOW)
+
+**Ticket ID**: GCP-STG-0524
+**Severity**: P3 LOW
+**Platforms**: POS, BACKEND
+**Layers**: Business, Backend
+**Source**: Audit — Go-Live Functionality
+
+**Problem**: No scan metrics are tracked. Operators cannot answer: "How many scans per day?", "What % of scans result in not-found?", "What are the top not-found barcodes?" These metrics are critical for measuring digitisation progress and identifying catalog gaps.
+
+**Fix**: Log scan events to `pos_events` table (same as SALE_COMPLETED): `{ event_type: 'SCAN', barcode, result, source, store_id, device_id }`. Add SuperAdmin Scan Analytics tab showing daily scan count, not-found rate, top unknown barcodes.
+
+**Files to modify**: `src/services/scan/handleScan.ts`, `backend/src/routes/v1/pos/events.ts`, `supermandi-superadmin/src/tabs/`
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅, L7 DB ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0525 — LOW: No batch/rapid scan mode with running total display (LOW)
+
+**Ticket ID**: GCP-STG-0525
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX, Business
+**Source**: Audit — Go-Live Functionality
+
+**Problem**: During busy checkout, cashiers scan items one at a time. Each scan shows product result in the result panel, replacing the previous. There's no running total visible during scanning. Cashier must close scan screen to see cart total. Commercial POS systems show a running count + total during rapid scanning.
+
+**Fix**: Add a mini cart summary bar at the top of ScanScreenV3: "Cart: {itemCount} items · ₹{total}" that updates on each scan. Optionally show last 3 scanned items as scrolling ticker.
+
+**Files to modify**: `src/screens/v3/ScanScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0526 — LOW: No scan sensitivity settings — HID timing not configurable (LOW)
+
+**Ticket ID**: GCP-STG-0526
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, Business
+**Source**: Audit — Go-Live Functionality
+
+**Problem**: HID scanner timing thresholds are hardcoded: `HID_MAX_INTERVAL_MS=150`, `HID_IDLE_TIMEOUT_MS=200`, `HID_MIN_LENGTH=4` at `hidScannerService.ts:6-12`. Different HID scanner models have different inter-character timing. Budget scanners may need 200-250ms. Premium scanners work at 50ms. No way for operators to tune this without a code change.
+
+**Fix**: Add "Scanner Settings" section in SettingsScreenV3 with sliders for: Inter-character timeout (50-300ms), Min barcode length (3-8), Duplicate window (300-2000ms). Store in settingsStore. Read from settingsStore in hidScannerService.
+
+**Files to modify**: `src/services/hidScannerService.ts`, `src/screens/v3/SettingsScreenV3.tsx`, `src/stores/settingsStore.ts`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0527 — LOW: No barcode label printing from POS (LOW)
+
+**Ticket ID**: GCP-STG-0527
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, Business
+**Source**: Audit — Go-Live Functionality
+
+**Problem**: When a product has no barcode (new local product, loose items), the POS can create the product but cannot print a barcode label. Kirana stores need to print labels for shelf display and future scanning. Currently requires a separate label printer app.
+
+**Fix**: Add "Print Label" button in product detail. Generate Code128 barcode SVG from product ID. Send to receipt printer (ESC/POS label mode) or Bluetooth label printer. Support standard label sizes: 38x25mm, 50x25mm.
+
+**Files to modify**: `src/services/printerService.ts`, `src/screens/v3/ScanScreenV3.tsx` (new product flow), new `src/utils/barcodeGenerator.ts`
+
+**12-Layer Verification**: L1 UI ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0528 — LOW: No multi-barcode per product support in scan lookup (LOW)
+
+**Ticket ID**: GCP-STG-0528
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: Audit — Go-Live Functionality
+
+**Problem**: `productsStore.getProductByBarcode()` at `productsStore.ts:433` only checks `product.barcode` (single field). But the backend `store_product_barcodes` table supports multiple barcodes per product (EAN-13, internal code, store label). The products synced to POS only carry ONE barcode. Scanning an alternate barcode won't match.
+
+**Fix**: Sync `store_product_barcodes` array to POS product data. Build a reverse `Map<barcode, productId>` index covering all barcodes. Lookup checks the multi-barcode map first.
+
+**Files to modify**: `src/stores/productsStore.ts`, `src/services/api/productsApi.ts` (include barcodes array in sync), backend `/pos/store-products` endpoint
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0529 — LOW: No scan-to-search fallback when product not found (auto-trigger) (LOW)
+
+**Ticket ID**: GCP-STG-0529
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UX, Business
+**Source**: Audit — Go-Live Functionality
+
+**Problem**: When a barcode scan returns "Product Not Found", the user sees buttons for "New Product", "Search by Name", and "Continue". But the search by name requires a manual tap and navigating to a separate screen. A smarter UX would auto-populate the barcode digits into the search field and show partial matches inline (some barcodes contain the product name or digits that match other fields).
+
+**Fix**: On scan miss, auto-trigger a debounced search using the barcode digits. Show top 3 results inline below the "Not Found" panel: "Did you mean: [Product A] [Product B]?" User can tap to add.
+
+**Files to modify**: `src/screens/v3/ScanScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0530 — LOW: No low-light warning when camera detects dark environment (LOW)
+
+**Ticket ID**: GCP-STG-0530
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UX
+**Source**: Audit — Go-Live Functionality
+
+**Problem**: In dark kirana store environments, the camera scan silently fails to detect barcodes. No feedback tells the user to turn on the torch or improve lighting. The user just sees the viewfinder with no results, assuming the barcode is unreadable.
+
+**Fix**: Monitor camera exposure metadata (if available from expo-camera). If consistently dark frames detected for 3+ seconds without a scan, show banner: "Low light detected — tap 🔦 to enable flashlight."
+
+**Files to modify**: `src/screens/v3/ScanScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0531 — LOW: No scan error recovery — retry button after failed API lookup (LOW)
+
+**Ticket ID**: GCP-STG-0531
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UX
+**Source**: Audit — Go-Live Functionality
+
+**Problem**: When a barcode API lookup fails (network error, timeout, 500), `handleScan.ts:762-769` shows a toast "Scan failed. Please try again." or "Could not resolve scan." But the user must physically re-scan the barcode. There's no "Retry" button to re-attempt the lookup for the same barcode without re-scanning.
+
+**Fix**: After API error, show the barcode in the result panel with a "Retry Lookup" button. Tapping it re-calls the lookup API for the same barcode. Also show "Add Manually" as alternative.
+
+**Files to modify**: `src/screens/v3/ScanScreenV3.tsx`, `src/services/scan/handleScan.ts`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0532 — LOW: Scan tutorial/onboarding missing for first-time POS users (LOW)
+
+**Ticket ID**: GCP-STG-0532
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Audit — Go-Live Functionality
+
+**Problem**: First-time POS users opening the scan screen have no guidance on: how HID scanning works, what the camera viewfinder does, what the context toggle means, or how to handle "not found" items. Kirana store operators may be unfamiliar with barcode scanning concepts.
+
+**Fix**: Show a one-time overlay tutorial on first scan screen open: Step 1 "Point camera at barcode or use HID scanner", Step 2 "Product added to cart automatically", Step 3 "If not found, tap New Product". Dismiss with "Got it" button. Track `hasSeenScanTutorial` in settingsStore.
+
+**Files to modify**: `src/screens/v3/ScanScreenV3.tsx`, `src/stores/settingsStore.ts`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0533 — LOW: No visual scan success animation — just toast text (LOW)
+
+**Ticket ID**: GCP-STG-0533
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UX
+**Source**: Audit — Go-Live Functionality
+
+**Problem**: On successful scan, the only feedback is: haptic vibration (handleScan path only), a toast message "Product added to cart", and the result panel update. No visual animation — no green flash, no checkmark overlay, no viewfinder color change. Commercial POS systems show a brief green flash on the scan frame to instantly confirm success.
+
+**Fix**: On successful scan, briefly (200ms) change the scan frame border to green (`#22C55E`) and show a ✓ checkmark overlay inside the viewfinder. Use `Animated.timing` for smooth fade.
+
+**Files to modify**: `src/screens/v3/ScanScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0534 — LOW: GS1 Application Identifiers not parsed — (01) GTIN, (10) Batch, (17) Expiry ignored (LOW)
+
+**Ticket ID**: GCP-STG-0534
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: Audit W — HID Scanner
+
+**Problem**: `handleScan.ts:364-377` strips GS1 symbology identifier prefixes (`]C1`, `]E0`, `]d2`) but does NOT parse GS1 Application Identifiers (AIs). GS1-128 barcodes encode structured data: `(01)08901234567890(17)260501(10)BATCH123`. The current code treats the entire string as a barcode, which won't match any product. FMCG products in India increasingly use GS1 DataBar and GS1-128 with AIs.
+
+**Fix**: Add GS1 AI parser: extract `(01)` GTIN for product lookup, `(17)` for expiry date display, `(10)` for batch tracking. Parse FNC1 group separators. Use GTIN-14 → GTIN-13 conversion for lookup.
+
+**Files to modify**: New `src/services/scan/gs1Parser.ts`, `src/services/scan/handleScan.ts`
+
+**12-Layer Verification**: L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0535 — LOW: No offline scan queue — scans during offline don't retry when back online (LOW)
+
+**Ticket ID**: GCP-STG-0535
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: Audit AA — Edge Cases
+
+**Problem**: When offline, `handleScan.ts:546` falls through to `resolveOfflineScan()` which uses local SQLite. If the product is NOT in local cache, the user sees "Product not found" — but the product may exist on the server. When the device comes back online, there's no retry. The scan is lost.
+
+**Fix**: When offline and product not found locally, queue the barcode in an `offlineScanQueue` (AsyncStorage). When network status changes to online, process the queue — re-lookup each barcode and notify the user of results via notification banner.
+
+**Files to modify**: `src/services/scan/handleScan.ts`, new `src/services/offline/scanQueue.ts`, `src/services/networkStatus.ts`
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+<!-- next ticket: GCP-STG-0536 -->
