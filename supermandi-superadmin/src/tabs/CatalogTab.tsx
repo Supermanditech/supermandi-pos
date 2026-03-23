@@ -602,18 +602,46 @@ export function CatalogTab() {
                         data-testid={`select-product-${product.id}`}
                       />
                     </td>
+                    {/* GCP-STG-0427: Product thumbnail beside name */}
                     <td>
-                      <div style={{ fontWeight: 500 }}>{product.displayName}</div>
-                      {product.supplierSku && (
-                        <div className="sa-text-muted" style={{ fontSize: 12 }}>
-                          SKU: {product.supplierSku}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.displayName}
+                            data-testid={`product-thumb-${product.id}`}
+                            style={{ width: 32, height: 32, objectFit: "cover", borderRadius: 4, flexShrink: 0, border: "1px solid #e2e8f0" }}
+                            loading="lazy"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling && ((e.target as HTMLImageElement).nextElementSibling as HTMLElement).style.removeProperty("display"); }}
+                          />
+                        ) : null}
+                        <div
+                          data-testid={`product-thumb-fallback-${product.id}`}
+                          style={{
+                            width: 32, height: 32, borderRadius: 4, flexShrink: 0,
+                            background: "#e2e8f0", color: "#64748b",
+                            display: product.imageUrl ? "none" : "flex",
+                            alignItems: "center", justifyContent: "center",
+                            fontSize: 13, fontWeight: 600, textTransform: "uppercase",
+                          }}
+                          aria-label={`${product.displayName} initials`}
+                        >
+                          {(product.displayName || product.name || "?").slice(0, 2)}
                         </div>
-                      )}
-                      {product.barcode && (
-                        <div className="sa-text-muted" style={{ fontSize: 11, fontFamily: "monospace" }}>
-                          {product.barcode}
+                        <div>
+                          <div style={{ fontWeight: 500 }}>{product.displayName}</div>
+                          {product.supplierSku && (
+                            <div className="sa-text-muted" style={{ fontSize: 12 }}>
+                              SKU: {product.supplierSku}
+                            </div>
+                          )}
+                          {product.barcode && (
+                            <div className="sa-text-muted" style={{ fontSize: 11, fontFamily: "monospace" }}>
+                              {product.barcode}
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </td>
                     <td>
                       <span>{product.currentCategory || "Uncategorized"}</span>
@@ -789,14 +817,42 @@ export function CatalogTab() {
           >
             <h3 style={{ marginTop: 0 }}>Edit Product</h3>
 
+            {/* GCP-STG-0427: Product image preview in edit modal header */}
             {/* Product info header */}
             <div style={{
               background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8,
-              padding: '10px 14px', marginBottom: 16, fontSize: 13
+              padding: '10px 14px', marginBottom: 16, fontSize: 13,
+              display: 'flex', gap: 14, alignItems: 'flex-start',
             }}>
-              <div><strong>Supplier:</strong> {editingProduct.supplierName}</div>
-              <div><strong>Purchase Price:</strong> {formatPrice(editingProduct.purchasePrice)}</div>
-              {editingProduct.mrp != null && <div><strong>MRP:</strong> {formatPrice(editingProduct.mrp)}</div>}
+              {editingProduct.imageUrl ? (
+                <img
+                  src={editingProduct.imageUrl}
+                  alt={editingProduct.displayName}
+                  data-testid="edit-modal-product-image"
+                  style={{
+                    width: 72, height: 72, objectFit: 'cover', borderRadius: 6,
+                    border: '1px solid #cbd5e1', flexShrink: 0,
+                  }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              ) : (
+                <div
+                  data-testid="edit-modal-product-image-fallback"
+                  style={{
+                    width: 72, height: 72, borderRadius: 6, flexShrink: 0,
+                    background: '#e2e8f0', color: '#64748b',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 22, fontWeight: 600, textTransform: 'uppercase',
+                  }}
+                >
+                  {(editingProduct.displayName || editingProduct.name || '?').slice(0, 2)}
+                </div>
+              )}
+              <div>
+                <div><strong>Supplier:</strong> {editingProduct.supplierName}</div>
+                <div><strong>Purchase Price:</strong> {formatPrice(editingProduct.purchasePrice)}</div>
+                {editingProduct.mrp != null && <div><strong>MRP:</strong> {formatPrice(editingProduct.mrp)}</div>}
+              </div>
             </div>
 
             {/* GCP-STG-0348: Read-only product details (5 fields from GET that were not displayed) */}
