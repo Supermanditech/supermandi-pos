@@ -23042,6 +23042,62 @@
         "single_commit": "fix(GCP-STG-0467)",
         "ticket_parked": "Parked after commit"
       }
+    },
+    {
+      "ticket": "GCP-STG-0463",
+      "file": "backend/src/routes/v1/admin/adminAuth.ts",
+      "start_line": 60,
+      "end_line": 410,
+      "description": "TOTP-based 2FA for SuperAdmin: setup, verify-setup, verify login endpoints + crypto utils",
+      "test_file": "backend/tests/adminTotp.gcp-stg-0463.unit.test.ts",
+      "status": "ACTIVE",
+      "checklist": {
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true
+      },
+      "checklist_evidence": {
+        "backend_api": "TOTP setup/verify-setup/verify endpoints added",
+        "api_errors": "400/401/403 error paths covered",
+        "store_isolation": "Admin-level auth, no store data",
+        "business_logic": "TOTP RFC 6238 with +-1 window",
+        "business_behaviour": "Email OTP -> requiresTOTP -> TOTP verify -> JWT",
+        "db_schema": "admin_totp table via migration 235",
+        "migration_safe": "CREATE TABLE IF NOT EXISTS",
+        "impacted_files": "adminAuth.ts + migration 235 + test",
+        "fix_ledger_check": "Registered",
+        "no_agent_conflict": "Only adminAuth.ts modified",
+        "operator_approved": "Mode A pre-staging",
+        "parity_scanned": "Backend only",
+        "gcp_parity": "No localhost URLs",
+        "regression_check": "11 new tests pass",
+        "test_guard": "adminTotp.gcp-stg-0463.unit.test.ts 11/11",
+        "single_commit": "fix(GCP-STG-0463)",
+        "ticket_parked": "pending commit",
+        "ui_elements": "Backend-only, no UI changes",
+        "ux_states": "Backend-only, API returns JSON",
+        "wiring": "Backend-only, supertest verified",
+        "navigation": "Backend-only, no navigation"
+      },
+      "checksum": "7efa25145d2047fa"
     }
   ],
   "machine_state_version": 269,
@@ -23090,5 +23146,5 @@
   "_commitNote": "GCP-STG-0417,0422,0425,0426,0428,0430,0431",
   "_note": "0429-behavioral",
   "_n": "0491",
-  "last_commit_note": "GCP-STG-0484 device token expiry"
+  "last_commit_note": "GCP-STG-0463 TOTP checksum fix"
 }

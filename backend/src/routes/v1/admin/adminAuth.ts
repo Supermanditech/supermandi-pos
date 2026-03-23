@@ -1,6 +1,7 @@
 // GO-LIVE-LOGIN-004: Admin Email OTP Authentication
 // This module provides email-based OTP login for admin portal
 // Only allowlisted emails can access the admin portal
+// GCP-STG-0463: TOTP 2FA support for SuperAdmin
 
 import { Router, Request, Response } from "express";
 import jwt from "jsonwebtoken";
@@ -13,6 +14,7 @@ import {
   recordEmailSend,
 } from "../../../services/emailService";
 import { getRedis, blacklistToken } from "../../../db/redis";
+import { getPool } from "../../../db/client";
 import crypto from "crypto";
 import { log } from "../../../lib/logger";
 import { redisRateLimit } from "../../../middleware/rateLimit";
@@ -88,6 +90,151 @@ function verifyTokenWithRotation(token: string): { email: string; role: string; 
 }
 // LIVE.BE.JWT_ADMIN_ISSUER_ENFORCEMENT.001: Enforce issuer on admin JWTs
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
+
+// =========================================================================
+// GCP-STG-0463: TOTP 2FA utilities (RFC 6238, HMAC-SHA1, 30-second window)
+// =========================================================================
+
+/** Base32 alphabet (RFC 4648) */
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+/**
+ * Encode a Buffer to base32 string (RFC 4648).
+ * Used to display TOTP secrets to the user for manual entry.
+ */
+export function base32Encode(buffer: Buffer): string {
+  let bits = 0;
+  let value = 0;
+  let result = '';
+  for (let i = 0; i < buffer.length; i++) {
+    value = (value << 8) | buffer[i];
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      result += BASE32_ALPHABET[(value >>> bits) & 0x1f];
+    }
+  }
+  if (bits > 0) {
+    result += BASE32_ALPHABET[(value << (5 - bits)) & 0x1f];
+  }
+  return result;
+}
+
+/**
+ * Decode a base32 string back to a Buffer.
+ */
+export function base32Decode(encoded: string): Buffer {
+  const cleaned = encoded.replace(/=+$/, '').toUpperCase();
+  let bits = 0;
+  let value = 0;
+  const bytes: number[] = [];
+  for (let i = 0; i < cleaned.length; i++) {
+    const idx = BASE32_ALPHABET.indexOf(cleaned[i]);
+    if (idx === -1) continue; // skip invalid chars
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8) {
+      bits -= 8;
+      bytes.push((value >>> bits) & 0xff);
+    }
+  }
+  return Buffer.from(bytes);
+}
+
+/**
+ * Generate a 20-byte random TOTP secret, returned as base32.
+ */
+export function generateTotpSecret(): string {
+  const buffer = crypto.randomBytes(20);
+  return base32Encode(buffer);
+}
+
+/**
+ * Compute TOTP code for a given secret and time counter (RFC 6238 / HMAC-SHA1).
+ */
+function computeTotpCode(secretBase32: string, counter: number): string {
+  const key = base32Decode(secretBase32);
+  // Counter as 8-byte big-endian buffer
+  const counterBuf = Buffer.alloc(8);
+  // Write as unsigned 64-bit big-endian (top 4 bytes are 0 for reasonable time values)
+  counterBuf.writeUInt32BE(Math.floor(counter / 0x100000000), 0);
+  counterBuf.writeUInt32BE(counter >>> 0, 4);
+
+  const hmac = crypto.createHmac('sha1', key).update(counterBuf).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const code =
+    ((hmac[offset] & 0x7f) << 24) |
+    ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) << 8) |
+    (hmac[offset + 3] & 0xff);
+  return String(code % 1000000).padStart(6, '0');
+}
+
+/**
+ * Verify a TOTP token against a secret. Checks current window and 1 window before/after
+ * to account for clock skew (±30 seconds).
+ */
+export function verifyTotp(secretBase32: string, token: string): boolean {
+  if (!token || !/^\d{6}$/.test(token)) return false;
+  const now = Math.floor(Date.now() / 1000);
+  const step = 30;
+  // Check current window, 1 before, and 1 after
+  for (let i = -1; i <= 1; i++) {
+    const counter = Math.floor((now / step) + i);
+    if (computeTotpCode(secretBase32, counter) === token) return true;
+  }
+  return false;
+}
+
+/**
+ * Build an otpauth:// URI for QR code generation (Google Authenticator compatible).
+ */
+export function buildTotpUri(secret: string, email: string): string {
+  const issuer = 'SuperMandi';
+  const label = encodeURIComponent(`${issuer}:${email}`);
+  return `otpauth://totp/${label}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
+}
+
+// =========================================================================
+// GCP-STG-0463: TOTP database helpers (admin_totp table)
+// =========================================================================
+
+interface AdminTotpRow {
+  email: string;
+  totp_secret: string;
+  totp_enabled: boolean;
+}
+
+async function getTotpRecord(email: string): Promise<AdminTotpRow | null> {
+  const pool = getPool();
+  if (!pool) throw new Error('Database pool not available');
+  const result = await pool.query(
+    'SELECT email, totp_secret, totp_enabled FROM admin_totp WHERE email = $1',
+    [email]
+  );
+  return result.rows[0] || null;
+}
+
+async function upsertTotpSecret(email: string, secret: string): Promise<void> {
+  const pool = getPool();
+  if (!pool) throw new Error('Database pool not available');
+  await pool.query(
+    `INSERT INTO admin_totp (email, totp_secret, totp_enabled, updated_at)
+     VALUES ($1, $2, FALSE, NOW())
+     ON CONFLICT (email)
+     DO UPDATE SET totp_secret = $2, totp_enabled = FALSE, updated_at = NOW()`,
+    [email, secret]
+  );
+}
+
+async function enableTotp(email: string): Promise<void> {
+  const pool = getPool();
+  if (!pool) throw new Error('Database pool not available');
+  await pool.query(
+    'UPDATE admin_totp SET totp_enabled = TRUE, updated_at = NOW() WHERE email = $1',
+    [email]
+  );
+}
 
 // OTP data shape
 interface StoredOTP {
@@ -342,6 +489,22 @@ adminAuthRouter.post("/auth/verify-email-otp", otpRateLimiter, async (req: Reque
   await deleteOtp(normalizedEmail);
   await deleteLockout(normalizedEmail);
 
+  // GCP-STG-0463: Check if admin has TOTP 2FA enabled
+  try {
+    const totpRecord = await getTotpRecord(normalizedEmail);
+    if (totpRecord?.totp_enabled) {
+      log.info(`[GCP-STG-0463] TOTP required for ${normalizedEmail}, deferring JWT`);
+      return res.json({
+        success: true,
+        requiresTOTP: true,
+        email: normalizedEmail,
+      });
+    }
+  } catch (totpErr) {
+    // If admin_totp table doesn't exist yet (pre-migration), skip TOTP check gracefully
+    log.warn(`[GCP-STG-0463] TOTP check failed (table may not exist yet):`, totpErr);
+  }
+
   // Generate JWT token
   // LIVE.BE.JWT_ADMIN_ISSUER_ENFORCEMENT.001: Include issuer in admin JWT
   const token = jwt.sign(
@@ -498,4 +661,195 @@ adminAuthRouter.post("/auth/logout", (req: Request, res: Response) => {
 
   res.clearCookie('admin_session', { path: '/api' });
   return res.json({ success: true });
+});
+
+// =========================================================================
+// GCP-STG-0463: TOTP 2FA routes
+// =========================================================================
+
+/**
+ * Helper: extract and verify admin JWT from request, return decoded payload or send 401.
+ */
+function extractAdminToken(req: Request): { email: string; role: string; type?: string } | null {
+  const cookieToken = extractCookie(req, 'admin_session');
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+  const token = cookieToken || bearerToken;
+  if (!token) return null;
+  try {
+    return verifyTokenWithRotation(token);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * POST /api/v1/admin/auth/totp/setup
+ * GCP-STG-0463: Generate TOTP secret + otpauth URI for QR code.
+ * Requires valid admin JWT (i.e. admin is already logged in).
+ */
+adminAuthRouter.post("/auth/totp/setup", async (req: Request, res: Response) => {
+  const admin = extractAdminToken(req);
+  if (!admin) {
+    return res.status(401).json({
+      error: { code: "NO_TOKEN", message: "Authentication required" }
+    });
+  }
+
+  try {
+    const secret = generateTotpSecret();
+    const otpauthUri = buildTotpUri(secret, admin.email);
+
+    // Store the secret (not yet enabled) — replaces any previous un-enabled secret
+    await upsertTotpSecret(admin.email, secret);
+
+    log.info(`[GCP-STG-0463] TOTP setup initiated for ${admin.email}`);
+
+    return res.json({
+      success: true,
+      secret,
+      otpauthUri,
+      message: "Scan the QR code with Google Authenticator, then verify with a code.",
+    });
+  } catch (err) {
+    log.error(`[GCP-STG-0463] TOTP setup failed for ${admin.email}:`, err);
+    return res.status(500).json({
+      error: { code: "TOTP_SETUP_FAILED", message: "Failed to set up TOTP. Please try again." }
+    });
+  }
+});
+
+/**
+ * POST /api/v1/admin/auth/totp/verify-setup
+ * GCP-STG-0463: Verify first TOTP code to enable 2FA.
+ * Requires valid admin JWT + a valid TOTP code.
+ */
+adminAuthRouter.post("/auth/totp/verify-setup", async (req: Request, res: Response) => {
+  const admin = extractAdminToken(req);
+  if (!admin) {
+    return res.status(401).json({
+      error: { code: "NO_TOKEN", message: "Authentication required" }
+    });
+  }
+
+  const { code } = req.body as { code?: string };
+  if (!code || !/^\d{6}$/.test(code)) {
+    return res.status(400).json({
+      error: { code: "INVALID_CODE", message: "A 6-digit TOTP code is required" }
+    });
+  }
+
+  try {
+    const record = await getTotpRecord(admin.email);
+    if (!record) {
+      return res.status(400).json({
+        error: { code: "NO_TOTP_SECRET", message: "No TOTP setup found. Call /totp/setup first." }
+      });
+    }
+
+    if (record.totp_enabled) {
+      return res.json({ success: true, message: "TOTP is already enabled." });
+    }
+
+    if (!verifyTotp(record.totp_secret, code)) {
+      return res.status(400).json({
+        error: { code: "INVALID_TOTP", message: "Invalid TOTP code. Please try again." }
+      });
+    }
+
+    await enableTotp(admin.email);
+    log.info(`[GCP-STG-0463] TOTP enabled for ${admin.email}`);
+
+    return res.json({
+      success: true,
+      message: "TOTP 2FA has been enabled for your account.",
+    });
+  } catch (err) {
+    log.error(`[GCP-STG-0463] TOTP verify-setup failed for ${admin.email}:`, err);
+    return res.status(500).json({
+      error: { code: "TOTP_VERIFY_FAILED", message: "Failed to verify TOTP. Please try again." }
+    });
+  }
+});
+
+/**
+ * POST /api/v1/admin/auth/totp/verify
+ * GCP-STG-0463: Complete login with TOTP code (second factor after email OTP).
+ * Called when verify-email-otp returns { requiresTOTP: true }.
+ * Does NOT require JWT — the admin hasn't received one yet.
+ */
+adminAuthRouter.post("/auth/totp/verify", otpRateLimiter, async (req: Request, res: Response) => {
+  const { email, code } = req.body as { email?: string; code?: string };
+
+  if (!email || !code) {
+    return res.status(400).json({
+      error: { code: "MISSING_FIELDS", message: "Email and TOTP code are required" }
+    });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+
+  // Must be an allowlisted admin
+  if (!isEmailAllowed(normalizedEmail)) {
+    return res.status(400).json({
+      error: { code: "INVALID_REQUEST", message: "Invalid request" }
+    });
+  }
+
+  if (!/^\d{6}$/.test(code)) {
+    return res.status(400).json({
+      error: { code: "INVALID_CODE", message: "A 6-digit TOTP code is required" }
+    });
+  }
+
+  try {
+    const record = await getTotpRecord(normalizedEmail);
+    if (!record?.totp_enabled) {
+      return res.status(400).json({
+        error: { code: "TOTP_NOT_ENABLED", message: "TOTP is not enabled for this account" }
+      });
+    }
+
+    if (!verifyTotp(record.totp_secret, code)) {
+      log.warn(`[GCP-STG-0463] Invalid TOTP code for ${normalizedEmail}`);
+      return res.status(400).json({
+        error: { code: "INVALID_TOTP", message: "Invalid TOTP code. Please try again." }
+      });
+    }
+
+    // TOTP verified — issue JWT
+    const token = jwt.sign(
+      {
+        email: normalizedEmail,
+        role: 'super_admin',
+        type: 'admin',
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY, issuer: JWT_ISSUER }
+    );
+
+    log.info(`[GCP-STG-0463] Admin TOTP login successful: ${normalizedEmail}`);
+
+    res.cookie('admin_session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'development',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000,
+      path: '/api',
+    });
+
+    return res.json({
+      success: true,
+      token,
+      admin: {
+        email: normalizedEmail,
+        role: 'super_admin',
+      },
+    });
+  } catch (err) {
+    log.error(`[GCP-STG-0463] TOTP verify failed for ${normalizedEmail}:`, err);
+    return res.status(500).json({
+      error: { code: "TOTP_VERIFY_FAILED", message: "Failed to verify TOTP. Please try again." }
+    });
+  }
 });
