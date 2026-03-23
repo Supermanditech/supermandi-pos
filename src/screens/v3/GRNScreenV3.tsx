@@ -12,6 +12,7 @@ import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import * as orderApi from "../../services/api/orderApi";
 import { recordManualInward } from "../../services/api/inventoryApi";
+import { apiClient } from "../../services/api/apiClient";
 import { getDeviceStoreId } from "../../services/deviceSession";
 
 // V3-042: GRN v3 — wire real pending PO items from orderApi
@@ -22,6 +23,8 @@ type GRNItem = {
   procurementUnit?: string; procurementPackQty?: number; baseStockUnit?: string; conversionConfirmed?: boolean;
   // GCP-STG-0387: Quantity unit from order item — prevents double-expansion
   quantityUnit?: 'BASE' | 'PROCUREMENT';
+  // GCP-STG-0391: Broken carton / partial pack — damaged or missing count per line item
+  damagedQty: number;
 };
 type POContext = { poNumber: string; supplierName: string; totalMinor: number } | null;
 type ScanFeedback = { productName: string; qty: number } | null;
@@ -66,6 +69,8 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
               conversionConfirmed: (item as any).conversionConfirmed,
               // GCP-STG-0387: Carry quantity_unit from order item to prevent double-expansion
               quantityUnit: (item as any).quantityUnit || (item as any).quantity_unit,
+              // GCP-STG-0391: Broken carton / partial pack — default 0 damaged
+              damagedQty: 0,
             });
           }
         }
@@ -104,6 +109,13 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
       }
       return { ...it, received: newReceived, checked: newReceived > 0 };
     }));
+  }, []);
+
+  // GCP-STG-0391: Update damaged/missing count per line item
+  const changeDamaged = useCallback((idx: number, text: string) => {
+    const parsed = parseInt(text, 10);
+    const val = Number.isNaN(parsed) || parsed < 0 ? 0 : parsed;
+    setItems(prev => prev.map((it, i) => i === idx ? { ...it, damagedQty: val } : it));
   }, []);
 
   const receivedCount = items.filter(i => i.checked).length;
@@ -172,8 +184,14 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
             <Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>Place a purchase order to receive goods here</Text>
           </View>
         )}
-        {activeTab === "po" && items.map((item, idx) => (
-          <View key={item.barcode} style={[styles.itemRow, !item.checked && item.ordered > 0 && styles.itemRowPending]}>
+        {activeTab === "po" && items.map((item, idx) => {
+          // GCP-STG-0391: Compute landed qty accounting for damaged/missing
+          const alreadyBase = item.quantityUnit === 'BASE' || !item.procurementPackQty || item.procurementPackQty <= 1;
+          const grossLanded = alreadyBase ? item.received : item.received * (item.procurementPackQty ?? 1);
+          const netLanded = Math.max(0, grossLanded - item.damagedQty);
+          const hasBulk = !alreadyBase && item.procurementPackQty && item.procurementPackQty > 1;
+          return (
+          <View key={item.barcode} style={[styles.itemRow, { flexWrap: "wrap" }, !item.checked && item.ordered > 0 && styles.itemRowPending]}>
             <Pressable style={[styles.check, item.checked && styles.checkChecked]} onPress={() => toggleCheck(idx)}>
               {item.checked ? <Text style={styles.checkMark}>✓</Text> : null}
             </Pressable>
@@ -190,8 +208,32 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
               <Pressable style={styles.qtyBtn} onPress={() => changeReceived(idx, 1)}><Text style={styles.qtyBtnText}>+</Text></Pressable>
             </View>
             <Text style={styles.editBtn}>Edit ▸</Text>
+            {/* GCP-STG-0391: Damaged/missing input — shown when item is checked */}
+            {item.checked && item.received > 0 ? (
+              <View style={styles.damagedRow}>
+                <Text style={styles.damagedLabel}>Damaged/missing:</Text>
+                <TextInput
+                  style={styles.damagedInput}
+                  keyboardType="numeric"
+                  value={item.damagedQty > 0 ? String(item.damagedQty) : ""}
+                  placeholder="0"
+                  placeholderTextColor={colors.textTertiary}
+                  onChangeText={(text) => changeDamaged(idx, text)}
+                  testID={`damaged-qty-${idx}`}
+                />
+                {/* GCP-STG-0391: Landed qty preview */}
+                {item.damagedQty > 0 || hasBulk ? (
+                  <Text style={styles.landedPreview}>
+                    {hasBulk
+                      ? `${item.received} × ${item.procurementPackQty} = ${grossLanded}${item.damagedQty > 0 ? `, minus ${item.damagedQty} damaged = ${netLanded}` : ""} landed`
+                      : `${item.received} minus ${item.damagedQty} damaged = ${netLanded} landed`}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
           </View>
-        ))}
+          );
+        })}
 
         {/* V3-FIX-079: Real scan feedback — only shown after actual scan */}
         {lastScan ? (
@@ -213,12 +255,26 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
         {(() => {
           // GCP-STG-0387: Only show bulk expansion preview for PROCUREMENT-unit items (not already-BASE)
           const bulkItems = items.filter(i => i.checked && i.procurementPackQty && i.procurementPackQty > 1 && i.quantityUnit !== 'BASE');
-          if (bulkItems.length === 0) return null;
-          const totalLanded = bulkItems.reduce((sum, i) => sum + (i.received * (i.procurementPackQty ?? 1)), 0);
+          // GCP-STG-0391: Subtract damagedQty from landed total
+          const totalDamaged = items.reduce((sum, i) => sum + (i.checked ? i.damagedQty : 0), 0);
+          if (bulkItems.length === 0 && totalDamaged === 0) return null;
+          const totalLanded = bulkItems.reduce((sum, i) => sum + (i.received * (i.procurementPackQty ?? 1) - i.damagedQty), 0);
+          const baseItems = items.filter(i => i.checked && (i.quantityUnit === 'BASE' || !i.procurementPackQty || i.procurementPackQty <= 1));
+          const baseDamaged = baseItems.reduce((sum, i) => sum + i.damagedQty, 0);
           return (
-            <Text style={[styles.footerMeta, { color: "#6366f1", fontWeight: "700" }]}>
-              Stock landing: {Math.round(totalLanded)} {bulkItems[0]?.baseStockUnit ?? "units"} from {bulkItems.length} bulk items
-            </Text>
+            <>
+              {bulkItems.length > 0 ? (
+                <Text style={[styles.footerMeta, { color: "#6366f1", fontWeight: "700" }]}>
+                  Stock landing: {Math.round(totalLanded)} {bulkItems[0]?.baseStockUnit ?? "units"} from {bulkItems.length} bulk items
+                </Text>
+              ) : null}
+              {totalDamaged > 0 ? (
+                <Text style={[styles.footerMeta, { color: "#f59e0b", fontWeight: "700" }]}>
+                  Short count: {totalDamaged} damaged/missing across {items.filter(i => i.checked && i.damagedQty > 0).length} items
+                  {baseDamaged > 0 ? ` (${baseDamaged} base units)` : ""}
+                </Text>
+              ) : null}
+            </>
           );
         })()}
 
@@ -231,7 +287,7 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
 
         <View style={styles.footerActions}>
           {/* GCP-STG-0137: Disable Match All when no items, show appropriate toast */}
-          <Pressable style={[styles.matchAllBtn, items.length === 0 && { opacity: 0.5 }]} disabled={items.length === 0} onPress={async () => { if (items.length === 0) { showToast("No items to match"); return; } const online = await isOnline(); if (!online) { showToast("Offline — match all requires connection"); return; } setItems(prev => prev.map(it => ({ ...it, checked: true, received: it.ordered }))); showToast("All items matched to PO"); }}><Text style={styles.matchAllText}>Match All</Text></Pressable>
+          <Pressable style={[styles.matchAllBtn, items.length === 0 && { opacity: 0.5 }]} disabled={items.length === 0} onPress={async () => { if (items.length === 0) { showToast("No items to match"); return; } const online = await isOnline(); if (!online) { showToast("Offline — match all requires connection"); return; } setItems(prev => prev.map(it => ({ ...it, checked: true, received: it.ordered, damagedQty: 0 }))); showToast("All items matched to PO"); }}><Text style={styles.matchAllText}>Match All</Text></Pressable>
           <Pressable style={styles.confirmBtn} onPress={async () => {
             // V3-FIX-170: Real GRN confirm — submit received items to backend
             const receivedItems = items.filter(i => i.checked && i.received > 0);
@@ -244,11 +300,13 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
               // V3-FIX-170: Submit received items as inward with conversion context
               // GCP-STG-0387: Guard against double-expansion — if qty is already in BASE units
               // (pre-expanded by BUY checkout via caseSize), do NOT multiply by procurementPackQty again
+              // GCP-STG-0391: Subtract damagedQty from landed quantity
               const inwardItems = receivedItems.map(item => {
                 const alreadyBase = item.quantityUnit === 'BASE' || !item.procurementPackQty || item.procurementPackQty <= 1;
-                const landedQty = alreadyBase
+                const grossLanded = alreadyBase
                   ? item.received
                   : item.received * item.procurementPackQty!;
+                const landedQty = Math.max(0, grossLanded - item.damagedQty);
                 return {
                   productId: item.productId || item.barcode,
                   quantity: landedQty,
@@ -259,8 +317,34 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
                   conversionConfirmed: item.conversionConfirmed,
                 };
               });
-              const grnNotes = `GRN receipt: ${receivedItems.length} items, ${totalReceived} units received`;
+              // GCP-STG-0391: Build separate adjustment entries for damaged/missing items
+              const damagedItems = receivedItems.filter(item => item.damagedQty > 0);
+              const totalDamagedCount = damagedItems.reduce((s, i) => s + i.damagedQty, 0);
+              const grnNotes = `GRN receipt: ${receivedItems.length} items, ${totalReceived} units received${totalDamagedCount > 0 ? `, ${totalDamagedCount} damaged/missing` : ""}`;
               await recordManualInward(inwardItems, grnNotes);
+              // GCP-STG-0391: Record grn_short_count adjustment for damaged items
+              if (damagedItems.length > 0) {
+                const adjustmentItems = damagedItems.map(item => ({
+                  productId: item.productId || item.barcode,
+                  quantity: -item.damagedQty,
+                  procurementUnit: item.procurementUnit,
+                  procurementPackQty: item.procurementPackQty,
+                  baseStockUnit: item.baseStockUnit,
+                  conversionConfirmed: item.conversionConfirmed,
+                }));
+                try {
+                  await apiClient.post(`/api/v1/pos/inventory/transactions`, {
+                    items: adjustmentItems,
+                    transactionType: "adjustment",
+                    referenceType: "manual",
+                    referenceId: `GRN-SHORT-${Date.now()}`,
+                    notes: `grn_short_count: ${totalDamagedCount} damaged/missing across ${damagedItems.length} items`,
+                  });
+                } catch (_adjErr) {
+                  // Non-fatal: stock was already correctly reduced in the primary inward
+                  console.warn("GCP-STG-0391: Short count ledger entry failed (non-fatal)", _adjErr);
+                }
+              }
               showToast(`Receipt confirmed! ${receivedItems.length} items, stock updated.`);
               setTimeout(onClose, 800);
             } catch (err) {
@@ -311,6 +395,11 @@ function createStyles(colors: ColorPalette) {
     qtyVal: { fontSize: 14, fontWeight: "800", minWidth: 20, textAlign: "center" },
     qtyValPending: { color: colors.error },
     editBtn: { fontSize: 11, color: colors.primary, fontWeight: "700", padding: 6 },
+    // GCP-STG-0391: Damaged/missing input styles
+    damagedRow: { width: "100%", flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6, paddingLeft: 36, paddingTop: 4 },
+    damagedLabel: { fontSize: 11, color: colors.textTertiary, fontWeight: "600" },
+    damagedInput: { width: 48, height: 28, borderRadius: 6, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background, textAlign: "center", fontSize: 12, fontWeight: "700", color: colors.error, paddingVertical: 2 },
+    landedPreview: { fontSize: 11, color: "#6366f1", fontWeight: "600", flexShrink: 1 },
     scanResult: { flexDirection: "row", alignItems: "center", gap: 10, margin: 14, padding: 12, backgroundColor: colors.successSoft, borderWidth: 1.5, borderColor: colors.success, borderRadius: 14 },
     scanResultIcon: { fontSize: 20 },
     scanResultTitle: { fontSize: 13, fontWeight: "700", color: colors.success },

@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 809,
+  "version": 816,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -4098,8 +4098,8 @@
     {
       "ticket": "STG-497",
       "file": "src/services/api/orderApi.ts",
-      "start_line": 435,
-      "end_line": 549,
+      "start_line": 437,
+      "end_line": 551,
       "description": "GRN idempotency key — deterministic key from orderId+items prevents duplicate stock entries on retry",
       "test_file": "src/__tests__/screens/GRNScreen.stg-497.idempotency.test.ts",
       "checksum": "fb35654b2171b46c",
@@ -4153,7 +4153,7 @@
         "single_commit": "fix(STG-497): add deterministic idempotency key to GRN receiveGoods",
         "ticket_parked": "STAGING_TICKETS.md updated to PARKED"
       },
-      "line_shifted_at": "2026-03-23T07:59:31.977Z"
+      "line_shifted_at": "2026-03-23T11:13:15.011Z"
     },
     {
       "ticket": "STG-499",
@@ -4515,7 +4515,7 @@
       "file": "backend/src/routes/v1/orders.ts",
       "start_line": 1725,
       "end_line": 2284,
-      "checksum": "39f73f9caf6225f6",
+      "checksum": "d7698c169f317b06",
       "description": "Reject GRN receive if total qty > ordered * 1.1 (10% tolerance)",
       "test_file": "src/__tests__/screens/grn-excess-qty.stg-509.test.ts",
       "depends_on": null,
@@ -6968,7 +6968,7 @@
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 1,
       "end_line": 803,
-      "checksum": "b67d555f6903d9bb",
+      "checksum": "ac0e0a03d1bde404",
       "description": "BUY tab v3 — supplier catalogue with wholesale metadata, supplier filter, categories, counter purchase CTA",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,
@@ -7226,9 +7226,9 @@
       "ticket": "STG-568",
       "file": "src/screens/v3/GRNScreenV3.tsx",
       "start_line": 1,
-      "end_line": 325,
-      "checksum": "18311845720bc799",
-      "description": "GRN v3 — HID+camera scan, PO matching, per-item qty, match all, confirm (updated GCP-STG-0387: quantityUnit guard)",
+      "end_line": 416,
+      "checksum": "afbe701b5704cbcd",
+      "description": "GRN v3 — HID+camera scan, PO matching, per-item qty, match all, confirm (updated GCP-STG-0387: quantityUnit guard, GCP-STG-0391: damagedQty)",
       "test_file": "src/__tests__/screens/store-layer4.stg-567-570.test.ts",
       "depends_on": null,
       "migration": null,
@@ -7301,7 +7301,7 @@
       "file": "src/screens/v3/StockScreenV3.tsx",
       "start_line": 1,
       "end_line": 192,
-      "checksum": "9d25069635dd3c38",
+      "checksum": "24482d7a426420a1",
       "description": "Stock screen v3 — current/unsold/movement tabs, stats, search, opening stock, barcode labels",
       "test_file": "src/__tests__/screens/store-layer4.stg-567-570.test.ts",
       "depends_on": null,
@@ -9973,8 +9973,8 @@
     {
       "ticket": "GCP-STG-0145",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 370,
-      "end_line": 403,
+      "start_line": 380,
+      "end_line": 413,
       "checksum": "fb53241a32a85e1f",
       "description": "BUY screen uses 3-column grid with ProductTileV3 instead of single-column SupplierProductCardV3",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
@@ -10008,7 +10008,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:41:40.330Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:55:49.000Z"
+      "line_shifted_at": "2026-03-23T11:22:49.841Z"
     },
     {
       "ticket": "GCP-STG-0144",
@@ -10610,8 +10610,8 @@
     {
       "ticket": "GCP-STG-0061",
       "file": "src/screens/v3/GRNScreenV3.tsx",
-      "start_line": 97,
-      "end_line": 105,
+      "start_line": 102,
+      "end_line": 110,
       "checksum": "d9aed9f3b4220848",
       "description": "GRN over-receive warning toast when received > ordered qty",
       "test_file": "src/__tests__/screens/grnQtyValidation.gcp-stg-0061.test.ts",
@@ -10645,7 +10645,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T12:50:27.030Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T07:59:32.408Z"
+      "line_shifted_at": "2026-03-23T11:13:15.082Z"
     },
     {
       "ticket": "GCP-STG-0134",
@@ -10729,8 +10729,8 @@
     {
       "ticket": "GCP-STG-0057",
       "file": "src/screens/v3/StockScreenV3.tsx",
-      "start_line": 57,
-      "end_line": 71,
+      "start_line": 60,
+      "end_line": 74,
       "checksum": "861816e345378e0f",
       "description": "Stock screen Unsold (dead stock) and Movement (low/out sorted) tab filtering",
       "test_file": "src/__tests__/screens/stockTabs.gcp-stg-0057.test.ts",
@@ -10764,7 +10764,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T13:12:18.594Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-21T13:25:15.527Z"
+      "line_shifted_at": "2026-03-23T11:22:49.850Z"
     },
     {
       "ticket": "GCP-STG-0147",
@@ -15049,7 +15049,7 @@
       "file": "backend/src/routes/v1/orders.ts",
       "start_line": 1927,
       "end_line": 1967,
-      "checksum": "1b613b7424a9ed41",
+      "checksum": "817df5908b5729e4",
       "description": "GRN receive writes to inventory_ledger (was missing) for dual-ledger invariant",
       "test_file": "backend/tests/dualLedger.gcp-stg-0287.unit.test.ts",
       "depends_on": null,
@@ -15701,8 +15701,8 @@
     {
       "ticket": "GCP-STG-0320",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 205,
-      "end_line": 240,
+      "start_line": 215,
+      "end_line": 250,
       "checksum": "ea15f0f3e191f1d4",
       "description": "BUY search uses server-side getBuyCatalog(q=) with 300ms debounce instead of client-only name+brand filter",
       "test_file": "src/__tests__/screens/buyServerSearch.gcp-stg-0320.test.ts",
@@ -15733,7 +15733,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:03:07.834Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:55:49.059Z"
+      "line_shifted_at": "2026-03-23T11:22:49.927Z"
     },
     {
       "ticket": "GCP-STG-0321",
@@ -16030,8 +16030,8 @@
     {
       "ticket": "GCP-STG-0323",
       "file": "src/screens/v3/StockScreenV3.tsx",
-      "start_line": 118,
-      "end_line": 118,
+      "start_line": 151,
+      "end_line": 151,
       "checksum": "fa07507adcc0d23d",
       "description": "Search-aware empty state: shows No results for query instead of generic No dead stock/No stock alerts/No inventory (3 screens)",
       "test_file": "src/__tests__/screens/emptyStates.gcp-stg-0323.test.ts",
@@ -16061,7 +16061,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:25:23.245Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T11:22:49.930Z"
     },
     {
       "ticket": "GCP-STG-0323",
@@ -17934,8 +17935,8 @@
     {
       "ticket": "GCP-STG-0397",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 277,
-      "end_line": 293,
+      "start_line": 287,
+      "end_line": 303,
       "checksum": "b06fdc0e960475e7",
       "description": "BUY checkout MOQ enforcement: handleQtyChange snaps qty to product.moq floor when qty>0 and qty<moq, shows toast warning. qty=0 still allows cart removal.",
       "test_file": "backend/tests/moqEnforcement.gcp-stg-0397.unit.test.ts",
@@ -17966,7 +17967,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:18:54.532Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:55:49.084Z"
+      "line_shifted_at": "2026-03-23T11:22:49.948Z"
     },
     {
       "ticket": "GCP-STG-0399",
@@ -18083,8 +18084,8 @@
     {
       "ticket": "GCP-STG-0401",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 448,
-      "end_line": 467,
+      "start_line": 458,
+      "end_line": 477,
       "checksum": "6e5def9328da4f6f",
       "description": "BuyScreenV3 procurement mapping extended with 6 fields from detailProduct (6 fields wired)",
       "test_file": "src/__tests__/components/buyDetailFields.gcp-stg-0401.test.ts",
@@ -18115,7 +18116,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:33:08.397Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:55:49.092Z"
+      "line_shifted_at": "2026-03-23T11:22:49.955Z"
     },
     {
       "ticket": "GCP-STG-0400",
@@ -18412,8 +18413,8 @@
     {
       "ticket": "GCP-STG-0398",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 256,
-      "end_line": 274,
+      "start_line": 266,
+      "end_line": 284,
       "checksum": "a5564b6b33f27d21",
       "description": "BuyScreenV3 cartTotal computed with MOQ tier discounts applied (not display-only) via useMemo (applied to cart total)",
       "test_file": "src/__tests__/screens/volumeDiscount.gcp-stg-0398.test.ts",
@@ -18444,15 +18445,15 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:59:18.571Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:55:49.099Z"
+      "line_shifted_at": "2026-03-23T11:22:49.959Z"
     },
     {
       "ticket": "GCP-STG-0387",
       "file": "src/screens/v3/GRNScreenV3.tsx",
-      "start_line": 240,
-      "end_line": 256,
-      "checksum": "4c30e9cb2f501971",
-      "description": "GRN double-expansion guard: skip procurementPackQty multiplication when quantityUnit=BASE (already expanded by BUY checkout) (quantity_unit guard)",
+      "start_line": 303,
+      "end_line": 319,
+      "checksum": "20aa41fa398bce18",
+      "description": "GRN double-expansion guard: skip procurementPackQty multiplication when quantityUnit=BASE (already expanded by BUY checkout) (quantity_unit guard, updated for GCP-STG-0391 damagedQty subtraction)",
       "test_file": "backend/tests/grnExpansionGuard.gcp-stg-0387.unit.test.ts",
       "depends_on": null,
       "migration": "227_gcp_stg_0387_poi_quantity_unit.sql",
@@ -18480,7 +18481,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:01:10.904Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T11:10:14.313Z"
     },
     {
       "ticket": "GCP-STG-0344",
@@ -19030,8 +19032,8 @@
     {
       "ticket": "GCP-STG-0403",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 497,
-      "end_line": 503,
+      "start_line": 507,
+      "end_line": 513,
       "checksum": "58828b3aa9c86dc5",
       "description": "BUY checkout GST computed per-item (each item gstPct) instead of averaged across all cart items (per-item reduce)",
       "test_file": "src/__tests__/screens/buyGstPerItem.gcp-stg-0403.test.ts",
@@ -19062,7 +19064,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:21:18.302Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:55:49.110Z"
+      "line_shifted_at": "2026-03-23T11:22:49.970Z"
     },
     {
       "ticket": "GCP-STG-0360",
@@ -19139,8 +19141,8 @@
     {
       "ticket": "GCP-STG-0402",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 86,
-      "end_line": 94,
+      "start_line": 88,
+      "end_line": 96,
       "checksum": "8d21179e769ea277",
       "description": "BuyScreenV3 uses purchaseCartStore selectors for orderQtys instead of useState — cart survives screen unmount (Zustand + storeScopedStorage)",
       "test_file": "src/__tests__/stores/purchaseCartStore.gcp-stg-0402.test.ts",
@@ -19171,7 +19173,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:30:00.201Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:55:49.113Z"
+      "line_shifted_at": "2026-03-23T11:22:49.971Z"
     },
     {
       "ticket": "GCP-STG-0408",
@@ -19505,7 +19507,7 @@
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 714,
       "end_line": 760,
-      "checksum": "1e3ed64ee8648252",
+      "checksum": "a5d1d056deeaf2e0",
       "description": "BUY order confirmation modal shown after successful checkout with order numbers, item count, total amount, payment status, and Continue Shopping button (modal with order summary)",
       "test_file": "src/__tests__/screens/buyConfirmation.gcp-stg-0404.test.ts",
       "depends_on": null,
@@ -19796,8 +19798,8 @@
     {
       "ticket": "GCP-STG-0409",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 661,
-      "end_line": 670,
+      "start_line": 717,
+      "end_line": 726,
       "checksum": "d07d5a70f496bf71",
       "description": "BuyScreenV3 createOrder call passes storeNotes (from deliveryNotes) + deliveryAddress (from store identity)",
       "test_file": "src/__tests__/screens/buyDeliveryNotes.gcp-stg-0409.test.ts",
@@ -19827,7 +19829,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:58:19.605Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T11:22:50.001Z"
     },
     {
       "ticket": "GCP-STG-0410",
@@ -19899,6 +19902,259 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:00:20.064Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0412",
+      "file": "src/screens/v3/BuyScreenV3.tsx",
+      "start_line": 589,
+      "end_line": 604,
+      "checksum": "c91a71df88de5b42",
+      "description": "BUY checkout payment selector includes BANK and CARD modes with labels",
+      "test_file": "src/__tests__/screens/bankCardPayment.gcp-stg-0412.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T11:12:51.119Z",
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T11:22:50.007Z"
+    },
+    {
+      "ticket": "GCP-STG-0391",
+      "file": "src/screens/v3/GRNScreenV3.tsx",
+      "start_line": 20,
+      "end_line": 28,
+      "checksum": "7daf2acf8c48d417",
+      "description": "Broken carton / partial pack: damagedQty field on GRNItem, damaged TextInput per line, landed qty calc (gross - damaged), grn_short_count adjustment ledger entry",
+      "test_file": "src/__tests__/screens/grnPartialPack.gcp-stg-0391.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T11:12:54.002Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0412",
+      "file": "src/services/api/orderApi.ts",
+      "start_line": 149,
+      "end_line": 222,
+      "checksum": "4399fbb4f35b8ebd",
+      "description": "BuyPaymentMode and CreatePurchaseOrderPayload types include CARD",
+      "test_file": "src/__tests__/screens/bankCardPayment.gcp-stg-0412.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T11:12:59.239Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0411",
+      "file": "backend/src/services/procurementPaymentService.ts",
+      "start_line": 169,
+      "end_line": 213,
+      "checksum": "ba844cb096354bb7",
+      "description": "BNPL provider checks credit line exists + approved + sufficient balance, deducts from credit line, sets payment status to authorized",
+      "test_file": "backend/tests/bnplCreditSystem.gcp-stg-0411.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T11:22:33.704Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0392",
+      "file": "backend/src/routes/v1/orders.ts",
+      "start_line": 1959,
+      "end_line": 1976,
+      "checksum": "2534ee4e586b9ae2",
+      "description": "GRN receive inserts into inventory.stock_batches when batchNumber or expiryDate provided (batch-level stock tracking)",
+      "test_file": "backend/tests/stockBatches.gcp-stg-0392.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T11:23:06.232Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0392",
+      "file": "backend/src/routes/v1/pos/inventory.ts",
+      "start_line": 824,
+      "end_line": 870,
+      "checksum": "d438f943225cf6e0",
+      "description": "GET /inventory/batches/:productId — returns FEFO-ordered batch breakdown per product from inventory.stock_batches",
+      "test_file": "backend/tests/stockBatches.gcp-stg-0392.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T11:23:21.959Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0392",
+      "file": "src/screens/v3/StockScreenV3.tsx",
+      "start_line": 80,
+      "end_line": 113,
+      "checksum": "f875cc5008a57548",
+      "description": "Batch breakdown modal state + openBatchModal + formatExpiryDate in StockScreenV3 (replaces simple Alert with batch-aware detail modal)",
+      "test_file": "backend/tests/stockBatches.gcp-stg-0392.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T11:23:56.576Z",
       "status": "ACTIVE"
     }
   ],
