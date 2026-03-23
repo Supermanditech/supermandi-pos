@@ -1,6 +1,7 @@
 // GCP-STG-0062: Barcode label sheet screen — fetches products, generates PDF, print/share
 import React, { useMemo, useState, useEffect } from "react";
 import { View, Pressable, ScrollView, ActivityIndicator, StyleSheet, Text, Alert } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
@@ -18,6 +19,7 @@ type Props = { onClose: () => void };
 
 export default function BarcodeSheetScreenV3({ onClose }: Props) {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [loading, setLoading] = useState(true);
@@ -66,7 +68,7 @@ export default function BarcodeSheetScreenV3({ onClose }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable>
         <Text style={styles.headerTitle}>Barcode Labels</Text>
@@ -108,7 +110,7 @@ export default function BarcodeSheetScreenV3({ onClose }: Props) {
         </ScrollView>
       )}
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable style={[styles.generateBtn, (generating || selected.size === 0) && { opacity: 0.5 }]} onPress={handleGenerate} disabled={generating || selected.size === 0}>
           <Text style={styles.generateText}>{generating ? "Generating..." : `🏷️ Generate Sheet (${selected.size})`}</Text>
         </Pressable>
