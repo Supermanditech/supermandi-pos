@@ -59,6 +59,8 @@ export type CatalogProduct = {
   moq?: number | null;
   imageUrl?: string | null;
   stockQuantity?: number | null;
+  // GCP-STG-0428: Product description field
+  description?: string;
   // GCP-STG-0356: Supplier visibility toggle
   supplierVisible?: boolean;
 };

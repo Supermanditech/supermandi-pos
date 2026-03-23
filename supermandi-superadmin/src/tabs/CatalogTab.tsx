@@ -852,6 +852,10 @@ export function CatalogTab() {
                 <div><strong>Supplier:</strong> {editingProduct.supplierName}</div>
                 <div><strong>Purchase Price:</strong> {formatPrice(editingProduct.purchasePrice)}</div>
                 {editingProduct.mrp != null && <div><strong>MRP:</strong> {formatPrice(editingProduct.mrp)}</div>}
+                {/* GCP-STG-0428: Show product description if present (read-only) */}
+                {editingProduct.description && (
+                  <div style={{ marginTop: 4, color: '#64748b', fontSize: 12 }}>{editingProduct.description}</div>
+                )}
               </div>
             </div>
 
