@@ -1,6 +1,11 @@
 /**
  * DRX-001: Firebase configuration for POS phone OTP
  *
+ * GCP-STG-0455: DEAD CODE — POS does NOT use Firebase for authentication.
+ * POS uses custom backend OTP via device enrollment + JWT (deviceSession.ts).
+ * The Firebase SDK is retained solely for future push notifications and
+ * analytics capabilities. No production screen or service calls isFirebaseReady().
+ *
  * FIREBASE-HARDENING-E: POS Firebase scope — OUT OF SCOPE for production auth.
  * POS uses device enrollment + JWT (deviceSession.ts), not Firebase phone OTP.
  * This config exists as scaffolding for future POS OTP capability.
