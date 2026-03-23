@@ -90,6 +90,9 @@ export function isScanEnabled(): boolean { return scanEnabled; }
 const PIPELINE_DEDUP_MS = 500;
 let lastPipelineScan: { barcode: string; ts: number } | null = null;
 
+// GCP-STG-0518: In-flight lookup guard — prevent concurrent lookups for the same barcode
+const inFlightBarcodes = new Set<string>();
+
 type CartScanProduct = ScanProduct & { metadata?: Record<string, any> };
 
 export function needsSellFirstOnboarding(product: StoreLookupProduct | null): boolean {
@@ -471,6 +474,10 @@ async function handleScan(
     return;
   }
 
+  // GCP-STG-0518: In-flight lookup guard — block concurrent lookups for same barcode
+  if (inFlightBarcodes.has(trimmed)) return;
+  inFlightBarcodes.add(trimmed);
+
   notify(null);
   const useScanLookupV2 = runtime.scanLookupV2Enabled === true;
 
@@ -791,5 +798,8 @@ async function handleScan(
       console.error("handleScan non-API error:", String(error));
       notify({ tone: "error", message: "Could not resolve scan. Check connection." });
     }
+  } finally {
+    // GCP-STG-0518: Release in-flight guard
+    inFlightBarcodes.delete(trimmed);
   }
 }
