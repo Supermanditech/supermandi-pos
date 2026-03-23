@@ -3,6 +3,8 @@ import { View, FlatList, TextInput, Pressable, KeyboardAvoidingView, Platform, S
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
+// GCP-STG-0445: Safe area insets for dynamic paddingTop + paddingBottom
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import PurchaseItemCardV3, { type PurchaseItemData } from "../../components/v3/PurchaseItemCardV3";
 import { useThemeColors } from "../../theme";
@@ -29,6 +31,8 @@ type CounterPurchaseScreenV3Props = {
 export default function CounterPurchaseScreenV3({ onClose, onCameraScan }: CounterPurchaseScreenV3Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
+  // GCP-STG-0445: Use safe area insets instead of hardcoded padding
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [items, setItems] = useState<PurchaseItemData[]>([]);
   const [barcodeInput, setBarcodeInput] = useState("");
@@ -220,7 +224,7 @@ export default function CounterPurchaseScreenV3({ onClose, onCameraScan }: Count
   }, 0);
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={[styles.container, { paddingTop: insets.top }]} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={onClose} accessibilityLabel="Back"><Text style={styles.backText}>←</Text></Pressable>
@@ -311,7 +315,8 @@ export default function CounterPurchaseScreenV3({ onClose, onCameraScan }: Count
       </ScrollView>
 
       {/* Footer summary */}
-      <View style={styles.footer}>
+      {/* GCP-STG-0445: Safe area bottom padding */}
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <View style={styles.footerTop}>
           <Text style={styles.footerMeta}>{items.length} items{supplierName ? ` · ${supplierName}` : ""}{invoiceNo ? ` · ${invoiceNo}` : ""}</Text>
           <Text style={styles.footerCount}>{items.filter(i => i.state === "repeat").length} repeat · {items.filter(i => i.state === "new").length} new</Text>
