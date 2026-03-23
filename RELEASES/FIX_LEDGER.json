@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 928,
+  "version": 929,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -7483,7 +7483,7 @@
       "file": "src/screens/v3/SettingsScreenV3.tsx",
       "start_line": 1,
       "end_line": 420,
-      "checksum": "38056e7774813718",
+      "checksum": "9eb57a439f0a2952",
       "description": "STG-576 v3 screen + DA-011/012 i18n.changeLanguage + Switch Staff/Logout wiring",
       "test_file": "src/__tests__/screens/more-layer5.stg-571-576.test.ts",
       "depends_on": null,
@@ -11946,7 +11946,7 @@
       "file": "src/screens/v3/SettingsScreenV3.tsx",
       "start_line": 212,
       "end_line": 218,
-      "checksum": "47feb12ec4b0cb89",
+      "checksum": "05d5e761d30f690f",
       "description": "Clear cart on explicit logout (device unbind = new store = no cart)",
       "test_file": "backend/tests/sseEvents.gcp-stg-0108.unit.test.ts",
       "depends_on": null,
@@ -24657,6 +24657,33 @@
         "parity_scanned": true,
         "parity_fixed": true
       }
+    },
+    {
+      "ticket": "GCP-STG-0526",
+      "file": "src/screens/v3/SettingsScreenV3.tsx",
+      "start_line": 91,
+      "end_line": 97,
+      "checksum": "084c1532715017e6",
+      "description": "Scanner sensitivity settings section — read-only display of HID timing values",
+      "test_file": "N/A",
+      "registered_at": "2026-03-23T22:06:45.654Z",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      }
     }
   ],
   "machine_state_version": 269,
@@ -24701,9 +24728,9 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-23T22:05:48.018Z",
+  "lastUpdated": "2026-03-23T22:06:45.655Z",
   "_commitNote": "GCP-STG-0417,0422,0425,0426,0428,0430,0431",
   "_note": "0429-behavioral",
   "_n": "0491",
-  "last_commit_note": "GCP-STG-0525"
+  "last_commit_note": "GCP-STG-0526"
 }

@@ -89,6 +89,12 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
       { icon: "📟", label: "HID Scanner", value: (() => { try { const h = require("../../services/hidScannerService"); return h.isHidActive?.() ? "Active ✓" : "Inactive"; } catch { return "Unknown"; } })(), valueColor: (() => { try { return require("../../services/hidScannerService").isHidActive?.() ? colors.success : colors.textTertiary; } catch { return colors.textTertiary; } })() },
       { icon: "🔄", label: "Auto-Print", toggle: true, on: autoPrint, onToggle: () => setAutoPrint(!autoPrint) },
     ]},
+    // GCP-STG-0526: Scanner sensitivity settings (read-only for now)
+    { title: "SCANNER", items: [
+      { icon: "⏱️", label: "Inter-char timeout", value: "150ms" },
+      { icon: "📏", label: "Min barcode length", value: "4 chars" },
+      { icon: "🔁", label: "Duplicate window", value: "1000ms" },
+    ]},
     { title: "PAYMENTS", items: [
       // V3-FIX-124: UPI ID — tappable to edit, gated to MANAGER role
       // V3-HARDEN-127: Uses subscribed upiVpa selector, not getState()
