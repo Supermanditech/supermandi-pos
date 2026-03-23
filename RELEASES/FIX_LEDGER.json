@@ -19246,7 +19246,7 @@
       "start_line": 1018,
       "end_line": 1083,
       "checksum": "1d40777a1ebd2e4f",
-      "description": "Structured MOQ tier editor replacing raw JSON input — table with minQty/discountPct rows, add/remove buttons, validation (minQty>0, discountPct 0-100, no duplicates), parse/serialize for edit pre-fill and submit",
+      "description": "Structured MOQ tier editor replacing raw JSON input — table with minQty/discountPct rows, add/remove buttons, validation (minQty>0, discountPct 0-100, no duplicates), parse/serialize for edit pre-fill and submit (structured table editor)",
       "test_file": "supplier-portal/tests/moqTierEditor.gcp-stg-0406.test.ts",
       "depends_on": null,
       "migration": null,

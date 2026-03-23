@@ -87,6 +87,10 @@ export default function ProductsPage() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // GCP-STG-0406: Structured MOQ tier editor state
+  type MoqTier = { minQty: number; discountPct: number };
+  const [moqTiersArray, setMoqTiersArray] = useState<MoqTier[]>([]);
+
   const [formData, setFormData] = useState<ProductInput>({
     name: '',
     brand: '', // GCP-STG-0292
@@ -229,6 +233,7 @@ export default function ProductsPage() {
     setShowForm(false);
     setEditingProduct(null);
     setHasUnsavedChanges(false); // GL-WF-062
+    setMoqTiersArray([]); // GCP-STG-0406: Reset tier editor
     // T-161: Clear image state
     setImageFile(null);
     setImagePreview(null);
@@ -350,6 +355,9 @@ export default function ProductsPage() {
       financeEligible: product.financeEligible || false,
       moqTiers: product.moqTiers ? (typeof product.moqTiers === 'string' ? product.moqTiers : JSON.stringify(product.moqTiers)) : '',
     });
+    // GCP-STG-0406: Parse existing moqTiers into structured editor state
+    const rawMoq = product.moqTiers ? (typeof product.moqTiers === 'string' ? product.moqTiers : JSON.stringify(product.moqTiers)) : '';
+    setMoqTiersArray(parseMoqTiers(rawMoq));
     setShowForm(true);
   };
 
@@ -442,8 +450,17 @@ export default function ProductsPage() {
         return;
       }
 
+      // GCP-STG-0406: Validate and serialize MOQ tiers
+      if (moqTiersArray.length > 0) {
+        const moqError = validateMoqTiers(moqTiersArray);
+        if (moqError) {
+          toast.error(moqError);
+          return;
+        }
+      }
+
       // T-161: Upload image first if a new file is selected
-      let submitData = { ...formData };
+      let submitData = { ...formData, moqTiers: serializeMoqTiers(moqTiersArray) };
       if (imageFile) {
         try {
           setIsUploadingImage(true);
@@ -496,6 +513,61 @@ export default function ProductsPage() {
           ? value === '' ? undefined : parseInt(value) || undefined
           : value,
     }));
+  };
+
+  // GCP-STG-0406: Parse moqTiers JSON string into structured array
+  const parseMoqTiers = (raw: string | undefined): MoqTier[] => {
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((t: Record<string, unknown>) => typeof t === 'object' && t !== null)
+        .map((t: Record<string, unknown>) => ({
+          minQty: Number(t.minQty) || 0,
+          discountPct: Number(t.discountPct) || 0,
+        }));
+    } catch {
+      return [];
+    }
+  };
+
+  // GCP-STG-0406: Serialize moqTiers array back to JSON for API
+  const serializeMoqTiers = (tiers: MoqTier[]): string => {
+    const valid = tiers.filter(t => t.minQty > 0);
+    return valid.length > 0 ? JSON.stringify(valid) : '';
+  };
+
+  // GCP-STG-0406: Validate moqTiers before submit
+  const validateMoqTiers = (tiers: MoqTier[]): string | null => {
+    for (let i = 0; i < tiers.length; i++) {
+      if (tiers[i].minQty <= 0) return `Tier ${i + 1}: Min Qty must be greater than 0`;
+      if (tiers[i].discountPct < 0 || tiers[i].discountPct > 100) return `Tier ${i + 1}: Discount must be 0–100%`;
+    }
+    const minQtys = tiers.map(t => t.minQty);
+    const uniqueMinQtys = new Set(minQtys);
+    if (uniqueMinQtys.size !== minQtys.length) return 'Duplicate Min Qty values are not allowed';
+    return null;
+  };
+
+  // GCP-STG-0406: Add a new empty tier row
+  const handleAddMoqTier = () => {
+    setHasUnsavedChanges(true);
+    setMoqTiersArray(prev => [...prev, { minQty: 0, discountPct: 0 }]);
+  };
+
+  // GCP-STG-0406: Remove a tier row by index
+  const handleRemoveMoqTier = (index: number) => {
+    setHasUnsavedChanges(true);
+    setMoqTiersArray(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // GCP-STG-0406: Update a tier field by index
+  const handleMoqTierChange = (index: number, field: keyof MoqTier, value: string) => {
+    setHasUnsavedChanges(true);
+    setMoqTiersArray(prev => prev.map((tier, i) =>
+      i === index ? { ...tier, [field]: parseFloat(value) || 0 } : tier
+    ));
   };
 
   // Filter products
@@ -943,14 +1015,71 @@ export default function ProductsPage() {
                     value={formData.deliveryTerms || ''} onChange={handleChange}
                     className="input" placeholder="e.g. Free above ₹5000" />
                 </div>
-                <div className="col-span-2">
-                  <label htmlFor="product-moqTiers" className="label">MOQ Tier Discounts (JSON)</label>
-                  <input type="text" id="product-moqTiers" name="moqTiers"
-                    value={formData.moqTiers || ''}
-                    onChange={handleChange}
-                    className="input font-mono text-xs"
-                    placeholder='[{"minQty":10,"discountPct":5},{"minQty":50,"discountPct":10}]' />
-                  <p className="text-xs text-slate-400 mt-1">Optional: JSON array of tier discounts by minimum quantity</p>
+                {/* GCP-STG-0406: Structured MOQ Tier Editor */}
+                <div className="col-span-2" data-testid="moq-tier-editor">
+                  <label className="label">MOQ Tier Discounts</label>
+                  {moqTiersArray.length > 0 && (
+                    <table className="w-full text-sm mb-2 border border-slate-200 rounded">
+                      <thead>
+                        <tr className="bg-slate-50">
+                          <th className="text-left px-3 py-1.5 font-medium text-slate-600">Min Qty</th>
+                          <th className="text-left px-3 py-1.5 font-medium text-slate-600">Discount %</th>
+                          <th className="px-3 py-1.5 w-16"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {moqTiersArray.map((tier, idx) => (
+                          <tr key={idx} className="border-t border-slate-100">
+                            <td className="px-2 py-1">
+                              <input
+                                type="number"
+                                data-testid={`moq-tier-minQty-${idx}`}
+                                value={tier.minQty || ''}
+                                onChange={(e) => handleMoqTierChange(idx, 'minQty', e.target.value)}
+                                className="input text-sm"
+                                placeholder="e.g. 10"
+                                min="1"
+                                step="1"
+                              />
+                            </td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="number"
+                                data-testid={`moq-tier-discountPct-${idx}`}
+                                value={tier.discountPct || ''}
+                                onChange={(e) => handleMoqTierChange(idx, 'discountPct', e.target.value)}
+                                className="input text-sm"
+                                placeholder="e.g. 5"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                              />
+                            </td>
+                            <td className="px-2 py-1 text-center">
+                              <button
+                                type="button"
+                                data-testid={`moq-tier-remove-${idx}`}
+                                onClick={() => handleRemoveMoqTier(idx)}
+                                className="text-red-500 hover:text-red-700 text-xs font-medium"
+                                title="Remove tier"
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                  <button
+                    type="button"
+                    data-testid="moq-tier-add"
+                    onClick={handleAddMoqTier}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    + Add Tier
+                  </button>
+                  <p className="text-xs text-slate-400 mt-1">Optional: define quantity-based discount tiers</p>
                 </div>
                 {/* GCP-STG-0298: Duplicate procurement fields removed — canonical fields are in "Procurement Packaging" section above */}
                 <div className="col-span-2 flex items-center gap-2">
