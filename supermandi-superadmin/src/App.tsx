@@ -104,6 +104,7 @@ import { ComplianceTab } from "./tabs/ComplianceTab";  // SA-P2-004: Compliance 
 import { CatalogTab } from "./tabs/CatalogTab";  // SA-P2-006: Product category override
 import { DemandPressureTab } from "./tabs/DemandPressureTab";  // V3-HARDEN-185: Cross-store demand pressure
 import { AllocationsDashboardTab } from "./tabs/AllocationsDashboardTab";  // V3-FIX-187: Allocation management
+import { SettlementsTab } from "./tabs/SettlementsTab";  // GCP-STG-0355: Settlement management
 // T-083: Lucide sidebar icons
 import {
   Activity, Store, Smartphone, Users, AlertTriangle, Receipt,
@@ -119,6 +120,7 @@ import {
   ClipboardCheck,  // SA-P2-004: Compliance overview
   TrendingDown,  // V3-HARDEN-185: Demand pressure
   GitBranch,  // V3-FIX-187: Allocations
+  Banknote,  // GCP-STG-0355: Settlements
 } from "lucide-react";
 import "./App.css";
 
@@ -155,6 +157,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   "catalog": "Catalog",
   "demand-pressure": "Demand Pressure",
   "allocations": "Allocations",
+  "settlements": "Settlements",
 };
 
 // T-114: Valid tab keys for hash routing
@@ -3234,6 +3237,9 @@ export default function App() {
             <button aria-current={tab === "catalog" ? "page" : undefined} className={`sidebarItem ${tab === "catalog" ? "sidebarItemActive" : ""}`} onClick={() => setTab("catalog")}>
               <span className="sidebarItemLabel"><Package size={18} className={`sa-nav-icon ${tab === "catalog" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Catalog</span>
             </button>
+            <button aria-current={tab === "settlements" ? "page" : undefined} className={`sidebarItem ${tab === "settlements" ? "sidebarItemActive" : ""}`} onClick={() => setTab("settlements")}>
+              <span className="sidebarItemLabel"><Banknote size={18} className={`sa-nav-icon ${tab === "settlements" ? "sa-nav-icon--active" : "sa-nav-icon--inactive"}`} />Settlements</span>
+            </button>
           </div>
 
           {/* Monitoring */}
@@ -3301,6 +3307,7 @@ export default function App() {
           <button role="tab" aria-selected={tab === "allocations"} className={tab === "allocations" ? "tab tabActive" : "tab"} onClick={() => setTab("allocations")}>Allocations</button>
           <button role="tab" aria-selected={tab === "whatsapp"} className={tab === "whatsapp" ? "tab tabActive" : "tab"} onClick={() => setTab("whatsapp")}>WhatsApp</button>
           <button role="tab" aria-selected={tab === "catalog"} className={tab === "catalog" ? "tab tabActive" : "tab"} onClick={() => setTab("catalog")}>Catalog</button>
+          <button role="tab" aria-selected={tab === "settlements"} className={tab === "settlements" ? "tab tabActive" : "tab"} onClick={() => setTab("settlements")}>Settlements</button>
         </nav>
 
         <div id="main-content" className="mainContent" role="main">
@@ -3865,6 +3872,8 @@ export default function App() {
       {tab === "maintenance" && <MaintenanceTab />}
 
       {tab === "catalog" && <CatalogTab />}
+
+      {tab === "settlements" && <SettlementsTab />}
 
         </div>{/* end mainContent */}
       </div>{/* end pageLayout */}
