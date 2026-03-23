@@ -338,7 +338,7 @@ function checkStagedFiles() {
   }
 
   // FM-26: Check for broad staging (git add . / git add -A indicators)
-  const hasDotEnv = stagedFiles.some(f => f.startsWith('.env') || f.includes('/.env'));
+  const hasDotEnv = stagedFiles.some(f => (f.startsWith('.env') || f.includes('/.env')) && !f.endsWith('.example'));
   if (hasDotEnv) {
     failures.push({
       gate: 'FM-26',
