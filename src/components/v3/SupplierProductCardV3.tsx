@@ -49,6 +49,8 @@ export interface SupplierProduct {
   billingModel?: string;
   // GCP-STG-0408: Product image URL for BUY tile
   imageUrl?: string;
+  // GCP-STG-0407: Supplier stock availability
+  supplierStockQty?: number | null;
 }
 
 // V3-FIX-136: Card is browse-only — no inline qty/add controls
@@ -66,11 +68,21 @@ function getStockUrgency(days?: number): "urgent" | "low" | "ok" | "unknown" {
   return "ok";
 }
 
+// GCP-STG-0407: Supplier stock availability indicator
+function getSupplierStockStatus(qty?: number | null): { label: string; level: "inStock" | "lowStock" | "outOfStock" | "na" } {
+  if (qty == null) return { label: "Stock N/A", level: "na" };
+  if (qty === 0) return { label: "Out of Stock", level: "outOfStock" };
+  if (qty <= 10) return { label: "Low Stock", level: "lowStock" };
+  return { label: "In Stock", level: "inStock" };
+}
+
 export default function SupplierProductCardV3({ product, orderQtyCases, onPress }: SupplierProductCardV3Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const marginPct = product.mrpMinor > 0 ? Math.round((1 - product.ptrMinor / product.mrpMinor) * 100) : 0;
   const urgency = getStockUrgency(product.daysOfStock);
+  // GCP-STG-0407: Supplier stock availability
+  const supplierStock = getSupplierStockStatus(product.supplierStockQty);
 
   return (
     <Pressable style={[styles.card, urgency === "urgent" && styles.cardUrgent]} onPress={onPress} accessibilityRole="button">
@@ -139,16 +151,34 @@ export default function SupplierProductCardV3({ product, orderQtyCases, onPress 
 
           {/* V3-FIX-136: Browse-only — no inline qty/add. Tap card for details. */}
           <View style={styles.bottomRow}>
-            <Text style={[
-              styles.stockLabel,
-              urgency === "urgent" && styles.stockUrgent,
-              urgency === "low" && styles.stockLow,
-              urgency === "ok" && styles.stockOk,
-            ]}>
-              {product.currentStock != null
-                ? `Stock: ${product.currentStock}${product.daysOfStock != null ? ` (${urgency === "urgent" ? "runs out today!" : urgency === "low" ? `${product.daysOfStock}d left` : `${product.daysOfStock}d`})` : ""}`
-                : "Stock: —"}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={[
+                styles.stockLabel,
+                urgency === "urgent" && styles.stockUrgent,
+                urgency === "low" && styles.stockLow,
+                urgency === "ok" && styles.stockOk,
+              ]}>
+                {product.currentStock != null
+                  ? `Stock: ${product.currentStock}${product.daysOfStock != null ? ` (${urgency === "urgent" ? "runs out today!" : urgency === "low" ? `${product.daysOfStock}d left` : `${product.daysOfStock}d`})` : ""}`
+                  : "Stock: —"}
+              </Text>
+              {/* GCP-STG-0407: Supplier stock availability indicator */}
+              <View style={[
+                styles.supplierStockBadge,
+                supplierStock.level === "inStock" && styles.supplierStockInStock,
+                supplierStock.level === "lowStock" && styles.supplierStockLow,
+                supplierStock.level === "outOfStock" && styles.supplierStockOut,
+                supplierStock.level === "na" && styles.supplierStockNa,
+              ]}>
+                <Text style={[
+                  styles.supplierStockText,
+                  supplierStock.level === "inStock" && styles.supplierStockTextInStock,
+                  supplierStock.level === "lowStock" && styles.supplierStockTextLow,
+                  supplierStock.level === "outOfStock" && styles.supplierStockTextOut,
+                  supplierStock.level === "na" && styles.supplierStockTextNa,
+                ]}>{supplierStock.label}</Text>
+              </View>
+            </View>
             {(orderQtyCases ?? 0) > 0 ? (
               <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{orderQtyCases} in cart</Text></View>
             ) : (
@@ -209,6 +239,17 @@ function createStyles(colors: ColorPalette) {
     cartBadge: { backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
     cartBadgeText: { color: colors.textInverse, fontSize: 10, fontWeight: "700" },
     tapHint: { fontSize: 11, color: colors.textTertiary, fontWeight: "500" },
+    // GCP-STG-0407: Supplier stock availability badge styles
+    supplierStockBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+    supplierStockInStock: { backgroundColor: colors.successSoft },
+    supplierStockLow: { backgroundColor: colors.warningSoft },
+    supplierStockOut: { backgroundColor: colors.errorSoft },
+    supplierStockNa: { backgroundColor: colors.backgroundSecondary },
+    supplierStockText: { fontSize: 10, fontWeight: "700" },
+    supplierStockTextInStock: { color: colors.success },
+    supplierStockTextLow: { color: colors.warningDark },
+    supplierStockTextOut: { color: colors.error },
+    supplierStockTextNa: { color: colors.textTertiary },
     // V3-FIX-181: Semantic badge styles from chipColors tokens
     infoBadge: { backgroundColor: chipColors(colors).info.bg, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
     infoBadgeText: { fontSize: 10, fontWeight: "700", color: chipColors(colors).info.text }, // GCP-STG-0307: raised from 9

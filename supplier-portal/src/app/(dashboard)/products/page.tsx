@@ -124,6 +124,7 @@ export default function ProductsPage() {
     creditDays: undefined,
     financeEligible: false,
     moqTiers: '',
+    stockQty: undefined, // GCP-STG-0407: Supplier stock availability
   });
 
   // GL-WF-063: Paginated products query
@@ -225,6 +226,7 @@ export default function ProductsPage() {
         creditDays: product.creditDays ?? undefined,
         financeEligible: product.financeEligible || false,
         moqTiers: product.moqTiers ? (typeof product.moqTiers === 'string' ? product.moqTiers : JSON.stringify(product.moqTiers)) : '',
+        stockQty: product.stockQty ?? undefined, // GCP-STG-0407
       },
     });
   };
@@ -273,6 +275,7 @@ export default function ProductsPage() {
       creditDays: undefined,
       financeEligible: false,
       moqTiers: '',
+      stockQty: undefined, // GCP-STG-0407
     });
   };
 
@@ -354,6 +357,7 @@ export default function ProductsPage() {
       creditDays: product.creditDays ?? undefined,
       financeEligible: product.financeEligible || false,
       moqTiers: product.moqTiers ? (typeof product.moqTiers === 'string' ? product.moqTiers : JSON.stringify(product.moqTiers)) : '',
+      stockQty: product.stockQty ?? undefined, // GCP-STG-0407
     });
     // GCP-STG-0406: Parse existing moqTiers into structured editor state
     const rawMoq = product.moqTiers ? (typeof product.moqTiers === 'string' ? product.moqTiers : JSON.stringify(product.moqTiers)) : '';
@@ -509,7 +513,7 @@ export default function ProductsPage() {
           ? value === '' ? undefined : Math.round((parseFloat(value || '0') + Number.EPSILON) * 100)
           : name === 'tradeDiscountPct'
           ? value === '' ? undefined : parseFloat(value) || undefined
-          : name === 'deliverySlaDays' || name === 'creditDays' || name === 'procurementPackQty'
+          : name === 'deliverySlaDays' || name === 'creditDays' || name === 'procurementPackQty' || name === 'stockQty'
           ? value === '' ? undefined : parseInt(value) || undefined
           : value,
     }));
@@ -1002,6 +1006,13 @@ export default function ProductsPage() {
                   <input type="number" id="product-creditDays" name="creditDays"
                     value={formData.creditDays ?? ''} onChange={handleChange}
                     className="input" placeholder="e.g. 7" min="0" />
+                </div>
+                {/* GCP-STG-0407: Supplier stock availability */}
+                <div>
+                  <label htmlFor="product-stockQty" className="label">Available Stock</label>
+                  <input type="number" id="product-stockQty" name="stockQty"
+                    value={formData.stockQty ?? ''} onChange={handleChange}
+                    className="input" placeholder="e.g. 500" min="0" step="1" />
                 </div>
                 <div>
                   <label htmlFor="product-deliverySlaDays" className="label">Delivery SLA (days)</label>

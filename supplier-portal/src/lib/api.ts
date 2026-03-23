@@ -515,6 +515,7 @@ export interface Product {
   publishedTermsVersion?: number | null;
   publishedAt?: string | null;
   moqTiers?: any;
+  stockQty?: number; // GCP-STG-0407: Supplier stock availability
   procurementUnit?: string | null;
   procurementPackQty?: number | null;
   baseStockUnit?: string | null;
@@ -555,6 +556,7 @@ export interface ProductInput {
   creditDays?: number;
   financeEligible?: boolean;
   moqTiers?: string; // JSON string: [{minQty, discountPct}]
+  stockQty?: number; // GCP-STG-0407: Supplier stock availability
   // packageType maps to procurementUnit — no separate field needed
 }
 
