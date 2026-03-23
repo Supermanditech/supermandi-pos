@@ -159,7 +159,12 @@ export default function LoginPage() {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
+        const msg = err instanceof Error ? err.message : 'Failed to send OTP. Please try again.';
+        setError(msg);
+        // GCP-STG-0454: Auto-switch to password mode on Firebase rate limit
+        if (msg.includes('Too many OTP requests')) {
+          setAuthMode('password');
+        }
       }
     } finally {
       setIsLoading(false);
@@ -242,7 +247,13 @@ export default function LoginPage() {
       setOtpExpirySeconds(300); // AUTH-OTP-001: Reset expiry on resend
       toast.success('New code sent — please enter the new code.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resend OTP.');
+      const msg = err instanceof Error ? err.message : 'Failed to resend OTP.';
+      setError(msg);
+      // GCP-STG-0454: Auto-switch to password mode on Firebase rate limit (resend path)
+      if (msg.includes('Too many OTP requests')) {
+        setAuthMode('password');
+        setStep('phone');
+      }
     } finally {
       setIsLoading(false);
     }

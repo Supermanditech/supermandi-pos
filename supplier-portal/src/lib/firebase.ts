@@ -179,7 +179,8 @@ export async function sendOtp(phoneNumber: string, buttonId?: string): Promise<b
     if (errorCode === 'auth/invalid-app-credential' || errorCode === 'auth/captcha-check-failed') {
       userMessage = 'Unable to send OTP. Please reload and try again, or contact support.';
     } else if (errorCode === 'auth/too-many-requests') {
-      userMessage = 'Too many attempts. Please wait a few minutes and try again.';
+      // GCP-STG-0454: Suggest password fallback on OTP rate limit (parity with retailer-admin GCP-STG-0147)
+      userMessage = 'Too many OTP requests. Try logging in with your password instead, or wait a few minutes.';
     } else if (errorCode === 'auth/invalid-phone-number') {
       userMessage = 'Invalid phone number. Please check and try again.';
     } else if (errorCode === 'auth/quota-exceeded') {
@@ -209,8 +210,22 @@ export async function verifyOtp(otp: string): Promise<string> {
     confirmationResult = null;
     return idToken;
   } catch (error: unknown) {
+    // GCP-STG-0454: Differentiate rate-limit errors from invalid OTP (parity with retailer-admin)
+    const firebaseError = error as { code?: string; message?: string };
+    const errorCode = firebaseError.code || '';
+
+    if (errorCode === 'auth/too-many-requests') {
+      throw new Error('Too many attempts. Please wait 30 minutes and try again.');
+    } else if (errorCode === 'auth/quota-exceeded') {
+      throw new Error('Verification service temporarily unavailable. Please try again later.');
+    } else if (errorCode === 'auth/code-expired') {
+      throw new Error('OTP has expired. Please request a new one.');
+    } else if (errorCode === 'auth/invalid-verification-code') {
+      throw new Error('Invalid OTP. Please check the code and try again.');
+    }
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    throw new Error(`Invalid OTP: ${errorMessage}`);
+    throw new Error(`Verification failed: ${errorMessage}`);
   }
 }
 
