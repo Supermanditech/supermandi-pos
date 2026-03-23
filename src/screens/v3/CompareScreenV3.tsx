@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { View, Pressable, ScrollView, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { useThemeColors } from "../../theme";
@@ -55,6 +56,7 @@ type CompareScreenV3Props = {
 export default function CompareScreenV3({ visible, productName, productId, packSize, mrpMinor, currentStock, sellPriceMinor, weeklyNeed, onClose, onOrder }: CompareScreenV3Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [offers, setOffers] = useState<SupplierOffer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,7 +116,7 @@ export default function CompareScreenV3({ visible, productName, productId, packS
   if (!visible) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={onClose} accessibilityLabel="Back">
