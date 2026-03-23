@@ -268,6 +268,39 @@ export async function checkCatalogFreshness(
 }
 
 // =============================================================================
+// GCP-STG-0336: Delta Sync (Incremental Product Sync)
+// =============================================================================
+
+export interface DeltaSyncResponse {
+  success: boolean;
+  fullReloadRequired: boolean;
+  upserted?: StoreProductListItem[];
+  deletedIds?: string[];
+  totalChanged?: number;
+  storeId?: string;
+}
+
+/**
+ * GCP-STG-0336: Fetch only products changed since the given timestamp.
+ * Returns upserted products and deletedIds.
+ * If fullReloadRequired is true, the caller must fall back to a full catalog reload.
+ *
+ * @param since - ISO timestamp of last sync
+ * @returns DeltaSyncResponse
+ */
+export async function fetchDeltaSync(
+  since: string
+): Promise<DeltaSyncResponse> {
+  const params = new URLSearchParams({ since });
+
+  const response = await apiClient.get<DeltaSyncResponse>(
+    `/api/v1/pos/store-products/delta?${params}`
+  );
+
+  return response;
+}
+
+// =============================================================================
 // HELPER: Flatten groups for simple list display
 // =============================================================================
 

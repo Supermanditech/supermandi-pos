@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { eventLogger } from '../services/eventLogger';
 import * as productsApi from '../services/api/productsApi';
-import { checkCatalogFreshness } from '../services/api/sellSearchApi';
+import { checkCatalogFreshness, fetchDeltaSync } from '../services/api/sellSearchApi';
 import { storeScopedStorage } from "../services/storeScope";
 import { upsertStockFromProducts } from "../services/stockService";
 import { getDeviceToken } from "../services/deviceSession";
@@ -174,17 +174,99 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
   },
 
   // RET-POS-SYNC-010: Check freshness via backend and re-fetch if stale
+  // GCP-STG-0336: Try delta sync first, fall back to full reload
   checkAndRefresh: async () => {
     // Guard: do not call protected API without a device session
     const token = await getDeviceToken();
     if (!token) return;
 
-    const { lastSyncedAt, loadProducts } = get();
+    const { lastSyncedAt, products, loadProducts } = get();
     try {
       const resp = await checkCatalogFreshness(lastSyncedAt);
-      if (resp.stale) {
-        await loadProducts();
+      if (!resp.stale) return;
+
+      // GCP-STG-0336: Attempt delta sync if we have a lastSyncedAt timestamp
+      if (lastSyncedAt) {
+        try {
+          const delta = await fetchDeltaSync(lastSyncedAt);
+
+          if (!delta.fullReloadRequired && delta.upserted && delta.deletedIds) {
+            // Merge delta into local store
+            const deletedSet = new Set(delta.deletedIds);
+            // Remove deleted products, then update/add upserted ones
+            const existing = products.filter(p => !deletedSet.has(p.id));
+
+            // Build map of existing products by id for fast lookup
+            const byId = new Map(existing.map(p => [p.id, p]));
+
+            // Apply upserts
+            for (const item of delta.upserted) {
+              const raw = item as any;
+              const priceSources = {
+                inventoryPrice: raw.sellPrice ?? null,
+                variantPrice: null,
+                variantMrp: raw.mrp ?? null,
+              };
+              const priceMinor = priceSources.inventoryPrice ?? priceSources.variantMrp ?? 0;
+
+              const mapped: Product = {
+                id: raw.productId,
+                storeProductId: raw.storeProductId ?? raw.store_product_id,
+                name: raw.name,
+                priceMinor: typeof priceMinor === 'number' && Number.isFinite(priceMinor) ? Math.max(0, priceMinor) : 0,
+                mrpMinor: raw.mrp != null ? Math.round(raw.mrp * 100) : undefined,
+                purchasePriceMinor: raw.purchasePrice ?? raw.purchasePriceMinor ?? raw.purchase_price_minor,
+                currency: 'INR',
+                barcode: raw.barcode ?? undefined,
+                category: raw.category,
+                stock: typeof raw.currentStock === 'number' ? raw.currentStock : 0,
+                description: raw.description,
+                brand: raw.brand,
+                imageUrl: raw.imageUrl ?? raw.image_url,
+                unit: raw.unit,
+                hsnCode: raw.hsnCode ?? raw.hsn_code,
+                gstRate: raw.gstRate ?? raw.gst_rate,
+                netContentValue: raw.netContentValue ?? raw.net_content_value,
+                netContentUnit: raw.netContentUnit ?? raw.net_content_unit,
+                supplierId: raw.supplierId ?? raw.supplier_id,
+                supplierName: raw.supplierName ?? raw.supplier_name,
+                metadataUpdatedAt: raw.metadataUpdatedAt ?? raw.metadata_updated_at,
+                productMode: raw.productMode ?? raw.product_mode ?? raw.mode ?? undefined,
+                soldBy: raw.soldBy ?? raw.sold_by ?? undefined,
+                rateUnit: raw.rateUnit ?? raw.rate_unit ?? undefined,
+                procurementUnit: raw.procurementUnit ?? raw.procurement_unit ?? undefined,
+                procurementPackQty: raw.procurementPackQty ?? raw.procurement_pack_qty ?? undefined,
+                baseStockUnit: raw.baseStockUnit ?? raw.base_stock_unit ?? undefined,
+                allowFractionalSell: raw.allowFractionalSell ?? raw.allow_fractional_sell ?? undefined,
+                conversionPrecision: raw.conversionPrecision ?? raw.conversion_precision ?? undefined,
+                conversionConfirmed: raw.conversionConfirmed ?? raw.conversion_confirmed ?? undefined,
+              };
+
+              byId.set(mapped.id, mapped);
+            }
+
+            const merged = Array.from(byId.values());
+            const now = new Date().toISOString();
+            set({ products: merged, lastSyncedAt: now });
+
+            // Persist merged cache + update stock
+            await storeScopedStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(merged));
+            upsertStockFromProducts(merged);
+
+            await eventLogger.log('PRODUCTS_DELTA_SYNCED', {
+              upserted: delta.upserted.length,
+              deleted: delta.deletedIds.length,
+              totalAfter: merged.length,
+            });
+            return; // Delta sync succeeded, no full reload needed
+          }
+        } catch {
+          // Delta sync failed — fall through to full reload
+        }
       }
+
+      // Full reload fallback (no lastSyncedAt, or delta returned fullReloadRequired, or delta failed)
+      await loadProducts();
     } catch {
       // Freshness check failures are non-critical
     }

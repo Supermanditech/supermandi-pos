@@ -22,6 +22,7 @@ export type EventType =
   | 'PRINT_FAILED'
   | 'PRODUCTS_LOADED'
   | 'PRODUCTS_LOAD_FAILED'
+  | 'PRODUCTS_DELTA_SYNCED'
   | 'ERROR'
   | 'USER_ACTION'
   | 'stock_drift'; // T-178: Stock reconciliation drift event

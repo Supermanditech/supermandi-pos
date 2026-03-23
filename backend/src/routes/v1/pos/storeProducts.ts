@@ -959,6 +959,191 @@ posStoreProductsRouter.get("/store-products/freshness", requireDeviceToken, asyn
 });
 
 /**
+ * GCP-STG-0336: GET /api/v1/pos/store-products/delta?since=<ISO timestamp>
+ * Incremental product sync — returns only products changed since the given timestamp.
+ * If more than 500 changes exist, returns fullReloadRequired: true so POS falls back.
+ * Also returns deletedIds for products that became is_active=false since the timestamp.
+ */
+posStoreProductsRouter.get("/store-products/delta", requireDeviceToken, async (req, res) => {
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products/delta");
+  const since = String(req.query.since || "").trim();
+
+  if (!since) {
+    return res.status(400).json({ error: "VALIDATION_ERROR", message: "since query parameter is required (ISO timestamp)" });
+  }
+
+  const sinceDate = new Date(since);
+  if (isNaN(sinceDate.getTime())) {
+    return res.status(400).json({ error: "VALIDATION_ERROR", message: "since must be a valid ISO timestamp" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
+  }
+
+  const DELTA_LIMIT = 500;
+
+  try {
+    // Count total changed products (active + deactivated) to decide if full reload is needed
+    const countResult = await pool.query(
+      `SELECT COUNT(*)::int as total
+       FROM catalog.store_products sp
+       JOIN catalog.products p ON p.id = sp.product_id
+       WHERE sp.store_id = $1
+         AND (
+           sp.updated_at > $2
+           OR sp.metadata_updated_at > $2
+           OR COALESCE(sp.price_updated_at, sp.updated_at) > $2
+           OR p.updated_at > $2
+         )`,
+      [storeId, sinceDate.toISOString()]
+    );
+
+    const totalChanged = countResult.rows[0]?.total || 0;
+
+    if (totalChanged > DELTA_LIMIT) {
+      return res.json({
+        success: true,
+        fullReloadRequired: true,
+        totalChanged,
+        deltaLimit: DELTA_LIMIT,
+        storeId,
+      });
+    }
+
+    // Fetch changed active products (same fields as /list endpoint)
+    const dataResult = await pool.query(
+      `SELECT
+          sp.id as store_product_id,
+          sp.product_id,
+          p.name,
+          p.primary_barcode,
+          spb.barcode as store_barcode,
+          sp.sell_price,
+          sp.mrp,
+          sp.purchase_price,
+          sp.display_name,
+          sp.product_mode,
+          sp.metadata_updated_at,
+          sp.expiry_date,
+          sp.batch_number,
+          COALESCE(sb.current_qty, sp.current_stock, 0) as current_stock,
+          COALESCE(sp.brand, p.brand) as brand,
+          p.unit,
+          p.category,
+          GREATEST(sp.updated_at, p.updated_at) as updated_at,
+          COALESCE(sp.image_url, p.image_url) AS image_url,
+          p.default_gst_rate AS gst_rate,
+          p.net_content_value,
+          p.net_content_unit,
+          sp.sold_by,
+          sp.rate_unit,
+          sp.procurement_unit,
+          sp.procurement_pack_qty,
+          sp.base_stock_unit,
+          sp.allow_fractional_sell,
+          sp.conversion_precision,
+          sp.conversion_confirmed,
+          p.description,
+          p.hsn_code,
+          sp.supplier_id,
+          sup.business_name AS supplier_name,
+          sp.low_stock_alert_qty,
+          sp.notes,
+          p.pack_size,
+          p.pack_unit
+        FROM catalog.store_products sp
+        JOIN catalog.products p ON p.id = sp.product_id
+        LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
+        LEFT JOIN supplier.suppliers sup ON sup.id = sp.supplier_id
+        LEFT JOIN LATERAL (
+          SELECT barcode FROM catalog.store_product_barcodes
+          WHERE store_product_id = sp.id AND store_id = sp.store_id
+          LIMIT 1
+        ) spb ON true
+        WHERE sp.store_id = $1
+          AND sp.is_active = true
+          AND p.is_active = true
+          AND (
+            sp.updated_at > $2
+            OR sp.metadata_updated_at > $2
+            OR COALESCE(sp.price_updated_at, sp.updated_at) > $2
+            OR p.updated_at > $2
+          )
+        ORDER BY GREATEST(sp.updated_at, p.updated_at) DESC
+        LIMIT $3`,
+      [storeId, sinceDate.toISOString(), DELTA_LIMIT]
+    );
+
+    const upserted = dataResult.rows.map((row: any) => ({
+      storeProductId: row.store_product_id,
+      productId: row.product_id,
+      name: row.display_name || row.name,
+      barcode: row.store_barcode || row.primary_barcode || null,
+      sellPrice: row.sell_price,
+      mrp: row.mrp || null,
+      purchasePrice: row.purchase_price || null,
+      currentStock: parseStock(row.current_stock),
+      brand: row.brand || null,
+      unit: row.unit || "pcs",
+      category: row.category || null,
+      displayName: row.display_name || null,
+      mode: row.product_mode || null,
+      updatedAt: row.updated_at || null,
+      metadataUpdatedAt: row.metadata_updated_at || null,
+      expiry_date: row.expiry_date || null,
+      batch_number: row.batch_number || null,
+      image_url: row.image_url || null,
+      gst_rate: row.gst_rate != null ? Number(row.gst_rate) : null,
+      net_content_value: row.net_content_value != null ? Number(row.net_content_value) : null,
+      net_content_unit: row.net_content_unit || null,
+      soldBy: row.sold_by || null,
+      rateUnit: row.rate_unit || null,
+      procurementUnit: row.procurement_unit || null,
+      procurementPackQty: row.procurement_pack_qty != null ? Number(row.procurement_pack_qty) : null,
+      baseStockUnit: row.base_stock_unit || null,
+      allowFractionalSell: row.allow_fractional_sell || false,
+      conversionPrecision: row.conversion_precision ?? 2,
+      conversionConfirmed: row.conversion_confirmed || false,
+      description: row.description || null,
+      hsnCode: row.hsn_code || null,
+      supplierId: row.supplier_id || null,
+      supplierName: row.supplier_name || null,
+      lowStockAlertQty: row.low_stock_alert_qty != null ? Number(row.low_stock_alert_qty) : null,
+      notes: row.notes || null,
+      caseSize: row.pack_size != null ? Number(row.pack_size) : null,
+      packUnit: row.pack_unit || null,
+    }));
+
+    // Fetch products that became inactive since the timestamp (deletions)
+    const deletedResult = await pool.query(
+      `SELECT sp.product_id
+       FROM catalog.store_products sp
+       WHERE sp.store_id = $1
+         AND sp.is_active = false
+         AND sp.updated_at > $2
+       LIMIT $3`,
+      [storeId, sinceDate.toISOString(), DELTA_LIMIT]
+    );
+
+    const deletedIds = deletedResult.rows.map((row: any) => row.product_id as string);
+
+    return res.json({
+      success: true,
+      fullReloadRequired: false,
+      upserted,
+      deletedIds,
+      totalChanged,
+      storeId,
+    });
+  } catch (error) {
+    log.error("[storeProducts] Delta sync error:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Delta sync failed" });
+  }
+});
+
+/**
  * PATCH /api/v1/pos/store-products/price
  * Update sell price for a store product (by barcode or productId)
  * Used when POS user edits price inline
