@@ -77,6 +77,37 @@ export function normalizeBarcode(raw: string): string {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// GCP-STG-0513: EAN/UPC CHECKSUM VALIDATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Validate the check digit of EAN-13, EAN-8, or UPC-A barcodes using GS1 mod-10 algorithm.
+ * Returns true if valid or if the barcode length is not standard (no validation possible).
+ * Logs a warning for invalid checksums but does NOT block lookup (some barcodes are non-standard).
+ */
+export function validateBarcodeChecksum(barcode: string): boolean {
+  if (!/^\d+$/.test(barcode)) return true; // Non-numeric — skip validation
+  const len = barcode.length;
+  if (len !== 8 && len !== 12 && len !== 13) return true; // Not a standard EAN/UPC length
+
+  const digits = barcode.split("").map(Number);
+  const checkDigit = digits[len - 1];
+  let sum = 0;
+  for (let i = 0; i < len - 1; i++) {
+    // For EAN-13: odd positions (0-indexed) get weight 1, even get weight 3
+    // For EAN-8 and UPC-A: same pattern applies
+    const weight = i % 2 === 0 ? (len === 13 ? 1 : 3) : (len === 13 ? 3 : 1);
+    sum += digits[i] * weight;
+  }
+  const expected = (10 - (sum % 10)) % 10;
+  if (expected !== checkDigit) {
+    console.warn(`GCP-STG-0513: Barcode checksum invalid: ${barcode} (expected ${expected}, got ${checkDigit})`);
+    return false;
+  }
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // DUPLICATE SUPPRESSION
 // ═══════════════════════════════════════════════════════════════════════════════
 
