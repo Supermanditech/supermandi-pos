@@ -233,6 +233,14 @@ export default function SellScreenV3() {
   const cartTotal = useCartStore((s) => s.items.reduce((sum, item) => sum + item.priceMinor * item.quantity, 0));
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
+  // GCP-STG-0367: Pre-compute cart ID + barcode sets for O(1) lookup instead of O(m) .some()
+  const cartIdSet = useMemo(() => new Set(cartItems.map(c => c.id)), [cartItems]);
+  const cartBarcodeSet = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of cartItems) { if (c.barcode) s.add(c.barcode); }
+    return s;
+  }, [cartItems]);
+
   // V3-FIX-041: Filter by category + use frequent products when "Frequent" selected
   const tileProducts: ProductTileData[] = useMemo(() => {
     // Source: Frequent loads from API, other categories filter from products store
@@ -251,8 +259,9 @@ export default function SellScreenV3() {
         });
 
     const sorted = [...filtered].sort((a, b) => {
-      const aInCart = cartItems.some(c => c.id === a.id || c.barcode === a.barcode) ? 1 : 0;
-      const bInCart = cartItems.some(c => c.id === b.id || c.barcode === b.barcode) ? 1 : 0;
+      // GCP-STG-0367: O(1) cart membership check via Set instead of O(m) .some()
+      const aInCart = (cartIdSet.has(a.id) || (a.barcode ? cartBarcodeSet.has(a.barcode) : false)) ? 1 : 0;
+      const bInCart = (cartIdSet.has(b.id) || (b.barcode ? cartBarcodeSet.has(b.barcode) : false)) ? 1 : 0;
       if (aInCart !== bInCart) return bInCart - aInCart;
       const aStock = (a.stock ?? 0) > 0 ? 1 : 0;
       const bStock = (b.stock ?? 0) > 0 ? 1 : 0;
@@ -260,7 +269,7 @@ export default function SellScreenV3() {
       return a.name.localeCompare(b.name);
     });
     return sorted.map(productToTileData);
-  }, [products, cartItems, selectedCategory, frequentProducts]);
+  }, [products, cartItems, selectedCategory, frequentProducts, cartIdSet, cartBarcodeSet]);
 
   // Get cart qty for a product
   const getCartQty = useCallback(

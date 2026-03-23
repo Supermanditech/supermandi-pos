@@ -161,6 +161,28 @@ export interface Product {
   allowFractionalSell?: boolean;
   conversionPrecision?: number;
   conversionConfirmed?: boolean;
+  // GCP-STG-0367: Pre-computed lowercase fields for O(1) search (no per-keystroke toLowerCase)
+  _searchName?: string;
+  _searchBrand?: string;
+  _searchBarcode?: string;
+  _searchCategory?: string;
+  _searchDescription?: string;
+}
+
+// GCP-STG-0367: Search result cap — avoids rendering thousands of tiles on broad queries
+const SEARCH_RESULT_CAP = 100;
+
+/**
+ * GCP-STG-0367: Attach pre-computed lowercase search fields to a product.
+ * Called once when products are loaded/synced, not on every keystroke.
+ */
+export function attachSearchFields(product: Product): Product {
+  product._searchName = product.name?.toLowerCase() ?? '';
+  product._searchBrand = product.brand?.toLowerCase() ?? '';
+  product._searchBarcode = product.barcode?.toLowerCase() ?? '';
+  product._searchCategory = product.category?.toLowerCase() ?? '';
+  product._searchDescription = product.description?.toLowerCase() ?? '';
+  return product;
 }
 
 interface ProductsState {
@@ -236,6 +258,8 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
           };
         });
 
+        // GCP-STG-0367: Pre-compute lowercase search fields at load time
+        mapped.forEach(attachSearchFields);
         allProducts.push(...mapped);
 
         // GCP-STG-0083: Update store incrementally — first chunk visible immediately
@@ -264,6 +288,8 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       try {
         const productsData = await readProductsChunked();
         if (productsData && productsData.length > 0) {
+          // GCP-STG-0367: Pre-compute search fields on cache load
+          productsData.forEach(attachSearchFields);
           set({ products: productsData, loading: false, error: null });
           upsertStockFromProducts(productsData);
           await eventLogger.log('PRODUCTS_LOADED', {
@@ -361,6 +387,8 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
                 conversionConfirmed: raw.conversionConfirmed ?? raw.conversion_confirmed ?? undefined,
               };
 
+              // GCP-STG-0367: Pre-compute search fields on delta upsert
+              attachSearchFields(mapped);
               byId.set(mapped.id, mapped);
             }
 
@@ -404,19 +432,28 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     return products.find(product => product.id === barcode) ?? undefined;
   },
 
+  // GCP-STG-0367: Pre-computed lowercase fields + capped results + for-loop early break
+  // GCP-STG-0093: Multi-parameter search — name, barcode, category, brand, description
   searchProducts: (query: string) => {
     const { products } = get();
     if (!query.trim()) return products;
 
-    const lowercaseQuery = query.toLowerCase();
-    // GCP-STG-0093: Multi-parameter search — name, barcode, category, brand, description
-    return products.filter(product =>
-      product.name.toLowerCase().includes(lowercaseQuery) ||
-      (product.barcode ? product.barcode.toLowerCase().includes(lowercaseQuery) : false) ||
-      product.category?.toLowerCase().includes(lowercaseQuery) ||
-      (product as any).brand?.toLowerCase().includes(lowercaseQuery) ||
-      (product as any).description?.toLowerCase().includes(lowercaseQuery)
-    );
+    const lq = query.toLowerCase();
+    const results: Product[] = [];
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+      if (
+        (p._searchName ?? p.name.toLowerCase()).includes(lq) ||
+        (p._searchBarcode ?? p.barcode?.toLowerCase() ?? '').includes(lq) ||
+        (p._searchCategory ?? p.category?.toLowerCase() ?? '').includes(lq) ||
+        (p._searchBrand ?? p.brand?.toLowerCase() ?? '').includes(lq) ||
+        (p._searchDescription ?? p.description?.toLowerCase() ?? '').includes(lq)
+      ) {
+        results.push(p);
+        if (results.length >= SEARCH_RESULT_CAP) break;
+      }
+    }
+    return results;
   },
 
   resetForStore: () => {
