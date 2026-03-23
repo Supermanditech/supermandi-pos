@@ -53,6 +53,9 @@ import { useProductsStore } from "./src/stores/productsStore";
 import { isCacheLoaded, getCachedSession } from "./src/services/deviceSession";
 import { registerForPushNotifications, setupNotificationListeners } from "./src/services/pushNotifications";
 
+// GCP-STG-0519: Global HID keyboard capture for barcode scanners
+import { HidKeyboardCapture } from "./src/components/HidKeyboardCapture";
+
 const Stack = createNativeStackNavigator();
 
 // Deep link config for enrollment QR codes (supermandi://enroll?code=X)
@@ -133,6 +136,7 @@ export default function App() {
           backgroundColor={themeColors.background}
           barStyle={isDark ? "light-content" : (Platform.OS === "android" ? "dark-content" : "default")}
         />
+        <HidKeyboardCapture />
         <ErrorBoundary>
         <NavigationContainer linking={linking}>
         <Stack.Navigator
