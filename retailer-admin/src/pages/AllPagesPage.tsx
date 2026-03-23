@@ -29,6 +29,9 @@ const pages: PageRoute[] = [
 ];
 
 export default function AllPagesPage() {
+  // GCP-STG-0422: Hide QA hub in production builds
+  if (import.meta.env.PROD) return null;
+
   const { storeCode } = useParams<{ storeCode: string }>();
 
   return (
