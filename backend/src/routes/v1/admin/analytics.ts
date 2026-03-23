@@ -12,6 +12,8 @@ import {
   fetchPurchasesAnalytics,
   fetchActivityAnalytics
 } from "../../../services/analytics/analyticsService";
+import { detectSlowMovers } from "../../../services/ai/slowMoverService";
+import { getPool } from "../../../db/client";
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
 
@@ -392,5 +394,58 @@ adminAnalyticsRouter.get("/analytics/activity", async (req, res) => {
     // XPORT-003: Never leak raw error messages — log server-side only
     log.error("[Analytics] Query failed:", e?.message);
     res.status(500).json({ error: { code: "ANALYTICS_FAILED", message: "Failed to fetch analytics data" } });
+  }
+});
+
+// =============================================================================
+// GCP-STG-0377: Slow-Mover Report for SuperAdmin
+// GET /api/v1/admin/analytics/slow-movers?storeId=&limit=&offset=
+// Exposes detectSlowMovers (previously POS-only) to admin dashboard
+// =============================================================================
+adminAnalyticsRouter.get("/analytics/slow-movers", async (req, res) => {
+  try {
+    const storeId = asString(req.query.storeId);
+    const limit = asPageLimit(req.query.limit);
+    const offset = asPageOffset(req.query.offset);
+
+    if (storeId) {
+      // Single store — direct call
+      const data = await detectSlowMovers(storeId, { limit, offset });
+      return res.json({
+        success: true,
+        storeId,
+        slowMovers: data.slowMovers,
+        total: data.total,
+        pagination: { limit, offset },
+      });
+    }
+
+    // No storeId — aggregate across all active stores
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    const storesResult = await pool.query(
+      `SELECT id FROM public.stores WHERE status = 'active' ORDER BY id`
+    );
+    const storeIds: string[] = storesResult.rows.map((r: any) => r.id);
+
+    const aggregated: Array<{ storeId: string; slowMovers: any[]; total: number }> = [];
+    for (const sid of storeIds) {
+      const data = await detectSlowMovers(sid, { limit: 20 }); // cap per-store in aggregate
+      if (data.total > 0) {
+        aggregated.push({ storeId: sid, slowMovers: data.slowMovers, total: data.total });
+      }
+    }
+
+    return res.json({
+      success: true,
+      storeCount: storeIds.length,
+      storesWithSlowMovers: aggregated.length,
+      stores: aggregated,
+    });
+  } catch (_e: unknown) {
+    const e = asError(_e);
+    log.error("[GCP-STG-0377] Slow-mover report failed:", e?.message);
+    res.status(500).json({ error: { code: "ANALYTICS_FAILED", message: "Failed to fetch slow-mover report" } });
   }
 });

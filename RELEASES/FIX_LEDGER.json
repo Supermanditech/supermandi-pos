@@ -18583,7 +18583,7 @@
       "start_line": 399,
       "end_line": 453,
       "checksum": "89236210d1b8beff",
-      "description": "Slow-mover report endpoint for SuperAdmin — GET /analytics/slow-movers with single-store and aggregate modes",
+      "description": "Slow-mover report endpoint for SuperAdmin — GET /analytics/slow-movers with single-store and aggregate modes (per-store + aggregate)",
       "test_file": "backend/tests/adminSlowMovers.gcp-stg-0377.unit.test.ts",
       "depends_on": null,
       "migration": null,
