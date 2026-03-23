@@ -30,6 +30,11 @@ jest.mock("../src/services/whatsappService", () => ({
   sendTextMessage: jest.fn(),
 }));
 
+// Mock smsService (GCP-STG-0467)
+jest.mock("../src/services/smsService", () => ({
+  sendSms: jest.fn().mockResolvedValue(false),
+}));
+
 import express from "express";
 import request from "supertest";
 import crypto from "crypto";

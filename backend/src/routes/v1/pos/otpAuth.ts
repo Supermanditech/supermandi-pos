@@ -14,6 +14,7 @@ import { getPool } from "../../../db/client";
 import { asError } from "../../../lib/errorUtils";
 import crypto from "crypto";
 import { sendTextMessage, isWhatsAppConfigured } from "../../../services/whatsappService";
+import { sendSms } from "../../../services/smsService";
 import { redisRateLimit } from "../../../middleware/rateLimit";
 
 // GCP-STG-0308: Rate limiter on send-otp to prevent OTP table flooding
@@ -84,14 +85,32 @@ posOtpAuthRouter.post("/auth/send-otp", otpSendLimiter, async (req, res) => {
       console.log(`[OTP] Phone: ${phone.slice(0, 3)}***${phone.slice(-2)}, OTP: ****** (expires: ${expiresAt.toISOString()})`);
     }
 
+    // GCP-STG-0467: WhatsApp primary + SMS fallback for OTP delivery
+    let otpDelivered = false;
+    const otpMessage = `Your SuperMandi POS verification code is: ${otp}\n\nThis code expires in 5 minutes. Do not share it with anyone.`;
+
     if (isWhatsAppConfigured()) {
       try {
         await sendTextMessage({
           to: `91${phone}`,
-          body: `Your SuperMandi POS verification code is: ${otp}\n\nThis code expires in 5 minutes. Do not share it with anyone.`,
+          body: otpMessage,
         });
+        otpDelivered = true;
       } catch (waErr) {
         console.error(`[OTP] WhatsApp failed for ${phone.slice(0, 3)}***:`, asError(waErr).message);
+      }
+    }
+
+    // GCP-STG-0467: SMS fallback when WhatsApp fails or is not configured
+    if (!otpDelivered) {
+      console.log(`[OTP] WhatsApp failed, SMS fallback attempted for ${phone.slice(0, 3)}***`);
+      try {
+        const smsSent = await sendSms(`+91${phone}`, otpMessage);
+        if (smsSent) {
+          otpDelivered = true;
+        }
+      } catch (smsErr) {
+        console.error(`[OTP] SMS fallback also failed for ${phone.slice(0, 3)}***:`, asError(smsErr).message);
       }
     }
 

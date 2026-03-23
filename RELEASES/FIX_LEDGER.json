@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 892,
+  "version": 894,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -9859,8 +9859,8 @@
     {
       "ticket": "GCP-STG-0007",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 176,
-      "end_line": 217,
+      "start_line": 195,
+      "end_line": 236,
       "checksum": "a36c0926cc914ee9",
       "description": "Deactivate old devices + create new one in transaction on OTP verify (race-condition safe) — checksum updated by GCP-STG-0484 (added token_expires_at to INSERT)",
       "test_file": "backend/src/__tests__/pos/otpAuth.test.ts",
@@ -9894,7 +9894,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:25:31.465Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T17:26:42.870Z"
+      "line_shifted_at": "2026-03-23T18:11:05.093Z"
     },
     {
       "ticket": "GCP-STG-0008",
@@ -15280,8 +15280,8 @@
     {
       "ticket": "GCP-STG-0311",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 50,
-      "end_line": 65,
+      "start_line": 51,
+      "end_line": 66,
       "checksum": "f0a5bfc3c3475bf0",
       "description": "send-otp checks u.is_active = true to block deactivated users",
       "test_file": "backend/tests/otpDeactivatedUser.gcp-stg-0311.unit.test.ts",
@@ -15311,7 +15311,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:53:31.193Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T18:11:05.129Z"
     },
     {
       "ticket": "GCP-STG-0298",
@@ -22290,8 +22291,8 @@
     {
       "ticket": "GCP-STG-0453",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 143,
-      "end_line": 151,
+      "start_line": 162,
+      "end_line": 170,
       "checksum": "59a47e2f6aeaad4c",
       "description": "verify-otp checks u.is_active = true matching send-otp parity",
       "test_file": "backend/tests/verifyOtpIsActive.gcp-stg-0453.unit.test.ts",
@@ -22322,7 +22323,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T16:25:03.203Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T17:26:43.027Z"
+      "line_shifted_at": "2026-03-23T18:11:05.178Z"
     },
     {
       "ticket": "GCP-STG-0454",
@@ -22513,8 +22514,8 @@
     {
       "ticket": "GCP-STG-0459",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 115,
-      "end_line": 135,
+      "start_line": 134,
+      "end_line": 154,
       "checksum": "0e12ec1a50706d82",
       "description": "pos_otp SELECT/UPDATE uses normalizedPhone (+91 E.164) in verify-otp",
       "test_file": "backend/tests/otpAuth.gcp-stg-0459.unit.test.ts",
@@ -22545,13 +22546,13 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:17:57.355Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T17:26:43.030Z"
+      "line_shifted_at": "2026-03-23T18:11:05.180Z"
     },
     {
       "ticket": "GCP-STG-0461",
       "file": "backend/src/routes/v1/admin/adminAuth.ts",
-      "start_line": 269,
-      "end_line": 269,
+      "start_line": 416,
+      "end_line": 416,
       "checksum": "69ddd34ff1dca925",
       "description": "verify-email-otp route has otpRateLimiter middleware for IP-level brute-force protection",
       "test_file": "backend/tests/adminAuth.gcp-stg-0461.unit.test.ts",
@@ -22582,13 +22583,13 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:18:35.582Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T17:50:04.683Z"
+      "line_shifted_at": "2026-03-23T18:11:05.181Z"
     },
     {
       "ticket": "GCP-STG-0478",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 79,
-      "end_line": 84,
+      "start_line": 80,
+      "end_line": 85,
       "checksum": "ff06c7a0b907c6d0",
       "description": "Replace __DEV__ OTP log guard with process.env.LOG_OTP_PLAINTEXT check — prevents plaintext OTP in console outside local dev",
       "test_file": "backend/tests/otpAuth.gcp-stg-0478.unit.test.ts",
@@ -22618,7 +22619,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:32:05.337Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T18:11:05.182Z"
     },
     {
       "ticket": "GCP-STG-0465",
@@ -22877,8 +22879,8 @@
     {
       "ticket": "GCP-STG-0484",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 201,
-      "end_line": 207,
+      "start_line": 220,
+      "end_line": 226,
       "checksum": "1c43371cc26bb892",
       "description": "POS device token expiry: INSERT via otpAuth sets token_expires_at = NOW() + 90 days",
       "test_file": "backend/tests/deviceTokenExpiry.gcp-stg-0484.unit.test.ts",
@@ -22928,6 +22930,117 @@
         "test_guard": "deviceTokenExpiry.gcp-stg-0484.unit.test.ts 4/4",
         "single_commit": "fix(GCP-STG-0484)",
         "ticket_parked": "pending commit"
+      },
+      "line_shifted_at": "2026-03-23T18:11:05.187Z"
+    },
+    {
+      "ticket": "GCP-STG-0467",
+      "file": "backend/src/services/smsService.ts",
+      "start_line": 1,
+      "end_line": 115,
+      "checksum": "19cc9b96d2fe7940",
+      "description": "SMS fallback service for OTP delivery — supports MSG91, Twilio, disabled (default). Never throws.",
+      "test_file": "backend/tests/smsFallback.gcp-stg-0467.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": "Mode A pre-staging, no operator needed",
+        "parity_scanned": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T18:10:47.465Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "smsService.ts: sendSms(to,body) function + otpAuth.ts send-otp endpoint with SMS fallback",
+        "api_errors": "send-otp returns 200 even if both WA+SMS fail (OTP stored, delivery best-effort); 400/404/500 paths unchanged",
+        "store_isolation": "No store_id in SMS/OTP delivery — phone-based only, store context added at verify-otp",
+        "business_logic": "OTP stored before delivery attempt; SMS fallback only on WA failure; never throws",
+        "business_behaviour": "send-otp: WA success → no SMS; WA fail → SMS fallback; both fail → 200 returned",
+        "db_schema": "No schema changes — uses existing pos_otp table",
+        "impacted_files": "smsService.ts (new), otpAuth.ts (modified), 4 existing tests (added smsService mock), 1 new test",
+        "fix_ledger_check": "453 fixes intact, zero drift after change",
+        "no_agent_conflict": "Single agent, git diff shows only GCP-STG-0467 changes",
+        "operator_approved": "Mode A pre-staging, no operator needed",
+        "gcp_parity": "No localhost URLs, env vars for SMS_PROVIDER/MSG91/Twilio, staging compatible",
+        "regression_check": "44/44 otpAuth-related tests pass including new SMS fallback tests",
+        "test_guard": "smsFallback.gcp-stg-0467.unit.test.ts: 6/6 tests pass",
+        "single_commit": "fix(GCP-STG-0467): add SMS fallback for POS OTP delivery",
+        "ticket_parked": "Parked after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0467",
+      "file": "backend/src/routes/v1/pos/otpAuth.ts",
+      "start_line": 88,
+      "end_line": 115,
+      "checksum": "333cc14c260879fb",
+      "description": "SMS fallback in send-otp: tries WhatsApp first, falls back to SMS if WA fails or not configured",
+      "test_file": "backend/tests/smsFallback.gcp-stg-0467.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": "Mode A pre-staging, no operator needed",
+        "parity_scanned": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T18:10:54.222Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "otpAuth.ts send-otp endpoint with SMS fallback after WhatsApp failure",
+        "api_errors": "200 returned even if both WA+SMS fail",
+        "store_isolation": "Phone-based delivery, no store_id involved",
+        "business_logic": "OTP stored before delivery; SMS only on WA failure",
+        "business_behaviour": "WA success → no SMS; WA fail → SMS fallback; both fail → 200",
+        "db_schema": "No schema changes",
+        "impacted_files": "otpAuth.ts modified with SMS fallback block",
+        "fix_ledger_check": "453 fixes intact, zero drift",
+        "no_agent_conflict": "Single agent",
+        "operator_approved": "Mode A pre-staging, no operator needed",
+        "gcp_parity": "No localhost URLs, env vars only",
+        "regression_check": "44/44 tests pass",
+        "test_guard": "smsFallback.gcp-stg-0467.unit.test.ts: 6/6",
+        "single_commit": "fix(GCP-STG-0467)",
+        "ticket_parked": "Parked after commit"
       }
     }
   ],

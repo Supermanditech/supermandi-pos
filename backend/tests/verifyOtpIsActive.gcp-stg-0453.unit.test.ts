@@ -18,6 +18,11 @@ jest.mock("../src/services/whatsappService", () => ({
   sendTextMessage: jest.fn(),
 }));
 
+// Mock smsService (GCP-STG-0467)
+jest.mock("../src/services/smsService", () => ({
+  sendSms: jest.fn().mockResolvedValue(false),
+}));
+
 jest.mock("../src/db/redis", () => ({
   getRedisClient: () => null,
   cacheGet: jest.fn().mockResolvedValue(null),
