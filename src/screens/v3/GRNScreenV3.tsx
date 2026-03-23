@@ -20,6 +20,8 @@ type GRNItem = {
   barcode: string; name: string; ordered: number; received: number; checked: boolean; productId?: string;
   // V3-FIX-170: Conversion context for pack-break preview
   procurementUnit?: string; procurementPackQty?: number; baseStockUnit?: string; conversionConfirmed?: boolean;
+  // GCP-STG-0387: Quantity unit from order item — prevents double-expansion
+  quantityUnit?: 'BASE' | 'PROCUREMENT';
 };
 type POContext = { poNumber: string; supplierName: string; totalMinor: number } | null;
 type ScanFeedback = { productName: string; qty: number } | null;
@@ -62,6 +64,8 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
               procurementPackQty: (item as any).procurementPackQty,
               baseStockUnit: (item as any).baseStockUnit,
               conversionConfirmed: (item as any).conversionConfirmed,
+              // GCP-STG-0387: Carry quantity_unit from order item to prevent double-expansion
+              quantityUnit: (item as any).quantityUnit || (item as any).quantity_unit,
             });
           }
         }
@@ -207,7 +211,8 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
 
         {/* V3-FIX-170: Landed stock preview for bulk items */}
         {(() => {
-          const bulkItems = items.filter(i => i.checked && i.procurementPackQty && i.procurementPackQty > 1);
+          // GCP-STG-0387: Only show bulk expansion preview for PROCUREMENT-unit items (not already-BASE)
+          const bulkItems = items.filter(i => i.checked && i.procurementPackQty && i.procurementPackQty > 1 && i.quantityUnit !== 'BASE');
           if (bulkItems.length === 0) return null;
           const totalLanded = bulkItems.reduce((sum, i) => sum + (i.received * (i.procurementPackQty ?? 1)), 0);
           return (
@@ -237,10 +242,13 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
               const online = await isOnline();
               if (!online) { showToast("Offline — receipt will be queued"); }
               // V3-FIX-170: Submit received items as inward with conversion context
+              // GCP-STG-0387: Guard against double-expansion — if qty is already in BASE units
+              // (pre-expanded by BUY checkout via caseSize), do NOT multiply by procurementPackQty again
               const inwardItems = receivedItems.map(item => {
-                const landedQty = item.procurementPackQty && item.procurementPackQty > 1
-                  ? item.received * item.procurementPackQty
-                  : item.received;
+                const alreadyBase = item.quantityUnit === 'BASE' || !item.procurementPackQty || item.procurementPackQty <= 1;
+                const landedQty = alreadyBase
+                  ? item.received
+                  : item.received * item.procurementPackQty!;
                 return {
                   productId: item.productId || item.barcode,
                   quantity: landedQty,

@@ -137,6 +137,8 @@ export interface CreateOrderParams {
     supplierProductId: string;
     quantity: number;
     unitPrice: number;
+    // GCP-STG-0387: Quantity unit — 'BASE' means already expanded (e.g. cartons×caseSize→PCS)
+    quantityUnit?: 'BASE' | 'PROCUREMENT';
   }>;
   reorderIds?: string[];
   storeNotes?: string;

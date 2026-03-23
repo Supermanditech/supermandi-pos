@@ -110,6 +110,8 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
       hsnCode: string | null;
       gstRate: number;
       unit: string;
+      // GCP-STG-0387: Track whether qty is already in base units
+      quantityUnit: 'BASE' | 'PROCUREMENT';
     }> = [];
 
     for (const item of items) {
@@ -174,6 +176,8 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         hsnCode: product.hsn_code || null,
         gstRate: product.gst_rate ? parseFloat(product.gst_rate) : 0,
         unit: product.unit || "PCS",
+        // GCP-STG-0387: Preserve quantity unit from client — defaults to BASE
+        quantityUnit: (item as any).quantityUnit === 'PROCUREMENT' ? 'PROCUREMENT' : 'BASE',
       });
     }
 
@@ -357,8 +361,8 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         const itemResult = await client.query(
           `INSERT INTO orders.purchase_order_items (
             id, order_id, store_id, supplier_product_id, product_id,
-            ordered_quantity, received_quantity, unit_price, line_total, product_name, status
-          ) VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $8, $9, 'pending')
+            ordered_quantity, received_quantity, unit_price, line_total, product_name, status, quantity_unit
+          ) VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $8, $9, 'pending', $10)
           RETURNING
             id,
             order_id as "orderId",
@@ -369,8 +373,9 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
             unit_price as "unitPrice",
             line_total as "totalPrice",
             status,
+            quantity_unit as "quantityUnit",
             notes`,
-          [itemId, orderId, storeId, item.supplierProductId, item.productId, item.quantity, item.unitPrice, item.totalPrice, item.productName]
+          [itemId, orderId, storeId, item.supplierProductId, item.productId, item.quantity, item.unitPrice, item.totalPrice, item.productName, item.quantityUnit]
         );
 
         insertedItems.push({
@@ -680,7 +685,8 @@ ordersRouter.get("/stores/:storeId/orders/:orderId", requireDeviceToken, async (
         poi.unit_price as "unitPrice",
         poi.line_total as "totalPrice",
         poi.status,
-        poi.notes
+        poi.notes,
+        poi.quantity_unit as "quantityUnit"
       FROM orders.purchase_order_items poi
       LEFT JOIN catalog.products p ON p.id = poi.product_id
       LEFT JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id

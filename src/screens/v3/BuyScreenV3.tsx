@@ -228,7 +228,26 @@ export default function BuyScreenV3() {
   }, [products, serverSearchResults, selectedSupplier, suppliers, selectedCategory, categories]);
 
   const cartItemCount = Object.values(orderQtys).reduce((s, v) => s + (v > 0 ? 1 : 0), 0);
-  const cartTotal = products.reduce((s, p) => s + (orderQtys[p.id] ?? 0) * p.caseSize * p.ptrMinor, 0);
+  // GCP-STG-0398: Apply MOQ tier discounts to cart total (not display-only)
+  const { cartTotal, volumeDiscountTotal } = useMemo(() => {
+    let total = 0;
+    let discount = 0;
+    for (const p of products) {
+      const cases = orderQtys[p.id] ?? 0;
+      if (cases <= 0) continue;
+      const orderQty = cases * p.caseSize;
+      const lineBase = cases * p.caseSize * p.ptrMinor;
+      const applicableTier = (p.moqTiers as any[] | undefined)
+        ?.slice()
+        .sort((a: any, b: any) => (b.minQty || 0) - (a.minQty || 0))
+        .find((t: any) => orderQty >= (t.minQty || 0));
+      const discPct = applicableTier?.discountPct ?? 0;
+      const lineDiscount = Math.round(lineBase * discPct / 100);
+      total += lineBase - lineDiscount;
+      discount += lineDiscount;
+    }
+    return { cartTotal: total, volumeDiscountTotal: discount };
+  }, [products, orderQtys]);
 
   // GCP-STG-0397: Enforce MOQ floor — qty=0 removes from cart, qty>0 must be >= product.moq
   const handleQtyChange = useCallback((id: string, cases: number) => {
@@ -472,6 +491,13 @@ export default function BuyScreenV3() {
                       <Text style={{ fontSize: 12, color: colors.success, fontWeight: '600' }}>{discountItems.map(p => `-${p.tradeDiscountPct}%`).join(', ')}</Text>
                     </View>
                   ) : null}
+                  {/* GCP-STG-0398: Volume/tier discount line — actually applied to total */}
+                  {volumeDiscountTotal > 0 ? (
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }} testID="volume-discount-line">
+                      <Text style={{ fontSize: 12, color: colors.success }}>Volume discount</Text>
+                      <Text style={{ fontSize: 12, color: colors.success, fontWeight: '600' }}>-₹{Math.round(volumeDiscountTotal / 100).toLocaleString("en-IN")}</Text>
+                    </View>
+                  ) : null}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 6 }}>
                     <Text style={{ fontSize: 16, fontWeight: '800', color: colors.primary }}>{hasCredit ? 'Payable later' : 'Total payable'}</Text>
                     <Text style={{ fontSize: 16, fontWeight: '800', color: colors.primary }}>₹{Math.round(subtotal / 100).toLocaleString("en-IN")}</Text>
@@ -565,6 +591,9 @@ export default function BuyScreenV3() {
                       supplierProductId: p.id,
                       quantity: (orderQtys[p.id] ?? 0) * p.caseSize,
                       unitPrice: p.ptrMinor,
+                      // GCP-STG-0387: Mark qty as already expanded to BASE units (cartons×caseSize→PCS)
+                      // so GRN does NOT multiply by procurementPackQty again
+                      quantityUnit: 'BASE' as const,
                       // V3-FIX-175: Snapshot commercial terms at order time
                       acceptedTerms: {
                         ptrMinor: p.ptrMinor, mrpMinor: p.mrpMinor,

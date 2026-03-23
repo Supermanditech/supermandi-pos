@@ -18439,7 +18439,7 @@
       "start_line": 240,
       "end_line": 256,
       "checksum": "4c30e9cb2f501971",
-      "description": "GRN double-expansion guard: skip procurementPackQty multiplication when quantityUnit=BASE (already expanded by BUY checkout)",
+      "description": "GRN double-expansion guard: skip procurementPackQty multiplication when quantityUnit=BASE (already expanded by BUY checkout) (quantity_unit guard)",
       "test_file": "backend/tests/grnExpansionGuard.gcp-stg-0387.unit.test.ts",
       "depends_on": null,
       "migration": "227_gcp_stg_0387_poi_quantity_unit.sql",
