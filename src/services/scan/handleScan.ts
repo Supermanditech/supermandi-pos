@@ -17,6 +17,8 @@ import { usePurchaseDraftStore } from "../../stores/purchaseDraftStore";
 import { useScanHistoryStore } from "../../stores/scanHistoryStore";
 // GCP-STG-0524: Scan analytics — log scan events for debugging
 import { logPosEvent } from "../cloudEventLogger";
+// GCP-STG-0534: GS1 barcode parser for GTIN extraction
+import { extractGTIN } from "./gs1Parser";
 import { POS_MESSAGES } from "../../utils/uiStatus";
 import { upsertStockEntries } from "../stockService";
 
@@ -486,13 +488,21 @@ async function handleScan(
   if (inFlightBarcodes.has(trimmed)) return;
   inFlightBarcodes.add(trimmed);
 
+  // GCP-STG-0534: Extract GTIN from GS1-128/DataMatrix barcodes before lookup
+  const gtinExtracted = extractGTIN(trimmed);
+  if (gtinExtracted && gtinExtracted !== trimmed) {
+    console.log(`scan_gs1_gtin:${trimmed}→${gtinExtracted}`);
+  }
+  const lookupBarcode = gtinExtracted ?? trimmed;
+
   notify(null);
   const useScanLookupV2 = runtime.scanLookupV2Enabled === true;
 
   try {
     if (intent === "SELL" && mode === "SELL" && useScanLookupV2) {
       if (await isOnline()) {
-        let storeProduct = await lookupStoreProductPreviewByScan({ scanned: trimmed, format });
+        // GCP-STG-0534: Use GTIN-extracted barcode for lookup if available
+        let storeProduct = await lookupStoreProductPreviewByScan({ scanned: lookupBarcode, format });
         if (!storeProduct) {
           // R3: Pass empty name so the onboarding modal uses search query or shows blank
           // (do NOT use "Item XXXX" placeholder - per go-live requirements)
