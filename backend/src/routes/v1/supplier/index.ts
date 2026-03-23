@@ -17,6 +17,8 @@ import { supplierSettlementsRouter } from "./settlements";  // GCP-STG-0106: Set
 import { supplierNotificationsRouter } from "./notifications";  // Phase 8: Supplier notifications
 // GCP-STG-0209+0210: Mount BNPL visibility router (was defined but never imported)
 import { supplierBnplRouter } from "./bnplVisibility";
+// GCP-STG-0378: Supplier SSE events (service existed but no route)
+import { supplierSseRouter } from "./sseEvents";
 
 export const supplierRouter = Router();
 
@@ -37,3 +39,5 @@ supplierRouter.use("/settlements", supplierSettlementsRouter);  // GCP-STG-0106:
 supplierRouter.use("/", supplierNotificationsRouter);  // Phase 8: Notifications
 // GCP-STG-0209+0210: BNPL backed-orders visibility
 supplierRouter.use("/bnpl", supplierBnplRouter);
+// GCP-STG-0378: Supplier SSE real-time events
+supplierRouter.use("/", supplierSseRouter);
