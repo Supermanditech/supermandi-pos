@@ -19022,7 +19022,7 @@
       "start_line": 472,
       "end_line": 478,
       "checksum": "58828b3aa9c86dc5",
-      "description": "BUY checkout GST computed per-item (each item gstPct) instead of averaged across all cart items",
+      "description": "BUY checkout GST computed per-item (each item gstPct) instead of averaged across all cart items (per-item reduce)",
       "test_file": "src/__tests__/screens/buyGstPerItem.gcp-stg-0403.test.ts",
       "depends_on": null,
       "migration": null,

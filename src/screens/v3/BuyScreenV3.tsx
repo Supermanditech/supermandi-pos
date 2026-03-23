@@ -469,8 +469,13 @@ export default function BuyScreenV3() {
             {(() => {
               const selected = products.filter((p) => (orderQtys[p.id] ?? 0) > 0);
               const subtotal = cartTotal;
-              const avgGstPct = selected.length > 0 ? selected.reduce((s, p) => s + (p.gstPct || 18), 0) / selected.length : 18;
-              const estimatedGst = Math.round(subtotal * avgGstPct / (100 + avgGstPct)); // extract GST from inclusive price
+              // GCP-STG-0403: Per-item GST extraction (not averaged across items)
+              const estimatedGst = selected.reduce((sum, p) => {
+                const cases = orderQtys[p.id] ?? 0;
+                const gst = p.gstPct ?? 18;
+                const lineTotal = cases * p.caseSize * p.ptrMinor;
+                return sum + Math.round(lineTotal * gst / (100 + gst));
+              }, 0);
               const baseAmount = subtotal - estimatedGst;
               const discountItems = selected.filter(p => p.tradeDiscountPct);
               const hasCredit = paymentMode === "CREDIT" || paymentMode === "BNPL";
@@ -482,7 +487,7 @@ export default function BuyScreenV3() {
                     <Text style={{ fontSize: 12, fontWeight: '600' }}>₹{Math.round(baseAmount / 100).toLocaleString("en-IN")}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
-                    <Text style={{ fontSize: 12, color: colors.textSecondary }}>GST (~{Math.round(avgGstPct)}%)</Text>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary }}>GST (per-item)</Text>
                     <Text style={{ fontSize: 12, fontWeight: '600' }}>₹{Math.round(estimatedGst / 100).toLocaleString("en-IN")}</Text>
                   </View>
                   {discountItems.length > 0 ? (
