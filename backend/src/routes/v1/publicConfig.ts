@@ -73,7 +73,13 @@ publicConfigRouter.get("/whatsapp-cta-config", ctaRateLimiter, async (_req, res)
       return res.json({ enabled: false });
     }
 
-    return res.json(result.rows[0]);
+    // GCP-STG-0503: Warn if both numbers are identical (should be different contacts)
+    const row = result.rows[0];
+    if (row.superadminNumber && row.companyNumber && row.superadminNumber === row.companyNumber) {
+      log.warn("[public/whatsapp-cta-config] superadminNumber and companyNumber are identical — consider using different numbers for each contact type");
+    }
+
+    return res.json(row);
   } catch (err: unknown) {
     log.warn("[public/whatsapp-cta-config] read error, returning disabled:", err);
     // Fail-safe: if DB errors, hide widget rather than crash
