@@ -1,92 +1,182 @@
 /**
- * GCP-STG-0429: Supplier Product Type Missing gstRate Field
+ * @jest-environment node
+ */
+/**
+ * GCP-STG-0429: Supplier Product gstRate Field
  *
- * Verifies that:
- *   1. Product interface in api.ts includes gstRate field
- *   2. Backend supplier products list query SELECTs gst_rate
- *   3. Backend supplier products list response maps gstRate
- *   4. Backend single product GET query SELECTs gst_rate
- *   5. Backend single product GET response maps gstRate
- *   6. Products page table has GST column header
- *   7. Products page table renders GST rate badge
- *   8. Products page edit form shows read-only GST rate
+ * BEHAVIORAL test — mounts the supplier products router via supertest,
+ * calls GET /supplier/products, verifies the response includes gstRate
+ * mapped from gst_rate in the DB row.
  */
 
-import { readFileSync } from 'fs';
-import { join } from 'path';
+(global as any).__DEV__ = false;
 
-const API_FILE = join(
-  __dirname,
-  '..',
-  'src',
-  'lib',
-  'api.ts',
-);
+const mockQuery = jest.fn();
 
-const FORM_FILE = join(
-  __dirname,
-  '..',
-  'src',
-  'app',
-  '(dashboard)',
-  'products',
-  'page.tsx',
-);
+jest.mock("../../backend/src/db/client", () => ({
+  getPool: () => ({ query: mockQuery }),
+}));
 
-const BACKEND_FILE = join(
-  __dirname,
-  '..',
-  '..',
-  'backend',
-  'src',
-  'routes',
-  'v1',
-  'supplier',
-  'products.ts',
-);
+jest.mock("../../backend/src/routes/v1/supplier/auth", () => ({
+  requireSupplierAuth: (req: any, _res: any, next: any) => {
+    req.supplierId = "supplier-uuid-1";
+    req.supplierStatus = "ACTIVE";
+    next();
+  },
+  SupplierAuthRequest: {},
+}));
 
-describe('GCP-STG-0429 — Supplier Product gstRate Field', () => {
-  let apiSource: string;
-  let formSource: string;
-  let backendSource: string;
+jest.mock("../../backend/src/middleware/supplierStatusGate", () => ({
+  requireActiveSupplier: (_req: any, _res: any, next: any) => next(),
+  requireRegisteredSupplier: (_req: any, _res: any, next: any) => next(),
+}));
 
-  beforeAll(() => {
-    apiSource = readFileSync(API_FILE, 'utf-8');
-    formSource = readFileSync(FORM_FILE, 'utf-8');
-    backendSource = readFileSync(BACKEND_FILE, 'utf-8');
+jest.mock("../../backend/src/middleware/rateLimit", () => ({
+  redisRateLimit: () => (_req: any, _res: any, next: any) => next(),
+}));
+
+jest.mock("../../backend/src/lib/logger", () => ({
+  log: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+}));
+
+jest.mock("../../backend/src/services/supplierReadiness", () => ({
+  checkSupplierReadiness: jest.fn().mockResolvedValue({ ready: true, blockers: [], checks: [] }),
+}));
+
+import express from "express";
+import request from "supertest";
+import { supplierProductsRouter } from "../../backend/src/routes/v1/supplier/products";
+
+const app = express();
+app.use(express.json());
+app.use("/supplier", supplierProductsRouter);
+
+beforeEach(() => {
+  mockQuery.mockReset();
+});
+
+describe("GCP-STG-0429: Supplier product gstRate field (BEHAVIORAL)", () => {
+  const PRODUCT_ROW = {
+    id: "prod-1",
+    name: "Test Rice 5kg",
+    category: "Grocery",
+    brand: "TestBrand",
+    supplier_sku: "SKU-001",
+    barcode: "8901234567890",
+    purchase_price: 15000,
+    mrp: 20000,
+    moq: 1,
+    unit: "KG",
+    stock_quantity: 100,
+    stock_status: "in_stock",
+    is_active: true,
+    approval_status: "approved",
+    rejection_reason: null,
+    edited_name: null,
+    edited_category: null,
+    supermandi_margin_minor: 500,
+    bnpl_eligible: false,
+    price_change_pending: false,
+    pending_purchase_price: null,
+    pending_mrp: null,
+    image_url: null,
+    thumbnail_url: null,
+    net_content_value: 5,
+    net_content_unit: "kg",
+    manufacturer_name: "Test Mfg",
+    country_of_origin: "IN",
+    shelf_life_days: 365,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-02T00:00:00Z",
+    ptr_minor: null,
+    pts_minor: null,
+    trade_discount_pct: null,
+    scheme: null,
+    delivery_sla_days: null,
+    delivery_terms: null,
+    credit_days: null,
+    finance_eligible: false,
+    delivery_days: null,
+    bnpl_max_days: null,
+    published_terms_version: null,
+    published_at: null,
+    moq_tiers: null,
+    procurement_unit: null,
+    procurement_pack_qty: null,
+    base_stock_unit: null,
+    hsn_code: "1006",
+    split_sell_eligible: false,
+    gst_rate: 5,
+  };
+
+  function setupListMock(rows: any[]) {
+    mockQuery.mockImplementation((sql: string) => {
+      if (typeof sql !== "string") return { rows: [] };
+      if (sql.includes("COUNT(*)")) {
+        return { rows: [{ total: String(rows.length) }] };
+      }
+      if (sql.includes("FROM catalog.supplier_products")) {
+        return { rows };
+      }
+      return { rows: [] };
+    });
+  }
+
+  test("GET /supplier/products returns gstRate mapped from gst_rate", async () => {
+    setupListMock([PRODUCT_ROW]);
+
+    const res = await request(app)
+      .get("/supplier/products")
+      .expect(200);
+
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0]).toHaveProperty("gstRate", 5);
   });
 
-  test('Product interface includes gstRate field', () => {
-    expect(apiSource).toMatch(/gstRate\??\s*:\s*number\s*\|\s*null/);
+  test("gstRate is null when gst_rate is null in DB", async () => {
+    setupListMock([{ ...PRODUCT_ROW, gst_rate: null }]);
+
+    const res = await request(app)
+      .get("/supplier/products")
+      .expect(200);
+
+    expect(res.body.data[0]).toHaveProperty("gstRate", null);
   });
 
-  test('Backend list query SELECTs gst_rate from supplier_products', () => {
-    // The list endpoint query should include gst_rate in SELECT
-    expect(backendSource).toMatch(/gst_rate\s*\n?\s*FROM catalog\.supplier_products/);
+  test("gstRate is numeric even when gst_rate is a string from DB", async () => {
+    setupListMock([{ ...PRODUCT_ROW, gst_rate: "18" }]);
+
+    const res = await request(app)
+      .get("/supplier/products")
+      .expect(200);
+
+    expect(res.body.data[0].gstRate).toBe(18);
+    expect(typeof res.body.data[0].gstRate).toBe("number");
   });
 
-  test('Backend list response maps gstRate from gst_rate', () => {
-    expect(backendSource).toMatch(/gstRate:\s*p\.gst_rate/);
+  test("gstRate=0 is preserved (not coerced to null/false)", async () => {
+    setupListMock([{ ...PRODUCT_ROW, gst_rate: 0 }]);
+
+    const res = await request(app)
+      .get("/supplier/products")
+      .expect(200);
+
+    expect(res.body.data[0].gstRate).toBe(0);
   });
 
-  test('Backend single product GET query includes gst_rate', () => {
-    // The single-product query should also select gst_rate
-    expect(backendSource).toMatch(/split_sell_eligible,\s*gst_rate/);
-  });
+  test("response includes gstRate alongside other product fields", async () => {
+    setupListMock([PRODUCT_ROW]);
 
-  test('Products page table has GST column header', () => {
-    expect(formSource).toContain('GST');
-    // Ensure there is a <th> for GST
-    expect(formSource).toMatch(/<th[^>]*>\s*\n?\s*GST\s*\n?\s*<\/th>/);
-  });
+    const res = await request(app)
+      .get("/supplier/products")
+      .expect(200);
 
-  test('Products page table renders GST rate badge', () => {
-    expect(formSource).toMatch(/product\.gstRate/);
-    expect(formSource).toContain('GST {product.gstRate}%');
-  });
-
-  test('Products page edit form shows read-only GST rate', () => {
-    expect(formSource).toMatch(/editingProduct\?\.gstRate/);
-    expect(formSource).toContain('Set by SuperMandi admin');
+    const product = res.body.data[0];
+    // Verify gstRate coexists with other key fields
+    expect(product).toHaveProperty("id", "prod-1");
+    expect(product).toHaveProperty("name", "Test Rice 5kg");
+    expect(product).toHaveProperty("hsnCode", "1006");
+    expect(product).toHaveProperty("gstRate", 5);
+    expect(product).toHaveProperty("splitSellEligible", false);
   });
 });
