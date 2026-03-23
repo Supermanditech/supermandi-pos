@@ -273,3 +273,13 @@ class PrinterService {
 }
 
 export const printerService = new PrinterService();
+
+/**
+ * GCP-STG-0527: Barcode label printing — stub for future implementation.
+ * Requires ESC/POS label mode support or Bluetooth label printer protocol.
+ */
+export async function printBarcodeLabel(barcode: string, productName: string): Promise<boolean> {
+  console.log(`[PRINT] Label print requested: ${barcode} — ${productName}`);
+  // TODO: Implement ESC/POS label mode or Bluetooth label printer protocol
+  return false;
+}
