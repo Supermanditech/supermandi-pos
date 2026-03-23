@@ -405,7 +405,7 @@ adminCatalogRouter.post(
     };
 
     if (marginPct === undefined && marginFixedMinor === undefined) {
-      return res.status(400).json({ error: "Provide marginPct (e.g., 15) or marginFixedMinor (e.g., 500)" });
+      return res.status(400).json({ error: "Provide marginPct (e.g., 15) and/or marginFixedMinor (e.g., 500)" });
     }
 
     if (marginPct !== undefined && (marginPct < 0 || marginPct > 100)) {
@@ -424,9 +424,12 @@ adminCatalogRouter.post(
 
       const purchasePrice = product.rows[0].purchase_price;
 
-      // Calculate retail price
+      // GCP-STG-0357: Calculate retail price — supports combined % + fixed margin
       let retailPrice: number;
-      if (marginPct !== undefined) {
+      if (marginPct !== undefined && marginFixedMinor !== undefined) {
+        // Combined: apply % first, then add fixed
+        retailPrice = Math.round(purchasePrice * (1 + marginPct / 100)) + marginFixedMinor;
+      } else if (marginPct !== undefined) {
         retailPrice = Math.round(purchasePrice * (1 + marginPct / 100));
       } else {
         retailPrice = purchasePrice + (marginFixedMinor ?? 0);

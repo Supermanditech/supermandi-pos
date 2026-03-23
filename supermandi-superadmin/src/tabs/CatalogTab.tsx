@@ -814,7 +814,7 @@ export function CatalogTab() {
                   <input
                     type="number"
                     value={editMarginPct}
-                    onChange={(e) => { setEditMarginPct(e.target.value); setEditMarginFixed(""); }}
+                    onChange={(e) => { setEditMarginPct(e.target.value); }}
                     className="sa-input"
                     style={{ width: '100%', fontSize: 13 }}
                     placeholder="e.g., 15"
@@ -823,11 +823,11 @@ export function CatalogTab() {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 2 }}>OR Fixed (₹):</label>
+                  <label style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 2 }}>+ Fixed (₹):</label>
                   <input
                     type="number"
                     value={editMarginFixed}
-                    onChange={(e) => { setEditMarginFixed(e.target.value); setEditMarginPct(""); }}
+                    onChange={(e) => { setEditMarginFixed(e.target.value); }}
                     className="sa-input"
                     style={{ width: '100%', fontSize: 13 }}
                     placeholder="e.g., 50"
@@ -836,14 +836,20 @@ export function CatalogTab() {
                   />
                 </div>
               </div>
-              {(editMarginPct || editMarginFixed) && (
-                <p style={{ fontSize: 12, color: '#059669', marginTop: 6, marginBottom: 0 }}>
-                  Retail price: {editMarginPct
-                    ? formatPrice(editingProduct.purchasePrice * (1 + parseFloat(editMarginPct) / 100))
-                    : formatPrice(editingProduct.purchasePrice + parseFloat(editMarginFixed || "0"))
-                  }
-                </p>
-              )}
+              {(editMarginPct || editMarginFixed) && (() => {
+                const cost = editingProduct.purchasePrice;
+                const pct = editMarginPct ? parseFloat(editMarginPct) : 0;
+                const fixed = editMarginFixed ? parseFloat(editMarginFixed) : 0;
+                const retail = Math.round(cost * (1 + pct / 100)) + Math.round(fixed * 100);
+                const parts: string[] = [];
+                if (pct > 0) parts.push(`${pct}%`);
+                if (fixed > 0) parts.push(`\u20B9${fixed} fixed`);
+                return (
+                  <p style={{ fontSize: 12, color: '#059669', marginTop: 6, marginBottom: 0 }}>
+                    Retail = {formatPrice(retail)} (cost {formatPrice(cost)}{parts.length > 0 ? ` + ${parts.join(' + ')}` : ''})
+                  </p>
+                );
+              })()}
             </div>
 
             {/* GCP-STG-0087: Billing Model Selector */}
