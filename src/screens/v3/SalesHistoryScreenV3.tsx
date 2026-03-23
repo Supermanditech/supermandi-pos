@@ -4,6 +4,7 @@
  */
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { View, Pressable, FlatList, ActivityIndicator, StyleSheet, Text, TextInput } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
@@ -24,6 +25,7 @@ type SaleRow = {
 type Props = { onClose: () => void };
 
 export default function SalesHistoryScreenV3({ onClose }: Props) {
+  const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [sales, setSales] = useState<SaleRow[]>([]);
@@ -132,7 +134,7 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable>
         <Text style={styles.headerTitle}>Sales History</Text>
