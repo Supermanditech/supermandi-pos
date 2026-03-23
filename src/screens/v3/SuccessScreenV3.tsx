@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { View, Pressable, StyleSheet, Text, Alert } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 
@@ -32,6 +33,7 @@ type SuccessScreenV3Props = {
 const METHOD_LABELS: Record<string, string> = { CASH: "Cash · नकद", UPI: "UPI · यूपीआई", DUE: "Udhar · उधार" };
 
 export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, saleId, customerPhone, onNewSale }: SuccessScreenV3Props) {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -99,7 +101,7 @@ export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, 
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 16) }]}>
       <Confetti active={showConfetti} />
 
       <View style={styles.body}>
