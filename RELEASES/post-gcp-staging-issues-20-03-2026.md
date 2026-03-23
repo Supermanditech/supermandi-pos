@@ -13427,4 +13427,344 @@ SuperAdmin correctly has 5-attempt lockout with 30-minute cooldown. POS has PIN 
 
 ---
 
-<!-- next ticket: GCP-STG-0492 -->
+## GCP-STG-0492 — LOW: WhatsApp CTA click tracking is console-only — no backend analytics (LOW)
+
+**Ticket ID**: GCP-STG-0492
+**Severity**: P3 LOW
+**Platforms**: LANDING, BACKEND
+**Layers**: Backend, Business
+**Source**: Audit — Landing Page WhatsApp CTA
+
+**Problem**: Click tracking at `supermandi-landing/index.html:790` uses `console.info('[supermandi][wa_cta]', ...)` only. No backend event is recorded. At scale, operators need CTA conversion rates (how many visitors click → how many start a WhatsApp chat → how many become customers). Console logs are lost when the user closes the page.
+
+**Impact**: Low — no data loss or functional issue. But critical business metric is missing for go-live reporting.
+
+**Fix**:
+1. Add `POST /api/v1/public/analytics/event` endpoint (no auth, rate-limited to 60/min/IP)
+2. Fire `navigator.sendBeacon('/api/v1/public/analytics/event', JSON.stringify({event:'whatsapp_cta_click', target, ts}))` on click
+3. Store in `platform.analytics_events` table (id, event_type, metadata JSONB, ip, user_agent, created_at)
+4. SuperAdmin dashboard: show CTA click count per day/week
+
+**Files to modify**: `supermandi-landing/index.html` (line 790), `backend/src/routes/v1/publicConfig.ts` (new endpoint), new migration
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅, L7 DB ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0493 — LOW: WhatsApp CTA rapid double-tap can open multiple browser windows (LOW)
+
+**Ticket ID**: GCP-STG-0493
+**Severity**: P3 LOW
+**Platforms**: LANDING
+**Layers**: UI, UX
+**Source**: Audit — Landing Page WhatsApp CTA
+
+**Problem**: `window.open()` at `index.html:839` fires on every chooser item click. The menu closes after click (line 840), but a fast double-tap on the chooser item before the animation completes (180ms) can trigger two `window.open` calls, opening duplicate WhatsApp tabs.
+
+**Impact**: Low — cosmetic annoyance. No data loss.
+
+**Fix**: Add click debounce — ignore clicks within 1 second of last `window.open`:
+```js
+var lastOpenTs = 0;
+btn.addEventListener('click', function () {
+  if (Date.now() - lastOpenTs < 1000) return;
+  lastOpenTs = Date.now();
+  // ... existing click logic
+});
+```
+
+**Files to modify**: `supermandi-landing/index.html` (line 835-841)
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0494 — MEDIUM: Public CTA config endpoint has no rate limiting — DDoS vector (MEDIUM)
+
+**Ticket ID**: GCP-STG-0494
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, GCP Parity
+**Source**: Audit — Landing Page WhatsApp CTA
+
+**Problem**: `GET /api/v1/public/whatsapp-cta-config` at `publicConfig.ts:16` has no rate limiting. Any bot can hammer this endpoint thousands of times per second, creating unnecessary DB load on `platform.whatsapp_cta_config`. While the query is lightweight (single-row SELECT), at scale this is a DDoS amplification vector.
+
+**Impact**: Medium — public endpoint with no auth and no rate limit. DB connection pool exhaustion possible under sustained attack.
+
+**Fix**:
+1. Add IP-based rate limit: 30 requests/minute/IP (landing page only needs 1 per page load)
+2. Reuse existing `redisRateLimit` middleware from `backend/src/middleware/rateLimit.ts`
+3. Add `Cache-Control: public, max-age=300` header (5-minute cache) to reduce repeat fetches
+
+**Files to modify**: `backend/src/routes/v1/publicConfig.ts`
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅, L9 GCP Parity ✅
+
+---
+
+## GCP-STG-0495 — LOW: Public CTA config response has no Cache-Control header — fetched on every page load (LOW)
+
+**Ticket ID**: GCP-STG-0495
+**Severity**: P3 LOW
+**Platforms**: BACKEND, LANDING
+**Layers**: Backend, GCP Parity
+**Source**: Audit — Landing Page WhatsApp CTA
+
+**Problem**: `publicConfig.ts:39` returns the JSON response without any `Cache-Control` header. Every landing page load triggers a fresh DB query. For a config that changes maybe once a month, this is wasteful. CDN (Cloud Run + Cloud CDN) cannot cache the response without explicit cache headers.
+
+**Impact**: Low — the query is fast (~1ms single-row), but at 10K visitors/day that's 10K unnecessary DB queries.
+
+**Fix**: Add response headers:
+```typescript
+res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+```
+5-minute cache with 10-minute stale-while-revalidate. Config changes take up to 5 minutes to propagate (acceptable for phone number changes).
+
+**Files to modify**: `backend/src/routes/v1/publicConfig.ts` (line 39)
+
+**12-Layer Verification**: L6 Backend ✅, L9 GCP Parity ✅
+
+---
+
+## GCP-STG-0496 — LOW: CTA config change has no audit history — only last update visible (LOW)
+
+**Ticket ID**: GCP-STG-0496
+**Severity**: P3 LOW
+**Platforms**: BACKEND, SUPERADMIN
+**Layers**: Backend, DB, Business
+**Source**: Audit — Landing Page WhatsApp CTA
+
+**Problem**: `platform.whatsapp_cta_config` is a single-row table (id=1). PUT overwrites the previous config. Only `updated_at` and `updated_by` are stored — no history. If a wrong number is set, there's no way to see what the previous number was (must check Cloud Run logs or DB audit).
+
+**Impact**: Low — config changes are rare. But for compliance and incident investigation, an audit trail is important.
+
+**Fix**:
+1. Add `platform.whatsapp_cta_config_history` table: `(id, config_snapshot JSONB, changed_by, changed_at)`
+2. In the PUT handler, before upsert, INSERT the current row into history
+3. Show history in SuperAdmin WhatsAppTab (collapsible "Change History" section)
+
+**Files to modify**: New migration, `backend/src/routes/v1/admin/whatsapp.ts`, `supermandi-superadmin/src/tabs/WhatsAppTab.tsx`
+
+**12-Layer Verification**: L6 Backend ✅, L7 DB ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0497 — LOW: SuperAdmin CTA config editor has no phone number preview/validation feedback (LOW)
+
+**Ticket ID**: GCP-STG-0497
+**Severity**: P3 LOW
+**Platforms**: SUPERADMIN
+**Layers**: UI, UX
+**Source**: Audit — Landing Page WhatsApp CTA
+
+**Problem**: `WhatsAppTab.tsx:395-417` has plain `<input type="tel">` fields for phone numbers. No live validation feedback — admin can type letters, symbols, or invalid-length numbers and only sees the error after clicking "Save & Apply Live". No preview of what the wa.me link will look like.
+
+**Impact**: Low — backend validation catches errors. But poor admin UX.
+
+**Fix**:
+1. Add real-time validation: red border + "Invalid format" message if input doesn't match `/^\d{10,15}$/`
+2. Add green checkmark when valid
+3. Add preview link: "Preview: wa.me/{number}" clickable to test
+4. Add "Test WhatsApp" button that opens wa.me with the draft number in a new tab
+
+**Files to modify**: `supermandi-superadmin/src/tabs/WhatsAppTab.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0498 — LOW: WhatsApp CTA FAB overlaps cookie consent banner and footer on scroll (LOW)
+
+**Ticket ID**: GCP-STG-0498
+**Severity**: P3 LOW
+**Platforms**: LANDING
+**Layers**: UI, UX
+**Source**: Audit — Landing Page WhatsApp CTA
+
+**Problem**: FAB is fixed at `bottom: 28px; right: 28px` (line 475-476). If a cookie consent banner is added in the future (required for GDPR compliance if targeting non-Indian users), the FAB will overlap it. On very short mobile screens, the FAB may overlap the footer content when scrolled to the bottom.
+
+**Impact**: Low — no cookie banner currently. Footer overlap only on very short screens.
+
+**Fix**:
+1. Add `z-index` layering documentation (cookie banner should be z-index: 300+, FAB is 200)
+2. On mobile, check if FAB overlaps footer and adjust `bottom` dynamically
+3. Add CSS: `.wa-fab-wrapper { margin-bottom: env(safe-area-inset-bottom); }` for iPhone gesture bar
+
+**Files to modify**: `supermandi-landing/index.html` (CSS section)
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0499 — LOW: WhatsApp CTA chooser menu has no dark mode styles for item hover (LOW)
+
+**Ticket ID**: GCP-STG-0499
+**Severity**: P3 LOW
+**Platforms**: LANDING
+**Layers**: UI
+**Source**: Audit — Landing Page WhatsApp CTA
+
+**Problem**: `.wa-chooser-item:hover` at line 568 uses `var(--gray-50)` which works in light mode. In dark mode, `--gray-50` may be too dark or too light depending on the theme variable mapping. The chooser background uses `var(--background)` and border uses `var(--border)` which adapt, but the hover state needs verification.
+
+**Impact**: Low — cosmetic. Dark mode users may see low-contrast hover state.
+
+**Fix**: Add explicit dark mode hover: `.dark .wa-chooser-item:hover { background: var(--gray-800); }` or verify `--gray-50` maps correctly in dark theme.
+
+**Files to modify**: `supermandi-landing/index.html` (CSS section)
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0500 — LOW: WhatsApp CTA pre-filled message not localized — English only (LOW)
+
+**Ticket ID**: GCP-STG-0500
+**Severity**: P3 LOW
+**Platforms**: LANDING, BACKEND
+**Layers**: UI, Business
+**Source**: Audit — Landing Page WhatsApp CTA
+
+**Problem**: Pre-filled messages are hardcoded English in the DB seed (migration 167, line 11-13): "Hi! I need help with..." and "Hi! I'd like to learn more...". Indian kirana store owners often prefer Hindi or regional languages. The message is editable in SuperAdmin, but there's no per-language variant support.
+
+**Impact**: Low — English is acceptable for initial launch. Hindi message would increase conversion for non-English users.
+
+**Fix**:
+1. Add `superadmin_message_hi`, `company_message_hi` columns (Hindi variants)
+2. Landing page detects browser language (`navigator.language`) and uses Hindi message if `hi` or `hi-IN`
+3. SuperAdmin UI: add Hindi message fields alongside English
+
+**Files to modify**: Migration (new columns), `publicConfig.ts` (return both languages), `index.html` (language detection), `WhatsAppTab.tsx` (Hindi fields)
+
+**12-Layer Verification**: L1 UI ✅, L6 Backend ✅, L7 DB ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0501 — MEDIUM: Public CTA config endpoint returns raw DB column values without sanitization (MEDIUM)
+
+**Ticket ID**: GCP-STG-0501
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, Business
+**Source**: Audit — Landing Page WhatsApp CTA
+
+**Problem**: `publicConfig.ts:39` returns `result.rows[0]` directly from the DB query. If a malicious SuperAdmin sets the message to contain JavaScript (`<script>alert(1)</script>`) or HTML, the landing page's `encodeURIComponent()` prevents XSS in the wa.me URL, BUT the message content is not sanitized at the storage layer.
+
+Currently safe because:
+- Messages only appear in `encodeURIComponent()` context (wa.me URL parameter)
+- Messages are never rendered as HTML on the landing page
+
+But if ANY future code renders the message as innerHTML (e.g., a tooltip preview), it becomes an XSS vector.
+
+**Impact**: Medium — defense-in-depth. Currently safe but fragile.
+
+**Fix**:
+1. In PUT handler, strip HTML tags from messages: `message.replace(/<[^>]*>/g, '')`
+2. Add Content-Type: `application/json` explicitly (already default in Express, but be explicit)
+3. Add `X-Content-Type-Options: nosniff` header on response
+
+**Files to modify**: `backend/src/routes/v1/admin/whatsapp.ts` (PUT validation), `backend/src/routes/v1/publicConfig.ts` (response headers)
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0502 — LOW: SuperAdmin CTA config has no "Test Config" button to preview before going live (LOW)
+
+**Ticket ID**: GCP-STG-0502
+**Severity**: P3 LOW
+**Platforms**: SUPERADMIN
+**Layers**: UI, UX, Business
+**Source**: Audit — Landing Page WhatsApp CTA
+
+**Problem**: `WhatsAppTab.tsx:441-447` has "Save & Apply Live" button that immediately writes to DB. No way to preview the config before it goes live. If the admin types a wrong number and clicks save, the landing page immediately shows the wrong CTA (within 5 minutes if caching is added).
+
+**Impact**: Low — confirmation dialog exists (line 161-188), but doesn't include a visual preview of what the landing page CTA will look like.
+
+**Fix**:
+1. Add "Preview" button next to "Save" that opens a modal showing:
+   - The FAB button mockup
+   - The chooser menu with both targets
+   - Clickable wa.me links (opens in new tab for manual verification)
+2. Admin can verify the links work before saving
+
+**Files to modify**: `supermandi-superadmin/src/tabs/WhatsAppTab.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0503 — LOW: Both CTA targets use the same phone number by default — no differentiation (LOW)
+
+**Ticket ID**: GCP-STG-0503
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Business
+**Source**: Audit — Landing Page WhatsApp CTA
+
+**Problem**: Migration 167 seeds both `superadmin_number` and `company_number` with the same value: `919251893684`. The CTA presents two distinct options ("Chat with Support" vs "Contact SuperMandi") but both go to the same WhatsApp number with different pre-filled messages. This creates confusion — users expect two different contacts.
+
+**Impact**: Low — functional at launch (one person handles all inquiries). But the two-option UI implies two different contacts exist.
+
+**Fix**: Either:
+1. Set different numbers at launch (support team vs sales team)
+2. Or reduce to single CTA button if only one number is available
+3. At minimum, document in SuperAdmin that both numbers should be different for proper routing
+
+**Files to modify**: Migration seed data or SuperAdmin guidance text
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0504 — LOW: WhatsApp CTA widget has no loading skeleton or transition on first paint (LOW)
+
+**Ticket ID**: GCP-STG-0504
+**Severity**: P3 LOW
+**Platforms**: LANDING
+**Layers**: UI, UX
+**Source**: Audit — Landing Page WhatsApp CTA
+
+**Problem**: The FAB is hidden via `display: none` (line 800) until the config fetch completes (up to 5 seconds). When it appears, it pops in instantly with no fade-in transition. On slow connections (common in rural India), there's a visible "jump" when the button appears after 2-3 seconds.
+
+**Impact**: Low — cosmetic. No functional issue.
+
+**Fix**: Add a fade-in animation when the wrapper transitions from hidden to visible:
+```css
+.wa-fab-wrapper { opacity: 0; transition: opacity 0.3s ease; }
+.wa-fab-wrapper.visible { opacity: 1; }
+```
+In JS, use `wrapper.classList.add('visible')` instead of `wrapper.style.display = ''`.
+
+**Files to modify**: `supermandi-landing/index.html` (CSS + JS)
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0505 — LOW: No E2E test for WhatsApp CTA fetch → render → click flow (LOW)
+
+**Ticket ID**: GCP-STG-0505
+**Severity**: P3 LOW
+**Platforms**: E2E
+**Layers**: Test Guard
+**Source**: Audit — Landing Page WhatsApp CTA
+
+**Problem**: No Playwright E2E test verifies the complete CTA flow: page load → API fetch → FAB visible → click FAB → chooser opens → click item → wa.me URL constructed correctly. The SuperAdmin WhatsAppTab has unit tests, but the landing page rendering is untested.
+
+**Impact**: Low — manual testing covers this. But regression risk on any landing page change.
+
+**Fix**: Add Playwright test in `e2e-tests/`:
+1. Navigate to landing page
+2. Mock `/api/v1/public/whatsapp-cta-config` to return test config
+3. Assert FAB is visible
+4. Click FAB → assert chooser opens
+5. Click "Chat with Support" → assert `window.open` called with correct wa.me URL
+6. Test disabled config → assert FAB is hidden
+
+**Files to modify**: New `e2e-tests/landing-whatsapp-cta.spec.ts`
+
+**12-Layer Verification**: Test Guard ✅
+
+---
+
+<!-- next ticket: GCP-STG-0506 -->
