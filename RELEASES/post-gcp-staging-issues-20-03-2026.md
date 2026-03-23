@@ -13060,4 +13060,371 @@ If a valid OTP was created in the last 30 seconds, return the same OTP hash (don
 
 ---
 
-<!-- next ticket: GCP-STG-0475 -->
+## GCP-STG-0475 — MEDIUM: Firebase Staging vs Production Not Separated — Same Project for Both (MEDIUM)
+
+**Ticket ID**: GCP-STG-0475
+**Severity**: P2 MEDIUM
+**Platforms**: INFRA, CROSS-PLATFORM
+**Layers**: GCP Parity, Dependencies
+**Source**: Audit L+P — Firebase Environment Separation
+
+**Problem**: Firebase project `supermandi-pos` is used for both staging and production. OTP verifications, analytics, and crash reports from staging pollute production data. Staging testing consumes production OTP quota. No isolation between environments.
+
+**Impact**: Staging OTP tests count against production quota. Analytics data is mixed. No way to test Firebase config changes without affecting production.
+
+**Fix**: Create separate Firebase project `supermandi-pos-staging`. Configure staging builds to use staging project config. Production builds use production project.
+
+**Files to modify**: Firebase Console (new project), `.env.staging` files across all platforms, CI/CD deploy scripts
+
+**12-Layer Verification**: L9 GCP Parity ✅, L11 Dependencies ✅
+
+---
+
+## GCP-STG-0476 — LOW: No .env.example Files Documenting Required Firebase/Auth Env Vars (LOW)
+
+**Ticket ID**: GCP-STG-0476
+**Severity**: P3 LOW
+**Platforms**: CROSS-PLATFORM
+**Layers**: Dependencies, Business
+**Source**: Audit L — Firebase Config Documentation
+
+**Problem**: Firebase config reads from env vars (`VITE_FIREBASE_*`, `NEXT_PUBLIC_FIREBASE_*`, `EXPO_PUBLIC_FIREBASE_*`) but no `.env.example` files exist documenting which vars are required, optional, or have defaults. New developers must read source code to discover required configuration.
+
+**Fix**: Create `.env.example` in each platform directory listing all required env vars with descriptions and placeholder values.
+
+**Files to create**: `retailer-admin/.env.example`, `supplier-portal/.env.example`, `.env.example` (POS), `backend/.env.example`, `supermandi-superadmin/.env.example`
+
+**12-Layer Verification**: L11 Dependencies ✅
+
+---
+
+## GCP-STG-0477 — LOW: Expired OTP Entries in pos_otp Table Never Cleaned Up (LOW)
+
+**Ticket ID**: GCP-STG-0477
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, DB
+**Source**: Audit M — OTP Logic, POS OTP Lifecycle
+
+**Problem**: `pos_otp` table entries are created on send-otp and deleted on successful verify-otp. But if OTP expires without being verified (user abandoned flow), the row stays in the table forever. Over time with 10K users, this accumulates thousands of orphaned rows.
+
+**Fix**: Add cleanup in two places:
+1. Scheduled job (Cloud Scheduler): `DELETE FROM pos_otp WHERE expires_at < NOW() - interval '1 hour'`
+2. Opportunistic cleanup on send-otp: before INSERT, delete expired entries for the same phone
+
+**Files to modify**: `backend/src/routes/v1/admin/scheduledJobs.ts` (add cleanup endpoint), `backend/src/routes/v1/pos/otpAuth.ts` (opportunistic cleanup)
+
+**12-Layer Verification**: L6 Backend ✅, L7 DB ✅
+
+---
+
+## GCP-STG-0478 — MEDIUM: POS OTP Dev Mode Logs Plaintext OTP to Console (MEDIUM)
+
+**Ticket ID**: GCP-STG-0478
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, Business
+**Source**: Audit M — OTP Logic, POS OTP Security
+
+**Problem**: `otpAuth.ts:81-83` in dev mode (`__DEV__` is true) logs the plaintext OTP to console: `log.info('[OTP-DEV] OTP for ${phone}: ${otp}')`. If `__DEV__` is accidentally true in production (e.g., wrong env var, misconfigured Docker), OTP codes appear in Cloud Run logs accessible to anyone with GCP log viewer access.
+
+**Impact**: Medium — production logs should NEVER contain plaintext OTP. Even in dev mode, this should be a separate debug flag, not `__DEV__`.
+
+**Fix**:
+1. Replace `__DEV__` check with explicit `process.env.LOG_OTP_PLAINTEXT === 'true'`
+2. Never set this in staging/production env vars
+3. Add comment: "// SECURITY: Never enable in staging or production"
+
+**Files to modify**: `backend/src/routes/v1/pos/otpAuth.ts` (line 81)
+
+**12-Layer Verification**: L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0479 — LOW: POS Phone Input Rejects +91 Prefix — User Must Enter Raw 10 Digits (LOW)
+
+**Ticket ID**: GCP-STG-0479
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Audit N — OTP Edge Cases, Phone Input
+
+**Problem**: `PhoneScreenV3.tsx:27` strips non-digits and takes last 10: `phone.replace(/\D/g, "").slice(-10)`. This correctly handles "+919876543210" → "9876543210". But the input validation at `otpAuth.ts:41` requires exactly 10 digits: `/^\d{10}$/`. If the user types "91" prefix without "+", the client sends "919876543210" (12 digits) which passes `.slice(-10)` but looks wrong to the user.
+
+The phone input shows "+91" as a static prefix (line 65) implying the user should NOT type 91 again. But there's no client-side validation warning if they do.
+
+**Impact**: Low — `.slice(-10)` handles this gracefully. But confusing UX if user types full number with country code.
+
+**Fix**: Add client-side validation hint: if input length > 10, show "Enter 10-digit number without country code".
+
+**Files to modify**: `src/screens/v3/PhoneScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0480 — MEDIUM: No JWT Secret Rotation Mechanism for SuperAdmin (MEDIUM)
+
+**Ticket ID**: GCP-STG-0480
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND, SUPERADMIN
+**Layers**: Backend, Business, GCP Parity
+**Source**: Audit O — SuperAdmin Auth, JWT Security
+
+**Problem**: SuperAdmin JWT is signed with `JWT_SECRET` env var. If this secret is compromised, ALL issued tokens are valid until they expire (24 hours). There is no mechanism to:
+1. Rotate the JWT secret without invalidating all sessions
+2. Support multiple valid secrets during rotation (old + new)
+3. Force-invalidate all tokens (nuclear option)
+
+**Impact**: Medium — JWT secret compromise gives 24-hour window of unlimited admin access. No way to rotate without logging out all admins.
+
+**Fix**: Support dual-secret rotation:
+1. Accept `JWT_SECRET` (current) and `JWT_SECRET_PREVIOUS` (old, still valid for verification only)
+2. Sign new tokens with current secret
+3. Verify tokens against both secrets (try current first, fall back to previous)
+4. To rotate: set current to new value, set previous to old value, deploy. After 24 hours, remove previous.
+
+**Files to modify**: `backend/src/routes/v1/admin/adminAuth.ts` (JWT sign/verify), env var documentation
+
+**12-Layer Verification**: L6 Backend ✅, L9 GCP Parity ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0481 — LOW: No Session Invalidation on Admin Email Change (LOW)
+
+**Ticket ID**: GCP-STG-0481
+**Severity**: P3 LOW
+**Platforms**: BACKEND, SUPERADMIN
+**Layers**: Backend, Business
+**Source**: Audit O — SuperAdmin Auth, Session Management
+
+**Problem**: If an admin's email is changed in the allowlist (`ADMIN_EMAIL_ALLOWLIST`), existing sessions for the OLD email remain valid until JWT expiry (24 hours). The token contains the old email as a claim but the allowlist no longer includes it. The `requireAdminToken` middleware verifies the JWT signature but does NOT re-check the allowlist on every request.
+
+**Impact**: Low — admin email changes are extremely rare. The 24-hour window is the maximum exposure.
+
+**Fix**: On each authenticated admin request, re-validate the email claim against the current allowlist. If email is no longer in allowlist, return 403 and clear session.
+
+**Files to modify**: `backend/src/middleware/adminToken.ts`
+
+**12-Layer Verification**: L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0482 — LOW: Admin Token Blacklist in Redis Has No TTL — Potential Memory Leak (LOW)
+
+**Ticket ID**: GCP-STG-0482
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, DB
+**Source**: Audit O — SuperAdmin Auth, Token Blacklist
+
+**Problem**: `adminAuth.ts:449-460` on logout, blacklists the token in Redis. If the Redis key has no TTL set, blacklisted tokens accumulate forever. Over months, this grows unbounded. JWT tokens have 24-hour expiry, so blacklist entries only need to persist for 24 hours.
+
+**Impact**: Low — Redis memory grows slowly. At ~100 bytes per entry and ~10 logouts/day, this is ~1MB/year. But it's a correctness issue.
+
+**Fix**: Set TTL on blacklist keys to match JWT expiry (24 hours):
+```typescript
+await redis.set(`admin:blacklist:${token}`, '1', 'EX', 86400);
+```
+
+**Files to modify**: `backend/src/routes/v1/admin/adminAuth.ts` (line ~455)
+
+**12-Layer Verification**: L6 Backend ✅, L7 DB (Redis) ✅
+
+---
+
+## GCP-STG-0483 — LOW: Firebase Authorized Domains Not Verified for Production (LOW)
+
+**Ticket ID**: GCP-STG-0483
+**Severity**: P3 LOW
+**Platforms**: INFRA
+**Layers**: GCP Parity, Dependencies
+**Source**: Audit P — Firebase Project Configuration
+
+**Problem**: Firebase Console → Authentication → Settings → Authorized domains must include the production domains for retailer web and supplier portal. If domains are not listed, Firebase OTP will fail with `auth/unauthorized-domain` error in production.
+
+**Fix**: Verify in Firebase Console that these domains are authorized:
+- `retailer.supermandi.tech` (retailer web)
+- `supplier.supermandi.tech` (supplier portal)
+- `staging.supermandi.tech` (staging)
+- `localhost` (development)
+
+**Files to modify**: Firebase Console only
+
+**12-Layer Verification**: L9 GCP Parity ✅
+
+---
+
+## GCP-STG-0484 — MEDIUM: POS Device Token Never Expires — No Automatic Rotation (MEDIUM)
+
+**Ticket ID**: GCP-STG-0484
+**Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: Backend, Business
+**Source**: Audit Q — Cross-Platform Auth Matrix, Token Expiry
+
+**Problem**: POS device token (generated at `otpAuth.ts:200-210`) is a random hex string stored in `pos_devices` table. It NEVER expires — valid until explicitly revoked by SuperAdmin or replaced by new OTP verification. A stolen device token grants permanent POS access.
+
+**Impact**: Medium — if a device is lost/stolen, the token remains valid. SuperAdmin can revoke, but this requires detecting the theft first.
+
+**Fix**: Add token expiry:
+1. Add `expires_at TIMESTAMPTZ` column to `pos_devices` (default: NOW() + 90 days)
+2. `requireDeviceToken` middleware checks `expires_at > NOW()`
+3. POS app handles 401 by prompting re-authentication
+4. Add auto-renewal: on each successful authenticated request, extend expiry by 90 days
+
+**Files to modify**: Migration (new column), `backend/src/middleware/deviceToken.ts`, POS auth refresh logic
+
+**12-Layer Verification**: L6 Backend ✅, L7 DB ✅, L8 Migration ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0485 — LOW: Retailer Web No CSRF Protection on Backend API Endpoints (LOW)
+
+**Ticket ID**: GCP-STG-0485
+**Severity**: P3 LOW
+**Platforms**: RETAILER-WEB, BACKEND
+**Layers**: Backend, Business
+**Source**: Audit Q — Cross-Platform Auth Matrix, CSRF
+
+**Problem**: Retailer web uses JWT Bearer token for authentication. While this is inherently CSRF-resistant (browser doesn't auto-send Bearer headers), if any endpoint also accepts session cookies or if CORS is misconfigured, CSRF attacks are possible.
+
+SuperAdmin correctly uses `X-Requested-With: XMLHttpRequest` header as CSRF defense (checked in middleware). Retailer web does NOT send this header.
+
+**Impact**: Low — JWT Bearer auth is CSRF-resistant by design. Risk only if future changes add cookie-based auth.
+
+**Fix**: Add `X-Requested-With: XMLHttpRequest` header to retailer-admin API calls (matching SuperAdmin pattern). Backend middleware can optionally validate this header.
+
+**Files to modify**: `retailer-admin/src/lib/api.ts` (add header to fetch calls)
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅
+
+---
+
+## GCP-STG-0486 — MEDIUM: Supplier Portal JWT Stored in localStorage — XSS Risk (MEDIUM)
+
+**Ticket ID**: GCP-STG-0486
+**Severity**: P2 MEDIUM
+**Platforms**: SUPPLIER-WEB
+**Layers**: UI, Business
+**Source**: Audit Q — Cross-Platform Auth Matrix, Token Storage
+
+**Problem**: Supplier portal stores JWT token in `localStorage` (accessible to any JavaScript on the page). If any XSS vulnerability exists (e.g., user-generated content, third-party script injection), the attacker can steal the JWT and impersonate the supplier. SuperAdmin correctly uses HttpOnly cookies (not accessible to JS).
+
+**Impact**: Medium — XSS is the #1 web vulnerability. localStorage JWT is the most common exploitable pattern.
+
+**Fix**: Migrate to HttpOnly cookie auth (matching SuperAdmin pattern):
+1. Backend sets `supplier_session` HttpOnly cookie on login
+2. Frontend stores 'cookie-auth' flag in localStorage (not the actual token)
+3. All API calls use `credentials: 'include'`
+
+**Files to modify**: `backend/src/routes/v1/supplier/auth.ts`, `supplier-portal/src/lib/api.ts`
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0487 — MEDIUM: No Account Lockout on Retailer/Supplier Password Login (MEDIUM)
+
+**Ticket ID**: GCP-STG-0487
+**Severity**: P2 MEDIUM
+**Platforms**: RETAILER-WEB, SUPPLIER-WEB, BACKEND
+**Layers**: Backend, API, Business
+**Source**: Audit Q — Cross-Platform Auth Matrix, Brute Force
+
+**Problem**: Retailer web and supplier portal have email/password login as fallback when Firebase OTP rate-limits. The backend password login endpoints do NOT have per-account lockout after N failed attempts. An attacker can brute-force passwords with unlimited attempts (only IP-level rate limiting applies, easily bypassed with proxies).
+
+SuperAdmin correctly has 5-attempt lockout with 30-minute cooldown. POS has PIN lockout. But web portals have none.
+
+**Fix**: Add per-account lockout matching SuperAdmin pattern:
+1. Track `failed_login_count` and `locked_until` on user record
+2. After 5 failed attempts, lock for 30 minutes
+3. Return 429 with `unlockAt` timestamp
+
+**Files to modify**: Backend retailer-admin and supplier auth endpoints
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0488 — LOW: No Password Complexity Requirements on Retailer/Supplier Password (LOW)
+
+**Ticket ID**: GCP-STG-0488
+**Severity**: P3 LOW
+**Platforms**: RETAILER-WEB, SUPPLIER-WEB
+**Layers**: UI, Backend
+**Source**: Audit Q — Cross-Platform Auth Matrix, Password Policy
+
+**Problem**: Password set/change endpoints accept any non-empty password. No minimum length, no complexity requirements (uppercase, number, special char). Users can set password "1" or "abc".
+
+**Impact**: Low — most users use Firebase OTP (no password needed). Password is fallback only.
+
+**Fix**: Add validation: minimum 8 characters, at least 1 number. Show strength indicator on password fields.
+
+**Files to modify**: Backend auth endpoints (validation), retailer-admin + supplier-portal password forms (UI)
+
+**12-Layer Verification**: L1 UI ✅, L6 Backend ✅
+
+---
+
+## GCP-STG-0489 — MEDIUM: No Auth Event Audit Log (Login/Logout/Password Change) (MEDIUM)
+
+**Ticket ID**: GCP-STG-0489
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND, CROSS-PLATFORM
+**Layers**: Backend, DB, Business
+**Source**: Audit Q — Cross-Platform Auth Matrix, Audit Trail
+
+**Problem**: Authentication events (login success, login failure, logout, password change, OTP send, OTP verify, device enrollment, device revocation) are NOT logged to any audit table. Only console logs exist. For security compliance and incident investigation, a queryable audit trail is essential.
+
+**Fix**:
+1. Create `auth.auth_events` table: `(id, actor_type, actor_id, event_type, ip_address, user_agent, metadata, created_at)`
+2. Log events: login_success, login_failed, logout, password_changed, otp_sent, otp_verified, device_enrolled, device_revoked
+3. Expose in SuperAdmin AuditTab
+
+**Files to modify**: Migration (new table), all auth endpoints, SuperAdmin AuditTab
+
+**12-Layer Verification**: L6 Backend ✅, L7 DB ✅, L8 Migration ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0490 — MEDIUM: CORS Origins Not Locked Down for Production (MEDIUM)
+
+**Ticket ID**: GCP-STG-0490
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, GCP Parity
+**Source**: Audit Q — Cross-Platform Auth Matrix, CORS
+
+**Problem**: Backend CORS configuration needs verification. If `CORS_ORIGIN` is set to `*` (wildcard) in production, any website can make authenticated API calls using stolen tokens. Production CORS should be restricted to:
+- `https://retailer.supermandi.tech`
+- `https://supplier.supermandi.tech`
+- `https://admin.supermandi.tech`
+
+**Fix**: Verify CORS config in `backend/src/app.ts`. Set production `CORS_ORIGIN` env var to comma-separated allowed origins. Reject wildcard in production.
+
+**Files to modify**: `backend/src/app.ts` (CORS config), deploy env vars
+
+**12-Layer Verification**: L6 Backend ✅, L9 GCP Parity ✅
+
+---
+
+## GCP-STG-0491 — MEDIUM: No Rate Limiting on Retailer/Supplier Password Login Endpoints (MEDIUM)
+
+**Ticket ID**: GCP-STG-0491
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, API
+**Source**: Audit Q — Cross-Platform Auth Matrix, Rate Limiting
+
+**Problem**: Retailer web and supplier portal password login endpoints may lack IP-level rate limiting (like `redisRateLimit` used on POS OTP endpoints). Without rate limiting, an attacker can attempt thousands of password guesses per second from a single IP.
+
+**Fix**: Add `redisRateLimit({ keyPrefix: 'rl:retailer:login', windowMs: 60000, max: 10 })` middleware to retailer and supplier password login endpoints.
+
+**Files to modify**: Backend retailer-admin and supplier auth routes
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅
+
+---
+
+<!-- next ticket: GCP-STG-0492 -->
