@@ -12033,4 +12033,410 @@ The backend `GET /api/v1/retailer-admin/customers` supports `?limit=` and `?offs
 
 ---
 
-<!-- next ticket: GCP-STG-0432 -->
+## BATCH 32: Second Pre-Deploy Audit Findings (2026-03-23)
+
+Source: Full 4-platform re-audit after all 431 tickets implemented. Found 20 POS screens missing SafeAreaView + 1 backend field parity gap. Individual tickets created per screen for granular tracking.
+
+---
+
+## GCP-STG-0432 — HIGH: PaymentScreenV3 Missing SafeAreaView — Header Clips Behind Notch (HIGH)
+
+**Ticket ID**: GCP-STG-0432
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS PaymentScreenV3
+
+**Problem**: `PaymentScreenV3.tsx` renders its own header ("Payment" title + back button + total amount) without SafeAreaView or useSafeAreaInsets. On notched phones (Redmi Note series, Realme C series), the "Payment" header and back button render behind the status bar/notch. This screen is visited on EVERY sale — highest traffic of all affected screens.
+
+**Impact**: Payment method selection is unusable on notched phones. Users cannot tap the back button or read the total amount. Blocks daily sales workflow.
+
+**Fix**:
+1. Import `useSafeAreaInsets` from `react-native-safe-area-context`
+2. Call `const insets = useSafeAreaInsets()` in the component
+3. Apply `paddingTop: insets.top` to the outermost container
+4. Apply `paddingBottom: Math.max(insets.bottom, 16)` to the footer button area
+
+**Files to modify**: `src/screens/v3/PaymentScreenV3.tsx`
+**Test**: Verify on notched device — header fully below status bar, buttons tappable.
+
+**12-Layer Verification**: L1 UI ✅, L11 Dependencies (react-native-safe-area-context already installed) ✅
+
+---
+
+## GCP-STG-0433 — HIGH: CashScreenV3 Missing SafeAreaView (HIGH)
+
+**Ticket ID**: GCP-STG-0433
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS CashScreenV3
+
+**Problem**: `CashScreenV3.tsx` renders "Cash Payment" header + back button + total without SafeAreaView. Header clips behind notch. COMPLETE SALE button at bottom may render behind home indicator on gesture-nav devices.
+
+**Impact**: Cash payment (most common payment method for kirana stores — 70%+ of transactions) has broken header on notched phones.
+
+**Fix**: Same pattern as 0432 — import useSafeAreaInsets, apply paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 16).
+
+**Files to modify**: `src/screens/v3/CashScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0434 — HIGH: UpiScreenV3 Missing SafeAreaView (HIGH)
+
+**Ticket ID**: GCP-STG-0434
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS UpiScreenV3
+
+**Problem**: `UpiScreenV3.tsx` renders "UPI Payment" header + QR code without SafeAreaView. On notched phones, header clips behind status bar. QR code display area may shift.
+
+**Impact**: UPI payment (second most common method, growing rapidly in Indian kirana) has broken header.
+
+**Fix**: Same pattern — useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/UpiScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0435 — HIGH: UdharScreenV3 Missing SafeAreaView (HIGH)
+
+**Ticket ID**: GCP-STG-0435
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS UdharScreenV3
+
+**Problem**: `UdharScreenV3.tsx` renders "Udhar / Credit" header + customer inputs without SafeAreaView. Header clips on notched phones.
+
+**Impact**: Credit sales (common in kirana — "udhar" is core business practice) has broken header.
+
+**Fix**: Same pattern — useSafeAreaInsets + paddingTop/paddingBottom.
+
+**Files to modify**: `src/screens/v3/UdharScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0436 — HIGH: SuccessScreenV3 Missing SafeAreaView (HIGH)
+
+**Ticket ID**: GCP-STG-0436
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS SuccessScreenV3
+
+**Problem**: `SuccessScreenV3.tsx` renders confetti + checkmark + receipt actions without SafeAreaView. Top of success animation clips behind notch. Bottom buttons (New Sale, Reprint, WhatsApp, Void) may clip behind home indicator.
+
+**Impact**: Post-sale success screen shown after EVERY transaction has clipped UI.
+
+**Fix**: Same pattern — useSafeAreaInsets + paddingTop/paddingBottom.
+
+**Files to modify**: `src/screens/v3/SuccessScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0437 — MEDIUM: SalesHistoryScreenV3 Missing SafeAreaView (MEDIUM)
+
+**Ticket ID**: GCP-STG-0437
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS SalesHistoryScreenV3
+
+**Problem**: `SalesHistoryScreenV3.tsx` renders "Sales History" header + date filters + search without SafeAreaView.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/SalesHistoryScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0438 — MEDIUM: BillDetailScreenV3 Missing SafeAreaView (MEDIUM)
+
+**Ticket ID**: GCP-STG-0438
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS BillDetailScreenV3
+
+**Problem**: `BillDetailScreenV3.tsx` renders "Bill Details" header without SafeAreaView.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/BillDetailScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0439 — MEDIUM: NewProductScreenV3 Missing SafeAreaView (MEDIUM)
+
+**Ticket ID**: GCP-STG-0439
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS NewProductScreenV3
+
+**Problem**: `NewProductScreenV3.tsx` renders "Add New Product" header without SafeAreaView. Long form content scrolls but header clips.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/NewProductScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0440 — MEDIUM: CustomersScreenV3 Missing SafeAreaView (MEDIUM)
+
+**Ticket ID**: GCP-STG-0440
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS CustomersScreenV3
+
+**Problem**: `CustomersScreenV3.tsx` renders "Customers" header without SafeAreaView.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/CustomersScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0441 — MEDIUM: KhataScreenV3 Missing SafeAreaView (MEDIUM)
+
+**Ticket ID**: GCP-STG-0441
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS KhataScreenV3
+
+**Problem**: `KhataScreenV3.tsx` renders "Khata" header without SafeAreaView.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/KhataScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0442 — MEDIUM: ReportsScreenV3 Missing SafeAreaView (MEDIUM)
+
+**Ticket ID**: GCP-STG-0442
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS ReportsScreenV3
+
+**Problem**: `ReportsScreenV3.tsx` renders "Reports" header without SafeAreaView.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/ReportsScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0443 — MEDIUM: SettingsScreenV3 Missing SafeAreaView (MEDIUM)
+
+**Ticket ID**: GCP-STG-0443
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS SettingsScreenV3
+
+**Problem**: `SettingsScreenV3.tsx` renders "Settings" header without SafeAreaView.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/SettingsScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0444 — MEDIUM: GRNScreenV3 Missing SafeAreaView (MEDIUM)
+
+**Ticket ID**: GCP-STG-0444
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS GRNScreenV3
+
+**Problem**: `GRNScreenV3.tsx` renders "Receive Stock" header without SafeAreaView.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/GRNScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0445 — MEDIUM: CounterPurchaseScreenV3 Missing SafeAreaView (MEDIUM)
+
+**Ticket ID**: GCP-STG-0445
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS CounterPurchaseScreenV3
+
+**Problem**: `CounterPurchaseScreenV3.tsx` renders "Counter Purchase" header without SafeAreaView.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/CounterPurchaseScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0446 — LOW: FinanceScreenV3 Missing SafeAreaView (LOW)
+
+**Ticket ID**: GCP-STG-0446
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS FinanceScreenV3
+
+**Problem**: `FinanceScreenV3.tsx` renders "Credit & Finance" header without SafeAreaView.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/FinanceScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0447 — LOW: CompareScreenV3 Missing SafeAreaView (LOW)
+
+**Ticket ID**: GCP-STG-0447
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS CompareScreenV3
+
+**Problem**: `CompareScreenV3.tsx` renders compare header without SafeAreaView.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/CompareScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0448 — LOW: BarcodeSheetScreenV3 Missing SafeAreaView (LOW)
+
+**Ticket ID**: GCP-STG-0448
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS BarcodeSheetScreenV3
+
+**Problem**: `BarcodeSheetScreenV3.tsx` renders "Barcode Labels" header without SafeAreaView.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/BarcodeSheetScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0449 — LOW: StockScreenV3 Missing SafeAreaView (LOW)
+
+**Ticket ID**: GCP-STG-0449
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS StockScreenV3
+
+**Problem**: `StockScreenV3.tsx` renders "Stock & Inventory" header without SafeAreaView.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/StockScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0450 — LOW: StoreHubScreenV3 Missing SafeAreaView (LOW)
+
+**Ticket ID**: GCP-STG-0450
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS StoreHubScreenV3
+
+**Problem**: `StoreHubScreenV3.tsx` renders store header without SafeAreaView.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/StoreHubScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0451 — LOW: ReorderScreenV3 Missing SafeAreaView (LOW)
+
+**Ticket ID**: GCP-STG-0451
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Second Pre-Deploy Audit — POS ReorderScreenV3
+
+**Problem**: `ReorderScreenV3.tsx` renders "Reorder Suggestions" header without SafeAreaView.
+
+**Fix**: useSafeAreaInsets + paddingTop: insets.top.
+
+**Files to modify**: `src/screens/v3/ReorderScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0452 — LOW: Admin Catalog Products API Missing description in SELECT (LOW)
+
+**Ticket ID**: GCP-STG-0452
+**Severity**: P3 LOW
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: API, Backend
+**Source**: Second Pre-Deploy Audit — Cross-Platform Data Matrix
+
+**Problem**: `GET /api/v1/admin/catalog/products` (backend/src/routes/v1/admin/catalog.ts) does NOT select `sp.description` from `catalog.supplier_products`. The frontend `CatalogProduct` type (supermandi-superadmin/src/api/catalog.ts:63) declares `description?: string` and CatalogTab edit modal (GCP-STG-0428) renders it — but the API returns `undefined` for this field.
+
+Retailer admin (`products.ts:130`) returns `p.description` and supplier portal (`supplier/products.ts:1048`) returns `sp.description` — only the SuperAdmin admin catalog endpoint is missing it.
+
+**Impact**: Low — product descriptions are optional and rarely populated for kirana FMCG products. The edit modal gracefully handles undefined (shows nothing).
+
+**Fix**: Add `sp.description` to the SELECT clause in `backend/src/routes/v1/admin/catalog.ts` GET products query. No frontend change needed — type already declares it.
+
+**Files to modify**: `backend/src/routes/v1/admin/catalog.ts`
+
+**12-Layer Verification**:
+- L1 UI: Already handled (0428) ✅
+- L5 API: Add to SELECT ✅
+- L6 Backend: Single column addition ✅
+
+---
+
+<!-- next ticket: GCP-STG-0453 -->
