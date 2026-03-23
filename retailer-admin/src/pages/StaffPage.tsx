@@ -21,11 +21,16 @@ type StaffMember = {
 
 const ROLES = ['CASHIER', 'STOCK_MANAGER', 'MANAGER'] as const;
 
+/** GCP-STG-0418: Page size for client-side staff pagination */
+const STAFF_PAGE_SIZE = 20;
+
 export default function StaffPage() {
   const { accessToken, store } = useAuth();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // GCP-STG-0418: Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
 
   // Create form state
   const [showCreate, setShowCreate] = useState(false);
@@ -33,6 +38,9 @@ export default function StaffPage() {
   const [newPin, setNewPin] = useState('');
   const [newRole, setNewRole] = useState<string>('CASHIER');
   const [creating, setCreating] = useState(false);
+
+  // GCP-STG-0417: Inline error message instead of alert()
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Reset PIN state
   const [resetTarget, setResetTarget] = useState<string | null>(null);
@@ -71,27 +79,28 @@ export default function StaffPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        alert(data?.error?.message ?? 'Failed to create staff');
+        setActionError(data?.error?.message ?? 'Failed to create staff');
         return;
       }
+      setActionError(null);
       setNewName(''); setNewPin(''); setNewRole('CASHIER'); setShowCreate(false);
       await fetchStaff();
-    } catch { alert('Network error'); }
+    } catch { setActionError('Network error'); }
     finally { setCreating(false); }
   };
 
   const handleEdit = async (staffId: string) => {
-    if (!editName.trim() || editName.trim().length < 2) { alert('Name must be at least 2 characters'); return; }
+    if (!editName.trim() || editName.trim().length < 2) { setActionError('Name must be at least 2 characters'); return; }
     try {
       const res = await authFetch(`/api/v1/retailer-admin/staff/${staffId}`, accessToken, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: editName.trim(), role: editRole }),
       });
-      if (!res.ok) { const d = await res.json(); alert(d?.error?.message ?? 'Failed to update'); return; }
-      setEditTarget(null); setEditName(''); setEditRole('');
+      if (!res.ok) { const d = await res.json(); setActionError(d?.error?.message ?? 'Failed to update'); return; }
+      setActionError(null); setEditTarget(null); setEditName(''); setEditRole('');
       await fetchStaff();
-    } catch { alert('Network error'); }
+    } catch { setActionError('Network error'); }
   };
 
   const handleToggleActive = async (staffId: string) => {
@@ -101,23 +110,23 @@ export default function StaffPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !staff.find(s => s.id === staffId)?.is_active }),
       });
-      if (!res.ok) { const d = await res.json(); alert(d?.error?.message ?? 'Failed'); return; }
+      if (!res.ok) { const d = await res.json(); setActionError(d?.error?.message ?? 'Failed'); return; }
+      setActionError(null);
       await fetchStaff();
-    } catch { alert('Network error'); }
+    } catch { setActionError('Network error'); }
   };
 
   const handleResetPin = async (staffId: string) => {
-    if (!resetPin || !/^\d{4,6}$/.test(resetPin)) { alert('PIN must be 4-6 digits'); return; }
+    if (!resetPin || !/^\d{4,6}$/.test(resetPin)) { setActionError('PIN must be 4-6 digits'); return; }
     try {
       const res = await authFetch(`/api/v1/retailer-admin/staff/${staffId}/reset-pin`, accessToken, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: resetPin }),
       });
-      if (!res.ok) { const d = await res.json(); alert(d?.error?.message ?? 'Failed to reset PIN'); return; }
-      setResetTarget(null); setResetPin('');
-      alert('PIN reset successfully');
-    } catch { alert('Network error'); }
+      if (!res.ok) { const d = await res.json(); setActionError(d?.error?.message ?? 'Failed to reset PIN'); return; }
+      setActionError(null); setResetTarget(null); setResetPin('');
+    } catch { setActionError('Network error'); }
   };
 
   return (
@@ -160,6 +169,8 @@ export default function StaffPage() {
       )}
 
       {error && <div style={{ padding: 16, backgroundColor: '#FEF2F2', color: '#DC2626', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
+      {/* GCP-STG-0417: Inline action error replaces alert() */}
+      {actionError && <div style={{ padding: 12, backgroundColor: '#FEF2F2', color: '#DC2626', borderRadius: 8, marginBottom: 12, fontSize: 14 }}>{actionError}</div>}
       {loading && <p style={{ textAlign: 'center', color: '#64748B', padding: 40 }}>Loading staff...</p>}
 
       {/* Staff list */}
@@ -171,7 +182,8 @@ export default function StaffPage() {
         </div>
       )}
 
-      {staff.map(s => (
+      {/* GCP-STG-0418: Paginate staff list client-side */}
+      {staff.slice(currentPage * STAFF_PAGE_SIZE, (currentPage + 1) * STAFF_PAGE_SIZE).map(s => (
         <div key={s.id} style={{
           display: 'flex', alignItems: 'center', gap: 16, padding: 16,
           backgroundColor: '#fff', borderRadius: 12, border: '1px solid #E2E8F0',
@@ -224,6 +236,38 @@ export default function StaffPage() {
           </div>
         </div>
       ))}
+
+      {/* GCP-STG-0418: Pagination controls */}
+      {(() => {
+        const totalPages = Math.ceil(staff.length / STAFF_PAGE_SIZE);
+        if (totalPages <= 1) return null;
+        return (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, padding: '8px 0' }}>
+            <span style={{ fontSize: 13, color: '#64748B' }}>
+              Showing {currentPage * STAFF_PAGE_SIZE + 1}–{Math.min((currentPage + 1) * STAFF_PAGE_SIZE, staff.length)} of {staff.length}
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setCurrentPage(p => p - 1)}
+                disabled={currentPage === 0}
+                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #CBD5E1', backgroundColor: currentPage === 0 ? '#F1F5F9' : '#fff', cursor: currentPage === 0 ? 'default' : 'pointer', fontSize: 13 }}
+              >
+                Previous
+              </button>
+              <span style={{ fontSize: 13, lineHeight: '36px', color: '#475569' }}>
+                Page {currentPage + 1} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => p + 1)}
+                disabled={currentPage >= totalPages - 1}
+                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #CBD5E1', backgroundColor: currentPage >= totalPages - 1 ? '#F1F5F9' : '#fff', cursor: currentPage >= totalPages - 1 ? 'default' : 'pointer', fontSize: 13 }}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
