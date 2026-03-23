@@ -17698,5 +17698,6 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-22T19:32:22.658Z"
+  "lastUpdated": "2026-03-22T19:32:22.658Z",
+  "_commitNote": "GCP-STG-0368"
 }

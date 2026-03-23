@@ -359,12 +359,22 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
     const tokenWhereClauses: string[] = [];
     const tokenScoreCases: string[] = [];
 
-    for (const token of tokens) {
+    // GCP-STG-0368: Cap similarity() tokens at 3 to prevent query timeout
+    const SIMILARITY_TOKEN_CAP = 3;
+    for (let tokenIdx = 0; tokenIdx < tokens.length; tokenIdx++) {
+      const token = tokens[tokenIdx];
       params.push(token);
       const idx = params.length; // $idx references this token
+      const useSimilarity = tokenIdx < SIMILARITY_TOKEN_CAP;
 
       // T-132 + V3-FIX-132: Fuzzy/typo-tolerant search + unit/content matching
       // GCP-STG-0327: barcode exact (1000) + ILIKE partial fallback (600)
+      // GCP-STG-0368: similarity() only for first 3 tokens, ILIKE-only for rest
+      const similarityWhere = useSimilarity ? `
+        OR similarity(p.name, $${idx}) > 0.3
+        OR similarity(COALESCE(sp.display_name, ''), $${idx}) > 0.3
+        OR similarity(COALESCE(p.brand, ''), $${idx}) > 0.3` : '';
+
       tokenWhereClauses.push(`(
         p.primary_barcode = $${idx}
         OR spb.barcode = $${idx}
@@ -375,32 +385,33 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
         OR COALESCE(p.brand, '') ILIKE '%' || $${idx} || '%'
         OR COALESCE(p.unit, '') ILIKE $${idx}
         OR COALESCE(p.net_content_unit, '') ILIKE $${idx}
-        OR CAST(COALESCE(p.net_content_value, 0) AS TEXT) = $${idx}
-        OR similarity(p.name, $${idx}) > 0.3
-        OR similarity(COALESCE(sp.display_name, ''), $${idx}) > 0.3
-        OR similarity(COALESCE(p.brand, ''), $${idx}) > 0.3
+        OR CAST(COALESCE(p.net_content_value, 0) AS TEXT) = $${idx}${similarityWhere}
         OR COALESCE(p.hsn_code, '') ILIKE '%' || $${idx} || '%'
         OR COALESCE(pt.name, '') ILIKE '%' || $${idx} || '%'
       )`);
 
       // T-132: Enhanced scoring with display_name similarity for typo tolerance
       // GCP-STG-0327: barcode exact=1000, barcode ILIKE partial=600
+      // GCP-STG-0368: similarity scoring only for first 3 tokens
+      const similarityScoring = useSimilarity ? `
+        WHEN similarity(p.name, $${idx}) > 0.5 THEN 500 + similarity(p.name, $${idx}) * 100
+        WHEN similarity(COALESCE(sp.display_name, ''), $${idx}) > 0.5 THEN 500 + similarity(COALESCE(sp.display_name, ''), $${idx}) * 100` : '';
+      const similarityLowScoring = useSimilarity ? `
+        WHEN similarity(p.name, $${idx}) > 0.3 THEN 200 + similarity(p.name, $${idx}) * 100
+        WHEN similarity(COALESCE(sp.display_name, ''), $${idx}) > 0.3 THEN 200 + similarity(COALESCE(sp.display_name, ''), $${idx}) * 100
+        WHEN similarity(COALESCE(p.brand, ''), $${idx}) > 0.3 THEN 150 + similarity(COALESCE(p.brand, ''), $${idx}) * 100` : '';
+
       tokenScoreCases.push(`CASE
         WHEN p.primary_barcode = $${idx} OR spb.barcode = $${idx} THEN 1000
         WHEN p.primary_barcode ILIKE '%' || $${idx} || '%' OR spb.barcode ILIKE '%' || $${idx} || '%' THEN 600
         WHEN LOWER(p.name) = LOWER($${idx}) THEN 800
         WHEN LOWER(COALESCE(sp.display_name, '')) = LOWER($${idx}) THEN 800
         WHEN LOWER(p.name) LIKE LOWER($${idx}) || '%' THEN 700
-        WHEN LOWER(COALESCE(sp.display_name, '')) LIKE LOWER($${idx}) || '%' THEN 700
-        WHEN similarity(p.name, $${idx}) > 0.5 THEN 500 + similarity(p.name, $${idx}) * 100
-        WHEN similarity(COALESCE(sp.display_name, ''), $${idx}) > 0.5 THEN 500 + similarity(COALESCE(sp.display_name, ''), $${idx}) * 100
+        WHEN LOWER(COALESCE(sp.display_name, '')) LIKE LOWER($${idx}) || '%' THEN 700${similarityScoring}
         WHEN p.name ILIKE '%' || $${idx} || '%' THEN 300
         WHEN COALESCE(sp.display_name, '') ILIKE '%' || $${idx} || '%' THEN 300
         WHEN COALESCE(p.brand, '') ILIKE '%' || $${idx} || '%' THEN 250
-        WHEN COALESCE(pt.name, '') ILIKE '%' || $${idx} || '%' THEN 225
-        WHEN similarity(p.name, $${idx}) > 0.3 THEN 200 + similarity(p.name, $${idx}) * 100
-        WHEN similarity(COALESCE(sp.display_name, ''), $${idx}) > 0.3 THEN 200 + similarity(COALESCE(sp.display_name, ''), $${idx}) * 100
-        WHEN similarity(COALESCE(p.brand, ''), $${idx}) > 0.3 THEN 150 + similarity(COALESCE(p.brand, ''), $${idx}) * 100
+        WHEN COALESCE(pt.name, '') ILIKE '%' || $${idx} || '%' THEN 225${similarityLowScoring}
         ELSE 50
       END`);
     }
