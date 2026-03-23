@@ -206,10 +206,13 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
         logger.debug("V3Scan", `not_found_local:${code},context:${context},trying_supplier_catalog`);
       } else {
         setLastResult({ barcode: code, isNew: true });
+        // GCP-STG-0529: Auto-populate barcode digits for search fallback
+        setBarcodeInput(code);
         logger.debug("V3Scan", `not_found:${code},context:${context}`);
       }
     }
-    setBarcodeInput("");
+    // GCP-STG-0529: Only clear input on found — not-found branch populates it above
+    if (getProductByBarcode(code)) setBarcodeInput("");
   }, [context, getProductByBarcode, getProductsByBarcode, addItem, onProductFound, searchSupplierCatalog]);
 
   // Manual submit and camera use the same pipeline

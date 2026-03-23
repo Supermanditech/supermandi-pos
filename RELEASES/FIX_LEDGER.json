@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 931,
+  "version": 932,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6854,7 +6854,7 @@
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 1,
       "end_line": 591,
-      "checksum": "50de29048f92aad6",
+      "checksum": "80a2dd28988c102d",
       "description": "Scan screen v3 — context-aware barcode scan (Sell/Stock-In/New Product), HID+camera, result panel (updated by GCP-STG-0322: supplier catalog fallback, GCP-STG-0414: safe area insets)",
       "test_file": "src/__tests__/screens/scan-v3.stg-559.test.ts",
       "depends_on": null,
@@ -10497,7 +10497,7 @@
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 475,
       "end_line": 512,
-      "checksum": "745f75dd60bb50cd",
+      "checksum": "f5e04fe089c18a5b",
       "description": "Continue button on scan not-found result to dismiss and scan next barcode",
       "test_file": "src/__tests__/screens/scanContinueBtn.gcp-stg-0028.test.ts",
       "depends_on": null,
@@ -10656,7 +10656,7 @@
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 447,
       "end_line": 462,
-      "checksum": "34d60fc34f7148da",
+      "checksum": "ff6de68bec2df943",
       "description": "Scan quick-qty presets warn when exceeding available stock",
       "test_file": "src/__tests__/screens/scanQtyStockCheck.gcp-stg-0052.test.ts",
       "depends_on": null,
@@ -15232,7 +15232,7 @@
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 477,
       "end_line": 501,
-      "checksum": "5ad894a4d0b55788",
+      "checksum": "7b3be0081b079b93",
       "description": "Scan not-found shows Search by Name button instead of toast-only (SELL+BUY tabs)",
       "test_file": "src/__tests__/screens/scanNotFound.gcp-stg-0316.test.ts",
       "depends_on": null,
@@ -19715,7 +19715,7 @@
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 525,
       "end_line": 529,
-      "checksum": "374b9fccc86b328a",
+      "checksum": "c06949f1deb758eb",
       "description": "createStyles accepts safeTop param; header paddingTop uses safeTop+8 instead of hardcoded 48 (insets.top+8)",
       "test_file": "src/__tests__/screens/scanSafeArea.gcp-stg-0414.test.ts",
       "depends_on": null,
@@ -23867,7 +23867,7 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "f9980a57b6e4c72a",
+      "checksum": "aa1763a90c9f7567",
       "line_shifted_at": "2026-03-23T21:15:12.336Z"
     },
     {
@@ -24738,6 +24738,33 @@
         "parity_scanned": true,
         "parity_fixed": true
       }
+    },
+    {
+      "ticket": "GCP-STG-0529",
+      "file": "src/screens/v3/ScanScreenV3.tsx",
+      "start_line": 208,
+      "end_line": 215,
+      "checksum": "7cb61fd95a2cdaad",
+      "description": "Auto-populate barcode input on scan miss for search fallback",
+      "test_file": "N/A",
+      "registered_at": "2026-03-23T22:11:22.258Z",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      }
     }
   ],
   "machine_state_version": 269,
@@ -24782,9 +24809,9 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-23T22:08:32.432Z",
+  "lastUpdated": "2026-03-23T22:11:22.259Z",
   "_commitNote": "GCP-STG-0417,0422,0425,0426,0428,0430,0431",
   "_note": "0429-behavioral",
   "_n": "0491",
-  "last_commit_note": "GCP-STG-0528"
+  "last_commit_note": "GCP-STG-0529"
 }
