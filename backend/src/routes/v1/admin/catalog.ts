@@ -7,11 +7,17 @@ import { requireAdminToken, requirePermission } from "../../../middleware/adminT
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
 import { reconcileStockBalances, checkStockDivergence } from "../../../services/stockReconciliation";
+// GCP-STG-0369: Redis cache for categories endpoint (5-min TTL)
+import { cacheGet, cacheSet } from "../../../db/redis";
 
 export const adminCatalogRouter = Router();
 
 // All routes require admin authentication
 adminCatalogRouter.use(requireAdminToken);
+
+// GCP-STG-0369: Cache key + TTL for categories endpoint
+const CATEGORIES_CACHE_KEY = "admin:catalog:categories";
+const CATEGORIES_CACHE_TTL = 300; // 5 minutes
 
 // ITER4-P1-018: UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -33,6 +39,12 @@ adminCatalogRouter.get(
     if (!pool) return res.status(503).json({ error: "database unavailable" });
 
     try {
+      // GCP-STG-0369: Serve from Redis cache if available
+      const cached = await cacheGet<{ data: unknown[]; count: number }>(CATEGORIES_CACHE_KEY);
+      if (cached) {
+        return res.json({ success: true, ...cached });
+      }
+
       // Get categories from supplier_products (which have edited_category overrides)
       const result = await pool.query(
         `SELECT
@@ -46,11 +58,12 @@ adminCatalogRouter.get(
         ORDER BY COALESCE(sp.edited_category, sp.category) ASC`
       );
 
-      return res.json({
-        success: true,
-        data: result.rows,
-        count: result.rows.length,
-      });
+      const payload = { data: result.rows, count: result.rows.length };
+
+      // GCP-STG-0369: Populate cache (fire-and-forget)
+      cacheSet(CATEGORIES_CACHE_KEY, payload, CATEGORIES_CACHE_TTL).catch(() => {});
+
+      return res.json({ success: true, ...payload });
     } catch (_error: unknown) {
       const error = asError(_error);
       log.error("[SA-P2-006] List categories error:", error.message);
