@@ -13,6 +13,8 @@ import { isOnline } from "../networkStatus";
 import { resolveOfflineScan, setLocalPrice, upsertLocalProduct } from "../offline/scan";
 import { useCartStore } from "../../stores/cartStore";
 import { usePurchaseDraftStore } from "../../stores/purchaseDraftStore";
+// GCP-STG-0523: Scan history log — last 50 scans
+import { useScanHistoryStore } from "../../stores/scanHistoryStore";
 import { POS_MESSAGES } from "../../utils/uiStatus";
 import { upsertStockEntries } from "../stockService";
 
@@ -130,6 +132,8 @@ function isDuplicate(barcode: string, intent: ScanIntent, mode: ScanMode): boole
   if (lastTs !== undefined && now - lastTs < DUPLICATE_WINDOW_MS) {
     // STG-335: Inform cashier to use qty stepper instead of re-scanning
     notify({ tone: "info", message: POS_MESSAGES.duplicateScan ?? "Item already scanned — use +/- to adjust quantity" });
+    // GCP-STG-0523: Log duplicate suppression to scan history
+    useScanHistoryStore.getState().addEntry({ barcode, timestamp: now, result: 'duplicate', source: 'hid' });
     return true;
   }
   lastScanByKey.set(key, now);
@@ -513,6 +517,8 @@ async function handleScan(
             }
           }
           console.log(`scan_needs_onboarding:${trimmed},sellPrice=${storeProduct.sell_price},isNew=${storeProduct.is_first_time_in_store}`);
+          // GCP-STG-0523: Log not-found/onboarding scan
+          useScanHistoryStore.getState().addEntry({ barcode: trimmed, timestamp: Date.now(), result: storeProduct.is_first_time_in_store ? 'not_found' : 'found', source: source === 'keyboard' ? 'manual' : 'hid' });
           runtime.onSellFirstOnboarding?.({ barcode: trimmed, format, product: storeProduct });
           return;
         }
@@ -564,6 +570,9 @@ async function handleScan(
           // AUD-002: Cache image from /lookup response so offline tiles show image
           imageUrl: storeProduct.imageUrl ?? null,
         });
+
+        // GCP-STG-0523: Log successful scan to history
+        useScanHistoryStore.getState().addEntry({ barcode: trimmed, timestamp: Date.now(), result: 'found', productName: displayName, source: source === 'keyboard' ? 'manual' : 'hid' });
 
         const warningKey = trimmed.toUpperCase();
         if (storeProduct.is_first_time_in_store && !warnedNewItems.has(warningKey)) {

@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 925,
+  "version": 926,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -3068,8 +3068,8 @@
       "ticket": "STG-339",
       "file": "src/services/scan/handleScan.ts",
       "start_line": 511,
-      "end_line": 795,
-      "checksum": "cb7aa8721c7c031d",
+      "end_line": 808,
+      "checksum": "e9cbd5f0bc613f5c",
       "description": "Removed store_product_id gate — variant picker mandatory for all LOOSE_BULK",
       "test_file": "src/__tests__/scan/handleScan.stg-335.unit.test.ts",
       "status": "ACTIVE",
@@ -4570,8 +4570,8 @@
       "ticket": "STG-510",
       "file": "src/services/scan/handleScan.ts",
       "start_line": 120,
-      "end_line": 795,
-      "checksum": "2a5dbf2a1f15d42e",
+      "end_line": 808,
+      "checksum": "f8248bdd60f8dee4",
       "description": "Per-barcode duplicate tracking using Map instead of single lastScan",
       "test_file": "src/__tests__/screens/scan-duplicate.stg-510.test.ts",
       "depends_on": null,
@@ -4893,8 +4893,8 @@
       "ticket": "STG-540",
       "file": "src/services/scan/handleScan.ts",
       "start_line": 452,
-      "end_line": 795,
-      "checksum": "1f4ad9c5d9a3ad02",
+      "end_line": 808,
+      "checksum": "69a9b9b73bfa31ed",
       "description": "Reject barcode inputs shorter than 3 characters as invalid",
       "test_file": "src/__tests__/screens/scan-min-length.stg-540.test.ts",
       "depends_on": null,
@@ -23484,9 +23484,9 @@
     {
       "ticket": "GCP-STG-0506",
       "file": "src/services/scan/handleScan.ts",
-      "start_line": 83,
-      "end_line": 92,
-      "checksum": "28d52e176971d9dc",
+      "start_line": 85,
+      "end_line": 808,
+      "checksum": "dbfe1aff6f3eafc4",
       "description": "Scan context guard — scanEnabled flag + isScanEnabled/setScanEnabled exports to block scans during payment/modals",
       "test_file": "src/__tests__/services/scanGuard.gcp-stg-0506.test.ts",
       "depends_on": null,
@@ -23523,14 +23523,15 @@
         "impacted_files": "verified",
         "fix_ledger_check": "verified",
         "no_agent_conflict": "verified"
-      }
+      },
+      "line_shifted_at": "2026-03-23T21:59:01.865Z"
     },
     {
       "ticket": "GCP-STG-0508",
       "file": "src/services/scan/handleScan.ts",
-      "start_line": 389,
-      "end_line": 406,
-      "checksum": "db94bdf8fe053650",
+      "start_line": 393,
+      "end_line": 808,
+      "checksum": "9d85be79f509abc7",
       "description": "Pipeline-level dedup — suppress identical barcode within 500ms across HID+ScanIntent pipelines in onBarcodeScanned",
       "test_file": "src/__tests__/services/scanGuard.gcp-stg-0506.test.ts",
       "depends_on": null,
@@ -23567,7 +23568,8 @@
         "impacted_files": "verified",
         "fix_ledger_check": "verified",
         "no_agent_conflict": "verified"
-      }
+      },
+      "line_shifted_at": "2026-03-23T21:59:01.870Z"
     },
     {
       "ticket": "GCP-STG-0506",
@@ -24547,6 +24549,60 @@
         "regression_check": "done",
         "test_guard": "done"
       }
+    },
+    {
+      "ticket": "GCP-STG-0523",
+      "file": "src/stores/scanHistoryStore.ts",
+      "start_line": 1,
+      "end_line": 27,
+      "checksum": "8421481b4546de2b",
+      "description": "Scan history store — last 50 scans with zustand",
+      "test_file": "N/A",
+      "registered_at": "2026-03-23T22:00:01.660Z",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      }
+    },
+    {
+      "ticket": "GCP-STG-0523",
+      "file": "src/services/scan/handleScan.ts",
+      "start_line": 17,
+      "end_line": 18,
+      "checksum": "535cf2c9edd7804c",
+      "description": "Scan history logging at duplicate, found, and not-found scan points",
+      "test_file": "N/A",
+      "registered_at": "2026-03-23T22:00:01.661Z",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      }
     }
   ],
   "machine_state_version": 269,
@@ -24591,9 +24647,9 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-23T17:19:48.983Z",
+  "lastUpdated": "2026-03-23T22:00:01.661Z",
   "_commitNote": "GCP-STG-0417,0422,0425,0426,0428,0430,0431",
   "_note": "0429-behavioral",
   "_n": "0491",
-  "last_commit_note": "GCP-STG-0502 marker"
+  "last_commit_note": "GCP-STG-0523 scan history"
 }
