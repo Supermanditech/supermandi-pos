@@ -12521,4 +12521,249 @@ ORDER BY ps.created_at DESC
 
 ---
 
-<!-- next ticket: GCP-STG-0454 -->
+## BATCH 34: Firebase + OTP + Auth Deep Audit Findings (2026-03-23)
+
+Source: Comprehensive Audit L-Q covering Firebase configuration, OTP logic, SuperAdmin auth, cross-platform auth matrix across all 4 platforms. Found 5 proposed tickets + 4 additional ⚠️/❌ findings = 9 total.
+
+---
+
+## GCP-STG-0454 — MEDIUM: Supplier Portal Missing Firebase Rate-Limit Auto-Switch (GCP-STG-0147 Parity Gap) (MEDIUM)
+
+**Ticket ID**: GCP-STG-0454
+**Severity**: P2 MEDIUM
+**Platforms**: SUPPLIER-WEB
+**Layers**: UI, UX, Dependencies
+**Source**: Audit L+N — Firebase OTP Edge Cases
+
+**Problem**: Retailer web `retailer-admin/src/lib/firebase.ts:148` has rate-limit handling from GCP-STG-0147 — when Firebase returns `auth/too-many-requests`, it shows "Try email & password instead or wait" and auto-switches the login form to password mode. Supplier portal `supplier-portal/src/lib/firebase.ts:182` does NOT have this handling. When a supplier hits Firebase OTP rate limit, they see a generic error with no fallback guidance.
+
+**Impact**: Suppliers who trigger rate limits (common during testing, demo days, or when Firebase free tier quota is low) are stuck with no actionable guidance. Retailer web gracefully degrades; supplier portal does not.
+
+**Fix**:
+1. Read `retailer-admin/src/lib/firebase.ts:134-157` — copy the rate-limit error handling pattern
+2. In `supplier-portal/src/lib/firebase.ts` sendOtp error handler, add:
+   - Detect `auth/too-many-requests` error code
+   - Return user-friendly message: "Too many OTP requests. Try logging in with your password instead, or wait a few minutes."
+3. In supplier login page, auto-switch to password mode when rate limit detected (matching retailer pattern)
+
+**Files to modify**:
+- `supplier-portal/src/lib/firebase.ts` — add rate-limit error handling
+- `supplier-portal/src/app/(auth)/login/page.tsx` — add auto-switch to password mode
+
+**12-Layer Verification**: L1 UI ✅, L2 UX (error state) ✅, L11 Dependencies (Firebase) ✅
+
+---
+
+## GCP-STG-0455 — LOW: POS Firebase SDK is Dead Code — Installed But Never Used (LOW)
+
+**Ticket ID**: GCP-STG-0455
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Dependencies, Business
+**Source**: Audit L — Firebase Configuration, POS App
+
+**Problem**: POS app has Firebase SDK installed and configured:
+- `firebase@^11.0.0` in package.json
+- `src/config/firebase.ts` imports `firebase/app` + `firebase/auth`, reads `EXPO_PUBLIC_FIREBASE_*` env vars, exports `isFirebaseReady()`
+- `google-services.json` present in repo root + `android/app/`
+
+But NO POS screen or service ever calls Firebase. POS OTP uses custom backend (otpAuth.ts with WhatsApp delivery). `isFirebaseReady()` is exported but never imported by any consumer.
+
+**Impact**: Low — dead code increases bundle size (~100KB for firebase/auth) and creates confusion about which auth system POS actually uses. No functional impact.
+
+**Fix**: Either:
+1. (Recommended) Remove `src/config/firebase.ts` and `firebase` from package.json dependencies. Document in README that POS uses custom backend OTP, not Firebase.
+2. Or add a comment in `firebase.ts` explaining it's reserved for future iOS push notifications or analytics.
+
+**Files to modify**: `src/config/firebase.ts` (remove or document), `package.json` (remove firebase dep if option 1)
+
+**12-Layer Verification**: L11 Dependencies ✅
+
+---
+
+## GCP-STG-0456 — LOW: Firebase API Key Hardcoded in google-services.json in Source Control (LOW)
+
+**Ticket ID**: GCP-STG-0456
+**Severity**: P3 LOW
+**Platforms**: POS, INFRA
+**Layers**: Dependencies, GCP Parity
+**Source**: Audit L — Firebase Configuration, POS App
+
+**Problem**: `google-services.json` (repo root + `android/app/`) contains the Firebase API key `AIzaSyB6PwYoUkg3qAAiowgSg4RN3mhsT6oEgVM` in plaintext. This file is checked into git and visible to anyone with repo access.
+
+**Impact**: Low — Google restricts Firebase API keys by Android package name + SHA-1 fingerprint. The key alone is not sufficient for unauthorized access. However, best practice is to inject at build time or restrict key usage in Google Cloud Console.
+
+**Fix**: Either:
+1. Add API key restrictions in Google Cloud Console (restrict to Android package `com.supermanditech.supermandipos` + registered SHA-1)
+2. Or move `google-services.json` to `.gitignore` and inject via CI/CD secrets
+3. At minimum, verify key restrictions are in place in GCP Console
+
+**Files**: `google-services.json`, `android/app/google-services.json`, `.gitignore`
+
+**12-Layer Verification**: L9 GCP Parity ✅, L11 Dependencies ✅
+
+---
+
+## GCP-STG-0457 — LOW: SuperAdmin Login Cooldown Timer Not Synced with Server Lockout (LOW)
+
+**Ticket ID**: GCP-STG-0457
+**Severity**: P3 LOW
+**Platforms**: SUPERADMIN
+**Layers**: UI, UX, Backend
+**Source**: Audit O — SuperAdmin Auth
+
+**Problem**: `supermandi-superadmin/src/components/LoginGate.tsx` (lines 14, 24-29) has a frontend cooldown timer of 60 seconds for OTP resend. But the backend (`adminAuth.ts:258-268`) has a 30-minute lockout after 5 failed attempts. When the user hits the 5-attempt lockout:
+1. Frontend cooldown expires after 60 seconds → "Resend OTP" button re-enables
+2. User resends OTP → succeeds (new OTP generated)
+3. User enters wrong OTP → gets confusing error (lockout still active for verification)
+
+**Impact**: Low — confusing UX but no security issue. The lockout is correctly enforced server-side. The frontend just doesn't reflect it.
+
+**Fix**: After 5 failed verify attempts, backend returns `{ locked: true, unlockAt: timestamp }`. Frontend reads this and shows "Account locked. Try again in {N} minutes" with a countdown matching the server lockout.
+
+**Files to modify**:
+- `supermandi-superadmin/src/components/LoginGate.tsx` — read lockout from error response
+- `backend/src/routes/v1/admin/adminAuth.ts` — include unlockAt in 429 response (may already be there)
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L5 API ✅
+
+---
+
+## GCP-STG-0458 — LOW: iOS GoogleService-Info.plist Not Present — Firebase Won't Work on iOS (LOW)
+
+**Ticket ID**: GCP-STG-0458
+**Severity**: P3 LOW
+**Platforms**: POS, INFRA
+**Layers**: Dependencies, GCP Parity
+**Source**: Audit L — Firebase Configuration, POS App
+
+**Problem**: `google-services.json` exists for Android but `GoogleService-Info.plist` does NOT exist for iOS. If/when an iOS build is needed, Firebase phone auth (if ever enabled on POS) and push notifications via FCM will not work.
+
+**Impact**: Low — POS is Android-only for Indian kirana market. iOS support is not planned for launch. This is a future consideration.
+
+**Fix**: Download `GoogleService-Info.plist` from Firebase Console → Project Settings → iOS app → download config file. Place in `ios/` directory.
+
+**Files**: Create `ios/GoogleService-Info.plist` (from Firebase Console)
+
+**12-Layer Verification**: L11 Dependencies ✅
+
+---
+
+## GCP-STG-0459 — MEDIUM: POS OTP Phone Stored as Raw 10-Digit Not E.164 in pos_otp Table (MEDIUM)
+
+**Ticket ID**: GCP-STG-0459
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, DB, Business
+**Source**: Audit M — OTP Logic, POS OTP
+
+**Problem**: `otpAuth.ts` send-otp (line 72-76) stores OTP with raw 10-digit phone as the key in `pos_otp` table:
+```sql
+INSERT INTO pos_otp (phone, otp_hash, expires_at) VALUES ($1, $2, $3)
+-- $1 = "9876543210" (raw 10-digit)
+```
+
+But the auth.users lookup (line 52-61) uses E.164 normalized phone:
+```sql
+WHERE u.phone = $1 -- $1 = "+919876543210"
+```
+
+This means `pos_otp.phone` and `auth.users.phone` store the SAME phone in DIFFERENT formats. If any code tries to JOIN or cross-reference these tables by phone, it will fail silently.
+
+**Impact**: Medium — currently no cross-reference exists so no runtime bug. But any future analytics query (e.g., "which phone numbers have OTP issues") would need to know about this format mismatch.
+
+**Fix**: Normalize pos_otp storage to E.164:
+1. Change line 72-76: use `normalizedPhone` (+91 format) instead of raw `phone`
+2. Change line 119: lookup by `normalizedPhone` instead of raw `phone`
+3. Change line 136: UPDATE by `normalizedPhone`
+4. This makes all phone fields across all tables consistently E.164
+
+**Files to modify**: `backend/src/routes/v1/pos/otpAuth.ts` (lines 72, 119, 136)
+
+**12-Layer Verification**: L6 Backend ✅, L7 DB ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0460 — LOW: POS Device Quota Hardcoded to 10 — No Per-Store Configuration (LOW)
+
+**Ticket ID**: GCP-STG-0460
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, Business
+**Source**: Audit M — OTP Logic, POS OTP Device Management
+
+**Problem**: `otpAuth.ts:184` hardcodes the maximum active devices per store to 10:
+```typescript
+const MAX_DEVICES_PER_STORE = 10;
+```
+
+Large stores with multiple counters may need more than 10 POS devices. Small stores may want to limit to 2-3 to prevent unauthorized device proliferation.
+
+**Impact**: Low — 10 devices is sufficient for 99% of kirana stores at launch. Becomes relevant at scale with multi-counter stores.
+
+**Fix**: Move to platform.stores config:
+1. Add `max_pos_devices INTEGER DEFAULT 10` column to `platform.stores`
+2. Read from store record instead of hardcoded constant
+3. Allow SuperAdmin to set per-store device limit in StoresTab
+
+**Files to modify**: Migration (new column), `otpAuth.ts` (read from store), `StoresTab.tsx` (admin UI)
+
+**12-Layer Verification**: L6 Backend ✅, L7 DB ✅, L8 Migration ✅
+
+---
+
+## GCP-STG-0461 — MEDIUM: SuperAdmin Email Rate Limit Not Enforced on verify-email-otp Endpoint (MEDIUM)
+
+**Ticket ID**: GCP-STG-0461
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND, SUPERADMIN
+**Layers**: Backend, API, Business
+**Source**: Audit O — SuperAdmin Auth
+
+**Problem**: `adminAuth.ts` send-email-otp endpoint (line 181-186) has BOTH IP-level rate limiting (`otpRateLimiter`) AND email-level rate limiting (`checkEmailRateLimit`). But the verify-email-otp endpoint (line 238) only has the 5-attempt lockout — NO IP-level rate limiter middleware.
+
+An attacker who knows a valid admin email could call verify-email-otp rapidly from multiple IPs to brute-force the 6-digit OTP (1M combinations). The 5-attempt lockout prevents brute-force per lockout window, but after 30-minute lockout expires, they can try 5 more.
+
+**Impact**: Medium — the 5-attempt lockout + 30-min window makes brute-force infeasible (5 attempts per 30 min = 240 attempts/day = 4,167 days to exhaust 1M combinations). But defense-in-depth says the verify endpoint should also have IP rate limiting.
+
+**Fix**: Add `otpRateLimiter` middleware to the verify-email-otp route:
+```typescript
+adminAuthRouter.post("/auth/verify-email-otp", otpRateLimiter, async (req, res) => {
+```
+
+**Files to modify**: `backend/src/routes/v1/admin/adminAuth.ts` (line 238)
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0462 — LOW: Email Service Provider Config Not Validated at Startup (LOW)
+
+**Ticket ID**: GCP-STG-0462
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, Dependencies
+**Source**: Audit M — OTP Logic, Email Service
+
+**Problem**: `emailService.ts` (lines 43-73) reads `EMAIL_PROVIDER` env var and selects provider (resend/smtp/disabled). If required env vars for the selected provider are missing (e.g., `RESEND_API_KEY` for resend, `SMTP_HOST` for smtp), it only logs a warning — does not fail fast at startup.
+
+This means the app can start successfully but SuperAdmin email OTP will silently fail when the first admin tries to log in. No startup health check catches this.
+
+**Impact**: Low — this is caught on first login attempt, not a silent data corruption issue. But it delays problem detection from deploy time to first-use time.
+
+**Fix**: Add a startup validation function called from `app.ts`:
+```typescript
+function validateEmailConfig() {
+  const provider = process.env.EMAIL_PROVIDER;
+  if (provider === 'resend' && !process.env.RESEND_API_KEY) throw new Error('RESEND_API_KEY required');
+  if (provider === 'smtp' && !process.env.SMTP_HOST) throw new Error('SMTP_HOST required');
+}
+```
+
+**Files to modify**: `backend/src/services/emailService.ts`, `backend/src/app.ts` (call at startup)
+
+**12-Layer Verification**: L6 Backend ✅, L11 Dependencies ✅
+
+---
+
+<!-- next ticket: GCP-STG-0463 -->
