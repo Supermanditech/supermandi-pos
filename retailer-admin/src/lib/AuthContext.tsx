@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { onAuthFailure, API_GATEWAY_BASE, logoutApi, hasAuthCookie, safeJson } from './api';
+import toast from 'react-hot-toast';
 
 // GO-LIVE-109 + AUTH-EXPIRY-001: Token refresh configuration
 // Access token expires in 15 minutes. Refresh 5 minutes before expiry.
@@ -66,8 +67,8 @@ const LEGACY_KEYS = [
 
 // RCAT-AUTH-001: Idle timeout configuration
 // GL-CRIT-0076: Make idle timeout configurable via environment variable
-// V3-SESSION-025: Default changed from 30 → 60 minutes per owner auth requirement
-const IDLE_TIMEOUT_MINUTES = parseInt(import.meta.env.VITE_IDLE_TIMEOUT_MINUTES || '60', 10);
+// GCP-STG-0465: Default changed back to 30 minutes for security (matches SuperAdmin + Supplier Portal)
+const IDLE_TIMEOUT_MINUTES = parseInt(import.meta.env.VITE_IDLE_TIMEOUT_MINUTES || '30', 10);
 const IDLE_TIMEOUT_MS = Math.max(5, IDLE_TIMEOUT_MINUTES) * 60 * 1000; // Minimum 5 minutes
 // GL-WF-028: Warning 5 minutes before timeout (or 1/6 of timeout if timeout is short)
 const WARNING_BEFORE_MS = Math.min(5 * 60 * 1000, IDLE_TIMEOUT_MS / 6);
@@ -428,8 +429,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Logout after full timeout
+      // GCP-STG-0465: Show toast + logout on idle timeout
       if (elapsed > IDLE_TIMEOUT_MS) {
         setShowSessionWarning(false);
+        toast.error('Session expired due to inactivity. Please log in again.', { duration: 6000 });
         logout();
       }
     }, 30000); // Check every 30 seconds for more responsive warning
