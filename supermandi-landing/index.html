@@ -787,6 +787,9 @@
 
         function logClick(target) {
             try {
+                if (navigator.sendBeacon) {
+                    navigator.sendBeacon('/api/v1/public/analytics/event', new Blob([JSON.stringify({event:'whatsapp_cta_click',target:target,ts:Date.now()})], {type:'application/json'}));
+                }
                 console.info('[supermandi][wa_cta]', { event: 'whatsapp_cta_click', target: target, ts: Date.now() });
             } catch (e) {}
         }

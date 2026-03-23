@@ -23,6 +23,28 @@ const ctaRateLimiter = redisRateLimit({
 // GCP-STG-0494: Rate limited + Cache-Control header
 // GCP-STG-0501: X-Content-Type-Options: nosniff
 // =============================================================================
+// =============================================================================
+// POST /public/analytics/event
+// Non-blocking analytics ingestion for landing-page CTA clicks.
+// GCP-STG-0492: Never returns an error — always 204.
+// =============================================================================
+publicConfigRouter.post("/analytics/event", async (req, res) => {
+  try {
+    const { event, target, ts } = req.body;
+    if (!event || typeof event !== "string") return res.status(400).json({ error: "event required" });
+    const pool = getPool();
+    if (pool) {
+      await pool.query(
+        `INSERT INTO platform.analytics_events (event_type, metadata, ip_address, user_agent, created_at) VALUES ($1, $2, $3, $4, NOW())`,
+        [event, JSON.stringify({ target, ts }), req.ip, req.headers["user-agent"]]
+      );
+    }
+    res.status(204).end();
+  } catch {
+    res.status(204).end(); // Non-blocking, never fail
+  }
+});
+
 publicConfigRouter.get("/whatsapp-cta-config", ctaRateLimiter, async (_req, res) => {
   try {
     const pool = getPool();

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect } from "react";
+import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { View, Pressable, TextInput, StyleSheet, Text, Modal } from "react-native";
 import Svg, { Rect, Path, Line } from "react-native-svg";
 import { useTranslation } from "react-i18next";
@@ -7,6 +7,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 // GCP-STG-0414: Safe area insets for dynamic paddingTop
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import * as Haptics from "expo-haptics";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
@@ -70,6 +71,10 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
   const [supplierSearching, setSupplierSearching] = useState(false);
   // GCP-STG-0035: Camera permissions + barcode scanning
   const [cameraPermission, requestPermission] = useCameraPermissions();
+  // GCP-STG-0509: Camera torch toggle
+  const [torchOn, setTorchOn] = useState(false);
+  // GCP-STG-0520: Camera scan cooldown to prevent rapid-fire duplicate scans
+  const scanCooldownRef = useRef(false);
 
   // V3-003: Real barcode lookup from productsStore + cartStore
   const getProductByBarcode = useProductsStore((s) => s.getProductByBarcode);
@@ -117,6 +122,11 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
 
   // V3-FIX-157 + V3-FIX-160: One canonical scan pipeline for HID, camera, and manual entry
   const processScan = useCallback((rawBarcode: string) => {
+    // GCP-STG-0520: Camera scan cooldown — prevent rapid-fire scans within 1.5s
+    if (scanCooldownRef.current) return;
+    scanCooldownRef.current = true;
+    setTimeout(() => { scanCooldownRef.current = false; }, 1500);
+
     const code = normalizeBarcode(rawBarcode);
     if (!code) return;
     if (isDuplicateScan(code)) return;
@@ -180,6 +190,10 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
         showToast(`${product.name} — found in store`);
         onProductFound(code, context);
       }
+      // GCP-STG-0516: Haptic feedback on successful scan
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+      // GCP-STG-0522: Scan beep alternative — double haptic pulse
+      try { setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 80); } catch {}
       logger.debug("V3Scan", `found:${code},product:${product.name},context:${context}`);
     } else {
       // Not found — intent-specific behavior
@@ -231,7 +245,8 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
             <CameraView
               style={StyleSheet.absoluteFill}
               facing="back"
-              barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e", "code128", "code39", "qr"] }}
+              enableTorch={torchOn}
+              barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e", "code128", "code39", "qr", "itf14", "datamatrix", "codabar"] }}
               onBarcodeScanned={(result) => {
                 if (result.data) processScan(result.data);
               }}
@@ -243,6 +258,16 @@ export default function ScanScreenV3({ visible, defaultContext = "sell_scan", on
               </Text>
             </Pressable>
           )}
+          {/* GCP-STG-0509: Torch toggle button */}
+          <Pressable
+            style={styles.torchBtn}
+            onPress={() => setTorchOn((prev) => !prev)}
+            accessibilityLabel={torchOn ? "Turn off flashlight" : "Turn on flashlight"}
+            testID="torch-toggle-btn"
+          >
+            <Text style={{ fontSize: 20 }}>{torchOn ? "🔦" : "🔦"}</Text>
+            <Text style={styles.torchText}>{torchOn ? "ON" : "OFF"}</Text>
+          </Pressable>
           <View style={styles.scanFrame} pointerEvents="none">
             {/* Corner markers */}
             <View style={[styles.corner, styles.cornerTL]} />
@@ -506,6 +531,9 @@ function createStyles(colors: ColorPalette, safeTop: number) {
     backBtn: { width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
     backText: { color: "#fff", fontSize: 16 },
     headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
+    // GCP-STG-0509: Torch toggle button — top-right of viewfinder
+    torchBtn: { position: "absolute", top: 12, right: 12, zIndex: 10, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, flexDirection: "row", alignItems: "center", gap: 4 },
+    torchText: { color: "#fff", fontSize: 11, fontWeight: "700" },
     // Viewfinder
     viewfinder: { flex: 1, alignItems: "center", justifyContent: "center" },
     scanFrame: { width: 220, height: 220, borderWidth: 2, borderColor: "rgba(37,99,235,0.5)", borderRadius: 18, position: "relative" },

@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 900,
+  "version": 904,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6853,8 +6853,8 @@
       "ticket": "STG-559",
       "file": "src/screens/v3/ScanScreenV3.tsx",
       "start_line": 1,
-      "end_line": 487,
-      "checksum": "5aeb00cea3b6ef64",
+      "end_line": 591,
+      "checksum": "db8789197abaf027",
       "description": "Scan screen v3 — context-aware barcode scan (Sell/Stock-In/New Product), HID+camera, result panel (updated by GCP-STG-0322: supplier catalog fallback, GCP-STG-0414: safe area insets)",
       "test_file": "src/__tests__/screens/scan-v3.stg-559.test.ts",
       "depends_on": null,
@@ -10495,8 +10495,8 @@
     {
       "ticket": "GCP-STG-0028",
       "file": "src/screens/v3/ScanScreenV3.tsx",
-      "start_line": 450,
-      "end_line": 487,
+      "start_line": 475,
+      "end_line": 512,
       "checksum": "7327e71d3fd5122a",
       "description": "Continue button on scan not-found result to dismiss and scan next barcode",
       "test_file": "src/__tests__/screens/scanContinueBtn.gcp-stg-0028.test.ts",
@@ -10530,7 +10530,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T12:35:30.376Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T21:08:40.192Z"
+      "line_shifted_at": "2026-03-23T21:15:56.137Z"
     },
     {
       "ticket": "GCP-STG-0055",
@@ -10654,8 +10654,8 @@
     {
       "ticket": "GCP-STG-0052",
       "file": "src/screens/v3/ScanScreenV3.tsx",
-      "start_line": 422,
-      "end_line": 437,
+      "start_line": 447,
+      "end_line": 462,
       "checksum": "3c016e64f88f6b17",
       "description": "Scan quick-qty presets warn when exceeding available stock",
       "test_file": "src/__tests__/screens/scanQtyStockCheck.gcp-stg-0052.test.ts",
@@ -10689,7 +10689,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T13:04:04.085Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T21:08:40.199Z"
+      "line_shifted_at": "2026-03-23T21:15:56.147Z"
     },
     {
       "ticket": "GCP-STG-0057",
@@ -15229,8 +15229,8 @@
     {
       "ticket": "GCP-STG-0316",
       "file": "src/screens/v3/ScanScreenV3.tsx",
-      "start_line": 452,
-      "end_line": 476,
+      "start_line": 477,
+      "end_line": 501,
       "checksum": "0a702f745b72301e",
       "description": "Scan not-found shows Search by Name button instead of toast-only (SELL+BUY tabs)",
       "test_file": "src/__tests__/screens/scanNotFound.gcp-stg-0316.test.ts",
@@ -15261,7 +15261,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-22T21:15:58.129Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T21:08:40.244Z"
+      "line_shifted_at": "2026-03-23T21:15:56.231Z"
     },
     {
       "ticket": "GCP-STG-0318",
@@ -15775,8 +15775,8 @@
     {
       "ticket": "GCP-STG-0322",
       "file": "src/screens/v3/ScanScreenV3.tsx",
-      "start_line": 82,
-      "end_line": 116,
+      "start_line": 87,
+      "end_line": 121,
       "checksum": "739081e5f457f5cd",
       "description": "Supplier catalog fallback: when procurement scan misses local store products, call buyBarcodeSearch API to search supplier catalog before showing not-found",
       "test_file": "src/__tests__/screens/scanSupplierFallback.gcp-stg-0322.test.ts",
@@ -15807,7 +15807,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:20:25.394Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T21:08:40.251Z"
+      "line_shifted_at": "2026-03-23T21:15:24.394Z"
     },
     {
       "ticket": "GCP-STG-0325",
@@ -19712,8 +19712,8 @@
     {
       "ticket": "GCP-STG-0414",
       "file": "src/screens/v3/ScanScreenV3.tsx",
-      "start_line": 500,
-      "end_line": 504,
+      "start_line": 525,
+      "end_line": 529,
       "checksum": "5df3b3129e072c8c",
       "description": "createStyles accepts safeTop param; header paddingTop uses safeTop+8 instead of hardcoded 48 (insets.top+8)",
       "test_file": "src/__tests__/screens/scanSafeArea.gcp-stg-0414.test.ts",
@@ -19744,7 +19744,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:37:06.355Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T21:08:40.314Z"
+      "line_shifted_at": "2026-03-23T21:15:56.312Z"
     },
     {
       "ticket": "GCP-STG-0415",
@@ -23645,9 +23645,9 @@
     {
       "ticket": "GCP-STG-0494",
       "file": "backend/src/routes/v1/publicConfig.ts",
-      "start_line": 16,
-      "end_line": 45,
-      "description": "Rate limit 30/min/IP + Cache-Control on public CTA endpoint",
+      "start_line": 12,
+      "end_line": 82,
+      "description": "Rate limit 30/min/IP + Cache-Control on public CTA endpoint (expanded with analytics endpoint GCP-STG-0492)",
       "test_file": "backend/tests/ctaRateLimit.gcp-stg-0494.unit.test.ts",
       "status": "ACTIVE",
       "checklist": {
@@ -23696,7 +23696,7 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "df42a337daba305b"
+      "checksum": "14db49a733fc3811"
     },
     {
       "ticket": "GCP-STG-0501",
@@ -23813,8 +23813,8 @@
     {
       "ticket": "GCP-STG-0521",
       "file": "src/screens/v3/ScanScreenV3.tsx",
-      "start_line": 115,
-      "end_line": 180,
+      "start_line": 124,
+      "end_line": 210,
       "description": "Disambiguation picker for multiple products with same barcode",
       "test_file": "src/__tests__/stores/barcodeIndex.gcp-stg-0507.test.ts",
       "status": "ACTIVE",
@@ -23864,7 +23864,8 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "932d03bbfd291079"
+      "checksum": "3002ed163ce33573",
+      "line_shifted_at": "2026-03-23T21:15:12.336Z"
     },
     {
       "ticket": "GCP-STG-0519",
@@ -23921,6 +23922,58 @@
         "ticket_parked": "pending"
       },
       "checksum": "4a73c8dab86553ca"
+    },
+    {
+      "ticket": "GCP-STG-0492",
+      "file": "backend/src/routes/v1/publicConfig.ts",
+      "start_line": 31,
+      "end_line": 46,
+      "description": "Non-blocking analytics event POST endpoint for landing page CTA clicks",
+      "test_file": "backend/src/__tests__/analyticsEvent.gcp-stg-0492.unit.test.ts",
+      "status": "ACTIVE",
+      "checksum": "6aee7127f1446b91",
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true
+      },
+      "checklist_evidence": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "sendBeacon in landing page",
+        "navigation": "N/A",
+        "backend_api": "POST /public/analytics/event 204",
+        "api_errors": "always 204",
+        "store_isolation": "N/A public endpoint",
+        "business_logic": "fire-and-forget analytics",
+        "business_behaviour": "done",
+        "db_schema": "platform.analytics_events",
+        "migration_safe": "CREATE IF NOT EXISTS",
+        "impacted_files": "publicConfig.ts, index.html",
+        "fix_ledger_check": "done",
+        "no_agent_conflict": "done",
+        "operator_approved": "Mode A",
+        "parity_scanned": "done",
+        "gcp_parity": "done",
+        "regression_check": "unit test 5/5",
+        "test_guard": "done"
+      }
     }
   ],
   "machine_state_version": 269,
