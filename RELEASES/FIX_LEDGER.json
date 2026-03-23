@@ -10372,8 +10372,8 @@
     {
       "ticket": "GCP-STG-0083",
       "file": "src/stores/productsStore.ts",
-      "start_line": 65,
-      "end_line": 131,
+      "start_line": 184,
+      "end_line": 250,
       "checksum": "2369f8499013e69e",
       "description": "Progressive product loading — 500-item chunks update store incrementally instead of all-at-once",
       "test_file": "src/__tests__/stores/progressiveProductLoad.gcp-stg-0083.test.ts",
@@ -10406,7 +10406,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:47:35.740Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T06:36:13.751Z"
     },
     {
       "ticket": "GCP-STG-0041",
@@ -15116,9 +15117,9 @@
     {
       "ticket": "GCP-STG-0288",
       "file": "backend/src/routes/v1/pos/storeProducts.ts",
-      "start_line": 558,
-      "end_line": 728,
-      "checksum": "07b2602adad83fb5",
+      "start_line": 601,
+      "end_line": 771,
+      "checksum": "9a4af043c7ddd78b",
       "description": "POS API returns lowStockAlertQty + notes in search/lookup/list endpoints",
       "test_file": "backend/tests/posReturnFields.gcp-stg-0288.unit.test.ts",
       "depends_on": null,
@@ -15148,7 +15149,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:42:34.926Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-22T23:02:15.638Z"
+      "line_shifted_at": "2026-03-23T06:46:31.190Z"
     },
     {
       "ticket": "GCP-STG-0297",
@@ -15189,9 +15190,9 @@
     {
       "ticket": "GCP-STG-0309",
       "file": "backend/src/routes/v1/pos/storeProducts.ts",
-      "start_line": 401,
-      "end_line": 871,
-      "checksum": "413714c05366f4a5",
+      "start_line": 433,
+      "end_line": 903,
+      "checksum": "9f24021e9065ffdb",
       "description": "POS API returns caseSize and packUnit from products.pack_size/pack_unit",
       "test_file": "backend/tests/casePackSize.gcp-stg-0309.unit.test.ts",
       "depends_on": null,
@@ -15660,8 +15661,8 @@
       "ticket": "GCP-STG-0321",
       "file": "backend/src/routes/v1/pos/storeProducts.ts",
       "start_line": 311,
-      "end_line": 523,
-      "checksum": "217e8d3ad125ba26",
+      "end_line": 555,
+      "checksum": "b32fab63d706870c",
       "description": "SELL search endpoint supports ?category= query param for filtering by product category (backend+POS)",
       "test_file": "backend/tests/sellCategoryFilter.gcp-stg-0321.unit.test.ts",
       "depends_on": null,
@@ -16165,8 +16166,8 @@
       "ticket": "GCP-STG-0326",
       "file": "backend/src/routes/v1/pos/storeProducts.ts",
       "start_line": 367,
-      "end_line": 380,
-      "checksum": "d10fbe7e84438b71",
+      "end_line": 400,
+      "checksum": "343444aeee2187d8",
       "description": "SELL search token WHERE clause includes p.hsn_code ILIKE matching",
       "test_file": "backend/tests/hsnSearch.gcp-stg-0326.unit.test.ts",
       "depends_on": null,
@@ -16274,9 +16275,9 @@
     {
       "ticket": "GCP-STG-0335",
       "file": "backend/src/routes/v1/pos/storeProducts.ts",
-      "start_line": 1148,
-      "end_line": 1293,
-      "checksum": "cbfc9771d0720799",
+      "start_line": 1191,
+      "end_line": 1336,
+      "checksum": "b486331319d7f520",
       "description": "POS price update LWW guard: accepts expectedPriceUpdatedAt, adds AND price_updated_at guard to WHERE, returns 409 stale_write on conflict, sets price_updated_at=NOW() (POS+retailer-admin)",
       "test_file": "backend/tests/priceLwwGuard.gcp-stg-0335.unit.test.ts",
       "depends_on": null,
@@ -16306,7 +16307,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:42:19.601Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T00:30:23.095Z"
+      "line_shifted_at": "2026-03-23T06:46:31.801Z"
     },
     {
       "ticket": "GCP-STG-0335",
@@ -16422,8 +16423,8 @@
       "ticket": "GCP-STG-0328",
       "file": "backend/src/routes/v1/pos/storeProducts.ts",
       "start_line": 367,
-      "end_line": 405,
-      "checksum": "1989d739598dff30",
+      "end_line": 425,
+      "checksum": "07bddff27cdaad88",
       "description": "SELL search WHERE + scoring includes Devanagari script matching via LEFT JOIN catalog.product_translations (locale=hi), pt.name ILIKE in WHERE, score 225 in CASE (Hindi translations JOIN) (fully behavioral supertest)",
       "test_file": "backend/tests/devanagariSearch.gcp-stg-0328.unit.test.ts",
       "depends_on": null,
@@ -16458,8 +16459,8 @@
       "ticket": "GCP-STG-0327",
       "file": "backend/src/routes/v1/pos/storeProducts.ts",
       "start_line": 367,
-      "end_line": 400,
-      "checksum": "08dd1667d4db463e",
+      "end_line": 420,
+      "checksum": "71a41bd19dd92b3d",
       "description": "SELL search: barcode exact match (1000) + ILIKE partial fallback (600) in WHERE + scoring CASE",
       "test_file": "backend/tests/barcodeSearchStandard.gcp-stg-0327.unit.test.ts",
       "depends_on": null,
@@ -17221,9 +17222,9 @@
     {
       "ticket": "GCP-STG-0336",
       "file": "backend/src/routes/v1/pos/storeProducts.ts",
-      "start_line": 961,
-      "end_line": 1103,
-      "checksum": "a45555f0e5ff3867",
+      "start_line": 1004,
+      "end_line": 1146,
+      "checksum": "3a9b0fe5c4c75714",
       "description": "Delta sync endpoint — GET /pos/store-products/delta?since= returns incremental changes (upserted + deletedIds) or fullReloadRequired (delta endpoint + POS merge)",
       "test_file": "backend/tests/deltaSync.gcp-stg-0336.unit.test.ts",
       "depends_on": null,
@@ -17252,14 +17253,15 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:31:32.245Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T06:46:31.963Z"
     },
     {
       "ticket": "GCP-STG-0336",
       "file": "src/stores/productsStore.ts",
       "start_line": 177,
       "end_line": 257,
-      "checksum": "ae75ff7bf4519164",
+      "checksum": "9381f76e535b1600",
       "description": "Delta sync in checkAndRefresh — try incremental sync first, fall back to full reload (delta endpoint + POS merge)",
       "test_file": "backend/tests/deltaSync.gcp-stg-0336.unit.test.ts",
       "depends_on": null,
@@ -17437,9 +17439,9 @@
     {
       "ticket": "GCP-STG-0337",
       "file": "backend/src/routes/v1/pos/storeProducts.ts",
-      "start_line": 1507,
-      "end_line": 1514,
-      "checksum": "d331bed83b3a61a0",
+      "start_line": 1539,
+      "end_line": 1546,
+      "checksum": "a13cbe19434ad869",
       "description": "LWW guard mandatory on POS PATCH /store-products/metadata — returns 400 if metadataUpdatedAt missing",
       "test_file": "backend/tests/lwwGuardMandatory.gcp-stg-0337.unit.test.ts",
       "depends_on": null,
@@ -17511,9 +17513,9 @@
     {
       "ticket": "GCP-STG-0337",
       "file": "backend/src/routes/v1/pos/storeProducts.ts",
-      "start_line": 1715,
-      "end_line": 1722,
-      "checksum": "57d585fe73a6f3aa",
+      "start_line": 1536,
+      "end_line": 1543,
+      "checksum": "a5e90228b080c367",
       "description": "LWW guard mandatory on POS PATCH /store-products/:id/metadata — returns 400 if metadataUpdatedAt missing",
       "test_file": "backend/tests/lwwGuardMandatory.gcp-stg-0337.unit.test.ts",
       "depends_on": null,
@@ -17542,7 +17544,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T02:08:03.116Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T06:46:31.983Z"
     },
     {
       "ticket": "GCP-STG-0337",

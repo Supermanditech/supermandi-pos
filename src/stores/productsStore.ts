@@ -1,12 +1,131 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { eventLogger } from '../services/eventLogger';
 import * as productsApi from '../services/api/productsApi';
 import { checkCatalogFreshness, fetchDeltaSync } from '../services/api/sellSearchApi';
-import { storeScopedStorage } from "../services/storeScope";
+import { storeScopedStorage, getStoreScopedKey } from "../services/storeScope";
 import { upsertStockFromProducts } from "../services/stockService";
 import { getDeviceToken } from "../services/deviceSession";
 
 const PRODUCTS_CACHE_KEY = 'supermandi.cache.products.v1';
+
+// GCP-STG-0366: Chunked AsyncStorage for 10K+ products
+// Single JSON blob at 10K products (~5MB) blocks JS thread and risks AsyncStorage limits.
+// Chunk into 1000-product blocks with a metadata key for reassembly.
+const PRODUCTS_CHUNK_PREFIX = 'supermandi.cache.products.chunk';
+const PRODUCTS_META_KEY = 'supermandi.cache.products.meta';
+const CHUNK_SIZE = 1000;
+
+interface ChunkMeta {
+  chunkCount: number;
+  totalProducts: number;
+  savedAt: string;
+}
+
+/**
+ * GCP-STG-0366: Write products in chunks to avoid blocking JS thread on large catalogs.
+ * Each chunk stored under a separate key; metadata key tracks chunk count.
+ */
+export async function writeProductsChunked(products: Product[]): Promise<void> {
+  const metaKey = await getStoreScopedKey(PRODUCTS_META_KEY);
+  const chunkCount = Math.ceil(products.length / CHUNK_SIZE) || 1;
+
+  // Read old meta BEFORE writing new data — needed for stale chunk cleanup
+  const oldMeta = await readChunkMeta();
+
+  // Build key-value pairs for all chunks
+  const kvPairs: [string, string][] = [];
+  for (let i = 0; i < chunkCount; i++) {
+    const chunkKey = await getStoreScopedKey(`${PRODUCTS_CHUNK_PREFIX}_${i}`);
+    const slice = products.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+    kvPairs.push([chunkKey, JSON.stringify(slice)]);
+  }
+
+  const meta: ChunkMeta = {
+    chunkCount,
+    totalProducts: products.length,
+    savedAt: new Date().toISOString(),
+  };
+  kvPairs.push([metaKey, JSON.stringify(meta)]);
+
+  // Parallel write via AsyncStorage.multiSet
+  await AsyncStorage.multiSet(kvPairs);
+
+  // Clean up any leftover chunks from a previous larger catalog
+  // (e.g. old catalog had 12 chunks, new one has 8 — remove chunks 8..11)
+  if (oldMeta && oldMeta.chunkCount > chunkCount) {
+    const staleKeys: string[] = [];
+    for (let i = chunkCount; i < oldMeta.chunkCount; i++) {
+      staleKeys.push(await getStoreScopedKey(`${PRODUCTS_CHUNK_PREFIX}_${i}`));
+    }
+    if (staleKeys.length > 0) {
+      await AsyncStorage.multiRemove(staleKeys);
+    }
+  }
+
+  // Clear legacy single-key cache (one-time migration)
+  try {
+    const legacyKey = await getStoreScopedKey(PRODUCTS_CACHE_KEY);
+    await AsyncStorage.removeItem(legacyKey);
+  } catch {
+    // non-critical
+  }
+}
+
+/**
+ * GCP-STG-0366: Read chunk metadata (null if no chunked cache exists).
+ */
+async function readChunkMeta(): Promise<ChunkMeta | null> {
+  try {
+    const metaKey = await getStoreScopedKey(PRODUCTS_META_KEY);
+    const raw = await AsyncStorage.getItem(metaKey);
+    if (!raw) return null;
+    return JSON.parse(raw) as ChunkMeta;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * GCP-STG-0366: Read products from chunked cache. Falls back to legacy single-key cache.
+ */
+export async function readProductsChunked(): Promise<Product[] | null> {
+  // Try chunked read first
+  const meta = await readChunkMeta();
+  if (meta && meta.chunkCount > 0) {
+    const chunkKeys: string[] = [];
+    for (let i = 0; i < meta.chunkCount; i++) {
+      chunkKeys.push(await getStoreScopedKey(`${PRODUCTS_CHUNK_PREFIX}_${i}`));
+    }
+
+    const pairs = await AsyncStorage.multiGet(chunkKeys);
+    const allProducts: Product[] = [];
+    for (const [, value] of pairs) {
+      if (value) {
+        try {
+          const chunk = JSON.parse(value) as Product[];
+          allProducts.push(...chunk);
+        } catch {
+          // Corrupted chunk — abort chunked read
+          return null;
+        }
+      }
+    }
+    return allProducts;
+  }
+
+  // Fallback: legacy single-key cache
+  const cached = await storeScopedStorage.getItem(PRODUCTS_CACHE_KEY);
+  if (cached) {
+    try {
+      return JSON.parse(cached) as Product[];
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
 
 // V3-FIX-096: Authoritative product contract — preserves all metadata from backend
 // V3-FIX-167: Added canonical conversion profile fields
@@ -132,7 +251,8 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
         }
       });
 
-      await storeScopedStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(allProducts));
+      // GCP-STG-0366: Chunked write to avoid blocking JS thread on 10K+ catalogs
+      await writeProductsChunked(allProducts);
 
       await eventLogger.log('PRODUCTS_LOADED', {
         count: allProducts.length,
@@ -140,11 +260,10 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       });
 
     } catch (error) {
-      // 2) Fallback to cache
-      const cached = await storeScopedStorage.getItem(PRODUCTS_CACHE_KEY);
-      if (cached) {
-        try {
-          const productsData = JSON.parse(cached) as Product[];
+      // 2) Fallback to cache — GCP-STG-0366: chunked read (with legacy fallback)
+      try {
+        const productsData = await readProductsChunked();
+        if (productsData && productsData.length > 0) {
           set({ products: productsData, loading: false, error: null });
           upsertStockFromProducts(productsData);
           await eventLogger.log('PRODUCTS_LOADED', {
@@ -152,10 +271,10 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
             source: 'cache'
           });
           return;
-        } catch (parseError) {
-          // AUD-064-C FIX: Log cache parse errors for debugging
-          console.warn('[ProductsStore] Cache parse error, falling back to bundled data:', parseError);
         }
+      } catch (parseError) {
+        // AUD-064-C FIX: Log cache parse errors for debugging
+        console.warn('[ProductsStore] Cache parse error, falling back to bundled data:', parseError);
       }
 
       // AUDIT-POS-042: Removed hardcoded sample products fallback — show error instead
@@ -249,8 +368,8 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
             const now = new Date().toISOString();
             set({ products: merged, lastSyncedAt: now });
 
-            // Persist merged cache + update stock
-            await storeScopedStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(merged));
+            // Persist merged cache + update stock — GCP-STG-0366: chunked write
+            await writeProductsChunked(merged);
             upsertStockFromProducts(merged);
 
             await eventLogger.log('PRODUCTS_DELTA_SYNCED', {
