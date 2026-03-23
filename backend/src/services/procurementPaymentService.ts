@@ -165,13 +165,63 @@ export async function createPaymentIntent(
     return { id, status: 'authorized' as PaymentIntentStatus, provider };
   }
 
-  // ── BNPL ──
+  // ── BNPL (GCP-STG-0411: SuperMandi as credit provider) ──
   if (provider === 'BNPL') {
-    await client.query(
-      `UPDATE procurement.payment_intents SET status = 'pending', updated_at = NOW() WHERE id = $1`,
-      [id]
+    // Check credit line exists and is approved
+    const creditLineResult = await client.query(
+      `SELECT id, approved_limit_minor, used_minor, status
+       FROM payments.bnpl_credit_lines
+       WHERE store_id = $1
+       FOR UPDATE`,
+      [input.storeId]
     );
-    return { id, status: 'pending' as PaymentIntentStatus, provider };
+
+    if (creditLineResult.rows.length === 0) {
+      await client.query(
+        `UPDATE procurement.payment_intents SET status = 'failed', updated_at = NOW() WHERE id = $1`,
+        [id]
+      );
+      log.warn(`[GCP-STG-0411] BNPL: no credit line for store=${input.storeId}`);
+      return { id, status: 'failed' as PaymentIntentStatus, provider };
+    }
+
+    const creditLine = creditLineResult.rows[0];
+
+    if (creditLine.status !== 'approved') {
+      await client.query(
+        `UPDATE procurement.payment_intents SET status = 'failed', updated_at = NOW() WHERE id = $1`,
+        [id]
+      );
+      log.warn(`[GCP-STG-0411] BNPL: credit line not approved (status=${creditLine.status}) for store=${input.storeId}`);
+      return { id, status: 'failed' as PaymentIntentStatus, provider };
+    }
+
+    const available = creditLine.approved_limit_minor - creditLine.used_minor;
+    if (available < input.amountMinor) {
+      await client.query(
+        `UPDATE procurement.payment_intents SET status = 'failed', updated_at = NOW() WHERE id = $1`,
+        [id]
+      );
+      log.warn(`[GCP-STG-0411] BNPL: insufficient credit (available=${available}, requested=${input.amountMinor}) for store=${input.storeId}`);
+      return { id, status: 'failed' as PaymentIntentStatus, provider };
+    }
+
+    // Deduct from credit line
+    await client.query(
+      `UPDATE payments.bnpl_credit_lines
+       SET used_minor = used_minor + $1, updated_at = NOW()
+       WHERE store_id = $2`,
+      [input.amountMinor, input.storeId]
+    );
+
+    // Mark payment as approved
+    await client.query(
+      `UPDATE procurement.payment_intents SET status = 'authorized', provider_order_id = $2, updated_at = NOW() WHERE id = $1`,
+      [id, `BNPL-${id.substring(0, 8)}`]
+    );
+
+    log.info(`[GCP-STG-0411] BNPL authorized: store=${input.storeId}, amount=${input.amountMinor}, remaining=${available - input.amountMinor}`);
+    return { id, status: 'authorized' as PaymentIntentStatus, provider };
   }
 
   // ── MANUAL (Cash) ──

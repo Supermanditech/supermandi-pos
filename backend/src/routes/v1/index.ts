@@ -99,6 +99,7 @@ import { adminSseRouter } from "./admin/sseEvents";  // GCP-STG-0108: Admin SSE 
 import { adminDemandAggregationRouter } from "./admin/demandAggregation";  // GCP-STG-0089: Demand aggregation
 import { retailerSseRouter } from "./retailer-admin/sseEvents";  // GCP-STG-0108: Retailer SSE events
 import { adminCreditRouter } from "./admin/credit";  // CL-020: Credit approval
+import { adminBnplRouter } from "./admin/bnpl";  // GCP-STG-0411: BNPL credit management
 import { authRouter } from "./auth";  // PORTAL-AUTH-001: Unified auth routes
 import { retailerRegisterRouter } from "./retailer/register";  // RO-001: Canonical registration
 import { retailerMeRouter } from "./retailer/me";  // RO-005: Cross-surface login linking
@@ -243,6 +244,7 @@ v1Router.use("/admin", adminPaymentGatewaysRouter);  // GCP-STG-0088: Gateway co
 v1Router.use("/admin", adminSseRouter);  // GCP-STG-0108: Admin SSE events
 v1Router.use("/admin", adminDemandAggregationRouter);  // GCP-STG-0089: Demand aggregation
 v1Router.use("/admin", adminCreditRouter);  // CL-020: SuperAdmin credit approval
+v1Router.use("/admin", adminBnplRouter);  // GCP-STG-0411: BNPL credit management
 v1Router.use("/admin", adminGstComplianceRouter);  // T-235: GST compliance + GSTR-1 export
 v1Router.use("/admin", adminComplianceRouter);  // SA-P2-004: Compliance status aggregation
 v1Router.use("/admin", adminCatalogRouter);  // SA-P2-006: Product category override

@@ -20019,7 +20019,7 @@
       "start_line": 169,
       "end_line": 213,
       "checksum": "ba844cb096354bb7",
-      "description": "BNPL provider checks credit line exists + approved + sufficient balance, deducts from credit line, sets payment status to authorized",
+      "description": "BNPL provider checks credit line exists + approved + sufficient balance, deducts from credit line, sets payment status to authorized (SuperMandi credit provider)",
       "test_file": "backend/tests/bnplCreditSystem.gcp-stg-0411.unit.test.ts",
       "depends_on": null,
       "migration": null,

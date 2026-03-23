@@ -895,4 +895,146 @@ posBnplRouter.get("/bnpl/:drawdownId/disputes", requireDeviceToken, async (req: 
   }
 });
 
+// =============================================================================
+// GCP-STG-0411: BNPL Credit Application
+// Allows stores to apply for a BNPL credit line from SuperMandi
+// =============================================================================
+
+/**
+ * POST /api/v1/pos/bnpl/apply
+ * GCP-STG-0411: Submit BNPL credit application
+ * Creates an application for admin review; no auto-approval
+ */
+posBnplRouter.post("/bnpl/apply", requireDeviceToken, requireActiveStore, financialOperationsRateLimiter, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as unknown as PosRequest).posDevice;
+  const { businessName, gstin, requestedAmountMinor } = req.body as {
+    businessName?: string;
+    gstin?: string;
+    requestedAmountMinor?: number;
+  };
+
+  if (!businessName || typeof businessName !== "string" || businessName.trim().length === 0) {
+    return res.status(400).json({ success: false, error: "businessName is required" });
+  }
+  if (!requestedAmountMinor || typeof requestedAmountMinor !== "number" || requestedAmountMinor <= 0) {
+    return res.status(400).json({ success: false, error: "requestedAmountMinor must be a positive number" });
+  }
+  // GSTIN validation: 15-char alphanumeric if provided
+  if (gstin && (typeof gstin !== "string" || !/^[A-Z0-9]{15}$/.test(gstin.trim().toUpperCase()))) {
+    return res.status(400).json({ success: false, error: "GSTIN must be 15 alphanumeric characters" });
+  }
+
+  try {
+    // Check if store already has an approved credit line
+    const existingLine = await pool.query(
+      `SELECT id, status FROM payments.bnpl_credit_lines WHERE store_id = $1`,
+      [storeId]
+    );
+    if (existingLine.rows.length > 0 && existingLine.rows[0].status === "approved") {
+      return res.status(400).json({
+        success: false,
+        error: "Store already has an approved BNPL credit line",
+      });
+    }
+
+    // Check for pending application
+    const existingApp = await pool.query(
+      `SELECT id FROM payments.bnpl_applications WHERE store_id = $1 AND status = 'pending'`,
+      [storeId]
+    );
+    if (existingApp.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: "A pending BNPL application already exists for this store",
+      });
+    }
+
+    const appId = randomUUID();
+    await pool.query(
+      `INSERT INTO payments.bnpl_applications (id, store_id, business_name, gstin, requested_amount_minor)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [appId, storeId, businessName.trim(), gstin?.trim().toUpperCase() ?? null, requestedAmountMinor]
+    );
+
+    log.info(`[GCP-STG-0411] BNPL application created: id=${appId}, store=${storeId}, amount=${requestedAmountMinor}`);
+
+    return res.json({
+      success: true,
+      applicationId: appId,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[GCP-STG-0411] BNPL apply error:", error.message);
+
+    // Handle missing table gracefully
+    if ((error as any).code === "42P01") {
+      return res.status(503).json({
+        success: false,
+        error: "BNPL application functionality not yet available",
+      });
+    }
+
+    return res.status(500).json({ success: false, error: "Failed to submit BNPL application" });
+  }
+});
+
+/**
+ * GET /api/v1/pos/bnpl/credit-line
+ * GCP-STG-0411: Get current store's BNPL credit line status
+ */
+posBnplRouter.get("/bnpl/credit-line", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as unknown as PosRequest).posDevice;
+
+  try {
+    const lineResult = await pool.query(
+      `SELECT id, approved_limit_minor AS "approvedLimitMinor", used_minor AS "usedMinor",
+              status, approved_at AS "approvedAt"
+       FROM payments.bnpl_credit_lines WHERE store_id = $1`,
+      [storeId]
+    );
+
+    if (lineResult.rows.length === 0) {
+      // Check for pending application
+      const appResult = await pool.query(
+        `SELECT id, status, created_at AS "createdAt"
+         FROM payments.bnpl_applications WHERE store_id = $1
+         ORDER BY created_at DESC LIMIT 1`,
+        [storeId]
+      );
+      return res.json({
+        success: true,
+        hasCreditLine: false,
+        pendingApplication: appResult.rows[0] ?? null,
+      });
+    }
+
+    const line = lineResult.rows[0];
+    return res.json({
+      success: true,
+      hasCreditLine: true,
+      creditLine: {
+        ...line,
+        availableMinor: Math.max(0, line.approvedLimitMinor - line.usedMinor),
+      },
+    });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[GCP-STG-0411] Credit line check error:", error.message);
+
+    if ((error as any).code === "42P01") {
+      return res.json({ success: true, hasCreditLine: false, pendingApplication: null });
+    }
+
+    return res.status(500).json({ success: false, error: "Failed to check credit line" });
+  }
+});
+
 export default posBnplRouter;

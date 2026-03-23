@@ -274,6 +274,55 @@ export async function pollBnplPaymentStatus(
 }
 
 // =============================================================================
+// GCP-STG-0411: BNPL Credit Application (SuperMandi as credit provider)
+// =============================================================================
+
+export interface BnplApplyInput {
+  businessName: string;
+  gstin?: string;
+  requestedAmountMinor: number;
+}
+
+export interface BnplApplyResponse {
+  success: boolean;
+  applicationId: string;
+  status: "pending";
+  createdAt: string;
+}
+
+export interface BnplCreditLineResponse {
+  success: boolean;
+  hasCreditLine: boolean;
+  creditLine?: {
+    id: string;
+    approvedLimitMinor: number;
+    usedMinor: number;
+    availableMinor: number;
+    status: string;
+    approvedAt: string | null;
+  };
+  pendingApplication?: {
+    id: string;
+    status: string;
+    createdAt: string;
+  } | null;
+}
+
+/**
+ * GCP-STG-0411: Apply for BNPL credit line
+ */
+export async function applyForBnpl(input: BnplApplyInput): Promise<BnplApplyResponse> {
+  return apiClient.post<BnplApplyResponse>(`${BNPL_BASE}/apply`, input);
+}
+
+/**
+ * GCP-STG-0411: Get current store's BNPL credit line status
+ */
+export async function getBnplCreditLine(): Promise<BnplCreditLineResponse> {
+  return apiClient.get<BnplCreditLineResponse>(`${BNPL_BASE}/credit-line`);
+}
+
+// =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
