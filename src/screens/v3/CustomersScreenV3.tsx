@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect, useState, useCallback } from "react";
 import { View, Pressable, TextInput, FlatList, ActivityIndicator, Modal, StyleSheet, Text, Linking, Alert } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -15,6 +16,7 @@ type Customer = { name: string; initial: string; visits: number; total: number; 
 type Props = { onClose: () => void };
 
 export default function CustomersScreenV3({ onClose }: Props) {
+  const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -63,7 +65,7 @@ export default function CustomersScreenV3({ onClose }: Props) {
   }, [newCustomerName, newCustomerPhone, fetchCustomers]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Customers</Text><Pressable style={styles.addBtn} onPress={() => setAddModalVisible(true)}><Text style={styles.addBtnText}>+ Add</Text></Pressable></View>
       <View style={styles.searchBar}><TextInput style={styles.searchInput} placeholder="Search customer..." placeholderTextColor={colors.textTertiary} value={searchQuery} onChangeText={setSearchQuery} /></View>
       {loading ? <ActivityIndicator size="small" color={colors.primary} style={{ padding: 20 }} /> : null}
