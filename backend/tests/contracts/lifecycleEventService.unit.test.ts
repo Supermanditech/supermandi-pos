@@ -13,10 +13,11 @@ describe("V3-HARDEN-188: Lifecycle event fan-out rules", () => {
     "order_created", "supplier_action_required", "supplier_accepted",
     "supplier_rejected", "partial_accept", "dispatched",
     "delivery_due", "delivered", "grn_completed", "repeat_order_prompt",
+    "payment_completed", // GCP-STG-0382
   ];
 
-  it("all 10 event types have communication rules", () => {
-    expect(Object.keys(LIFECYCLE_COMMUNICATION_RULES)).toHaveLength(10);
+  it("all event types have communication rules", () => {
+    expect(Object.keys(LIFECYCLE_COMMUNICATION_RULES)).toHaveLength(ALL_EVENTS.length);
     for (const evt of ALL_EVENTS) {
       expect(LIFECYCLE_COMMUNICATION_RULES[evt]).toBeDefined();
     }
@@ -58,13 +59,13 @@ describe("V3-HARDEN-188: Lifecycle event fan-out rules", () => {
     expect(rule.admin).toEqual([]);
   });
 
-  it("grn_completed: in_app only for all parties", () => {
+  it("grn_completed: retailer gets in_app+whatsapp, supplier+admin get in_app", () => {
     const rule = LIFECYCLE_COMMUNICATION_RULES.grn_completed;
-    expect(rule.retailer).toEqual(["in_app"]);
+    // GCP-STG-0381: GRN completion now sends WhatsApp confirmation to retailer
+    expect(rule.retailer).toContain("in_app");
+    expect(rule.retailer).toContain("whatsapp");
     expect(rule.supplier).toEqual(["in_app"]);
     expect(rule.admin).toEqual(["in_app"]);
-    // No whatsapp for GRN — it's a confirmation, not an alert
-    expect(rule.retailer).not.toContain("whatsapp");
   });
 });
 

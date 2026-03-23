@@ -79,9 +79,30 @@ const WHATSAPP_TEMPLATES: Partial<Record<LifecycleEventType, {
     templateKey: "order_delivered",
     buildMessage: (e) => `Order #${e.orderId.slice(-8)} has been delivered. Please verify and complete GRN.`,
   },
+  supplier_accepted: {
+    templateKey: "supplier_order_confirmed",
+    buildMessage: (e) => `Order #${e.orderId.slice(-8)} has been accepted by the supplier. Expect dispatch soon.`,
+  },
+  partial_accept: {
+    templateKey: "supplier_partial_accept",
+    buildMessage: (e) => `Order #${e.orderId.slice(-8)} was partially accepted by the supplier. Check updated quantities.`,
+  },
+  grn_completed: {
+    templateKey: "grn_receipt_confirmation",
+    buildMessage: (e) => `GRN for order #${e.orderId.slice(-8)} is complete. Stock has been updated.`,
+  },
+  delivery_due: {
+    templateKey: "delivery_reminder",
+    buildMessage: (e) => `Reminder: Order #${e.orderId.slice(-8)} delivery is due today. Please prepare for receiving.`,
+  },
   repeat_order_prompt: {
     templateKey: "reorder_reminder",
     buildMessage: (e) => `Time to reorder? Your stock for recent items is running low. Tap to review.`,
+  },
+  // GCP-STG-0382: Payment completed lifecycle event
+  payment_completed: {
+    templateKey: "payment_confirmation",
+    buildMessage: (e) => `Payment confirmed for sale #${e.orderId.slice(-8)} via ${e.payload?.method ?? "POS"}. Thank you!`,
   },
 };
 

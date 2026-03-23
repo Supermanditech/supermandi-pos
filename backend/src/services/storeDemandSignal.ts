@@ -129,7 +129,8 @@ export type LifecycleEventType =
   | "delivery_due"
   | "delivered"
   | "grn_completed"
-  | "repeat_order_prompt";
+  | "repeat_order_prompt"
+  | "payment_completed"; // GCP-STG-0382: Payment lifecycle event
 
 export interface LifecycleEvent {
   eventType: LifecycleEventType;
@@ -155,12 +156,14 @@ export const LIFECYCLE_COMMUNICATION_RULES: Record<LifecycleEventType, {
 }> = {
   order_created:            { retailer: ["in_app", "whatsapp"], supplier: [],                    admin: ["in_app"] },
   supplier_action_required: { retailer: [],                     supplier: ["in_app", "whatsapp"], admin: ["in_app"] },
-  supplier_accepted:        { retailer: ["in_app"],             supplier: ["in_app"],             admin: ["in_app"] },
+  supplier_accepted:        { retailer: ["in_app", "whatsapp"], supplier: ["in_app"],             admin: ["in_app"] },
   supplier_rejected:        { retailer: ["in_app", "whatsapp"], supplier: ["in_app"],             admin: ["in_app"] },
-  partial_accept:           { retailer: ["in_app"],             supplier: ["in_app"],             admin: ["in_app"] },
+  partial_accept:           { retailer: ["in_app", "whatsapp"], supplier: ["in_app"],             admin: ["in_app"] },
   dispatched:               { retailer: ["in_app", "whatsapp"], supplier: ["in_app"],             admin: ["in_app"] },
-  delivery_due:             { retailer: ["in_app"],             supplier: ["in_app"],             admin: ["in_app"] },
+  delivery_due:             { retailer: ["in_app", "whatsapp"], supplier: ["in_app"],             admin: ["in_app"] },
   delivered:                { retailer: ["in_app", "whatsapp"], supplier: ["in_app"],             admin: ["in_app"] },
-  grn_completed:            { retailer: ["in_app"],             supplier: ["in_app"],             admin: ["in_app"] },
+  grn_completed:            { retailer: ["in_app", "whatsapp"], supplier: ["in_app"],             admin: ["in_app"] },
   repeat_order_prompt:      { retailer: ["in_app", "whatsapp"], supplier: [],                    admin: [] },
+  // GCP-STG-0382: Payment completed — retailer gets WhatsApp confirmation + in_app + SSE
+  payment_completed:        { retailer: ["in_app", "whatsapp"], supplier: [],                    admin: ["in_app"] },
 };
