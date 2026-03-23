@@ -15,6 +15,8 @@ import { useCartStore } from "../../stores/cartStore";
 import { usePurchaseDraftStore } from "../../stores/purchaseDraftStore";
 // GCP-STG-0523: Scan history log — last 50 scans
 import { useScanHistoryStore } from "../../stores/scanHistoryStore";
+// GCP-STG-0524: Scan analytics — log scan events for debugging
+import { logPosEvent } from "../cloudEventLogger";
 import { POS_MESSAGES } from "../../utils/uiStatus";
 import { upsertStockEntries } from "../stockService";
 
@@ -134,6 +136,8 @@ function isDuplicate(barcode: string, intent: ScanIntent, mode: ScanMode): boole
     notify({ tone: "info", message: POS_MESSAGES.duplicateScan ?? "Item already scanned — use +/- to adjust quantity" });
     // GCP-STG-0523: Log duplicate suppression to scan history
     useScanHistoryStore.getState().addEntry({ barcode, timestamp: now, result: 'duplicate', source: 'hid' });
+    // GCP-STG-0524: Scan analytics — duplicate suppression
+    void logPosEvent("SCAN_BARCODE", { barcode, result: "duplicate" });
     return true;
   }
   lastScanByKey.set(key, now);
@@ -519,6 +523,8 @@ async function handleScan(
           console.log(`scan_needs_onboarding:${trimmed},sellPrice=${storeProduct.sell_price},isNew=${storeProduct.is_first_time_in_store}`);
           // GCP-STG-0523: Log not-found/onboarding scan
           useScanHistoryStore.getState().addEntry({ barcode: trimmed, timestamp: Date.now(), result: storeProduct.is_first_time_in_store ? 'not_found' : 'found', source: source === 'keyboard' ? 'manual' : 'hid' });
+          // GCP-STG-0524: Scan analytics event
+          void logPosEvent("SCAN_BARCODE", { barcode: trimmed, result: storeProduct.is_first_time_in_store ? "not_found" : "found", source });
           runtime.onSellFirstOnboarding?.({ barcode: trimmed, format, product: storeProduct });
           return;
         }
@@ -573,6 +579,8 @@ async function handleScan(
 
         // GCP-STG-0523: Log successful scan to history
         useScanHistoryStore.getState().addEntry({ barcode: trimmed, timestamp: Date.now(), result: 'found', productName: displayName, source: source === 'keyboard' ? 'manual' : 'hid' });
+        // GCP-STG-0524: Scan analytics event
+        void logPosEvent("SCAN_BARCODE", { barcode: trimmed, result: "found", source });
 
         const warningKey = trimmed.toUpperCase();
         if (storeProduct.is_first_time_in_store && !warnedNewItems.has(warningKey)) {
