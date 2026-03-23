@@ -164,6 +164,9 @@ pos_screen.png
 # Firebase service account keys (NEVER commit)
 firebase-service-account*.json
 *-firebase-adminsdk-*.json
+# GCP-STG-0456: google-services.json contains Firebase API key. The key is
+# restricted by Android package name + SHA-1 fingerprint in GCP Console, so it
+# is low-risk if leaked, but we gitignore it as defense-in-depth.
 google-services.json
 retailer-admin/coverage/
 supermandi-superadmin/coverage/
