@@ -191,7 +191,8 @@ adminCatalogRouter.get(
           sp.delivery_sla_days AS "deliverySlaDays",
           sp.credit_days AS "creditDays",
           sp.image_url AS "imageUrl",
-          sp.stock_quantity AS "stockQuantity"
+          sp.stock_quantity AS "stockQuantity",
+          COALESCE(sp.supplier_visible, false) AS "supplierVisible"
         FROM catalog.supplier_products sp
         LEFT JOIN supplier.suppliers s ON s.id = sp.supplier_id
         ${whereClause}

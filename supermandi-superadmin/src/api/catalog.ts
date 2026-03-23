@@ -59,6 +59,8 @@ export type CatalogProduct = {
   moq?: number | null;
   imageUrl?: string | null;
   stockQuantity?: number | null;
+  // GCP-STG-0356: Supplier visibility toggle
+  supplierVisible?: boolean;
 };
 
 // V3-FIX-169: Update supplier product conversion metadata
@@ -302,6 +304,8 @@ export async function editProductMetadata(
     gstRate?: number;
     deliverySlaDays?: number;
     creditDays?: number;
+    // GCP-STG-0356: Supplier visibility toggle
+    supplierVisible?: boolean;
   }
 ): Promise<void> {
   const base = API_BASE;

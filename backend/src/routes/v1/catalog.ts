@@ -540,7 +540,8 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           sp.procurement_unit,
           sp.procurement_pack_qty,
           sp.base_stock_unit,
-          sp.billing_model
+          sp.billing_model,
+          COALESCE(sp.supplier_visible, false) AS supplier_visible
         FROM catalog.supplier_products sp
         JOIN supplier.suppliers s ON s.id = sp.supplier_id
         JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
@@ -573,13 +574,15 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
         MIN(COALESCE(mp_image_url, sp_image_url)) AS "imageUrl",
         MIN(mp_pack_size) AS "packSize",
         (
-          SELECT supplier_name FROM priced p2
+          SELECT CASE WHEN p2.supplier_visible THEN p2.supplier_name ELSE 'SuperMandi' END
+          FROM priced p2
           WHERE p2.group_id = priced.group_id
           ORDER BY p2.is_preferred DESC, p2.retailer_price ASC
           LIMIT 1
         ) AS "bestSupplierName",
         (
-          SELECT supplier_city FROM priced p2
+          SELECT CASE WHEN p2.supplier_visible THEN p2.supplier_city ELSE NULL END
+          FROM priced p2
           WHERE p2.group_id = priced.group_id
           ORDER BY p2.is_preferred DESC, p2.retailer_price ASC
           LIMIT 1
@@ -591,9 +594,9 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           LIMIT 1
         ) AS "bnplEligible",
         json_agg(json_build_object(
-          'supplierId', supplier_id,
-          'supplierName', supplier_name,
-          'supplierCity', supplier_city,
+          'supplierId', CASE WHEN supplier_visible THEN supplier_id ELSE NULL END,
+          'supplierName', CASE WHEN supplier_visible THEN supplier_name ELSE 'SuperMandi' END,
+          'supplierCity', CASE WHEN supplier_visible THEN supplier_city ELSE NULL END,
           'supplierProductId', sp_id,
           'purchasePrice', retailer_price,
           'mrp', mrp,
@@ -879,7 +882,8 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
           sp.net_content_value AS sp_net_content_value,
           sp.net_content_unit AS sp_net_content_unit,
           mp.net_content_value AS mp_net_content_value,
-          mp.net_content_unit AS mp_net_content_unit
+          mp.net_content_unit AS mp_net_content_unit,
+          COALESCE(sp.supplier_visible, false) AS supplier_visible
         FROM catalog.supplier_products sp
         JOIN supplier.suppliers s ON s.id = sp.supplier_id
         JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
@@ -917,13 +921,15 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
         MIN(COALESCE(mp_image_url, sp_image_url)) AS "imageUrl",
         MIN(mp_pack_size) AS "packSize",
         (
-          SELECT supplier_name FROM priced p2
+          SELECT CASE WHEN p2.supplier_visible THEN p2.supplier_name ELSE 'SuperMandi' END
+          FROM priced p2
           WHERE p2.group_id = priced.group_id
           ORDER BY p2.is_preferred DESC, p2.retailer_price ASC
           LIMIT 1
         ) AS "bestSupplierName",
         (
-          SELECT supplier_city FROM priced p2
+          SELECT CASE WHEN p2.supplier_visible THEN p2.supplier_city ELSE NULL END
+          FROM priced p2
           WHERE p2.group_id = priced.group_id
           ORDER BY p2.is_preferred DESC, p2.retailer_price ASC
           LIMIT 1
@@ -935,9 +941,9 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
           LIMIT 1
         ) AS "bnplEligible",
         json_agg(json_build_object(
-          'supplierId', supplier_id,
-          'supplierName', supplier_name,
-          'supplierCity', supplier_city,
+          'supplierId', CASE WHEN supplier_visible THEN supplier_id ELSE NULL END,
+          'supplierName', CASE WHEN supplier_visible THEN supplier_name ELSE 'SuperMandi' END,
+          'supplierCity', CASE WHEN supplier_visible THEN supplier_city ELSE NULL END,
           'supplierProductId', sp_id,
           'purchasePrice', retailer_price,
           'mrp', mrp,
