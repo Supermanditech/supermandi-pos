@@ -7,6 +7,7 @@
  */
 import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { View, Pressable, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import QRCode from "react-native-qrcode-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -26,6 +27,7 @@ type UpiScreenV3Props = {
 };
 
 export default function UpiScreenV3({ onBack, onComplete }: UpiScreenV3Props) {
+  const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -146,7 +148,7 @@ export default function UpiScreenV3({ onBack, onComplete }: UpiScreenV3Props) {
   }, [onBack]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={handleBack} accessibilityLabel="Back to payment methods">
           <Text style={styles.backText}>←</Text>
@@ -202,7 +204,7 @@ export default function UpiScreenV3({ onBack, onComplete }: UpiScreenV3Props) {
 
       {/* Confirm button — only visible in waiting state */}
       {(upiState === "waiting" || upiState === "confirming") ? (
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <Pressable
             style={[styles.completeBtn, upiState === "confirming" && styles.completeBtnDisabled]}
             onPress={handleConfirm}
