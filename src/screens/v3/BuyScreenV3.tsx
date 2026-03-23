@@ -107,6 +107,15 @@ export default function BuyScreenV3() {
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [paymentMode, setPaymentMode] = useState<"UPI" | "BANK" | "BNPL" | "CREDIT" | "CASH">("CASH");
   const [ordering, setOrdering] = useState(false);
+  // GCP-STG-0404: Order confirmation state — shown after successful checkout
+  const [confirmationData, setConfirmationData] = useState<{
+    orderNumbers: string[];
+    itemCount: number;
+    totalMinor: number;
+    paymentMode: string;
+    paymentStatus: string;
+    supplierCount: number;
+  } | null>(null);
 
   // V3-013: Fetch real catalog data
   useEffect(() => {
@@ -600,6 +609,10 @@ export default function BuyScreenV3() {
                   }
 
                   let totalItems = 0;
+                  const orderNumbers: string[] = [];
+                  let lastPaymentStatus = 'none';
+                  const savedCartTotal = cartTotal;
+                  const savedPaymentMode = paymentMode;
                   for (const [supplierId, supplierProducts] of bySupplier) {
                     const orderItems = supplierProducts.map((p) => ({
                       supplierProductId: p.id,
@@ -626,31 +639,35 @@ export default function BuyScreenV3() {
                       paymentMode: paymentMode as any,
                     });
                     await submitOrder(sid, order.id);
+                    // GCP-STG-0404: Collect order numbers for confirmation screen
+                    orderNumbers.push(order.orderNumber || order.id);
                     // V3-FIX-176: Payment intent created server-side — surface state + redirect
                     const orderData = order as any;
+                    lastPaymentStatus = orderData.paymentIntentStatus || 'none';
                     if (orderData.paymentIntentStatus === 'pending' && orderData.paymentRedirectUrl) {
                       // UPI/Provider: open payment redirect
-                      showToast(`Order placed — redirecting to payment...`);
                       try {
                         const { Linking } = require('react-native');
                         await Linking.openURL(orderData.paymentRedirectUrl);
                       } catch {
-                        showToast(`Pay via: ${orderData.paymentRedirectUrl}`);
+                        // Payment URL will be shown in confirmation screen
                       }
                       logger.debug("BuyV3", `payment_redirect:${orderData.paymentRedirectUrl}`);
-                    } else if (orderData.paymentIntentStatus === 'authorized') {
-                      showToast(`Order placed — SuperMandi Credit approved!`);
-                    } else if (orderData.paymentIntentStatus === 'pending') {
-                      showToast(`Order placed — payment pending partner approval`);
                     }
                     totalItems += orderItems.length;
                     logger.debug("BuyV3", `checkout:${order.id},supplier:${supplierId},payment:${paymentMode},intent:${orderData.paymentIntentStatus || 'none'}`);
                   }
-                  if (paymentMode === "CASH") {
-                    showToast(`Order placed (Cash on Delivery): ${totalItems} items · ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")}`);
-                  }
                   storeClearOrderQtys();
                   setCheckoutVisible(false);
+                  // GCP-STG-0404: Show order confirmation screen instead of just a toast
+                  setConfirmationData({
+                    orderNumbers,
+                    itemCount: totalItems,
+                    totalMinor: savedCartTotal,
+                    paymentMode: savedPaymentMode,
+                    paymentStatus: lastPaymentStatus,
+                    supplierCount: bySupplier.size,
+                  });
                 } catch (err: any) {
                   showToast(err?.message ?? "Failed to place order");
                 } finally {
@@ -658,6 +675,69 @@ export default function BuyScreenV3() {
                 }
               }}>
                 <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textInverse }}>{ordering ? "Placing..." : `Pay ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")} →`}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* GCP-STG-0404: Order Confirmation Screen — shown after successful BUY checkout */}
+      <Modal visible={confirmationData !== null} transparent animationType="fade" onRequestClose={() => setConfirmationData(null)} testID="buy-confirmation-modal">
+        <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 24, width: '100%', maxWidth: 360, alignItems: 'center' }}>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>{'✅'}</Text>
+            <Text style={{ fontSize: 20, fontWeight: '800', color: colors.textPrimary, marginBottom: 4 }} testID="confirmation-title">Order Placed!</Text>
+            <Text style={{ fontSize: 13, color: colors.textTertiary, marginBottom: 16, textAlign: 'center' }}>
+              {confirmationData && confirmationData.supplierCount > 1
+                ? `${confirmationData.supplierCount} supplier orders created`
+                : 'Your procurement order has been submitted'}
+            </Text>
+
+            {confirmationData ? (
+              <View style={{ backgroundColor: colors.backgroundSecondary, borderRadius: 12, padding: 14, width: '100%', marginBottom: 16 }}>
+                {/* Order number(s) */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>{confirmationData.orderNumbers.length > 1 ? 'Order Numbers' : 'Order Number'}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textPrimary }} testID="confirmation-order-numbers">
+                    {confirmationData.orderNumbers.length <= 2
+                      ? confirmationData.orderNumbers.join(', ')
+                      : `${confirmationData.orderNumbers[0]} +${confirmationData.orderNumbers.length - 1} more`}
+                  </Text>
+                </View>
+                {/* Item count */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>Items</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textPrimary }} testID="confirmation-item-count">
+                    {confirmationData.itemCount} item{confirmationData.itemCount !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+                {/* Total amount */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 6 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: colors.primary }}>Total</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: colors.primary }} testID="confirmation-total">
+                    {'₹'}{Math.round(confirmationData.totalMinor / 100).toLocaleString("en-IN")}
+                  </Text>
+                </View>
+                {/* Payment status */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>Payment</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: confirmationData.paymentStatus === 'authorized' ? colors.success : colors.textPrimary }} testID="confirmation-payment-status">
+                    {confirmationData.paymentMode === 'CASH' ? 'Cash on Delivery'
+                      : confirmationData.paymentStatus === 'authorized' ? 'Approved'
+                      : confirmationData.paymentStatus === 'pending' ? 'Pending'
+                      : confirmationData.paymentMode}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+
+            {/* Action buttons */}
+            <View style={{ width: '100%', gap: 8 }}>
+              <Pressable
+                style={{ padding: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' }}
+                onPress={() => setConfirmationData(null)}
+                testID="confirmation-continue-btn"
+              >
+                <Text style={{ fontSize: 15, fontWeight: '800', color: colors.textInverse }}>Continue Shopping</Text>
               </Pressable>
             </View>
           </View>

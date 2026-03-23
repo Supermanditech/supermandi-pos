@@ -19502,7 +19502,7 @@
       "start_line": 684,
       "end_line": 730,
       "checksum": "1e3ed64ee8648252",
-      "description": "BUY order confirmation modal shown after successful checkout with order numbers, item count, total amount, payment status, and Continue Shopping button",
+      "description": "BUY order confirmation modal shown after successful checkout with order numbers, item count, total amount, payment status, and Continue Shopping button (modal with order summary)",
       "test_file": "src/__tests__/screens/buyConfirmation.gcp-stg-0404.test.ts",
       "depends_on": null,
       "migration": null,
