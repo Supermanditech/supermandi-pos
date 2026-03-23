@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { View, Pressable, ScrollView, StyleSheet, Text, ActivityIndicator } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding, getChipFontSize } from "../../theme/responsive";
@@ -14,6 +15,7 @@ type Props = { onClose: () => void };
 
 export default function FinanceScreenV3({ onClose }: Props) {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<"offers" | "loans" | "bills">("offers");
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,7 @@ export default function FinanceScreenV3({ onClose }: Props) {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={[styles.header, { backgroundColor: "#7C3AED" }]}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Credit & Finance</Text><View style={{ width: 30 }} /></View>
       <View style={styles.tabs}>
         {(["offers", "loans", "bills"] as const).map(t => (
