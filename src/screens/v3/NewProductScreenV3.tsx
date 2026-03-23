@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { View, TextInput, Pressable, ScrollView, StyleSheet, Text, Image } from "react-native";
+import { View, TextInput, Pressable, ScrollView, StyleSheet, Text, Image, Modal, FlatList } from "react-native";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 
@@ -12,6 +12,10 @@ import { useCartStore } from "../../stores/cartStore";
 import { apiClient } from "../../services/api/apiClient";
 import { isOnline } from "../../services/networkStatus";
 import { logger } from "../../services/logger";
+
+// GCP-STG-0393: Valid unit options for constrained picker (no free-text)
+export const VALID_UNITS = ["PCS", "KG", "GM", "LTR", "ML", "DOZEN", "BOTTLE", "PACK", "BOX", "CARTON", "CASE", "BAG"] as const;
+export type ValidUnit = (typeof VALID_UNITS)[number];
 
 // V3-FIX-070: New product digitization — real master DB lookup via API
 // GET /api/v1/pos/catalog/master/:barcode → auto-fill if found
@@ -74,7 +78,8 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
   const [openingStock, setOpeningStock] = useState("0");
   const [hsnCode, setHsnCode] = useState("");
   const [gstPct, setGstPct] = useState("18");
-  const [unit, setUnit] = useState("pcs");
+  const [unit, setUnit] = useState<ValidUnit>("PCS");
+  const [unitPickerVisible, setUnitPickerVisible] = useState(false);
   const [caseQty, setCaseQty] = useState("24");
   // V3-FIX-168: Product mode + conversion setup
   const [productMode, setProductMode] = useState<"PACKAGED" | "LOOSE_BULK">("PACKAGED");
@@ -251,7 +256,36 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.fieldLabel}>UNIT</Text>
-            <TextInput style={styles.fieldInput} value={unit} onChangeText={setUnit} placeholder="pcs" placeholderTextColor={colors.textTertiary} />
+            <Pressable
+              style={styles.fieldInput}
+              onPress={() => setUnitPickerVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Select unit"
+              testID="unit-picker-trigger"
+            >
+              <Text style={{ fontSize: 14, fontWeight: "500", color: colors.textPrimary }}>{unit}</Text>
+            </Pressable>
+            {/* GCP-STG-0393: Unit picker modal */}
+            <Modal visible={unitPickerVisible} transparent animationType="fade" onRequestClose={() => setUnitPickerVisible(false)}>
+              <Pressable style={styles.pickerOverlay} onPress={() => setUnitPickerVisible(false)}>
+                <View style={styles.pickerContainer}>
+                  <Text style={styles.pickerTitle}>Select Unit</Text>
+                  <FlatList
+                    data={VALID_UNITS as unknown as ValidUnit[]}
+                    keyExtractor={(item) => item}
+                    renderItem={({ item }) => (
+                      <Pressable
+                        style={[styles.pickerItem, item === unit && styles.pickerItemSelected]}
+                        onPress={() => { setUnit(item); setUnitPickerVisible(false); }}
+                        testID={`unit-option-${item}`}
+                      >
+                        <Text style={[styles.pickerItemText, item === unit && styles.pickerItemTextSelected]}>{item}</Text>
+                      </Pressable>
+                    )}
+                  />
+                </View>
+              </Pressable>
+            </Modal>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.fieldLabel}>CASE QTY</Text>
@@ -265,14 +299,14 @@ export default function NewProductScreenV3({ barcode, onClose, onProductAdded }:
           <View style={styles.row}>
             <Pressable
               style={[styles.halfField, { backgroundColor: productMode === "PACKAGED" ? colors.primary + "20" : colors.background, borderRadius: 8, padding: 10, alignItems: "center", borderWidth: 1, borderColor: productMode === "PACKAGED" ? colors.primary : colors.border }]}
-              onPress={() => { setProductMode("PACKAGED"); setUnit("pcs"); setBaseStockUnit("PCS"); }}
+              onPress={() => { setProductMode("PACKAGED"); setUnit("PCS"); setBaseStockUnit("PCS"); }}
             >
               <Text style={{ fontSize: 12, fontWeight: "700", color: productMode === "PACKAGED" ? colors.primary : colors.textSecondary }}>PACKAGED</Text>
               <Text style={{ fontSize: 10, color: colors.textTertiary }}>Fixed pack</Text>
             </Pressable>
             <Pressable
               style={[styles.halfField, { backgroundColor: productMode === "LOOSE_BULK" ? colors.primary + "20" : colors.background, borderRadius: 8, padding: 10, alignItems: "center", borderWidth: 1, borderColor: productMode === "LOOSE_BULK" ? colors.primary : colors.border }]}
-              onPress={() => { setProductMode("LOOSE_BULK"); setUnit("kg"); setBaseStockUnit("KG"); }}
+              onPress={() => { setProductMode("LOOSE_BULK"); setUnit("KG"); setBaseStockUnit("KG"); }}
             >
               <Text style={{ fontSize: 12, fontWeight: "700", color: productMode === "LOOSE_BULK" ? colors.primary : colors.textSecondary }}>LOOSE / BULK</Text>
               <Text style={{ fontSize: 10, color: colors.textTertiary }}>Weight / volume</Text>
@@ -447,5 +481,13 @@ function createStyles(colors: ColorPalette) {
     submitBtn: { backgroundColor: colors.primary, paddingVertical: 16, borderRadius: 16, alignItems: "center" },
     submitBtnDisabled: { backgroundColor: colors.disabled, opacity: 0.6 },
     submitText: { fontSize: 17, fontWeight: "800", color: "#fff", letterSpacing: -0.2 },
+    // GCP-STG-0393: Unit picker styles
+    pickerOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center" },
+    pickerContainer: { backgroundColor: colors.surface, borderRadius: 16, width: 260, maxHeight: 400, padding: 16 },
+    pickerTitle: { fontSize: 14, fontWeight: "800", color: colors.textPrimary, marginBottom: 12, textAlign: "center" },
+    pickerItem: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, marginBottom: 4 },
+    pickerItemSelected: { backgroundColor: colors.primary + "20" },
+    pickerItemText: { fontSize: 14, fontWeight: "500", color: colors.textPrimary },
+    pickerItemTextSelected: { fontWeight: "800", color: colors.primary },
   });
 }
