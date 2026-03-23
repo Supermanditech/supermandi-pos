@@ -16,6 +16,7 @@ import crypto from "crypto";
 import { sendTextMessage, isWhatsAppConfigured } from "../../../services/whatsappService";
 import { sendSms } from "../../../services/smsService";
 import { redisRateLimit } from "../../../middleware/rateLimit";
+import { logAuthEvent } from "../../../services/authAudit";
 
 // GCP-STG-0308: Rate limiter on send-otp to prevent OTP table flooding
 const otpSendLimiter = redisRateLimit({
@@ -113,6 +114,15 @@ posOtpAuthRouter.post("/auth/send-otp", otpSendLimiter, async (req, res) => {
         console.error(`[OTP] SMS fallback also failed for ${phone.slice(0, 3)}***:`, asError(smsErr).message);
       }
     }
+
+    // GCP-STG-0489: Audit log — OTP sent for POS device
+    logAuthEvent({
+      actorType: 'pos_device',
+      actorId: normalizedPhone,
+      eventType: 'otp_sent',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
 
     res.json({ success: true, message: "OTP sent to your phone" });
   } catch (err) {
@@ -235,6 +245,24 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
     } finally {
       client.release();
     }
+
+    // GCP-STG-0489: Audit log — OTP verified + device enrolled
+    logAuthEvent({
+      actorType: 'pos_device',
+      actorId: normalizedPhone,
+      eventType: 'otp_verified',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { storeId: store.id, storeCode: store.store_code },
+    });
+    logAuthEvent({
+      actorType: 'pos_device',
+      actorId: normalizedPhone,
+      eventType: 'device_enrolled',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { storeId: store.id, storeCode: store.store_code },
+    });
 
     res.json({
       token,

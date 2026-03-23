@@ -18,6 +18,7 @@ import { getPool } from "../../../db/client";
 import crypto from "crypto";
 import { log } from "../../../lib/logger";
 import { redisRateLimit } from "../../../middleware/rateLimit";
+import { logAuthEvent } from "../../../services/authAudit";
 
 // SEC-007: IP-level rate limit for admin OTP endpoints
 // Prevents brute-force OTP requests from a single IP
@@ -519,6 +520,16 @@ adminAuthRouter.post("/auth/verify-email-otp", otpRateLimiter, async (req: Reque
 
   log.info(`[GO-LIVE-LOGIN-004] Admin login successful: ${normalizedEmail}`);
 
+  // GCP-STG-0489: Audit log — admin login success
+  logAuthEvent({
+    actorType: 'admin',
+    actorId: normalizedEmail,
+    eventType: 'login_success',
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+    metadata: { method: 'email_otp' },
+  });
+
   // ISSUE-MICRO-025: Set HttpOnly cookie (XSS-safe) alongside JSON response
   res.cookie('admin_session', token, {
     httpOnly: true,
@@ -658,6 +669,16 @@ adminAuthRouter.post("/auth/logout", (req: Request, res: Response) => {
       // Non-fatal — cookie clear is still the primary action
     }
   }
+
+  // GCP-STG-0489: Audit log — admin logout
+  const logoutEmail = token ? (jwt.decode(token) as { email?: string } | null)?.email : undefined;
+  logAuthEvent({
+    actorType: 'admin',
+    actorId: logoutEmail ?? undefined,
+    eventType: 'logout',
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
 
   res.clearCookie('admin_session', { path: '/api' });
   return res.json({ success: true });
