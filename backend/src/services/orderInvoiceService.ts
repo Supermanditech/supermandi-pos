@@ -132,7 +132,10 @@ async function generatePrincipalInvoices(
   const purchaseInvoice = await createInvoice(pool, purchaseInput);
   await issueInvoice(pool, purchaseInvoice.id);
 
-  // 2. Sale invoice (SuperMandi → Retailer) — same items but at retail price
+  // 2. Sale invoice (SuperMandi → Retailer) — retail price with margin applied
+  // GCP-STG-0349: Build saleItems with margin-applied retail prices
+  const saleItems = await buildSaleItems(pool, items);
+
   // GCP-STG-0353: Derive inter-state from GSTIN state codes
   const saleIsInterState = deriveInterState(SUPERMANDI_ENTITY.gstin, store.gstin);
   const saleInput: CreateInvoiceInput = {
@@ -152,7 +155,7 @@ async function generatePrincipalInvoices(
       gstin: store.gstin,
       address: store.full_address,
     },
-    items,
+    items: saleItems,
     orderId: order.orderId,
     referenceNote: `Auto-generated from PO (principal model)`,
     isInterState: saleIsInterState,
@@ -308,6 +311,79 @@ async function generateDirectSupplierInvoices(
   }
 
   log.info(`[order-invoice] Direct supplier invoices generated for order ${order.orderId}: sale=${directSaleInvoice.invoiceNumber}, commission=${commissionInvoice.invoiceNumber}`);
+}
+
+/**
+ * GCP-STG-0349: Build sale-invoice items with margin-applied retail prices.
+ * For SUPERMANDI_PRINCIPAL, the sale invoice (SM→Retailer) must use
+ * admin_retail_price_minor (or computed from margin) instead of supplier's purchase_price.
+ *
+ * Priority: admin_retail_price_minor > purchase_price + admin_margin_fixed_minor
+ *           > purchase_price * (1 + admin_margin_pct/100) > purchase_price (fallback)
+ */
+export async function buildSaleItems(
+  pool: Pool,
+  items: InvoiceItemInput[]
+): Promise<InvoiceItemInput[]> {
+  const supplierProductIds = items
+    .map((i) => i.supplierProductId)
+    .filter((id): id is string => !!id);
+
+  if (supplierProductIds.length === 0) {
+    return items; // No supplier product IDs — cannot look up margin, return as-is
+  }
+
+  // Fetch margin data for all items in one query
+  const marginResult = await pool.query(
+    `SELECT id::text,
+            purchase_price,
+            admin_retail_price_minor,
+            admin_margin_fixed_minor,
+            admin_margin_pct
+     FROM catalog.supplier_products
+     WHERE id = ANY($1::uuid[])`,
+    [supplierProductIds]
+  );
+
+  const marginMap = new Map<string, {
+    purchasePrice: number;
+    retailPrice: number | null;
+    fixedMargin: number | null;
+    pctMargin: number | null;
+  }>();
+  for (const row of marginResult.rows) {
+    marginMap.set(row.id, {
+      purchasePrice: row.purchase_price,
+      retailPrice: row.admin_retail_price_minor,
+      fixedMargin: row.admin_margin_fixed_minor,
+      pctMargin: row.admin_margin_pct ? parseFloat(row.admin_margin_pct) : null,
+    });
+  }
+
+  return items.map((item) => {
+    if (!item.supplierProductId) return item;
+
+    const margin = marginMap.get(item.supplierProductId);
+    if (!margin) return item; // Product not found — keep supplier price
+
+    let retailUnitPrice: number;
+
+    if (margin.retailPrice != null && margin.retailPrice > 0) {
+      // Explicit admin-set retail price takes priority
+      retailUnitPrice = margin.retailPrice;
+    } else if (margin.fixedMargin != null && margin.fixedMargin > 0) {
+      // Fixed margin in paise added to supplier price
+      retailUnitPrice = item.unitPriceMinor + margin.fixedMargin;
+    } else if (margin.pctMargin != null && margin.pctMargin > 0) {
+      // Percentage margin on supplier price
+      retailUnitPrice = Math.round(item.unitPriceMinor * (1 + margin.pctMargin / 100));
+    } else {
+      // No margin configured — keep supplier price (shouldn't happen in production)
+      return item;
+    }
+
+    return { ...item, unitPriceMinor: retailUnitPrice };
+  });
 }
 
 /**
