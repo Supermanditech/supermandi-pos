@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 785,
+  "version": 788,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6967,8 +6967,8 @@
       "ticket": "STG-561",
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 1,
-      "end_line": 660,
-      "checksum": "d215fd95bbe72934",
+      "end_line": 721,
+      "checksum": "cc1d323dd9d8d161",
       "description": "BUY tab v3 — supplier catalogue with wholesale metadata, supplier filter, categories, counter purchase CTA",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,
@@ -9973,8 +9973,8 @@
     {
       "ticket": "GCP-STG-0145",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 345,
-      "end_line": 378,
+      "start_line": 352,
+      "end_line": 385,
       "checksum": "fb53241a32a85e1f",
       "description": "BUY screen uses 3-column grid with ProductTileV3 instead of single-column SupplierProductCardV3",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
@@ -10008,7 +10008,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:41:40.330Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T07:59:32.401Z"
+      "line_shifted_at": "2026-03-23T09:28:47.662Z"
     },
     {
       "ticket": "GCP-STG-0144",
@@ -11006,7 +11006,7 @@
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
       "start_line": 1,
       "end_line": 519,
-      "checksum": "77b285c8fb9aa7ef",
+      "checksum": "42b41758b112c69d",
       "description": "CatalogTab: approve/reject buttons, margin UI, full edit modal, price display, reject reason modal (updated GCP-STG-0339/0340/0342/0343: supplier dropdown + status filter chips + published badge + B2B columns)",
       "test_file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
       "depends_on": null,
@@ -14515,8 +14515,8 @@
     {
       "ticket": "GCP-STG-0290",
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
-      "start_line": 205,
-      "end_line": 218,
+      "start_line": 212,
+      "end_line": 225,
       "checksum": "6b542936f082678d",
       "description": "GCP-STG-0290: Publish button handler — calls publishProduct API, shows toast with store count",
       "test_file": "supermandi-superadmin/src/__tests__/tabs/CatalogTabPublish.gcp-stg-0290.test.tsx",
@@ -14567,7 +14567,7 @@
         "single_commit": "fix(GCP-STG-0290)",
         "ticket_parked": "after commit"
       },
-      "line_shifted_at": "2026-03-23T09:04:54.927Z"
+      "line_shifted_at": "2026-03-23T09:28:47.955Z"
     },
     {
       "ticket": "GCP-STG-0313",
@@ -15699,8 +15699,8 @@
     {
       "ticket": "GCP-STG-0320",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 180,
-      "end_line": 215,
+      "start_line": 187,
+      "end_line": 222,
       "checksum": "ea15f0f3e191f1d4",
       "description": "BUY search uses server-side getBuyCatalog(q=) with 300ms debounce instead of client-only name+brand filter",
       "test_file": "src/__tests__/screens/buyServerSearch.gcp-stg-0320.test.ts",
@@ -15730,7 +15730,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:03:07.834Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T09:28:47.987Z"
     },
     {
       "ticket": "GCP-STG-0321",
@@ -16648,8 +16649,8 @@
     {
       "ticket": "GCP-STG-0339",
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
-      "start_line": 29,
-      "end_line": 36,
+      "start_line": 30,
+      "end_line": 37,
       "checksum": "641dd1a686ac30b7",
       "description": "CatalogTab supplier dropdown state + approval status state for filter controls (dropdown + backend filter)",
       "test_file": "backend/tests/catalogSupplierFilter.gcp-stg-0339.unit.test.ts",
@@ -16679,7 +16680,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T23:12:43.192Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T09:28:48.003Z"
     },
     {
       "ticket": "GCP-STG-0339",
@@ -16795,8 +16797,8 @@
     {
       "ticket": "GCP-STG-0341",
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
-      "start_line": 59,
-      "end_line": 68,
+      "start_line": 60,
+      "end_line": 69,
       "checksum": "a4beba27f9b0e79e",
       "description": "CatalogTab edit modal: 5 new editable fields (HSN, GST dropdown, BNPL checkbox, Delivery SLA days, Credit days) + state init + metadata PUT payload",
       "test_file": "supermandi-superadmin/src/__tests__/tabs/editModalFields.gcp-stg-0341.test.tsx",
@@ -16826,7 +16828,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:00:52.335Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T09:28:48.006Z"
     },
     {
       "ticket": "GCP-STG-0341",
@@ -16977,8 +16980,8 @@
     {
       "ticket": "GCP-STG-0342",
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
-      "start_line": 541,
-      "end_line": 565,
+      "start_line": 663,
+      "end_line": 687,
       "checksum": "066c470f15f62d01",
       "description": "GCP-STG-0342: Published/unpublished indicator badge for approved products in CatalogTab status column — shows store count or Unpublished with color-coded badges (badge + count)",
       "test_file": "supermandi-superadmin/src/__tests__/tabs/publishIndicator.gcp-stg-0342.test.tsx",
@@ -17009,7 +17012,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:08:48.491Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T09:04:54.996Z"
+      "line_shifted_at": "2026-03-23T09:28:48.018Z"
     },
     {
       "ticket": "GCP-STG-0342",
@@ -17634,7 +17637,7 @@
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
       "start_line": 480,
       "end_line": 517,
-      "checksum": "cca0a77ab5c35cc4",
+      "checksum": "8c8595cd666ceff1",
       "description": "GCP-STG-0343: Add B2B Terms and Stock columns to CatalogTab product table — PTR, PTS, trade discount, scheme, MOQ, delivery/credit days, image thumbnail, stock quantity (9 fields in table)",
       "test_file": "backend/tests/catalogB2bFields.gcp-stg-0343.unit.test.ts",
       "depends_on": null,
@@ -17928,9 +17931,9 @@
     {
       "ticket": "GCP-STG-0397",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 252,
-      "end_line": 268,
-      "checksum": "e75696929d757ab1",
+      "start_line": 259,
+      "end_line": 275,
+      "checksum": "b06fdc0e960475e7",
       "description": "BUY checkout MOQ enforcement: handleQtyChange snaps qty to product.moq floor when qty>0 and qty<moq, shows toast warning. qty=0 still allows cart removal.",
       "test_file": "backend/tests/moqEnforcement.gcp-stg-0397.unit.test.ts",
       "depends_on": null,
@@ -18076,8 +18079,8 @@
     {
       "ticket": "GCP-STG-0401",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 423,
-      "end_line": 442,
+      "start_line": 430,
+      "end_line": 449,
       "checksum": "6e5def9328da4f6f",
       "description": "BuyScreenV3 procurement mapping extended with 6 fields from detailProduct (6 fields wired)",
       "test_file": "src/__tests__/components/buyDetailFields.gcp-stg-0401.test.ts",
@@ -18108,7 +18111,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:33:08.397Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T07:59:32.690Z"
+      "line_shifted_at": "2026-03-23T09:28:48.085Z"
     },
     {
       "ticket": "GCP-STG-0400",
@@ -18403,8 +18406,8 @@
     {
       "ticket": "GCP-STG-0398",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 231,
-      "end_line": 249,
+      "start_line": 238,
+      "end_line": 256,
       "checksum": "a5564b6b33f27d21",
       "description": "BuyScreenV3 cartTotal computed with MOQ tier discounts applied (not display-only) via useMemo (applied to cart total)",
       "test_file": "src/__tests__/screens/volumeDiscount.gcp-stg-0398.test.ts",
@@ -18434,7 +18437,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:59:18.571Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T09:28:48.092Z"
     },
     {
       "ticket": "GCP-STG-0387",
@@ -18802,8 +18806,8 @@
     {
       "ticket": "GCP-STG-0348",
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
-      "start_line": 680,
-      "end_line": 701,
+      "start_line": 802,
+      "end_line": 823,
       "checksum": "7dfe7795dc641cdd",
       "description": "GCP-STG-0348: Read-only Product Details section in edit modal showing 5 fields (netContentValue+Unit, manufacturerName, countryOfOrigin, shelfLifeDays) that were SELECTed but never displayed",
       "test_file": "supermandi-superadmin/src/__tests__/tabs/catalogExtraFields.gcp-stg-0348.test.tsx",
@@ -18834,7 +18838,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:59:30.705Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T09:04:55.209Z"
+      "line_shifted_at": "2026-03-23T09:28:48.118Z"
     },
     {
       "ticket": "GCP-STG-0373",
@@ -18983,8 +18987,8 @@
     {
       "ticket": "GCP-STG-0357",
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
-      "start_line": 816,
-      "end_line": 852,
+      "start_line": 938,
+      "end_line": 974,
       "checksum": "e61318da5aec7f96",
       "description": "Remove mutual exclusion between margin % and fixed inputs, combined price preview showing cost + pct + fixed breakdown",
       "test_file": "backend/tests/combinedMargin.gcp-stg-0357.unit.test.ts",
@@ -19014,13 +19018,14 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:20:22.117Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T09:28:48.150Z"
     },
     {
       "ticket": "GCP-STG-0403",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 472,
-      "end_line": 478,
+      "start_line": 479,
+      "end_line": 485,
       "checksum": "58828b3aa9c86dc5",
       "description": "BUY checkout GST computed per-item (each item gstPct) instead of averaged across all cart items (per-item reduce)",
       "test_file": "src/__tests__/screens/buyGstPerItem.gcp-stg-0403.test.ts",
@@ -19050,6 +19055,115 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:21:18.302Z",
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T09:28:48.158Z"
+    },
+    {
+      "ticket": "GCP-STG-0360",
+      "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
+      "start_line": 247,
+      "end_line": 301,
+      "checksum": "56c18774e22212a3",
+      "description": "Bulk approve/reject UI: selectedIds state, toggleSelection, toggleSelectAll, handleBulkApprove, handleBulkReject handlers + checkbox column in table + bulk actions toolbar",
+      "test_file": "supermandi-superadmin/src/__tests__/tabs/bulkApprove.gcp-stg-0360.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T09:29:41.432Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0402",
+      "file": "src/stores/purchaseCartStore.ts",
+      "start_line": 63,
+      "end_line": 87,
+      "checksum": "e0201b016ba1b538",
+      "description": "BUY cart orderQtys + selectedSupplierIndex persisted in Zustand store (not useState) — survives screen unmount",
+      "test_file": "src/__tests__/stores/purchaseCartStore.gcp-stg-0402.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T09:29:44.363Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0402",
+      "file": "src/screens/v3/BuyScreenV3.tsx",
+      "start_line": 82,
+      "end_line": 90,
+      "checksum": "8d21179e769ea277",
+      "description": "BuyScreenV3 uses purchaseCartStore selectors for orderQtys instead of useState — cart survives screen unmount",
+      "test_file": "src/__tests__/stores/purchaseCartStore.gcp-stg-0402.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T09:30:00.201Z",
       "status": "ACTIVE"
     }
   ],

@@ -16,7 +16,8 @@ import {
   type CatalogProduct,
 } from "../api/catalog";
 // GCP-STG-0290: Publish approved products to retailer stores
-import { publishProduct, unpublishProduct } from "../api/suppliers";
+// GCP-STG-0360: Bulk approve/reject via batch-action endpoint
+import { publishProduct, unpublishProduct, batchProductAction } from "../api/suppliers";
 import toast from "react-hot-toast";
 import { TableSkeleton } from "../components/TableSkeleton";
 
@@ -73,6 +74,10 @@ export function CatalogTab() {
   // In-flight action guard
   const [actionInFlight, setActionInFlight] = useState<string | null>(null);
 
+  // GCP-STG-0360: Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkActionInFlight, setBulkActionInFlight] = useState(false);
+
   // R4-NET-007: In-flight guard
   const refreshInFlight = useRef(false);
 
@@ -121,6 +126,8 @@ export function CatalogTab() {
 
   useEffect(() => {
     loadProducts(page, search, selectedCategory, selectedSupplierId, selectedApprovalStatus);
+    // GCP-STG-0360: Clear bulk selection when filters/page change
+    setSelectedIds(new Set());
   }, [page, search, selectedCategory, selectedSupplierId, selectedApprovalStatus, loadProducts]);
 
   // Debounced search
@@ -237,6 +244,59 @@ export function CatalogTab() {
       toast.error(err instanceof Error ? err.message : "Failed to unpublish product");
     } finally {
       setActionInFlight(null);
+    }
+  };
+
+  // GCP-STG-0360: Toggle single product selection
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // GCP-STG-0360: Toggle all visible products
+  const toggleSelectAll = () => {
+    if (selectedIds.size === products.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(products.map((p) => p.id)));
+    }
+  };
+
+  // GCP-STG-0360: Bulk approve selected products
+  const handleBulkApprove = async () => {
+    if (bulkActionInFlight || selectedIds.size === 0) return;
+    setBulkActionInFlight(true);
+    try {
+      const result = await batchProductAction(Array.from(selectedIds), "approve");
+      toast.success(`Bulk approved: ${result.succeeded} product(s)${result.failed > 0 ? `, ${result.failed} failed` : ""}`);
+      setSelectedIds(new Set());
+      loadProducts(page, search, selectedCategory, selectedSupplierId, selectedApprovalStatus);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Bulk approve failed");
+    } finally {
+      setBulkActionInFlight(false);
+    }
+  };
+
+  // GCP-STG-0360: Bulk reject selected products
+  const handleBulkReject = async () => {
+    if (bulkActionInFlight || selectedIds.size === 0) return;
+    const reason = prompt("Enter rejection reason for all selected products:");
+    if (!reason || !reason.trim()) return;
+    setBulkActionInFlight(true);
+    try {
+      const result = await batchProductAction(Array.from(selectedIds), "reject", reason.trim());
+      toast.success(`Bulk rejected: ${result.succeeded} product(s)${result.failed > 0 ? `, ${result.failed} failed` : ""}`);
+      setSelectedIds(new Set());
+      loadProducts(page, search, selectedCategory, selectedSupplierId, selectedApprovalStatus);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Bulk reject failed");
+    } finally {
+      setBulkActionInFlight(false);
     }
   };
 
@@ -462,10 +522,62 @@ export function CatalogTab() {
       {/* Products table */}
       {!loading && products.length > 0 && (
         <>
+          {/* GCP-STG-0360: Bulk actions toolbar */}
+          {selectedIds.size > 0 && (
+            <div
+              data-testid="bulk-actions-toolbar"
+              style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "10px 16px", marginBottom: 12,
+                background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8,
+              }}
+            >
+              <span style={{ fontWeight: 500, fontSize: 14 }}>
+                {selectedIds.size} product{selectedIds.size > 1 ? "s" : ""} selected
+              </span>
+              <button
+                className="btnSm btnPrimary"
+                onClick={handleBulkApprove}
+                disabled={bulkActionInFlight}
+                data-testid="bulk-approve-btn"
+                style={{ background: "#059669", borderColor: "#059669" }}
+              >
+                {bulkActionInFlight ? "Processing..." : `Approve Selected (${selectedIds.size})`}
+              </button>
+              <button
+                className="btnSm"
+                onClick={handleBulkReject}
+                disabled={bulkActionInFlight}
+                data-testid="bulk-reject-btn"
+                style={{ color: "#dc2626", borderColor: "#dc2626" }}
+              >
+                {bulkActionInFlight ? "Processing..." : `Reject Selected (${selectedIds.size})`}
+              </button>
+              <button
+                className="btnSm"
+                onClick={() => setSelectedIds(new Set())}
+                disabled={bulkActionInFlight}
+                style={{ marginLeft: "auto" }}
+              >
+                Clear Selection
+              </button>
+            </div>
+          )}
+
           <div style={{ overflowX: "auto" }}>
             <table className="sa-table" aria-label="Catalog products">
               <thead>
                 <tr>
+                  {/* GCP-STG-0360: Select All checkbox */}
+                  <th style={{ width: 36 }}>
+                    <input
+                      type="checkbox"
+                      checked={products.length > 0 && selectedIds.size === products.length}
+                      onChange={toggleSelectAll}
+                      aria-label="Select all products"
+                      data-testid="select-all-checkbox"
+                    />
+                  </th>
                   <th>Product</th>
                   <th>Category</th>
                   <th>Brand</th>
@@ -480,6 +592,16 @@ export function CatalogTab() {
               <tbody>
                 {products.map((product) => (
                   <tr key={product.id}>
+                    {/* GCP-STG-0360: Row checkbox */}
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(product.id)}
+                        onChange={() => toggleSelection(product.id)}
+                        aria-label={`Select ${product.displayName}`}
+                        data-testid={`select-product-${product.id}`}
+                      />
+                    </td>
                     <td>
                       <div style={{ fontWeight: 500 }}>{product.displayName}</div>
                       {product.supplierSku && (
