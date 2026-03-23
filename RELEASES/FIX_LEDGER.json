@@ -21437,7 +21437,7 @@
       "start_line": 38,
       "end_line": 63,
       "checksum": "930b4b782c820ebc",
-      "description": "Server-side pagination for supplier allocations (limit 20, offset-based) with Previous/Next controls",
+      "description": "Server-side pagination for supplier allocations (limit 20, offset-based) with Previous/Next controls (committed)",
       "test_file": "N/A",
       "registered_at": "2026-03-23T14:00:00.000Z",
       "status": "ACTIVE",

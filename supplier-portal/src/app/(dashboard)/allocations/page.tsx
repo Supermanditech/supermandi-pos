@@ -35,6 +35,9 @@ const STATUS_COLORS: Record<string, string> = {
   grn_completed: '#6b7280',
 };
 
+/** GCP-STG-0423: Page size for allocation list pagination */
+const ALLOCATIONS_PAGE_SIZE = 20;
+
 export default function AllocationsPage() {
   const [allocations, setAllocations] = useState<SupplierAllocation[]>([]);
   const [total, setTotal] = useState(0);
@@ -44,12 +47,17 @@ export default function AllocationsPage() {
   const [transitioning, setTransitioning] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<SupplierAllocation | null>(null);
+  // GCP-STG-0423: Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
 
-  const fetchAllocations = useCallback(async () => {
+  const fetchAllocations = useCallback(async (page = 0) => {
     setLoading(true);
     setError(null);
     try {
-      const params: { status?: string; limit?: number } = { limit: 20 };
+      const params: { status?: string; limit?: number; offset?: number } = {
+        limit: ALLOCATIONS_PAGE_SIZE,
+        offset: page * ALLOCATIONS_PAGE_SIZE,
+      };
       if (statusFilter) params.status = statusFilter;
       const result = await listAllocations(params);
       setAllocations(result.allocations);
@@ -61,14 +69,14 @@ export default function AllocationsPage() {
     }
   }, [statusFilter]);
 
-  useEffect(() => { fetchAllocations(); }, [fetchAllocations]);
+  useEffect(() => { setCurrentPage(0); fetchAllocations(0); }, [fetchAllocations]);
 
   const handleTransition = async (allocationId: string, nextStatus: string) => {
     setTransitioning(allocationId);
     setError(null);
     try {
       await updateAllocationStatus(allocationId, nextStatus);
-      await fetchAllocations();
+      await fetchAllocations(currentPage);
       if (selectedId === allocationId) {
         const updated = await getAllocation(allocationId);
         setDetail(updated);
@@ -165,6 +173,38 @@ export default function AllocationsPage() {
           </tbody>
         </table>
       )}
+
+      {/* GCP-STG-0423: Pagination controls */}
+      {(() => {
+        const totalPages = Math.ceil(total / ALLOCATIONS_PAGE_SIZE);
+        if (totalPages <= 1) return null;
+        return (
+          <div className="flex justify-between items-center mt-4 py-2">
+            <span className="text-xs text-gray-500">
+              Showing {currentPage * ALLOCATIONS_PAGE_SIZE + 1}–{Math.min((currentPage + 1) * ALLOCATIONS_PAGE_SIZE, total)} of {total}
+            </span>
+            <div className="flex gap-2 items-center">
+              <button
+                onClick={() => { const p = currentPage - 1; setCurrentPage(p); fetchAllocations(p); }}
+                disabled={currentPage === 0}
+                className="px-3 py-1 text-xs rounded border disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="text-xs text-gray-600">
+                Page {currentPage + 1} of {totalPages}
+              </span>
+              <button
+                onClick={() => { const p = currentPage + 1; setCurrentPage(p); fetchAllocations(p); }}
+                disabled={currentPage >= totalPages - 1}
+                className="px-3 py-1 text-xs rounded border disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {detail && (
         <div className="mt-6 p-4 border rounded bg-gray-50">
