@@ -13,6 +13,7 @@ import { requireActiveStore, requireOperationalStore } from "../../../middleware
 // V3-HARDEN-130: Store isolation enforcement — every route goes through this
 import { assertStoreId } from "../../../services/storeIsolation";
 import { logPosEventSafe } from "../../../services/posEventLogger"; // GCP-STG-0233
+import { publishLifecycleEvent } from "../../../services/lifecycleEventService"; // GCP-STG-0382
 import type { Request as ExpressRequest } from "express";
 function getStoreIdFromPosDevice(req: ExpressRequest, operation: string): string {
   const storeId = (req as any).posDevice?.storeId as string | null | undefined;
@@ -1616,6 +1617,16 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
     generateSaleInvoice(pool, saleId, storeId, paymentMode).catch(() => {});
     // GCP-STG-0233: Log SALE_COMPLETED event for admin Events tab
     void logPosEventSafe({ deviceId: (req as any).deviceId ?? "backend", storeId, eventType: "SALE_COMPLETED", payload: { saleId, paymentMode, totalMinor: totalAmount } });
+    // GCP-STG-0382: Fire-and-forget payment_completed lifecycle event
+    void publishLifecycleEvent({
+      eventType: "payment_completed",
+      orderId: saleId,
+      storeId,
+      supplierId: null,
+      targets: [{ role: "retailer", channels: ["in_app", "whatsapp"] }],
+      payload: { saleId, method: paymentMode, totalMinor: totalAmount },
+      timestamp: new Date().toISOString(),
+    }).catch(() => {});
 
     return res.json({
       saleId,
@@ -2211,6 +2222,16 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, requireA
     // GCP-STG-0077: Fire-and-forget invoice generation after successful UPI payment
     generateSaleInvoice(pool, saleId, storeId, "UPI").catch(() => {});
     void logPosEventSafe({ deviceId: (req as any).deviceId ?? "backend", storeId, eventType: "PAYMENT_COMPLETED", payload: { saleId, method: "UPI" } });
+    // GCP-STG-0382: Fire-and-forget payment_completed lifecycle event (UPI)
+    void publishLifecycleEvent({
+      eventType: "payment_completed",
+      orderId: saleId,
+      storeId,
+      supplierId: null,
+      targets: [{ role: "retailer", channels: ["in_app", "whatsapp"] }],
+      payload: { saleId, method: "UPI" },
+      timestamp: new Date().toISOString(),
+    }).catch(() => {});
 
     return res.json({ status: "PAID" });
   } catch (error) {
@@ -2503,6 +2524,16 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, requireActiveStore, fi
     // GCP-STG-0077: Fire-and-forget invoice generation after successful cash payment
     generateSaleInvoice(pool, saleId, storeId, "CASH").catch(() => {});
     void logPosEventSafe({ deviceId: (req as any).deviceId ?? "backend", storeId, eventType: "PAYMENT_COMPLETED", payload: { saleId, method: "CASH" } });
+    // GCP-STG-0382: Fire-and-forget payment_completed lifecycle event (CASH)
+    void publishLifecycleEvent({
+      eventType: "payment_completed",
+      orderId: saleId,
+      storeId,
+      supplierId: null,
+      targets: [{ role: "retailer", channels: ["in_app", "whatsapp"] }],
+      payload: { saleId, method: "CASH" },
+      timestamp: new Date().toISOString(),
+    }).catch(() => {});
 
     return res.json({ status: "PAID" });
   } catch (error) {
@@ -2732,6 +2763,16 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
     // GCP-STG-0077: Fire-and-forget invoice generation after successful due payment
     generateSaleInvoice(pool, saleId, storeId, "DUE").catch(() => {});
     void logPosEventSafe({ deviceId: (req as any).deviceId ?? "backend", storeId, eventType: "SALE_COMPLETED", payload: { saleId, method: "DUE" } });
+    // GCP-STG-0382: Fire-and-forget payment_completed lifecycle event (DUE)
+    void publishLifecycleEvent({
+      eventType: "payment_completed",
+      orderId: saleId,
+      storeId,
+      supplierId: null,
+      targets: [{ role: "retailer", channels: ["in_app", "whatsapp"] }],
+      payload: { saleId, method: "DUE" },
+      timestamp: new Date().toISOString(),
+    }).catch(() => {});
 
     return res.json({ status: "DUE", paymentId });
   } catch (error) {
