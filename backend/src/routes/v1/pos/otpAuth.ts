@@ -216,12 +216,24 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
       store = storeResult.rows[0];
     }
 
-    // V3-BIZ-008: Check max_devices per store (default 10)
+    // V3-BIZ-008 + GCP-STG-0460: Check max_devices per store (configurable, default 10)
     const deviceCountResult = await pool.query(
       `SELECT COUNT(*)::int AS device_count FROM pos_devices WHERE store_id = $1 AND active = TRUE`,
       [store.id]
     );
-    const maxDevices = 10; // Configurable per store in future
+    // GCP-STG-0460: Query per-store device quota; fall back to 10 if column missing or NULL
+    let maxDevices = 10;
+    try {
+      const quotaResult = await pool.query(
+        `SELECT max_pos_devices FROM platform.stores WHERE id = $1`,
+        [store.id]
+      );
+      if (quotaResult.rows[0]?.max_pos_devices != null) {
+        maxDevices = quotaResult.rows[0].max_pos_devices;
+      }
+    } catch {
+      // Column may not exist yet (pre-migration) — use default
+    }
     if (deviceCountResult.rows[0]?.device_count >= maxDevices) {
       return res.status(400).json({ error: { code: "MAX_DEVICES_REACHED", message: `This store already has ${maxDevices} active devices. Deactivate an old device first.` } });
     }
