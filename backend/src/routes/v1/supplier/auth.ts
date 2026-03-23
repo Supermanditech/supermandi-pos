@@ -280,12 +280,25 @@ export async function requireSupplierAuth(
 ) {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader?.startsWith('Bearer ')) {
+  // GCP-STG-0486: Accept token from Bearer header OR sm_access_token HttpOnly cookie
+  let token: string | undefined;
+  if (authHeader?.startsWith('Bearer ')) {
+    token = authHeader.slice(7);
+  } else {
+    // Fall back to HttpOnly cookie (set by setAuthCookies on login)
+    const cookieHeader = req.headers.cookie;
+    if (cookieHeader) {
+      const match = cookieHeader.match(/(?:^|;\s*)sm_access_token=([^;]*)/);
+      if (match && match[1]) {
+        token = decodeURIComponent(match[1]);
+      }
+    }
+  }
+
+  if (!token) {
     res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required' } });
     return;
   }
-
-  const token = authHeader.slice(7);
 
   try {
     // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
@@ -1402,14 +1415,26 @@ router.post("/auth/logout", requireSupplierAuth, async (req: SupplierAuthRequest
       return;
     }
 
-    // Get token JTI and expiry from the decoded JWT
+    // GCP-STG-0486: Get token from Bearer header or sm_access_token cookie
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
+    let token: string | undefined;
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.slice(7);
+    } else {
+      const cookieHeader = req.headers.cookie;
+      if (cookieHeader) {
+        const match = cookieHeader.match(/(?:^|;\s*)sm_access_token=([^;]*)/);
+        if (match && match[1]) {
+          token = decodeURIComponent(match[1]);
+        }
+      }
+    }
+    if (!token) {
+      // AUTH-SESSION-169: Still clear cookies even without token
+      clearAuthCookies(res);
       res.json({ data: { success: true, message: 'Logged out' } });
       return;
     }
-
-    const token = authHeader.slice(7);
     let decoded: { jti?: string; exp?: number };
 
     try {
