@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { View, Pressable, ScrollView, TextInput, StyleSheet, Text, ActivityIndicator } from "react-native";
 import Svg, { Path } from "react-native-svg";
+// GCP-STG-0451: Safe area insets for dynamic paddingTop/paddingBottom
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
@@ -20,6 +22,8 @@ type Props = { onClose: () => void };
 
 export default function ReorderScreenV3({ onClose }: Props) {
   const colors = useThemeColors();
+  // GCP-STG-0451: Use safe area insets instead of hardcoded padding
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [items, setItems] = useState<ReorderItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +76,7 @@ export default function ReorderScreenV3({ onClose }: Props) {
   const total = items.reduce((s, i) => s + i.cost, 0);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Reorder Suggestions</Text><View style={{ width: 30 }} /></View>
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
         {loading && <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />}
@@ -134,7 +138,7 @@ export default function ReorderScreenV3({ onClose }: Props) {
           </View>
         ))}
       </ScrollView>
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         {/* V3-FIX-186: Buy Again — loads demand-driven draft into purchaseDraftStore */}
         <Pressable style={[styles.buyAgainBtn, buyAgainLoading && { opacity: 0.5 }]} disabled={buyAgainLoading} onPress={async () => {
           if (buyAgainLoading) return;
