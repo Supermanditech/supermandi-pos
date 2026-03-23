@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { View, Pressable, TextInput, FlatList, StyleSheet, Text, ActivityIndicator, Alert, Modal, ScrollView } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -19,6 +20,7 @@ type Props = { onClose: () => void; onOpeningStock?: () => void };
 
 export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<"current" | "unsold" | "movement">("current");
   const [items, setItems] = useState<StockItem[]>([]);
@@ -112,7 +114,7 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}><Pressable style={styles.backBtn} onPress={onClose}><Text style={styles.backText}>←</Text></Pressable><Text style={styles.headerTitle}>Stock & Inventory</Text><View style={{ width: 30 }} /></View>
 
       <View style={styles.tabs}>
@@ -223,7 +225,7 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
       </Modal>
 
       {/* V3-FIX-080: Real actions instead of placeholder alerts */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable style={styles.footerBtn} onPress={() => {
           // V3-FIX-080: Navigate to scan in stock_in context via wrapper
           if (onOpeningStock) { onOpeningStock(); }
