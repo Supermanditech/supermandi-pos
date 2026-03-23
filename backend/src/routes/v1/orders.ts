@@ -192,20 +192,13 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
       }
     }
 
-    // 4. Generate order number
-    const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, "");
-    const shortId = randomUUID().slice(0, 6).toUpperCase();
-    const orderNumber = `PO-${dateStr}-${shortId}`;
-
-    // 5. Insert purchase order
     // V3-FIX-142: Resolve procurement lane from orderType
     const { resolveProcurementLane } = require("../../services/procurementLane");
     const procurementLane = resolveProcurementLane(orderType);
 
-    const orderId = randomUUID();
-
     // V3-FIX-175+177: Build authoritative accepted-term snapshot from published catalog data
-    const termSnapItems = [];
+    // Build per-item term snapshots (needed for each order group)
+    const termSnapByProductId = new Map<string, any>();
     for (const vi of validatedItems) {
       const termRow = await client.query(
         `SELECT ptr_minor, pts_minor, purchase_price, mrp, trade_discount_pct, scheme,
@@ -216,7 +209,7 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         [vi.supplierProductId]
       );
       const t = termRow.rows[0] || {};
-      termSnapItems.push({
+      termSnapByProductId.set(vi.supplierProductId, {
         supplierProductId: vi.supplierProductId,
         unitPrice: vi.unitPrice,
         quantity: vi.quantity,
@@ -247,162 +240,189 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         })(),
       });
     }
-    const acceptedTermsSnapshot = JSON.stringify({
-      version: Math.max(...termSnapItems.map(i => i.publishedTerms.version), 1),
-      snapshotAt: new Date().toISOString(),
-      items: termSnapItems,
-    });
 
-    // GCP-STG-0087: Resolve billing model from first item (all items in single order share same model)
-    const orderBillingModel = validatedItems[0]?.billingModel || "SUPERMANDI_PRINCIPAL";
-
-    // GCP-STG-0110: Snapshot delivery terms version at PO creation
-    const deliveryTermsVersion = validatedItems[0]?.deliveryTermsVersion ?? 1;
-
-    const orderResult = await client.query(
-      `INSERT INTO orders.purchase_orders (
-        id, order_number, store_id, supplier_id, order_type, status,
-        total_amount, item_count, store_notes, delivery_address,
-        expected_delivery_date, created_by_user_id, procurement_lane,
-        accepted_terms_snapshot, accepted_terms_version, payment_lane, billing_model, delivery_terms_version
-      ) VALUES ($1, $2, $3, $4, $5, $12, $6, $7, $8, $9, $10, NULL, $11, $13, $15, $14, $16, $17)
-      RETURNING
-        id,
-        order_number as "orderNumber",
-        store_id as "storeId",
-        supplier_id as "supplierId",
-        order_type as "orderType",
-        status,
-        total_amount as "totalAmount",
-        item_count as "itemCount",
-        store_notes as "storeNotes",
-        delivery_address as "deliveryAddress",
-        expected_delivery_date as "expectedDeliveryDate",
-        procurement_lane as "procurementLane",
-        billing_model as "billingModel",
-        created_at as "createdAt",
-        updated_at as "updatedAt"`,
-      [
-        orderId, orderNumber, storeId, supplierId, orderType,
-        totalAmount, validatedItems.length,
-        storeNotes || null, deliveryAddress || null,
-        expectedDeliveryDate || null,
-        procurementLane,
-        orderStatus,
-        acceptedTermsSnapshot,
-        // V3-FIX-176: Payment lane — SuperMandi principal for catalogue orders
-        procurementLane === "CATALOGUE_PRINCIPAL" ? "SUPERMANDI_PRINCIPAL" : null,
-        // V3-FIX-175: Real published-term version from snapshot
-        Math.max(...termSnapItems.map(i => i.publishedTerms.version), 1),
-        // GCP-STG-0087: Billing model from supplier product catalog
-        orderBillingModel,
-        // GCP-STG-0110: Delivery terms version snapshot
-        deliveryTermsVersion,
-      ]
-    );
-
-    const order = orderResult.rows[0];
-
-    // V3-FIX-144: For principal lane, generate linked procurement reference
-    if (procurementLane === "CATALOGUE_PRINCIPAL") {
-      const linkedProcurementId = randomUUID();
-      await client.query(
-        `UPDATE orders.purchase_orders SET linked_procurement_id = $1 WHERE id = $2`,
-        [linkedProcurementId, orderId]
-      );
-      order.linkedProcurementId = linkedProcurementId;
-
-      // V3-FIX-176: Create canonical procurement payment intent for principal orders
-      if (paymentMode && paymentMode !== "CASH") {
-        const { createPaymentIntent } = require("../../services/procurementPaymentService");
-        const providerMap: Record<string, string> = { UPI: 'UPI_DIRECT', BANK: 'RAZORPAY', BNPL: 'BNPL', CREDIT: 'SUPERMANDI_CREDIT' };
-        try {
-          const intent = await createPaymentIntent(client, {
-            storeId, orderId, amountMinor: totalAmount,
-            mode: paymentMode, provider: providerMap[paymentMode] || 'MANUAL',
-          });
-          order.paymentIntentId = intent.id;
-          order.paymentIntentStatus = intent.status;
-          order.paymentRedirectUrl = intent.redirectUrl;
-          order.paymentQrData = intent.qrData;
-        } catch (payErr: any) {
-          log.warn(`[V3-FIX-176] Payment intent creation failed for order ${orderId}: ${payErr.message}`);
-        }
+    // GCP-STG-0350: Split cart items by billing model (was dead code in orderInvoiceService)
+    // Group items by billingModel — each group becomes a separate purchase order
+    const billingModelGroups = new Map<string, typeof validatedItems>();
+    for (const item of validatedItems) {
+      const key = item.billingModel || "SUPERMANDI_PRINCIPAL";
+      if (!billingModelGroups.has(key)) {
+        billingModelGroups.set(key, []);
       }
+      billingModelGroups.get(key)!.push(item);
     }
 
-    // 6. Insert order items
-    const insertedItems: Array<Record<string, unknown>> = [];
-    for (const item of validatedItems) {
-      const itemId = randomUUID();
-      const itemResult = await client.query(
-        `INSERT INTO orders.purchase_order_items (
-          id, order_id, store_id, supplier_product_id, product_id,
-          ordered_quantity, received_quantity, unit_price, line_total, product_name, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $8, $9, 'pending')
+    // Helper: create a single purchase order for a group of items sharing the same billing model
+    async function createSingleOrder(
+      groupItems: typeof validatedItems,
+      groupBillingModel: string,
+    ): Promise<{ order: Record<string, any>; insertedItems: Array<Record<string, unknown>> }> {
+      // 4. Generate order number
+      const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, "");
+      const shortId = randomUUID().slice(0, 6).toUpperCase();
+      const orderNumber = `PO-${dateStr}-${shortId}`;
+
+      const orderId = randomUUID();
+      const groupTotal = groupItems.reduce((sum, i) => sum + i.totalPrice, 0);
+
+      // Build accepted-terms snapshot for this group's items
+      const groupTermSnap = groupItems.map(vi => termSnapByProductId.get(vi.supplierProductId));
+      const acceptedTermsSnapshot = JSON.stringify({
+        version: Math.max(...groupTermSnap.map((i: any) => i.publishedTerms.version), 1),
+        snapshotAt: new Date().toISOString(),
+        items: groupTermSnap,
+      });
+
+      // GCP-STG-0110: Snapshot delivery terms version at PO creation
+      const deliveryTermsVersion = (groupItems[0] as any)?.deliveryTermsVersion ?? 1;
+
+      const orderResult = await client.query(
+        `INSERT INTO orders.purchase_orders (
+          id, order_number, store_id, supplier_id, order_type, status,
+          total_amount, item_count, store_notes, delivery_address,
+          expected_delivery_date, created_by_user_id, procurement_lane,
+          accepted_terms_snapshot, accepted_terms_version, payment_lane, billing_model, delivery_terms_version
+        ) VALUES ($1, $2, $3, $4, $5, $12, $6, $7, $8, $9, $10, NULL, $11, $13, $15, $14, $16, $17)
         RETURNING
           id,
-          order_id as "orderId",
-          supplier_product_id as "supplierProductId",
-          product_id as "productId",
-          ordered_quantity as "orderedQuantity",
-          received_quantity as "receivedQuantity",
-          unit_price as "unitPrice",
-          line_total as "totalPrice",
+          order_number as "orderNumber",
+          store_id as "storeId",
+          supplier_id as "supplierId",
+          order_type as "orderType",
           status,
-          notes`,
-        [itemId, orderId, storeId, item.supplierProductId, item.productId, item.quantity, item.unitPrice, item.totalPrice, item.productName]
+          total_amount as "totalAmount",
+          item_count as "itemCount",
+          store_notes as "storeNotes",
+          delivery_address as "deliveryAddress",
+          expected_delivery_date as "expectedDeliveryDate",
+          procurement_lane as "procurementLane",
+          billing_model as "billingModel",
+          created_at as "createdAt",
+          updated_at as "updatedAt"`,
+        [
+          orderId, orderNumber, storeId, supplierId, orderType,
+          groupTotal, groupItems.length,
+          storeNotes || null, deliveryAddress || null,
+          expectedDeliveryDate || null,
+          procurementLane,
+          orderStatus,
+          acceptedTermsSnapshot,
+          // V3-FIX-176: Payment lane — SuperMandi principal for catalogue orders
+          procurementLane === "CATALOGUE_PRINCIPAL" ? "SUPERMANDI_PRINCIPAL" : null,
+          // V3-FIX-175: Real published-term version from snapshot
+          Math.max(...groupTermSnap.map((i: any) => i.publishedTerms.version), 1),
+          // GCP-STG-0350: Billing model from this group (not just first item)
+          groupBillingModel,
+          // GCP-STG-0110: Delivery terms version snapshot
+          deliveryTermsVersion,
+        ]
       );
 
-      insertedItems.push({
-        ...itemResult.rows[0],
-        productName: item.productName,
-        barcode: item.barcode,
-      });
-    }
+      const order = orderResult.rows[0];
 
-    // 7. Log creation event
-    try {
-      await client.query(
-        `INSERT INTO orders.order_events (purchase_order_id, event_type, from_status, to_status, actor_type, metadata)
-         VALUES ($1, 'created', NULL, 'submitted', 'system', $2)`,
-        [orderId, JSON.stringify({ orderType, itemCount: validatedItems.length })]
-      );
-    } catch (eventErr: any) {
-      log.warn("[Orders] Failed to log creation event:", eventErr.message);
-    }
+      // V3-FIX-144: For principal lane, generate linked procurement reference
+      if (procurementLane === "CATALOGUE_PRINCIPAL") {
+        const linkedProcurementId = randomUUID();
+        await client.query(
+          `UPDATE orders.purchase_orders SET linked_procurement_id = $1 WHERE id = $2`,
+          [linkedProcurementId, orderId]
+        );
+        order.linkedProcurementId = linkedProcurementId;
 
-    await client.query("COMMIT");
+        // V3-FIX-176: Create canonical procurement payment intent for principal orders
+        if (paymentMode && paymentMode !== "CASH") {
+          const { createPaymentIntent } = require("../../services/procurementPaymentService");
+          const providerMap: Record<string, string> = { UPI: 'UPI_DIRECT', BANK: 'RAZORPAY', BNPL: 'BNPL', CREDIT: 'SUPERMANDI_CREDIT' };
+          try {
+            const intent = await createPaymentIntent(client, {
+              storeId, orderId, amountMinor: groupTotal,
+              mode: paymentMode, provider: providerMap[paymentMode] || 'MANUAL',
+            });
+            order.paymentIntentId = intent.id;
+            order.paymentIntentStatus = intent.status;
+            order.paymentRedirectUrl = intent.redirectUrl;
+            order.paymentQrData = intent.qrData;
+          } catch (payErr: any) {
+            log.warn(`[V3-FIX-176] Payment intent creation failed for order ${orderId}: ${payErr.message}`);
+          }
+        }
+      }
 
-    log.info(`[SUP-POS-001] Order created: ${orderNumber}, storeId=${storeId}, supplierId=${supplierId}, items=${validatedItems.length}, total=${totalAmount}`);
+      // 6. Insert order items
+      const insertedItems: Array<Record<string, unknown>> = [];
+      for (const item of groupItems) {
+        const itemId = randomUUID();
+        const itemResult = await client.query(
+          `INSERT INTO orders.purchase_order_items (
+            id, order_id, store_id, supplier_product_id, product_id,
+            ordered_quantity, received_quantity, unit_price, line_total, product_name, status
+          ) VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $8, $9, 'pending')
+          RETURNING
+            id,
+            order_id as "orderId",
+            supplier_product_id as "supplierProductId",
+            product_id as "productId",
+            ordered_quantity as "orderedQuantity",
+            received_quantity as "receivedQuantity",
+            unit_price as "unitPrice",
+            line_total as "totalPrice",
+            status,
+            notes`,
+          [itemId, orderId, storeId, item.supplierProductId, item.productId, item.quantity, item.unitPrice, item.totalPrice, item.productName]
+        );
 
-    // GCP-STG-0087: Auto-generate invoices for submitted orders (non-blocking)
-    if (orderStatus === "submitted") {
-      import("../../services/orderInvoiceService").then(({ generateOrderInvoices }) => {
-        generateOrderInvoices(pool, {
-          orderId,
-          storeId,
-          supplierId,
-          billingModel: orderBillingModel as "SUPERMANDI_PRINCIPAL" | "DIRECT_SUPPLIER",
-          totalAmount,
-          items: validatedItems.map((vi) => ({
-            supplierProductId: vi.supplierProductId,
-            productName: vi.productName,
-            quantity: vi.quantity,
-            unitPrice: vi.unitPrice,
-            hsnCode: vi.hsnCode || undefined,
-            gstRate: vi.gstRate,
-            unit: vi.unit,
-          })),
-        }).catch((err: any) => {
-          log.error(`[GCP-STG-0087] Auto-invoice failed for order ${orderId}:`, err?.message);
+        insertedItems.push({
+          ...itemResult.rows[0],
+          productName: item.productName,
+          barcode: item.barcode,
         });
-      }).catch(() => {});
+      }
+
+      // 7. Log creation event
+      try {
+        await client.query(
+          `INSERT INTO orders.order_events (purchase_order_id, event_type, from_status, to_status, actor_type, metadata)
+           VALUES ($1, 'created', NULL, 'submitted', 'system', $2)`,
+          [orderId, JSON.stringify({ orderType, itemCount: groupItems.length, billingModel: groupBillingModel })]
+        );
+      } catch (eventErr: any) {
+        log.warn("[Orders] Failed to log creation event:", eventErr.message);
+      }
+
+      log.info(`[SUP-POS-001] Order created: ${orderNumber}, storeId=${storeId}, supplierId=${supplierId}, billingModel=${groupBillingModel}, items=${groupItems.length}, total=${groupTotal}`);
+
+      // GCP-STG-0087: Auto-generate invoices for submitted orders (non-blocking)
+      if (orderStatus === "submitted") {
+        import("../../services/orderInvoiceService").then(({ generateOrderInvoices }) => {
+          generateOrderInvoices(pool, {
+            orderId,
+            storeId,
+            supplierId,
+            billingModel: groupBillingModel as "SUPERMANDI_PRINCIPAL" | "DIRECT_SUPPLIER",
+            totalAmount: groupTotal,
+            items: groupItems.map((vi) => ({
+              supplierProductId: vi.supplierProductId,
+              productName: vi.productName,
+              quantity: vi.quantity,
+              unitPrice: vi.unitPrice,
+              hsnCode: vi.hsnCode || undefined,
+              gstRate: vi.gstRate,
+              unit: vi.unit,
+            })),
+          }).catch((err: any) => {
+            log.error(`[GCP-STG-0087] Auto-invoice failed for order ${orderId}:`, err?.message);
+          });
+        }).catch(() => {});
+      }
+
+      return { order, insertedItems };
     }
 
-    return res.status(201).json({
-      success: true,
-      data: {
+    // GCP-STG-0350: Create one order per billing model group (single group = backward-compatible)
+    const createdOrders: Array<Record<string, any>> = [];
+    for (const [billingModel, groupItems] of billingModelGroups) {
+      const { order, insertedItems } = await createSingleOrder(groupItems, billingModel);
+      createdOrders.push({
         ...order,
         supplierName,
         supplierNotes: null,
@@ -411,7 +431,23 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         carrier: null,
         createdByUserId: null,
         items: insertedItems,
-      },
+      });
+    }
+
+    await client.query("COMMIT");
+
+    // GCP-STG-0350: Return single order (backward-compatible) or array when split occurred
+    if (createdOrders.length === 1) {
+      return res.status(201).json({
+        success: true,
+        data: createdOrders[0],
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      splitByBillingModel: true,
+      data: createdOrders,
     });
   } catch (_error: unknown) {
     const error = asError(_error);
