@@ -16,6 +16,7 @@ import {
 import { getRedis, blacklistToken } from "../../../db/redis";
 import { getPool } from "../../../db/client";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { log } from "../../../lib/logger";
 import { redisRateLimit } from "../../../middleware/rateLimit";
 import { logAuthEvent } from "../../../services/authAudit";
@@ -93,108 +94,18 @@ function verifyTokenWithRotation(token: string): { email: string; role: string; 
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 
 // =========================================================================
-// GCP-STG-0463: TOTP 2FA utilities (RFC 6238, HMAC-SHA1, 30-second window)
+// GCP-STG-0463 / GCP-STG-0464: TOTP 2FA utilities — imported from shared lib
 // =========================================================================
+import {
+  base32Encode,
+  base32Decode,
+  generateTotpSecret,
+  verifyTotp,
+  buildTotpUri,
+} from "../../../lib/totp";
 
-/** Base32 alphabet (RFC 4648) */
-const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-
-/**
- * Encode a Buffer to base32 string (RFC 4648).
- * Used to display TOTP secrets to the user for manual entry.
- */
-export function base32Encode(buffer: Buffer): string {
-  let bits = 0;
-  let value = 0;
-  let result = '';
-  for (let i = 0; i < buffer.length; i++) {
-    value = (value << 8) | buffer[i];
-    bits += 8;
-    while (bits >= 5) {
-      bits -= 5;
-      result += BASE32_ALPHABET[(value >>> bits) & 0x1f];
-    }
-  }
-  if (bits > 0) {
-    result += BASE32_ALPHABET[(value << (5 - bits)) & 0x1f];
-  }
-  return result;
-}
-
-/**
- * Decode a base32 string back to a Buffer.
- */
-export function base32Decode(encoded: string): Buffer {
-  const cleaned = encoded.replace(/=+$/, '').toUpperCase();
-  let bits = 0;
-  let value = 0;
-  const bytes: number[] = [];
-  for (let i = 0; i < cleaned.length; i++) {
-    const idx = BASE32_ALPHABET.indexOf(cleaned[i]);
-    if (idx === -1) continue; // skip invalid chars
-    value = (value << 5) | idx;
-    bits += 5;
-    if (bits >= 8) {
-      bits -= 8;
-      bytes.push((value >>> bits) & 0xff);
-    }
-  }
-  return Buffer.from(bytes);
-}
-
-/**
- * Generate a 20-byte random TOTP secret, returned as base32.
- */
-export function generateTotpSecret(): string {
-  const buffer = crypto.randomBytes(20);
-  return base32Encode(buffer);
-}
-
-/**
- * Compute TOTP code for a given secret and time counter (RFC 6238 / HMAC-SHA1).
- */
-function computeTotpCode(secretBase32: string, counter: number): string {
-  const key = base32Decode(secretBase32);
-  // Counter as 8-byte big-endian buffer
-  const counterBuf = Buffer.alloc(8);
-  // Write as unsigned 64-bit big-endian (top 4 bytes are 0 for reasonable time values)
-  counterBuf.writeUInt32BE(Math.floor(counter / 0x100000000), 0);
-  counterBuf.writeUInt32BE(counter >>> 0, 4);
-
-  const hmac = crypto.createHmac('sha1', key).update(counterBuf).digest();
-  const offset = hmac[hmac.length - 1] & 0x0f;
-  const code =
-    ((hmac[offset] & 0x7f) << 24) |
-    ((hmac[offset + 1] & 0xff) << 16) |
-    ((hmac[offset + 2] & 0xff) << 8) |
-    (hmac[offset + 3] & 0xff);
-  return String(code % 1000000).padStart(6, '0');
-}
-
-/**
- * Verify a TOTP token against a secret. Checks current window and 1 window before/after
- * to account for clock skew (±30 seconds).
- */
-export function verifyTotp(secretBase32: string, token: string): boolean {
-  if (!token || !/^\d{6}$/.test(token)) return false;
-  const now = Math.floor(Date.now() / 1000);
-  const step = 30;
-  // Check current window, 1 before, and 1 after
-  for (let i = -1; i <= 1; i++) {
-    const counter = Math.floor((now / step) + i);
-    if (computeTotpCode(secretBase32, counter) === token) return true;
-  }
-  return false;
-}
-
-/**
- * Build an otpauth:// URI for QR code generation (Google Authenticator compatible).
- */
-export function buildTotpUri(secret: string, email: string): string {
-  const issuer = 'SuperMandi';
-  const label = encodeURIComponent(`${issuer}:${email}`);
-  return `otpauth://totp/${label}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
-}
+// Re-export for any consumers that imported from adminAuth
+export { base32Encode, base32Decode, generateTotpSecret, verifyTotp, buildTotpUri };
 
 // =========================================================================
 // GCP-STG-0463: TOTP database helpers (admin_totp table)
@@ -204,13 +115,14 @@ interface AdminTotpRow {
   email: string;
   totp_secret: string;
   totp_enabled: boolean;
+  password_hash: string | null;
 }
 
 async function getTotpRecord(email: string): Promise<AdminTotpRow | null> {
   const pool = getPool();
   if (!pool) throw new Error('Database pool not available');
   const result = await pool.query(
-    'SELECT email, totp_secret, totp_enabled FROM admin_totp WHERE email = $1',
+    'SELECT email, totp_secret, totp_enabled, password_hash FROM admin_totp WHERE email = $1',
     [email]
   );
   return result.rows[0] || null;
@@ -691,17 +603,224 @@ adminAuthRouter.post("/auth/logout", (req: Request, res: Response) => {
 });
 
 // =========================================================================
-// GCP-STG-0471: SuperAdmin password login fallback (stub)
-// Implementation plan:
-//   1. Add password_hash column to admin_totp table (or new admin_credentials table)
-//   2. Accept { email, password } — check allowlist, bcrypt.compare, issue JWT
-//   3. Enforce same rate limiting and lockout as OTP flow
-// Currently returns 501 until password hashing infrastructure is in place.
+// GCP-STG-0471: SuperAdmin password management + login
 // =========================================================================
-adminAuthRouter.post("/auth/login-password", otpRateLimiter, (_req: Request, res: Response) => {
-  return res.status(501).json({
-    error: { code: "NOT_IMPLEMENTED", message: "Password login not yet enabled. Use email OTP login." }
-  });
+
+/**
+ * POST /api/v1/admin/auth/set-password
+ * GCP-STG-0471: Set or update admin password (requires valid admin JWT).
+ * Password requirements: min 8 chars, at least 1 number.
+ */
+adminAuthRouter.post("/auth/set-password", async (req: Request, res: Response) => {
+  const admin = extractAdminToken(req);
+  if (!admin) {
+    return res.status(401).json({
+      error: { code: "NO_TOKEN", message: "Authentication required" }
+    });
+  }
+
+  const { password } = req.body as { password?: string };
+  if (!password || typeof password !== 'string') {
+    return res.status(400).json({
+      error: { code: "MISSING_PASSWORD", message: "Password is required" }
+    });
+  }
+
+  // Validate password: min 8 chars, at least 1 number
+  if (password.length < 8) {
+    return res.status(400).json({
+      error: { code: "WEAK_PASSWORD", message: "Password must be at least 8 characters" }
+    });
+  }
+  if (!/\d/.test(password)) {
+    return res.status(400).json({
+      error: { code: "WEAK_PASSWORD", message: "Password must contain at least 1 number" }
+    });
+  }
+
+  try {
+    const pool = getPool();
+    if (!pool) throw new Error('Database pool not available');
+
+    const hash = await bcrypt.hash(password, 12);
+
+    // Upsert into admin_totp — set password_hash, preserve existing TOTP fields
+    await pool.query(
+      `INSERT INTO admin_totp (email, totp_secret, totp_enabled, password_hash, updated_at)
+       VALUES ($1, '', FALSE, $2, NOW())
+       ON CONFLICT (email)
+       DO UPDATE SET password_hash = $2, updated_at = NOW()`,
+      [admin.email, hash]
+    );
+
+    log.info(`[GCP-STG-0471] Password set for admin ${admin.email}`);
+
+    return res.json({ success: true });
+  } catch (err) {
+    log.error(`[GCP-STG-0471] Set password failed for ${admin.email}:`, err);
+    return res.status(500).json({
+      error: { code: "SET_PASSWORD_FAILED", message: "Failed to set password. Please try again." }
+    });
+  }
+});
+
+/**
+ * POST /api/v1/admin/auth/login-password
+ * GCP-STG-0471: Password-based admin login with bcrypt verification.
+ * Enforces allowlist, rate limiting, and account lockout.
+ */
+adminAuthRouter.post("/auth/login-password", otpRateLimiter, async (req: Request, res: Response) => {
+  const { email, password } = req.body as { email?: string; password?: string };
+
+  if (!email || !password) {
+    return res.status(400).json({
+      error: { code: "MISSING_FIELDS", message: "Email and password are required" }
+    });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+
+  // Check allowlist
+  if (!isEmailAllowed(normalizedEmail)) {
+    log.warn(`[GCP-STG-0471] Password login blocked for non-allowlisted email: ${normalizedEmail}`);
+    return res.status(403).json({
+      error: { code: "NOT_ALLOWED", message: "This email is not authorized for admin access" }
+    });
+  }
+
+  // Check account lockout (reuses existing OTP lockout tracking)
+  const lockedUntil = await getLockout(normalizedEmail);
+  if (lockedUntil && Date.now() < lockedUntil) {
+    const waitMinutes = Math.ceil((lockedUntil - Date.now()) / 60000);
+    return res.status(429).json({
+      error: {
+        code: "TOO_MANY_ATTEMPTS",
+        message: `Account locked. Please try again in ${waitMinutes} minutes.`,
+        unlockAt: lockedUntil,
+      }
+    });
+  }
+
+  try {
+    // Query admin_totp for password_hash
+    const record = await getTotpRecord(normalizedEmail);
+
+    if (!record?.password_hash) {
+      return res.status(400).json({
+        error: { code: "NO_PASSWORD", message: "Password not configured. Use email OTP." }
+      });
+    }
+
+    // Compare password with stored hash
+    const isValid = await bcrypt.compare(password, record.password_hash);
+
+    if (!isValid) {
+      // Increment failed attempts using existing OTP lockout infrastructure
+      const stored = await getOtp(normalizedEmail);
+      const attempts = (stored?.attempts ?? 0) + 1;
+      await setOtp(normalizedEmail, {
+        hash: '',
+        expiresAt: Date.now() + LOCKOUT_MS,
+        attempts,
+      });
+
+      if (attempts >= MAX_VERIFY_ATTEMPTS) {
+        const lockoutUntil = Date.now() + LOCKOUT_MS;
+        await setLockout(normalizedEmail, lockoutUntil);
+        await deleteOtp(normalizedEmail);
+        log.warn(`[GCP-STG-0471] Password lockout for ${normalizedEmail} after ${attempts} failed attempts`);
+
+        logAuthEvent({
+          actorType: 'admin',
+          actorId: normalizedEmail,
+          eventType: 'login_failed',
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+          metadata: { method: 'password', reason: 'lockout' },
+        });
+
+        return res.status(429).json({
+          error: {
+            code: "TOO_MANY_ATTEMPTS",
+            message: "Too many failed attempts. Please try again in 30 minutes.",
+            unlockAt: lockoutUntil,
+          }
+        });
+      }
+
+      logAuthEvent({
+        actorType: 'admin',
+        actorId: normalizedEmail,
+        eventType: 'login_failed',
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        metadata: { method: 'password', reason: 'wrong_password' },
+      });
+
+      return res.status(401).json({
+        error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password" }
+      });
+    }
+
+    // Password correct — clear any lockout state
+    await deleteLockout(normalizedEmail);
+    await deleteOtp(normalizedEmail);
+
+    // Check if TOTP 2FA is enabled — require second factor
+    if (record.totp_enabled) {
+      log.info(`[GCP-STG-0471] TOTP required for password login: ${normalizedEmail}`);
+      return res.json({
+        success: true,
+        requiresTOTP: true,
+        email: normalizedEmail,
+      });
+    }
+
+    // Issue JWT (same claims as verify-email-otp)
+    const token = jwt.sign(
+      {
+        email: normalizedEmail,
+        role: 'super_admin',
+        type: 'admin',
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY, issuer: JWT_ISSUER }
+    );
+
+    log.info(`[GCP-STG-0471] Admin password login successful: ${normalizedEmail}`);
+
+    logAuthEvent({
+      actorType: 'admin',
+      actorId: normalizedEmail,
+      eventType: 'login_success',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { method: 'password' },
+    });
+
+    // Set HttpOnly cookie (same as OTP flow)
+    res.cookie('admin_session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'development',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000,
+      path: '/api',
+    });
+
+    return res.json({
+      success: true,
+      token,
+      admin: {
+        email: normalizedEmail,
+        role: 'super_admin',
+      },
+    });
+  } catch (err) {
+    log.error(`[GCP-STG-0471] Password login error for ${normalizedEmail}:`, err);
+    return res.status(500).json({
+      error: { code: "LOGIN_FAILED", message: "Login failed. Please try again." }
+    });
+  }
 });
 
 // =========================================================================

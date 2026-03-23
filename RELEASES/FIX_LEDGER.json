@@ -10812,8 +10812,8 @@
     {
       "ticket": "GCP-STG-0214",
       "file": "backend/src/routes/v1/supplier/auth.ts",
-      "start_line": 863,
-      "end_line": 883,
+      "start_line": 885,
+      "end_line": 905,
       "checksum": "ef7ac779bd1144b0",
       "description": "Block forgot-password email + OTP for unapproved suppliers (verification_status != ACTIVE)",
       "test_file": "backend/tests/supplierResetBlock.gcp-stg-0214.unit.test.ts",
@@ -10847,7 +10847,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T14:10:24.547Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T18:31:15.903Z"
+      "line_shifted_at": "2026-03-23T19:49:12.072Z"
     },
     {
       "ticket": "GCP-STG-0082",
@@ -13985,8 +13985,8 @@
     {
       "ticket": "GCP-STG-0214-COMPLETION",
       "file": "backend/src/routes/v1/supplier/auth.ts",
-      "start_line": 1132,
-      "end_line": 1151,
+      "start_line": 1154,
+      "end_line": 1173,
       "checksum": "8006d1bf4c5a2ac8",
       "description": "Block OTP reset completion for non-ACTIVE suppliers",
       "test_file": "backend/tests/settlement.gcp-stg-0106.unit.test.ts",
@@ -14020,7 +14020,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T23:25:26.784Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T18:31:15.936Z"
+      "line_shifted_at": "2026-03-23T19:49:12.109Z"
     },
     {
       "ticket": "GCP-STG-0231",
@@ -21558,8 +21558,8 @@
     {
       "ticket": "GCP-STG-0461",
       "file": "backend/src/routes/v1/admin/adminAuth.ts",
-      "start_line": 417,
-      "end_line": 417,
+      "start_line": 329,
+      "end_line": 329,
       "checksum": "69ddd34ff1dca925",
       "description": "verify-email-otp route has otpRateLimiter middleware for IP-level brute-force protection",
       "test_file": "backend/tests/adminAuth.gcp-stg-0461.unit.test.ts",
@@ -21590,7 +21590,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:18:35.582Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T18:31:16.012Z"
+      "line_shifted_at": "2026-03-23T19:49:12.179Z"
     },
     {
       "ticket": "GCP-STG-0478",
@@ -21632,8 +21632,8 @@
     {
       "ticket": "GCP-STG-0487",
       "file": "backend/src/routes/v1/retailer-admin/auth.ts",
-      "start_line": 72,
-      "end_line": 87,
+      "start_line": 74,
+      "end_line": 89,
       "checksum": "e3ca3ad8b2f0d1ba",
       "description": "DB-backed account lockout (failed_login_count + locked_until) for retailer password login, 30-min lockout matching SuperAdmin/Supplier pattern",
       "test_file": "backend/tests/retailerAuth.gcp-stg-0487.unit.test.ts",
@@ -21663,7 +21663,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:32:14.140Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T19:49:12.181Z"
     },
     {
       "ticket": "GCP-STG-0465",
@@ -21777,8 +21778,8 @@
     {
       "ticket": "GCP-STG-0491",
       "file": "backend/src/routes/v1/retailer-admin/auth.ts",
-      "start_line": 78,
-      "end_line": 83,
+      "start_line": 80,
+      "end_line": 85,
       "checksum": "4614123d6b3e5a92",
       "description": "Redis-backed rate limiter (10 req/min/IP) on retailer password login endpoint",
       "test_file": "backend/tests/passwordLoginRateLimit.gcp-stg-0491.unit.test.ts",
@@ -21808,13 +21809,14 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:32:32.496Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T19:49:12.184Z"
     },
     {
       "ticket": "GCP-STG-0491",
       "file": "backend/src/routes/v1/supplier/auth.ts",
-      "start_line": 87,
-      "end_line": 95,
+      "start_line": 89,
+      "end_line": 97,
       "checksum": "19438958f63f6cbe",
       "description": "Redis-backed rate limiter (10 req/min/IP) on supplier password login endpoint",
       "test_file": "backend/tests/passwordLoginRateLimit.gcp-stg-0491.unit.test.ts",
@@ -21844,7 +21846,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:32:40.333Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T19:49:12.186Z"
     },
     {
       "ticket": "GCP-STG-0484",
@@ -22068,14 +22071,14 @@
         "wiring": "Backend-only, supertest verified",
         "navigation": "Backend-only, no navigation"
       },
-      "checksum": "7efa25145d2047fa",
+      "checksum": "8d346a2a5c6cd4c1",
       "line_shifted_at": "2026-03-23T18:31:16.025Z"
     },
     {
       "ticket": "GCP-STG-0486",
       "file": "backend/src/routes/v1/supplier/auth.ts",
-      "start_line": 276,
-      "end_line": 340,
+      "start_line": 278,
+      "end_line": 342,
       "description": "Supplier auth middleware accepts HttpOnly cookie sm_access_token alongside Bearer header",
       "test_file": "backend/tests/supplierCookieAuth.gcp-stg-0486.unit.test.ts",
       "status": "ACTIVE",
@@ -22125,7 +22128,8 @@
         "ticket_parked": "pending",
         "migration_safe": "No migration needed, middleware change only"
       },
-      "checksum": "3f12de135af6dd92"
+      "checksum": "3f12de135af6dd92",
+      "line_shifted_at": "2026-03-23T19:49:12.262Z"
     },
     {
       "ticket": "GCP-STG-0489",
@@ -22858,8 +22862,8 @@
     {
       "ticket": "GCP-STG-0473",
       "file": "backend/src/routes/v1/admin/adminAuth.ts",
-      "start_line": 390,
-      "end_line": 395,
+      "start_line": 302,
+      "end_line": 307,
       "description": "OTP cleanup on email send failure (already implemented)",
       "test_file": "N/A",
       "status": "ACTIVE",
@@ -22909,7 +22913,8 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "736063a33908f3d6"
+      "checksum": "736063a33908f3d6",
+      "line_shifted_at": "2026-03-23T19:49:12.265Z"
     },
     {
       "ticket": "GCP-STG-0477",
@@ -23080,62 +23085,6 @@
       "checksum": "c4267eb3bf668674"
     },
     {
-      "ticket": "GCP-STG-0471",
-      "file": "backend/src/routes/v1/admin/adminAuth.ts",
-      "start_line": 1,
-      "end_line": 10,
-      "description": "Password login stub endpoint returning 501",
-      "test_file": "N/A",
-      "status": "ACTIVE",
-      "checklist": {
-        "ui_elements": true,
-        "ux_states": true,
-        "wiring": true,
-        "navigation": true,
-        "backend_api": true,
-        "api_errors": true,
-        "store_isolation": true,
-        "business_logic": true,
-        "business_behaviour": true,
-        "db_schema": true,
-        "migration_safe": true,
-        "impacted_files": true,
-        "fix_ledger_check": true,
-        "no_agent_conflict": true,
-        "operator_approved": true,
-        "parity_scanned": true,
-        "gcp_parity": true,
-        "regression_check": true,
-        "test_guard": true,
-        "single_commit": true,
-        "ticket_parked": true
-      },
-      "checklist_evidence": {
-        "ui_elements": "N/A",
-        "ux_states": "N/A",
-        "wiring": "N/A",
-        "navigation": "N/A",
-        "backend_api": "N/A",
-        "api_errors": "N/A",
-        "store_isolation": "N/A",
-        "business_logic": "N/A",
-        "business_behaviour": "N/A",
-        "db_schema": "N/A",
-        "migration_safe": "N/A",
-        "impacted_files": "backend/src/routes/v1/admin/adminAuth.ts",
-        "fix_ledger_check": "done",
-        "no_agent_conflict": "done",
-        "operator_approved": "Mode A",
-        "parity_scanned": "done",
-        "gcp_parity": "done",
-        "regression_check": "done",
-        "test_guard": "N/A",
-        "single_commit": "done",
-        "ticket_parked": "pending"
-      },
-      "checksum": "c8c2779946dcbace"
-    },
-    {
       "ticket": "GCP-STG-0481",
       "file": "backend/src/middleware/adminToken.ts",
       "start_line": 1,
@@ -23194,8 +23143,8 @@
     {
       "ticket": "GCP-STG-0482",
       "file": "backend/src/routes/v1/admin/adminAuth.ts",
-      "start_line": 445,
-      "end_line": 460,
+      "start_line": 357,
+      "end_line": 372,
       "description": "Redis blacklist with TTL matching token expiry",
       "test_file": "N/A",
       "status": "ACTIVE",
@@ -23245,7 +23194,8 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "d2af52d3e7301aea"
+      "checksum": "d2af52d3e7301aea",
+      "line_shifted_at": "2026-03-23T19:49:12.269Z"
     },
     {
       "ticket": "GCP-STG-0485",
@@ -23306,8 +23256,8 @@
     {
       "ticket": "GCP-STG-0488",
       "file": "backend/src/routes/v1/supplier/auth.ts",
-      "start_line": 186,
-      "end_line": 190,
+      "start_line": 188,
+      "end_line": 192,
       "description": "Password complexity validation already implemented",
       "test_file": "N/A",
       "status": "ACTIVE",
@@ -23357,7 +23307,8 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "7301f5f67c29801f"
+      "checksum": "7301f5f67c29801f",
+      "line_shifted_at": "2026-03-23T19:49:12.271Z"
     },
     {
       "ticket": "GCP-STG-0479",
@@ -23414,6 +23365,118 @@
         "ticket_parked": "pending"
       },
       "checksum": "ad1e8e8a87f8e3b1"
+    },
+    {
+      "ticket": "GCP-STG-0471",
+      "file": "backend/src/routes/v1/admin/adminAuth.ts",
+      "start_line": 700,
+      "end_line": 780,
+      "description": "SuperAdmin password login: set-password + login-password with bcrypt, lockout, TOTP",
+      "test_file": "backend/tests/adminPasswordLogin.gcp-stg-0471.unit.test.ts",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_evidence": {
+        "ui_elements": "Backend only",
+        "ux_states": "400/401/403/429 error states",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "backend_api": "set-password + login-password",
+        "api_errors": "All covered",
+        "store_isolation": "Admin-level",
+        "business_logic": "bcrypt+lockout+TOTP",
+        "business_behaviour": "Full login flow",
+        "db_schema": "password_hash in admin_totp",
+        "migration_safe": "ALTER TABLE ADD COLUMN IF NOT EXISTS",
+        "impacted_files": "adminAuth.ts+migration238+test",
+        "fix_ledger_check": "done",
+        "no_agent_conflict": "done",
+        "operator_approved": "Mode A",
+        "parity_scanned": "done",
+        "gcp_parity": "done",
+        "regression_check": "12 tests pass",
+        "test_guard": "adminPasswordLogin 12/12",
+        "single_commit": "done",
+        "ticket_parked": "pending"
+      },
+      "checksum": "2cfbc08aba950ab6"
+    },
+    {
+      "ticket": "GCP-STG-0464",
+      "file": "backend/src/lib/totp.ts",
+      "start_line": 1,
+      "end_line": 100,
+      "description": "Shared TOTP utility + retailer/supplier TOTP 2FA endpoints + user_totp table",
+      "test_file": "backend/tests/userTotp.gcp-stg-0464.unit.test.ts",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_evidence": {
+        "ui_elements": "Backend only",
+        "ux_states": "TOTP flow states",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "backend_api": "6 TOTP endpoints (3 per portal)",
+        "api_errors": "400/401/403",
+        "store_isolation": "User-scoped",
+        "business_logic": "RFC 6238 TOTP",
+        "business_behaviour": "Login->requiresTOTP->verify->JWT",
+        "db_schema": "auth.user_totp table",
+        "migration_safe": "CREATE TABLE IF NOT EXISTS",
+        "impacted_files": "totp.ts+auth.ts(x3)+migration+test",
+        "fix_ledger_check": "done",
+        "no_agent_conflict": "done",
+        "operator_approved": "Mode A",
+        "parity_scanned": "done",
+        "gcp_parity": "done",
+        "regression_check": "17 tests pass",
+        "test_guard": "userTotp 17/17",
+        "single_commit": "done",
+        "ticket_parked": "pending"
+      },
+      "checksum": "3c529768065a4b1d"
     }
   ],
   "machine_state_version": 269,
@@ -23462,5 +23525,5 @@
   "_commitNote": "GCP-STG-0417,0422,0425,0426,0428,0430,0431",
   "_note": "0429-behavioral",
   "_n": "0491",
-  "last_commit_note": "0479"
+  "last_commit_note": "0471+0464"
 }
