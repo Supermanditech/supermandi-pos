@@ -128,6 +128,13 @@ async function verifyAdminApiKey(apiKey: string): Promise<AdminInfo | null> {
   }
 }
 
+// GCP-STG-0481: Admin email allowlist for session invalidation on email change
+// Re-checked on every authenticated request so removing an email instantly revokes access.
+const ADMIN_EMAIL_ALLOWLIST = (process.env.ADMIN_EMAIL_ALLOWLIST || '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean);
+
 // W5-BACKEND-JWT-001: JWT_SECRET must always be set; no hardcoded fallback in any environment
 const JWT_SECRET = (() => {
   const secret = process.env.JWT_SECRET;
@@ -159,6 +166,12 @@ export async function requireAdminToken(req: Request, res: Response, next: NextF
       // LIVE.BE.JWT_ALGORITHM_PINNING.001: Pin HS256 algorithm
       const decoded = jwt.verify(cookieToken, JWT_SECRET, { algorithms: ['HS256'], clockTolerance: 30 }) as { email?: string; role?: string; type?: string };
       if (decoded.type === 'admin' || decoded.role === 'super_admin') {
+        // GCP-STG-0481: Re-check email against current allowlist (instant revocation on email removal)
+        if (decoded.email && ADMIN_EMAIL_ALLOWLIST.length > 0 && !ADMIN_EMAIL_ALLOWLIST.includes(decoded.email.toLowerCase())) {
+          log.warn(`[GCP-STG-0481] Admin email ${decoded.email} no longer in allowlist — access denied`);
+          res.status(403).json({ error: { code: "EMAIL_REVOKED", message: "Your admin access has been revoked" } });
+          return;
+        }
         req.adminId = decoded.email || 'jwt-session';
         req.adminRole = (decoded.role as AdminRole) || 'super_admin';
         return next();
@@ -178,6 +191,12 @@ export async function requireAdminToken(req: Request, res: Response, next: NextF
       // ISSUE-187: 30s clock tolerance
       const decoded = jwt.verify(bearerToken, JWT_SECRET, { algorithms: ['HS256'], clockTolerance: 30 }) as { email?: string; role?: string; type?: string };
       if (decoded.type === 'admin' || decoded.role === 'super_admin') {
+        // GCP-STG-0481: Re-check email against current allowlist (instant revocation on email removal)
+        if (decoded.email && ADMIN_EMAIL_ALLOWLIST.length > 0 && !ADMIN_EMAIL_ALLOWLIST.includes(decoded.email.toLowerCase())) {
+          log.warn(`[GCP-STG-0481] Admin email ${decoded.email} no longer in allowlist — access denied`);
+          res.status(403).json({ error: { code: "EMAIL_REVOKED", message: "Your admin access has been revoked" } });
+          return;
+        }
         req.adminId = decoded.email || 'jwt-session';
         req.adminRole = (decoded.role as AdminRole) || 'super_admin';
         return next();
