@@ -18403,7 +18403,7 @@
       "start_line": 231,
       "end_line": 249,
       "checksum": "a5564b6b33f27d21",
-      "description": "BuyScreenV3 cartTotal computed with MOQ tier discounts applied (not display-only) via useMemo",
+      "description": "BuyScreenV3 cartTotal computed with MOQ tier discounts applied (not display-only) via useMemo (applied to cart total)",
       "test_file": "src/__tests__/screens/volumeDiscount.gcp-stg-0398.test.ts",
       "depends_on": null,
       "migration": null,
