@@ -11,6 +11,7 @@ import type { PosStaffContext } from "../../../middleware/posStaff";
 import { randomUUID } from "crypto";
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
+import { procurementToStock } from "../../../services/conversionEngine";
 
 export const posStockInRouter = Router();
 
@@ -220,7 +221,8 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
 
     for (const item of items) {
       // SCALE-C1: Destructure batchNumber and expiryDate (both optional)
-      const { barcode, quantity, buyPrice, batchNumber, expiryDate } = item;
+      // GCP-STG-0388: Destructure optional procurementUnit + packQty for unit conversion
+      const { barcode, quantity, buyPrice, batchNumber, expiryDate, procurementUnit, packQty } = item;
 
       // BUG-004: quantity validated upfront — always positive here
 
@@ -238,8 +240,10 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
       }
 
       // Look up product by barcode in store_product_barcodes + store_products
+      // GCP-STG-0388: Also read conversion profile columns for unit conversion awareness
       const productResult = await client.query(
-        `SELECT sp.product_id, sp.current_stock
+        `SELECT sp.product_id, sp.current_stock,
+                sp.procurement_unit, sp.procurement_pack_qty, sp.base_stock_unit
          FROM catalog.store_product_barcodes spb
          JOIN catalog.store_products sp ON sp.store_id = spb.store_id AND sp.id = spb.store_product_id
          WHERE spb.store_id = $1 AND spb.barcode = $2 AND sp.is_active = true
@@ -260,7 +264,27 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
         continue;
       }
 
-      const deltaQty = Math.abs(quantity);
+      // GCP-STG-0388: Unit conversion awareness for stock-in
+      // Priority: (1) request-body procurementUnit+packQty, (2) DB conversion profile, (3) raw qty
+      let deltaQty: number;
+      const dbProcUnit = productResult.rows[0].procurement_unit;
+      const dbPackQty = Number(productResult.rows[0].procurement_pack_qty);
+      const dbBaseUnit = productResult.rows[0].base_stock_unit;
+
+      if (procurementUnit && typeof procurementUnit === "string" && typeof packQty === "number" && packQty > 0) {
+        // Request explicitly provides conversion info — use it
+        deltaQty = procurementToStock(Math.abs(quantity), packQty);
+        log.info(`[stock-in] Conversion applied (request): ${quantity} ${procurementUnit} × ${packQty} = ${deltaQty} (barcode=${barcode})`);
+      } else if (dbProcUnit && Number.isFinite(dbPackQty) && dbPackQty > 0 && dbBaseUnit) {
+        // DB product has a conversion profile — apply it
+        deltaQty = procurementToStock(Math.abs(quantity), dbPackQty);
+        log.info(`[stock-in] Conversion applied (DB profile): ${quantity} ${dbProcUnit} × ${dbPackQty} = ${deltaQty} ${dbBaseUnit} (barcode=${barcode})`);
+      } else {
+        // No conversion info — raw quantity (backward compatible)
+        deltaQty = Math.abs(quantity);
+        log.warn(`[stock-in] No unit conversion info for barcode=${barcode} in store ${storeId} — using raw qty ${deltaQty}`);
+      }
+
       const newStock = currentStock + deltaQty;
 
       // SCALE-C1: Update store_products with stock, batch_number, and/or expiry_date
