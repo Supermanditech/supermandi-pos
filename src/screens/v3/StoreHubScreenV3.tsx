@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { View, Pressable, ScrollView, ActivityIndicator, StyleSheet, Text, Alert } from "react-native";
 import Svg, { Rect, Path, Circle, Line } from "react-native-svg";
+// GCP-STG-0450: Safe area insets for dynamic paddingTop/paddingBottom
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
@@ -19,6 +21,8 @@ type RecentOrder = { supplier: string; daysAgo: number; items: number; total: nu
 
 export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) {
   const colors = useThemeColors();
+  // GCP-STG-0450: Use safe area insets instead of hardcoded padding
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
@@ -60,7 +64,7 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
           <Path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
@@ -68,7 +72,7 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
         <Text style={styles.headerTitle}>Store</Text>
       </View>
 
-      <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) }} showsVerticalScrollIndicator={false}>
         <View style={styles.grid}>
           <Pressable style={styles.card} onPress={() => onNavigate("grn")} accessibilityRole="button">
             <Svg width={36} height={36} viewBox="0 0 48 48" fill="none"><Rect x="8" y="16" width="32" height="24" rx="3" fill={colors.backgroundSecondary} stroke={colors.textTertiary} strokeWidth="1.5" /><Rect x="14" y="8" width="20" height="10" rx="2" fill={colors.primary} /><Path d="M18 12h12" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" /><Circle cx="38" cy="36" r="6" fill={colors.success} /><Path d="M35 36l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></Svg>
