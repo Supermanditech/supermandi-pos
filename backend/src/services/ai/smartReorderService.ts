@@ -11,6 +11,14 @@ export interface SmartReorderSuggestion {
   predictedDailyDemand: number;
   leadDays: number;
   suggestedQty: number;
+  /** Quantity in procurement units (e.g. 2 bags instead of 100 KG) */
+  suggestedProcurementQty: number | null;
+  /** Procurement unit label (e.g. BAG, CARTON, KG) */
+  procurementUnit: string | null;
+  /** How many base stock units per procurement unit */
+  packQty: number | null;
+  /** Base stock unit (e.g. KG, PCS) */
+  baseStockUnit: string | null;
   suggestedSupplierId: string | null;
   suggestedPrice: number | null;
   urgency: 'critical' | 'high' | 'normal';
@@ -44,7 +52,8 @@ export async function generateSmartReorders(storeId: string): Promise<number> {
      product_info AS (
        SELECT sp.product_id, sp.display_name,
               COALESCE(sb.current_qty, sp.current_stock, 0) AS current_stock,
-              rp.min_stock, rp.target_stock, rp.preferred_supplier_id, rp.is_enabled
+              rp.min_stock, rp.target_stock, rp.preferred_supplier_id, rp.is_enabled,
+              sp.procurement_unit, sp.procurement_pack_qty, sp.base_stock_unit
        FROM catalog.store_products sp
        LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
        LEFT JOIN reorder.reorder_policies rp ON rp.store_id = sp.store_id AND rp.product_id = sp.product_id
@@ -54,7 +63,8 @@ export async function generateSmartReorders(storeId: string): Promise<number> {
             COALESCE(af.avg_daily_demand, 0) AS avg_daily_demand,
             COALESCE(pi.min_stock, 5) AS min_stock,
             COALESCE(pi.target_stock, 20) AS target_stock,
-            pi.preferred_supplier_id, pi.is_enabled
+            pi.preferred_supplier_id, pi.is_enabled,
+            pi.procurement_unit, pi.procurement_pack_qty, pi.base_stock_unit
      FROM product_info pi
      LEFT JOIN avg_forecast af ON af.product_id = pi.product_id
      WHERE (pi.is_enabled IS NULL OR pi.is_enabled = true)
@@ -72,6 +82,15 @@ export async function generateSmartReorders(storeId: string): Promise<number> {
 
     // Calculate suggested quantity: enough for target_stock + lead_days buffer
     const suggestedQty = Math.max(1, Math.ceil(targetStock - currentStock + dailyDemand * leadDays));
+
+    // GCP-STG-0390: Compute procurement units (e.g. "2 bags" instead of "100 KG")
+    const procurementUnit: string | null = row.procurement_unit || null;
+    const packQty: number | null = row.procurement_pack_qty ? parseFloat(row.procurement_pack_qty) : null;
+    const baseStockUnit: string | null = row.base_stock_unit || null;
+    const suggestedProcurementQty: number | null =
+      procurementUnit && packQty && packQty > 0
+        ? Math.ceil(suggestedQty / packQty)
+        : null;
 
     // Check for existing pending reorder
     const existing = await pool.query(
@@ -98,10 +117,12 @@ export async function generateSmartReorders(storeId: string): Promise<number> {
     await pool.query(
       `INSERT INTO reorder.pending_reorders
        (store_id, product_id, current_stock, min_threshold, target_stock,
-        suggested_quantity, suggested_supplier_id, suggested_unit_price, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')`,
+        suggested_quantity, suggested_supplier_id, suggested_unit_price, status,
+        procurement_unit, procurement_pack_qty, base_stock_unit, suggested_procurement_qty)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, $10, $11, $12)`,
       [storeId, row.product_id, currentStock, parseInt(row.min_stock),
-       targetStock, suggestedQty, supplierId, unitPrice]
+       targetStock, suggestedQty, supplierId, unitPrice,
+       procurementUnit, packQty, baseStockUnit, suggestedProcurementQty]
     );
     created++;
   }

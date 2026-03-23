@@ -155,7 +155,10 @@ retailerReorderRouter.get("/reorder/suggestions", async (req: Request, res: Resp
         rp.target_stock as "targetStock",
         rp.max_reorder_qty as "maxReorderQty",
         sp.purchase_price as "purchasePrice",
-        sp.sell_price as "sellPrice"
+        sp.sell_price as "sellPrice",
+        sp.procurement_unit as "procurementUnit",
+        sp.procurement_pack_qty as "procurementPackQty",
+        sp.base_stock_unit as "baseStockUnit"
       FROM reorder.reorder_policies rp
       JOIN catalog.store_products sp ON sp.store_id = rp.store_id AND sp.product_id = rp.product_id
       JOIN catalog.products p ON p.id = rp.product_id
@@ -208,6 +211,10 @@ retailerReorderRouter.get("/reorder/pending", async (req: Request, res: Response
         pr.suggested_quantity as "suggestedQuantity",
         pr.suggested_supplier_name as "supplierName",
         pr.suggested_unit_price as "unitPrice",
+        pr.procurement_unit as "procurementUnit",
+        pr.procurement_pack_qty as "procurementPackQty",
+        pr.base_stock_unit as "baseStockUnit",
+        pr.suggested_procurement_qty as "suggestedProcurementQty",
         pr.status,
         pr.expires_at as "expiresAt",
         pr.created_at as "createdAt"

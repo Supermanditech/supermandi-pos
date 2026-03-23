@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 798,
+  "version": 800,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6967,8 +6967,8 @@
       "ticket": "STG-561",
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 1,
-      "end_line": 723,
-      "checksum": "cb0fca95f100f58a",
+      "end_line": 803,
+      "checksum": "bc298db9e5c50389",
       "description": "BUY tab v3 — supplier catalogue with wholesale metadata, supplier filter, categories, counter purchase CTA",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,
@@ -9973,8 +9973,8 @@
     {
       "ticket": "GCP-STG-0145",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 354,
-      "end_line": 387,
+      "start_line": 363,
+      "end_line": 396,
       "checksum": "fb53241a32a85e1f",
       "description": "BUY screen uses 3-column grid with ProductTileV3 instead of single-column SupplierProductCardV3",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
@@ -10008,7 +10008,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:41:40.330Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T09:41:49.335Z"
+      "line_shifted_at": "2026-03-23T10:26:17.130Z"
     },
     {
       "ticket": "GCP-STG-0144",
@@ -10452,8 +10452,8 @@
       "ticket": "GCP-STG-0129",
       "file": "backend/src/routes/v1/reorder.ts",
       "start_line": 403,
-      "end_line": 437,
-      "checksum": "eac550771407966d",
+      "end_line": 441,
+      "checksum": "ee81e8a6c6efb518",
       "description": "Remove non-existent ssl.credit_limit and ssl.credit_period_days from pending reorders query",
       "test_file": "backend/tests/reorderPending.gcp-stg-0129.unit.test.ts",
       "depends_on": null,
@@ -15701,8 +15701,8 @@
     {
       "ticket": "GCP-STG-0320",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 189,
-      "end_line": 224,
+      "start_line": 198,
+      "end_line": 233,
       "checksum": "ea15f0f3e191f1d4",
       "description": "BUY search uses server-side getBuyCatalog(q=) with 300ms debounce instead of client-only name+brand filter",
       "test_file": "src/__tests__/screens/buyServerSearch.gcp-stg-0320.test.ts",
@@ -15733,7 +15733,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:03:07.834Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T09:41:49.461Z"
+      "line_shifted_at": "2026-03-23T10:26:17.244Z"
     },
     {
       "ticket": "GCP-STG-0321",
@@ -17933,8 +17933,8 @@
     {
       "ticket": "GCP-STG-0397",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 261,
-      "end_line": 277,
+      "start_line": 270,
+      "end_line": 286,
       "checksum": "b06fdc0e960475e7",
       "description": "BUY checkout MOQ enforcement: handleQtyChange snaps qty to product.moq floor when qty>0 and qty<moq, shows toast warning. qty=0 still allows cart removal.",
       "test_file": "backend/tests/moqEnforcement.gcp-stg-0397.unit.test.ts",
@@ -17965,7 +17965,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:18:54.532Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T09:41:49.511Z"
+      "line_shifted_at": "2026-03-23T10:26:17.282Z"
     },
     {
       "ticket": "GCP-STG-0399",
@@ -18081,8 +18081,8 @@
     {
       "ticket": "GCP-STG-0401",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 432,
-      "end_line": 451,
+      "start_line": 441,
+      "end_line": 460,
       "checksum": "6e5def9328da4f6f",
       "description": "BuyScreenV3 procurement mapping extended with 6 fields from detailProduct (6 fields wired)",
       "test_file": "src/__tests__/components/buyDetailFields.gcp-stg-0401.test.ts",
@@ -18113,7 +18113,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:33:08.397Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T09:41:49.535Z"
+      "line_shifted_at": "2026-03-23T10:26:17.293Z"
     },
     {
       "ticket": "GCP-STG-0400",
@@ -18372,8 +18372,8 @@
     {
       "ticket": "GCP-STG-0376",
       "file": "backend/src/routes/v1/reorder.ts",
-      "start_line": 593,
-      "end_line": 690,
+      "start_line": 597,
+      "end_line": 694,
       "checksum": "2db6b2dcdf9c2a67",
       "description": "Reorder PO creation uses submitted (not draft) + supplier lifecycle notification after COMMIT — both approve and auto-approve paths",
       "test_file": "backend/tests/reorderAutoSubmit.gcp-stg-0376.unit.test.ts",
@@ -18403,13 +18403,14 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:54:32.356Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T10:26:17.326Z"
     },
     {
       "ticket": "GCP-STG-0398",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 240,
-      "end_line": 258,
+      "start_line": 249,
+      "end_line": 267,
       "checksum": "a5564b6b33f27d21",
       "description": "BuyScreenV3 cartTotal computed with MOQ tier discounts applied (not display-only) via useMemo (applied to cart total)",
       "test_file": "src/__tests__/screens/volumeDiscount.gcp-stg-0398.test.ts",
@@ -18440,7 +18441,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:59:18.571Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T09:41:49.546Z"
+      "line_shifted_at": "2026-03-23T10:26:17.332Z"
     },
     {
       "ticket": "GCP-STG-0387",
@@ -19026,8 +19027,8 @@
     {
       "ticket": "GCP-STG-0403",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 481,
-      "end_line": 487,
+      "start_line": 490,
+      "end_line": 496,
       "checksum": "58828b3aa9c86dc5",
       "description": "BUY checkout GST computed per-item (each item gstPct) instead of averaged across all cart items (per-item reduce)",
       "test_file": "src/__tests__/screens/buyGstPerItem.gcp-stg-0403.test.ts",
@@ -19058,7 +19059,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:21:18.302Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T09:41:49.567Z"
+      "line_shifted_at": "2026-03-23T10:26:17.349Z"
     },
     {
       "ticket": "GCP-STG-0360",
@@ -19493,6 +19494,78 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:16:46.300Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0404",
+      "file": "src/screens/v3/BuyScreenV3.tsx",
+      "start_line": 684,
+      "end_line": 730,
+      "checksum": "1e3ed64ee8648252",
+      "description": "BUY order confirmation modal shown after successful checkout with order numbers, item count, total amount, payment status, and Continue Shopping button",
+      "test_file": "src/__tests__/screens/buyConfirmation.gcp-stg-0404.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T10:26:06.961Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0390",
+      "file": "backend/src/services/ai/smartReorderService.ts",
+      "start_line": 7,
+      "end_line": 93,
+      "checksum": "a7a360366c49f04f",
+      "description": "Reorder suggestions include procurement units: suggestedProcurementQty, procurementUnit, packQty, baseStockUnit. Computes ceil(suggestedQty/packQty) and stores in pending_reorders.",
+      "test_file": "backend/tests/reorderProcurementUnits.gcp-stg-0390.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T10:26:52.647Z",
       "status": "ACTIVE"
     }
   ],
