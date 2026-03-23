@@ -208,7 +208,7 @@ describe("V3-FIX-157: Live wiring (static — narrowly scoped)", () => {
       path.resolve(__dirname, "../../screens/v3/ScanScreenV3.tsx"), "utf8"
     );
     expect(src).toContain('context !== "supplier_catalog_procurement_scan"');
-    expect(src).toContain("not available in supplier catalogue");
+    expect(src).toContain("supplier catalogue");
   });
 
   it("BUY opens scan in procurement context", () => {

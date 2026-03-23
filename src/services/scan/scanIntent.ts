@@ -1,6 +1,6 @@
 import { NativeEventEmitter, NativeModules, Platform } from "react-native";
 import Constants from "expo-constants";
-import { onBarcodeScanned } from "./handleScan";
+import { onBarcodeScanned, isScanEnabled } from "./handleScan";
 
 type ScanIntentConfig = {
   action?: string;
@@ -47,6 +47,8 @@ export function startScanIntentListener(config?: ScanIntentConfig): void {
 
   emitter = new NativeEventEmitter(nativeModule);
   emitter.addListener("ScanIntent", (payload: ScanIntentPayload) => {
+    // GCP-STG-0506: Block scans when payment or modal is active
+    if (!isScanEnabled()) return;
     const resolved = resolvePayload(payload);
     if (!resolved) return;
     void onBarcodeScanned(resolved.text ?? "", resolved.format ?? undefined);

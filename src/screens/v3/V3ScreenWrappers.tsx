@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+
+// GCP-STG-0506: Scan context guard — disable scanning during payment flow
+import { setScanEnabled } from "../../services/scan/handleScan";
 
 // V3-001: Wrapper components for React Navigation stack registration
 // Each wrapper passes navigation.goBack() as onClose and navigation params as props
@@ -35,6 +38,11 @@ import { useSearchTriggerStore } from "../../stores/searchTriggerStore";
 // V3-FIX-071: Payment chooser navigates to child screens
 export function V3PaymentWrapper() {
   const nav = useNavigation<Nav>();
+  // GCP-STG-0506: Disable scanning while payment screen is active
+  useEffect(() => {
+    setScanEnabled(false);
+    return () => { setScanEnabled(true); };
+  }, []);
   const toSuccess = (method: string, saleId?: string, totalMinor?: number, itemCount?: number) =>
     nav.navigate("V3Success", { method, saleId, totalMinor, itemCount });
   return (

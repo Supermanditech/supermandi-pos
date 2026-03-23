@@ -81,6 +81,15 @@ let lastStormNotice = 0;
 const warnedNewItems = new Set<string>();
 let purchaseConfirmActive = false;
 
+// GCP-STG-0506: Scan context guard — block scans during payment/modals
+let scanEnabled = true;
+export function setScanEnabled(enabled: boolean): void { scanEnabled = enabled; }
+export function isScanEnabled(): boolean { return scanEnabled; }
+
+// GCP-STG-0508: Pipeline-level dedup — suppress identical barcode within 500ms across pipelines
+const PIPELINE_DEDUP_MS = 500;
+let lastPipelineScan: { barcode: string; ts: number } | null = null;
+
 type CartScanProduct = ScanProduct & { metadata?: Record<string, any> };
 
 export function needsSellFirstOnboarding(product: StoreLookupProduct | null): boolean {
@@ -378,10 +387,24 @@ function stripScannerAffixes(raw: string): string {
 
 export async function onBarcodeScanned(rawText: string, format?: string, source: ScanSource = "scanner"): Promise<void> {
   try {
+    // GCP-STG-0506: Block scans when payment or modal is active
+    if (!scanEnabled) {
+      console.log('scan_blocked:payment_or_modal_active');
+      return;
+    }
+
     // POS-SCAN-003: Strip scanner prefix/suffix before normalization
     // POS-SCAN-001: Normalize barcode case at entry point
     const trimmed = stripScannerAffixes(rawText?.trim?.() ?? "").toUpperCase();
     if (!trimmed) return;
+
+    // GCP-STG-0508: Pipeline-level dedup — same barcode within 500ms across pipelines
+    const now = Date.now();
+    if (lastPipelineScan && lastPipelineScan.barcode === trimmed && now - lastPipelineScan.ts < PIPELINE_DEDUP_MS) {
+      console.log('scan_pipeline_dedup:' + trimmed);
+      return;
+    }
+    lastPipelineScan = { barcode: trimmed, ts: now };
 
     console.log(`scan_barcode_received:${trimmed}`);
 
