@@ -3,7 +3,7 @@ import { View, FlatList, TextInput, Pressable, ActivityIndicator, RefreshControl
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
-import { getGridColumns, getScreenPadding, getChipPadding, getChipFontSize } from "../../theme/responsive";
+import { getGridColumns, getScreenPadding, getChipPadding, getChipFontSize, SCREEN_W } from "../../theme/responsive";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
@@ -34,6 +34,20 @@ import { useSearchTriggerStore } from "../../stores/searchTriggerStore";
 
 // V3-FIX-052: V3 category-group contract — loaded from backend, fallback to canonical labels
 const FALLBACK_CATEGORIES = ["Frequent", "Beverages", "Snacks", "Dairy", "Staples", "Home Care"];
+
+// GCP-STG-0370: Pre-calculated tile row height for getItemLayout (eliminates scroll jank)
+// Tile content: padding(10+10) + imageArea(~tileWidth) + name(~30) + price(~18) + extras(~20) + gridRow marginBottom(10)
+// On a 360dp phone with 3 columns: tileWidth ≈ (360-28-20)/3 ≈ 104, total ≈ 104+60+10+10 ≈ 184
+// We use a conservative estimate that works across device classes
+const TILE_ROW_HEIGHT = 180;
+const TILE_ROW_MARGIN = 10; // styles.gridRow marginBottom
+const ITEM_HEIGHT = TILE_ROW_HEIGHT + TILE_ROW_MARGIN;
+
+const getItemLayoutFn = (_data: unknown, index: number) => ({
+  length: ITEM_HEIGHT,
+  offset: ITEM_HEIGHT * index,
+  index,
+});
 
 // V3-FIX-042: Use real backend fields, no synthetic fallbacks
 function productToTileData(p: Product): ProductTileData {
@@ -271,7 +285,9 @@ export default function SellScreenV3() {
       return a.name.localeCompare(b.name);
     });
     return sorted.map(productToTileData);
-  }, [products, cartItems, selectedCategory, frequentProducts, cartIdSet, cartBarcodeSet]);
+  // GCP-STG-0370: Removed cartItems from deps — only cartIdSet/cartBarcodeSet are used inside
+  // This prevents O(n) re-sort on every cart quantity change (Set refs only change on add/remove)
+  }, [products, selectedCategory, frequentProducts, cartIdSet, cartBarcodeSet]);
 
   // Get cart qty for a product
   const getCartQty = useCallback(
@@ -434,6 +450,7 @@ export default function SellScreenV3() {
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={styles.gridContainer}
           renderItem={renderTile}
+          getItemLayout={getItemLayoutFn}
           showsVerticalScrollIndicator={false}
           removeClippedSubviews
           windowSize={5}

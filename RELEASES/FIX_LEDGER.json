@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 762,
+  "version": 764,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6671,8 +6671,8 @@
       "ticket": "STG-553",
       "file": "src/screens/v3/SellScreenV3.tsx",
       "start_line": 1,
-      "end_line": 579,
-      "checksum": "6e72d6897a6982c1",
+      "end_line": 598,
+      "checksum": "025d1bc05b13d671",
       "description": "SellScreenV3 — product grid + Retail/Bulk toggle + CartSheetV3 wired + V3-HARDEN-106 testIDs + GCP-STG-0400 purchasePriceMinor wiring",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
       "depends_on": null,
@@ -10093,8 +10093,8 @@
     {
       "ticket": "GCP-STG-0024",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 285,
-      "end_line": 309,
+      "start_line": 301,
+      "end_line": 325,
       "checksum": "43c20b9e6d7e4a16",
       "description": "Tap adds to cart directly, long-press opens detail sheet for kirana billing speed",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
@@ -10128,7 +10128,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:55:48.789Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T07:33:18.689Z"
+      "line_shifted_at": "2026-03-23T07:40:19.789Z"
     },
     {
       "ticket": "GCP-STG-0126",
@@ -10213,8 +10213,8 @@
     {
       "ticket": "GCP-STG-0127",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 293,
-      "end_line": 303,
+      "start_line": 309,
+      "end_line": 319,
       "checksum": "59bb22eabab5b5dd",
       "description": "Stock warning toast on add-to-cart when product out of stock or qty exceeds stock",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
@@ -10248,7 +10248,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:08:06.648Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T07:33:18.692Z"
+      "line_shifted_at": "2026-03-23T07:40:19.795Z"
     },
     {
       "ticket": "GCP-STG-0077",
@@ -12165,8 +12165,8 @@
     {
       "ticket": "GCP-STG-0142",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 396,
-      "end_line": 398,
+      "start_line": 412,
+      "end_line": 414,
       "checksum": "cf34650ac857fc6c",
       "description": "Enable Retail/Bulk trade toggle on SELL screen (prototype compliance)",
       "test_file": "backend/tests/sseEvents.gcp-stg-0108.unit.test.ts",
@@ -12197,7 +12197,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T18:50:26.038Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T07:33:18.708Z"
+      "line_shifted_at": "2026-03-23T07:40:19.813Z"
     },
     {
       "ticket": "GCP-STG-0122",
@@ -15733,8 +15733,8 @@
     {
       "ticket": "GCP-STG-0321",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 149,
-      "end_line": 199,
+      "start_line": 163,
+      "end_line": 213,
       "checksum": "aaabb499e07be565",
       "description": "SellScreenV3 search handler passes selectedCategory to backend search API (backend+POS)",
       "test_file": "backend/tests/sellCategoryFilter.gcp-stg-0321.unit.test.ts",
@@ -15765,7 +15765,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:03:38.305Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T07:33:18.737Z"
+      "line_shifted_at": "2026-03-23T07:40:19.847Z"
     },
     {
       "ticket": "GCP-STG-0321",
@@ -17886,8 +17886,8 @@
     {
       "ticket": "GCP-STG-0367",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 239,
-      "end_line": 245,
+      "start_line": 253,
+      "end_line": 259,
       "checksum": "168801a131599f37",
       "description": "cartIdSet + cartBarcodeSet useMemo Sets for O(1) cart membership in tileProducts sort",
       "test_file": "src/__tests__/stores/searchPerf.gcp-stg-0367.test.ts",
@@ -17918,7 +17918,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:07:01.714Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T07:33:18.755Z"
+      "line_shifted_at": "2026-03-23T07:40:19.870Z"
     },
     {
       "ticket": "GCP-STG-0397",
@@ -18210,6 +18210,78 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:33:27.863Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0374",
+      "file": "backend/migrations/226_gcp_stg_0374_drop_duplicate_indexes.sql",
+      "start_line": 1,
+      "end_line": 12,
+      "checksum": "630f6c94e2e8b30d",
+      "description": "Drop 2 duplicate indexes: store_products_store_id_idx (dup of store_products_store_idx) and idx_store_products_name_trgm (dup of idx_store_products_display_name_trgm)",
+      "test_file": "backend/tests/duplicateIndexes.gcp-stg-0374.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T07:40:09.063Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0370",
+      "file": "src/screens/v3/SellScreenV3.tsx",
+      "start_line": 36,
+      "end_line": 49,
+      "checksum": "9db39158058dc33b",
+      "description": "getItemLayout + TILE_ROW_HEIGHT constants for FlatList scroll performance; removed cartItems from tileProducts useMemo deps",
+      "test_file": "src/__tests__/screens/flatListPerf.gcp-stg-0370.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T07:41:08.808Z",
       "status": "ACTIVE"
     }
   ],
