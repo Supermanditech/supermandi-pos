@@ -106,6 +106,7 @@ export default function UdharScreenV3({ onBack, onComplete }: UdharScreenV3Props
         />
 
         {/* GCP-STG-0041: Customer cards with avatar, due balance, action buttons */}
+        {/* GCP-STG-0431: Hint text when no recent customers */}
         {recentCustomers.length > 0 ? (
           <View style={styles.recentSection}>
             <Text style={styles.recentTitle}>OR SELECT EXISTING</Text>
@@ -136,7 +137,11 @@ export default function UdharScreenV3({ onBack, onComplete }: UdharScreenV3Props
               }}
             />
           </View>
-        ) : null}
+        ) : (
+          <Text style={{ fontSize: 13, color: colors.textTertiary, marginTop: 16, textAlign: "center" }}>
+            Recent credit customers will appear here
+          </Text>
+        )}
       </View>
 
       <View style={styles.footer}>
