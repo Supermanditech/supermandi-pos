@@ -11552,3 +11552,485 @@ These are useful for retailers when deciding pricing, prioritizing near-expiry s
 **Impact**: Low — UPI covers most digital payment needs for kirana stores. But some retailers prefer net banking or card for larger orders.
 
 **Fix**: Add "Bank Transfer / Card" option to the payment method selector in BuyScreenV3. When selected, set `paymentMode: "BANK"`. The backend will resolve to Razorpay, create an order, and return a redirect URL.
+
+**Status**: IMPLEMENTED
+**Commit**: pending
+**Files changed**: `src/screens/v3/BuyScreenV3.tsx`, `src/services/api/orderApi.ts`
+**Test**: `src/__tests__/screens/bankCardPayment.gcp-stg-0412.test.ts` (8 tests, all pass)
+
+---
+
+## BATCH 31: Pre-Deploy Audit — Post-Completion Screen & Journey Audit (2026-03-23)
+
+Source: Full 4-platform screen audit after all 412 tickets completed. 31 POS screens, 25 retailer pages, 14 supplier pages, 30 SuperAdmin tabs audited. 20 user journeys traced. Cross-platform data matrix verified.
+
+---
+
+## GCP-STG-0413 — HIGH: Auth Screens Missing SafeAreaView — Content Behind Notch/Status Bar (HIGH)
+
+**Ticket ID**: GCP-STG-0413
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Pre-Deploy Audit — POS Platform, 5 Auth Screens
+
+**Problem**: Five POS auth screens render content without SafeAreaView or useSafeAreaInsets:
+1. `SplashScreenV3.tsx` — uses plain `View` with `flex: 1`, no safe area
+2. `PhoneScreenV3.tsx` — uses `KeyboardAvoidingView` without SafeArea wrapper
+3. `OTPScreenV3.tsx` — no safe area handling
+4. `StoreSelectScreenV3.tsx` — uses hardcoded `paddingTop: 60` as fragile workaround
+5. `StaffLoginScreenV3.tsx` — no safe area handling
+
+GCP-STG-0302 added safe area to `BrandedHeader` (top) and `BottomNavV3` (bottom), which covers all tab screens. But auth screens are NOT wrapped by these components — they render before the user reaches the tab layout.
+
+On devices with notches (Redmi Note series, Realme C series — dominant Indian market phones), the logo, phone input, and OTP boxes render behind the status bar. On devices with gesture navigation bars, the bottom buttons render behind the home indicator.
+
+**Impact**: First-time user experience is broken on notched phones. The enrollment flow (Phone → OTP → StoreSelect → StaffLogin) is the first thing every retailer sees. Content clipping makes the app look unprofessional.
+
+**Fix**: For each of the 5 screens:
+1. Import `useSafeAreaInsets` from `react-native-safe-area-context`
+2. Apply `paddingTop: insets.top` to the outermost container
+3. Apply `paddingBottom: Math.max(insets.bottom, 16)` to footer/button areas
+4. Remove hardcoded `paddingTop: 60` from StoreSelectScreenV3
+5. Remove hardcoded `paddingTop: 48` from related references
+
+**Files to modify**:
+- `src/screens/v3/SplashScreenV3.tsx`
+- `src/screens/v3/PhoneScreenV3.tsx`
+- `src/screens/v3/OTPScreenV3.tsx`
+- `src/screens/v3/StoreSelectScreenV3.tsx`
+- `src/screens/v3/StaffLoginScreenV3.tsx`
+
+**Test**: Verify on Redmi Note 12 (notch) + Samsung A14 (punch-hole) + iPhone 15 (Dynamic Island). All UI elements must be below status bar and above home indicator.
+
+**12-Layer Verification**:
+- L1 UI Elements: Safe area padding applied ✅
+- L2 UX States: N/A (no state change) ✅
+- L3 Wiring: N/A ✅
+- L4 Navigation: N/A ✅
+- L5 API: N/A ✅
+- L6 Backend: N/A ✅
+- L7 DB: N/A ✅
+- L8 Migrations: N/A ✅
+- L9 GCP Parity: N/A ✅
+- L10 Business: N/A ✅
+- L11 Dependencies: react-native-safe-area-context (already installed) ✅
+- L12 Store Isolation: N/A ✅
+
+---
+
+## GCP-STG-0414 — MEDIUM: ScanScreenV3 Hardcoded paddingTop:48 Instead of Safe Area Insets (MEDIUM)
+
+**Ticket ID**: GCP-STG-0414
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Pre-Deploy Audit — POS ScanScreenV3
+
+**Problem**: `ScanScreenV3.tsx` uses `paddingTop: 48` (line 424 in styles) as a hardcoded approximation of the status bar height. This value:
+- Is correct for ~40% of Android devices (status bar 24dp + some margin)
+- Is too small for notched devices (Redmi Note series: status bar + notch = 60-80dp)
+- Is too large for non-notched devices (status bar 24dp, wastes 24dp)
+- Is wrong for all iPhones (Dynamic Island = 59dp, standard notch = 44dp)
+
+The scan screen is used multiple times per session (SELL scan, BUY scan, GRN scan, counter purchase scan). Misaligned header on this screen is highly visible.
+
+**Impact**: Scan header clips behind notch on notched phones. Excessive gap on non-notched phones.
+
+**Fix**:
+1. Import `useSafeAreaInsets` from `react-native-safe-area-context`
+2. Replace `paddingTop: 48` with `paddingTop: insets.top + 8` (8dp additional padding for visual spacing)
+3. Verify camera viewfinder is not affected by the padding change
+
+**Files to modify**: `src/screens/v3/ScanScreenV3.tsx`
+
+**Test**: Open scan screen on Redmi Note 12 (notch) + Samsung A14 (punch-hole). Header "Scan Barcode" text must be fully below status bar. Camera viewfinder must fill remaining space correctly.
+
+**12-Layer Verification**:
+- L1 UI Elements: Dynamic padding ✅
+- L2-L12: N/A ✅
+
+---
+
+## GCP-STG-0415 — MEDIUM: StoreSelectScreenV3 Hardcoded paddingTop:60 Instead of Safe Area Insets (MEDIUM)
+
+**Ticket ID**: GCP-STG-0415
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Pre-Deploy Audit — POS StoreSelectScreenV3
+
+**Problem**: `StoreSelectScreenV3.tsx` uses `paddingTop: 60` (line 89) instead of safe area insets. Same issue as GCP-STG-0414 but on the store selection screen shown during OTP verification when a user has multiple stores.
+
+**Impact**: Store list clips behind notch on some devices, excessive gap on others.
+
+**Fix**:
+1. Import `useSafeAreaInsets`
+2. Replace `paddingTop: 60` with `paddingTop: insets.top + 16`
+
+**Files to modify**: `src/screens/v3/StoreSelectScreenV3.tsx`
+
+**Test**: Verify store cards are fully visible below status bar on notched devices.
+
+**12-Layer Verification**: L1 UI ✅, L2-L12 N/A ✅
+
+---
+
+## GCP-STG-0416 — MEDIUM: Retailer Web CustomersPage Missing Pagination (MEDIUM)
+
+**Ticket ID**: GCP-STG-0416
+**Severity**: P2 MEDIUM
+**Platforms**: RETAILER-WEB
+**Layers**: UI, UX, Wiring, API
+**Source**: Pre-Deploy Audit — Retailer Web CustomersPage
+
+**Problem**: `retailer-admin/src/pages/CustomersPage.tsx` fetches customers with `limit: 50` but has NO pagination controls (no next/prev buttons, no page indicator, no "load more"). Stores with >50 customers only see the first 50. The remaining customers are invisible — cannot be searched, viewed, or contacted.
+
+The backend `GET /api/v1/retailer-admin/customers` supports `?limit=` and `?offset=` parameters.
+
+**Impact**: Kirana stores with 50+ regular customers (common for established stores) lose access to older customer records. Cannot send WhatsApp reminders to customers beyond page 1.
+
+**Fix**:
+1. Add `currentPage` state (default 0), `totalCustomers` state
+2. Pass `limit=50&offset=page*50` to the API call
+3. Backend must return `total` count alongside data (add `COUNT(*)` query if missing)
+4. Add pagination controls below the customer list: Previous/Next buttons, "Showing X-Y of Z", page indicator
+5. Reset page to 0 when search query changes
+
+**Files to modify**:
+- `retailer-admin/src/pages/CustomersPage.tsx` — add pagination UI + state
+- `backend/src/routes/v1/retailer-admin/customers.ts` — add `total` count to response if missing
+
+**Test**: Create test store with 60 customers. Verify page 1 shows 1-50, page 2 shows 51-60. Search resets to page 1.
+
+**12-Layer Verification**:
+- L1 UI Elements: Pagination controls ✅
+- L2 UX States: Empty page 2 handled ✅
+- L3 Wiring: Page change triggers refetch ✅
+- L4 Navigation: N/A ✅
+- L5 API: limit+offset params ✅
+- L6 Backend: COUNT query ✅
+- L7-L12: N/A ✅
+
+---
+
+## GCP-STG-0417 — LOW: Retailer Web StaffPage Uses alert() for Errors Instead of Inline UI (LOW)
+
+**Ticket ID**: GCP-STG-0417
+**Severity**: P3 LOW
+**Platforms**: RETAILER-WEB
+**Layers**: UI, UX
+**Source**: Pre-Deploy Audit — Retailer Web StaffPage
+
+**Problem**: `retailer-admin/src/pages/StaffPage.tsx` (lines 74, 79, 84, 91) uses browser `alert()` for error messages instead of inline error states or toast notifications. `alert()` blocks the UI thread, is not styled, and provides poor UX.
+
+**Impact**: Low — staff management is infrequent. But `alert()` looks unprofessional and blocks interaction.
+
+**Fix**: Replace all `alert(errorMessage)` calls with inline error state rendering or a toast notification component (matching the pattern used in ProductsPage and other pages).
+
+**Files to modify**: `retailer-admin/src/pages/StaffPage.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3-L12 N/A ✅
+
+---
+
+## GCP-STG-0418 — LOW: Retailer Web StaffPage Missing Pagination (LOW)
+
+**Ticket ID**: GCP-STG-0418
+**Severity**: P3 LOW
+**Platforms**: RETAILER-WEB
+**Layers**: UI, UX, Wiring
+**Source**: Pre-Deploy Audit — Retailer Web StaffPage
+
+**Problem**: `StaffPage.tsx` loads all staff members without pagination. For stores with >20 staff (rare for kirana but possible for larger outlets), the list could be long.
+
+**Impact**: Low — most kirana stores have 1-5 staff. Pagination is cosmetic for typical usage.
+
+**Fix**: Add client-side pagination (page size 20) or server-side if the API supports it.
+
+**Files to modify**: `retailer-admin/src/pages/StaffPage.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L3 Wiring ✅, L5 API ✅ (if server-side)
+
+---
+
+## GCP-STG-0419 — LOW: Retailer Web SuppliersPage Missing Pagination Controls (LOW)
+
+**Ticket ID**: GCP-STG-0419
+**Severity**: P3 LOW
+**Platforms**: RETAILER-WEB
+**Layers**: UI, UX, Wiring
+**Source**: Pre-Deploy Audit — Retailer Web SuppliersPage
+
+**Problem**: `SuppliersPage.tsx` loads supplier list without visible pagination controls. If a retailer has >50 linked suppliers, only the first batch is shown.
+
+**Impact**: Low — most retailers work with 5-15 suppliers.
+
+**Fix**: Add pagination controls with Previous/Next buttons. Pass limit/offset to API.
+
+**Files to modify**: `retailer-admin/src/pages/SuppliersPage.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L3 Wiring ✅, L5 API ✅
+
+---
+
+## GCP-STG-0420 — LOW: Retailer Admin ProductQueuePage Missing Pagination (LOW)
+
+**Ticket ID**: GCP-STG-0420
+**Severity**: P3 LOW
+**Platforms**: RETAILER-WEB
+**Layers**: UI, UX
+**Source**: Pre-Deploy Audit — Retailer Web Admin ProductQueuePage
+
+**Problem**: `admin/ProductQueuePage.tsx` lists pending product approvals without pagination. If 100+ products are pending, only the first batch renders.
+
+**Impact**: Low — admin queue pages are used infrequently.
+
+**Fix**: Add pagination or "load more" button.
+
+**Files to modify**: `retailer-admin/src/pages/admin/ProductQueuePage.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L3 Wiring ✅
+
+---
+
+## GCP-STG-0421 — LOW: Retailer Admin SupplierQueuePage Missing Pagination (LOW)
+
+**Ticket ID**: GCP-STG-0421
+**Severity**: P3 LOW
+**Platforms**: RETAILER-WEB
+**Layers**: UI, UX
+**Source**: Pre-Deploy Audit — Retailer Web Admin SupplierQueuePage
+
+**Problem**: `admin/SupplierQueuePage.tsx` lists pending supplier approvals without pagination.
+
+**Impact**: Low — supplier queue is typically small.
+
+**Fix**: Add pagination or "load more" button.
+
+**Files to modify**: `retailer-admin/src/pages/admin/SupplierQueuePage.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L3 Wiring ✅
+
+---
+
+## GCP-STG-0422 — LOW: AllPagesPage QA Hub Accessible in Production (LOW)
+
+**Ticket ID**: GCP-STG-0422
+**Severity**: P3 LOW
+**Platforms**: RETAILER-WEB
+**Layers**: UI, Business
+**Source**: Pre-Deploy Audit — Retailer Web AllPagesPage
+
+**Problem**: `retailer-admin/src/pages/AllPagesPage.tsx` is a QA/dev hub page that lists all routes with navigation links. It renders inside `ProtectedLayout` (requires auth) but is accessible to any authenticated retailer user. Exposes internal route structure.
+
+**Impact**: Low — behind auth, no data exposure. But reveals internal navigation map and looks unprofessional if a retailer discovers it.
+
+**Fix**: Either (a) gate behind `NODE_ENV !== 'production'` check, or (b) gate behind admin role check, or (c) remove from production route registration.
+
+**Files to modify**: `retailer-admin/src/App.tsx` (route registration) or `retailer-admin/src/pages/AllPagesPage.tsx` (env check)
+
+**12-Layer Verification**: L1 UI ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0423 — LOW: Supplier Portal AllocationsPage Missing Pagination (LOW)
+
+**Ticket ID**: GCP-STG-0423
+**Severity**: P3 LOW
+**Platforms**: SUPPLIER-WEB
+**Layers**: UI, UX, Wiring
+**Source**: Pre-Deploy Audit — Supplier Portal AllocationsPage
+
+**Problem**: `supplier-portal/src/app/(dashboard)/allocations/page.tsx` fetches allocations with `limit: 20` but has no pagination controls for >20 allocations.
+
+**Impact**: Low — allocations are uncommon for most suppliers in early platform phase.
+
+**Fix**: Add pagination controls with page state + offset param.
+
+**Files to modify**: `supplier-portal/src/app/(dashboard)/allocations/page.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L3 Wiring ✅, L5 API ✅
+
+---
+
+## GCP-STG-0424 — LOW: SuperAdmin UsersTab Missing Pagination (LOW)
+
+**Ticket ID**: GCP-STG-0424
+**Severity**: P3 LOW
+**Platforms**: SUPERADMIN
+**Layers**: UI, UX
+**Source**: Pre-Deploy Audit — SuperAdmin UsersTab
+
+**Problem**: `supermandi-superadmin/src/tabs/UsersTab.tsx` loads all users without pagination. With 10K+ platform users, this would be unmanageable.
+
+**Impact**: Low at launch (small user base). Becomes HIGH at scale.
+
+**Fix**: Add server-side pagination with limit/offset. Add Previous/Next controls.
+
+**Files to modify**: `supermandi-superadmin/src/tabs/UsersTab.tsx`, backend users endpoint
+
+**12-Layer Verification**: L1 UI ✅, L3 Wiring ✅, L5 API ✅, L6 Backend ✅
+
+---
+
+## GCP-STG-0425 — LOW: SuperAdmin StoresTab No Pagination for Store Directory (LOW)
+
+**Ticket ID**: GCP-STG-0425
+**Severity**: P3 LOW
+**Platforms**: SUPERADMIN
+**Layers**: UI, UX
+**Source**: Pre-Deploy Audit — SuperAdmin StoresTab
+
+**Problem**: `StoresTab.tsx` loads all stores in a single list without pagination. At 10K stores, this causes slow rendering and high memory usage.
+
+**Impact**: Low at launch. Becomes HIGH at scale.
+
+**Fix**: Add server-side pagination with search + filters preserved across pages.
+
+**Files to modify**: `supermandi-superadmin/src/tabs/StoresTab.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L3 Wiring ✅, L5 API ✅
+
+---
+
+## GCP-STG-0426 — LOW: SuperAdmin AllocationsDashboardTab Drill-Down Missing Pagination (LOW)
+
+**Ticket ID**: GCP-STG-0426
+**Severity**: P3 LOW
+**Platforms**: SUPERADMIN
+**Layers**: UI, UX
+**Source**: Pre-Deploy Audit — SuperAdmin AllocationsDashboardTab
+
+**Problem**: `AllocationsDashboardTab.tsx` store drill-down fetches with `limit: 20` but has no page controls for viewing additional allocations per store.
+
+**Impact**: Low — allocations per store rarely exceed 20 at launch.
+
+**Fix**: Add "load more" or pagination on drill-down view.
+
+**Files to modify**: `supermandi-superadmin/src/tabs/AllocationsDashboardTab.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L3 Wiring ✅
+
+---
+
+## GCP-STG-0427 — MEDIUM: SuperAdmin CatalogProduct Type Missing imageUrl Field (MEDIUM)
+
+**Ticket ID**: GCP-STG-0427
+**Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: UI, API, Backend
+**Source**: Pre-Deploy Audit — Cross-Platform Data Matrix
+
+**Problem**: `supermandi-superadmin/src/api/catalog.ts` `CatalogProduct` type does NOT include `imageUrl`. The backend `GET /admin/catalog/products` query (catalog.ts) selects `sp.image_url` (added by GCP-STG-0343) but the frontend type doesn't declare it. SuperAdmin cannot preview product images during approval/editing workflow.
+
+**Impact**: Admin approves products blindly without seeing the product image. Cannot verify image quality or correctness before publishing to stores.
+
+**Fix**:
+1. Add `imageUrl?: string` to `CatalogProduct` type in `supermandi-superadmin/src/api/catalog.ts`
+2. Add image thumbnail in CatalogTab product table (32x32 with fallback to product name initials)
+3. Add image preview in edit modal header
+
+**Files to modify**:
+- `supermandi-superadmin/src/api/catalog.ts` — add type field
+- `supermandi-superadmin/src/tabs/CatalogTab.tsx` — add thumbnail + preview
+
+**12-Layer Verification**:
+- L1 UI Elements: Thumbnail + preview ✅
+- L3 Wiring: Read from API response ✅
+- L5 API: Already returned by backend ✅
+- L6 Backend: Already in SELECT ✅
+
+---
+
+## GCP-STG-0428 — LOW: SuperAdmin CatalogProduct Type Missing description Field (LOW)
+
+**Ticket ID**: GCP-STG-0428
+**Severity**: P3 LOW
+**Platforms**: SUPERADMIN
+**Layers**: UI, API
+**Source**: Pre-Deploy Audit — Cross-Platform Data Matrix
+
+**Problem**: `CatalogProduct` type missing `description` field. Admin cannot read product descriptions during review. Backend already returns it.
+
+**Impact**: Low — descriptions are optional and rarely used in kirana product catalogs.
+
+**Fix**: Add `description?: string` to `CatalogProduct` type. Show in edit modal info section if present.
+
+**Files to modify**: `supermandi-superadmin/src/api/catalog.ts`, `supermandi-superadmin/src/tabs/CatalogTab.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L3 Wiring ✅
+
+---
+
+## GCP-STG-0429 — MEDIUM: Supplier Product Type Missing gstRate Field (MEDIUM)
+
+**Ticket ID**: GCP-STG-0429
+**Severity**: P2 MEDIUM
+**Platforms**: SUPPLIER-WEB, BACKEND
+**Layers**: UI, API, Backend
+**Source**: Pre-Deploy Audit — Cross-Platform Data Matrix
+
+**Problem**: `supplier-portal/src/lib/api.ts` `Product` interface has `hsnCode` but NO `gstRate` or `gstPercent` field. Suppliers cannot see the GST rate applicable to their products. The backend `catalog.supplier_products` table has `default_gst_rate` (from `catalog.products` via join) but the supplier GET endpoint doesn't return it.
+
+**Impact**: Suppliers cannot verify correct GST classification for their products. May lead to wrong HSN/GST mapping going undetected until invoice generation.
+
+**Fix**:
+1. Backend: Add `p.default_gst_rate AS "gstRate"` to supplier products GET query (join with `catalog.products`)
+2. Frontend: Add `gstRate?: number` to `Product` interface
+3. Display GST rate in product list and edit form (read-only, set by admin)
+
+**Files to modify**:
+- `backend/src/routes/v1/supplier/products.ts` — add to GET query
+- `supplier-portal/src/lib/api.ts` — add type field
+- `supplier-portal/src/app/(dashboard)/products/page.tsx` — display GST rate
+
+**12-Layer Verification**:
+- L1 UI Elements: GST rate display ✅
+- L3 Wiring: Read from API ✅
+- L5 API: Add to response ✅
+- L6 Backend: JOIN + SELECT ✅
+
+---
+
+## GCP-STG-0430 — LOW: BillDetailScreenV3 No Empty State When Items Array Empty (LOW)
+
+**Ticket ID**: GCP-STG-0430
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Pre-Deploy Audit — POS BillDetailScreenV3
+
+**Problem**: `BillDetailScreenV3.tsx` ITEMS section renders items with `.map()` but has no `ListEmptyComponent` or conditional empty state. When viewing a bill in offline mode with no cached items, the ITEMS section is blank — no "No items available" message, just empty space between the header card and the total row.
+
+**Impact**: Low — offline bill detail viewing is a rare edge case. Items are almost always available.
+
+**Fix**: Add conditional: if `items.length === 0`, show "Items not available offline" message with a muted icon.
+
+**Files to modify**: `src/screens/v3/BillDetailScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX (empty state) ✅
+
+---
+
+## GCP-STG-0431 — LOW: UdharScreenV3 No Empty State Hint for Customer List (LOW)
+
+**Ticket ID**: GCP-STG-0431
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Pre-Deploy Audit — POS UdharScreenV3
+
+**Problem**: `UdharScreenV3.tsx` shows recent customers as a horizontal FlatList for quick selection. When no recent customers exist (first-time credit sale), the section is simply absent — no hint text explaining "Your recent credit customers will appear here" or similar guidance.
+
+**Impact**: Low — not confusing (user just types name/phone manually), but a missed opportunity for onboarding guidance.
+
+**Fix**: Add a subtle hint text when `recentCustomers.length === 0`: "Recent credit customers will appear here for quick selection."
+
+**Files to modify**: `src/screens/v3/UdharScreenV3.tsx`
+
+**12-Layer Verification**: L1 UI ✅, L2 UX (empty state) ✅
+
+---
+
+<!-- next ticket: GCP-STG-0432 -->
