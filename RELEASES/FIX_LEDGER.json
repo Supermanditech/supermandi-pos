@@ -20420,7 +20420,7 @@
       "start_line": 89,
       "end_line": 93,
       "checksum": "4c6e5abf718d7827",
-      "description": "createStyles accepts safeTop param; header paddingTop uses safeTop+16 instead of hardcoded 60",
+      "description": "createStyles accepts safeTop param; header paddingTop uses safeTop+16 instead of hardcoded 60 (insets.top+16)",
       "test_file": "src/__tests__/screens/storeSelectSafeArea.gcp-stg-0415.test.ts",
       "status": "ACTIVE",
       "depends_on": null,
