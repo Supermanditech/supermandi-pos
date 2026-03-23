@@ -1,15 +1,18 @@
 import React, { useMemo, useState } from "react";
-import { View, Pressable, ScrollView, StyleSheet, Text, Linking } from "react-native";
+import { View, Pressable, ScrollView, StyleSheet, Text, Linking, Platform } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { showToast } from "../../utils/showToast";
 import { printerService } from "../../services/printerService";
+import { apiClient } from "../../services/api/apiClient";
+import { isOnline } from "../../services/networkStatus";
 
 // V3-067: Bill detail sub-screen — view bill items, reprint, WhatsApp share
 
 type BillItem = { name: string; qty: number; priceMinor: number };
 
 type Props = {
+  saleId?: string;  // GCP-STG-0361: needed for invoice PDF download
   billRef: string;
   date: string;
   method: string;
@@ -18,11 +21,36 @@ type Props = {
   onClose: () => void;
 };
 
-export default function BillDetailScreenV3({ billRef, date, method, totalMinor, items, onClose }: Props) {
+export default function BillDetailScreenV3({ saleId, billRef, date, method, totalMinor, items, onClose }: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const total = Math.round(totalMinor / 100);
   const [printing, setPrinting] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  // GCP-STG-0361: Download invoice PDF
+  const handleDownloadInvoice = async () => {
+    if (!saleId) { showToast("Sale ID unavailable"); return; }
+    const online = await isOnline();
+    if (!online) { showToast("Offline — cannot download invoice"); return; }
+    setDownloadingPdf(true);
+    try {
+      const baseUrl = (apiClient as any).baseUrl || (apiClient as any).baseURL || "";
+      const token = (apiClient as any).token || "";
+      const url = `${baseUrl}/api/v1/pos/sales/${saleId}/invoice/pdf`;
+      if (Platform.OS === "web") {
+        // Web: open in new tab
+        window.open(url, "_blank");
+      } else {
+        // Mobile: use Linking to open the PDF URL (device browser / PDF viewer)
+        await Linking.openURL(url);
+      }
+      showToast("Invoice PDF opened");
+    } catch {
+      showToast("Could not download invoice");
+    }
+    setDownloadingPdf(false);
+  };
 
   return (
     <View style={styles.container}>
@@ -67,11 +95,20 @@ export default function BillDetailScreenV3({ billRef, date, method, totalMinor, 
         }}>
           <Text style={styles.printText}>{printing ? "Printing..." : "🖨️ Reprint"}</Text>
         </Pressable>
+        {/* GCP-STG-0361: Invoice PDF download button */}
+        <Pressable
+          style={[styles.invoiceBtn, downloadingPdf && { opacity: 0.5 }]}
+          disabled={downloadingPdf || !saleId}
+          onPress={handleDownloadInvoice}
+          testID="invoice-pdf-btn"
+        >
+          <Text style={styles.invoiceText}>{downloadingPdf ? "Loading..." : "Invoice PDF"}</Text>
+        </Pressable>
         <Pressable style={styles.waBtn} onPress={() => {
           const msg = encodeURIComponent(`*Bill: ${billRef}*\n${method}\n${items.length} items\n*Total: ₹${total.toLocaleString("en-IN")}*\n\nThank you!\n— SuperMandi POS`);
           Linking.openURL(`whatsapp://send?text=${msg}`).catch(() => showToast("WhatsApp not installed"));
         }}>
-          <Text style={styles.waText}>📱 WhatsApp</Text>
+          <Text style={styles.waText}>WhatsApp</Text>
         </Pressable>
       </View>
     </View>
@@ -102,6 +139,8 @@ function createStyles(colors: ColorPalette) {
     footer: { flexDirection: "row", gap: 8, padding: 14 },
     printBtn: { flex: 1, padding: 14, borderRadius: 14, borderWidth: 2, borderColor: colors.primary, alignItems: "center" },
     printText: { fontSize: 14, fontWeight: "700", color: colors.primary },
+    invoiceBtn: { flex: 1, padding: 14, borderRadius: 14, backgroundColor: "#E65100", alignItems: "center" },
+    invoiceText: { fontSize: 14, fontWeight: "700", color: "#fff" },
     waBtn: { flex: 1, padding: 14, borderRadius: 14, backgroundColor: "#25D366", alignItems: "center" },
     waText: { fontSize: 14, fontWeight: "700", color: "#fff" },
   });

@@ -31,6 +31,7 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
   // GCP-STG-0070: Date range filter
   const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "all">("today");
   const [selectedBill, setSelectedBill] = useState<{
+    saleId: string;  // GCP-STG-0361: pass saleId for invoice PDF download
     billRef: string; date: string; method: string; totalMinor: number;
     items: { name: string; qty: number; priceMinor: number }[];
   } | null>(null);
@@ -79,7 +80,7 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
       if (!online) {
         // Offline: show basic detail without line items
         setSelectedBill({
-          billRef: sale.billRef, date: formatTime(sale.createdAt),
+          saleId: sale.id, billRef: sale.billRef, date: formatTime(sale.createdAt),
           method: sale.paymentMode, totalMinor: sale.totalMinor, items: [],
         });
         return;
@@ -92,7 +93,7 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
         priceMinor: i.priceMinor ?? i.price_minor ?? i.total_minor ?? 0,
       }));
       setSelectedBill({
-        billRef: sale.billRef, date: formatTime(sale.createdAt),
+        saleId: sale.id, billRef: sale.billRef, date: formatTime(sale.createdAt),
         method: sale.paymentMode, totalMinor: sale.totalMinor, items,
       });
     } catch { showToast("Could not load bill details"); }
@@ -221,6 +222,7 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
       {selectedBill ? (
         <View style={StyleSheet.absoluteFill}>
           <BillDetailScreenV3
+            saleId={selectedBill.saleId}
             billRef={selectedBill.billRef}
             date={selectedBill.date}
             method={selectedBill.method}

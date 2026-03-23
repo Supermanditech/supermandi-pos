@@ -49,7 +49,10 @@ import {
 import { invalidateStockCache } from "./inventory";
 import { log } from "../../../lib/logger";
 // GCP-STG-0077: Import invoice service for auto-generation after payment
-import { createInvoice, issueInvoice } from "../../../services/invoiceService";
+import { createInvoice, issueInvoice, getInvoice } from "../../../services/invoiceService";
+// GCP-STG-0361: Import PDF + QR services for POS invoice download
+import { generateInvoicePdf } from "../../../services/invoicePdfService";
+import { generateQrCodeBuffer } from "../../../services/eInvoiceService";
 import type { Pool } from "pg";
 
 export const posSalesRouter = Router();
@@ -3096,5 +3099,69 @@ posSalesRouter.get("/sales/:saleId/invoice", requireDeviceToken, async (req, res
   } catch (error) {
     log.error("[sales/invoice] Error:", error);
     return res.status(500).json({ error: "failed to get invoice" });
+  }
+});
+
+// =============================================================================
+// GCP-STG-0361: GET /sales/:saleId/invoice/pdf — Download invoice PDF for a POS sale
+// =============================================================================
+posSalesRouter.get("/sales/:saleId/invoice/pdf", requireDeviceToken, async (req, res) => {
+  const saleId = typeof req.params.saleId === "string" ? req.params.saleId.trim() : "";
+  if (!saleId) return res.status(400).json({ error: "saleId is required" });
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromPosDevice(req, "pos/sales/invoice/pdf");
+
+  try {
+    // Store isolation: verify sale belongs to this store
+    const saleCheck = await pool.query(
+      `SELECT id FROM sales WHERE id = $1 AND store_id = $2`,
+      [saleId, storeId]
+    );
+    if (saleCheck.rows.length === 0) {
+      return res.status(404).json({ error: "sale_not_found" });
+    }
+
+    // Find invoice linked to this sale via order_id
+    const invoiceRef = await pool.query(
+      `SELECT id FROM invoicing.invoices WHERE order_id = $1 LIMIT 1`,
+      [saleId]
+    );
+    if (invoiceRef.rows.length === 0) {
+      return res.status(404).json({ error: "invoice_not_found", message: "Invoice not yet generated for this sale" });
+    }
+
+    const invoiceId = String(invoiceRef.rows[0].id);
+    const invoice = await getInvoice(pool, invoiceId);
+    if (!invoice) {
+      return res.status(404).json({ error: "invoice_not_found" });
+    }
+
+    // Generate QR code buffer if signed QR string exists (e-invoice)
+    let qrCodeBuffer: Buffer | undefined;
+    if (invoice.signedQrString) {
+      const buf = await generateQrCodeBuffer(invoice.signedQrString);
+      if (buf) qrCodeBuffer = buf;
+    }
+
+    const pdfDoc = generateInvoicePdf({
+      ...invoice,
+      irn: invoice.irn,
+      ackNumber: invoice.ackNumber,
+      ackDate: invoice.ackDate,
+      qrCodeBuffer,
+    });
+
+    // LIVE.BE.DOCUMENTS.CONTENT_DISPOSITION_SANITIZATION.001: Strip path traversal + special chars
+    const filename = `${invoice.invoiceNumber.replace(/[/\\<>"'\r\n\t]/g, "-")}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    pdfDoc.pipe(res);
+  } catch (err: any) {
+    log.error("[pos/sales/invoice/pdf] Error:", err);
+    return res.status(500).json({ error: "Failed to generate invoice PDF" });
   }
 });
