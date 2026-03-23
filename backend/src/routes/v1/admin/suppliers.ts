@@ -1855,11 +1855,11 @@ adminSuppliersRouter.post("/products/publish-bulk", requireAdminToken, requirePe
       try {
         await client.query("BEGIN");
 
-        // Get product details
+        // Get product details — GCP-STG-0344: fetch mrp for MRP-cap in pricing engine
         const pResult = await client.query(
           `SELECT sp.id, sp.name, sp.barcode, sp.category, sp.unit,
                   sp.purchase_price, sp.supermandi_margin_minor, sp.margin_percent,
-                  sp.supplier_id
+                  sp.supplier_id, sp.mrp
            FROM catalog.supplier_products sp WHERE sp.id = $1`,
           [product.id]
         );
@@ -1882,10 +1882,15 @@ adminSuppliersRouter.post("/products/publish-bulk", requireAdminToken, requirePe
           );
         }
 
-        // Calculate price
-        let margin = 0;
-        if (p.supermandi_margin_minor > 0) margin = p.supermandi_margin_minor;
-        else if (p.margin_percent > 0) margin = Math.round(p.purchase_price * p.margin_percent / 100);
+        // GCP-STG-0344: Use canonical pricing engine (matches single-publish path)
+        const { calculateRetailerPrice: calcPrice } = require("../../../services/pricingEngine");
+        const bulkPricing = calcPrice({
+          supplierPriceMinor: p.purchase_price,
+          mrpMinor: p.mrp ? Math.round(p.mrp * 100) : undefined,
+          productMargin: p.supermandi_margin_minor > 0 ? { type: "fixed" as const, value: p.supermandi_margin_minor } : null,
+          supplierMargin: p.margin_percent > 0 ? { type: "percentage" as const, value: p.margin_percent } : null,
+        });
+        const retailerPrice = bulkPricing.retailerPriceMinor;
 
         // Find stores that don't have it yet
         const stores = await client.query(
@@ -1903,7 +1908,7 @@ adminSuppliersRouter.post("/products/publish-bulk", requireAdminToken, requirePe
               store_id, product_id, display_name, sell_price, purchase_price,
               current_stock, is_active, supplier_id, source
             ) VALUES ($1, $2::uuid, $3, $4, $5, 0, true, $6::uuid, 'supplier_publish') RETURNING id`,
-            [store.store_id, catalogProductId, p.name, p.purchase_price + margin,
+            [store.store_id, catalogProductId, p.name, retailerPrice,
              p.purchase_price, p.supplier_id]
           );
           if (p.barcode) {

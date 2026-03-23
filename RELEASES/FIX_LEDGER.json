@@ -18475,7 +18475,7 @@
       "start_line": 1885,
       "end_line": 1898,
       "checksum": "bdd84877b87b1892",
-      "description": "Bulk publish uses calculateRetailerPrice() instead of inline margin math — matches single-publish path, adds MRP cap + global default fallback",
+      "description": "Bulk publish uses calculateRetailerPrice() instead of inline margin math — matches single-publish path, adds MRP cap + global default fallback (canonical pricing engine)",
       "test_file": "backend/tests/bulkPublishPricing.gcp-stg-0344.unit.test.ts",
       "depends_on": null,
       "migration": null,
