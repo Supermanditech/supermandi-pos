@@ -74,6 +74,8 @@ function productToTileData(p: Product): ProductTileData {
     conversionConfirmed: p.conversionConfirmed,
     // GCP-STG-0400: Purchase price for margin indicator
     purchasePriceMinor: p.purchasePriceMinor,
+    // GCP-STG-0410: Expiry date for SELL detail info section
+    expiryDate: p.expiryDate,
   };
 }
 

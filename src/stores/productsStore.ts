@@ -161,6 +161,8 @@ export interface Product {
   allowFractionalSell?: boolean;
   conversionPrecision?: number;
   conversionConfirmed?: boolean;
+  // GCP-STG-0410: Expiry date from store_products for SELL detail display
+  expiryDate?: string;       // ISO date string from backend (expiry_date column)
   // GCP-STG-0367: Pre-computed lowercase fields for O(1) search (no per-keystroke toLowerCase)
   _searchName?: string;
   _searchBrand?: string;
@@ -255,6 +257,8 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
             allowFractionalSell: raw.allowFractionalSell ?? raw.allow_fractional_sell ?? undefined,
             conversionPrecision: raw.conversionPrecision ?? raw.conversion_precision ?? undefined,
             conversionConfirmed: raw.conversionConfirmed ?? raw.conversion_confirmed ?? undefined,
+            // GCP-STG-0410: Expiry date for SELL detail display
+            expiryDate: raw.expiryDate ?? raw.expiry_date ?? undefined,
           };
         });
 

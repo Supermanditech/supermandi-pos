@@ -168,6 +168,36 @@ export default function ProductDetailSheetV3({
               ) : null}
             </View>
 
+            {/* GCP-STG-0410: SELL detail info — expiry date + cost price */}
+            {context === "SELL" ? (
+              <View style={styles.metaGrid} testID="sell-info-section">
+                {product.expiryDate ? (() => {
+                  const now = new Date();
+                  const expiry = new Date(product.expiryDate);
+                  const diffMs = expiry.getTime() - now.getTime();
+                  const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                  const expiryColor = daysLeft < 30 ? colors.error : daysLeft < 90 ? colors.warning : colors.success;
+                  const formattedDate = expiry.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+                  return (
+                    <View style={styles.metaItem}>
+                      <Text style={styles.metaLabel}>Expiry</Text>
+                      <Text style={[styles.metaValue, { color: expiryColor }]} testID="sell-expiry-date">
+                        {formattedDate}{daysLeft <= 0 ? " (EXPIRED)" : daysLeft < 30 ? ` (${daysLeft}d)` : ""}
+                      </Text>
+                    </View>
+                  );
+                })() : null}
+                {product.purchasePriceMinor && product.purchasePriceMinor > 0 ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Cost</Text>
+                    <Text style={styles.metaValue} testID="sell-cost-price">
+                      {"\u20B9"}{(product.purchasePriceMinor / 100).toFixed(product.purchasePriceMinor % 100 === 0 ? 0 : 2)}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
             {/* V3-FIX-136: Procurement metadata for BUY context */}
             {context === "BUY" && procurement ? (
               <View style={styles.metaGrid}>

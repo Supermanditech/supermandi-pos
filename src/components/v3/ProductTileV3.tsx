@@ -41,6 +41,8 @@ export interface ProductTileData {
   conversionConfirmed?: boolean;
   storeProductId?: string;       // canonical store product identity
   purchasePriceMinor?: number;   // GCP-STG-0400: purchase/cost price in paise for margin calc
+  // GCP-STG-0410: Expiry date for SELL detail info section
+  expiryDate?: string;       // ISO date string
   // GCP-STG-0116: Rich tile metadata
   description?: string;
   netContentValue?: number;
