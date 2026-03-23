@@ -392,6 +392,7 @@ export function WhatsAppTab() {
               <span className="sa-text-xs sa-text-muted">(uncheck to hide the floating button from the landing page)</span>
             </div>
             <div className="sa-grid-2" style={{ gap: "0.5rem 1rem" }}>
+              {/* GCP-STG-0497: Live validation feedback + GCP-STG-0502: Test WhatsApp button */}
               <div>
                 <label className="sa-form-label">
                   Superadmin Number <span className="sa-text-muted">(E.164 digits, e.g. 919251893684)</span>
@@ -402,7 +403,18 @@ export function WhatsAppTab() {
                   value={ctaDraft.superadminNumber}
                   onChange={e => setCtaDraft(d => ({ ...d, superadminNumber: e.target.value }))}
                   placeholder="919251893684"
+                  style={{ borderColor: ctaDraft.superadminNumber.trim() && !/^\d{10,15}$/.test(ctaDraft.superadminNumber.trim()) ? "var(--color-error)" : undefined }}
                 />
+                {ctaDraft.superadminNumber.trim() && !/^\d{10,15}$/.test(ctaDraft.superadminNumber.trim()) && (
+                  <span className="sa-text-xs" style={{ color: "var(--color-error)" }}>Invalid E.164 format (10-15 digits)</span>
+                )}
+                {ctaDraft.superadminNumber.trim() && /^\d{10,15}$/.test(ctaDraft.superadminNumber.trim()) && (
+                  <span className="sa-text-xs" style={{ color: "var(--color-success)" }}>
+                    Preview: <a href={`https://wa.me/${ctaDraft.superadminNumber.trim()}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-success)" }}>wa.me/{ctaDraft.superadminNumber.trim()}</a>
+                    {" "}
+                    <button type="button" className="sa-btn-text sa-text-xs" style={{ color: "var(--color-primary)", textDecoration: "underline" }} onClick={() => window.open(`https://wa.me/${ctaDraft.superadminNumber.trim()}?text=${encodeURIComponent(ctaDraft.superadminMessage || "")}`, "_blank", "noopener")}>Test WhatsApp</button>
+                  </span>
+                )}
               </div>
               <div>
                 <label className="sa-form-label">
@@ -414,7 +426,18 @@ export function WhatsAppTab() {
                   value={ctaDraft.companyNumber}
                   onChange={e => setCtaDraft(d => ({ ...d, companyNumber: e.target.value }))}
                   placeholder="919251893684"
+                  style={{ borderColor: ctaDraft.companyNumber.trim() && !/^\d{10,15}$/.test(ctaDraft.companyNumber.trim()) ? "var(--color-error)" : undefined }}
                 />
+                {ctaDraft.companyNumber.trim() && !/^\d{10,15}$/.test(ctaDraft.companyNumber.trim()) && (
+                  <span className="sa-text-xs" style={{ color: "var(--color-error)" }}>Invalid E.164 format (10-15 digits)</span>
+                )}
+                {ctaDraft.companyNumber.trim() && /^\d{10,15}$/.test(ctaDraft.companyNumber.trim()) && (
+                  <span className="sa-text-xs" style={{ color: "var(--color-success)" }}>
+                    Preview: <a href={`https://wa.me/${ctaDraft.companyNumber.trim()}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-success)" }}>wa.me/{ctaDraft.companyNumber.trim()}</a>
+                    {" "}
+                    <button type="button" className="sa-btn-text sa-text-xs" style={{ color: "var(--color-primary)", textDecoration: "underline" }} onClick={() => window.open(`https://wa.me/${ctaDraft.companyNumber.trim()}?text=${encodeURIComponent(ctaDraft.companyMessage || "")}`, "_blank", "noopener")}>Test WhatsApp</button>
+                  </span>
+                )}
               </div>
               <div>
                 <label className="sa-form-label">Superadmin WhatsApp Pre-fill Message</label>
