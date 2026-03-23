@@ -58,6 +58,8 @@ function productToTileData(p: Product): ProductTileData {
     baseStockUnit: p.baseStockUnit,
     allowFractionalSell: p.allowFractionalSell,
     conversionConfirmed: p.conversionConfirmed,
+    // GCP-STG-0400: Purchase price for margin indicator
+    purchasePriceMinor: p.purchasePriceMinor,
   };
 }
 

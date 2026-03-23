@@ -11,6 +11,7 @@ import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
 import type { ProductTileData } from "./ProductTileV3";
+import { computeMargin } from "./ProductTileV3";
 import { showToast } from "../../utils/showToast";
 
 // V3-FIX-136: Procurement metadata for BUY context
@@ -27,6 +28,13 @@ export interface ProcurementData {
   creditDays?: number;
   bnplAvailable?: boolean;
   billingModel?: string;
+  // GCP-STG-0401: 6 missing procurement fields
+  deliveryTerms?: string;
+  financeEligible?: boolean;
+  publishedTermsVersion?: number;
+  moqTiers?: Array<{ minQty: number; discountPct: number }>;
+  procurementUnit?: string;
+  procurementPackQty?: number;
 }
 
 type ProductDetailSheetV3Props = {
@@ -120,6 +128,17 @@ export default function ProductDetailSheetV3({
                 <Text style={styles.tradePrice}>Trade: ₹{(product.priceTradeMinor / 100).toFixed(0)}</Text>
               ) : null}
             </View>
+
+            {/* GCP-STG-0400: Profit margin line for SELL context */}
+            {context === "SELL" && product.purchasePriceMinor && product.purchasePriceMinor > 0 ? (() => {
+              const profitMinor = displayPriceMinor - product.purchasePriceMinor;
+              const margin = computeMargin(displayPriceMinor, product.purchasePriceMinor);
+              const profitLabel = `Profit: \u20B9${(Math.abs(profitMinor) / 100).toFixed(2)}${margin ? ` (${margin.label})` : ""}`;
+              const profitColor = margin?.color === "green" ? colors.success : margin?.color === "yellow" ? colors.warning : colors.error;
+              return (
+                <Text style={[styles.profitLine, { color: profitColor }]} testID="profit-line">{profitMinor < 0 ? `Loss: \u20B9${(Math.abs(profitMinor) / 100).toFixed(2)}${margin ? ` (${margin.label})` : ""}` : profitLabel}</Text>
+              );
+            })() : null}
 
             {/* Metadata grid */}
             <View style={styles.metaGrid}>
@@ -226,6 +245,47 @@ export default function ProductDetailSheetV3({
                     </Text>
                   </View>
                 ) : null}
+                {/* GCP-STG-0401: 6 missing procurement fields */}
+                {procurement.deliveryTerms ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Delivery Terms</Text>
+                    <Text style={styles.metaValue}>{procurement.deliveryTerms}</Text>
+                  </View>
+                ) : null}
+                {procurement.financeEligible ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Finance</Text>
+                    <Text style={[styles.metaValue, { color: colors.primary }]} testID="finance-eligible-badge">Credit Available</Text>
+                  </View>
+                ) : null}
+                {procurement.publishedTermsVersion != null ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Terms Version</Text>
+                    <Text style={styles.metaValue} testID="terms-version-label">v{procurement.publishedTermsVersion}</Text>
+                  </View>
+                ) : null}
+                {Array.isArray(procurement.moqTiers) && procurement.moqTiers.length > 0 ? (
+                  <View style={[styles.metaItem, { minWidth: "90%" }]}>
+                    <Text style={styles.metaLabel}>MOQ Tiers</Text>
+                    {procurement.moqTiers.map((tier: { minQty: number; discountPct: number }, idx: number) => (
+                      <Text key={idx} style={[styles.metaValue, { marginTop: idx === 0 ? 2 : 1 }]} testID={`moq-tier-${idx}`}>
+                        {tier.minQty}+ cases: {tier.discountPct}% off
+                      </Text>
+                    ))}
+                  </View>
+                ) : null}
+                {procurement.procurementUnit ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Ships As</Text>
+                    <Text style={styles.metaValue} testID="procurement-unit-label">{procurement.procurementUnit}</Text>
+                  </View>
+                ) : null}
+                {procurement.procurementPackQty ? (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Pack Size</Text>
+                    <Text style={styles.metaValue} testID="procurement-pack-label">{procurement.procurementPackQty} per {procurement.procurementUnit ?? "unit"}</Text>
+                  </View>
+                ) : null}
               </View>
             ) : null}
 
@@ -313,6 +373,8 @@ function createStyles(colors: ColorPalette) {
     priceRow: { flexDirection: "row", alignItems: "baseline", gap: 12, marginTop: 8 },
     price: { fontSize: 28, fontWeight: "900", color: colors.primary },
     tradePrice: { fontSize: 14, fontWeight: "600", color: colors.success },
+    // GCP-STG-0400: Profit margin line
+    profitLine: { fontSize: 14, fontWeight: "700", marginTop: 4 },
     metaGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 16 },
     metaItem: { backgroundColor: colors.backgroundSecondary, borderRadius: 10, padding: 10, minWidth: "45%" },
     metaLabel: { fontSize: 10, fontWeight: "700", color: colors.textTertiary, letterSpacing: 0.5 },

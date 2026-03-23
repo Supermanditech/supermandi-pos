@@ -8,6 +8,18 @@ import type { SellMode } from "../../stores/cartStore";
 
 // STG-553: Product tile for v3 sell grid — stock dot, cart badge, case size, wholesale price
 
+// GCP-STG-0400: Compute profit margin indicator from sell vs purchase price
+export function computeMargin(sellMinor: number, purchaseMinor?: number): { label: string; color: "green" | "yellow" | "red" } | null {
+  if (!purchaseMinor || purchaseMinor <= 0) return null;
+  const pct = ((sellMinor - purchaseMinor) / purchaseMinor) * 100;
+  const rounded = Math.round(pct * 10) / 10;
+  const arrow = rounded >= 0 ? "\u2191" : "\u2193";
+  const label = `${arrow}${rounded >= 0 ? "" : ""}${rounded}%`;
+  if (pct >= 10) return { label, color: "green" };
+  if (pct >= 0) return { label, color: "yellow" };
+  return { label, color: "red" };
+}
+
 export interface ProductTileData {
   id: string;
   name: string;
@@ -28,6 +40,7 @@ export interface ProductTileData {
   allowFractionalSell?: boolean;
   conversionConfirmed?: boolean;
   storeProductId?: string;       // canonical store product identity
+  purchasePriceMinor?: number;   // GCP-STG-0400: purchase/cost price in paise for margin calc
   // GCP-STG-0116: Rich tile metadata
   description?: string;
   netContentValue?: number;
@@ -58,6 +71,8 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress, onL
     : product.priceMrpMinor;
   const priceLabel = `₹${(displayPrice / 100).toFixed(displayPrice % 100 === 0 ? 0 : 2)}`;
   const emoji = getCategoryEmoji(product.category);
+  // GCP-STG-0400: Margin indicator
+  const margin = computeMargin(displayPrice, product.purchasePriceMinor);
 
   return (
     <Pressable
@@ -102,6 +117,16 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress, onL
         <Text style={styles.packSize} numberOfLines={1}>{product.description}</Text>
       ) : null}
       <Text style={styles.price}>{priceLabel}</Text>
+
+      {/* GCP-STG-0400: Profit margin indicator */}
+      {margin ? (
+        <Text style={[
+          styles.marginLabel,
+          margin.color === "green" && styles.marginGreen,
+          margin.color === "yellow" && styles.marginYellow,
+          margin.color === "red" && styles.marginRed,
+        ]} testID="margin-indicator">{margin.label}</Text>
+      ) : null}
 
       {product.caseSize ? (
         <Text style={styles.caseInfo}>
@@ -255,5 +280,10 @@ function createStyles(colors: ColorPalette) {
     stockLow: { fontSize: 11, color: colors.warning, textAlign: "center" as const, fontWeight: "700" as const }, // GCP-STG-0307
     stockOut: { fontSize: 11, color: colors.error, textAlign: "center" as const, fontWeight: "700" as const }, // GCP-STG-0307
     setupNeeded: { fontSize: 11, color: colors.warning, textAlign: "center" as const, marginTop: 2 }, // GCP-STG-0307
+    // GCP-STG-0400: Margin indicator styles
+    marginLabel: { fontSize: Math.max(getChipFontSize() - 3, 10), fontWeight: "700" as const, textAlign: "center" as const, marginTop: 1 },
+    marginGreen: { color: colors.success },
+    marginYellow: { color: colors.warning },
+    marginRed: { color: colors.error },
   });
 }
