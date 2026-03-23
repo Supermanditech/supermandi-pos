@@ -17331,7 +17331,7 @@
       "start_line": 14,
       "end_line": 27,
       "checksum": "3f70ba7b543be7ed",
-      "description": "Reduced DB_POOL_MAX default from 25 to 10 and DB_POOL_MIN from 5 to 2 for Cloud SQL connection limit safety. 15 instances x (10+10) = 300, within 500-connection upgraded tier.",
+      "description": "Reduced DB_POOL_MAX default from 25 to 10 and DB_POOL_MIN from 5 to 2 for Cloud SQL connection limit safety. 15 instances x (10+10) = 300, within 500-connection upgraded tier. (pool max 25→10)",
       "test_file": "backend/tests/dbPoolConfig.gcp-stg-0365.unit.test.ts",
       "depends_on": null,
       "migration": null,

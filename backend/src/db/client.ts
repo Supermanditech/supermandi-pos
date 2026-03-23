@@ -11,10 +11,14 @@ let db: NodePgDatabase | undefined;
 // SCALE-D2: Tuned for 10K concurrent users — min raised to 5 to avoid cold-start latency,
 // max raised to 25 to handle burst traffic while staying within Cloud SQL limits
 // (25 + 10 common = 35 per instance, safe for 3 instances under 100-connection cap).
+// GCP-STG-0365: Reduced default max from 25 to 10 for Cloud SQL connection limit safety.
+// Math: 15 instances × (10 Drizzle + 10 common) = 300 connections, within Cloud SQL
+// upgraded-tier limit (500). Previous 25 default × 15 = 375 Drizzle alone, exceeding limits.
+// Min also reduced from 5 to 2 to lower idle connection footprint across 15 instances.
 const POOL_CONFIG = {
-  min: parseInt(process.env.DB_POOL_MIN || '5', 10),
-  // SCALE-D2: 25 default (Cloud SQL basic=100, 25+10=35 per instance, safe for 3 instances)
-  max: parseInt(process.env.DB_POOL_MAX || '25', 10),
+  min: parseInt(process.env.DB_POOL_MIN || '2', 10),
+  // GCP-STG-0365: 10 default (15 instances × 10 = 150, + common pool 150 = 300, within 500 cap)
+  max: parseInt(process.env.DB_POOL_MAX || '10', 10),
   // Close idle connections after this many milliseconds
   idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000', 10),
   // Connection timeout in milliseconds
