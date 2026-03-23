@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 777,
+  "version": 782,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -7815,7 +7815,7 @@
       "file": "backend/src/routes/v1/admin/catalog.ts",
       "start_line": 1,
       "end_line": 539,
-      "checksum": "f597f1e6ec6391de",
+      "checksum": "b004fff039dda814",
       "description": "Admin margin control + SKU approval + SYS-002 stock reconciliation endpoints (updated GCP-STG-0338/0339/0340/0342/0343: billing_model + supplierId + approvalStatus filters + publishedToStores subquery + B2B fields)",
       "test_file": "N/A",
       "status": "ACTIVE",
@@ -11006,7 +11006,7 @@
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
       "start_line": 1,
       "end_line": 519,
-      "checksum": "9e9e8a7daad3ae4f",
+      "checksum": "77b285c8fb9aa7ef",
       "description": "CatalogTab: approve/reject buttons, margin UI, full edit modal, price display, reject reason modal (updated GCP-STG-0339/0340/0342/0343: supplier dropdown + status filter chips + published badge + B2B columns)",
       "test_file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
       "depends_on": null,
@@ -11045,7 +11045,7 @@
       "file": "supermandi-superadmin/src/api/catalog.ts",
       "start_line": 205,
       "end_line": 315,
-      "checksum": "7933f30bfcdc96e0",
+      "checksum": "f38c4332e713b2a9",
       "description": "Catalog API: approveProduct, rejectProduct, setProductMargin, editProductMetadata client functions (line shift from GCP-STG-0339/0340 fetchProducts params)",
       "test_file": "supermandi-superadmin/src/api/catalog.ts",
       "depends_on": null,
@@ -14515,8 +14515,8 @@
     {
       "ticket": "GCP-STG-0290",
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
-      "start_line": 201,
-      "end_line": 214,
+      "start_line": 205,
+      "end_line": 218,
       "checksum": "6b542936f082678d",
       "description": "GCP-STG-0290: Publish button handler — calls publishProduct API, shows toast with store count",
       "test_file": "supermandi-superadmin/src/__tests__/tabs/CatalogTabPublish.gcp-stg-0290.test.tsx",
@@ -14567,7 +14567,7 @@
         "single_commit": "fix(GCP-STG-0290)",
         "ticket_parked": "after commit"
       },
-      "line_shifted_at": "2026-03-22T23:59:21.384Z"
+      "line_shifted_at": "2026-03-23T09:04:54.927Z"
     },
     {
       "ticket": "GCP-STG-0313",
@@ -14803,8 +14803,8 @@
     {
       "ticket": "GCP-STG-0283",
       "file": "backend/src/routes/v1/admin/catalog.ts",
-      "start_line": 578,
-      "end_line": 621,
+      "start_line": 579,
+      "end_line": 622,
       "checksum": "24cb55e00af7e2e3",
       "description": "Ledger-sum vs stock_balances reconciliation endpoint: GET /stock-reconciliation/ledger-check",
       "test_file": "backend/tests/ledgerReconciliation.gcp-stg-0283.unit.test.ts",
@@ -14860,7 +14860,7 @@
         "single_commit": "fix(GCP-STG-0283)",
         "ticket_parked": "after commit"
       },
-      "line_shifted_at": "2026-03-23T07:05:04.628Z"
+      "line_shifted_at": "2026-03-23T09:04:54.947Z"
     },
     {
       "ticket": "GCP-STG-0291",
@@ -15948,7 +15948,9 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:20:17.129Z",
-      "status": "ACTIVE"
+      "status": "SUPERSEDED",
+      "superseded_by": "GCP-STG-0373",
+      "superseded_reason": "Per-store INSERT replaced by batch INSERT in GCP-STG-0373; source=supplier_publish preserved"
     },
     {
       "ticket": "GCP-STG-0322",
@@ -16682,8 +16684,8 @@
     {
       "ticket": "GCP-STG-0339",
       "file": "supermandi-superadmin/src/api/catalog.ts",
-      "start_line": 147,
-      "end_line": 176,
+      "start_line": 149,
+      "end_line": 178,
       "checksum": "b81650f722123c32",
       "description": "fetchProducts params: added supplierId and approvalStatus optional params, appended to URL search params (dropdown + backend filter)",
       "test_file": "backend/tests/catalogSupplierFilter.gcp-stg-0339.unit.test.ts",
@@ -16714,7 +16716,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-22T23:12:54.928Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T02:08:22.364Z"
+      "line_shifted_at": "2026-03-23T09:04:54.974Z"
     },
     {
       "ticket": "GCP-STG-0352",
@@ -16795,7 +16797,7 @@
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
       "start_line": 59,
       "end_line": 68,
-      "checksum": "db460697acd35928",
+      "checksum": "a4beba27f9b0e79e",
       "description": "CatalogTab edit modal: 5 new editable fields (HSN, GST dropdown, BNPL checkbox, Delivery SLA days, Credit days) + state init + metadata PUT payload",
       "test_file": "supermandi-superadmin/src/__tests__/tabs/editModalFields.gcp-stg-0341.test.tsx",
       "depends_on": null,
@@ -16975,8 +16977,8 @@
     {
       "ticket": "GCP-STG-0342",
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
-      "start_line": 533,
-      "end_line": 557,
+      "start_line": 541,
+      "end_line": 565,
       "checksum": "066c470f15f62d01",
       "description": "GCP-STG-0342: Published/unpublished indicator badge for approved products in CatalogTab status column — shows store count or Unpublished with color-coded badges (badge + count)",
       "test_file": "supermandi-superadmin/src/__tests__/tabs/publishIndicator.gcp-stg-0342.test.tsx",
@@ -17007,7 +17009,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:08:48.491Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T08:36:56.124Z"
+      "line_shifted_at": "2026-03-23T09:04:54.996Z"
     },
     {
       "ticket": "GCP-STG-0342",
@@ -17486,7 +17488,7 @@
       "file": "backend/src/routes/v1/admin/catalog.ts",
       "start_line": 183,
       "end_line": 195,
-      "checksum": "1af66cd03042c144",
+      "checksum": "40bbfb8d88a3ef2c",
       "description": "GCP-STG-0343: Add B2B commercial columns (ptr_minor, pts_minor, trade_discount_pct, scheme, moq, delivery_sla_days, credit_days, image_url, stock_quantity) to admin catalog products SELECT (9 fields in table)",
       "test_file": "backend/tests/catalogB2bFields.gcp-stg-0343.unit.test.ts",
       "depends_on": null,
@@ -17630,8 +17632,8 @@
     {
       "ticket": "GCP-STG-0343",
       "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
-      "start_line": 472,
-      "end_line": 509,
+      "start_line": 480,
+      "end_line": 517,
       "checksum": "cca0a77ab5c35cc4",
       "description": "GCP-STG-0343: Add B2B Terms and Stock columns to CatalogTab product table — PTR, PTS, trade discount, scheme, MOQ, delivery/credit days, image thumbnail, stock quantity (9 fields in table)",
       "test_file": "backend/tests/catalogB2bFields.gcp-stg-0343.unit.test.ts",
@@ -17662,7 +17664,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T02:08:32.965Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T08:36:56.145Z"
+      "line_shifted_at": "2026-03-23T09:04:55.026Z"
     },
     {
       "ticket": "GCP-STG-0369",
@@ -18473,8 +18475,8 @@
     {
       "ticket": "GCP-STG-0344",
       "file": "backend/src/routes/v1/admin/suppliers.ts",
-      "start_line": 1971,
-      "end_line": 1984,
+      "start_line": 2015,
+      "end_line": 2028,
       "checksum": "bdd84877b87b1892",
       "description": "Bulk publish uses calculateRetailerPrice() instead of inline margin math — matches single-publish path, adds MRP cap + global default fallback (canonical pricing engine)",
       "test_file": "backend/tests/bulkPublishPricing.gcp-stg-0344.unit.test.ts",
@@ -18505,7 +18507,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:17:48.683Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T08:36:56.171Z"
+      "line_shifted_at": "2026-03-23T09:04:55.059Z"
     },
     {
       "ticket": "GCP-STG-0388",
@@ -18618,8 +18620,8 @@
     {
       "ticket": "GCP-STG-0345",
       "file": "backend/src/routes/v1/admin/suppliers.ts",
-      "start_line": 1858,
-      "end_line": 1934,
+      "start_line": 1902,
+      "end_line": 1978,
       "checksum": "5bd1a7d9e6e035ce",
       "description": "Bulk publish INSERT includes conversion/mode columns (procurement_unit, procurement_pack_qty, base_stock_unit, allow_fractional_sell, conversion_confirmed, product_mode, sold_by, rate_unit) — mirrors single-publish path V3-FIX-169",
       "test_file": "backend/tests/bulkPublishColumns.gcp-stg-0345.unit.test.ts",
@@ -18649,13 +18651,14 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:36:43.532Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T09:04:55.134Z"
     },
     {
       "ticket": "GCP-STG-0347",
       "file": "backend/src/routes/v1/admin/suppliers.ts",
-      "start_line": 1823,
-      "end_line": 1903,
+      "start_line": 1867,
+      "end_line": 1947,
       "checksum": "a1a04dfee12620ea",
       "description": "Unpublish endpoint: POST /admin/products/:productId/unpublish — deactivates store_products (is_active=false), optional storeId query param, audit log (backend + UI button)",
       "test_file": "backend/tests/unpublish.gcp-stg-0347.unit.test.ts",
@@ -18685,7 +18688,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:40:32.357Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T09:04:55.200Z"
     },
     {
       "ticket": "GCP-STG-0371",
@@ -18757,6 +18761,187 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:50:24.454Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0362",
+      "file": "backend/migrations/228_gcp_stg_0362_drop_invoice_dispatch_logs.sql",
+      "start_line": 1,
+      "end_line": 33,
+      "checksum": "ae22104eab7be02b",
+      "description": "Drop dead schema invoice_dispatch_logs — never used by application code",
+      "test_file": "backend/tests/deadSchemaCleanup.gcp-stg-0362.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T08:58:41.645Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0348",
+      "file": "supermandi-superadmin/src/tabs/CatalogTab.tsx",
+      "start_line": 680,
+      "end_line": 701,
+      "checksum": "7dfe7795dc641cdd",
+      "description": "GCP-STG-0348: Read-only Product Details section in edit modal showing 5 fields (netContentValue+Unit, manufacturerName, countryOfOrigin, shelfLifeDays) that were SELECTed but never displayed",
+      "test_file": "supermandi-superadmin/src/__tests__/tabs/catalogExtraFields.gcp-stg-0348.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T08:59:30.705Z",
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-23T09:04:55.209Z"
+    },
+    {
+      "ticket": "GCP-STG-0373",
+      "file": "backend/src/routes/v1/admin/suppliers.ts",
+      "start_line": 1775,
+      "end_line": 1824,
+      "checksum": "2841746860d27229",
+      "description": "Batch INSERT for single-product publish: replaces per-store INSERT loop with multi-row VALUES (batches of 100). Preserves source=supplier_publish (GCP-STG-0325). Also batches barcode INSERTs.",
+      "test_file": "backend/tests/batchPublish.gcp-stg-0373.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T09:04:30.192Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0356",
+      "file": "backend/src/routes/v1/catalog.ts",
+      "start_line": 541,
+      "end_line": 544,
+      "checksum": "a453d0839c20df4e",
+      "description": "BUY catalog selects supplier_visible and masks supplier identity when false",
+      "test_file": "backend/tests/supplierVisibility.gcp-stg-0356.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T09:06:29.742Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0356",
+      "file": "backend/src/routes/v1/admin/suppliers.ts",
+      "start_line": 1547,
+      "end_line": 1557,
+      "checksum": "c486c2d3e05a5cdb",
+      "description": "Admin edit endpoint accepts supplierVisible toggle and persists to supplier_products",
+      "test_file": "backend/tests/supplierVisibility.gcp-stg-0356.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-23T09:06:37.066Z",
       "status": "ACTIVE"
     }
   ],

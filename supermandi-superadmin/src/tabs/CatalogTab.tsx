@@ -62,6 +62,8 @@ export function CatalogTab() {
   const [editBnplEligible, setEditBnplEligible] = useState(false);
   const [editDeliveryDays, setEditDeliveryDays] = useState("");
   const [editCreditDays, setEditCreditDays] = useState("");
+  // GCP-STG-0356: Supplier visibility toggle
+  const [editSupplierVisible, setEditSupplierVisible] = useState(false);
 
   // GCP-STG-0071: Reject modal state
   const [rejectingProduct, setRejectingProduct] = useState<CatalogProduct | null>(null);
@@ -166,6 +168,8 @@ export function CatalogTab() {
     setEditBnplEligible(product.bnplEligible || false);
     setEditDeliveryDays(product.deliverySlaDays != null ? String(product.deliverySlaDays) : "");
     setEditCreditDays(product.creditDays != null ? String(product.creditDays) : "");
+    // GCP-STG-0356: Supplier visibility
+    setEditSupplierVisible(product.supplierVisible || false);
   };
 
   // GCP-STG-0071: Approve product
@@ -307,6 +311,10 @@ export function CatalogTab() {
       const currentCredit = editingProduct.creditDays != null ? String(editingProduct.creditDays) : "";
       if (editCreditDays !== currentCredit) {
         metadataPayload.creditDays = editCreditDays ? Number(editCreditDays) : undefined;
+      }
+      // GCP-STG-0356: Supplier visibility
+      if (editSupplierVisible !== (editingProduct.supplierVisible || false)) {
+        metadataPayload.supplierVisible = editSupplierVisible;
       }
       // Send metadata update if any field changed
       if (Object.keys(metadataPayload).length > 0) {
@@ -669,6 +677,28 @@ export function CatalogTab() {
               {editingProduct.mrp != null && <div><strong>MRP:</strong> {formatPrice(editingProduct.mrp)}</div>}
             </div>
 
+            {/* GCP-STG-0348: Read-only product details (5 fields from GET that were not displayed) */}
+            {(editingProduct.netContentValue != null || editingProduct.manufacturerName || editingProduct.countryOfOrigin || editingProduct.shelfLifeDays != null) && (
+              <div style={{
+                background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 8,
+                padding: '10px 14px', marginBottom: 16, fontSize: 13
+              }} data-testid="product-details-section">
+                <h4 style={{ margin: '0 0 6px', fontSize: 13, color: '#475569' }}>Product Details</h4>
+                {(editingProduct.netContentValue != null && editingProduct.netContentUnit) && (
+                  <div data-testid="net-content"><strong>Net Content:</strong> {editingProduct.netContentValue} {editingProduct.netContentUnit}</div>
+                )}
+                {editingProduct.manufacturerName && (
+                  <div data-testid="manufacturer"><strong>Manufacturer:</strong> {editingProduct.manufacturerName}</div>
+                )}
+                {editingProduct.countryOfOrigin && (
+                  <div data-testid="country-of-origin"><strong>Country of Origin:</strong> {editingProduct.countryOfOrigin}</div>
+                )}
+                {editingProduct.shelfLifeDays != null && (
+                  <div data-testid="shelf-life"><strong>Shelf Life:</strong> {editingProduct.shelfLifeDays} days</div>
+                )}
+              </div>
+            )}
+
             {/* GCP-STG-0075: Product name override */}
             <div style={{ marginBottom: 12 }}>
               <label htmlFor="edit-name" style={{ display: "block", marginBottom: 4, fontWeight: 500, fontSize: 13 }}>
@@ -851,6 +881,24 @@ export function CatalogTab() {
                   ? "SuperMandi buys from supplier and resells to retailer. Two invoices: purchase + sale."
                   : "Supplier invoices retailer directly. SuperMandi charges platform commission fee."}
               </p>
+              {/* GCP-STG-0356: Supplier visibility toggle */}
+              <div style={{ marginTop: 10, borderTop: '1px solid #bbf7d0', paddingTop: 8 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={editSupplierVisible}
+                    onChange={(e) => setEditSupplierVisible(e.target.checked)}
+                    disabled={editSaving}
+                    data-testid="supplier-visible-toggle"
+                  />
+                  Show supplier identity to retailer
+                </label>
+                <p style={{ fontSize: 11, color: '#6b7280', marginTop: 4, marginBottom: 0 }}>
+                  {editSupplierVisible
+                    ? "Retailer will see the real supplier name and city in the BUY catalog."
+                    : "Supplier identity hidden. Retailer sees \"SuperMandi\" as the source."}
+                </p>
+              </div>
             </div>
 
             {/* V3-FIX-169: Conversion approval — editable "bought as / stocked as / sold as" */}
