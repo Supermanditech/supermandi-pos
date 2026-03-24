@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 988,
+  "version": 991,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -8102,8 +8102,8 @@
       "ticket": "V3-HARDEN-171",
       "file": "src/components/v3/ProductTileV3.tsx",
       "start_line": 10,
-      "end_line": 263,
-      "checksum": "dbf8ba29ad094931",
+      "end_line": 266,
+      "checksum": "d43d22edc706eb49",
       "description": "ProductTileData with conversion-aware sell flow fields (productMode, soldBy, rateUnit, baseStockUnit, allowFractionalSell, conversionConfirmed, purchasePriceMinor)",
       "test_file": "backend/tests/conversionEngine.v3-fix-167.unit.test.ts",
       "depends_on": null,
@@ -9433,8 +9433,8 @@
     {
       "ticket": "GCP-STG-0010",
       "file": "src/components/v3/ProductTileV3.tsx",
-      "start_line": 195,
-      "end_line": 208,
+      "start_line": 199,
+      "end_line": 212,
       "checksum": "a8b3caa860fe91d9",
       "description": "ProductTileV3 tile style has flex:1 for 3-column grid layout",
       "test_file": "src/__tests__/components/ProductTileV3.test.tsx",
@@ -9468,7 +9468,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T09:06:38.226Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T15:32:04.367Z"
+      "line_shifted_at": "2026-03-24T16:17:15.422Z"
     },
     {
       "ticket": "GCP-STG-0153",
@@ -9984,8 +9984,8 @@
     {
       "ticket": "GCP-STG-0144",
       "file": "src/components/v3/ProductTileV3.tsx",
-      "start_line": 178,
-      "end_line": 193,
+      "start_line": 182,
+      "end_line": 197,
       "checksum": "41bed30adfe89c7f",
       "description": "Comprehensive category emoji mapping with 26 categories + case-insensitive lookup",
       "test_file": "src/__tests__/components/ProductTileV3.test.tsx",
@@ -10019,13 +10019,13 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:41:40.441Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T15:32:04.397Z"
+      "line_shifted_at": "2026-03-24T16:17:15.428Z"
     },
     {
       "ticket": "GCP-STG-0013",
       "file": "src/components/v3/ProductTileV3.tsx",
-      "start_line": 178,
-      "end_line": 193,
+      "start_line": 182,
+      "end_line": 197,
       "checksum": "41bed30adfe89c7f",
       "description": "getCategoryEmoji exported with 29 category mappings including Vegetables and Fruits",
       "test_file": "src/__tests__/components/ProductTileV3.test.tsx",
@@ -10059,7 +10059,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:48:03.244Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T15:32:04.399Z"
+      "line_shifted_at": "2026-03-24T16:17:15.430Z"
     },
     {
       "ticket": "GCP-STG-0024",
@@ -15055,8 +15055,8 @@
     {
       "ticket": "GCP-STG-0310",
       "file": "src/components/v3/ProductTileV3.tsx",
-      "start_line": 104,
-      "end_line": 114,
+      "start_line": 108,
+      "end_line": 118,
       "checksum": "6d825dbc85d8d84f",
       "description": "Product image uses responsive getChipFontSize()*3 instead of hardcoded 32x32",
       "test_file": "src/__tests__/components/productImageSize.gcp-stg-0310.test.ts",
@@ -15087,7 +15087,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:50:45.133Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:58:31.178Z"
+      "line_shifted_at": "2026-03-24T16:17:15.468Z"
     },
     {
       "ticket": "GCP-STG-0311",
@@ -26433,8 +26433,8 @@
     {
       "ticket": "GCP-STG-0553",
       "file": "src/components/v3/ProductTileV3.tsx",
-      "start_line": 178,
-      "end_line": 193,
+      "start_line": 182,
+      "end_line": 197,
       "checksum": "41bed30adfe89c7f",
       "description": "BUY tile category emoji verification — getCategoryEmoji maps 29 categories with case-insensitive fallback",
       "test_file": "src/components/v3/ProductTileV3.tsx",
@@ -26483,7 +26483,8 @@
         "test_guard": "getCategoryEmoji already tested via GCP-STG-0013+0144 registrations",
         "single_commit": "fix(GCP-STG-0553): BUY tile category emoji verification",
         "ticket_parked": "Will park after commit"
-      }
+      },
+      "line_shifted_at": "2026-03-24T16:17:15.553Z"
     },
     {
       "ticket": "GCP-STG-0554",
@@ -26758,6 +26759,62 @@
         "regression_check": "tsc --noEmit passes",
         "test_guard": "Covered by BuyScreenV3 existing test surface",
         "single_commit": "fix(GCP-STG-0557): one ticket one commit",
+        "ticket_parked": "Will update after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0558",
+      "file": "src/components/v3/ProductTileV3.tsx",
+      "start_line": 87,
+      "end_line": 89,
+      "checksum": "dbcb06a93ce6663d",
+      "description": "BUY tile accessibility label with PTR + supplier attribution",
+      "test_file": "src/components/v3/__tests__/ProductTileV3.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T16:17:10.980Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "accessibilityLabel updated for BUY context",
+        "ux_states": "BUY shows PTR+supplier; SELL unchanged",
+        "wiring": "isBuy ternary drives label content",
+        "navigation": "N/A",
+        "i18n_keys": "Accessibility label uses dynamic data, no new keys",
+        "business_logic": "N/A — accessibility only",
+        "business_behaviour": "Screen reader users hear PTR and supplier in BUY mode",
+        "impacted_files": "src/components/v3/ProductTileV3.tsx",
+        "fix_ledger_check": "544 fixes intact, zero drift",
+        "no_agent_conflict": "Single agent",
+        "gcp_parity": "Pure UI change, no URLs",
+        "regression_check": "tsc --noEmit passes",
+        "test_guard": "Covered by ProductTileV3 test surface",
+        "single_commit": "fix(GCP-STG-0558): one ticket one commit",
         "ticket_parked": "Will update after commit"
       }
     }

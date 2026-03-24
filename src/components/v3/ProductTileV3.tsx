@@ -84,6 +84,10 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress, onL
   const emoji = getCategoryEmoji(product.category);
   // GCP-STG-0400: Margin indicator
   const margin = computeMargin(displayPrice, product.purchasePriceMinor);
+  // GCP-STG-0558: Context-aware accessibility label — BUY shows PTR + supplier attribution
+  const a11yLabel = isBuy
+    ? `${product.name}, PTR ${priceLabel}, from ${supplierName || product.brand || 'supplier'}, tap for details`
+    : `${product.name}, ${priceLabel}, tap to add, hold for details`;
 
   return (
     <Pressable
@@ -91,7 +95,7 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress, onL
       onPress={onPress}
       onLongPress={onLongPress}
       accessibilityRole="button"
-      accessibilityLabel={`${product.name}, ${priceLabel}, tap to add, hold for details`}
+      accessibilityLabel={a11yLabel}
     >
       {cartQty > 0 ? (
         <View style={styles.cartBadge}>
