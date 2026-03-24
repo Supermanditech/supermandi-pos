@@ -272,6 +272,33 @@ class PrinterService {
   }
 }
 
+// GCP-STG-0670: Printer error classification for recovery UI
+export type PrinterError = 'DISCONNECTED' | 'PAPER_OUT' | 'BUSY' | 'UNKNOWN';
+
+/**
+ * GCP-STG-0670: Classify a printer error into a user-actionable category.
+ * Used by PrinterErrorRecovery UI to show appropriate guidance and retry logic.
+ */
+export function classifyPrinterError(err: unknown): PrinterError {
+  const msg = String(err).toLowerCase();
+  if (msg.includes('disconnect') || msg.includes('not connected')) return 'DISCONNECTED';
+  if (msg.includes('paper') || msg.includes('out of paper')) return 'PAPER_OUT';
+  if (msg.includes('busy') || msg.includes('timeout')) return 'BUSY';
+  return 'UNKNOWN';
+}
+
+/**
+ * GCP-STG-0670: Human-readable message for each printer error type.
+ */
+export function getPrinterErrorMessage(errorType: PrinterError): string {
+  switch (errorType) {
+    case 'DISCONNECTED': return 'Printer disconnected — check cable/Bluetooth';
+    case 'PAPER_OUT': return 'Out of paper — load new roll';
+    case 'BUSY': return 'Printer busy — wait and retry';
+    case 'UNKNOWN': return 'Printer error — check connection and paper';
+  }
+}
+
 export const printerService = new PrinterService();
 
 /**
