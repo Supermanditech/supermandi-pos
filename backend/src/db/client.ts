@@ -86,6 +86,28 @@ export function getPool(): Pool | undefined {
   return pool;
 }
 
+// GCP-STG-0677: Slow query detection
+// Wraps pool.query with duration logging. Warns >1s, errors >5s.
+const SLOW_QUERY_WARN_MS = parseInt(process.env.SLOW_QUERY_WARN_MS || '1000', 10);
+const SLOW_QUERY_ERROR_MS = parseInt(process.env.SLOW_QUERY_ERROR_MS || '5000', 10);
+
+export async function timedQuery(
+  text: string,
+  params?: unknown[]
+): Promise<import("pg").QueryResult> {
+  const p = getPool();
+  if (!p) throw new Error("Database pool not initialized");
+  const queryStart = Date.now();
+  const result = await p.query(text, params);
+  const duration = Date.now() - queryStart;
+  if (duration > SLOW_QUERY_ERROR_MS) {
+    log.error({ query: text.substring(0, 200), duration_ms: duration }, 'SLOW_QUERY_CRITICAL');
+  } else if (duration > SLOW_QUERY_WARN_MS) {
+    log.warn({ query: text.substring(0, 200), duration_ms: duration }, 'SLOW_QUERY');
+  }
+  return result;
+}
+
 // #343: UUID format validation for RLS store context
 // rls_store_check() casts to ::uuid — passing non-UUID would throw at DB level.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
