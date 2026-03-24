@@ -145,7 +145,8 @@ describe('CatalogTab', () => {
       expect(screen.getByText('Tata Salt 1kg')).toBeTruthy();
       expect(screen.getByText('Grocery')).toBeTruthy();
       expect(screen.getByText('Tata')).toBeTruthy();
-      expect(screen.getByText('Tata Distributors')).toBeTruthy();
+      // GCP-STG-0570: supplierName appears in both table cell and supplier filter dropdown
+      expect(screen.getAllByText('Tata Distributors').length).toBeGreaterThanOrEqual(1);
     });
   });
 
