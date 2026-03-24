@@ -10,6 +10,7 @@ import { fetchStoreFeatureFlags, setStoreOverride, removeStoreOverride } from ".
 import { fetchPriceBounds, updatePriceBounds, type PriceBounds } from "../api/priceBounds";
 import type { StoreRecord } from "../api/stores";
 import { formatDateTime } from "../lib/formatters";
+import { TotpSetupCard } from "../components/TotpSetupCard";
 
 interface SettingsTabProps {
   systemSettings: SystemSettings | null;
@@ -377,6 +378,12 @@ export function SettingsTab({
           {selectedStoreId && storeFlags.length === 0 && !storeFlagsLoading && (
             <div className="sa-text-muted sa-text-md">No flags found for this store.</div>
           )}
+        </div>
+
+        {/* GCP-STG-0539: TOTP 2FA Setup */}
+        <div className="sa-mt-20">
+          <h3 className="sa-text-lg sa-fw-700 sa-mb-12">Account Security</h3>
+          <TotpSetupCard />
         </div>
       </div>
       {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />}
