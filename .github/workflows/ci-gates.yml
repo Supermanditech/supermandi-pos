@@ -1132,6 +1132,23 @@ jobs:
           VITE_API_BASE_URL="" npx vite build
           test -f dist/index.html || exit 1
           echo "✅ SuperAdmin dist/index.html exists"
+      # GCP-STG-0645: Bundle size reporting
+      - name: Report retailer bundle size
+        run: |
+          SIZE=$(du -sb retailer-admin/dist | awk '{print $1}')
+          SIZE_KB=$((SIZE / 1024))
+          echo "📦 Retailer bundle: ${SIZE_KB}KB"
+          if [ "$SIZE_KB" -gt 10240 ]; then
+            echo "⚠️ WARNING: Bundle > 10MB — investigate large imports"
+          fi
+      - name: Report superadmin bundle size
+        run: |
+          SIZE=$(du -sb supermandi-superadmin/dist | awk '{print $1}')
+          SIZE_KB=$((SIZE / 1024))
+          echo "📦 SuperAdmin bundle: ${SIZE_KB}KB"
+          if [ "$SIZE_KB" -gt 10240 ]; then
+            echo "⚠️ WARNING: Bundle > 10MB — investigate large imports"
+          fi
 
   # ==========================================================================
   # JOB: Supplier Portal Tests (GCP-STG-0601)
