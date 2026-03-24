@@ -20,6 +20,8 @@ export function TotpSetupCard() {
   const [error, setError] = useState('');
   const [totpEnabled, setTotpEnabled] = useState<boolean | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [codesSaved, setCodesSaved] = useState(false);
+  const [copyLabel, setCopyLabel] = useState('Copy All');
 
   // Check current TOTP status on first render
   const checkStatus = useCallback(async () => {
@@ -349,6 +351,46 @@ export function TotpSetupCard() {
                   <span key={i}>{code}</span>
                 ))}
               </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button
+                  type="button"
+                  style={btnGhostStyle}
+                  onClick={() => {
+                    navigator.clipboard.writeText(setupData.backupCodes.join('\n'));
+                    setCopyLabel('Copied!');
+                    setTimeout(() => setCopyLabel('Copy All'), 2000);
+                  }}
+                >
+                  {copyLabel}
+                </button>
+                <button
+                  type="button"
+                  style={btnGhostStyle}
+                  onClick={() => {
+                    const text = 'SuperMandi SuperAdmin — TOTP Backup Codes\n' +
+                      'Generated: ' + new Date().toISOString() + '\n\n' +
+                      setupData.backupCodes.join('\n') + '\n\nEach code can be used once.';
+                    const blob = new Blob([text], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'supermandi-superadmin-backup-codes.txt';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  Download as Text
+                </button>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 13, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={codesSaved}
+                  onChange={(e) => setCodesSaved(e.target.checked)}
+                  style={{ width: 16, height: 16 }}
+                />
+                <span style={{ color: 'var(--color-text, #1a1a1a)' }}>I have saved these recovery codes</span>
+              </label>
             </div>
           )}
 
@@ -371,7 +413,7 @@ export function TotpSetupCard() {
               <button
                 style={btnPrimaryStyle}
                 onClick={handleVerify}
-                disabled={state === 'verifying' || verifyCode.trim().length !== 6}
+                disabled={state === 'verifying' || verifyCode.trim().length !== 6 || (setupData!.backupCodes.length > 0 && !codesSaved)}
               >
                 {state === 'verifying' ? 'Verifying...' : 'Verify & Enable'}
               </button>

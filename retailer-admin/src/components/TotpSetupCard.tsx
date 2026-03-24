@@ -29,6 +29,8 @@ export default function TotpSetupCard() {
   const [error, setError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [disabling, setDisabling] = useState(false);
+  const [codesSaved, setCodesSaved] = useState(false);
+  const [copyLabel, setCopyLabel] = useState('Copy All');
 
   // Check current TOTP status on mount would require a GET endpoint;
   // since the backend doesn't expose one, we start at 'idle' and let the user
@@ -212,6 +214,48 @@ export default function TotpSetupCard() {
                   </code>
                 ))}
               </div>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="set-password-btn"
+                  style={{ background: 'var(--text-muted, #94a3b8)', fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(setupData.backupCodes.join('\n'));
+                    setCopyLabel('Copied!');
+                    setTimeout(() => setCopyLabel('Copy All'), 2000);
+                  }}
+                >
+                  {copyLabel}
+                </button>
+                <button
+                  type="button"
+                  className="set-password-btn"
+                  style={{ background: 'var(--text-muted, #94a3b8)', fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
+                  onClick={() => {
+                    const text = 'SuperMandi Retailer Admin — TOTP Backup Codes\n' +
+                      'Generated: ' + new Date().toISOString() + '\n\n' +
+                      setupData.backupCodes.join('\n') + '\n\nEach code can be used once.';
+                    const blob = new Blob([text], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'supermandi-retailer-backup-codes.txt';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  Download as Text
+                </button>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={codesSaved}
+                  onChange={(e) => setCodesSaved(e.target.checked)}
+                  style={{ width: 16, height: 16 }}
+                />
+                <span className="set-hint-text" style={{ margin: 0 }}>I have saved these recovery codes</span>
+              </label>
               <p className="set-hint-text">
                 Each backup code can be used once if you lose access to your authenticator app.
               </p>
@@ -238,7 +282,7 @@ export default function TotpSetupCard() {
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button
               onClick={handleVerify}
-              disabled={verifying || verifyCode.length !== 6}
+              disabled={verifying || verifyCode.length !== 6 || (setupData!.backupCodes.length > 0 && !codesSaved)}
               className="set-password-btn"
             >
               {verifying ? 'Verifying...' : 'Verify & Enable'}

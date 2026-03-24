@@ -20,6 +20,8 @@ export default function TotpSetupCard({ totpEnabled: initialEnabled }: { totpEna
   const [verifyCode, setVerifyCode] = useState('');
   const [disableCode, setDisableCode] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [codesSaved, setCodesSaved] = useState(false);
+  const [copyLabel, setCopyLabel] = useState('Copy All');
 
   const handleEnableSetup = async () => {
     setState('loading');
@@ -185,7 +187,47 @@ export default function TotpSetupCard({ totpEnabled: initialEnabled }: { totpEna
                   </code>
                 ))}
               </div>
-              <p className="text-xs text-yellow-600 mt-3">
+              <div className="flex gap-2 mt-3">
+                <button
+                  type="button"
+                  className="btn btn-secondary text-xs"
+                  onClick={() => {
+                    navigator.clipboard.writeText(setupData.backupCodes.join('\n'));
+                    setCopyLabel('Copied!');
+                    setTimeout(() => setCopyLabel('Copy All'), 2000);
+                  }}
+                >
+                  {copyLabel}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary text-xs"
+                  onClick={() => {
+                    const text = 'SuperMandi Supplier Portal — TOTP Backup Codes\n' +
+                      'Generated: ' + new Date().toISOString() + '\n\n' +
+                      setupData.backupCodes.join('\n') + '\n\nEach code can be used once.';
+                    const blob = new Blob([text], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'supermandi-supplier-backup-codes.txt';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  Download as Text
+                </button>
+              </div>
+              <label className="flex items-center gap-2 mt-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={codesSaved}
+                  onChange={(e) => setCodesSaved(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm text-yellow-800">I have saved these recovery codes</span>
+              </label>
+              <p className="text-xs text-yellow-600 mt-2">
                 Store these codes securely. You will need them if you lose access to your authenticator app.
               </p>
             </div>
@@ -217,7 +259,7 @@ export default function TotpSetupCard({ totpEnabled: initialEnabled }: { totpEna
               <button
                 type="submit"
                 className="btn btn-primary"
-                disabled={verifyCode.length !== 6}
+                disabled={verifyCode.length !== 6 || (setupData.backupCodes.length > 0 && !codesSaved)}
               >
                 Verify &amp; Enable
               </button>
