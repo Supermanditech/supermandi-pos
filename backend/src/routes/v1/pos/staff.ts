@@ -22,6 +22,7 @@ import {
   isValidPinFormat,
   isAccountLocked,
   computeLockout,
+  isWeakPin,
 } from "../../../services/staffAuthHelpers";
 
 posStaffRouter.post("/staff/login", requireDeviceToken, async (req, res) => {
@@ -47,9 +48,10 @@ posStaffRouter.post("/staff/login", requireDeviceToken, async (req, res) => {
     }
 
     // V3-BIZ-026: PIN-only lookup using store-scoped pin_lookup_hash
+    // GCP-STG-0549: Also fetch must_change_pin for force-change-on-first-login
     const lookupHash = pinLookupHash(pin, posDevice.storeId);
     const result = await pool.query(
-      `SELECT id, name, pin_hash, role, is_owner, locked_until, failed_login_count
+      `SELECT id, name, pin_hash, role, is_owner, locked_until, failed_login_count, must_change_pin
        FROM platform.store_staff
        WHERE store_id = $1::uuid AND pin_lookup_hash = $2 AND is_active = true`,
       [posDevice.storeId, lookupHash]
@@ -111,12 +113,14 @@ posStaffRouter.post("/staff/login", requireDeviceToken, async (req, res) => {
       [staff.id]
     );
 
+    // GCP-STG-0549: Include requiresPinChange so POS app can force PIN change on first login
     return res.json({
       staffId: staff.id,
       name: staff.name,
       role: staff.role,
       isOwner: staff.is_owner ?? false,
       maxDiscountPct: staff.role === "MANAGER" ? 100 : staff.role === "STOCK_MANAGER" ? 50 : 10,
+      requiresPinChange: staff.must_change_pin ?? false,
     });
   } catch (err) {
     log.error("[POS Staff Login] Error:", err);
@@ -265,6 +269,91 @@ posStaffRouter.post(
       log.error("[POS Verify PIN] Error:", err);
       return res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "PIN verification failed" }
+      });
+    }
+  }
+);
+
+// GCP-STG-0549: POST /api/v1/pos/staff/change-pin
+// Staff changes their own PIN (required after auto-created default PIN)
+posStaffRouter.post(
+  "/staff/change-pin",
+  requireDeviceToken,
+  async (req, res) => {
+    try {
+      const { staffId, currentPin, newPin } = req.body ?? {};
+      const posDevice = (req as any).posDevice as PosDeviceContext;
+
+      if (!staffId || !currentPin || !newPin) {
+        return res.status(400).json({
+          error: { code: "INVALID_INPUT", message: "staffId, currentPin, and newPin are required" }
+        });
+      }
+
+      if (!isValidPinFormat(currentPin) || !isValidPinFormat(newPin)) {
+        return res.status(400).json({
+          error: { code: "INVALID_PIN_FORMAT", message: "PIN must be 4-6 digits" }
+        });
+      }
+
+      if (isWeakPin(newPin)) {
+        return res.status(400).json({
+          error: { code: "WEAK_PIN", message: "PIN is too weak. Avoid sequential or repeated digits." }
+        });
+      }
+
+      if (currentPin === newPin) {
+        return res.status(400).json({
+          error: { code: "SAME_PIN", message: "New PIN must be different from current PIN" }
+        });
+      }
+
+      const pool = getPool();
+      if (!pool) {
+        return res.status(503).json({
+          error: { code: "SERVICE_UNAVAILABLE", message: "Database unavailable" }
+        });
+      }
+
+      // Fetch staff record scoped to device's store
+      const result = await pool.query(
+        `SELECT id, pin_hash FROM platform.store_staff
+         WHERE id = $1 AND store_id = $2::uuid AND is_active = true`,
+        [staffId, posDevice.storeId]
+      );
+
+      const staff = result.rows[0];
+      if (!staff) {
+        return res.status(404).json({
+          error: { code: "STAFF_NOT_FOUND", message: "Staff not found" }
+        });
+      }
+
+      // Verify current PIN
+      const pinValid = await bcrypt.compare(currentPin, staff.pin_hash);
+      if (!pinValid) {
+        return res.status(401).json({
+          error: { code: "INVALID_CURRENT_PIN", message: "Current PIN is incorrect" }
+        });
+      }
+
+      // Hash new PIN + compute lookup hash
+      const newPinHash = await bcrypt.hash(newPin, 10);
+      const newLookupHash = pinLookupHash(newPin, posDevice.storeId);
+
+      await pool.query(
+        `UPDATE platform.store_staff
+         SET pin_hash = $1, pin_lookup_hash = $2, must_change_pin = FALSE
+         WHERE id = $3`,
+        [newPinHash, newLookupHash, staffId]
+      );
+
+      log.info(`[GCP-STG-0549] Staff ${staffId} changed PIN successfully`);
+      return res.json({ success: true });
+    } catch (err) {
+      log.error("[POS Staff Change PIN] Error:", err);
+      return res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "PIN change failed" }
       });
     }
   }

@@ -655,13 +655,13 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
             return;
           }
 
-          // Default PIN is "1234" — owner should change via SuperAdmin
-          const defaultPin = "1234";
+          // GCP-STG-0549: Generate random 6-digit PIN instead of hardcoded "1234"
+          const defaultPin = String(Math.floor(100000 + Math.random() * 900000));
           const pinHash = await bcrypt.hash(defaultPin, 10);
 
           await staffPool.query(
-            `INSERT INTO platform.store_staff (store_id, name, phone, pin_hash, role)
-             VALUES ($1::uuid, $2, $3, $4, 'MANAGER')
+            `INSERT INTO platform.store_staff (store_id, name, phone, pin_hash, role, must_change_pin)
+             VALUES ($1::uuid, $2, $3, $4, 'MANAGER', TRUE)
              ON CONFLICT DO NOTHING`,
             [enrollment.store_id, `${storeName} Manager`, phone10, pinHash]
           );

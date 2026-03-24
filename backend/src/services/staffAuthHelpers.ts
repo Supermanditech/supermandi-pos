@@ -54,3 +54,24 @@ export function isAccountLocked(lockedUntil: Date | string | null): boolean {
   const until = typeof lockedUntil === "string" ? new Date(lockedUntil) : lockedUntil;
   return until > new Date();
 }
+
+/**
+ * GCP-STG-0549: Check if a PIN is too weak (sequential, repeated digits, common patterns).
+ * Returns true if the PIN should be rejected.
+ */
+export function isWeakPin(pin: string): boolean {
+  // All same digits (0000, 1111, ..., 999999)
+  if (/^(\d)\1+$/.test(pin)) return true;
+
+  // Sequential ascending (1234, 12345, 123456, 3456, etc.)
+  const digits = pin.split("").map(Number);
+  let allAsc = true;
+  let allDesc = true;
+  for (let i = 1; i < digits.length; i++) {
+    if (digits[i] !== digits[i - 1] + 1) allAsc = false;
+    if (digits[i] !== digits[i - 1] - 1) allDesc = false;
+  }
+  if (allAsc || allDesc) return true;
+
+  return false;
+}
