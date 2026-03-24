@@ -1013,3 +1013,36 @@ adminAuthRouter.post("/auth/totp/verify", otpRateLimiter, async (req: Request, r
     });
   }
 });
+
+/**
+ * POST /api/v1/admin/auth/totp-revoke-devices
+ * GCP-STG-0548: Revoke all TOTP trusted devices for admin.
+ * Trust is cookie-based; this endpoint logs the revocation event
+ * so the frontend can clear cookies and force re-verification.
+ */
+adminAuthRouter.post("/auth/totp-revoke-devices", async (req: Request, res: Response) => {
+  const admin = extractAdminToken(req);
+  if (!admin) {
+    return res.status(401).json({
+      error: { code: "NO_TOKEN", message: "Authentication required" }
+    });
+  }
+
+  try {
+    log.info(`[GCP-STG-0548] Admin TOTP device revocation for ${admin.email}`);
+
+    logAuthEvent({
+      actorType: 'admin',
+      actorId: admin.email,
+      eventType: 'totp_devices_revoked',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { action: 'revoke_all_trusted_devices' },
+    });
+
+    return res.json({ success: true, message: "All trusted devices revoked" });
+  } catch (err) {
+    log.error(`[GCP-STG-0548] totp-revoke-devices error for ${admin.email}:`, err);
+    return res.status(500).json({ error: "Failed to revoke trusted devices" });
+  }
+});

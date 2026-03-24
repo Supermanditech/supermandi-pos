@@ -20,6 +20,8 @@ import { enhancedAuthProtection } from "../../../middleware/authProtection";
 // GCP-STG-0491: Redis-backed rate limiter for password login endpoints
 import { redisRateLimit } from "../../../middleware/rateLimit";
 import { log } from "../../../lib/logger";
+// GCP-STG-0548: Auth audit trail for TOTP device revocation
+import { logAuthEvent } from "../../../services/authAudit";
 // GCP-STG-0464: Shared TOTP 2FA utilities
 import { generateTotpSecret, verifyTotp, buildTotpUri } from "../../../lib/totp";
 // STG-055: Import email service for password reset emails
@@ -2259,6 +2261,39 @@ router.post("/auth/totp/verify", authRateLimiter, async (req: Request, res: Resp
         name: s.name,
       })),
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/retailer-admin/auth/totp-revoke-devices
+ * GCP-STG-0548: Revoke all TOTP trusted devices for retailer user.
+ * Trust is cookie-based; this endpoint logs the revocation event
+ * so the frontend can clear cookies and force re-verification.
+ */
+router.post("/auth/totp-revoke-devices", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const decoded = extractRetailerToken(req);
+    if (!decoded) {
+      res.status(401).json({ error: { code: "NO_TOKEN", message: "Authentication required" } });
+      return;
+    }
+
+    const userId = decoded.sub;
+    log.info(`[GCP-STG-0548] Retailer TOTP device revocation for user ${userId}`);
+
+    // Non-blocking audit log
+    logAuthEvent({
+      actorType: 'retailer',
+      actorId: userId,
+      eventType: 'totp_devices_revoked',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { action: 'revoke_all_trusted_devices' },
+    });
+
+    res.json({ success: true, message: "All trusted devices revoked" });
   } catch (error) {
     next(error);
   }

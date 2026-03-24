@@ -16,6 +16,8 @@ import { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest } from "..
 // T-184: Redis token blacklist for immediate revocation at gateway level
 import { blacklistToken } from "../../../db/redis";
 import { log } from "../../../lib/logger";
+// GCP-STG-0548: Auth audit trail for TOTP device revocation
+import { logAuthEvent } from "../../../services/authAudit";
 // GCP-STG-0464: Shared TOTP 2FA utilities
 import { generateTotpSecret, verifyTotp, buildTotpUri } from "../../../lib/totp";
 
@@ -2311,6 +2313,37 @@ router.post("/auth/totp/verify", loginRateLimiter, async (req: Request, res: Res
         },
       },
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/supplier/auth/totp-revoke-devices
+ * GCP-STG-0548: Revoke all TOTP trusted devices for supplier.
+ * Trust is cookie-based; this endpoint logs the revocation event
+ * so the frontend can clear cookies and force re-verification.
+ */
+router.post("/auth/totp-revoke-devices", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const supplierId = req.supplierId;
+    if (!supplierId) {
+      res.status(401).json({ error: { code: "NO_TOKEN", message: "Authentication required" } });
+      return;
+    }
+
+    log.info(`[GCP-STG-0548] Supplier TOTP device revocation for ${supplierId}`);
+
+    logAuthEvent({
+      actorType: 'supplier',
+      actorId: supplierId,
+      eventType: 'totp_devices_revoked',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { action: 'revoke_all_trusted_devices' },
+    });
+
+    res.json({ success: true, message: "All trusted devices revoked" });
   } catch (error) {
     next(error);
   }

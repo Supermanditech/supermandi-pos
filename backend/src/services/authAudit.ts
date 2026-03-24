@@ -14,7 +14,8 @@ export type AuthEventType =
   | 'device_enrolled'
   | 'device_revoked'
   | 'totp_enabled'
-  | 'totp_disabled';
+  | 'totp_disabled'
+  | 'totp_devices_revoked';
 
 export interface AuthEventParams {
   actorType: AuthActorType;
