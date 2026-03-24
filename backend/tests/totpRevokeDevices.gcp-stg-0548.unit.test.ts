@@ -1,107 +1,220 @@
 /**
  * GCP-STG-0548: TOTP revoke-devices endpoint tests
- * Behavioral: verifies route declarations exist in all 3 auth files
- * and that the endpoints follow the correct pattern (auth guard + logAuthEvent).
+ * Behavioral: supertest against mounted routers with mocked auth + logAuthEvent
  */
-import fs from "fs";
-import path from "path";
+import express, { Request, Response, NextFunction } from "express";
+import request from "supertest";
 
-describe("GCP-STG-0548: TOTP revoke-devices endpoints", () => {
-  const adminAuthPath = path.resolve(__dirname, "../src/routes/v1/admin/adminAuth.ts");
-  const retailerAuthPath = path.resolve(__dirname, "../src/routes/v1/retailer-admin/auth.ts");
-  const supplierAuthPath = path.resolve(__dirname, "../src/routes/v1/supplier/auth.ts");
+// Set required env vars before any imports
+process.env.JWT_SECRET = "test-secret-for-totp-revoke";
+process.env.NODE_ENV = "test";
 
-  let adminSrc: string;
-  let retailerSrc: string;
-  let supplierSrc: string;
+// Mock logAuthEvent before any router imports
+const mockLogAuthEvent = jest.fn();
+jest.mock("../src/services/authAudit", () => ({
+  logAuthEvent: (...args: unknown[]) => mockLogAuthEvent(...args),
+}));
 
-  beforeAll(() => {
-    adminSrc = fs.readFileSync(adminAuthPath, "utf-8");
-    retailerSrc = fs.readFileSync(retailerAuthPath, "utf-8");
-    supplierSrc = fs.readFileSync(supplierAuthPath, "utf-8");
+// Mock jsonwebtoken — controls extractAdminToken / extractRetailerToken
+const mockVerify = jest.fn();
+jest.mock("jsonwebtoken", () => ({
+  verify: (...args: unknown[]) => mockVerify(...args),
+  sign: jest.fn().mockReturnValue("mock-token"),
+  decode: jest.fn(),
+}));
+
+// Mock db client (some routers import getPool at module level)
+const mockQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 });
+jest.mock("../src/db/client", () => ({
+  getPool: () => ({ query: mockQuery, connect: jest.fn().mockResolvedValue({ query: mockQuery, release: jest.fn() }) }),
+}));
+
+// Mock Redis
+jest.mock("../src/db/redis", () => ({
+  cacheGet: jest.fn().mockResolvedValue(null),
+  cacheSet: jest.fn().mockResolvedValue(undefined),
+  getRedisClient: jest.fn().mockReturnValue(null),
+}));
+
+// Mock email service (adminAuth imports it)
+jest.mock("../src/services/emailService", () => ({
+  sendOtpEmail: jest.fn().mockResolvedValue({ sent: true }),
+  __esModule: true,
+}));
+
+// Mock TOTP lib
+jest.mock("../src/lib/totp", () => ({
+  generateTotpSecret: jest.fn(),
+  verifyTotpCode: jest.fn(),
+  generateBackupCodes: jest.fn(),
+}));
+
+// Supplier auth uses jwt.verify internally (same mock as above)
+// requireSupplierAuth is defined in the same auth.ts file, not a separate module
+
+// Import routers after all mocks
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { adminAuthRouter } = require("../src/routes/v1/admin/adminAuth");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { retailerAdminAuthRouter } = require("../src/routes/v1/retailer-admin/auth");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { supplierAuthRouter } = require("../src/routes/v1/supplier/auth");
+
+// Build Express apps
+const adminApp = express();
+adminApp.use(express.json());
+adminApp.use("/admin", adminAuthRouter);
+
+const retailerApp = express();
+retailerApp.use(express.json());
+retailerApp.use("/retailer-admin", retailerAdminAuthRouter);
+
+const supplierApp = express();
+supplierApp.use(express.json());
+supplierApp.use("/supplier", supplierAuthRouter);
+
+describe("GCP-STG-0548: TOTP revoke-devices — behavioral supertest", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockResolvedValue({ rows: [], rowCount: 0 });
   });
 
-  // --- Admin ---
-  describe("Admin portal", () => {
-    it("declares POST /auth/totp-revoke-devices route", () => {
-      expect(adminSrc).toContain('adminAuthRouter.post("/auth/totp-revoke-devices"');
+  // ======================= ADMIN =======================
+  describe("POST /admin/auth/totp-revoke-devices", () => {
+    it("returns 200 with success when admin is authenticated", async () => {
+      // Mock jwt.verify to return valid admin token
+      mockVerify.mockReturnValue({ email: "admin@supermandi.tech", role: "superadmin" });
+
+      const res = await request(adminApp)
+        .post("/admin/auth/totp-revoke-devices")
+        .set("Authorization", "Bearer valid-token");
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toContain("revoked");
     });
 
-    it("uses extractAdminToken for auth guard", () => {
-      const routeBlock = adminSrc.slice(adminSrc.indexOf('"/auth/totp-revoke-devices"'));
-      expect(routeBlock).toContain("extractAdminToken(req)");
+    it("returns 401 when no token provided", async () => {
+      mockVerify.mockImplementation(() => { throw new Error("invalid"); });
+
+      const res = await request(adminApp)
+        .post("/admin/auth/totp-revoke-devices");
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe("NO_TOKEN");
     });
 
-    it("returns 401 when no token", () => {
-      const routeBlock = adminSrc.slice(adminSrc.indexOf('"/auth/totp-revoke-devices"'));
-      expect(routeBlock).toContain("401");
-      expect(routeBlock).toContain("NO_TOKEN");
-    });
+    it("calls logAuthEvent with totp_devices_revoked", async () => {
+      mockVerify.mockReturnValue({ email: "admin@supermandi.tech", role: "superadmin" });
 
-    it("logs totp_devices_revoked event", () => {
-      const routeBlock = adminSrc.slice(adminSrc.indexOf('"/auth/totp-revoke-devices"'));
-      expect(routeBlock).toContain("totp_devices_revoked");
-      expect(routeBlock).toContain("logAuthEvent");
-    });
+      await request(adminApp)
+        .post("/admin/auth/totp-revoke-devices")
+        .set("Authorization", "Bearer valid-token");
 
-    it("returns success:true response", () => {
-      const routeBlock = adminSrc.slice(adminSrc.indexOf('"/auth/totp-revoke-devices"'));
-      expect(routeBlock).toContain("success: true");
-    });
-  });
-
-  // --- Retailer ---
-  describe("Retailer portal", () => {
-    it("declares POST /auth/totp-revoke-devices route", () => {
-      expect(retailerSrc).toContain('router.post("/auth/totp-revoke-devices"');
-    });
-
-    it("uses extractRetailerToken for auth guard", () => {
-      const routeBlock = retailerSrc.slice(retailerSrc.indexOf('"/auth/totp-revoke-devices"'));
-      expect(routeBlock).toContain("extractRetailerToken(req)");
-    });
-
-    it("returns 401 when no token", () => {
-      const routeBlock = retailerSrc.slice(retailerSrc.indexOf('"/auth/totp-revoke-devices"'));
-      expect(routeBlock).toContain("401");
-      expect(routeBlock).toContain("NO_TOKEN");
-    });
-
-    it("logs totp_devices_revoked event for retailer", () => {
-      const routeBlock = retailerSrc.slice(retailerSrc.indexOf('"/auth/totp-revoke-devices"'));
-      expect(routeBlock).toContain("totp_devices_revoked");
-      expect(routeBlock).toContain("logAuthEvent");
-    });
-
-    it("imports logAuthEvent from authAudit", () => {
-      expect(retailerSrc).toContain('import { logAuthEvent } from "../../../services/authAudit"');
+      expect(mockLogAuthEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "totp_devices_revoked",
+          actorType: "admin",
+          actorId: "admin@supermandi.tech",
+        })
+      );
     });
   });
 
-  // --- Supplier ---
-  describe("Supplier portal", () => {
-    it("declares POST /auth/totp-revoke-devices route", () => {
-      expect(supplierSrc).toContain('router.post("/auth/totp-revoke-devices"');
+  // ======================= RETAILER =======================
+  describe("POST /retailer-admin/auth/totp-revoke-devices", () => {
+    it("returns 200 with success when retailer is authenticated", async () => {
+      mockVerify.mockReturnValue({ sub: "retailer-user-123", storeId: "store-1", role: "owner" });
+
+      const res = await request(retailerApp)
+        .post("/retailer-admin/auth/totp-revoke-devices")
+        .set("Authorization", "Bearer valid-token");
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toContain("revoked");
     });
 
-    it("uses requireSupplierAuth middleware", () => {
-      expect(supplierSrc).toMatch(/router\.post\("\/auth\/totp-revoke-devices",\s*requireSupplierAuth/);
+    it("returns 401 when no token provided", async () => {
+      mockVerify.mockImplementation(() => { throw new Error("invalid"); });
+
+      const res = await request(retailerApp)
+        .post("/retailer-admin/auth/totp-revoke-devices");
+
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe("NO_TOKEN");
     });
 
-    it("returns 401 when no supplierId", () => {
-      const routeBlock = supplierSrc.slice(supplierSrc.indexOf('"/auth/totp-revoke-devices"'));
-      expect(routeBlock).toContain("401");
-      expect(routeBlock).toContain("NO_TOKEN");
+    it("calls logAuthEvent with totp_devices_revoked for retailer", async () => {
+      mockVerify.mockReturnValue({ sub: "retailer-user-123", storeId: "store-1", role: "owner" });
+
+      await request(retailerApp)
+        .post("/retailer-admin/auth/totp-revoke-devices")
+        .set("Authorization", "Bearer valid-token");
+
+      expect(mockLogAuthEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "totp_devices_revoked",
+          actorType: "retailer",
+        })
+      );
+    });
+  });
+
+  // ======================= SUPPLIER =======================
+  describe("POST /supplier/auth/totp-revoke-devices", () => {
+    it("returns 200 with success when supplier is authenticated", async () => {
+      // Mock jwt.verify to return valid supplier JWT payload (actorType SUPPLIER required)
+      mockVerify.mockReturnValue({
+        sub: "supplier-123",
+        actorType: "SUPPLIER",
+        actorId: "supplier-123",
+        email: "supplier@test.com",
+        jti: "test-jti",
+        iat: Math.floor(Date.now() / 1000),
+      });
+      // Mock DB queries: token revocation check returns empty (not revoked), supplier lookup
+      mockQuery.mockResolvedValue({ rows: [], rowCount: 0 });
+
+      const res = await request(supplierApp)
+        .post("/supplier/auth/totp-revoke-devices")
+        .set("Authorization", "Bearer valid-supplier-token");
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toContain("revoked");
     });
 
-    it("logs totp_devices_revoked event for supplier", () => {
-      const routeBlock = supplierSrc.slice(supplierSrc.indexOf('"/auth/totp-revoke-devices"'));
-      expect(routeBlock).toContain("totp_devices_revoked");
-      expect(routeBlock).toContain("logAuthEvent");
+    it("returns 401 when supplier not authenticated", async () => {
+      mockVerify.mockImplementation(() => { throw new Error("invalid"); });
+
+      const res = await request(supplierApp)
+        .post("/supplier/auth/totp-revoke-devices");
+
+      expect(res.status).toBe(401);
     });
 
-    it("imports logAuthEvent from authAudit", () => {
-      expect(supplierSrc).toContain('import { logAuthEvent } from "../../../services/authAudit"');
+    it("calls logAuthEvent with totp_devices_revoked for supplier", async () => {
+      mockVerify.mockReturnValue({
+        sub: "supplier-123",
+        actorType: "SUPPLIER",
+        actorId: "supplier-123",
+        email: "supplier@test.com",
+        jti: "test-jti",
+        iat: Math.floor(Date.now() / 1000),
+      });
+      mockQuery.mockResolvedValue({ rows: [], rowCount: 0 });
+
+      await request(supplierApp)
+        .post("/supplier/auth/totp-revoke-devices")
+        .set("Authorization", "Bearer valid-supplier-token");
+
+      expect(mockLogAuthEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "totp_devices_revoked",
+          actorType: "supplier",
+        })
+      );
     });
   });
 });

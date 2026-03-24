@@ -1557,7 +1557,7 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
     }
 
     // PRA-079: Reject refresh tokens from other platforms (backward-compat: allow missing actorType)
-    if (decoded.actorType && decoded.actorType !== 'STORE') {
+    if ((decoded as Record<string, unknown>).actorType && (decoded as Record<string, unknown>).actorType !== 'STORE') {
       res.status(401).json({ error: "Invalid token for this endpoint" });
       return;
     }
