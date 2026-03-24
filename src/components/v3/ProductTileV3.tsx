@@ -55,6 +55,11 @@ type ProductTileV3Props = {
   cartQty: number;
   onPress: () => void;
   onLongPress?: () => void; // GCP-STG-0024: Long-press opens detail sheet
+  // GCP-STG-0552: BUY screen differentiation
+  context?: 'sell' | 'buy';       // default 'sell'
+  moq?: number;                   // minimum order quantity (BUY only)
+  marginPct?: number;             // profit margin percentage (BUY only)
+  supplierName?: string;          // supplier attribution (BUY only)
 };
 
 function getStockStatus(stock?: number): "in" | "low" | "out" | "unknown" {
@@ -64,13 +69,17 @@ function getStockStatus(stock?: number): "in" | "low" | "out" | "unknown" {
   return "in";
 }
 
-export default function ProductTileV3({ product, sellMode, cartQty, onPress, onLongPress }: ProductTileV3Props) {
+export default function ProductTileV3({ product, sellMode, cartQty, onPress, onLongPress, context = 'sell', moq, marginPct, supplierName }: ProductTileV3Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const isBuy = context === 'buy';
   const stockStatus = getStockStatus(product.stock);
-  const displayPrice = sellMode === "bulk" && product.priceTradeMinor
+  // GCP-STG-0552: BUY context shows PTR as primary price; SELL unchanged
+  const displayPrice = isBuy && product.priceTradeMinor
     ? product.priceTradeMinor
-    : product.priceMrpMinor;
+    : sellMode === "bulk" && product.priceTradeMinor
+      ? product.priceTradeMinor
+      : product.priceMrpMinor;
   const priceLabel = `₹${(displayPrice / 100).toFixed(displayPrice % 100 === 0 ? 0 : 2)}`;
   const emoji = getCategoryEmoji(product.category);
   // GCP-STG-0400: Margin indicator
@@ -108,6 +117,8 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress, onL
         )}
         {product.brand ? (
           <Text style={styles.brandLabel}>{product.brand}</Text>
+        ) : isBuy && supplierName ? (
+          <Text style={styles.brandLabel}>{supplierName}</Text>
         ) : null}
       </View>
 
@@ -118,7 +129,7 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress, onL
       ) : product.description ? (
         <Text style={styles.packSize} numberOfLines={1}>{product.description}</Text>
       ) : null}
-      <Text style={styles.price}>{priceLabel}</Text>
+      <Text style={[styles.price, isBuy && styles.priceBuy]}>{priceLabel}</Text>
 
       {/* GCP-STG-0400: Profit margin indicator */}
       {margin ? (
@@ -130,10 +141,18 @@ export default function ProductTileV3({ product, sellMode, cartQty, onPress, onL
         ]} testID="margin-indicator">{margin.label}</Text>
       ) : null}
 
-      {product.caseSize ? (
+      {/* GCP-STG-0552: BUY context shows PTR + margin%; SELL unchanged */}
+      {isBuy && marginPct != null ? (
+        <Text style={styles.caseInfo}>PTR · Margin {marginPct}%</Text>
+      ) : product.caseSize ? (
         <Text style={styles.caseInfo}>
           {sellMode === "bulk" ? "Trade" : "MRP"} · {product.caseSize}/{product.unit ?? "pcs"}
         </Text>
+      ) : null}
+
+      {/* GCP-STG-0552: MOQ badge for BUY context */}
+      {isBuy && moq != null && moq > 1 ? (
+        <Text style={styles.moqBadge}>MOQ {moq}</Text>
       ) : null}
 
       {/* V3-HARDEN-171: Sell-unit indicator for loose products */}
@@ -270,6 +289,18 @@ function createStyles(colors: ColorPalette) {
       fontWeight: "800",
       color: colors.primary,
       marginTop: 2,
+    },
+    // GCP-STG-0552: Green price for BUY context
+    priceBuy: {
+      color: colors.success,
+    },
+    // GCP-STG-0552: MOQ badge below price
+    moqBadge: {
+      fontSize: Math.max(getChipFontSize() - 3, 10),
+      fontWeight: "700" as const,
+      color: colors.warning,
+      textAlign: "center" as const,
+      marginTop: 1,
     },
     // V3-HARDEN-111: Responsive case info
     caseInfo: {

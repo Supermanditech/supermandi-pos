@@ -418,9 +418,13 @@ export default function BuyScreenV3() {
               unit: item.unit,
               caseSize: item.caseSize,
             }}
+            context="buy"
             sellMode="bulk"
             cartQty={orderQtys[item.id] ?? 0}
             onPress={() => setDetailProduct(item)}
+            moq={item.moq}
+            marginPct={item.mrpMinor > 0 ? Math.round((1 - item.ptrMinor / item.mrpMinor) * 100) : undefined}
+            supplierName={item.supplierName}
           />
         )}
         ListFooterComponent={
