@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1069,
+  "version": 1070,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -11139,8 +11139,8 @@
       "file": "backend/.env.cloudrun.example",
       "start_line": 1,
       "end_line": 122,
-      "checksum": "ab7a320bbdcc2b59",
-      "description": "Comprehensive Cloud Run env var parity reference: REQUIRED vs RECOMMENDED vs OPTIONAL categories with all 80+ env vars",
+      "checksum": "7a11c6a8fb4005c3",
+      "description": "Comprehensive Cloud Run env var parity reference: REQUIRED vs RECOMMENDED vs OPTIONAL categories with all 80+ env vars [UPDATED by GCP-STG-0603: added CORS production domain comments]",
       "test_file": "backend/.env.cloudrun.example",
       "depends_on": null,
       "migration": null,
@@ -28983,8 +28983,8 @@
     {
       "ticket": "GCP-STG-0585",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 652,
-      "end_line": 652,
+      "start_line": 658,
+      "end_line": 658,
       "checksum": "c9676a2f07665dff",
       "description": "JWT_SECRET_PREVIOUS + INVOICE_SIGNING_KEY added to --set-secrets (updated by GCP-STG-0591)",
       "test_file": ".github/workflows/deploy.yml",
@@ -29015,13 +29015,14 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:57:48.015Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-24T21:32:29.328Z"
     },
     {
       "ticket": "GCP-STG-0591",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 652,
-      "end_line": 652,
+      "start_line": 658,
+      "end_line": 658,
       "checksum": "c9676a2f07665dff",
       "description": "INVOICE_SIGNING_KEY added to --set-secrets for invoice PDF integrity",
       "test_file": ".github/workflows/deploy.yml",
@@ -29052,13 +29053,14 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:00:49.965Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-24T21:32:29.333Z"
     },
     {
       "ticket": "GCP-STG-0592",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 651,
-      "end_line": 651,
+      "start_line": 657,
+      "end_line": 657,
       "checksum": "13fbb04c96665c3e",
       "description": "Add DB_POOL_MAX=10 and MAX_COMMISSION_PERCENT=30 to backend --set-env-vars",
       "test_file": "scripts/gates/config-parity.sh",
@@ -29103,13 +29105,14 @@
         "test_guard": "Verified via config-parity gate",
         "single_commit": "One ticket one commit",
         "ticket_parked": "Parked after commit"
-      }
+      },
+      "line_shifted_at": "2026-03-24T21:32:29.336Z"
     },
     {
       "ticket": "GCP-STG-0592",
       "file": "backend/.env.cloudrun.example",
-      "start_line": 122,
-      "end_line": 126,
+      "start_line": 125,
+      "end_line": 129,
       "checksum": "1d99ae77a7b112a2",
       "description": "Document DB_POOL_MAX=10 with pool math and MAX_COMMISSION_PERCENT=30",
       "test_file": "scripts/gates/config-parity.sh",
@@ -29142,7 +29145,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:04:01.599Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-24T21:32:29.337Z"
     },
     {
       "ticket": "GCP-STG-0595",
@@ -29407,8 +29411,8 @@
     {
       "ticket": "GCP-STG-0583",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 1001,
-      "end_line": 1004,
+      "start_line": 1007,
+      "end_line": 1010,
       "checksum": "683eedc46552c3c3",
       "description": "Post-deploy URL smoke gate step using cd-post-deploy-gate.sh in CD smoke-test job",
       "test_file": "scripts/gates/cd-post-deploy-gate.sh",
@@ -29454,7 +29458,8 @@
         "test_guard": "CD-only change, verified",
         "single_commit": "CD-only change, verified",
         "ticket_parked": "CD-only change, verified"
-      }
+      },
+      "line_shifted_at": "2026-03-24T21:32:29.345Z"
     },
     {
       "ticket": "GCP-STG-0589",
@@ -29637,6 +29642,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:30:41.944Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0603",
+      "file": ".github/workflows/deploy.yml",
+      "start_line": 629,
+      "end_line": 635,
+      "checksum": "c7e608b2b7e79b94",
+      "description": "CORS production domain documentation comments in deploy.yml and .env.cloudrun.example",
+      "test_file": "backend/.env.cloudrun.example",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T21:32:04.617Z",
       "status": "ACTIVE"
     }
   ],

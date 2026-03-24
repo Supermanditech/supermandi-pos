@@ -626,6 +626,12 @@ jobs:
       # services — must explicitly clear with --startup-probe="" to remove
       # the probe set by STAGE-018. Without a probe, gcloud routes traffic
       # immediately and --deploy-health-check (default) uses TCP readiness.
+      # GCP-STG-0603: CORS domain configuration
+      # STAGING:    ALLOWED_ORIGINS=https://staging.supermandi.tech,https://www.staging.supermandi.tech
+      #             CORS_ALLOWED_ORIGINS=https://staging.supermandi.tech,https://www.staging.supermandi.tech
+      # PRODUCTION: Change to supermandi.tech,www.supermandi.tech before promoting:
+      #             ALLOWED_ORIGINS=https://supermandi.tech,https://www.supermandi.tech
+      #             CORS_ALLOWED_ORIGINS=https://supermandi.tech,https://www.supermandi.tech
       - name: Deploy main-backend to staging
         id: deploy-main-backend
         run: |
