@@ -66,7 +66,6 @@ function buildBillRef(saleId?: string): string {
 
 // ============================================================================
 // LEGACY FUNCTION - Used by SALE_CREATED for backward compatibility
-// TODO: Migrate SALE_CREATED to catalog schema in MT-6
 // ============================================================================
 async function ensureProductByBarcode(
   client: PoolClient,
@@ -420,7 +419,6 @@ async function incrementCatalogStock(
 
 // ============================================================================
 // LEGACY FUNCTIONS - Used by SALE_CREATED for backward compatibility
-// TODO: Migrate SALE_CREATED to catalog schema in MT-6
 // ============================================================================
 
 async function ensureRetailerVariant(

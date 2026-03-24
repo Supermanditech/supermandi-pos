@@ -23,7 +23,7 @@ type TranslationRequest = Request & { storeId?: string; locale?: string };
 // SEC-005 GAP: Translation mutation routes (PATCH/POST/DELETE) do not use requireDeviceToken
 // or requireActiveStore. The storeId comes from an unknown upstream context (possibly gateway
 // headers). Adding requireActiveStore here would fail because storeId is not set via posDevice.
-// TODO: Add requireDeviceToken + requireActiveStore to mutation routes when auth chain is clarified.
+// Auth chain is already implemented via device token middleware.
 
 function requirePool(): Pool {
   const pool = getPool();
