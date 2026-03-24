@@ -432,6 +432,12 @@ export default function BuyScreenV3() {
             sellMode="bulk"
             cartQty={orderQtys[item.id] ?? 0}
             onPress={() => setDetailProduct(item)}
+            // GCP-STG-0557: Long-press quick-adds product with MOQ quantity
+            onLongPress={() => {
+              const moq = item.moq || 1;
+              handleQtyChange(item.id, moq);
+              showToast(`${item.name} ×${moq} added`);
+            }}
             moq={item.moq}
             marginPct={item.mrpMinor > 0 ? Math.round((1 - item.ptrMinor / item.mrpMinor) * 100) : undefined}
             supplierName={item.supplierName}

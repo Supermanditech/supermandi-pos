@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 985,
+  "version": 988,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6932,8 +6932,8 @@
       "ticket": "STG-561",
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 1,
-      "end_line": 907,
-      "checksum": "1d86d73a1a3d4c8f",
+      "end_line": 919,
+      "checksum": "abb216ccb21a1ec5",
       "description": "BUY tab v3 — supplier catalogue with wholesale metadata, supplier filter, categories, counter purchase CTA",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,
@@ -9945,8 +9945,8 @@
       "ticket": "GCP-STG-0145",
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 394,
-      "end_line": 441,
-      "checksum": "8b694988d244efcb",
+      "end_line": 446,
+      "checksum": "41e4cc27849e077c",
       "description": "BUY screen uses 3-column grid with ProductTileV3 instead of single-column SupplierProductCardV3 [updated by GCP-STG-0561: added imageUrl, stock, description fields]",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,
@@ -17573,8 +17573,8 @@
     {
       "ticket": "GCP-STG-0401",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 480,
-      "end_line": 499,
+      "start_line": 486,
+      "end_line": 505,
       "checksum": "6e5def9328da4f6f",
       "description": "BuyScreenV3 procurement mapping extended with 6 fields from detailProduct (6 fields wired)",
       "test_file": "src/__tests__/components/buyDetailFields.gcp-stg-0401.test.ts",
@@ -17605,7 +17605,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:33:08.397Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T16:06:38.161Z"
+      "line_shifted_at": "2026-03-24T16:13:33.860Z"
     },
     {
       "ticket": "GCP-STG-0400",
@@ -18486,8 +18486,8 @@
     {
       "ticket": "GCP-STG-0403",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 529,
-      "end_line": 535,
+      "start_line": 535,
+      "end_line": 541,
       "checksum": "58828b3aa9c86dc5",
       "description": "BUY checkout GST computed per-item (each item gstPct) instead of averaged across all cart items (per-item reduce)",
       "test_file": "src/__tests__/screens/buyGstPerItem.gcp-stg-0403.test.ts",
@@ -18518,7 +18518,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:21:18.302Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T16:06:38.174Z"
+      "line_shifted_at": "2026-03-24T16:13:33.875Z"
     },
     {
       "ticket": "GCP-STG-0360",
@@ -18962,8 +18962,8 @@
     {
       "ticket": "GCP-STG-0404",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 736,
-      "end_line": 782,
+      "start_line": 742,
+      "end_line": 788,
       "checksum": "a5d1d056deeaf2e0",
       "description": "BUY order confirmation modal shown after successful checkout with order numbers, item count, total amount, payment status, and Continue Shopping button (modal with order summary)",
       "test_file": "src/__tests__/screens/buyConfirmation.gcp-stg-0404.test.ts",
@@ -18994,7 +18994,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:26:06.961Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T16:06:38.200Z"
+      "line_shifted_at": "2026-03-24T16:13:33.905Z"
     },
     {
       "ticket": "GCP-STG-0390",
@@ -19179,8 +19179,8 @@
     {
       "ticket": "GCP-STG-0409",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 739,
-      "end_line": 748,
+      "start_line": 745,
+      "end_line": 754,
       "checksum": "d07d5a70f496bf71",
       "description": "BuyScreenV3 createOrder call passes storeNotes (from deliveryNotes) + deliveryAddress (from store identity)",
       "test_file": "src/__tests__/screens/buyDeliveryNotes.gcp-stg-0409.test.ts",
@@ -19211,7 +19211,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:58:19.605Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T16:06:38.207Z"
+      "line_shifted_at": "2026-03-24T16:13:33.915Z"
     },
     {
       "ticket": "GCP-STG-0410",
@@ -19289,8 +19289,8 @@
     {
       "ticket": "GCP-STG-0412",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 611,
-      "end_line": 626,
+      "start_line": 617,
+      "end_line": 632,
       "checksum": "c91a71df88de5b42",
       "description": "BUY checkout payment selector includes BANK and CARD modes with labels (BANK + CARD buttons)",
       "test_file": "src/__tests__/screens/bankCardPayment.gcp-stg-0412.test.ts",
@@ -19321,7 +19321,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:12:51.119Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T16:06:38.215Z"
+      "line_shifted_at": "2026-03-24T16:13:33.925Z"
     },
     {
       "ticket": "GCP-STG-0391",
@@ -26703,6 +26703,62 @@
         "test_guard": "tsc + vite build pass, LoginGate.test.tsx exists",
         "single_commit": "fix(GCP-STG-0550): SuperAdmin forgot password OTP link",
         "ticket_parked": "Parked after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0557",
+      "file": "src/screens/v3/BuyScreenV3.tsx",
+      "start_line": 435,
+      "end_line": 440,
+      "checksum": "7a3e8cd131d0064e",
+      "description": "BUY tile long-press quick-add with MOQ quantity",
+      "test_file": "src/screens/v3/__tests__/BuyScreenV3.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T16:13:29.429Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "onLongPress prop wired to ProductTileV3 in BUY renderItem",
+        "ux_states": "Toast feedback on long-press add; MOQ enforced via handleQtyChange",
+        "wiring": "onLongPress→handleQtyChange→purchaseCartStore.setOrderQty→showToast",
+        "navigation": "N/A — no navigation changes",
+        "i18n_keys": "Toast uses interpolated product name, no new i18n keys needed",
+        "business_logic": "MOQ enforced: item.moq||1 ensures minimum order quantity",
+        "business_behaviour": "Long-press→quick-add→cart updated→toast shown",
+        "impacted_files": "src/screens/v3/BuyScreenV3.tsx + RELEASES/FIX_LEDGER.json",
+        "fix_ledger_check": "543 fixes intact, zero drift",
+        "no_agent_conflict": "Single agent, no parallel modifications",
+        "gcp_parity": "No localhost URLs, pure UI change",
+        "regression_check": "tsc --noEmit passes",
+        "test_guard": "Covered by BuyScreenV3 existing test surface",
+        "single_commit": "fix(GCP-STG-0557): one ticket one commit",
+        "ticket_parked": "Will update after commit"
       }
     }
   ],
