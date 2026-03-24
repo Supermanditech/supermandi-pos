@@ -17202,4 +17202,724 @@ pos-tests:
 
 ---
 
-<!-- next ticket: GCP-STG-0655 -->
+## GCP-STG-0655 — HIGH: Payment amount server-side validation (HIGH)
+
+**Ticket ID**: GCP-STG-0655
+**Severity**: P1 HIGH
+**Platforms**: Backend
+**Layers**: L4 Data Integrity, L10 Business
+**Source**: Payment Safety Audit
+
+**Problem**: Backend createSale in sales.ts trusts the frontend-supplied total amount. A malicious or buggy client could send a lower amount, resulting in revenue loss.
+
+**Fix**: Backend MUST re-calculate total from cart line items (qty × price) server-side before persisting the sale. Reject if client total diverges from server total by more than ₹0.01.
+
+**12-Layer Verification**: L4 Data Integrity ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0656 — HIGH: Double-payment prevention via idempotency key (HIGH)
+
+**Ticket ID**: GCP-STG-0656
+**Severity**: P1 HIGH
+**Platforms**: Backend, POS
+**Layers**: L4 Data Integrity, L10 Business
+**Source**: Payment Safety Audit
+
+**Problem**: UPI payment initiation has no idempotency guard. Network retries or user double-taps can trigger duplicate payment requests to Razorpay.
+
+**Fix**: Add idempotency_key column to payment_intents table. POS generates a UUID per payment attempt; backend enforces uniqueness and returns existing result on duplicate key.
+
+**12-Layer Verification**: L4 Data Integrity ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0657 — MED: Refund time limit configuration (MED)
+
+**Ticket ID**: GCP-STG-0657
+**Severity**: P2 MED
+**Platforms**: Backend
+**Layers**: L10 Business
+**Source**: Payment Safety Audit
+
+**Problem**: Void/refund operations have no time limit. A refund can be issued weeks after the original sale, creating accounting and reconciliation issues.
+
+**Fix**: Add configurable max days for void/refund (default 7 days) via ENV var REFUND_MAX_DAYS. Backend rejects refund requests beyond the configured window.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0658 — MED: Payment reconciliation endpoint (MED)
+
+**Ticket ID**: GCP-STG-0658
+**Severity**: P2 MED
+**Platforms**: Backend, Retailer Admin
+**Layers**: L10 Business, L7 Monitoring
+**Source**: Payment Safety Audit
+
+**Problem**: No mechanism to compare Razorpay settlements against internal payment records. Discrepancies go undetected until manual accounting review.
+
+**Fix**: Create a reconciliation endpoint that fetches Razorpay settlement data and diffs against internal payment records, flagging mismatches for review.
+
+**12-Layer Verification**: L10 Business ✅, L7 Monitoring ✅
+
+---
+
+## GCP-STG-0659 — MED: UPI payment failure retry with timeout handling (MED)
+
+**Ticket ID**: GCP-STG-0659
+**Severity**: P2 MED
+**Platforms**: POS, Backend
+**Layers**: L6 Resilience, L10 Business
+**Source**: Payment Safety Audit
+
+**Problem**: UPI payment timeouts leave the user stuck with no recovery path. The POS shows a spinner indefinitely on slow networks.
+
+**Fix**: Implement 30s timeout on UPI payment initiation. On timeout, auto-retry once with the same idempotency key. If retry also fails, show clear error with manual retry button.
+
+**12-Layer Verification**: L6 Resilience ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0660 — LOW: Daily settlement summary auto-generation (LOW)
+
+**Ticket ID**: GCP-STG-0660
+**Severity**: P3 LOW
+**Platforms**: Backend
+**Layers**: L7 Monitoring, L10 Business
+**Source**: Payment Safety Audit
+
+**Problem**: Store owners must manually tally daily payments. No automated daily settlement summary exists.
+
+**Fix**: Add Cloud Scheduler job to generate daily settlement summary (total sales, payment breakdown by method, refunds) and store in a settlements table.
+
+**12-Layer Verification**: L7 Monitoring ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0661 — HIGH: BNPL credit limit enforcement at checkout (HIGH)
+
+**Ticket ID**: GCP-STG-0661
+**Severity**: P1 HIGH
+**Platforms**: Backend
+**Layers**: L4 Data Integrity, L10 Business
+**Source**: B2B Wholesale Audit
+
+**Problem**: Buy Now Pay Later checkout does not enforce the retailer's remaining credit line. Orders exceeding the credit limit can be placed, creating unrecoverable debt risk.
+
+**Fix**: At BUY checkout, backend queries remaining credit (credit_limit - outstanding_balance) and blocks the order if total exceeds available credit. Return clear error with remaining balance.
+
+**12-Layer Verification**: L4 Data Integrity ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0662 — MED: Debit note / credit note generation for goods returns (MED)
+
+**Ticket ID**: GCP-STG-0662
+**Severity**: P2 MED
+**Platforms**: Backend, Retailer Admin, Supplier Portal
+**Layers**: L10 Business
+**Source**: B2B Wholesale Audit
+
+**Problem**: Goods returns between retailer and supplier have no GST-compliant debit/credit note generation. This violates Indian GST invoicing requirements.
+
+**Fix**: Implement debit note (retailer→supplier) and credit note (supplier→retailer) generation on goods return, with proper GST fields (original invoice ref, HSN, tax breakdown).
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0663 — MED: Purchase order amendment flow (MED)
+
+**Ticket ID**: GCP-STG-0663
+**Severity**: P2 MED
+**Platforms**: Backend, Retailer Admin
+**Layers**: L10 Business
+**Source**: B2B Wholesale Audit
+
+**Problem**: Once a purchase order is submitted, quantities and items cannot be edited. Retailers must cancel and recreate POs for any change, losing the audit trail.
+
+**Fix**: Allow PO amendment (edit qty/items) while status is SUBMITTED (before dispatch). Track amendment history with version numbers and timestamps.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0664 — MED: Goods return / rejection flow with reason codes (MED)
+
+**Ticket ID**: GCP-STG-0664
+**Severity**: P2 MED
+**Platforms**: Backend, Retailer Admin, Supplier Portal
+**Layers**: L10 Business
+**Source**: B2B Wholesale Audit
+
+**Problem**: No structured flow for returning damaged or incorrect goods to the supplier. Returns are handled informally outside the system.
+
+**Fix**: Implement goods return flow: retailer initiates return with reason code (damaged, expired, wrong item, quality issue), supplier acknowledges, system generates debit note.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0665 — MED: Supplier SLA monitoring and alerting (MED)
+
+**Ticket ID**: GCP-STG-0665
+**Severity**: P2 MED
+**Platforms**: Backend, Retailer Admin
+**Layers**: L7 Monitoring, L10 Business
+**Source**: B2B Wholesale Audit
+
+**Problem**: No visibility into supplier delivery performance. Promised delivery dates are not tracked against actual delivery, so SLA breaches go unnoticed.
+
+**Fix**: Track promised vs actual delivery days per supplier per order. Calculate SLA compliance rate. Alert retailer when a supplier's compliance drops below configurable threshold (default 80%).
+
+**12-Layer Verification**: L7 Monitoring ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0666 — LOW: TDS deduction on supplier payouts (LOW)
+
+**Ticket ID**: GCP-STG-0666
+**Severity**: P3 LOW
+**Platforms**: Backend
+**Layers**: L10 Business
+**Source**: B2B Wholesale Audit
+
+**Problem**: Section 194Q requires TDS deduction on B2B purchases exceeding ₹50L annual threshold. No automated TDS calculation exists.
+
+**Fix**: Track cumulative annual purchase value per supplier. When threshold is crossed, auto-calculate TDS at applicable rate and flag payout for deduction.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0667 — LOW: GST TCS applicability check (LOW)
+
+**Ticket ID**: GCP-STG-0667
+**Severity**: P3 LOW
+**Platforms**: Backend
+**Layers**: L10 Business
+**Source**: B2B Wholesale Audit
+
+**Problem**: Section 52 of CGST Act requires e-commerce operators to collect TCS. Applicability to SuperMandi's B2B model needs determination and implementation if required.
+
+**Fix**: Implement GST TCS applicability check based on operator classification. If applicable, auto-calculate TCS on net taxable supplies and include in settlement reports.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0668 — MED: Shift close / day-end cash reconciliation on POS (MED)
+
+**Ticket ID**: GCP-STG-0668
+**Severity**: P2 MED
+**Platforms**: POS
+**Layers**: L10 Business
+**Source**: Kirana UX Audit
+
+**Problem**: No shift close or day-end reconciliation feature on POS. Cashiers cannot reconcile physical cash against system totals at end of shift.
+
+**Fix**: Add shift close flow: cashier enters counted cash amount, system compares against expected cash (cash sales - cash refunds), shows over/short amount, saves reconciliation record.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0669 — MED: Z-report daily tax totals on POS (MED)
+
+**Ticket ID**: GCP-STG-0669
+**Severity**: P2 MED
+**Platforms**: POS
+**Layers**: L10 Business
+**Source**: Kirana UX Audit
+
+**Problem**: Some Indian states require daily tax total reports (Z-report). No Z-report generation exists on POS.
+
+**Fix**: Generate Z-report at day-end: total gross sales, net sales, tax collected (CGST + SGST breakdown), number of transactions, payment method breakdown. Support print and digital export.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0670 — MED: Printer error recovery with retry UI (MED)
+
+**Ticket ID**: GCP-STG-0670
+**Severity**: P2 MED
+**Platforms**: POS
+**Layers**: L6 Resilience
+**Source**: Kirana UX Audit
+
+**Problem**: Printer errors (paper jam, offline, Bluetooth disconnect) cause silent failures. The cashier doesn't know the receipt didn't print.
+
+**Fix**: Detect printer errors (timeout, connection loss, status byte check). Show clear error UI with retry button. Queue failed prints for batch retry when printer recovers.
+
+**12-Layer Verification**: L6 Resilience ✅
+
+---
+
+## GCP-STG-0671 — LOW: Cash drawer kick command via ESC/POS (LOW)
+
+**Ticket ID**: GCP-STG-0671
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: L10 Business
+**Source**: Kirana UX Audit
+
+**Problem**: POS cannot send cash drawer open command. Cashiers must manually open the drawer for every cash transaction.
+
+**Fix**: Send ESC/POS cash drawer kick command (ESC p 0/1) after each cash sale completion. Add manual "Open Drawer" button in POS settings for non-sale access.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0672 — LOW: Quick re-order from last week's purchases (LOW)
+
+**Ticket ID**: GCP-STG-0672
+**Severity**: P3 LOW
+**Platforms**: Retailer Admin
+**Layers**: L10 Business
+**Source**: Kirana UX Audit
+
+**Problem**: Kirana owners reorder the same products weekly. Currently they must manually search and add each item to a new purchase order.
+
+**Fix**: Add one-tap "Repeat Last Order" feature that pre-populates a new PO with last week's purchased items and quantities. Allow editing before submission.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0673 — LOW: Low-battery mode for POS (LOW)
+
+**Ticket ID**: GCP-STG-0673
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: L6 Resilience
+**Source**: Kirana UX Audit
+
+**Problem**: POS app continues full sync and animations on low battery, draining the device faster and potentially causing mid-transaction shutdowns.
+
+**Fix**: Detect battery level below 15%. Reduce sync frequency to manual-only, disable animations, show battery warning banner. Resume normal operation above 20%.
+
+**12-Layer Verification**: L6 Resilience ✅
+
+---
+
+## GCP-STG-0674 — LOW: Weighing scale Bluetooth integration (LOW)
+
+**Ticket ID**: GCP-STG-0674
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: L10 Business
+**Source**: Kirana UX Audit
+
+**Problem**: Loose products (dal, rice, vegetables) require manual weight entry. This is slow and error-prone at the billing counter.
+
+**Fix**: Integrate Bluetooth weighing scale via react-native-ble-plx. Auto-populate weight field when a stable reading is detected. Support common scale protocols (serial weight output).
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0675 — LOW: Customer-facing display support (LOW)
+
+**Ticket ID**: GCP-STG-0675
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: L10 Business
+**Source**: Kirana UX Audit
+
+**Problem**: Customers cannot see itemized billing during checkout. This reduces transparency and trust, especially for price-conscious kirana shoppers.
+
+**Fix**: Support customer-facing display (pole display via ESC/POS or second screen via Presentation API). Show running total, last scanned item, and final amount.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0676 — MED: Distributed tracing with OpenTelemetry (MED)
+
+**Ticket ID**: GCP-STG-0676
+**Severity**: P2 MED
+**Platforms**: Backend
+**Layers**: L7 Monitoring
+**Source**: Monitoring Audit
+
+**Problem**: No distributed tracing across microservices. Debugging cross-service request failures requires manual log correlation across 10 services.
+
+**Fix**: Integrate OpenTelemetry SDK with Cloud Trace exporter. Propagate trace context (W3C traceparent header) across all inter-service HTTP calls. Enable trace sampling at 10%.
+
+**12-Layer Verification**: L7 Monitoring ✅
+
+---
+
+## GCP-STG-0677 — MED: Slow query detection and alerting (MED)
+
+**Ticket ID**: GCP-STG-0677
+**Severity**: P2 MED
+**Platforms**: Backend
+**Layers**: L7 Monitoring
+**Source**: Monitoring Audit
+
+**Problem**: Slow database queries degrade API response times silently. No automated detection or alerting exists for queries exceeding acceptable thresholds.
+
+**Fix**: Log all queries exceeding 1s with full query text and parameters. Alert (Cloud Monitoring) on queries exceeding 5s. Include query plan analysis in logs for queries > 3s.
+
+**12-Layer Verification**: L7 Monitoring ✅
+
+---
+
+## GCP-STG-0678 — MED: Request duration P95/P99 alerting (MED)
+
+**Ticket ID**: GCP-STG-0678
+**Severity**: P2 MED
+**Platforms**: Backend
+**Layers**: L7 Monitoring
+**Source**: Monitoring Audit
+
+**Problem**: Cloud Run latency metrics exist but no alerting is configured. P95/P99 latency spikes go unnoticed until users complain.
+
+**Fix**: Configure Cloud Monitoring alert policies for Cloud Run request latency: warn at P95 > 2s, critical at P99 > 5s. Route alerts to ops notification channel.
+
+**12-Layer Verification**: L7 Monitoring ✅
+
+---
+
+## GCP-STG-0679 — LOW: Memory leak detection for Cloud Run instances (LOW)
+
+**Ticket ID**: GCP-STG-0679
+**Severity**: P3 LOW
+**Platforms**: Backend
+**Layers**: L7 Monitoring
+**Source**: Monitoring Audit
+
+**Problem**: Node.js memory leaks cause gradual instance degradation. Cloud Run auto-scales new instances but leaked instances consume resources until OOM-killed.
+
+**Fix**: Track Cloud Run instance memory utilization over time. Alert when memory usage grows > 20% over baseline within 1 hour. Log heap snapshots on memory warning threshold.
+
+**12-Layer Verification**: L7 Monitoring ✅
+
+---
+
+## GCP-STG-0680 — LOW: Cron job failure alerting (LOW)
+
+**Ticket ID**: GCP-STG-0680
+**Severity**: P3 LOW
+**Platforms**: Backend
+**Layers**: L7 Monitoring
+**Source**: Monitoring Audit
+
+**Problem**: Cloud Scheduler cron jobs (uptime-probe, zrp-scheduled) can fail silently. No alerting exists for missed or failed executions.
+
+**Fix**: Configure Cloud Monitoring uptime checks on cron job endpoints. Alert on two consecutive failures. Log execution status and duration for each cron run.
+
+**12-Layer Verification**: L7 Monitoring ✅
+
+---
+
+## GCP-STG-0681 — HIGH: PII encryption at rest for sensitive fields (HIGH)
+
+**Ticket ID**: GCP-STG-0681
+**Severity**: P1 HIGH
+**Platforms**: Backend
+**Layers**: L5 Security, L4 Data Integrity
+**Source**: Data Protection Audit
+
+**Problem**: Phone numbers, GSTIN, and bank account details are stored as plaintext in PostgreSQL. A database breach would expose all customer PII.
+
+**Fix**: Enable Cloud SQL encryption at rest (verify enabled). Additionally, implement column-level encryption for phone, GSTIN, and bank_account fields using AES-256-GCM with KMS-managed keys.
+
+**12-Layer Verification**: L5 Security ✅, L4 Data Integrity ✅
+
+---
+
+## GCP-STG-0682 — MED: Audit log retention policy with auto-archive (MED)
+
+**Ticket ID**: GCP-STG-0682
+**Severity**: P2 MED
+**Platforms**: Backend
+**Layers**: L4 Data Integrity
+**Source**: Data Protection Audit
+
+**Problem**: auth_events audit log table grows unbounded. Over time this degrades query performance and increases storage costs.
+
+**Fix**: Implement auto-archive for auth_events older than 90 days. Move archived records to a partitioned archive table or export to GCS as compressed JSON. Add Cloud Scheduler job for weekly archival.
+
+**12-Layer Verification**: L4 Data Integrity ✅
+
+---
+
+## GCP-STG-0683 — LOW: PostgreSQL vacuum/analyze scheduled maintenance (LOW)
+
+**Ticket ID**: GCP-STG-0683
+**Severity**: P3 LOW
+**Platforms**: Backend
+**Layers**: L7 Monitoring
+**Source**: Data Protection Audit
+
+**Problem**: Cloud SQL autovacuum may not be aggressive enough for high-write tables (sales, inventory_movements, auth_events). Table bloat can degrade query performance.
+
+**Fix**: Schedule weekly VACUUM ANALYZE on high-write tables via Cloud Scheduler + Cloud Function. Monitor dead tuple count and alert if autovacuum falls behind.
+
+**12-Layer Verification**: L7 Monitoring ✅
+
+---
+
+## GCP-STG-0684 — LOW: Backup restore verification test (LOW)
+
+**Ticket ID**: GCP-STG-0684
+**Severity**: P3 LOW
+**Platforms**: Backend
+**Layers**: L6 Resilience
+**Source**: Data Protection Audit
+
+**Problem**: Cloud SQL automated backups exist but have never been tested for restore. Untested backups provide false confidence in disaster recovery.
+
+**Fix**: Verify staging backup restores to a test Cloud SQL instance. Validate row counts on key tables match. Document restore procedure and time-to-recovery.
+
+**12-Layer Verification**: L6 Resilience ✅
+
+---
+
+## GCP-STG-0685 — MED: Per-store API rate limiting (MED)
+
+**Ticket ID**: GCP-STG-0685
+**Severity**: P2 MED
+**Platforms**: Backend
+**Layers**: L5 Security, L6 Resilience
+**Source**: API/Architecture Audit
+
+**Problem**: Current rate limiting is per-IP. One store with many devices can exhaust the rate limit, or a single misbehaving store can degrade service for all stores.
+
+**Fix**: Implement per-store rate limiting keyed by storeId from JWT. Set per-store limits (e.g., 1000 req/min) independent of global IP-based limits. Return 429 with Retry-After header.
+
+**12-Layer Verification**: L5 Security ✅, L6 Resilience ✅
+
+---
+
+## GCP-STG-0686 — MED: CDN configuration for static product images (MED)
+
+**Ticket ID**: GCP-STG-0686
+**Severity**: P2 MED
+**Platforms**: Backend
+**Layers**: L6 Resilience
+**Source**: API/Architecture Audit
+
+**Problem**: Product images served directly from GCS have high latency for users far from asia-south1 region. No CDN caching layer exists.
+
+**Fix**: Configure Cloud CDN in front of the GCS bucket serving product images. Set Cache-Control headers with 24h max-age. Implement cache invalidation on image update.
+
+**12-Layer Verification**: L6 Resilience ✅
+
+---
+
+## GCP-STG-0687 — LOW: API versioning strategy documentation (LOW)
+
+**Ticket ID**: GCP-STG-0687
+**Severity**: P3 LOW
+**Platforms**: Backend
+**Layers**: L10 Business
+**Source**: API/Architecture Audit
+
+**Problem**: All APIs are on v1 with no documented plan for v2 migration. Breaking changes risk disrupting POS clients still on older app versions.
+
+**Fix**: Document API versioning strategy: URL-based versioning (/v1/, /v2/), deprecation timeline (6-month sunset), backward compatibility rules, and migration path for POS app forced updates.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0688 — LOW: API response caching headers on product lists (LOW)
+
+**Ticket ID**: GCP-STG-0688
+**Severity**: P3 LOW
+**Platforms**: Backend
+**Layers**: L6 Resilience
+**Source**: API/Architecture Audit
+
+**Problem**: Product list endpoints return no Cache-Control headers. Every request hits the backend even when product data hasn't changed.
+
+**Fix**: Add Cache-Control headers on product list endpoints (max-age=300 for catalog, must-revalidate for inventory). Support ETag/If-None-Match for conditional requests.
+
+**12-Layer Verification**: L6 Resilience ✅
+
+---
+
+## GCP-STG-0689 — MED: Network partition test — POS offline 1 hour (MED)
+
+**Ticket ID**: GCP-STG-0689
+**Severity**: P2 MED
+**Platforms**: POS
+**Layers**: L6 Resilience
+**Source**: Testing Audit
+
+**Problem**: POS offline mode is implemented but not tested for extended disconnection periods. Sync recovery after 1+ hour offline may fail or lose transactions.
+
+**Fix**: Test scenario: POS goes offline → complete 20+ sales over 1 hour → reconnect → verify all sales sync successfully with correct timestamps and no duplicates.
+
+**12-Layer Verification**: L6 Resilience ✅
+
+---
+
+## GCP-STG-0690 — MED: Concurrent user test — 50 devices same store (MED)
+
+**Ticket ID**: GCP-STG-0690
+**Severity**: P2 MED
+**Platforms**: POS, Backend
+**Layers**: L6 Resilience, L4 Data Integrity
+**Source**: Testing Audit
+
+**Problem**: No load testing for concurrent POS usage within a single store. Stock decrements from 50 simultaneous sales may cause race conditions or negative stock.
+
+**Fix**: Simulate 50 concurrent POS devices in one store making simultaneous sales. Verify: no negative stock, no lost sales, correct inventory totals, response times < 2s at P95.
+
+**12-Layer Verification**: L6 Resilience ✅, L4 Data Integrity ✅
+
+---
+
+## GCP-STG-0691 — MED: Migration rollback test for all new migrations (MED)
+
+**Ticket ID**: GCP-STG-0691
+**Severity**: P2 MED
+**Platforms**: Backend
+**Layers**: L4 Data Integrity
+**Source**: Testing Audit
+
+**Problem**: 56 new migrations (186-241) have never been tested for rollback. A failed migration during deployment could leave the database in an inconsistent state.
+
+**Fix**: For each of the 56 new migrations: apply → verify schema → rollback → verify clean rollback. Document any migrations that are not safely reversible.
+
+**12-Layer Verification**: L4 Data Integrity ✅
+
+---
+
+## GCP-STG-0692 — LOW: Chaos test — main-backend killed (LOW)
+
+**Ticket ID**: GCP-STG-0692
+**Severity**: P3 LOW
+**Platforms**: POS, Backend
+**Layers**: L6 Resilience
+**Source**: Testing Audit
+
+**Problem**: Unclear how POS behaves when main-backend becomes completely unavailable. Users may see cryptic errors or blank screens.
+
+**Fix**: Kill main-backend container while POS is active. Verify POS shows user-friendly "Server unavailable" error, retries automatically, and recovers when backend returns.
+
+**12-Layer Verification**: L6 Resilience ✅
+
+---
+
+## GCP-STG-0693 — LOW: Chaos test — Redis down, rate limiting degrades (LOW)
+
+**Ticket ID**: GCP-STG-0693
+**Severity**: P3 LOW
+**Platforms**: Backend
+**Layers**: L6 Resilience
+**Source**: Testing Audit
+
+**Problem**: Rate limiting depends on Redis. If Redis goes down, it's unclear whether requests are blocked entirely or allowed without limits.
+
+**Fix**: Kill Redis while backend is running. Verify rate limiting degrades gracefully (allows requests through rather than blocking all). Confirm warning logs are emitted.
+
+**12-Layer Verification**: L6 Resilience ✅
+
+---
+
+## GCP-STG-0694 — LOW: Chaos test — Cloud SQL connection spike (LOW)
+
+**Ticket ID**: GCP-STG-0694
+**Severity**: P3 LOW
+**Platforms**: Backend
+**Layers**: L6 Resilience
+**Source**: Testing Audit
+
+**Problem**: Connection pool exhaustion during traffic spikes could cause cascading failures across all services sharing the same Cloud SQL instance.
+
+**Fix**: Simulate connection pool exhaustion (set pool max to 2, send 50 concurrent requests). Verify queued requests wait with timeout rather than crashing. Confirm proper error responses.
+
+**12-Layer Verification**: L6 Resilience ✅
+
+---
+
+## GCP-STG-0695 — LOW: Chaos test — GCS unavailable, invoice generation (LOW)
+
+**Ticket ID**: GCP-STG-0695
+**Severity**: P3 LOW
+**Platforms**: Backend
+**Layers**: L6 Resilience
+**Source**: Testing Audit
+
+**Problem**: Invoice PDF generation uploads to GCS. If GCS is unavailable, the sale may fail entirely or the invoice may be silently lost.
+
+**Fix**: Block GCS access during invoice generation. Verify sale completes successfully (invoice is non-blocking). Confirm failed invoice uploads are queued for retry.
+
+**12-Layer Verification**: L6 Resilience ✅
+
+---
+
+## GCP-STG-0696 — LOW: Store group concept — multi-store ownership (LOW)
+
+**Ticket ID**: GCP-STG-0696
+**Severity**: P3 LOW
+**Platforms**: Backend, Retailer Admin
+**Layers**: L10 Business
+**Source**: Multi-Store Audit
+
+**Problem**: Data model assumes one retailer = one store. Retailers expanding to multiple locations cannot manage them under a single account.
+
+**Fix**: Introduce store_groups table linking multiple stores to one retailer account. Retailer admin shows store switcher. Maintain strict store isolation for data queries.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0697 — LOW: Inter-store stock transfer (LOW)
+
+**Ticket ID**: GCP-STG-0697
+**Severity**: P3 LOW
+**Platforms**: Backend, Retailer Admin
+**Layers**: L10 Business, L4 Data Integrity
+**Source**: Multi-Store Audit
+
+**Problem**: Multi-store retailers cannot transfer excess stock between locations. Each store must independently order from suppliers even when sister stores have surplus.
+
+**Fix**: Implement inter-store transfer: source store decrements, destination store increments, transfer record created with quantities and reason. Both stores must belong to same store_group.
+
+**12-Layer Verification**: L10 Business ✅, L4 Data Integrity ✅
+
+---
+
+## GCP-STG-0698 — LOW: Consolidated reporting across stores (LOW)
+
+**Ticket ID**: GCP-STG-0698
+**Severity**: P3 LOW
+**Platforms**: Retailer Admin
+**Layers**: L10 Business
+**Source**: Multi-Store Audit
+
+**Problem**: Multi-store retailers cannot see aggregated sales, inventory, or performance metrics across all their stores in a single view.
+
+**Fix**: Add consolidated dashboard in retailer admin: total sales across stores, combined inventory value, per-store comparison charts. Respect store_group membership for data access.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0699 — LOW: Store-level feature flag override testing at scale (LOW)
+
+**Ticket ID**: GCP-STG-0699
+**Severity**: P3 LOW
+**Platforms**: Backend
+**Layers**: L6 Resilience
+**Source**: Multi-Store Audit
+
+**Problem**: Feature flags are global. Cannot enable/disable features per-store for gradual rollout or A/B testing across store groups.
+
+**Fix**: Extend feature flag system with store-level overrides. Store override takes precedence over global default. Test with 100+ stores to verify no performance degradation on flag evaluation.
+
+**12-Layer Verification**: L6 Resilience ✅
+
+---
+
+<!-- next ticket: GCP-STG-0700 -->
