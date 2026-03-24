@@ -371,9 +371,12 @@ export default function SellScreenV3() {
     <View style={styles.container} testID="sell-screen-v3">
       {/* V3-FIX-037: Header with working menu + unified online state (no separate OfflineBanner) */}
       <BrandedHeader onMenuPress={() => {
-        // Navigate to MORE tab from SELL
+        // GCP-STG-0546: Navigate to MORE tab from SELL
+        // "MORE" is a tab name in PosRootLayoutV3 (not a registered route),
+        // so we use `as never` — the standard React Navigation escape hatch
+        // for cross-navigator tab switching.
         const parent = navigation.getParent?.();
-        if (parent) parent.navigate("MORE" as any);
+        if (parent) parent.navigate("MORE" as never);
       }} />
 
       {/* GCP-STG-0033: Removed redundant "BILLING MODE" strip — replaced by

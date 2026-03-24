@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 959,
+  "version": 960,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6637,7 +6637,7 @@
       "file": "src/screens/v3/SellScreenV3.tsx",
       "start_line": 1,
       "end_line": 598,
-      "checksum": "58977219cdd713c0",
+      "checksum": "9bdd641b7644d052",
       "description": "SellScreenV3 — product grid + Retail/Bulk toggle + CartSheetV3 wired + V3-HARDEN-106 testIDs + GCP-STG-0400 purchasePriceMinor wiring",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
       "depends_on": null,
@@ -12023,8 +12023,8 @@
     {
       "ticket": "GCP-STG-0142",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 415,
-      "end_line": 417,
+      "start_line": 418,
+      "end_line": 420,
       "checksum": "cf34650ac857fc6c",
       "description": "Enable Retail/Bulk trade toggle on SELL screen (prototype compliance)",
       "test_file": "backend/tests/sseEvents.gcp-stg-0108.unit.test.ts",
@@ -12055,7 +12055,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T18:50:26.038Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T13:00:10.852Z"
+      "line_shifted_at": "2026-03-24T13:18:22.301Z"
     },
     {
       "ticket": "GCP-STG-0122",
@@ -25545,6 +25545,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T13:12:31.114Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0546",
+      "file": "src/screens/v3/SellScreenV3.tsx",
+      "start_line": 373,
+      "end_line": 380,
+      "checksum": "c1635a29f7f54091",
+      "description": "Type-safe MORE tab navigation — replaced as any with as never (React Navigation escape hatch)",
+      "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": true,
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T13:19:23.382Z",
       "status": "ACTIVE"
     }
   ],
