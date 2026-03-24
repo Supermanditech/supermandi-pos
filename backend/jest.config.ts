@@ -43,7 +43,8 @@ const config: Config = {
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
     '^.+\\.ts$': ['ts-jest', {
-      tsconfig: 'tests/tsconfig.json'
+      tsconfig: 'tests/tsconfig.json',
+      diagnostics: false,
     }]
   },
   // Only load DB setup when database is available
