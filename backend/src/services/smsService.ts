@@ -8,6 +8,12 @@
 
 import { log } from '../lib/logger';
 
+// GCP-STG-0584: Startup validation — warn if SMS is enabled but no provider credentials
+const SMS_DISABLED = process.env.SMS_DISABLED === 'true' || process.env.SMS_DISABLED === '1';
+if (!SMS_DISABLED && !process.env.MSG91_AUTH_KEY && !process.env.TWILIO_SID) {
+  log.warn('[SMS] SMS enabled but no provider configured — SMS delivery will fail');
+}
+
 type SmsProvider = 'msg91' | 'twilio' | 'disabled';
 
 function getProvider(): SmsProvider {
