@@ -46,10 +46,13 @@ app.use(express.json());
 app.use("/pos", posOtpAuthRouter);
 
 // Standard mock for store lookup success + OTP insert
+// Query sequence: auth.users → DELETE expired → SELECT cooldown → INSERT pos_otp → logAuthEvent
 function mockStoreFound() {
-  mockQuery.mockResolvedValue({
-    rows: [{ id: "store-1", store_name: "Test Store", store_code: "TS001", status: "ACTIVE" }],
-  });
+  mockQuery
+    .mockResolvedValueOnce({ rows: [{ id: "store-1", store_name: "Test Store", store_code: "TS001", status: "ACTIVE" }] }) // auth.users
+    .mockResolvedValueOnce({ rows: [] }) // DELETE expired OTPs
+    .mockResolvedValueOnce({ rows: [] }) // SELECT cooldown check (no recent OTP)
+    .mockResolvedValue({ rows: [] });    // INSERT pos_otp + logAuthEvent
 }
 
 beforeEach(() => {

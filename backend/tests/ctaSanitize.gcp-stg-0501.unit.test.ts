@@ -65,7 +65,8 @@ describe("PUT /admin/whatsapp/cta-config — GCP-STG-0501 sanitization", () => {
     expect(res.body.success).toBe(true);
 
     // Verify the sanitized message was passed to DB
-    const queryParams = mockQuery.mock.calls[0][1];
+    // call[0] = history SELECT (no params), call[1] = upsert with params
+    const queryParams = mockQuery.mock.calls[1][1];
     // superadminMessage is param index 2 (enabled=0, superadminNumber=1, superadminMessage=2)
     expect(queryParams[2]).toBe("Hello world and everyone");
   });
@@ -80,7 +81,7 @@ describe("PUT /admin/whatsapp/cta-config — GCP-STG-0501 sanitization", () => {
 
     expect(res.status).toBe(200);
 
-    const queryParams = mockQuery.mock.calls[0][1];
+    const queryParams = mockQuery.mock.calls[1][1];
     // companyMessage is param index 4 (enabled=0, superadminNumber=1, superadminMessage=2, companyNumber=3, companyMessage=4)
     expect(queryParams[4]).toBe('Welcomealert("xss") to us');
   });
@@ -95,7 +96,7 @@ describe("PUT /admin/whatsapp/cta-config — GCP-STG-0501 sanitization", () => {
 
     expect(res.status).toBe(200);
 
-    const queryParams = mockQuery.mock.calls[0][1];
+    const queryParams = mockQuery.mock.calls[1][1];
     expect(queryParams[2]).toBe("Nested link");
   });
 
@@ -106,7 +107,7 @@ describe("PUT /admin/whatsapp/cta-config — GCP-STG-0501 sanitization", () => {
 
     expect(res.status).toBe(200);
 
-    const queryParams = mockQuery.mock.calls[0][1];
+    const queryParams = mockQuery.mock.calls[1][1];
     expect(queryParams[2]).toBe("Hello from support");
     expect(queryParams[4]).toBe("Welcome to SuperMandi");
   });
@@ -121,7 +122,7 @@ describe("PUT /admin/whatsapp/cta-config — GCP-STG-0501 sanitization", () => {
 
     expect(res.status).toBe(200);
 
-    const queryParams = mockQuery.mock.calls[0][1];
+    const queryParams = mockQuery.mock.calls[1][1];
     expect(queryParams[2]).toBe("Hello");
   });
 
@@ -135,7 +136,7 @@ describe("PUT /admin/whatsapp/cta-config — GCP-STG-0501 sanitization", () => {
 
     expect(res.status).toBe(200);
 
-    const queryParams = mockQuery.mock.calls[0][1];
+    const queryParams = mockQuery.mock.calls[1][1];
     expect(queryParams[4]).toBe("Check  this");
   });
 });

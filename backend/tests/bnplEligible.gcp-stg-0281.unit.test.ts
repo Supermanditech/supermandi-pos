@@ -58,8 +58,11 @@ describe("GCP-STG-0281: bnpl_eligible on store_products", () => {
       expect(PRODUCTS_SRC).toContain("bnpl_eligible = COALESCE($15, bnpl_eligible)");
     });
 
-    test("LWW guard uses $16 (shifted from $15 after bnpl_eligible addition)", () => {
-      expect(PRODUCTS_SRC).toContain("metadata_updated_at < $16");
+    test("LWW guard uses dynamic $nextParam (starts at 21 after bnpl+conversion params)", () => {
+      // GCP-STG-0335: LWW guard is now dynamic via template literal $${nextParam}
+      // nextParam starts at 21 ($1-$20 are base params including bnpl + conversion)
+      expect(PRODUCTS_SRC).toContain("let nextParam = 21");
+      expect(PRODUCTS_SRC).toContain("metadata_updated_at < $${nextParam}");
     });
   });
 });

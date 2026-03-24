@@ -5,59 +5,58 @@
  * after order creation COMMIT, fire-and-forget (no blocking).
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock lifecycleEventService before importing the router
-const mockPublishLifecycleEvent = vi.fn().mockResolvedValue({
+const mockPublishLifecycleEvent = jest.fn().mockResolvedValue({
   eventId: "test-event-id",
   delivered: { sse: true, whatsapp: false },
   duplicate: false,
 });
 
-vi.mock("../src/services/lifecycleEventService", () => ({
+jest.mock("../src/services/lifecycleEventService", () => ({
   publishLifecycleEvent: mockPublishLifecycleEvent,
 }));
 
 // Mock other dependencies
-vi.mock("../src/db/client", () => ({
-  getPool: vi.fn().mockReturnValue({
-    connect: vi.fn().mockResolvedValue({
-      query: vi.fn().mockResolvedValue({ rows: [] }),
-      release: vi.fn(),
+jest.mock("../src/db/client", () => ({
+  getPool: jest.fn().mockReturnValue({
+    connect: jest.fn().mockResolvedValue({
+      query: jest.fn().mockResolvedValue({ rows: [] }),
+      release: jest.fn(),
     }),
   }),
 }));
 
-vi.mock("../src/lib/logger", () => ({
-  log: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
+jest.mock("../src/lib/logger", () => ({
+  log: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
 }));
 
-vi.mock("../src/middleware/deviceToken", () => ({
+jest.mock("../src/middleware/deviceToken", () => ({
   requireDeviceToken: (_req: any, _res: any, next: any) => next(),
   PosDeviceContext: {},
 }));
 
-vi.mock("../src/services/grnAlertNotificationService", () => ({
-  notifyGrnExcessAlert: vi.fn(),
-  notifyGrnMismatch: vi.fn(),
-  notifyOrderStatusChange: vi.fn(),
+jest.mock("../src/services/grnAlertNotificationService", () => ({
+  notifyGrnExcessAlert: jest.fn(),
+  notifyGrnMismatch: jest.fn(),
+  notifyOrderStatusChange: jest.fn(),
 }));
 
-vi.mock("../src/services/spendingLimitService", () => ({
-  checkSpendingLimits: vi.fn().mockResolvedValue({ allowed: true }),
+jest.mock("../src/services/spendingLimitService", () => ({
+  checkSpendingLimits: jest.fn().mockResolvedValue({ allowed: true }),
 }));
 
-vi.mock("../src/services/supplierPayoutService", () => ({
-  isPayoutsEnabled: vi.fn().mockReturnValue(false),
+jest.mock("../src/services/supplierPayoutService", () => ({
+  isPayoutsEnabled: jest.fn().mockReturnValue(false),
 }));
 
 describe("GCP-STG-0399: Supplier notification on new purchase order", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
   });
 
   it("should call publishLifecycleEvent with supplier_action_required after order COMMIT", async () => {

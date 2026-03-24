@@ -50,6 +50,15 @@ describe("V3-FIX-176: Procurement Payment Service", () => {
     });
 
     it("creates intent with BNPL provider for BNPL mode", async () => {
+      // INSERT into payment_intents
+      mockQuery.mockResolvedValueOnce({ rows: [] });
+      // BNPL credit line lookup (GCP-STG-0411)
+      mockQuery.mockResolvedValueOnce({
+        rows: [{ id: "cl-1", approved_limit_minor: 500000, used_minor: 0, status: "approved" }],
+      });
+      // UPDATE bnpl_credit_lines (deduct)
+      mockQuery.mockResolvedValueOnce({ rows: [] });
+      // UPDATE payment_intents status to authorized
       mockQuery.mockResolvedValueOnce({ rows: [] });
       const result = await createPaymentIntent(mockClient, {
         storeId: "store-1",

@@ -90,8 +90,8 @@ describe("Gate: demand compute reorder math", () => {
 // ─── 3. Lifecycle communication rules runtime execution ───
 
 describe("Gate: lifecycle communication rules", () => {
-  it("10 event types defined", () => {
-    expect(Object.keys(LIFECYCLE_COMMUNICATION_RULES)).toHaveLength(10);
+  it("11 event types defined", () => {
+    expect(Object.keys(LIFECYCLE_COMMUNICATION_RULES)).toHaveLength(11);
   });
 
   it("every event has at least one delivery target", () => {

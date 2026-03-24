@@ -9,7 +9,7 @@ const salesCode = fs.readFileSync(salesPath, "utf-8");
 
 describe("GCP-STG-0077: Invoice auto-generation wiring", () => {
   test("imports createInvoice and issueInvoice from invoiceService", () => {
-    expect(salesCode).toContain('import { createInvoice, issueInvoice } from "../../../services/invoiceService"');
+    expect(salesCode).toContain('import { createInvoice, issueInvoice, getInvoice } from "../../../services/invoiceService"');
   });
 
   test("defines generateSaleInvoice helper function", () => {

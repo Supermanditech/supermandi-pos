@@ -74,11 +74,14 @@ describe("GCP-STG-0282: Conversion profile fields on PATCH", () => {
   });
 
   describe("LWW guard shifted correctly", () => {
-    test("LWW guard uses $21 (after 5 conversion params added)", () => {
-      expect(SRC).toContain("metadata_updated_at < $21");
+    test("LWW guard uses dynamic $nextParam starting at 21 (after 5 conversion params added)", () => {
+      // GCP-STG-0335: LWW guard is dynamic via template literal $${nextParam}
+      // nextParam starts at 21 ($1-$20 are base params: $1-$14 original + $15 bnpl + $16-$20 conversion)
+      expect(SRC).toContain("let nextParam = 21");
+      expect(SRC).toContain("metadata_updated_at < $${nextParam}");
     });
 
-    test("LWW guard does NOT use old $16 position", () => {
+    test("LWW guard does NOT use hardcoded $16 position", () => {
       expect(SRC).not.toContain("metadata_updated_at < $16");
     });
   });

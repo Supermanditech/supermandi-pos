@@ -123,10 +123,10 @@ describe("Lifecycle delivery: cross-store access blocked", () => {
 // ─── 5. Communication rules: all 10 events have transport targets ───
 
 describe("Lifecycle delivery: communication rules completeness", () => {
-  it("all 10 event types mapped to at least one delivery channel", () => {
+  it("all 11 event types mapped to at least one delivery channel", () => {
     const { LIFECYCLE_COMMUNICATION_RULES } = require("../../src/services/storeDemandSignal");
     const events = Object.keys(LIFECYCLE_COMMUNICATION_RULES);
-    expect(events).toHaveLength(10);
+    expect(events).toHaveLength(11);
     for (const evt of events) {
       const rule = LIFECYCLE_COMMUNICATION_RULES[evt];
       const totalChannels = rule.retailer.length + rule.supplier.length + rule.admin.length;

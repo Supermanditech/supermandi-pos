@@ -77,8 +77,8 @@ describe("V3-HARDEN-165: Lifecycle communication rules (executable)", () => {
     expect(LIFECYCLE_COMMUNICATION_RULES.dispatched.retailer).toContain("whatsapp");
   });
 
-  it("all 10 event types have rules defined", () => {
-    expect(Object.keys(LIFECYCLE_COMMUNICATION_RULES).length).toBe(10);
+  it("all 11 event types have rules defined", () => {
+    expect(Object.keys(LIFECYCLE_COMMUNICATION_RULES).length).toBe(11);
   });
 
   it("supplier never receives repeat_order_prompt", () => {

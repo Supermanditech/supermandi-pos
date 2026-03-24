@@ -80,11 +80,12 @@ describe("V3-HARDEN-189: Lifecycle gate — all events mapped", () => {
     "order_created", "supplier_action_required", "supplier_accepted",
     "supplier_rejected", "partial_accept", "dispatched",
     "delivery_due", "delivered", "grn_completed", "repeat_order_prompt",
+    "payment_completed",
   ];
 
-  it("10 event types, 10 communication rules", () => {
-    expect(ALL_EVENTS).toHaveLength(10);
-    expect(Object.keys(LIFECYCLE_COMMUNICATION_RULES)).toHaveLength(10);
+  it("11 event types, 11 communication rules", () => {
+    expect(ALL_EVENTS).toHaveLength(11);
+    expect(Object.keys(LIFECYCLE_COMMUNICATION_RULES)).toHaveLength(11);
   });
 
   it("every event has at least one delivery target", () => {

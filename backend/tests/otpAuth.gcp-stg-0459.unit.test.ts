@@ -62,10 +62,12 @@ function hashOtp(otp: string): string {
 describe("GCP-STG-0459: pos_otp uses +91 E.164 phone format", () => {
   describe("POST /pos/auth/send-otp", () => {
     test("INSERT into pos_otp uses +91 normalized phone, not raw 10-digit", async () => {
-      // Mock: auth.users lookup returns a store
-      mockQuery.mockResolvedValue({
-        rows: [{ id: "store-1", store_name: "Test Store", store_code: "TS001", status: "ACTIVE" }],
-      });
+      // Mock query sequence: auth.users → DELETE expired → SELECT cooldown → INSERT pos_otp → logAuthEvent
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ id: "store-1", store_name: "Test Store", store_code: "TS001", status: "ACTIVE" }] }) // auth.users
+        .mockResolvedValueOnce({ rows: [] }) // DELETE expired OTPs
+        .mockResolvedValueOnce({ rows: [] }) // SELECT cooldown check (no recent OTP)
+        .mockResolvedValue({ rows: [] });    // INSERT pos_otp + logAuthEvent
 
       await request(app)
         .post("/pos/auth/send-otp")

@@ -67,13 +67,22 @@ describe("V3-HARDEN-178: B2B Procurement Lifecycle Behavioral Proof", () => {
       expect(result.redirectUrl).toContain("upi://pay");
     });
 
-    it("resolves BNPL → BNPL with status pending", async () => {
-      mockQuery.mockResolvedValue({ rows: [] });
+    it("resolves BNPL → BNPL with status authorized (GCP-STG-0411)", async () => {
+      // INSERT into payment_intents
+      mockQuery.mockResolvedValueOnce({ rows: [] });
+      // BNPL credit line lookup
+      mockQuery.mockResolvedValueOnce({
+        rows: [{ id: "cl-1", approved_limit_minor: 1000000, used_minor: 0, status: "approved" }],
+      });
+      // UPDATE bnpl_credit_lines (deduct)
+      mockQuery.mockResolvedValueOnce({ rows: [] });
+      // UPDATE payment_intents status to authorized
+      mockQuery.mockResolvedValueOnce({ rows: [] });
       const result = await createPaymentIntent(mockClient, {
         storeId: "s1", orderId: "o1", amountMinor: 300000, mode: "BNPL",
       });
       expect(result.provider).toBe("BNPL");
-      expect(result.status).toBe("pending");
+      expect(result.status).toBe("authorized");
     });
 
     it("resolves CREDIT → SUPERMANDI_CREDIT with status authorized", async () => {

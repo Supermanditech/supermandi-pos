@@ -42,8 +42,12 @@ beforeEach(() => {
 describe("GCP-STG-0299: POS OTP phone normalization", () => {
   describe("POST /pos/auth/send-otp", () => {
     test("normalizes 10-digit phone to +91 E.164 for auth.users query", async () => {
-      // Mock all queries: auth.users lookup, pos_otp INSERT, and any others
-      mockQuery.mockResolvedValue({ rows: [{ id: "store-1", store_name: "Test Store", store_code: "TS001", status: "ACTIVE" }] });
+      // Mock query sequence: auth.users → DELETE expired → SELECT cooldown → INSERT pos_otp → logAuthEvent
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ id: "store-1", store_name: "Test Store", store_code: "TS001", status: "ACTIVE" }] }) // auth.users
+        .mockResolvedValueOnce({ rows: [] }) // DELETE expired OTPs
+        .mockResolvedValueOnce({ rows: [] }) // SELECT cooldown check (no recent OTP)
+        .mockResolvedValue({ rows: [] });    // INSERT pos_otp + logAuthEvent
 
       await request(app)
         .post("/pos/auth/send-otp")
@@ -56,9 +60,11 @@ describe("GCP-STG-0299: POS OTP phone normalization", () => {
       expect(authQuery[1]).toEqual(["+919876543210"]);
 
       // GCP-STG-0459: pos_otp INSERT now uses +91 normalized phone (unified with auth.users)
-      const otpQuery = mockQuery.mock.calls[1];
-      expect(otpQuery[0]).toContain("INSERT INTO pos_otp");
-      expect(otpQuery[1][0]).toBe("+919876543210");
+      const insertCall = mockQuery.mock.calls.find(
+        (call: any[]) => typeof call[0] === "string" && call[0].includes("INSERT INTO pos_otp")
+      );
+      expect(insertCall).toBeDefined();
+      expect(insertCall![1][0]).toBe("+919876543210");
     });
 
     test("returns 404 PHONE_NOT_REGISTERED when no auth.users match", async () => {

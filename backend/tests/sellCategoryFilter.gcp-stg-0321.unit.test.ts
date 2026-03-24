@@ -5,58 +5,57 @@
  * correctly applies a category filter when the parameter is present,
  * and returns all categories when the parameter is absent.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Mock DB pool ──────────────────────────────────────────────────────
-const mockQuery = vi.fn();
-vi.mock("../src/db/client", () => ({
+const mockQuery = jest.fn();
+jest.mock("../src/db/client", () => ({
   getPool: () => ({ query: mockQuery }),
 }));
 
 // ── Mock Redis cache (no-op for search) ───────────────────────────────
-vi.mock("../src/db/redis", () => ({
-  cacheGet: vi.fn().mockResolvedValue(null),
-  cacheSet: vi.fn().mockResolvedValue(undefined),
+jest.mock("../src/db/redis", () => ({
+  cacheGet: jest.fn().mockResolvedValue(null),
+  cacheSet: jest.fn().mockResolvedValue(undefined),
 }));
 
 // ── Mock search localization ──────────────────────────────────────────
-vi.mock("../src/services/searchLocalization", () => ({
+jest.mock("../src/services/searchLocalization", () => ({
   expandHindiSearchTokens: (tokens: string[]) => tokens,
   normalizeQuantityTokens: (q: string) => q.split(/\s+/),
 }));
 
 // ── Mock store isolation ──────────────────────────────────────────────
-vi.mock("../src/services/storeIsolation", () => ({
-  assertStoreId: vi.fn(),
+jest.mock("../src/services/storeIsolation", () => ({
+  assertStoreId: jest.fn(),
 }));
 
 // ── Mock product validation ───────────────────────────────────────────
-vi.mock("../src/utils/productValidation", () => ({
-  validateProductName: vi.fn(),
-  validateBarcode: vi.fn(),
-  validatePrice: vi.fn(),
-  validateStock: vi.fn(),
+jest.mock("../src/utils/productValidation", () => ({
+  validateProductName: jest.fn(),
+  validateBarcode: jest.fn(),
+  validatePrice: jest.fn(),
+  validateStock: jest.fn(),
 }));
-vi.mock("../src/utils/priceBoundsValidator", () => ({
-  validatePriceBounds: vi.fn().mockReturnValue({ valid: true }),
+jest.mock("../src/utils/priceBoundsValidator", () => ({
+  validatePriceBounds: jest.fn().mockReturnValue({ valid: true }),
 }));
 
 // ── Mock storeProductDigitisationService ──────────────────────────────
-vi.mock("../src/services/storeProductDigitisationService", () => ({
-  createStoreProductFromDigitisation: vi.fn(),
+jest.mock("../src/services/storeProductDigitisationService", () => ({
+  createStoreProductFromDigitisation: jest.fn(),
 }));
 
 // ── Mock middleware ───────────────────────────────────────────────────
-vi.mock("../src/middleware/deviceToken", () => ({
+jest.mock("../src/middleware/deviceToken", () => ({
   requireDeviceToken: (_req: any, _res: any, next: any) => next(),
 }));
-vi.mock("../src/middleware/storeStatusGate", () => ({
+jest.mock("../src/middleware/storeStatusGate", () => ({
   requireActiveStore: (_req: any, _res: any, next: any) => next(),
 }));
 
 // ── Mock logger ───────────────────────────────────────────────────────
-vi.mock("../src/lib/logger", () => ({
-  log: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+jest.mock("../src/lib/logger", () => ({
+  log: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
 import express from "express";
@@ -117,7 +116,7 @@ describe("GCP-STG-0321: SELL search category filter", () => {
 
   beforeEach(() => {
     app = buildApp();
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   it("passes category param to SQL when ?category= is provided", async () => {

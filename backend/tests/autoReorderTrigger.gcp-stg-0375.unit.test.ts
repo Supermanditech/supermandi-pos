@@ -9,26 +9,25 @@
  * 5. Logs reorder_runs per store
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // --- Mock DB ---
-const mockQuery = vi.fn();
-const mockPool = { query: mockQuery, connect: vi.fn() };
+const mockQuery = jest.fn();
+const mockPool = { query: mockQuery, connect: jest.fn() };
 
-vi.mock("../src/db/client", () => ({
+jest.mock("../src/db/client", () => ({
   getPool: () => mockPool,
 }));
 
-vi.mock("../src/lib/logger", () => ({
-  log: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
+jest.mock("../src/lib/logger", () => ({
+  log: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
 }));
 
-vi.mock("../src/services/paymentReminderService", () => ({
-  processOverdueReminders: vi.fn(),
+jest.mock("../src/services/paymentReminderService", () => ({
+  processOverdueReminders: jest.fn(),
 }));
 
-vi.mock("../src/services/ai/anomalyAlertingService", () => ({
-  detectAnomalies: vi.fn(),
+jest.mock("../src/services/ai/anomalyAlertingService", () => ({
+  detectAnomalies: jest.fn(),
 }));
 
 import express from "express";
@@ -39,7 +38,7 @@ const app = express();
 app.use(express.json());
 
 // Mock admin token middleware
-vi.mock("../src/middleware/adminToken", () => ({
+jest.mock("../src/middleware/adminToken", () => ({
   requireAdminToken: (_req: any, _res: any, next: any) => {
     _req.adminId = "test-admin";
     _req.adminRole = "super_admin";
@@ -47,15 +46,14 @@ vi.mock("../src/middleware/adminToken", () => ({
   },
 }));
 
-// Import after mocks
-const { adminScheduledJobsRouter } = await import(
-  "../src/routes/v1/admin/scheduledJobs"
-);
+// Import after mocks — use require instead of top-level await (Jest doesn't support top-level await)
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { adminScheduledJobsRouter } = require("../src/routes/v1/admin/scheduledJobs");
 app.use("/admin", adminScheduledJobsRouter);
 
 describe("GCP-STG-0375: POST /admin/jobs/reorder-trigger-check", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   it("returns 503 when pool is null", async () => {

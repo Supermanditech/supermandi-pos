@@ -2,63 +2,62 @@
  * GCP-STG-0336: Delta Sync Endpoint Unit Tests
  * Tests GET /api/v1/pos/store-products/delta?since=<ISO timestamp>
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ---------- Mock pool ---------
-const mockQuery = vi.fn();
-vi.mock("../src/db/client", () => ({
+const mockQuery = jest.fn();
+jest.mock("../src/db/client", () => ({
   getPool: () => ({ query: mockQuery }),
 }));
 
 // ---------- Mock middleware ---------
-vi.mock("../src/middleware/deviceToken", () => ({
+jest.mock("../src/middleware/deviceToken", () => ({
   requireDeviceToken: (_req: any, _res: any, next: any) => {
     _req.posDevice = { storeId: "STORE-001" };
     next();
   },
 }));
-vi.mock("../src/middleware/storeStatusGate", () => ({
+jest.mock("../src/middleware/storeStatusGate", () => ({
   requireActiveStore: (_req: any, _res: any, next: any) => next(),
 }));
 
 // ---------- Mock storeIsolation ---------
-vi.mock("../src/services/storeIsolation", () => ({
+jest.mock("../src/services/storeIsolation", () => ({
   assertStoreId: (id: string | null | undefined, _op: string) => {
     if (!id) throw new Error("STORE_ID_MISSING");
   },
 }));
 
 // ---------- Mock redis ---------
-vi.mock("../src/db/redis", () => ({
-  cacheGet: vi.fn().mockResolvedValue(null),
-  cacheSet: vi.fn().mockResolvedValue(undefined),
+jest.mock("../src/db/redis", () => ({
+  cacheGet: jest.fn().mockResolvedValue(null),
+  cacheSet: jest.fn().mockResolvedValue(undefined),
 }));
 
 // ---------- Mock search localization ---------
-vi.mock("../src/services/searchLocalization", () => ({
+jest.mock("../src/services/searchLocalization", () => ({
   expandHindiSearchTokens: (tokens: string[]) => tokens,
   normalizeQuantityTokens: (tokens: string[]) => tokens,
 }));
 
 // ---------- Mock product validation ---------
-vi.mock("../src/utils/productValidation", () => ({
+jest.mock("../src/utils/productValidation", () => ({
   validateProductName: () => ({ valid: true }),
   validateBarcode: () => ({ valid: true }),
   validatePrice: () => ({ valid: true }),
   validateStock: () => ({ valid: true }),
 }));
-vi.mock("../src/utils/priceBoundsValidator", () => ({
+jest.mock("../src/utils/priceBoundsValidator", () => ({
   validatePriceBounds: () => Promise.resolve({ valid: true }),
 }));
 
 // ---------- Mock digitisation service (required import) ---------
-vi.mock("../src/services/storeProductDigitisationService", () => ({
-  createStoreProductFromDigitisation: vi.fn(),
+jest.mock("../src/services/storeProductDigitisationService", () => ({
+  createStoreProductFromDigitisation: jest.fn(),
 }));
 
 // ---------- Mock logger ---------
-vi.mock("../src/lib/logger", () => ({
-  log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+jest.mock("../src/lib/logger", () => ({
+  log: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
 import express from "express";

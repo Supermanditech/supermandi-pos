@@ -8,7 +8,6 @@
  * 4. BUY catalog shows supplier identity when supplier_visible = true
  * 5. Barcode lookup also respects supplier_visible
  */
-import { describe, it, expect } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 
