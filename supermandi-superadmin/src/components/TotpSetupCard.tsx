@@ -1,6 +1,10 @@
 // GCP-STG-0539: TOTP 2FA setup UI for SuperAdmin portal
+// GCP-STG-0548: Trusted devices section + revoke button
 import { useState, useCallback } from "react";
 import { getAuthHeaders, fetchWithTimeout } from "../api/authToken";
+
+/** GCP-STG-0548: Device trust duration in days. "Remember device" checkbox will be added to login TOTP step when backend returns totpRequired. */
+export const TOTP_DEVICE_TRUST_DAYS = 30;
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
 
@@ -22,6 +26,8 @@ export function TotpSetupCard() {
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [codesSaved, setCodesSaved] = useState(false);
   const [copyLabel, setCopyLabel] = useState('Copy All');
+  const [revoking, setRevoking] = useState(false);
+  const [revokeSuccess, setRevokeSuccess] = useState('');
 
   // Check current TOTP status on first render
   const checkStatus = useCallback(async () => {
@@ -159,6 +165,35 @@ export function TotpSetupCard() {
       setState('enabled');
     }
   }, [disableCode]);
+
+  // GCP-STG-0548: Revoke all trusted devices
+  const handleRevokeDevices = useCallback(async () => {
+    setRevoking(true);
+    setError('');
+    setRevokeSuccess('');
+    try {
+      const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/auth/totp-revoke-devices`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: '{}',
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setError(data?.error?.message || data?.message || `Revoke failed (${res.status})`);
+        return;
+      }
+      setRevokeSuccess('All trusted devices revoked. TOTP will be required on next login.');
+      setTimeout(() => setRevokeSuccess(''), 5000);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Network error');
+    } finally {
+      setRevoking(false);
+    }
+  }, []);
 
   const cardStyle: React.CSSProperties = {
     background: 'var(--color-surface, #fff)',
@@ -429,9 +464,37 @@ export function TotpSetupCard() {
         </div>
       )}
 
-      {/* Enabled state — show disable option */}
+      {/* Enabled state — show disable option + trusted devices */}
       {(state === 'enabled' || state === 'disabling') && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+          {/* GCP-STG-0548: Trusted Devices section */}
+          <div style={{
+            background: 'var(--color-surface-alt, #f8f9fa)',
+            border: '1px solid var(--color-border, #e0e0e0)',
+            borderRadius: 6,
+            padding: 16,
+          }}>
+            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, color: 'var(--color-text, #1a1a1a)' }}>
+              Trusted Devices
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary, #666)', marginBottom: 12 }}>
+              When you enable &quot;Remember this device&quot; during login, your device will be trusted for {TOTP_DEVICE_TRUST_DAYS} days.
+              Revoking clears all trusted devices, requiring TOTP on the next login from every device.
+            </div>
+            {revokeSuccess && (
+              <div style={{ color: '#1a7a1a', background: '#e6f9e6', padding: '8px 12px', borderRadius: 6, fontSize: 13, marginBottom: 8 }} role="status">
+                {revokeSuccess}
+              </div>
+            )}
+            <button
+              style={{ ...btnDangerStyle, fontSize: 13, padding: '6px 16px' }}
+              onClick={handleRevokeDevices}
+              disabled={revoking}
+            >
+              {revoking ? 'Revoking...' : 'Revoke All Trusted Devices'}
+            </button>
+          </div>
+
           <div style={{ fontSize: 14, color: 'var(--color-text-secondary, #666)' }}>
             To disable 2FA, enter a code from your authenticator app:
           </div>

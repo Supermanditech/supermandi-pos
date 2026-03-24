@@ -1,4 +1,5 @@
 // GCP-STG-0540: TOTP 2FA setup card for Retailer Admin portal
+// GCP-STG-0548: Trusted devices section + revoke button
 // Setup wizard: Enable → QR code → Verify → Enabled badge
 // Disable flow: Enter code → Confirm → Disabled
 
@@ -6,6 +7,9 @@ import { useState, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 import { logger } from '../lib/logger';
+
+/** GCP-STG-0548: Device trust duration in days. "Remember device" checkbox will be added to login TOTP step when backend returns totpRequired. */
+export const TOTP_DEVICE_TRUST_DAYS = 30;
 
 type TotpStep = 'idle' | 'loading' | 'setup' | 'enabled';
 
@@ -31,6 +35,8 @@ export default function TotpSetupCard() {
   const [disabling, setDisabling] = useState(false);
   const [codesSaved, setCodesSaved] = useState(false);
   const [copyLabel, setCopyLabel] = useState('Copy All');
+  const [revoking, setRevoking] = useState(false);
+  const [revokeSuccess, setRevokeSuccess] = useState<string | null>(null);
 
   // Check current TOTP status on mount would require a GET endpoint;
   // since the backend doesn't expose one, we start at 'idle' and let the user
@@ -121,6 +127,31 @@ export default function TotpSetupCard() {
       setDisabling(false);
     }
   }, [accessToken, disableCode]);
+
+  // GCP-STG-0548: Revoke all trusted devices
+  const handleRevokeDevices = useCallback(async () => {
+    if (!accessToken) return;
+    setRevoking(true);
+    setError(null);
+    setRevokeSuccess(null);
+    try {
+      const response = await authFetch('/api/v1/retailer-admin/auth/totp-revoke-devices', accessToken, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      if (!response.ok) {
+        const data = await safeJson(response);
+        throw new Error(data?.error?.message || `Revoke failed (${response.status})`);
+      }
+      setRevokeSuccess('All trusted devices revoked. TOTP will be required on next login.');
+      setTimeout(() => setRevokeSuccess(null), 5000);
+    } catch (err: any) {
+      logger.error('TOTP revoke devices failed:', err);
+      setError(err.message || 'Failed to revoke trusted devices');
+    } finally {
+      setRevoking(false);
+    }
+  }, [accessToken]);
 
   // Sanitize code input: digits only, max 6
   const handleCodeInput = (setter: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -298,11 +329,41 @@ export default function TotpSetupCard() {
         </div>
       )}
 
-      {/* ENABLED: Show badge + disable option */}
+      {/* ENABLED: Show badge + trusted devices + disable option */}
       {step === 'enabled' && (
         <div>
           <div className="set-pw-success" role="status" aria-live="polite" style={{ marginBottom: '1rem' }}>
             2FA Enabled — Your account is protected with two-factor authentication.
+          </div>
+
+          {/* GCP-STG-0548: Trusted Devices section */}
+          <div style={{
+            background: 'var(--bg-secondary, #f8fafc)',
+            border: '1px solid var(--border-color, #e2e8f0)',
+            borderRadius: 8,
+            padding: '1rem',
+            marginBottom: '1rem',
+          }}>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary, #1e293b)' }}>
+              Trusted Devices
+            </h3>
+            <p className="set-hint-text" style={{ margin: '0 0 0.75rem 0' }}>
+              When you enable &quot;Remember this device&quot; during login, your device will be trusted for {TOTP_DEVICE_TRUST_DAYS} days.
+              Revoking clears all trusted devices, requiring TOTP on the next login from every device.
+            </p>
+            {revokeSuccess && (
+              <div className="set-pw-success" role="status" style={{ marginBottom: '0.5rem' }}>
+                {revokeSuccess}
+              </div>
+            )}
+            <button
+              onClick={handleRevokeDevices}
+              disabled={revoking}
+              className="set-password-btn"
+              style={{ background: 'var(--danger, #ef4444)', fontSize: '0.85rem', padding: '0.4rem 0.75rem' }}
+            >
+              {revoking ? 'Revoking...' : 'Revoke All Trusted Devices'}
+            </button>
           </div>
 
           {!showDisable ? (
