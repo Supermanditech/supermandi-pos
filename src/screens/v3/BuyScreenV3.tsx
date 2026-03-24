@@ -334,7 +334,12 @@ export default function BuyScreenV3() {
           <TextInput ref={searchInputRef} style={styles.searchTextInput} value={searchQuery} onChangeText={setSearchQuery} placeholder="Search supplier products..." placeholderTextColor={colors.textTertiary} testID="buy-search-input" />
         </View>
         {/* GCP-STG-0562: Voice search — opens full VoiceOverlayV3 with Whisper STT */}
-        <Pressable style={styles.scanBtn} accessibilityLabel="Voice search" onPress={() => setVoiceVisible(true)}>
+        {/* GCP-STG-0563: Grey-out mic when offline */}
+        <Pressable style={[styles.scanBtn, offline && { opacity: 0.4 }]} accessibilityLabel="Voice search" onPress={async () => {
+          const online = await isOnline();
+          if (!online) { showToast("Voice requires internet"); return; }
+          setVoiceVisible(true);
+        }}>
           <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}>
             <Path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
             <Path d="M19 10v2a7 7 0 0 1-14 0v-2" />

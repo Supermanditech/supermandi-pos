@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 997,
+  "version": 1000,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6636,8 +6636,8 @@
       "ticket": "STG-553",
       "file": "src/screens/v3/SellScreenV3.tsx",
       "start_line": 1,
-      "end_line": 598,
-      "checksum": "9bdd641b7644d052",
+      "end_line": 610,
+      "checksum": "521615667c6e7c08",
       "description": "SellScreenV3 — product grid + Retail/Bulk toggle + CartSheetV3 wired + V3-HARDEN-106 testIDs + GCP-STG-0400 purchasePriceMinor wiring",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
       "depends_on": null,
@@ -6821,8 +6821,8 @@
       "ticket": "STG-558",
       "file": "src/components/v3/VoiceOverlayV3.tsx",
       "start_line": 1,
-      "end_line": 252,
-      "checksum": "6c0871850832d98b",
+      "end_line": 260,
+      "checksum": "9b447a168ff41990",
       "description": "Voice overlay v3 — mic pulse, transcript, match confirm, Hindi+English",
       "test_file": "src/__tests__/screens/voice-v3.stg-558.test.ts",
       "depends_on": null,
@@ -6932,8 +6932,8 @@
       "ticket": "STG-561",
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 1,
-      "end_line": 966,
-      "checksum": "fc178e566e2df434",
+      "end_line": 971,
+      "checksum": "880b0de660058509",
       "description": "BUY tab v3 — supplier catalogue with wholesale metadata, supplier filter, categories, counter purchase CTA",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
       "depends_on": null,
@@ -9944,8 +9944,8 @@
     {
       "ticket": "GCP-STG-0145",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 406,
-      "end_line": 458,
+      "start_line": 411,
+      "end_line": 463,
       "checksum": "41e4cc27849e077c",
       "description": "BUY screen uses 3-column grid with ProductTileV3 instead of single-column SupplierProductCardV3 [updated by GCP-STG-0561: added imageUrl, stock, description fields]",
       "test_file": "src/__tests__/screens/buy-screen-v3.stg-561.test.ts",
@@ -9979,7 +9979,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:41:40.330Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T16:42:59.225Z"
+      "line_shifted_at": "2026-03-24T17:09:45.650Z"
     },
     {
       "ticket": "GCP-STG-0144",
@@ -10064,8 +10064,8 @@
     {
       "ticket": "GCP-STG-0024",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 304,
-      "end_line": 328,
+      "start_line": 305,
+      "end_line": 329,
       "checksum": "43c20b9e6d7e4a16",
       "description": "Tap adds to cart directly, long-press opens detail sheet for kirana billing speed",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
@@ -10099,7 +10099,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:55:48.789Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T13:00:10.817Z"
+      "line_shifted_at": "2026-03-24T17:09:45.657Z"
     },
     {
       "ticket": "GCP-STG-0126",
@@ -10184,8 +10184,8 @@
     {
       "ticket": "GCP-STG-0127",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 312,
-      "end_line": 322,
+      "start_line": 313,
+      "end_line": 323,
       "checksum": "59bb22eabab5b5dd",
       "description": "Stock warning toast on add-to-cart when product out of stock or qty exceeds stock",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
@@ -10219,7 +10219,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:08:06.648Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T13:00:10.820Z"
+      "line_shifted_at": "2026-03-24T17:09:45.661Z"
     },
     {
       "ticket": "GCP-STG-0077",
@@ -10462,8 +10462,8 @@
     {
       "ticket": "GCP-STG-0027",
       "file": "src/components/v3/VoiceOverlayV3.tsx",
-      "start_line": 186,
-      "end_line": 197,
+      "start_line": 194,
+      "end_line": 205,
       "checksum": "754fd708c8b0107d",
       "description": "Voice match result shows estimated price + Add button has ✓ prefix",
       "test_file": "src/__tests__/components/voiceOverlay.gcp-stg-0027.test.ts",
@@ -10497,7 +10497,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T12:21:48.049Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-21T21:33:40.912Z"
+      "line_shifted_at": "2026-03-24T17:09:45.666Z"
     },
     {
       "ticket": "GCP-STG-0028",
@@ -12024,8 +12024,8 @@
     {
       "ticket": "GCP-STG-0142",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 418,
-      "end_line": 420,
+      "start_line": 424,
+      "end_line": 426,
       "checksum": "cf34650ac857fc6c",
       "description": "Enable Retail/Bulk trade toggle on SELL screen (prototype compliance)",
       "test_file": "backend/tests/sseEvents.gcp-stg-0108.unit.test.ts",
@@ -12056,7 +12056,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T18:50:26.038Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T13:18:22.301Z"
+      "line_shifted_at": "2026-03-24T17:09:45.683Z"
     },
     {
       "ticket": "GCP-STG-0122",
@@ -15565,8 +15565,8 @@
     {
       "ticket": "GCP-STG-0321",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 166,
-      "end_line": 216,
+      "start_line": 167,
+      "end_line": 217,
       "checksum": "aaabb499e07be565",
       "description": "SellScreenV3 search handler passes selectedCategory to backend search API (backend+POS)",
       "test_file": "backend/tests/sellCategoryFilter.gcp-stg-0321.unit.test.ts",
@@ -15597,7 +15597,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:03:38.305Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T13:00:10.888Z"
+      "line_shifted_at": "2026-03-24T17:09:45.721Z"
     },
     {
       "ticket": "GCP-STG-0321",
@@ -17425,8 +17425,8 @@
     {
       "ticket": "GCP-STG-0367",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 256,
-      "end_line": 262,
+      "start_line": 257,
+      "end_line": 263,
       "checksum": "168801a131599f37",
       "description": "cartIdSet + cartBarcodeSet useMemo Sets for O(1) cart membership in tileProducts sort",
       "test_file": "src/__tests__/stores/searchPerf.gcp-stg-0367.test.ts",
@@ -17457,7 +17457,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:07:01.714Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T13:00:10.918Z"
+      "line_shifted_at": "2026-03-24T17:09:45.751Z"
     },
     {
       "ticket": "GCP-STG-0397",
@@ -17573,8 +17573,8 @@
     {
       "ticket": "GCP-STG-0401",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 498,
-      "end_line": 517,
+      "start_line": 503,
+      "end_line": 522,
       "checksum": "6e5def9328da4f6f",
       "description": "BuyScreenV3 procurement mapping extended with 6 fields from detailProduct (6 fields wired)",
       "test_file": "src/__tests__/components/buyDetailFields.gcp-stg-0401.test.ts",
@@ -17605,7 +17605,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:33:08.397Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T16:42:59.311Z"
+      "line_shifted_at": "2026-03-24T17:09:45.761Z"
     },
     {
       "ticket": "GCP-STG-0400",
@@ -17720,8 +17720,8 @@
     {
       "ticket": "GCP-STG-0370",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 37,
-      "end_line": 50,
+      "start_line": 38,
+      "end_line": 51,
       "checksum": "9db39158058dc33b",
       "description": "getItemLayout + TILE_ROW_HEIGHT constants for FlatList scroll performance; removed cartItems from tileProducts useMemo deps",
       "test_file": "src/__tests__/screens/flatListPerf.gcp-stg-0370.test.ts",
@@ -17752,7 +17752,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:41:08.808Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T13:00:10.921Z"
+      "line_shifted_at": "2026-03-24T17:09:45.763Z"
     },
     {
       "ticket": "GCP-STG-0378",
@@ -18486,8 +18486,8 @@
     {
       "ticket": "GCP-STG-0403",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 579,
-      "end_line": 585,
+      "start_line": 584,
+      "end_line": 590,
       "checksum": "58828b3aa9c86dc5",
       "description": "BUY checkout GST computed per-item (each item gstPct) instead of averaged across all cart items (per-item reduce)",
       "test_file": "src/__tests__/screens/buyGstPerItem.gcp-stg-0403.test.ts",
@@ -18518,7 +18518,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:21:18.302Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T17:04:36.306Z"
+      "line_shifted_at": "2026-03-24T17:09:45.778Z"
     },
     {
       "ticket": "GCP-STG-0360",
@@ -18962,8 +18962,8 @@
     {
       "ticket": "GCP-STG-0404",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 786,
-      "end_line": 832,
+      "start_line": 791,
+      "end_line": 837,
       "checksum": "a5d1d056deeaf2e0",
       "description": "BUY order confirmation modal shown after successful checkout with order numbers, item count, total amount, payment status, and Continue Shopping button (modal with order summary)",
       "test_file": "src/__tests__/screens/buyConfirmation.gcp-stg-0404.test.ts",
@@ -18994,7 +18994,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:26:06.961Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T17:04:36.337Z"
+      "line_shifted_at": "2026-03-24T17:09:45.812Z"
     },
     {
       "ticket": "GCP-STG-0390",
@@ -19179,8 +19179,8 @@
     {
       "ticket": "GCP-STG-0409",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 789,
-      "end_line": 798,
+      "start_line": 794,
+      "end_line": 803,
       "checksum": "d07d5a70f496bf71",
       "description": "BuyScreenV3 createOrder call passes storeNotes (from deliveryNotes) + deliveryAddress (from store identity)",
       "test_file": "src/__tests__/screens/buyDeliveryNotes.gcp-stg-0409.test.ts",
@@ -19211,7 +19211,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:58:19.605Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T17:04:36.349Z"
+      "line_shifted_at": "2026-03-24T17:09:45.820Z"
     },
     {
       "ticket": "GCP-STG-0410",
@@ -19289,8 +19289,8 @@
     {
       "ticket": "GCP-STG-0412",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 661,
-      "end_line": 676,
+      "start_line": 666,
+      "end_line": 681,
       "checksum": "c91a71df88de5b42",
       "description": "BUY checkout payment selector includes BANK and CARD modes with labels (BANK + CARD buttons)",
       "test_file": "src/__tests__/screens/bankCardPayment.gcp-stg-0412.test.ts",
@@ -19321,7 +19321,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:12:51.119Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T17:04:36.363Z"
+      "line_shifted_at": "2026-03-24T17:09:45.829Z"
     },
     {
       "ticket": "GCP-STG-0391",
@@ -25562,8 +25562,8 @@
     {
       "ticket": "GCP-STG-0546",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 373,
-      "end_line": 380,
+      "start_line": 374,
+      "end_line": 381,
       "checksum": "c1635a29f7f54091",
       "description": "Type-safe MORE tab navigation — replaced as any with as never (React Navigation escape hatch)",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
@@ -25593,7 +25593,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T13:19:23.382Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-24T17:09:45.880Z"
     },
     {
       "ticket": "GCP-STG-0547",
@@ -26377,8 +26378,8 @@
     {
       "ticket": "GCP-STG-0561",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 426,
-      "end_line": 442,
+      "start_line": 431,
+      "end_line": 447,
       "checksum": "6f6b46e03e85f46e",
       "description": "BUY tile data mapping — pass imageUrl, stock, packSize to ProductTileV3",
       "test_file": "src/screens/v3/BuyScreenV3.tsx",
@@ -26428,7 +26429,7 @@
         "ticket_parked": "Will park after commit",
         "i18n_keys": "N/A - no new user-facing strings, reuses existing tile labels"
       },
-      "line_shifted_at": "2026-03-24T16:42:59.469Z"
+      "line_shifted_at": "2026-03-24T17:09:45.894Z"
     },
     {
       "ticket": "GCP-STG-0553",
@@ -26710,8 +26711,8 @@
     {
       "ticket": "GCP-STG-0557",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 447,
-      "end_line": 452,
+      "start_line": 452,
+      "end_line": 457,
       "checksum": "7a3e8cd131d0064e",
       "description": "BUY tile long-press quick-add with MOQ quantity",
       "test_file": "src/screens/v3/__tests__/BuyScreenV3.test.tsx",
@@ -26762,7 +26763,7 @@
         "single_commit": "fix(GCP-STG-0557): one ticket one commit",
         "ticket_parked": "Will update after commit"
       },
-      "line_shifted_at": "2026-03-24T16:42:59.474Z"
+      "line_shifted_at": "2026-03-24T17:09:45.899Z"
     },
     {
       "ticket": "GCP-STG-0558",
@@ -26823,8 +26824,8 @@
     {
       "ticket": "GCP-STG-0559",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 555,
-      "end_line": 566,
+      "start_line": 560,
+      "end_line": 571,
       "checksum": "a2df8a5a374ab539",
       "description": "BUY screen bottom cart strip with case count — always visible",
       "test_file": "src/screens/v3/__tests__/BuyScreenV3.test.tsx",
@@ -26875,7 +26876,7 @@
         "single_commit": "fix(GCP-STG-0559): one ticket one commit",
         "ticket_parked": "Will update after commit"
       },
-      "line_shifted_at": "2026-03-24T17:04:36.433Z"
+      "line_shifted_at": "2026-03-24T17:09:45.907Z"
     },
     {
       "ticket": "GCP-STG-0560",
@@ -26939,9 +26940,9 @@
       "ticket": "GCP-STG-0562",
       "file": "src/screens/v3/BuyScreenV3.tsx",
       "start_line": 336,
-      "end_line": 345,
-      "checksum": "87b9fe46dd750c03",
-      "description": "BUY screen mic button opens VoiceOverlayV3 instead of focus+Alert",
+      "end_line": 348,
+      "checksum": "b5ec362a76eb2728",
+      "description": "BUY screen mic button opens VoiceOverlayV3 instead of focus+Alert (updated by 0563: offline guard)",
       "test_file": "src/screens/v3/__tests__/BuyScreenV3.test.tsx",
       "depends_on": null,
       "migration": null,
@@ -26958,8 +26959,8 @@
     {
       "ticket": "GCP-STG-0562",
       "file": "src/screens/v3/BuyScreenV3.tsx",
-      "start_line": 522,
-      "end_line": 538,
+      "start_line": 527,
+      "end_line": 543,
       "checksum": "95c83c6cb9563f7a",
       "description": "VoiceOverlayV3 component in BUY screen with purchase cart + MOQ enforcement",
       "test_file": "src/screens/v3/__tests__/BuyScreenV3.test.tsx",
@@ -26973,7 +26974,128 @@
         "test_guard": "Covered by BuyScreenV3 test surface",
         "single_commit": "fix(GCP-STG-0562): one ticket one commit",
         "ticket_parked": false
+      },
+      "line_shifted_at": "2026-03-24T17:09:45.927Z"
+    },
+    {
+      "ticket": "GCP-STG-0563",
+      "file": "src/components/v3/VoiceOverlayV3.tsx",
+      "start_line": 62,
+      "end_line": 72,
+      "checksum": "cd37f395bbc4888c",
+      "description": "Offline check before voice recording — shows error + toast if not online",
+      "test_file": "src/components/v3/__tests__/VoiceOverlayV3.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T17:10:40.138Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "Mic FAB renders with opacity control on SELL/BUY; VoiceOverlay error state shows offline message",
+        "ux_states": "Error state shows 'Internet connection required' toast; offline mic shows 0.4 opacity",
+        "wiring": "isOnline() checked before startRecording in VoiceOverlay + before opening overlay in SELL/BUY",
+        "navigation": "No navigation changes — overlay open blocked when offline",
+        "i18n_keys": "Toast strings are hardcoded English — no i18n needed for error toasts",
+        "business_logic": "No business logic change — pure UX guard preventing offline voice attempt",
+        "business_behaviour": "Voice flow blocked cleanly when offline — no crash, no hanging recording",
+        "impacted_files": "VoiceOverlayV3.tsx, SellScreenV3.tsx, BuyScreenV3.tsx, FIX_LEDGER.json — all staged",
+        "fix_ledger_check": "fix-guard check passes — 550 fixes, zero drift",
+        "no_agent_conflict": "Single agent — no parallel modifications"
       }
+    },
+    {
+      "ticket": "GCP-STG-0563",
+      "file": "src/screens/v3/SellScreenV3.tsx",
+      "start_line": 401,
+      "end_line": 410,
+      "checksum": "712a189be757987f",
+      "description": "SELL screen mic FAB offline guard — toast + block when isOnline()=false",
+      "test_file": "src/screens/v3/__tests__/SellScreenV3.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T17:10:46.588Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0563",
+      "file": "src/screens/v3/BuyScreenV3.tsx",
+      "start_line": 336,
+      "end_line": 348,
+      "checksum": "b5ec362a76eb2728",
+      "description": "BUY screen mic button offline guard — opacity 0.4 + toast when offline",
+      "test_file": "src/screens/v3/__tests__/BuyScreenV3.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T17:10:48.665Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 270,

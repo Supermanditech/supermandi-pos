@@ -7,6 +7,7 @@ import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
 import { showToast } from "../../utils/showToast";
+import { isOnline } from "../../services/networkStatus";
 import {
   startRecording, stopRecording, cancelRecording,
   submitVoiceCommand, type VoiceCommandResult,
@@ -60,6 +61,13 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
 
     const runVoice = async () => {
       try {
+        // GCP-STG-0563: Block voice recording when offline
+        const online = await isOnline();
+        if (!online) {
+          setState("error");
+          showToast("Internet connection required for voice search");
+          return;
+        }
         setState("listening");
         await startRecording();
         // Wait for user to tap confirm or auto-stop triggers

@@ -26,6 +26,7 @@ import { getSellCategoryGroups, type SellCategoryGroup } from "../../services/ap
 import { buildCartItemFromTile, buildCartItemFromSearch } from "../../services/cartPayload";
 import { formatMoney } from "../../utils/money";
 import { showToast } from "../../utils/showToast";
+import { isOnline } from "../../services/networkStatus";
 import { getDeviceStoreId } from "../../services/deviceSession";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { getFrequentProducts } from "../../services/api/productsApi";
@@ -398,8 +399,13 @@ export default function SellScreenV3() {
           </Svg>
         </Pressable>
         {/* V3-FIX-039: Hide voice when voiceEnabled=false */}
+        {/* GCP-STG-0563: Grey-out mic FAB when offline */}
         {voiceEnabled ? (
-          <Pressable style={[styles.iconButton, { backgroundColor: colors.primaryLight }]} accessibilityLabel="Voice input" testID="sell-mic-btn" onPress={() => setVoiceVisible(true)}>
+          <Pressable style={[styles.iconButton, { backgroundColor: colors.primaryLight }]} accessibilityLabel="Voice input" testID="sell-mic-btn" onPress={async () => {
+            const online = await isOnline();
+            if (!online) { showToast("Voice requires internet"); return; }
+            setVoiceVisible(true);
+          }}>
             <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth={2}>
               <Rect x={9} y={2} width={6} height={12} rx={3} />
               <Path d="M5 10a7 7 0 0014 0M12 18v4M9 22h6" />
