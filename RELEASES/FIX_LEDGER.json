@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 955,
+  "version": 957,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -1714,7 +1714,7 @@
       "file": "src/screens/PaymentSetupScreen.tsx",
       "start_line": 1,
       "end_line": 425,
-      "checksum": "d3ddb202a8f14eb1",
+      "checksum": "307a8ce2eb7f8d06",
       "description": "PaymentSetupScreen i18n: all hardcoded strings replaced with t() calls under paymentSetup.* namespace (checksum updated: STG-280,314 VPA label + save toast)",
       "test_file": "src/__tests__/screens/PaymentSetupScreen.stg-257.i18n.unit.test.ts",
       "depends_on": null,
@@ -2680,7 +2680,7 @@
       "test_file": "src/__tests__/i18n/locale-completion.stg-054.unit.test.ts",
       "start_line": 1,
       "end_line": 1170,
-      "checksum": "fa1e5645427c1a62",
+      "checksum": "d2acf51a350ccb54",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -3657,7 +3657,7 @@
       "file": "src/stores/cartStore.ts",
       "start_line": 56,
       "end_line": 968,
-      "checksum": "71ba06fb1e2d77dc",
+      "checksum": "f7457d2a734d6237",
       "description": "CartCustomer and CartNote types + setCustomer/setNote actions",
       "test_file": "src/__tests__/stores/cartStore.unit.test.ts",
       "depends_on": null,
@@ -4944,8 +4944,8 @@
     {
       "ticket": "STG-502",
       "file": "src/services/api/storage.ts",
-      "start_line": 29,
-      "end_line": 91,
+      "start_line": 30,
+      "end_line": 92,
       "checksum": "5246494cc3ca31d9",
       "description": "Warn when reading auth token from plaintext AsyncStorage",
       "test_file": "src/__tests__/screens/plaintext-fallback.stg-502.test.ts",
@@ -4990,13 +4990,14 @@
         "test_guard": "plaintext-fallback.stg-502.test.ts — 3 tests",
         "single_commit": "Single commit",
         "ticket_parked": "Will mark PARKED"
-      }
+      },
+      "line_shifted_at": "2026-03-24T13:00:10.701Z"
     },
     {
       "ticket": "STG-502-W",
       "file": "src/services/api/storage.ts",
-      "start_line": 70,
-      "end_line": 91,
+      "start_line": 71,
+      "end_line": 92,
       "checksum": "5f887bef254f5874",
       "description": "Warn when writing auth token to plaintext AsyncStorage",
       "test_file": "src/__tests__/screens/plaintext-fallback.stg-502.test.ts",
@@ -5041,7 +5042,8 @@
         "test_guard": "See STG-502 main entry",
         "single_commit": "See STG-502 main entry",
         "ticket_parked": "See STG-502 main entry"
-      }
+      },
+      "line_shifted_at": "2026-03-24T13:00:10.702Z"
     },
     {
       "ticket": "STG-524",
@@ -5217,8 +5219,8 @@
     {
       "ticket": "STG-529",
       "file": "src/screens/PaymentSetupScreen.tsx",
-      "start_line": 65,
-      "end_line": 424,
+      "start_line": 66,
+      "end_line": 425,
       "checksum": "9e2fca130d4cd403",
       "description": "handleSkip wrapped in useCallback and added to BackHandler useEffect deps",
       "test_file": "src/__tests__/screens/payment-setup-deps.stg-529.test.ts",
@@ -5268,7 +5270,8 @@
         "test_guard": "payment-setup-deps.stg-529.test.ts — 3 tests",
         "single_commit": "Single commit",
         "ticket_parked": "Will mark PARKED"
-      }
+      },
+      "line_shifted_at": "2026-03-24T13:00:10.711Z"
     },
     {
       "ticket": "STG-543",
@@ -5603,8 +5606,8 @@
     {
       "ticket": "STG-542",
       "file": "src/stores/cartStore.ts",
-      "start_line": 198,
-      "end_line": 968,
+      "start_line": 199,
+      "end_line": 969,
       "checksum": "2b2ec9b85ecb6228",
       "description": "Warn in __DEV__ when discount exceeds subtotal (negative total capped to 0)",
       "test_file": "src/__tests__/screens/negative-total.stg-542.test.ts",
@@ -5650,7 +5653,7 @@
         "single_commit": "Done",
         "ticket_parked": "Done"
       },
-      "line_shifted_at": "2026-03-19T10:14:33.879Z"
+      "line_shifted_at": "2026-03-24T13:00:10.761Z"
     },
     {
       "ticket": "STG-512",
@@ -5983,8 +5986,8 @@
     {
       "ticket": "STG-547",
       "file": "src/services/deviceSession.ts",
-      "start_line": 229,
-      "end_line": 267,
+      "start_line": 230,
+      "end_line": 268,
       "checksum": "5636be43ada697e7",
       "description": "Pre-flight JWT token validation — decode exp claim, warn on near-expiry, clear on expired",
       "test_file": "src/__tests__/screens/token-validation.stg-547.test.ts",
@@ -6029,13 +6032,14 @@
         "test_guard": "done",
         "single_commit": "done",
         "ticket_parked": "done"
-      }
+      },
+      "line_shifted_at": "2026-03-24T13:00:10.766Z"
     },
     {
       "ticket": "STG-511",
       "file": "src/services/stockCache.ts",
-      "start_line": 23,
-      "end_line": 175,
+      "start_line": 24,
+      "end_line": 176,
       "checksum": "7a058d5b9bcce088",
       "description": "Barcode-to-productId alias map for multi-barcode stock merge",
       "test_file": "src/__tests__/screens/stock-multibarcode.stg-511.test.ts",
@@ -6080,7 +6084,8 @@
         "test_guard": "done",
         "single_commit": "done",
         "ticket_parked": "done"
-      }
+      },
+      "line_shifted_at": "2026-03-24T13:00:10.768Z"
     },
     {
       "ticket": "STG-536",
@@ -6632,7 +6637,7 @@
       "file": "src/screens/v3/SellScreenV3.tsx",
       "start_line": 1,
       "end_line": 598,
-      "checksum": "f5a93fdc18c2d16f",
+      "checksum": "58977219cdd713c0",
       "description": "SellScreenV3 — product grid + Retail/Bulk toggle + CartSheetV3 wired + V3-HARDEN-106 testIDs + GCP-STG-0400 purchasePriceMinor wiring",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
       "depends_on": null,
@@ -7002,7 +7007,7 @@
       "file": "src/screens/v3/CounterPurchaseScreenV3.tsx",
       "start_line": 1,
       "end_line": 427,
-      "checksum": "5782ca084c371bbd",
+      "checksum": "542d610758b0e31c",
       "description": "V3-041: Counter purchase — real barcode lookup + recordManualInward API + DA-008 field change wiring",
       "test_file": "src/__tests__/screens/counter-purchase-v3.stg-563.test.ts",
       "depends_on": null,
@@ -9584,8 +9589,8 @@
     {
       "ticket": "GCP-STG-0009",
       "file": "src/screens/EnrollDeviceScreen.tsx",
-      "start_line": 406,
-      "end_line": 409,
+      "start_line": 407,
+      "end_line": 410,
       "checksum": "8fd3c0d98429f115",
       "description": "After enrollment navigate to V3StaffLogin not SellScan — staff PIN mandatory",
       "test_file": "src/__tests__/screens/EnrollDeviceScreen.test.tsx",
@@ -9618,7 +9623,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T09:39:42.302Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-24T13:00:10.809Z"
     },
     {
       "ticket": "GCP-STG-0004",
@@ -10057,8 +10063,8 @@
     {
       "ticket": "GCP-STG-0024",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 303,
-      "end_line": 327,
+      "start_line": 304,
+      "end_line": 328,
       "checksum": "43c20b9e6d7e4a16",
       "description": "Tap adds to cart directly, long-press opens detail sheet for kirana billing speed",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
@@ -10092,7 +10098,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:55:48.789Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:58:31.108Z"
+      "line_shifted_at": "2026-03-24T13:00:10.817Z"
     },
     {
       "ticket": "GCP-STG-0126",
@@ -10177,8 +10183,8 @@
     {
       "ticket": "GCP-STG-0127",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 311,
-      "end_line": 321,
+      "start_line": 312,
+      "end_line": 322,
       "checksum": "59bb22eabab5b5dd",
       "description": "Stock warning toast on add-to-cart when product out of stock or qty exceeds stock",
       "test_file": "src/__tests__/screens/sell-screen-v3.stg-553.test.ts",
@@ -10212,7 +10218,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:08:06.648Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:58:31.112Z"
+      "line_shifted_at": "2026-03-24T13:00:10.820Z"
     },
     {
       "ticket": "GCP-STG-0077",
@@ -10336,8 +10342,8 @@
     {
       "ticket": "GCP-STG-0083",
       "file": "src/stores/productsStore.ts",
-      "start_line": 206,
-      "end_line": 276,
+      "start_line": 207,
+      "end_line": 277,
       "checksum": "2751c7ce4061fcb5",
       "description": "Progressive product loading — 500-item chunks update store incrementally instead of all-at-once",
       "test_file": "src/__tests__/stores/progressiveProductLoad.gcp-stg-0083.test.ts",
@@ -10371,7 +10377,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:47:35.740Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T06:36:13.751Z"
+      "line_shifted_at": "2026-03-24T13:00:10.827Z"
     },
     {
       "ticket": "GCP-STG-0041",
@@ -10535,8 +10541,8 @@
     {
       "ticket": "GCP-STG-0055",
       "file": "src/screens/v3/CounterPurchaseScreenV3.tsx",
-      "start_line": 237,
-      "end_line": 248,
+      "start_line": 238,
+      "end_line": 249,
       "checksum": "0b2765191212731b",
       "description": "Wire Camera Scan to V3Scan navigation + HID Scanner to focus barcode input",
       "test_file": "src/__tests__/screens/counterPurchaseScan.gcp-stg-0055.test.ts",
@@ -10570,7 +10576,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T12:39:21.339Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T14:42:18.568Z"
+      "line_shifted_at": "2026-03-24T13:00:10.833Z"
     },
     {
       "ticket": "GCP-STG-0061",
@@ -12017,8 +12023,8 @@
     {
       "ticket": "GCP-STG-0142",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 414,
-      "end_line": 416,
+      "start_line": 415,
+      "end_line": 417,
       "checksum": "cf34650ac857fc6c",
       "description": "Enable Retail/Bulk trade toggle on SELL screen (prototype compliance)",
       "test_file": "backend/tests/sseEvents.gcp-stg-0108.unit.test.ts",
@@ -12049,7 +12055,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T18:50:26.038Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:58:31.150Z"
+      "line_shifted_at": "2026-03-24T13:00:10.852Z"
     },
     {
       "ticket": "GCP-STG-0122",
@@ -15556,8 +15562,8 @@
     {
       "ticket": "GCP-STG-0321",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 165,
-      "end_line": 215,
+      "start_line": 166,
+      "end_line": 216,
       "checksum": "aaabb499e07be565",
       "description": "SellScreenV3 search handler passes selectedCategory to backend search API (backend+POS)",
       "test_file": "backend/tests/sellCategoryFilter.gcp-stg-0321.unit.test.ts",
@@ -15588,7 +15594,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:03:38.305Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:58:31.188Z"
+      "line_shifted_at": "2026-03-24T13:00:10.888Z"
     },
     {
       "ticket": "GCP-STG-0321",
@@ -16943,8 +16949,8 @@
     {
       "ticket": "GCP-STG-0336",
       "file": "src/stores/productsStore.ts",
-      "start_line": 199,
-      "end_line": 281,
+      "start_line": 200,
+      "end_line": 282,
       "checksum": "e3e36e9a602730f3",
       "description": "Delta sync in checkAndRefresh — try incremental sync first, fall back to full reload (delta endpoint + POS merge)",
       "test_file": "backend/tests/deltaSync.gcp-stg-0336.unit.test.ts",
@@ -16974,7 +16980,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:31:56.307Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-24T13:00:10.906Z"
     },
     {
       "ticket": "GCP-STG-0336",
@@ -17378,8 +17385,8 @@
     {
       "ticket": "GCP-STG-0367",
       "file": "src/stores/productsStore.ts",
-      "start_line": 508,
-      "end_line": 529,
+      "start_line": 509,
+      "end_line": 530,
       "checksum": "95788216a2defd8d",
       "description": "searchProducts uses pre-computed _search* fields with for-loop + early break at SEARCH_RESULT_CAP=100",
       "test_file": "src/__tests__/stores/searchPerf.gcp-stg-0367.test.ts",
@@ -17410,13 +17417,13 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:06:45.991Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T21:08:40.288Z"
+      "line_shifted_at": "2026-03-24T13:00:10.916Z"
     },
     {
       "ticket": "GCP-STG-0367",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 255,
-      "end_line": 261,
+      "start_line": 256,
+      "end_line": 262,
       "checksum": "168801a131599f37",
       "description": "cartIdSet + cartBarcodeSet useMemo Sets for O(1) cart membership in tileProducts sort",
       "test_file": "src/__tests__/stores/searchPerf.gcp-stg-0367.test.ts",
@@ -17447,7 +17454,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:07:01.714Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:58:31.229Z"
+      "line_shifted_at": "2026-03-24T13:00:10.918Z"
     },
     {
       "ticket": "GCP-STG-0397",
@@ -17709,8 +17716,8 @@
     {
       "ticket": "GCP-STG-0370",
       "file": "src/screens/v3/SellScreenV3.tsx",
-      "start_line": 36,
-      "end_line": 49,
+      "start_line": 37,
+      "end_line": 50,
       "checksum": "9db39158058dc33b",
       "description": "getItemLayout + TILE_ROW_HEIGHT constants for FlatList scroll performance; removed cartItems from tileProducts useMemo deps",
       "test_file": "src/__tests__/screens/flatListPerf.gcp-stg-0370.test.ts",
@@ -17740,7 +17747,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:41:08.808Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-24T13:00:10.921Z"
     },
     {
       "ticket": "GCP-STG-0378",
@@ -19932,7 +19940,7 @@
       "file": "src/screens/v3/StaffLoginScreenV3.tsx",
       "start_line": 1,
       "end_line": 179,
-      "checksum": "95b0d67d76e10bd1",
+      "checksum": "d32b7df37ec5b1d6",
       "description": "GCP-STG-0413: SafeAreaView insets on StaffLoginScreenV3 — paddingTop: insets.top",
       "test_file": "src/__tests__/screens/authSafeArea.gcp-stg-0413.test.ts",
       "depends_on": null,
@@ -21127,8 +21135,8 @@
     {
       "ticket": "GCP-STG-0445",
       "file": "src/screens/v3/CounterPurchaseScreenV3.tsx",
-      "start_line": 7,
-      "end_line": 34,
+      "start_line": 8,
+      "end_line": 35,
       "checksum": "ae6bbd7bfc8743a4",
       "description": "SafeArea insets on CounterPurchaseScreenV3: import useSafeAreaInsets, apply paddingTop:insets.top on container and paddingBottom:Math.max(insets.bottom,16) on footer",
       "test_file": "src/__tests__/screens/counterPurchaseSafeArea.gcp-stg-0445.test.ts",
@@ -21158,7 +21166,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:42:06.819Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-24T13:00:10.953Z"
     },
     {
       "ticket": "GCP-STG-0446",
@@ -23761,8 +23770,8 @@
     {
       "ticket": "GCP-STG-0507",
       "file": "src/stores/productsStore.ts",
-      "start_line": 430,
-      "end_line": 440,
+      "start_line": 431,
+      "end_line": 441,
       "description": "O(1) barcode Map index for getProductByBarcode",
       "test_file": "src/__tests__/stores/barcodeIndex.gcp-stg-0507.test.ts",
       "status": "ACTIVE",
@@ -23812,7 +23821,8 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "b6bd3018a4f34dd2"
+      "checksum": "b6bd3018a4f34dd2",
+      "line_shifted_at": "2026-03-24T13:00:10.972Z"
     },
     {
       "ticket": "GCP-STG-0521",
@@ -24716,8 +24726,8 @@
     {
       "ticket": "GCP-STG-0528",
       "file": "src/stores/productsStore.ts",
-      "start_line": 481,
-      "end_line": 485,
+      "start_line": 482,
+      "end_line": 486,
       "checksum": "06e1167e2a3ad1a6",
       "description": "Multi-barcode TODO comment at getProductByBarcode",
       "test_file": "N/A",
@@ -24738,7 +24748,8 @@
         "operator_approved": true,
         "parity_scanned": true,
         "parity_fixed": true
-      }
+      },
+      "line_shifted_at": "2026-03-24T13:00:10.980Z"
     },
     {
       "ticket": "GCP-STG-0529",
@@ -24961,7 +24972,7 @@
       "file": "src/services/offline/scanQueue.ts",
       "start_line": 1,
       "end_line": 39,
-      "checksum": "a8d246b419407ab8",
+      "checksum": "6e4a2ab10e4fa1a8",
       "description": "Offline scan queue — AsyncStorage-backed barcode queue for retry",
       "test_file": "N/A",
       "registered_at": "2026-03-23T22:19:42.800Z",
@@ -25476,9 +25487,79 @@
       "date": "2026-03-14",
       "action": "10-layer full verification audit fixes: consent auth, khata void, BackHandler, .catch(), theme tokens",
       "checksums_updated": 10
+    },
+    {
+      "ticket": "GCP-STG-0543",
+      "file": "supplier-portal/tsconfig.json",
+      "start_line": 1,
+      "end_line": 42,
+      "checksum": "5ae14b07ba2eb422",
+      "description": "Exclude tests/** from supplier portal tsconfig to eliminate 4 TS errors from vitest/express/supertest missing type declarations",
+      "test_file": "N/A",
+      "registered_at": "2026-03-24T12:00:00.000Z",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": "N/A",
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_evidence": {
+        "gcp_parity": "tsconfig.json — no runtime impact, build config only",
+        "regression_check": "npx tsc --noEmit returns 0 errors after change",
+        "test_guard": "No test needed — config-only change, verified by tsc --noEmit",
+        "operator_approved": "operator verified tsc --noEmit passes",
+        "parity_scanned": "Single file change, no parity gaps",
+        "parity_fixed": "No parity gaps found"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0544",
+      "file": "src/constants/storageKeys.ts",
+      "start_line": 1,
+      "end_line": 64,
+      "checksum": "2f9a7488589cd945",
+      "description": "Centralized AsyncStorage key constants — prevents key collisions and enables audit",
+      "test_file": "N/A",
+      "registered_at": "2026-03-24T12:00:00.000Z",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "business_logic": "N/A",
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_evidence": {
+        "gcp_parity": "No runtime behavior change — key strings are identical, only extracted to constants",
+        "regression_check": "npx tsc --noEmit passes, all key values unchanged",
+        "test_guard": "No test needed — pure refactor, all existing tests still pass with identical key values",
+        "operator_approved": "operator verified typecheck passes",
+        "parity_scanned": "28 files updated, all imports verified",
+        "parity_fixed": "No parity gaps found"
+      }
     }
   ],
-  "last_commit_ticket": "audit-v10-backheader",
+  "last_commit_ticket": "GCP-STG-0544",
   "last_updated": "2026-03-16",
   "metadata": {
     "last_audit": "2026-03-20",
@@ -25495,7 +25576,7 @@
     "predeploy_all_gates": "all DB/staging gates continue-on-error",
     "splash_enrollment_fix": "no session → EnrollDevice screen"
   },
-  "lastUpdated": "2026-03-23T22:19:42.911Z",
+  "lastUpdated": "2026-03-24T12:00:00.000Z",
   "_commitNote": "GCP-STG-0417,0422,0425,0426,0428,0430,0431",
   "_note": "0429-behavioral",
   "_n": "0491",
