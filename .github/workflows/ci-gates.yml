@@ -1012,6 +1012,49 @@ jobs:
           node scripts/workflow/guard.js validate-state
 
   # ==========================================================================
+  # JOB: POS TypeScript Typecheck (GCP-STG-0713)
+  # Expo/React Native POS app — tsc only (no build in CI)
+  # ==========================================================================
+  pos-typecheck:
+    name: "POS: TypeScript Check"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+        timeout-minutes: 5
+
+      - name: Run POS typecheck
+        run: npx tsc --noEmit
+        timeout-minutes: 3
+
+  # ==========================================================================
+  # JOB: Fix Guard Check (GCP-STG-0713)
+  # Validates all registered fixes are intact (zero drift)
+  # ==========================================================================
+  fix-guard-check:
+    name: "Fix Guard: Zero Drift"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Run fix-guard check
+        run: node scripts/fix-guard.js check
+
+  # ==========================================================================
   # Final gate - all jobs must pass
   # ==========================================================================
   gate-check:
@@ -1021,14 +1064,14 @@ jobs:
             git-discipline, security-audit, security-deep-scan, migration-safety,
             config-parity, license-coverage, db-auth-scan, scalability-observability,
             routing-validation, semgrep, gitleaks, contract-tests, portal-tests,
-            workflow-governance]
+            workflow-governance, pos-typecheck, fix-guard-check]
     if: always()
     steps:
       - name: Check all jobs passed
         run: |
           # Core CI gates (must pass)
           CORE_FAILED=0
-          for job in typecheck lint test build-verify local-smoke workflow-governance; do
+          for job in typecheck lint test build-verify local-smoke workflow-governance pos-typecheck fix-guard-check; do
             RESULT=""
             case "$job" in
               typecheck)     RESULT="${{ needs.typecheck.result }}" ;;
@@ -1037,6 +1080,8 @@ jobs:
               build-verify)  RESULT="${{ needs.build-verify.result }}" ;;
               local-smoke)   RESULT="${{ needs.local-smoke.result }}" ;;
               workflow-governance) RESULT="${{ needs.workflow-governance.result }}" ;;
+              pos-typecheck) RESULT="${{ needs.pos-typecheck.result }}" ;;
+              fix-guard-check) RESULT="${{ needs.fix-guard-check.result }}" ;;
             esac
             if [ "$RESULT" != "success" ]; then
               echo "FAIL: $job = $RESULT"
@@ -1124,7 +1169,7 @@ jobs:
           fi
 
           echo "════════════════════════════════════════════════════════════"
-          echo "ALL CI GATES PASSED (7 core + 10 ZRP + Semgrep)"
+          echo "ALL CI GATES PASSED (9 core + 10 ZRP + Semgrep)"
           echo "════════════════════════════════════════════════════════════"
           echo ""
           echo "This PR/commit is safe to merge."

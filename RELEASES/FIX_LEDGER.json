@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1024,
+  "version": 1026,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -28052,6 +28052,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:06:46.615Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0713",
+      "file": ".github/workflows/ci-gates.yml",
+      "start_line": 1050,
+      "end_line": 1090,
+      "checksum": "5fba70cdc910d770",
+      "description": "CI master gate — added POS typecheck and fix-guard check as blocking jobs in gate-check aggregation. All 7 required categories now covered: backend tsc+eslint+jest, superadmin tsc+build+vitest, retailer tsc+build+vitest, supplier tsc+next-build, POS tsc, fix-guard check, migration validation",
+      "test_file": "backend/tests/gcp-stg-0713.ci-master-gate.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T20:11:18.737Z",
       "status": "ACTIVE"
     }
   ],
