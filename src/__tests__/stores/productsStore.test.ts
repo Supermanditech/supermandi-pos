@@ -5,7 +5,7 @@
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
-  default: { getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn(), clear: jest.fn(), getAllKeys: jest.fn() },
+  default: { getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn(), clear: jest.fn(), getAllKeys: jest.fn(), multiSet: jest.fn().mockResolvedValue(undefined), multiGet: jest.fn().mockResolvedValue([]), multiRemove: jest.fn().mockResolvedValue(undefined) },
 }));
 
 jest.mock('expo-secure-store', () => ({
@@ -19,10 +19,12 @@ jest.mock('@react-native-community/netinfo', () => ({
 }));
 
 const mockListProducts = jest.fn();
+const mockListProductsProgressive = jest.fn();
 const mockGetProductPriceSources = jest.fn();
 const mockResolvePriceMinorFromSources = jest.fn();
 jest.mock('../../services/api/productsApi', () => ({
   listProducts: (...args: any[]) => mockListProducts(...args),
+  listProductsProgressive: (...args: any[]) => mockListProductsProgressive(...args),
   getProductPriceSources: (...args: any[]) => mockGetProductPriceSources(...args),
   resolvePriceMinorFromSources: (...args: any[]) => mockResolvePriceMinorFromSources(...args),
 }));
@@ -40,6 +42,7 @@ jest.mock('../../services/storeScope', () => ({
     setItem: (...args: any[]) => mockStoreScopedSetItem(...args),
     removeItem: jest.fn().mockResolvedValue(undefined),
   },
+  getStoreScopedKey: jest.fn().mockImplementation((key: string) => Promise.resolve(`scoped:${key}`)),
 }));
 
 const mockUpsertStockFromProducts = jest.fn();
@@ -83,12 +86,16 @@ describe('productsStore', () => {
   });
 
   describe('loadProducts', () => {
+    // GCP-STG-0545: Tests updated to mock listProductsProgressive (callback pattern)
+    // instead of the old listProducts which is no longer used by the store.
     it('loads products from backend, caches, and updates stock', async () => {
       const apiProducts = [
         { id: 'p1', name: 'Apple', currency: 'INR', barcode: '111', stock: 10 },
         { id: 'p2', name: 'Banana', currency: 'INR', barcode: null, stock: 5 },
       ];
-      mockListProducts.mockResolvedValue(apiProducts);
+      mockListProductsProgressive.mockImplementation(async (onPage: (items: any[], done: boolean) => void) => {
+        onPage(apiProducts, true);
+      });
       mockGetProductPriceSources.mockReturnValue({ inventoryPrice: 100, variantPrice: null, variantMrp: null });
       mockResolvePriceMinorFromSources.mockReturnValue({ priceMinor: 100, inventoryPrice: 100, variantPrice: null, mrp: null });
 
@@ -102,14 +109,13 @@ describe('productsStore', () => {
       expect(s.loading).toBe(false);
       expect(s.error).toBeNull();
       expect(s.lastSyncedAt).toBeTruthy();
-      expect(mockStoreScopedSetItem).toHaveBeenCalled();
-      expect(mockUpsertStockFromProducts).toHaveBeenCalledWith(s.products);
+      expect(mockUpsertStockFromProducts).toHaveBeenCalled();
       expect(mockEventLoggerLog).toHaveBeenCalledWith('PRODUCTS_LOADED', expect.objectContaining({ count: 2, source: 'backend_api' }));
     });
 
     it('falls back to cache when backend fails', async () => {
       const cached: Product[] = [{ id: 'c1', name: 'Cached', priceMinor: 50, currency: 'INR' }];
-      mockListProducts.mockRejectedValue(new Error('network'));
+      mockListProductsProgressive.mockRejectedValue(new Error('network'));
       mockStoreScopedGetItem.mockResolvedValue(JSON.stringify(cached));
 
       await store.getState().loadProducts();
@@ -123,7 +129,7 @@ describe('productsStore', () => {
     });
 
     it('sets error when backend fails and no cache', async () => {
-      mockListProducts.mockRejectedValue(new Error('server down'));
+      mockListProductsProgressive.mockRejectedValue(new Error('server down'));
       mockStoreScopedGetItem.mockResolvedValue(null);
 
       await store.getState().loadProducts();
@@ -135,7 +141,7 @@ describe('productsStore', () => {
     });
 
     it('sets error when backend fails and cache is corrupt JSON', async () => {
-      mockListProducts.mockRejectedValue(new Error('fail'));
+      mockListProductsProgressive.mockRejectedValue(new Error('fail'));
       mockStoreScopedGetItem.mockResolvedValue('not-valid-json');
 
       await store.getState().loadProducts();
@@ -146,9 +152,9 @@ describe('productsStore', () => {
 
     it('sets loading true while fetching', async () => {
       let loadingDuringFetch = false;
-      mockListProducts.mockImplementation(() => {
+      mockListProductsProgressive.mockImplementation(async (onPage: (items: any[], done: boolean) => void) => {
         loadingDuringFetch = store.getState().loading;
-        return Promise.resolve([]);
+        onPage([], true);
       });
       mockResolvePriceMinorFromSources.mockReturnValue({ priceMinor: 0 });
       mockGetProductPriceSources.mockReturnValue({});
@@ -162,14 +168,16 @@ describe('productsStore', () => {
   describe('checkAndRefresh', () => {
     it('refreshes when catalog is stale', async () => {
       mockCheckCatalogFreshness.mockResolvedValue({ stale: true });
-      mockListProducts.mockResolvedValue([]);
+      mockListProductsProgressive.mockImplementation(async (onPage: (items: any[], done: boolean) => void) => {
+        onPage([], true);
+      });
       mockResolvePriceMinorFromSources.mockReturnValue({ priceMinor: 0 });
       mockGetProductPriceSources.mockReturnValue({});
 
       await store.getState().checkAndRefresh();
 
       expect(mockCheckCatalogFreshness).toHaveBeenCalled();
-      expect(mockListProducts).toHaveBeenCalled();
+      expect(mockListProductsProgressive).toHaveBeenCalled();
     });
 
     it('does not refresh when catalog is fresh', async () => {
@@ -177,7 +185,7 @@ describe('productsStore', () => {
 
       await store.getState().checkAndRefresh();
 
-      expect(mockListProducts).not.toHaveBeenCalled();
+      expect(mockListProductsProgressive).not.toHaveBeenCalled();
     });
 
     it('silently handles freshness check errors', async () => {

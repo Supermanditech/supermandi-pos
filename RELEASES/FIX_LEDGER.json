@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 957,
+  "version": 959,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -10344,7 +10344,7 @@
       "file": "src/stores/productsStore.ts",
       "start_line": 207,
       "end_line": 277,
-      "checksum": "2751c7ce4061fcb5",
+      "checksum": "08e731ef610a857e",
       "description": "Progressive product loading — 500-item chunks update store incrementally instead of all-at-once",
       "test_file": "src/__tests__/stores/progressiveProductLoad.gcp-stg-0083.test.ts",
       "depends_on": null,
@@ -16951,7 +16951,7 @@
       "file": "src/stores/productsStore.ts",
       "start_line": 200,
       "end_line": 282,
-      "checksum": "e3e36e9a602730f3",
+      "checksum": "de1b25cf98a6214f",
       "description": "Delta sync in checkAndRefresh — try incremental sync first, fall back to full reload (delta endpoint + POS merge)",
       "test_file": "backend/tests/deltaSync.gcp-stg-0336.unit.test.ts",
       "depends_on": null,
@@ -17385,8 +17385,8 @@
     {
       "ticket": "GCP-STG-0367",
       "file": "src/stores/productsStore.ts",
-      "start_line": 509,
-      "end_line": 530,
+      "start_line": 512,
+      "end_line": 533,
       "checksum": "95788216a2defd8d",
       "description": "searchProducts uses pre-computed _search* fields with for-loop + early break at SEARCH_RESULT_CAP=100",
       "test_file": "src/__tests__/stores/searchPerf.gcp-stg-0367.test.ts",
@@ -17417,7 +17417,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:06:45.991Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T13:00:10.916Z"
+      "line_shifted_at": "2026-03-24T13:10:39.867Z"
     },
     {
       "ticket": "GCP-STG-0367",
@@ -23821,7 +23821,7 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "b6bd3018a4f34dd2",
+      "checksum": "5e36080b22b70d29",
       "line_shifted_at": "2026-03-24T13:00:10.972Z"
     },
     {
@@ -24726,8 +24726,8 @@
     {
       "ticket": "GCP-STG-0528",
       "file": "src/stores/productsStore.ts",
-      "start_line": 482,
-      "end_line": 486,
+      "start_line": 485,
+      "end_line": 489,
       "checksum": "06e1167e2a3ad1a6",
       "description": "Multi-barcode TODO comment at getProductByBarcode",
       "test_file": "N/A",
@@ -24749,7 +24749,7 @@
         "parity_scanned": true,
         "parity_fixed": true
       },
-      "line_shifted_at": "2026-03-24T13:00:10.980Z"
+      "line_shifted_at": "2026-03-24T13:10:39.951Z"
     },
     {
       "ticket": "GCP-STG-0529",
@@ -25462,6 +25462,90 @@
         "single_commit": "one commit",
         "ticket_parked": "PARKED"
       }
+    },
+    {
+      "ticket": "GCP-STG-0545",
+      "file": "src/stores/productsStore.ts",
+      "start_line": 271,
+      "end_line": 310,
+      "checksum": "09adb301e737459e",
+      "description": "Replace as any with proper types in productsStore — ApiProduct declares all dual-case fields",
+      "test_file": "src/__tests__/stores/productsStore.typecheck.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T13:12:18.258Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "Type-only change — no runtime behavior change, domain invariants unaffected",
+        "business_behaviour": "Type-only refactor — zero runtime change to scan/add/checkout flow",
+        "impacted_files": "productsStore.ts, productsApi.ts, productsStore.test.ts, FIX_LEDGER.json",
+        "fix_ledger_check": "Zero drift confirmed after change",
+        "no_agent_conflict": "Single agent, no parallel changes",
+        "gcp_parity": "No URLs changed, type-only refactor",
+        "regression_check": "productsStore.test.ts 18/18 pass, tsc --noEmit clean",
+        "test_guard": "src/__tests__/stores/productsStore.test.ts 18/18 pass",
+        "single_commit": "done",
+        "ticket_parked": "pending"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0545",
+      "file": "src/services/api/productsApi.ts",
+      "start_line": 57,
+      "end_line": 78,
+      "checksum": "e5d858312a3fdccb",
+      "description": "Added mode, store_product_id, expiryDate, expiry_date fields to ApiProduct for type-safe access",
+      "test_file": "src/__tests__/stores/productsStore.typecheck.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T13:12:31.114Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 269,

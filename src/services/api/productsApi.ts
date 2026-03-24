@@ -56,6 +56,7 @@ export type ApiProduct = {
   // V3-FIX-167: Canonical conversion profile
   productMode?: string | null;
   product_mode?: string | null;
+  mode?: string | null;
   soldBy?: string | null;
   sold_by?: string | null;
   rateUnit?: string | null;
@@ -72,6 +73,10 @@ export type ApiProduct = {
   conversion_precision?: number | null;
   conversionConfirmed?: boolean | null;
   conversion_confirmed?: boolean | null;
+  // GCP-STG-0545: Additional backend response fields for type-safe access
+  store_product_id?: string | null;
+  expiryDate?: string | null;
+  expiry_date?: string | null;
 };
 
 // V3-FIX-096: Authoritative list item type matching backend response

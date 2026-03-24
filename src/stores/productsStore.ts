@@ -268,44 +268,44 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
 
       await productsApi.listProductsProgressive((pageItems, done) => {
         // V3-FIX-096: Preserve all product metadata from backend
+        // GCP-STG-0545: Type-safe access — ApiProduct now declares all dual-case fields
         const mapped: Product[] = pageItems.map((p) => {
           const priceSources = productsApi.getProductPriceSources(p);
           const resolved = productsApi.resolvePriceMinorFromSources(priceSources);
-          const raw = p as any;
           return {
             id: p.id,
-            storeProductId: raw.storeProductId ?? raw.store_product_id,
+            storeProductId: p.storeProductId ?? p.store_product_id ?? undefined,
             name: p.name,
             priceMinor: resolved.priceMinor,
-            mrpMinor: raw.mrpMinor ?? raw.mrp_minor ?? (raw.mrp ? Math.round(raw.mrp * 100) : undefined),
-            purchasePriceMinor: raw.purchasePriceMinor ?? raw.purchase_price_minor,
+            mrpMinor: p.mrpMinor ?? p.mrp_minor ?? (p.mrp ? Math.round(p.mrp * 100) : undefined),
+            purchasePriceMinor: p.purchasePriceMinor ?? p.purchase_price_minor ?? undefined,
             currency: p.currency,
             barcode: p.barcode ?? undefined,
-            category: raw.category ?? raw.categoryName,
+            category: p.category ?? p.categoryName ?? undefined,
             stock: p.stock,
-            description: raw.description,
-            brand: raw.brand,
-            imageUrl: raw.imageUrl ?? raw.image_url,
-            unit: raw.unit,
-            hsnCode: raw.hsnCode ?? raw.hsn_code,
-            gstRate: raw.gstRate ?? raw.gst_rate,
-            netContentValue: raw.netContentValue ?? raw.net_content_value,
-            netContentUnit: raw.netContentUnit ?? raw.net_content_unit,
-            supplierId: raw.supplierId ?? raw.supplier_id,
-            supplierName: raw.supplierName ?? raw.supplier_name,
-            metadataUpdatedAt: raw.metadataUpdatedAt ?? raw.metadata_updated_at,
+            description: p.description ?? undefined,
+            brand: p.brand ?? undefined,
+            imageUrl: p.imageUrl ?? p.image_url ?? undefined,
+            unit: p.unit ?? undefined,
+            hsnCode: p.hsnCode ?? p.hsn_code ?? undefined,
+            gstRate: p.gstRate ?? p.gst_rate ?? undefined,
+            netContentValue: p.netContentValue ?? p.net_content_value ?? undefined,
+            netContentUnit: p.netContentUnit ?? p.net_content_unit ?? undefined,
+            supplierId: p.supplierId ?? p.supplier_id ?? undefined,
+            supplierName: p.supplierName ?? p.supplier_name ?? undefined,
+            metadataUpdatedAt: p.metadataUpdatedAt ?? p.metadata_updated_at ?? undefined,
             // V3-FIX-167: Canonical conversion profile
-            productMode: raw.productMode ?? raw.product_mode ?? raw.mode ?? undefined,
-            soldBy: raw.soldBy ?? raw.sold_by ?? undefined,
-            rateUnit: raw.rateUnit ?? raw.rate_unit ?? undefined,
-            procurementUnit: raw.procurementUnit ?? raw.procurement_unit ?? undefined,
-            procurementPackQty: raw.procurementPackQty ?? raw.procurement_pack_qty ?? undefined,
-            baseStockUnit: raw.baseStockUnit ?? raw.base_stock_unit ?? undefined,
-            allowFractionalSell: raw.allowFractionalSell ?? raw.allow_fractional_sell ?? undefined,
-            conversionPrecision: raw.conversionPrecision ?? raw.conversion_precision ?? undefined,
-            conversionConfirmed: raw.conversionConfirmed ?? raw.conversion_confirmed ?? undefined,
+            productMode: (p.productMode ?? p.product_mode ?? p.mode ?? undefined) as Product['productMode'],
+            soldBy: (p.soldBy ?? p.sold_by ?? undefined) as Product['soldBy'],
+            rateUnit: p.rateUnit ?? p.rate_unit ?? undefined,
+            procurementUnit: p.procurementUnit ?? p.procurement_unit ?? undefined,
+            procurementPackQty: p.procurementPackQty ?? p.procurement_pack_qty ?? undefined,
+            baseStockUnit: p.baseStockUnit ?? p.base_stock_unit ?? undefined,
+            allowFractionalSell: p.allowFractionalSell ?? p.allow_fractional_sell ?? undefined,
+            conversionPrecision: p.conversionPrecision ?? p.conversion_precision ?? undefined,
+            conversionConfirmed: p.conversionConfirmed ?? p.conversion_confirmed ?? undefined,
             // GCP-STG-0410: Expiry date for SELL detail display
-            expiryDate: raw.expiryDate ?? raw.expiry_date ?? undefined,
+            expiryDate: p.expiryDate ?? p.expiry_date ?? undefined,
           };
         });
 
@@ -401,8 +401,11 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
             const byId = new Map(existing.map(p => [p.id, p]));
 
             // Apply upserts
+            // GCP-STG-0545: Type-safe delta access — backend may include extra fields beyond StoreProductListItem
+            // Use ApiProduct which covers all dual-case field variants
+            type DeltaRaw = productsApi.ApiProduct & { productId?: string; sellPrice?: number | null; currentStock?: number; purchasePrice?: number | null };
             for (const item of delta.upserted) {
-              const raw = item as any;
+              const raw = item as DeltaRaw;
               const priceSources = {
                 inventoryPrice: raw.sellPrice ?? null,
                 variantPrice: null,
@@ -411,29 +414,29 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
               const priceMinor = priceSources.inventoryPrice ?? priceSources.variantMrp ?? 0;
 
               const mapped: Product = {
-                id: raw.productId,
-                storeProductId: raw.storeProductId ?? raw.store_product_id,
+                id: raw.productId ?? raw.id,
+                storeProductId: raw.storeProductId ?? raw.store_product_id ?? undefined,
                 name: raw.name,
                 priceMinor: typeof priceMinor === 'number' && Number.isFinite(priceMinor) ? Math.max(0, priceMinor) : 0,
                 mrpMinor: raw.mrp != null ? Math.round(raw.mrp * 100) : undefined,
-                purchasePriceMinor: raw.purchasePrice ?? raw.purchasePriceMinor ?? raw.purchase_price_minor,
+                purchasePriceMinor: raw.purchasePrice ?? raw.purchasePriceMinor ?? raw.purchase_price_minor ?? undefined,
                 currency: 'INR',
                 barcode: raw.barcode ?? undefined,
-                category: raw.category,
+                category: raw.category ?? raw.categoryName ?? undefined,
                 stock: typeof raw.currentStock === 'number' ? raw.currentStock : 0,
-                description: raw.description,
-                brand: raw.brand,
-                imageUrl: raw.imageUrl ?? raw.image_url,
-                unit: raw.unit,
-                hsnCode: raw.hsnCode ?? raw.hsn_code,
-                gstRate: raw.gstRate ?? raw.gst_rate,
-                netContentValue: raw.netContentValue ?? raw.net_content_value,
-                netContentUnit: raw.netContentUnit ?? raw.net_content_unit,
-                supplierId: raw.supplierId ?? raw.supplier_id,
-                supplierName: raw.supplierName ?? raw.supplier_name,
-                metadataUpdatedAt: raw.metadataUpdatedAt ?? raw.metadata_updated_at,
-                productMode: raw.productMode ?? raw.product_mode ?? raw.mode ?? undefined,
-                soldBy: raw.soldBy ?? raw.sold_by ?? undefined,
+                description: raw.description ?? undefined,
+                brand: raw.brand ?? undefined,
+                imageUrl: raw.imageUrl ?? raw.image_url ?? undefined,
+                unit: raw.unit ?? undefined,
+                hsnCode: raw.hsnCode ?? raw.hsn_code ?? undefined,
+                gstRate: raw.gstRate ?? raw.gst_rate ?? undefined,
+                netContentValue: raw.netContentValue ?? raw.net_content_value ?? undefined,
+                netContentUnit: raw.netContentUnit ?? raw.net_content_unit ?? undefined,
+                supplierId: raw.supplierId ?? raw.supplier_id ?? undefined,
+                supplierName: raw.supplierName ?? raw.supplier_name ?? undefined,
+                metadataUpdatedAt: raw.metadataUpdatedAt ?? raw.metadata_updated_at ?? undefined,
+                productMode: (raw.productMode ?? raw.product_mode ?? raw.mode ?? undefined) as Product['productMode'],
+                soldBy: (raw.soldBy ?? raw.sold_by ?? undefined) as Product['soldBy'],
                 rateUnit: raw.rateUnit ?? raw.rate_unit ?? undefined,
                 procurementUnit: raw.procurementUnit ?? raw.procurement_unit ?? undefined,
                 procurementPackQty: raw.procurementPackQty ?? raw.procurement_pack_qty ?? undefined,
