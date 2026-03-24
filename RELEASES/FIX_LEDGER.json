@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1092,
+  "version": 1093,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6417,7 +6417,7 @@
       "file": "backend/src/routes/v1/pos/sales.ts",
       "start_line": 816,
       "end_line": 3093,
-      "checksum": "03b6f8383cf79270",
+      "checksum": "cb4ab3b1a25de020",
       "description": "instanceof Date check for TIMESTAMPTZ in bill detail",
       "test_file": "src/__tests__/screens/date-timezone.stg-515.test.ts",
       "depends_on": null,
@@ -10225,8 +10225,8 @@
     {
       "ticket": "GCP-STG-0077",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 2243,
-      "end_line": 3112,
+      "start_line": 2258,
+      "end_line": 3127,
       "checksum": "ae6d1f357bf1151a",
       "description": "Auto-generate tax invoice after POS sale completion (fire-and-forget after cash/UPI/DUE payment COMMIT)",
       "test_file": "backend/tests/invoiceAutoGen.gcp-stg-0077.unit.test.ts",
@@ -10260,7 +10260,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:30:19.204Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T19:43:09.268Z"
+      "line_shifted_at": "2026-03-24T22:32:17.572Z"
     },
     {
       "ticket": "GCP-STG-0049",
@@ -18745,8 +18745,8 @@
     {
       "ticket": "GCP-STG-0361",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 3216,
-      "end_line": 3277,
+      "start_line": 3231,
+      "end_line": 3292,
       "checksum": "fa1b047f3b7141c3",
       "description": "GCP-STG-0361: POS invoice PDF download — GET /sales/:saleId/invoice/pdf with store isolation + PDF streaming",
       "test_file": "backend/tests/posInvoicePdf.gcp-stg-0361.unit.test.ts",
@@ -18777,7 +18777,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:01:45.434Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T19:48:53.906Z"
+      "line_shifted_at": "2026-03-24T22:32:17.715Z"
     },
     {
       "ticket": "GCP-STG-0361",
@@ -30484,6 +30484,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:27:02.400Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0657",
+      "file": "backend/src/routes/v1/pos/sales.ts",
+      "start_line": 1900,
+      "end_line": 1975,
+      "checksum": "6c63e640dd94dae5",
+      "description": "Configurable refund time limit — REFUND_MAX_DAYS env var enforced in void handler",
+      "test_file": "backend/src/__tests__/pos/sales.void.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T22:32:05.275Z",
       "status": "ACTIVE"
     }
   ],

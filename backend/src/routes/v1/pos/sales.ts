@@ -1898,6 +1898,11 @@ posSalesRouter.post("/sales/:saleId/return", requireDeviceToken, requireActiveSt
 });
 
 // =============================================================================
+// GCP-STG-0657: Configurable refund time limit
+// =============================================================================
+const REFUND_MAX_DAYS = parseInt(process.env.REFUND_MAX_DAYS || '7', 10);
+
+// =============================================================================
 // STG-489: Void/refund a completed sale
 // Sets status to 'voided', records who voided it and when.
 // Only completed sales (PAID_CASH, PAID_UPI, DUE) can be voided.
@@ -1948,6 +1953,16 @@ posSalesRouter.post("/sales/:saleId/void", requireDeviceToken, requireActiveStor
       return res.status(409).json({
         error: "cannot_void",
         message: `Cannot void sale in ${sale.status} status. Only completed sales (${voidableStatuses.join(", ")}) can be voided.`
+      });
+    }
+
+    // GCP-STG-0657: Enforce configurable refund time window
+    const saleDateMs = new Date(sale.created_at).getTime();
+    const daysSinceSale = (Date.now() - saleDateMs) / (1000 * 60 * 60 * 24);
+    if (daysSinceSale > REFUND_MAX_DAYS) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        error: { code: 'REFUND_WINDOW_EXPIRED', message: `Refund window expired. Maximum ${REFUND_MAX_DAYS} days.` }
       });
     }
 

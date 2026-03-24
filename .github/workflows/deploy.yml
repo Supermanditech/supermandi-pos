@@ -697,7 +697,7 @@ jobs:
             --startup-probe="" \
             --vpc-connector="$VPC_CONNECTOR" \
             --vpc-egress=all-traffic \
-            --set-env-vars="^;^NODE_ENV=staging;GIT_SHA=${{ env.SHA }};MIN_APP_VERSION=${{ env.APP_VERSION }};ADMIN_SERVICE_URL=$MB_URL;REDIS_HOST=10.107.71.27;REDIS_PORT=6379;REDIS_URL=redis://10.107.71.27:6379;CORS_ALLOWED_ORIGINS=https://staging.supermandi.tech,https://www.staging.supermandi.tech" \
+            --set-env-vars="^;^NODE_ENV=staging;GIT_SHA=${{ env.SHA }};MIN_APP_VERSION=${{ env.APP_VERSION }};ADMIN_SERVICE_URL=$MB_URL;REDIS_HOST=10.107.71.27;REDIS_PORT=6379;REDIS_URL=redis://10.107.71.27:6379;CORS_ALLOWED_ORIGINS=https://staging.supermandi.tech,https://www.staging.supermandi.tech;REFUND_MAX_DAYS=7" \
             --set-secrets="JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest" \
             --allow-unauthenticated \
             --quiet
