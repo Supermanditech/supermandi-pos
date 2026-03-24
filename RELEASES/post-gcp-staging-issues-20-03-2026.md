@@ -15661,4 +15661,235 @@ If API Gateway is bundled with main backend (runs as part of the same process):
 
 ---
 
-<!-- next ticket: GCP-STG-0575 -->
+## GCP-STG-0575 — MEDIUM: Update ALL .dockerignore files to exclude non-runtime files — reduce Docker image size (MEDIUM)
+
+**Ticket ID**: GCP-STG-0575
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND, RETAILER-WEB, SUPPLIER-PORTAL, SUPERADMIN, LANDING
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 2
+
+**Problem**: All 5 `.dockerignore` files are missing exclusions for planning docs, screenshots, and Claude instructions. These non-runtime files get copied into Docker images, adding ~12MB+ of unnecessary content:
+- `RELEASES/` — 155 .md files (682KB ticket file + 968KB FIX_LEDGER.json + rules, playbooks, ledgers)
+- `*.png` — 82 screenshot PNGs in repo root (~10MB+)
+- `CLAUDE.md` — session instructions (50KB)
+- `.claude/` — Claude settings directory
+- `*.md` — all markdown files (README, CHANGELOG, etc.) — not needed at runtime
+- `e2e-tests/` — Playwright E2E test suite
+- `scripts/` — deploy/migrate/gate scripts (not needed inside container)
+- `FIX_LEDGER.json` — 968KB fix tracking file
+- `__tests__/` — only backend excludes tests; other 4 platforms don't
+
+**Current .dockerignore coverage**:
+| Exclusion | backend | retailer | supplier | superadmin | landing |
+|-----------|---------|----------|----------|-----------|---------|
+| RELEASES/ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| *.png | ❌ | ❌ | ❌ | ❌ | ❌ |
+| CLAUDE.md | ❌ | ❌ | ❌ | ❌ | ❌ |
+| .claude/ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| *.md | ❌ | ❌ | ❌ | ❌ | ❌ |
+| __tests__/ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| e2e-tests/ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| scripts/ | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+**Fix**: Add these lines to ALL 5 `.dockerignore` files:
+```
+# Planning docs & internal files — not needed at runtime
+RELEASES/
+CLAUDE.md
+.claude/
+*.md
+!README.md
+
+# Screenshots & media
+*.png
+*.jpg
+
+# Test files
+__tests__/
+*.test.*
+*.spec.*
+e2e-tests/
+tests/
+
+# Scripts & tooling
+scripts/
+.github/
+.vscode/
+.husky/
+
+# Fix tracking
+FIX_LEDGER.json
+```
+
+**Files to modify**:
+- `backend/.dockerignore`
+- `retailer-admin/.dockerignore`
+- `supplier-portal/.dockerignore`
+- `supermandi-superadmin/.dockerignore`
+- `supermandi-landing/.dockerignore`
+
+**Test Requirements**: Docker build for each platform must still succeed after .dockerignore update. No runtime files accidentally excluded.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0576 — MEDIUM: Keep SMS_DISABLED=true — use WhatsApp + Firebase only for OTP/notifications (MEDIUM)
+
+**Ticket ID**: GCP-STG-0576
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, GCP Parity, Business
+**Source**: GCP Deployment Readiness Audit — Section 6
+
+**Problem**: The staging deploy config has `SMS_DISABLED=true`. The codebase has SMS fallback logic (GCP-STG-0467: `sendSms()` in smsService.ts) but no SMS provider (MSG91/Twilio) is configured. Need to formalize this as the intended production architecture — NOT a temporary staging workaround.
+
+**Decision**: SuperMandi uses **WhatsApp (primary) + Firebase Phone Auth (web portals)** for all OTP delivery. SMS is a dead code path that adds complexity without value:
+- **POS OTP**: WhatsApp via Meta Business API (WHATSAPP_ACCESS_TOKEN configured)
+- **Retailer/Supplier web OTP**: Firebase Phone Auth (handles SMS internally via Google)
+- **SuperAdmin OTP**: Email (SMTP configured)
+- **Notifications**: WhatsApp broadcast (already implemented)
+
+**Fix**:
+
+### 1. Document SMS_DISABLED as permanent (not temporary)
+In `backend/.env.cloudrun.example`, change the SMS section comment:
+```
+# SMS — PERMANENTLY DISABLED
+# SuperMandi uses WhatsApp (POS) + Firebase (web portals) for OTP delivery.
+# SMS fallback code exists (GCP-STG-0467) but is disabled by design.
+# Setting SMS_DISABLED=false would require MSG91/Twilio credentials.
+SMS_DISABLED=true
+```
+
+### 2. Remove SMS fallback attempt in otpAuth.ts
+In `backend/src/routes/v1/pos/otpAuth.ts`, the SMS fallback (GCP-STG-0467) tries to send SMS when WhatsApp fails. Since SMS is permanently disabled, update the fallback to:
+- Log "SMS disabled — WhatsApp delivery only" instead of attempting SMS
+- Remove the dead `sendSms()` call path when `SMS_DISABLED=true`
+- Keep the `sendSms()` function in smsService.ts (don't delete — allows future re-enablement)
+
+### 3. Update deploy.yml comment
+In `.github/workflows/deploy.yml`, add comment next to `SMS_DISABLED=true`:
+```yaml
+SMS_DISABLED=true  # Permanent: WhatsApp primary, Firebase for web, no SMS provider
+```
+
+### 4. Production deploy: same config
+When promoting to production, keep `SMS_DISABLED=true`. Document in RELEASE_POLICY.md.
+
+**Files to modify**:
+- `backend/.env.cloudrun.example` — update SMS section comments
+- `backend/src/routes/v1/pos/otpAuth.ts` — clean up dead SMS fallback path
+- `.github/workflows/deploy.yml` — add comment
+
+**Test Requirements**:
+- Behavioral: with SMS_DISABLED=true, verify WhatsApp-only delivery (no SMS attempt)
+- Existing otpAuth tests must still pass
+
+**12-Layer Verification**: L6 Backend ✅, L9 GCP ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0577 — MEDIUM: Configure Android release keystore + BLUETOOTH permission for signed APK (MEDIUM)
+
+**Ticket ID**: GCP-STG-0577
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: GCP Parity, Dependencies
+**Source**: GCP Deployment Readiness Audit — Section 12
+
+**Problem**: Two issues blocking production APK release:
+
+### Issue 1: No release keystore
+`android/app/build.gradle` only configures `debug.keystore` with `androiddebugkey`:
+```groovy
+signingConfigs {
+    debug {
+        storeFile file('debug.keystore')
+        keyAlias 'androiddebugkey'
+    }
+}
+```
+Cannot produce a signed release APK for Google Play Store. The release build defaults to debug signing which Play Store rejects.
+
+### Issue 2: Missing BLUETOOTH permission
+`android/app/src/main/AndroidManifest.xml` has CAMERA, INTERNET, RECORD_AUDIO, VIBRATE — but NOT:
+- `android.permission.BLUETOOTH` — required for BLE thermal printer discovery
+- `android.permission.BLUETOOTH_CONNECT` — required on Android 12+ for BLE pairing
+- `android.permission.BLUETOOTH_SCAN` — required on Android 12+ for BLE discovery
+- `android.permission.ACCESS_FINE_LOCATION` — required for BLE scan on Android 10+ (location is a prerequisite for Bluetooth scanning)
+
+Without these, the ESC/POS barcode label printing (GCP-STG-0536) and receipt printing via Bluetooth thermal printers will fail silently.
+
+**Fix**:
+
+### Part A: Release Keystore
+1. **Generate release keystore** (operator action — not automated):
+```bash
+keytool -genkeypair -v -storetype PKCS12 -keystore supermandi-release.keystore \
+  -alias supermandi -keyalg RSA -keysize 2048 -validity 10000 \
+  -dname "CN=SuperMandi Tech, OU=Mobile, O=SuperMandi Tech Pvt Ltd, L=Jodhpur, ST=Rajasthan, C=IN"
+```
+
+2. **Store keystore securely** — NOT in git. Options:
+   - GitHub Secrets (for CI build)
+   - Google Secret Manager (for Cloud Build)
+   - Local only (for operator builds)
+
+3. **Update build.gradle**:
+```groovy
+signingConfigs {
+    release {
+        storeFile file(System.getenv('KEYSTORE_PATH') ?: 'supermandi-release.keystore')
+        storePassword System.getenv('KEYSTORE_PASSWORD') ?: ''
+        keyAlias System.getenv('KEY_ALIAS') ?: 'supermandi'
+        keyPassword System.getenv('KEY_PASSWORD') ?: ''
+    }
+}
+buildTypes {
+    release {
+        signingConfig signingConfigs.release
+        minifyEnabled true
+        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    }
+}
+```
+
+4. **Register SHA-1 in Firebase Console** — release keystore SHA-1 must be added to Firebase project for Google Sign-In and App Check to work with release builds.
+
+### Part B: BLUETOOTH Permissions
+Add to `android/app/src/main/AndroidManifest.xml`:
+```xml
+<!-- Bluetooth for thermal printer (GCP-STG-0536) -->
+<uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+<!-- Location required for BLE scan on Android 10-11 -->
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+```
+
+### Part C: Version Bump
+Update `android/app/build.gradle`:
+- `versionCode` from 1 to 2 (increment for each release)
+- `versionName` from "1.0.1" to "1.1.0" (semantic version for 574-ticket release)
+
+Also update `app.json`:
+- `version` from "1.0.1" to "1.1.0"
+
+**Files to modify**:
+- `android/app/build.gradle` — release signing config + BLUETOOTH + version bump
+- `android/app/src/main/AndroidManifest.xml` — BLUETOOTH permissions
+- `app.json` — version bump
+
+**Test Requirements**:
+- `cd android && ./gradlew assembleRelease` must produce signed APK (requires keystore)
+- APK installs on device without "unsigned app" warning
+- Bluetooth printer discovery works after permission grant
+
+**12-Layer Verification**: L9 GCP ✅, L11 Dependencies ✅
+
+---
+
+<!-- next ticket: GCP-STG-0578 -->
