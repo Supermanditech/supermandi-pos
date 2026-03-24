@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1082,
+  "version": 1083,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -11139,9 +11139,9 @@
       "ticket": "GCP-STG-0097",
       "file": "backend/.env.cloudrun.example",
       "start_line": 1,
-      "end_line": 122,
-      "checksum": "7a11c6a8fb4005c3",
-      "description": "Comprehensive Cloud Run env var parity reference: REQUIRED vs RECOMMENDED vs OPTIONAL categories with all 80+ env vars [UPDATED by GCP-STG-0603: added CORS production domain comments]",
+      "end_line": 132,
+      "checksum": "01bebb12b19d9ae7",
+      "description": "Comprehensive Cloud Run env var parity reference: REQUIRED vs RECOMMENDED vs OPTIONAL categories with all 80+ env vars [UPDATED by GCP-STG-0617: added SERVICE_TOKEN_SECRET + ADMIN_TOKEN docs]",
       "test_file": "backend/.env.cloudrun.example",
       "depends_on": null,
       "migration": null,
@@ -29113,8 +29113,8 @@
     {
       "ticket": "GCP-STG-0592",
       "file": "backend/.env.cloudrun.example",
-      "start_line": 125,
-      "end_line": 129,
+      "start_line": 136,
+      "end_line": 140,
       "checksum": "1d99ae77a7b112a2",
       "description": "Document DB_POOL_MAX=10 with pool math and MAX_COMMISSION_PERCENT=30",
       "test_file": "scripts/gates/config-parity.sh",
@@ -29148,7 +29148,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:04:01.599Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T21:32:29.337Z"
+      "line_shifted_at": "2026-03-24T21:59:56.047Z"
     },
     {
       "ticket": "GCP-STG-0595",
@@ -29793,8 +29793,8 @@
     {
       "ticket": "GCP-STG-0584",
       "file": "backend/.env.cloudrun.example",
-      "start_line": 157,
-      "end_line": 172,
+      "start_line": 168,
+      "end_line": 183,
       "checksum": "4398e3f6a8d1f326",
       "description": "SMS provider configuration docs for MSG91 and Twilio",
       "test_file": "backend/.env.cloudrun.example",
@@ -29825,7 +29825,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:44:12.287Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T21:56:20.651Z"
+      "line_shifted_at": "2026-03-24T21:59:56.055Z"
     },
     {
       "ticket": "GCP-STG-0606",
@@ -30010,8 +30010,8 @@
     {
       "ticket": "GCP-STG-0615",
       "file": "backend/.env.cloudrun.example",
-      "start_line": 140,
-      "end_line": 145,
+      "start_line": 151,
+      "end_line": 156,
       "checksum": "7952a11428874602",
       "description": "ERROR_REPORTING_ENABLED documentation in env example",
       "test_file": "backend/.env.cloudrun.example",
@@ -30042,7 +30042,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:54:22.368Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T21:56:20.654Z"
+      "line_shifted_at": "2026-03-24T21:59:56.057Z"
     },
     {
       "ticket": "GCP-STG-0616",
@@ -30083,8 +30083,8 @@
     {
       "ticket": "GCP-STG-0616",
       "file": "backend/.env.cloudrun.example",
-      "start_line": 134,
-      "end_line": 138,
+      "start_line": 145,
+      "end_line": 149,
       "checksum": "e4f88aad005ab3fb",
       "description": "LOG_LEVEL documentation with values: debug, info, warn, error",
       "test_file": "backend/.env.cloudrun.example",
@@ -30114,7 +30114,51 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:56:02.036Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-24T21:59:56.059Z"
+    },
+    {
+      "ticket": "GCP-STG-0617",
+      "file": "backend/.env.cloudrun.example",
+      "start_line": 27,
+      "end_line": 37,
+      "checksum": "6e476c50bab7474c",
+      "description": "Document SERVICE_TOKEN_SECRET and ADMIN_TOKEN secrets with rotation and failure info",
+      "test_file": "backend/.env.cloudrun.example",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T21:59:51.066Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "Documentation-only change — no business logic affected",
+        "business_behaviour": "Documentation-only change — no runtime behaviour affected",
+        "impacted_files": "backend/.env.cloudrun.example + FIX_LEDGER.json",
+        "fix_ledger_check": "fix-guard check passes — 624 fixes intact",
+        "no_agent_conflict": "Single agent working — no parallel modifications"
+      }
     }
   ],
   "machine_state_version": 270,
