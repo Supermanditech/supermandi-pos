@@ -15321,4 +15321,202 @@ product={{
 
 ---
 
-<!-- next ticket: GCP-STG-0562 -->
+## GCP-STG-0562 — MEDIUM: BUY screen needs full VoiceOverlayV3 — not just focus+Alert (MEDIUM)
+
+**Ticket ID**: GCP-STG-0562
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX, Wiring, Business
+**Source**: Voice Module Audit — AUDIT OO
+
+**Problem**: The SELL screen has a complete voice flow: mic FAB → VoiceOverlayV3 → expo-av recording → Whisper STT → GPT intent parsing → product match → cart add. The BUY screen (GCP-STG-0560) only focuses the search TextInput + shows an Alert — no actual voice recording or AI processing.
+
+**Fix**:
+1. Import `VoiceOverlayV3` in `BuyScreenV3.tsx`
+2. Add `voiceVisible` state (same pattern as SellScreenV3:128)
+3. Replace the Alert-based mic handler with `setVoiceVisible(true)`
+4. Add `<VoiceOverlayV3>` component at bottom of JSX (same as SellScreenV3:507-514)
+5. On voice match → add to purchase cart (not sell cart) via `handleQtyChange(matchedProduct.id, moq)`
+6. Pass `context="buy"` to VoiceOverlayV3 so it searches supplier catalog instead of store products
+
+**Files to modify**: `src/screens/v3/BuyScreenV3.tsx`, possibly `src/components/v3/VoiceOverlayV3.tsx` (add context prop)
+
+**Test Requirements**:
+- Behavioral: BUY screen renders VoiceOverlayV3 when mic tapped
+- Behavioral: voice match in BUY context adds to purchase cart, not sell cart
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0563 — MEDIUM: Add offline check before voice recording starts (MEDIUM)
+
+**Ticket ID**: GCP-STG-0563
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UX, Business
+**Source**: Voice Module Audit — AUDIT RR
+
+**Problem**: `VoiceOverlayV3.tsx:57-80` starts recording without checking network connectivity. If the device is offline, the recording succeeds but the upload to backend fails with a confusing error. User wastes 10-30 seconds recording before seeing "Voice failed".
+
+**Fix**:
+1. At the start of the recording flow in VoiceOverlayV3, add:
+```typescript
+import { isOnline } from '../../services/networkStatus';
+// Before startRecording():
+if (!isOnline()) {
+  showToast('Internet connection required for voice search');
+  return;
+}
+```
+2. Also disable the mic FAB button visually when offline (grey out + no onPress)
+3. When network returns, re-enable automatically
+
+**Files to modify**: `src/components/v3/VoiceOverlayV3.tsx`, `src/screens/v3/SellScreenV3.tsx` (mic FAB grey-out), `src/screens/v3/BuyScreenV3.tsx` (same)
+
+**Test Requirements**:
+- Behavioral: mock isOnline()=false → recording does NOT start, toast shown
+- Behavioral: mock isOnline()=true → recording starts normally
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0564 — MEDIUM: Block voice activation during payment flow (MEDIUM)
+
+**Ticket ID**: GCP-STG-0564
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, Business
+**Source**: Voice Module Audit — AUDIT SS
+
+**Problem**: VoiceOverlayV3 can be opened during the payment flow (PaymentScreenV3, CashScreenV3, UpiScreenV3). A voice command during payment could add items to cart mid-checkout, creating an inconsistent state. This is the same issue as GCP-STG-0506 (scan blocked during payment) but for voice.
+
+**Fix**:
+1. Add `disabled` prop to VoiceOverlayV3: when true, overlay refuses to open
+2. In SellScreenV3, pass `disabled={paymentInProgress}` (check if payment modal/screen is active)
+3. Alternatively: hide the mic FAB entirely when on payment-related screens (since voice is on SellScreenV3 which has the FAB, and payment is a separate navigation screen, this may already be handled by navigation — verify)
+4. If VoiceOverlayV3 is a modal on SellScreenV3, check if `cartSheetVisible || paymentScreenActive` before allowing voice
+
+**Files to modify**: `src/components/v3/VoiceOverlayV3.tsx`, `src/screens/v3/SellScreenV3.tsx`
+
+**Test Requirements**:
+- Behavioral: voice overlay does NOT open when payment is in progress
+- Behavioral: voice overlay opens normally when no payment active
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0565 — MEDIUM: Voice multi-candidate picker — show product options when multiple match (MEDIUM)
+
+**Ticket ID**: GCP-STG-0565
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Voice Module Audit — AUDIT NN
+
+**Problem**: When voice says "sugar" and multiple products match (Sugar 1kg, Sugar 5kg, Brown Sugar), the backend returns `NEEDS_CLARIFICATION` with a `candidates` array (top 3). But VoiceOverlayV3 currently shows an error state instead of a picker. The user must retry with a more specific name.
+
+**Fix**:
+1. In VoiceOverlayV3, when `intent.action === 'NEEDS_CLARIFICATION'` AND `intent.candidates?.length > 1`:
+   - Show a picker UI: "Multiple products found — select one"
+   - List each candidate as a tappable row: name, price, stock, pack size
+   - On tap → add selected product to cart with voiced quantity
+   - "None of these" → show search input fallback
+2. Picker should match ProductTileV3 mini-card style (image + name + price in a horizontal row)
+
+**Files to modify**: `src/components/v3/VoiceOverlayV3.tsx`
+
+**Test Requirements**:
+- Behavioral: voice returns 3 candidates → picker renders 3 options
+- Behavioral: tap candidate → adds to cart
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0566 — LOW: Voice E2E test — mock-based CI coverage (LOW)
+
+**Ticket ID**: GCP-STG-0566
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: Voice Module Audit — AUDIT TT
+
+**Problem**: `e2e-tests/tests/sell-home-clickmap.spec.ts:50-54` has a voice test that's skipped (`test.skip`) because it requires a physical device. No voice flow is tested in CI.
+
+**Fix**: Create a mock-based voice test that doesn't need a real microphone:
+1. Mock `submitVoiceCommand()` to return a successful product match
+2. Verify the VoiceOverlayV3 shows the matched product
+3. Verify "Add" button adds to cart
+4. Verify cart count increments
+
+**Files to modify**: New test file `src/__tests__/screens/voiceE2E.gcp-stg-0566.test.tsx`
+
+**Test Requirements**: The test itself IS the deliverable
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0567 — LOW: Voice command analytics event tracking (LOW)
+
+**Ticket ID**: GCP-STG-0567
+**Severity**: P3 LOW
+**Platforms**: POS, BACKEND
+**Layers**: Business
+**Source**: Voice Module Audit — AUDIT TT
+
+**Problem**: Voice commands are not tracked in analytics. Can't measure: voice usage rate, success rate, most common voice queries, failure reasons, language distribution.
+
+**Fix**:
+1. In `voiceClient.ts`, after `submitVoiceCommand()` completes, log an analytics event:
+```typescript
+logEvent('VOICE_COMMAND', {
+  action: result.intent?.action,
+  confidence: result.intent?.confidence,
+  success: result.matched,
+  language: locale,
+  transcriptLength: result.transcript?.length,
+  duration_ms: Date.now() - startTime,
+});
+```
+2. Use existing `cloudEventLogger.ts` (which already has `PosEventType` — add `VOICE_COMMAND`)
+3. Backend: log in `voice.ts` route handler with requestId, storeId, deviceId
+
+**Files to modify**: `src/services/voice/voiceClient.ts`, `src/services/cloudEventLogger.ts`, `backend/src/routes/v1/pos/voice.ts`
+
+**Test Requirements**:
+- Behavioral: after voice command, verify logEvent called with correct payload
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0568 — LOW: Voice hint in welcome guide for first-time users (LOW)
+
+**Ticket ID**: GCP-STG-0568
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX
+**Source**: Voice Module Audit — AUDIT TT
+
+**Problem**: The SELL screen welcome guide (`SellScreenV3.tsx:528-549`) doesn't mention voice search. First-time users may not notice the mic FAB button or know they can speak in Hindi.
+
+**Fix**: Add a voice hint to the welcome guide:
+- "🎤 Voice Search — Tap the mic button and say 'Add 2 kg sugar' in Hindi or English"
+- Show after the first product add (not on empty screen — user needs context)
+- Dismissible with "Got it" button
+- Only shown once (AsyncStorage flag)
+
+**Files to modify**: `src/screens/v3/SellScreenV3.tsx`
+
+**Test Requirements**:
+- Behavioral: first-time user sees voice hint after first product add
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅
+
+---
+
+<!-- next ticket: GCP-STG-0569 -->
