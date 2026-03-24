@@ -14416,4 +14416,426 @@ Before printing, show a preview modal:
 
 ---
 
-<!-- next ticket: GCP-STG-0537 -->
+## GCP-STG-0537 — CRITICAL: SuperAdmin build fails — AllocationsDashboardTab.tsx IIFE syntax error blocks production build (CRITICAL)
+
+**Ticket ID**: GCP-STG-0537
+**Severity**: P0 CRITICAL
+**Platforms**: SUPERADMIN
+**Layers**: UI, GCP Parity
+**Source**: Final Comprehensive Audit — AUDIT 4
+
+**Problem**: `supermandi-superadmin/src/tabs/AllocationsDashboardTab.tsx:129-139` contains an IIFE (Immediately Invoked Function Expression) inside JSX that esbuild cannot parse:
+```tsx
+{storeAllocations.length > ALLOC_PAGE_SIZE && (() => {
+  const totalPages = Math.ceil(storeAllocations.length / ALLOC_PAGE_SIZE);
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, padding: '8px 0' }}>
+      <button disabled={allocPage === 0} onClick={() => setAllocPage(p => p - 1)}>Prev</button>
+      <span style={{ fontSize: 13, color: '#666' }}>Page {allocPage + 1} of {totalPages}</span>
+      <button disabled={allocPage >= totalPages - 1} onClick={() => setAllocPage(p => p + 1)}>Next</button>
+    </div>
+  );
+})()}
+```
+esbuild error: `Expected ")" but found "{"` at line 129:8. The `&&` + IIFE pattern is valid JavaScript but esbuild's JSX parser rejects it.
+
+**Impact**: CRITICAL — **SuperAdmin portal cannot be built for production**. `npx vite build` fails. This blocks deployment of the entire SuperAdmin portal.
+
+**Fix**: Replace the IIFE with a standard conditional render pattern:
+```tsx
+{storeAllocations.length > ALLOC_PAGE_SIZE && (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, padding: '8px 0' }}>
+    <button disabled={allocPage === 0} onClick={() => setAllocPage(p => p - 1)}>Prev</button>
+    <span style={{ fontSize: 13, color: '#666' }}>
+      Page {allocPage + 1} of {Math.ceil(storeAllocations.length / ALLOC_PAGE_SIZE)}
+    </span>
+    <button disabled={allocPage >= Math.ceil(storeAllocations.length / ALLOC_PAGE_SIZE) - 1} onClick={() => setAllocPage(p => p + 1)}>Next</button>
+  </div>
+)}
+```
+Alternatively, extract the `totalPages` computation to a `useMemo` above the JSX return.
+
+**Files to modify**: `supermandi-superadmin/src/tabs/AllocationsDashboardTab.tsx`
+
+**Test Requirements**: `VITE_API_BASE_URL="" npx vite build` must complete with exit code 0.
+
+**12-Layer Verification**: L1 UI ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0538 — HIGH: SuperAdmin password login UI missing — backend endpoint exists but LoginGate has no password field (HIGH)
+
+**Ticket ID**: GCP-STG-0538
+**Severity**: P1 HIGH
+**Platforms**: SUPERADMIN
+**Layers**: UI, Wiring, Navigation
+**Source**: Final Comprehensive Audit — AUDIT 4 + AUDIT 6
+**Depends on**: GCP-STG-0537 (build must work first)
+
+**Problem**: GCP-STG-0471 added `POST /api/v1/admin/auth/login-password` with bcrypt verification, 5-attempt lockout, allowlist enforcement, and audit logging. But the SuperAdmin frontend `LoginGate.tsx` only shows an email input → OTP verification flow. There is NO password field, NO toggle to switch between OTP and password login, and NO way for a SuperAdmin to use password authentication.
+
+**Current LoginGate flow**: Email input → "Send OTP" button → 6-digit OTP input → "Verify" button
+**Required LoginGate flow**: Email input → Auth mode toggle (OTP | Password) → OTP flow OR Password input → Login
+
+**Fix**:
+1. Add `authMode` state: `'otp' | 'password'` (default: `'otp'`)
+2. Add toggle link below email input: "Use password instead" / "Use OTP instead"
+3. When `authMode === 'password'`:
+   - Show password input field (type="password", min 8 chars)
+   - Show "Log In" button → `POST /api/v1/admin/auth/login-password` with `{ email, password }`
+   - Handle 200 (JWT in response) → store token → redirect to dashboard
+   - Handle 401 (wrong password) → show "Invalid password" error
+   - Handle 429 (locked out) → show lockout countdown timer
+   - Handle 403 (not in allowlist) → show "Email not authorized"
+4. After TOTP is enabled (0539), password login must also prompt for TOTP code as second factor
+5. Loading state on button, disable during request
+6. Error messages inline, not toast
+
+**Files to modify**: `supermandi-superadmin/src/components/LoginGate.tsx`, `supermandi-superadmin/src/api/auth.ts` (add `loginWithPassword()` API call)
+
+**Test Requirements**:
+- Behavioral: render LoginGate, click "Use password instead", verify password input appears
+- Behavioral: mock fetch, submit password, verify correct API call made
+- Behavioral: mock 429 response, verify lockout message displayed
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅, L5 API ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0539 — HIGH: SuperAdmin TOTP 2FA setup UI missing — backend admin_totp table + routes ready but no frontend (HIGH)
+
+**Ticket ID**: GCP-STG-0539
+**Severity**: P1 HIGH
+**Platforms**: SUPERADMIN
+**Layers**: UI, Wiring, Navigation, API, Backend
+**Source**: Final Comprehensive Audit — AUDIT 4 + AUDIT 6
+**Depends on**: GCP-STG-0537 (build), GCP-STG-0538 (password login)
+
+**Problem**: GCP-STG-0463 created:
+- Migration 235: `admin_totp` table with `totp_secret`, `totp_enabled`, `backup_codes` columns
+- Backend routes: `POST /admin/auth/totp-setup` (generate secret + QR), `POST /admin/auth/totp-verify` (verify 6-digit code), `POST /admin/auth/totp-disable`
+- Shared utility: `backend/src/lib/totp.ts` with pure Node.js crypto TOTP implementation
+
+But the SuperAdmin frontend has ZERO TOTP UI. No setup screen, no QR code display, no verification input, no backup codes display, no disable option.
+
+**Fix**:
+1. **Settings page TOTP section** (new component `TotpSetupCard.tsx`):
+   - "Enable Two-Factor Authentication" button (when not enabled)
+   - Call `POST /admin/auth/totp-setup` → receive `{ secret, qrCodeDataUrl, backupCodes }`
+   - Display QR code image (base64 data URL) for authenticator app scanning
+   - Display secret key as text (for manual entry)
+   - Display 10 backup codes with "Copy All" button + "Download" as .txt
+   - 6-digit verification input: "Enter the code from your authenticator app"
+   - "Verify & Enable" button → `POST /admin/auth/totp-verify` with `{ code }`
+   - Success → show green "2FA Enabled" badge
+   - "Disable 2FA" button (requires current TOTP code to confirm)
+
+2. **Login flow integration** (modify LoginGate.tsx):
+   - After email OTP or password verification, if `response.totpRequired === true`:
+   - Show TOTP input screen: "Enter your authenticator code"
+   - 6-digit input → `POST /admin/auth/totp-verify-login` with `{ code, sessionToken }`
+   - "Use backup code instead" link → separate input for 8-char backup code
+   - After TOTP verified → receive final JWT → redirect to dashboard
+
+3. **State management**:
+   - `totpEnabled: boolean` in auth context (fetched from `/admin/auth/me` profile)
+   - `totpStep: 'setup' | 'verify' | 'done'` for setup wizard
+
+**Files to modify**:
+- New `supermandi-superadmin/src/components/TotpSetupCard.tsx`
+- `supermandi-superadmin/src/components/LoginGate.tsx` — add TOTP step after OTP/password
+- `supermandi-superadmin/src/api/auth.ts` — add `setupTotp()`, `verifyTotp()`, `disableTotp()` API calls
+- `supermandi-superadmin/src/tabs/SettingsTab.tsx` — add TotpSetupCard section
+
+**Test Requirements**:
+- Behavioral: render TotpSetupCard, click "Enable 2FA", verify QR code image rendered
+- Behavioral: enter 6-digit code, click "Verify", verify API call with correct payload
+- Behavioral: render LoginGate with `totpRequired: true`, verify TOTP input step appears
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅, L5 API ✅, L6 Backend ✅, L7 DB ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0540 — HIGH: Retailer portal TOTP 2FA setup UI missing — backend user_totp ready but no frontend (HIGH)
+
+**Ticket ID**: GCP-STG-0540
+**Severity**: P1 HIGH
+**Platforms**: RETAILER-WEB
+**Layers**: UI, Wiring, Navigation, API
+**Source**: Final Comprehensive Audit — AUDIT 2 + AUDIT 6
+
+**Problem**: GCP-STG-0464 created:
+- Migration 239: `user_totp` table for retailer + supplier users
+- Backend routes on retailer-admin auth: `POST /retailer-admin/auth/totp-setup`, `POST /retailer-admin/auth/totp-verify`, `POST /retailer-admin/auth/totp-disable`
+
+But the Retailer Admin portal has NO TOTP UI. No setup page, no QR code, no verification, no backup codes.
+
+**Fix**:
+1. **Security Settings page** (new page or section in profile/settings):
+   - "Two-Factor Authentication" card
+   - Same pattern as SuperAdmin 0539: Enable → QR code → verify → backup codes → done
+   - "Disable 2FA" with code confirmation
+2. **Login flow**: After Firebase OTP or password login, if `totpRequired === true`, show TOTP input step
+3. **Profile indicator**: Show "2FA: Enabled/Disabled" badge in profile header
+
+**Files to modify**:
+- New `retailer-admin/src/components/TotpSetupCard.tsx`
+- `retailer-admin/src/pages/LoginPage.tsx` — add TOTP step
+- `retailer-admin/src/lib/api.ts` — add TOTP API calls
+- New or existing settings/profile page — mount TotpSetupCard
+
+**Test Requirements**:
+- Behavioral: render TotpSetupCard, verify QR + backup codes displayed after setup
+- Behavioral: login flow with `totpRequired: true` shows TOTP input
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅, L5 API ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0541 — HIGH: Supplier portal TOTP 2FA setup UI missing — backend user_totp ready but no frontend (HIGH)
+
+**Ticket ID**: GCP-STG-0541
+**Severity**: P1 HIGH
+**Platforms**: SUPPLIER-PORTAL
+**Layers**: UI, Wiring, Navigation, API
+**Source**: Final Comprehensive Audit — AUDIT 3 + AUDIT 6
+
+**Problem**: Same as GCP-STG-0540 but for Supplier Portal. GCP-STG-0464 backend routes exist for supplier auth TOTP (`POST /supplier/auth/totp-setup`, etc.) but supplier-portal has zero TOTP UI.
+
+**Fix**:
+1. **Profile/Settings page TOTP section**: Same pattern as 0539/0540
+2. **Login flow**: After email+password login, if `totpRequired === true`, show TOTP input
+3. **Profile indicator**: "2FA: Enabled/Disabled" badge
+
+**Files to modify**:
+- New `supplier-portal/src/components/TotpSetupCard.tsx`
+- `supplier-portal/src/app/(auth)/login/page.tsx` — add TOTP step
+- `supplier-portal/src/lib/api.ts` — add TOTP API calls
+- `supplier-portal/src/app/(dashboard)/profile/page.tsx` — mount TotpSetupCard
+
+**Test Requirements**:
+- Behavioral: render TotpSetupCard, verify setup flow
+- Behavioral: login flow TOTP step
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅, L5 API ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0542 — HIGH: Fix 18 failing backend test suites — mock shapes out of sync after route refactoring (HIGH)
+
+**Ticket ID**: GCP-STG-0542
+**Severity**: P1 HIGH
+**Platforms**: BACKEND
+**Layers**: Backend
+**Source**: Final Comprehensive Audit — AUDIT 5
+
+**Problem**: `npx jest --forceExit` reports 18 failing test suites (21 failing tests) out of 219 suites / 2902 tests. Root causes:
+
+**Category 1 — OTP route mock mismatches (3 suites)**:
+- `otpAuth.gcp-stg-0299.unit.test.ts` — phone normalization mock doesn't match refactored query
+- `otpAuth.gcp-stg-0459.unit.test.ts` — E.164 INSERT mock shape wrong after pos_otp refactoring
+- `smsFallback.gcp-stg-0467.unit.test.ts` — WhatsApp/SMS service mocks not matching new function signatures
+
+**Category 2 — CTA sanitization (1 suite, 6 failing tests)**:
+- `ctaSanitize.gcp-stg-0501.unit.test.ts` — `TypeError: Cannot read properties of undefined (reading '2')` — mock query result doesn't return expected row shape
+
+**Category 3 — Lifecycle contract tests (4 suites)**:
+- `phase21GoLiveGate.unit.test.ts` — event type count mismatch (new events added)
+- `phase21RuntimeVerify.unit.test.ts` — same
+- `storeDemandSignal.unit.test.ts` — expected array length wrong
+- `lifecycleDeliveryProof.unit.test.ts` — same
+
+**Category 4 — Business logic mock mismatches (10 suites)**:
+- `bnplEligible.gcp-stg-0281.unit.test.ts` — mock shape
+- `conversionPatch.gcp-stg-0282.unit.test.ts` — LWW guard parameter position shifted
+- `sellCategoryFilter.gcp-stg-0321.unit.test.ts` — mock shape
+- `deltaSync.gcp-stg-0336.unit.test.ts` — mock shape
+- `supplierVisibility.gcp-stg-0356.unit.test.ts` — mock shape
+- `autoReorderTrigger.gcp-stg-0375.unit.test.ts` — mock shape
+- `supplierNotification.gcp-stg-0399.unit.test.ts` — mock shape
+- `invoiceAutoGen.gcp-stg-0077.unit.test.ts` — mock shape
+- `procurementPayment.v3-fix-176.unit.test.ts` — `TypeError: Cannot read properties of undefined (reading 'rows')`
+- `b2bProcurementLifecycle.v3-harden-178.unit.test.ts` — BNPL provider resolution mock wrong
+
+**Fix**: Update mock query results and function signatures in each test to match current production code. Do NOT change production code — only update tests.
+
+**Files to modify**: 18 test files in `backend/tests/`
+
+**Test Requirements**: `npx jest --forceExit` must report 0 failures (219/219 pass)
+
+**12-Layer Verification**: L6 Backend ✅
+
+---
+
+## GCP-STG-0543 — MEDIUM: Supplier portal test files have TypeScript errors — missing vitest/express/supertest type declarations (MEDIUM)
+
+**Ticket ID**: GCP-STG-0543
+**Severity**: P2 MEDIUM
+**Platforms**: SUPPLIER-PORTAL
+**Layers**: Dependencies
+**Source**: Final Comprehensive Audit — AUDIT 3
+
+**Problem**: `cd supplier-portal && npx tsc --noEmit` reports 4 errors:
+```
+tests/firebaseRateLimit.gcp-stg-0454.test.ts(10,49): error TS2307: Cannot find module 'vitest'
+tests/idleTimeout.gcp-stg-0466.test.ts(12,49): error TS2307: Cannot find module 'vitest'
+tests/supplierGstRate.gcp-stg-0429.test.ts(46,21): error TS2307: Cannot find module 'express'
+tests/supplierGstRate.gcp-stg-0429.test.ts(47,21): error TS2307: Cannot find module 'supertest'
+```
+Source code is clean — only test files are affected. These tests import `vitest`, `express`, and `supertest` but the type declarations are not in devDependencies.
+
+**Fix**: Either:
+1. Add `@types/express`, `@types/supertest`, and `vitest` to `supplier-portal/package.json` devDependencies, OR
+2. Rewrite these tests to not import from vitest (use Jest globals) and not import express/supertest (use fetch-based testing), OR
+3. Exclude test files from tsconfig compilation: add `"exclude": ["tests/**"]` to `supplier-portal/tsconfig.json`
+
+Option 3 is safest — test files don't need to be type-checked during production build.
+
+**Files to modify**: `supplier-portal/tsconfig.json` OR `supplier-portal/package.json`
+
+**Test Requirements**: `cd supplier-portal && npx tsc --noEmit` reports 0 errors
+
+**12-Layer Verification**: L11 Dependencies ✅
+
+---
+
+## GCP-STG-0544 — MEDIUM: POS AsyncStorage key collision — `supermandi.partial_sale.v1` used in multiple contexts (MEDIUM)
+
+**Ticket ID**: GCP-STG-0544
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: Business
+**Source**: Final Comprehensive Audit — AUDIT 1
+
+**Problem**: The AsyncStorage key `supermandi.partial_sale.v1` is referenced in multiple locations for different purposes. If the same key is used for both cart persistence and pending sale state, data could be silently overwritten when switching between contexts.
+
+**Fix**:
+1. Audit all AsyncStorage key usages: `grep -rn "partial_sale" src/`
+2. If collision exists, split into distinct keys:
+   - `supermandi.partial_sale.cart.v1` — for in-progress cart items
+   - `supermandi.partial_sale.pending.v1` — for pending payment sale state
+3. Add migration: on app start, if old key exists, move data to correct new key
+4. Add `ASYNC_STORAGE_KEYS` const object in `src/constants/storageKeys.ts` to prevent future collisions
+
+**Files to modify**: `src/stores/cartStore.ts`, `src/stores/saleStore.ts` (or wherever key is used), new `src/constants/storageKeys.ts`
+
+**Test Requirements**: Behavioral test: write to cart key, write to pending key, verify no overwrite
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0545 — LOW: productsStore.ts `as any` type assertions hide potential type bugs (LOW)
+
+**Ticket ID**: GCP-STG-0545
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: Final Comprehensive Audit — AUDIT 1
+
+**Problem**: `src/stores/productsStore.ts` has 2 instances of `as any` type assertions for dynamic product field access during barcode indexing. While functionally harmless, `as any` bypasses TypeScript safety and could mask bugs if product shape changes.
+
+**Fix**:
+1. Replace `const raw = p as any` with proper typing: `const raw = p as Partial<Product & { _searchName?: string; _searchBarcode?: string }>`
+2. Or define an interface `ProductWithSearchFields` extending `Product` with the optional computed fields
+3. Update barcode map builder to use typed access
+
+**Files to modify**: `src/stores/productsStore.ts`
+
+**Test Requirements**: `npx tsc --noEmit` still passes with zero errors after type fix
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0546 — LOW: POS navigation "MORE" tab uses `as any` cast — fragile type escape (LOW)
+
+**Ticket ID**: GCP-STG-0546
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, Navigation
+**Source**: Final Comprehensive Audit — AUDIT 1
+
+**Problem**: `src/screens/v3/SellScreenV3.tsx:114` uses `parent.navigate("MORE" as any)` to switch to the MORE tab via parent navigator. The `as any` cast hides the actual tab route type, so if the tab name changes from "MORE" to something else, TypeScript won't catch the broken navigation at compile time.
+
+**Fix**:
+1. Define proper tab navigator param list: `type V3TabParamList = { SELL: undefined; BUY: undefined; STORE: undefined; MORE: undefined }`
+2. Use typed navigation: `const parent = navigation.getParent<BottomTabNavigationProp<V3TabParamList>>()`
+3. Remove `as any` — TypeScript will now catch tab name mismatches
+
+**Files to modify**: `src/screens/v3/SellScreenV3.tsx`, `src/screens/v3/PosRootLayoutV3.tsx` (define param list)
+
+**Test Requirements**: `npx tsc --noEmit` passes, navigation still works
+
+**12-Layer Verification**: L1 UI ✅, L4 Navigation ✅
+
+---
+
+## GCP-STG-0547 — MEDIUM: TOTP backup/recovery codes UI missing — users locked out if authenticator app lost (MEDIUM)
+
+**Ticket ID**: GCP-STG-0547
+**Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN, RETAILER-WEB, SUPPLIER-PORTAL
+**Layers**: UI, UX, Business
+**Source**: Final Comprehensive Audit — Production-grade hardening
+**Depends on**: GCP-STG-0539, GCP-STG-0540, GCP-STG-0541
+
+**Problem**: The backend `admin_totp` and `user_totp` tables have a `backup_codes` column (JSONB array of 10 one-time recovery codes). The TOTP setup endpoint returns these codes. But if the TOTP setup UI (0539-0541) doesn't prominently display and force the user to save these codes, they risk permanent account lockout if they lose their authenticator device.
+
+**Fix** (applies to all 3 TOTP setup UIs — 0539, 0540, 0541):
+1. **Setup flow step 3**: After QR scan + verify, show "Save Your Recovery Codes" screen
+   - Display 10 codes in a grid (2 columns × 5 rows), monospace font
+   - "Copy All" button → copies all codes to clipboard with toast "Copied"
+   - "Download as Text" button → downloads `supermandi-recovery-codes.txt`
+   - Checkbox: "I have saved these codes in a safe place" (required to continue)
+   - Warning text: "These codes are shown ONCE. If you lose your authenticator app and these codes, you will be locked out of your account."
+2. **Login flow**: "Use recovery code" option on TOTP input screen
+   - 8-character input → `POST /auth/totp-verify` with `{ backupCode }` instead of `{ code }`
+   - Backend marks used backup code as consumed (JSONB array update)
+   - Show remaining codes count: "You have X recovery codes remaining"
+3. **Regenerate codes**: Settings → "Regenerate Recovery Codes" (requires current TOTP code)
+
+**Files to modify**: All 3 TotpSetupCard components (0539-0541), LoginGate/LoginPage TOTP step
+
+**Test Requirements**: Behavioral test: setup flow shows 10 codes, checkbox required, download works
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0548 — MEDIUM: TOTP "remember this device" missing — users prompted for 2FA on every single login (MEDIUM)
+
+**Ticket ID**: GCP-STG-0548
+**Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN, RETAILER-WEB, SUPPLIER-PORTAL
+**Layers**: UI, UX, Backend, Business
+**Source**: Final Comprehensive Audit — Production-grade hardening
+**Depends on**: GCP-STG-0539, GCP-STG-0540, GCP-STG-0541
+
+**Problem**: Without "remember this device", a SuperAdmin logging in daily must enter their authenticator code EVERY time. This creates friction and may cause users to disable 2FA entirely — defeating the security purpose.
+
+**Fix**:
+1. **TOTP login step**: Add checkbox "Remember this device for 30 days"
+2. **Backend**: When checkbox checked, return a `deviceToken` (random UUID) in response
+   - Store in DB: `totp_trusted_devices(user_id, device_token, expires_at, user_agent, created_at)`
+   - Set `expires_at = NOW() + INTERVAL '30 days'`
+3. **Frontend**: Store `deviceToken` in HttpOnly cookie `totp_device_token` (30-day expiry)
+4. **Login flow**: If `totp_device_token` cookie present and matches a non-expired trusted device, skip TOTP step
+5. **Security**: "Revoke all trusted devices" button in settings (deletes all entries for user)
+6. **Migration**: New table `totp_trusted_devices` (or add to existing auth tables)
+
+**Files to modify**:
+- Backend: new migration for `totp_trusted_devices`, modify TOTP verify endpoints
+- Frontend: checkbox in TOTP step, cookie management
+- Settings: "Trusted Devices" section with revoke button
+
+**Test Requirements**:
+- Behavioral: check "remember device", verify deviceToken cookie set
+- Behavioral: login with valid deviceToken cookie, verify TOTP step skipped
+- Behavioral: click "Revoke all", verify next login requires TOTP
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L5 API ✅, L6 Backend ✅, L7 DB ✅, L8 Migrations ✅, L10 Business ✅
+
+---
+
+<!-- next ticket: GCP-STG-0549 -->
