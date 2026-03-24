@@ -1134,6 +1134,44 @@ jobs:
           echo "✅ SuperAdmin dist/index.html exists"
 
   # ==========================================================================
+  # JOB: Supplier Portal Tests (GCP-STG-0601)
+  # Dedicated supplier-portal test job for explicit CI coverage visibility
+  # ==========================================================================
+  supplier-tests:
+    name: Supplier Portal Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: supplier-portal/pnpm-lock.yaml
+      - run: cd supplier-portal && pnpm install --frozen-lockfile
+      - run: cd supplier-portal && npx jest --forceExit --ci --passWithNoTests 2>&1 | tail -40
+
+  # ==========================================================================
+  # JOB: POS Jest Tests (GCP-STG-0602)
+  # Expo/React Native POS app — Jest unit tests (separate from pos-typecheck)
+  # ==========================================================================
+  pos-tests:
+    name: POS Jest Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: pnpm install --frozen-lockfile
+      - run: npx jest --forceExit --ci --passWithNoTests 2>&1 | tail -20
+
+  # ==========================================================================
   # Final gate - all jobs must pass
   # ==========================================================================
   gate-check:
@@ -1144,7 +1182,7 @@ jobs:
             config-parity, license-coverage, db-auth-scan, scalability-observability,
             routing-validation, semgrep, gitleaks, contract-tests, portal-tests,
             workflow-governance, pos-typecheck, fix-guard-check, docker-build-check,
-            npm-audit, e2e-smoke]
+            npm-audit, e2e-smoke, supplier-tests, pos-tests]
     if: always()
     steps:
       - name: Check all jobs passed
