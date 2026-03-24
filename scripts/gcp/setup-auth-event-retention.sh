@@ -1,0 +1,17 @@
+#!/bin/bash
+# GCP-STG-0682: Audit log retention — archive events > 90 days
+echo "=== AUTH EVENT RETENTION SETUP ==="
+echo "Setup Cloud Scheduler for auth_events cleanup:"
+echo "  Schedule: Weekly Sunday 3 AM IST (Saturday 9:30 PM UTC)"
+echo "  Endpoint: POST /api/v1/admin/maintenance/archive-auth-events"
+echo "  Auth: Requires admin token with system:write permission"
+echo ""
+echo "gcloud scheduler jobs create http auth-event-cleanup \\"
+echo "  --schedule='30 21 * * 6' \\"
+echo "  --uri='https://staging.supermandi.tech/api/v1/admin/maintenance/archive-auth-events' \\"
+echo "  --http-method=POST \\"
+echo "  --time-zone='UTC' \\"
+echo "  --description='Weekly cleanup of auth events older than 90 days'"
+echo ""
+echo "Configure retention period via AUTH_EVENT_RETENTION_DAYS env var (default: 90)"
+echo "=== SETUP COMPLETE ==="

@@ -7,6 +7,7 @@ import { requireAdminToken, requirePermission } from "../../../middleware/adminT
 import { getPool } from "../../../db/client";
 import { log } from "../../../lib/logger";
 import { asError } from "../../../lib/errorUtils";
+import { archiveOldAuthEvents } from "../../../services/authAudit";
 
 export const adminMaintenanceRouter = Router();
 
@@ -144,6 +145,26 @@ adminMaintenanceRouter.post(
       const e = asError(err);
       log.error("[maintenance] POST failed:", e?.message);
       return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update maintenance status" });
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// GCP-STG-0682: POST /api/v1/admin/maintenance/archive-auth-events
+// Deletes auth_events older than 90 days (configurable via AUTH_EVENT_RETENTION_DAYS).
+// Intended to be called by Cloud Scheduler weekly (Sunday 3 AM IST).
+// ---------------------------------------------------------------------------
+adminMaintenanceRouter.post(
+  "/maintenance/archive-auth-events",
+  requirePermission("system", "write"),
+  async (_req, res) => {
+    try {
+      const archived = await archiveOldAuthEvents();
+      return res.json({ archived, message: `Deleted ${archived} auth events beyond retention period` });
+    } catch (err: unknown) {
+      const e = asError(err);
+      log.error("[maintenance] archive-auth-events failed:", e?.message);
+      return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to archive auth events" });
     }
   }
 );

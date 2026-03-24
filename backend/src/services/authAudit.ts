@@ -27,6 +27,32 @@ export interface AuthEventParams {
   metadata?: Record<string, unknown>;
 }
 
+// GCP-STG-0682: Auto-archive auth_events older than 90 days
+// Called by Cloud Scheduler weekly (Sunday 3 AM IST) via POST /admin/maintenance/archive-auth-events
+const RETENTION_DAYS = parseInt(process.env.AUTH_EVENT_RETENTION_DAYS || '90', 10);
+
+export async function archiveOldAuthEvents(): Promise<number> {
+  const pool = getPool();
+  if (!pool) return 0;
+
+  try {
+    const result = await pool.query(
+      `DELETE FROM auth.auth_events
+       WHERE created_at < NOW() - MAKE_INTERVAL(days => $1)
+       RETURNING id`,
+      [RETENTION_DAYS]
+    );
+    const count = result.rowCount || 0;
+    if (count > 0) {
+      log.info(`[AUTH-AUDIT] Archived ${count} auth events older than ${RETENTION_DAYS} days`);
+    }
+    return count;
+  } catch (err) {
+    log.error('[AUTH-AUDIT] Failed to archive old events:', (err as Error).message);
+    return 0;
+  }
+}
+
 export async function logAuthEvent(params: AuthEventParams): Promise<void> {
   try {
     const pool = getPool();
