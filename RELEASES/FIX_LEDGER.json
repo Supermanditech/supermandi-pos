@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1083,
+  "version": 1084,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6147,9 +6147,9 @@
       "ticket": "STG-519",
       "file": "backend/src/app.ts",
       "start_line": 87,
-      "end_line": 192,
-      "checksum": "0678ae5e069ba055",
-      "description": "Accept both CORS_ALLOWED_ORIGINS and ALLOWED_ORIGINS env vars with filter(Boolean) + GCP-STG-0490 wildcard block",
+      "end_line": 194,
+      "checksum": "a86417b0868fad98",
+      "description": "Accept both CORS_ALLOWED_ORIGINS and ALLOWED_ORIGINS env vars with filter(Boolean) + GCP-STG-0490 wildcard block [UPDATED by GCP-STG-0626: body size limit lines added]",
       "test_file": "src/__tests__/screens/cors-env-vars.stg-519.test.ts",
       "depends_on": null,
       "migration": null,
@@ -30159,6 +30159,42 @@
         "fix_ledger_check": "fix-guard check passes — 624 fixes intact",
         "no_agent_conflict": "Single agent working — no parallel modifications"
       }
+    },
+    {
+      "ticket": "GCP-STG-0626",
+      "file": "backend/src/app.ts",
+      "start_line": 123,
+      "end_line": 133,
+      "checksum": "3146d4f0102e8973",
+      "description": "Explicit 10MB body size limit on express.json and express.urlencoded fallback parsers",
+      "test_file": "backend/src/app.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T22:03:00.860Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 270,

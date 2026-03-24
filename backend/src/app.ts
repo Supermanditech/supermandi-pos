@@ -120,14 +120,16 @@ app.use(metricsMiddleware);
 // GO-LIVE-194: Per-endpoint body size limits (replaces global 1MB limit)
 // ITER4-P1-012: Now using perEndpointBodyLimit which applies different limits per endpoint
 app.use("/api", perEndpointBodyLimit());
-// Keep 1MB fallback for non-API routes (webhooks, etc.)
+// GCP-STG-0626: Explicit 10MB fallback for non-API routes (webhooks, file uploads via non-API paths)
+// Per-endpoint limits above handle /api/* routes; this catches everything else
 // WA-001: Capture raw body buffer for webhook signature verification (X-Hub-Signature-256)
 app.use(express.json({
-  limit: "1mb",
+  limit: "10mb", // GCP-STG-0626
   verify: (req, _res, buf) => {
     (req as any).rawBody = buf;
   },
 }));
+app.use(express.urlencoded({ limit: '10mb', extended: true })); // GCP-STG-0626
 
 app.get("/health", async (_req, res) => {
   // Cloud health-check contract: must be JSON { status: "ok" }
