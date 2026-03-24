@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1016,
+  "version": 1017,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6416,7 +6416,7 @@
       "file": "backend/src/routes/v1/pos/sales.ts",
       "start_line": 816,
       "end_line": 3093,
-      "checksum": "0c6dee9c9517fe69",
+      "checksum": "03b6f8383cf79270",
       "description": "instanceof Date check for TIMESTAMPTZ in bill detail",
       "test_file": "src/__tests__/screens/date-timezone.stg-515.test.ts",
       "depends_on": null,
@@ -10226,7 +10226,7 @@
       "file": "backend/src/routes/v1/pos/sales.ts",
       "start_line": 2243,
       "end_line": 3112,
-      "checksum": "f26ba8c43554eb76",
+      "checksum": "ae6d1f357bf1151a",
       "description": "Auto-generate tax invoice after POS sale completion (fire-and-forget after cash/UPI/DUE payment COMMIT)",
       "test_file": "backend/tests/invoiceAutoGen.gcp-stg-0077.unit.test.ts",
       "depends_on": null,
@@ -18743,8 +18743,8 @@
     {
       "ticket": "GCP-STG-0361",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 3163,
-      "end_line": 3224,
+      "start_line": 3216,
+      "end_line": 3277,
       "checksum": "fa1b047f3b7141c3",
       "description": "GCP-STG-0361: POS invoice PDF download — GET /sales/:saleId/invoice/pdf with store isolation + PDF streaming",
       "test_file": "backend/tests/posInvoicePdf.gcp-stg-0361.unit.test.ts",
@@ -18775,7 +18775,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:01:45.434Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T19:43:09.446Z"
+      "line_shifted_at": "2026-03-24T19:48:53.906Z"
     },
     {
       "ticket": "GCP-STG-0361",
@@ -27859,6 +27859,45 @@
         "fix_ledger_check": "567 fixes intact, zero drift",
         "no_agent_conflict": "Single agent, no parallel modifications"
       }
+    },
+    {
+      "ticket": "GCP-STG-0656",
+      "file": "backend/src/routes/v1/pos/sales.ts",
+      "start_line": 1456,
+      "end_line": 1487,
+      "checksum": "31ea2264474b3482",
+      "description": "Double-payment idempotency: confirm/cash/due endpoints accept idempotencyKey, check for existing payment within 5-minute window, return existing result instead of duplicate.",
+      "test_file": "backend/tests/paymentIdempotency.gcp-stg-0656.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T19:48:47.012Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 270,

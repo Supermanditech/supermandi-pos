@@ -1453,7 +1453,8 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
     return res.status(400).json({ error: "saleId is required" });
   }
 
-  const { paymentMode } = req.body as { paymentMode?: "CASH" | "UPI" | "DUE" };
+  // GCP-STG-0656: Accept idempotencyKey from frontend for double-payment prevention
+  const { paymentMode, idempotencyKey } = req.body as { paymentMode?: "CASH" | "UPI" | "DUE"; idempotencyKey?: string };
   if (!paymentMode || !["CASH", "UPI", "DUE"].includes(paymentMode)) {
     return res.status(400).json({ error: "paymentMode is required (CASH, UPI, or DUE)" });
   }
@@ -1462,6 +1463,25 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const storeId = getStoreIdFromPosDevice(req, "pos/sales");
+
+  // GCP-STG-0656: Idempotency check — if key provided, check for existing payment
+  if (typeof idempotencyKey === "string" && idempotencyKey.trim()) {
+    const existing = await pool.query(
+      `SELECT p.id, p.mode, p.status, p.amount_minor FROM payments p
+       WHERE p.sale_id = $1 AND p.store_id = $2
+       AND p.created_at > NOW() - INTERVAL '5 minutes'
+       LIMIT 1`,
+      [saleId, storeId]
+    );
+    if (existing.rows[0]) {
+      return res.json({
+        saleId,
+        status: existing.rows[0].status,
+        message: "Payment already processed (idempotent)",
+        idempotent: true,
+      });
+    }
+  }
 
   const client = await pool.connect();
   try {
@@ -2415,7 +2435,8 @@ async function generateSaleInvoice(
 // GO-LIVE-184: Rate limit cash payments to 30/min per store
 // SEC-001: POST /payments/cash requires ACTIVE store status
 posSalesRouter.post("/payments/cash", requireDeviceToken, requireActiveStore, financialOperationsRateLimiter, async (req, res) => {
-  const { saleId } = req.body as { saleId?: string };
+  // GCP-STG-0656: Accept idempotencyKey for double-payment prevention
+  const { saleId, idempotencyKey } = req.body as { saleId?: string; idempotencyKey?: string };
 
   if (typeof saleId !== "string" || saleId.trim().length === 0) {
     return res.status(400).json({ error: "saleId is required" });
@@ -2425,6 +2446,21 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, requireActiveStore, fi
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const { storeId, deviceId } = getDeviceContextFromPosDevice(req, "pos/sales");
+
+  // GCP-STG-0656: Idempotency check — if key provided, return existing payment
+  if (typeof idempotencyKey === "string" && idempotencyKey.trim()) {
+    const existing = await pool.query(
+      `SELECT p.id, p.status FROM payments p
+       WHERE p.sale_id = $1 AND p.store_id = $2 AND p.mode = 'CASH'
+       AND p.created_at > NOW() - INTERVAL '5 minutes'
+       LIMIT 1`,
+      [saleId, storeId]
+    );
+    if (existing.rows[0]) {
+      return res.json({ status: "PAID", idempotent: true });
+    }
+  }
+
   const store = await getStore(storeId);
   if (!store) {
     return res.status(404).json({ error: "store not found" });
@@ -2585,10 +2621,12 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, requireActiveStore, fi
 // SEC-001: POST /payments/due requires ACTIVE store status
 posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, financialOperationsRateLimiter, async (req, res) => {
   // GCP-STG-0053: Accept customerName + customerPhone from body (POS sends them for DUE)
-  const { saleId, customerName, customerPhone } = req.body as {
+  // GCP-STG-0656: Accept idempotencyKey for double-payment prevention
+  const { saleId, customerName, customerPhone, idempotencyKey } = req.body as {
     saleId?: string;
     customerName?: string;
     customerPhone?: string;
+    idempotencyKey?: string;
   };
 
   if (typeof saleId !== "string" || saleId.trim().length === 0) {
@@ -2599,6 +2637,21 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const { storeId, deviceId } = getDeviceContextFromPosDevice(req, "pos/sales");
+
+  // GCP-STG-0656: Idempotency check — if key provided, return existing payment
+  if (typeof idempotencyKey === "string" && idempotencyKey.trim()) {
+    const existing = await pool.query(
+      `SELECT p.id, p.status FROM payments p
+       WHERE p.sale_id = $1 AND p.store_id = $2 AND p.mode = 'DUE'
+       AND p.created_at > NOW() - INTERVAL '5 minutes'
+       LIMIT 1`,
+      [saleId, storeId]
+    );
+    if (existing.rows[0]) {
+      return res.json({ status: "DUE", idempotent: true });
+    }
+  }
+
   const store = await getStore(storeId);
   if (!store) {
     return res.status(404).json({ error: "store not found" });
