@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1104,
+  "version": 1105,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -30924,6 +30924,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:17:47.575Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0669",
+      "file": "backend/src/routes/v1/pos/sales.ts",
+      "start_line": 3350,
+      "end_line": 3395,
+      "checksum": "98b7602bf756e546",
+      "description": "Z-report daily tax summary — GET endpoint for GST compliance daily totals",
+      "test_file": "backend/tests/zReport.stg-0669.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T23:20:07.511Z",
       "status": "ACTIVE"
     }
   ],

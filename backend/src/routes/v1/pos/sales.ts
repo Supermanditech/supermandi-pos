@@ -3345,3 +3345,49 @@ posSalesRouter.post("/shift-close", requireDeviceToken, requireActiveStore, asyn
     return res.status(500).json({ error: "Failed to generate shift close report" });
   }
 });
+
+// =============================================================================
+// GCP-STG-0669: Z-REPORT (DAILY TAX TOTALS)
+// =============================================================================
+
+/**
+ * GET /api/v1/pos/sales/z-report
+ * GCP-STG-0669: Daily tax summary for GST compliance.
+ * Returns gross total, discounts, net total, and total tax for a given date.
+ */
+posSalesRouter.get("/z-report", requireDeviceToken, requireActiveStore, async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "Service unavailable" });
+
+  const storeId = getStoreIdFromPosDevice(req as any, "z-report");
+  const date = (req.query.date as string) || new Date().toISOString().split("T")[0];
+
+  try {
+    const result = await pool.query(`
+      SELECT
+        COUNT(*) as total_transactions,
+        COALESCE(SUM(total_minor), 0) as gross_total,
+        COALESCE(SUM(discount_minor), 0) as total_discount,
+        COALESCE(SUM(tax_minor), 0) as total_tax,
+        COALESCE(SUM(total_minor - COALESCE(tax_minor, 0)), 0) as net_total
+      FROM pos.sales
+      WHERE store_id = $1 AND created_at::date = $2 AND status = 'COMPLETED'
+    `, [storeId, date]);
+
+    const row = result.rows[0];
+    return res.json({
+      reportType: "Z-REPORT",
+      storeId,
+      date,
+      totalTransactions: parseInt(row.total_transactions) || 0,
+      grossTotal: parseInt(row.gross_total) || 0,
+      totalDiscount: parseInt(row.total_discount) || 0,
+      totalTax: parseInt(row.total_tax) || 0,
+      netTotal: parseInt(row.net_total) || 0,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    log.error("[GCP-STG-0669] Z-report error:", err.message);
+    return res.status(500).json({ error: "Failed to generate Z-report" });
+  }
+});
