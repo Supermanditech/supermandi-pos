@@ -2,7 +2,8 @@ import { getOrCreateDeviceId } from "../deviceId";
 import { getDeviceIdFromSession } from "../deviceSession";
 import { storeScopedStorage } from "../storeScope";
 
-const SEQ_PREFIX = "supermandi.offline.seq";
+import { SK_OFFLINE_SEQ_PREFIX } from "../../constants/storageKeys";
+const SEQ_PREFIX = SK_OFFLINE_SEQ_PREFIX;
 
 function formatDateKey(date: Date): string {
   const y = date.getFullYear();

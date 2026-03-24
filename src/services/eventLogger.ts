@@ -34,7 +34,8 @@ export interface EventLog {
   payload: Record<string, any>;
 }
 
-const STORAGE_KEY = '@pos_event_logs';
+import { SK_EVENT_LOGS } from "../constants/storageKeys";
+const STORAGE_KEY = SK_EVENT_LOGS;
 const MAX_LOGS = 1000; // Keep last 1000 events
 
 class EventLogger {

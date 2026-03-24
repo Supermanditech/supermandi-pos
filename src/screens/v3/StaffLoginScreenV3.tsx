@@ -22,6 +22,7 @@ import { clearDeviceSession } from "../../services/deviceSession";
 import { isOnline } from "../../services/networkStatus";
 import { logger } from "../../services/logger";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SK_PIN_CACHE } from "../../constants/storageKeys";
 
 type Nav = NativeStackNavigationProp<any>;
 
@@ -58,11 +59,11 @@ export default function StaffLoginScreenV3() {
         };
         useStaffSessionStore.getState().setSession(session);
         // V3-SESSION-025: Cache PIN+session for offline re-entry
-        await AsyncStorage.setItem("supermandi.pin_cache", JSON.stringify({ pin, ...session, cachedAt: Date.now() }));
+        await AsyncStorage.setItem(SK_PIN_CACHE, JSON.stringify({ pin, ...session, cachedAt: Date.now() }));
         logger.debug("StaffLoginV3", `login:${result.staffId},role:${result.role},owner:${result.isOwner}`);
       } else {
         // Offline: check cached PIN
-        const cached = await AsyncStorage.getItem("supermandi.pin_cache");
+        const cached = await AsyncStorage.getItem(SK_PIN_CACHE);
         if (!cached) { setError("Offline — no cached login available"); setPin(""); setLoading(false); return; }
         const parsed = JSON.parse(cached);
         if (parsed.pin !== pin) { setError("Invalid PIN (offline)"); setPin(""); setLoading(false); return; }

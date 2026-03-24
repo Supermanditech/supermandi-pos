@@ -5,7 +5,8 @@ import { API_BASE_URL } from "../config/api";
 import { getDeviceToken } from "./deviceSession";
 import { storeScopedStorage } from "./storeScope";
 
-const DEVICE_INFO_KEY = "supermandi.pos.device.info.v1";
+import { SK_DEVICE_INFO } from "../constants/storageKeys";
+const DEVICE_INFO_KEY = SK_DEVICE_INFO;
 
 export type DeviceInfo = {
   deviceId: string;

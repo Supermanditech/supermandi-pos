@@ -13,7 +13,8 @@ import hi from './locales/hi.json';
 // CONSTANTS
 // =============================================================================
 
-export const LANGUAGE_STORAGE_KEY = 'supermandi.language';
+import { SK_LANGUAGE } from "../constants/storageKeys";
+export const LANGUAGE_STORAGE_KEY = SK_LANGUAGE;
 
 export const SUPPORTED_LANGUAGES = ['en', 'hi'] as const;
 export type SupportedLanguage = typeof SUPPORTED_LANGUAGES[number];

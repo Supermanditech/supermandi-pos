@@ -6,7 +6,8 @@
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const PARTIAL_SALE_STATE_KEY = "supermandi.partial_sale.v1";
+import { SK_PARTIAL_SALE_STATE } from "../constants/storageKeys";
+const PARTIAL_SALE_STATE_KEY = SK_PARTIAL_SALE_STATE;
 
 export interface PartialSaleState {
   saleItemIds: string[];

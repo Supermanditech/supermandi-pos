@@ -158,7 +158,8 @@ interface CartState {
   recalculate: () => void;
 }
 
-const CART_STORAGE_KEY = "supermandi.cart.sell.v1";
+import { SK_CART_SELL } from "../constants/storageKeys";
+const CART_STORAGE_KEY = SK_CART_SELL;
 
 const calculateDiscountAmount = (
   baseAmount: number,

@@ -7,7 +7,8 @@ import { storeScopedStorage, getStoreScopedKey } from "../services/storeScope";
 import { upsertStockFromProducts } from "../services/stockService";
 import { getDeviceToken } from "../services/deviceSession";
 
-const PRODUCTS_CACHE_KEY = 'supermandi.cache.products.v1';
+import { SK_PRODUCTS_CACHE, SK_PRODUCTS_CHUNK_PREFIX, SK_PRODUCTS_META } from "../constants/storageKeys";
+const PRODUCTS_CACHE_KEY = SK_PRODUCTS_CACHE;
 
 // GCP-STG-0507: O(1) barcode Map index — rebuilt whenever products array changes
 let _barcodeIndex: Map<string, Product> = new Map();
@@ -56,8 +57,8 @@ function rebuildBarcodeIndexes(products: Product[]): void {
 // GCP-STG-0366: Chunked AsyncStorage for 10K+ products
 // Single JSON blob at 10K products (~5MB) blocks JS thread and risks AsyncStorage limits.
 // Chunk into 1000-product blocks with a metadata key for reassembly.
-const PRODUCTS_CHUNK_PREFIX = 'supermandi.cache.products.chunk';
-const PRODUCTS_META_KEY = 'supermandi.cache.products.meta';
+const PRODUCTS_CHUNK_PREFIX = SK_PRODUCTS_CHUNK_PREFIX;
+const PRODUCTS_META_KEY = SK_PRODUCTS_META;
 const CHUNK_SIZE = 1000;
 
 interface ChunkMeta {

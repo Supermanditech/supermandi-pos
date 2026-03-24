@@ -48,7 +48,8 @@ type QueuedPosEvent = {
   createdAt: string;
 };
 
-const QUEUE_KEY = "supermandi.queue.posEvents.v1";
+import { SK_CLOUD_EVENT_QUEUE, skPaymentOnce } from "../constants/storageKeys";
+const QUEUE_KEY = SK_CLOUD_EVENT_QUEUE;
 
 let started = false;
 let isOnline = true;
@@ -265,7 +266,7 @@ export async function logPaymentEvent(
 
   if (terminal.has(eventType)) {
     try {
-      const key = `supermandi.payment.once.${transactionId}.${eventType}`;
+      const key = skPaymentOnce(transactionId, eventType);
       const seen = await storeScopedStorage.getItem(key);
       if (seen) return;
       await storeScopedStorage.setItem(key, nowIso());

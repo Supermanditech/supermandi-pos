@@ -6,7 +6,8 @@ import { isOnline } from "./networkStatus";
 import { apiClient } from "./api/apiClient";
 import { asError } from "../utils/errorUtils";
 
-const OFFLINE_QUEUE_KEY = "supermandi.offline.queue.v1";
+import { SK_OFFLINE_QUEUE } from "../constants/storageKeys";
+const OFFLINE_QUEUE_KEY = SK_OFFLINE_QUEUE;
 const MAX_RETRIES = 3;
 // LIVE.POS.OFFLINE_QUEUE_RETRY_POLICY_HARDENING.001: Max age for stale transactions (24 hours)
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;

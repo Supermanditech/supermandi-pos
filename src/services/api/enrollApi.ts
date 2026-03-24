@@ -30,7 +30,8 @@ export type DeviceMeta = {
 };
 
 // DEV-071: Generate or retrieve persistent device fingerprint for idempotent enrollment
-const FINGERPRINT_KEY = "supermandi.device_fingerprint";
+import { SK_DEVICE_FINGERPRINT } from "../../constants/storageKeys";
+const FINGERPRINT_KEY = SK_DEVICE_FINGERPRINT;
 
 async function getOrCreateDeviceFingerprint(): Promise<string> {
   let fingerprint = await AsyncStorage.getItem(FINGERPRINT_KEY);

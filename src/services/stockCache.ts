@@ -1,6 +1,7 @@
 import { normalizeStoreScope, storeScopedStorage } from "./storeScope";
 
-const STOCK_CACHE_KEY = "supermandi.stock.cache.v1";
+import { SK_STOCK_CACHE } from "../constants/storageKeys";
+const STOCK_CACHE_KEY = SK_STOCK_CACHE;
 // GL-CRIT-0013: Reduced TTL to 5 minutes to prevent showing stale stock
 // Previous 6h TTL caused issues where sold-out items still showed as available.
 // Offline safety is maintained by allowing cart operations when stock is unknown (null).

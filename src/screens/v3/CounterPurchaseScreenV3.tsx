@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useCallback, useRef } from "react";
 import { View, FlatList, TextInput, Pressable, KeyboardAvoidingView, Platform, StyleSheet, Text, ScrollView, ActivityIndicator, Modal, Linking } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SK_PURCHASE_DRAFT_LEGACY } from "../../constants/storageKeys";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 // GCP-STG-0445: Safe area insets for dynamic paddingTop + paddingBottom
@@ -328,7 +329,7 @@ export default function CounterPurchaseScreenV3({ onClose, onCameraScan }: Count
           <Pressable style={styles.draftBtn} onPress={async () => {
             if (items.length === 0) { showToast("No items to save"); return; }
             const draft = { items, supplierName, invoiceNo, savedAt: Date.now() };
-            await AsyncStorage.setItem("supermandi.purchase.draft", JSON.stringify(draft));
+            await AsyncStorage.setItem(SK_PURCHASE_DRAFT_LEGACY, JSON.stringify(draft));
             showToast("Draft saved — restore on next visit");
           }}><Text style={styles.draftText}>Save Draft</Text></Pressable>
           <Pressable style={styles.waBtn} onPress={() => {

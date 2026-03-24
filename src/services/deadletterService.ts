@@ -7,7 +7,8 @@ import { syncOutboxBatch } from "./offline/sync";
 import { failedOutboxCount, clearCorruptedEvents } from "./offline/outbox";
 import { useSyncStore } from "../stores/syncStore";
 
-const DEADLETTER_STORAGE_KEY = "supermandi.deadletter.queue.v1";
+import { SK_DEADLETTER_QUEUE } from "../constants/storageKeys";
+const DEADLETTER_STORAGE_KEY = SK_DEADLETTER_QUEUE;
 const MAX_FAIL_COUNT = 10;
 
 export interface DeadletterItem {

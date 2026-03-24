@@ -4,9 +4,10 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const STORAGE_KEY = "supermandi.sell.searchHistory.v1";
+import { SK_SEARCH_HISTORY, SK_SEARCH_HISTORY_V2 } from "../constants/storageKeys";
+const STORAGE_KEY = SK_SEARCH_HISTORY;
 // STG-402: Switch to v2 format with timestamps
-const STORAGE_KEY_V2 = "supermandi.sell.searchHistory.v2";
+const STORAGE_KEY_V2 = SK_SEARCH_HISTORY_V2;
 const MAX_TERMS = 10;
 // STG-402: 7-day expiry in milliseconds
 const EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;

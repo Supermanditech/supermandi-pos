@@ -156,7 +156,8 @@ function calculateTotals(items: PurchaseCartItem[]): CartTotals {
 // STORE
 // =============================================================================
 
-const PURCHASE_CART_STORAGE_KEY = "supermandi.purchase.cart.v1";
+import { SK_PURCHASE_CART } from "../constants/storageKeys";
+const PURCHASE_CART_STORAGE_KEY = SK_PURCHASE_CART;
 
 export const usePurchaseCartStore = create<PurchaseCartState>()(
   persist(

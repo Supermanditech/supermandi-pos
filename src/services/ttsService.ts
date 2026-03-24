@@ -5,8 +5,9 @@
 import * as Speech from 'expo-speech';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const TTS_ENABLED_KEY = 'tts_enabled';
-const TTS_LANGUAGE_KEY = 'tts_language';
+import { SK_TTS_ENABLED, SK_TTS_LANGUAGE } from "../constants/storageKeys";
+const TTS_ENABLED_KEY = SK_TTS_ENABLED;
+const TTS_LANGUAGE_KEY = SK_TTS_LANGUAGE;
 
 export type TTSLanguage = 'hi-IN' | 'en-IN';
 

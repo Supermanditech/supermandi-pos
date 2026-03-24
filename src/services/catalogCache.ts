@@ -9,8 +9,9 @@ import type { CatalogProduct } from "./api/catalogApi";
 // CONSTANTS
 // =============================================================================
 
-const CATALOG_CACHE_KEY = "supermandi.catalog.cache.v1";
-const CATEGORIES_CACHE_KEY = "supermandi.catalog.categories.v1";
+import { SK_CATALOG_CACHE, SK_CATEGORIES_CACHE } from "../constants/storageKeys";
+const CATALOG_CACHE_KEY = SK_CATALOG_CACHE;
+const CATEGORIES_CACHE_KEY = SK_CATEGORIES_CACHE;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const CACHE_MAX_PRODUCTS = 500; // Max products to cache
 

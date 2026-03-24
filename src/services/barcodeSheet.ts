@@ -59,8 +59,9 @@ const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   labelsPerRow: 3,
 };
 
+import { SK_BARCODE_PRINT_SETTINGS } from "../constants/storageKeys";
 // T-169: AsyncStorage key for print settings
-const PRINT_SETTINGS_KEY = "supermandi.barcode.printSettings";
+const PRINT_SETTINGS_KEY = SK_BARCODE_PRINT_SETTINGS;
 
 export async function loadPrintSettings(): Promise<PrintSettings> {
   try {

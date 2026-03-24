@@ -1,7 +1,8 @@
 // GCP-STG-0535: Offline scan queue — queues unknown barcodes for retry when back online
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const QUEUE_KEY = 'offline_scan_queue';
+import { SK_OFFLINE_SCAN_QUEUE } from "../../constants/storageKeys";
+const QUEUE_KEY = SK_OFFLINE_SCAN_QUEUE;
 
 export async function enqueueScan(barcode: string): Promise<void> {
   try {

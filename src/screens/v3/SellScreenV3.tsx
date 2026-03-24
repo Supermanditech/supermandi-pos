@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, FlatList, TextInput, Pressable, ActivityIndicator, RefreshControl, StyleSheet, Text, Modal } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { skGuide } from "../../constants/storageKeys";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { getGridColumns, getScreenPadding, getChipPadding, getChipFontSize, SCREEN_W } from "../../theme/responsive";
@@ -82,12 +83,12 @@ function productToTileData(p: Product): ProductTileData {
 // V3-FIX-036: Welcome guide local persistence
 const GUIDE_VERSION = "1";
 async function shouldShowGuide(storeId: string): Promise<boolean> {
-  const key = `supermandi.guide.${storeId}.v${GUIDE_VERSION}`;
+  const key = skGuide(storeId, GUIDE_VERSION);
   const dismissed = await AsyncStorage.getItem(key);
   return dismissed !== "1";
 }
 async function dismissGuide(storeId: string): Promise<void> {
-  const key = `supermandi.guide.${storeId}.v${GUIDE_VERSION}`;
+  const key = skGuide(storeId, GUIDE_VERSION);
   await AsyncStorage.setItem(key, "1");
 }
 

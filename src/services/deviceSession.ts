@@ -2,7 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { clearAllHistory } from "./searchHistory";
 
-const SESSION_KEY = "supermandi.device.session.v1";
+import { SK_DEVICE_SESSION } from "../constants/storageKeys";
+const SESSION_KEY = SK_DEVICE_SESSION;
 
 export type DeviceSession = {
   deviceId: string;

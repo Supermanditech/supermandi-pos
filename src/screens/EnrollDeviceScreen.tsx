@@ -159,8 +159,9 @@ function getAppVersion(): string {
 // expo-updates disabled for development
 const Updates = { channel: null as string | null };
 
+import { skPaymentPrompted } from "../constants/storageKeys";
 // STG-437: Store-scoped key to prevent cross-store persistence
-const getPaymentPromptedKey = (storeId: string) => `supermandi.payment_setup_prompted.${storeId}`;
+const getPaymentPromptedKey = skPaymentPrompted;
 
 export default function EnrollDeviceScreen() {
   const navigation = useNavigation<Nav>();

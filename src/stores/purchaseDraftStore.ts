@@ -20,7 +20,8 @@ type PurchaseDraftState = {
   resetForStore: () => void;
 };
 
-const PURCHASE_DRAFT_STORAGE_KEY = "supermandi.purchase.draft.v1";
+import { SK_PURCHASE_DRAFT } from "../constants/storageKeys";
+const PURCHASE_DRAFT_STORAGE_KEY = SK_PURCHASE_DRAFT;
 
 export const usePurchaseDraftStore = create<PurchaseDraftState>()(
   persist(

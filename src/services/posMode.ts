@@ -2,7 +2,8 @@ import { storeScopedStorage } from "./storeScope";
 
 export type PosMode = "SELL" | "PURCHASE";
 
-const STORAGE_KEY = "supermandi.pos.lastMode.v1";
+import { SK_POS_MODE } from "../constants/storageKeys";
+const STORAGE_KEY = SK_POS_MODE;
 
 function normalizeMode(value: unknown): PosMode | null {
   if (typeof value !== "string") return null;

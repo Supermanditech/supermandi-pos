@@ -3,7 +3,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 
-const TOKEN_KEY = "supermandi.auth.token";
+import { SK_AUTH_TOKEN } from "../../constants/storageKeys";
+const TOKEN_KEY = SK_AUTH_TOKEN;
 
 // GO-LIVE-105: Check if SecureStore is available on this device
 async function secureStoreAvailable(): Promise<boolean> {

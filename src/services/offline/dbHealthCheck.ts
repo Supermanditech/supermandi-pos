@@ -7,7 +7,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getDeviceStoreId } from "../deviceSession";
 import { normalizeStoreScope } from "../storeScope";
 
-const DB_HEALTH_KEY = "supermandi.db.health.v1";
+import { SK_DB_HEALTH } from "../../constants/storageKeys";
+const DB_HEALTH_KEY = SK_DB_HEALTH;
 
 export type DbHealthStatus = "healthy" | "recovered" | "corrupt" | "cleared" | "unchecked";
 
