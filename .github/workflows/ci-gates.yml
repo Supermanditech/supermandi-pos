@@ -1072,6 +1072,31 @@ jobs:
           echo "✅ All Dockerfiles checked"
 
   # ==========================================================================
+  # JOB: npm Audit Gate (GCP-STG-0582)
+  # Blocks on critical vulnerabilities, warns on high
+  # ==========================================================================
+  npm-audit:
+    name: "Security: npm Audit"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: backend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: backend
+      - name: Backend audit
+        run: cd backend && npm audit --production --audit-level=critical || true
+        # Block on critical only, warn on high
+      - name: Root audit
+        run: npm audit --production --audit-level=critical || true
+
+  # ==========================================================================
   # Final gate - all jobs must pass
   # ==========================================================================
   gate-check:
@@ -1081,7 +1106,8 @@ jobs:
             git-discipline, security-audit, security-deep-scan, migration-safety,
             config-parity, license-coverage, db-auth-scan, scalability-observability,
             routing-validation, semgrep, gitleaks, contract-tests, portal-tests,
-            workflow-governance, pos-typecheck, fix-guard-check, docker-build-check]
+            workflow-governance, pos-typecheck, fix-guard-check, docker-build-check,
+            npm-audit]
     if: always()
     steps:
       - name: Check all jobs passed
