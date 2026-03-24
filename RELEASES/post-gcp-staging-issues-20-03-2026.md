@@ -15519,4 +15519,146 @@ logEvent('VOICE_COMMAND', {
 
 ---
 
-<!-- next ticket: GCP-STG-0569 -->
+## GCP-STG-0569 — MEDIUM: ESLint error in orders.ts:262 — function declaration inside block scope (MEDIUM)
+
+**Ticket ID**: GCP-STG-0569
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend
+**Source**: Regression Audit — AUDIT VV
+
+**Problem**: `backend/src/routes/v1/orders.ts:262` declares `async function createSingleOrder(...)` inside a block scope (likely inside another function or if-block). ESLint rule `no-inner-declarations` flags this as an error. While it works at runtime (function hoisting), it's technically incorrect and blocks ESLint CI gate.
+
+**Fix**: Move `createSingleOrder` function declaration to the module root scope (outside the enclosing block), or convert it to a `const createSingleOrder = async (...)` arrow function expression which is valid inside blocks.
+
+**Files to modify**: `backend/src/routes/v1/orders.ts`
+
+**Test Requirements**: `cd backend && npx eslint src --ext .ts --quiet` must report 0 errors
+
+**12-Layer Verification**: L6 Backend ✅
+
+---
+
+## GCP-STG-0570 — MEDIUM: Fix CatalogTab.test.tsx "renders products in table" failure (MEDIUM)
+
+**Ticket ID**: GCP-STG-0570
+**Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN
+**Layers**: Backend
+**Source**: Regression Audit — AUDIT VV
+
+**Problem**: `supermandi-superadmin/src/__tests__/tabs/CatalogTab.test.tsx` has 1 failing test: "renders products in table". 2330 of 2331 SuperAdmin tests pass. The failure is likely a mock shape mismatch after catalog editing features were added (GCP-STG-0341, 0342, 0348, 0360, 0427).
+
+**Fix**: Read the failing test, compare the mock product shape with the current CatalogTab component's expected props, update the mock to include any new fields (imageUrl, margin, publishedAt, etc.).
+
+**Files to modify**: `supermandi-superadmin/src/__tests__/tabs/CatalogTab.test.tsx`
+
+**Test Requirements**: `cd supermandi-superadmin && npx vitest run` must report 0 failures (2331/2331 pass)
+
+**12-Layer Verification**: L6 Backend ✅
+
+---
+
+## GCP-STG-0571 — MEDIUM: Fix AuthContext.test.tsx idle timeout warning tests (MEDIUM)
+
+**Ticket ID**: GCP-STG-0571
+**Severity**: P2 MEDIUM
+**Platforms**: RETAILER-WEB
+**Layers**: Backend
+**Source**: Regression Audit — AUDIT VV
+
+**Problem**: `retailer-admin/src/__tests__/lib/AuthContext.test.tsx` has 2 failing tests:
+1. "shows session warning when idle time exceeds warning threshold"
+2. "dismissSessionWarning resets warning and refreshes activity timestamp"
+
+1704 of 1706 retailer tests pass. The failures are likely timing-related after the idle timeout implementation (GCP-STG-0465) — fake timers may not advance correctly, or the warning threshold check uses a different calculation than the test expects.
+
+**Fix**: Read the failing tests, compare with the actual AuthContext idle timeout logic (30 min timeout, 5 min warning). Update fake timer advancement or threshold assertions to match.
+
+**Files to modify**: `retailer-admin/src/__tests__/lib/AuthContext.test.tsx`
+
+**Test Requirements**: `cd retailer-admin && npx vitest run` must report 0 failures (1706/1706 pass)
+
+**12-Layer Verification**: L6 Backend ✅
+
+---
+
+## GCP-STG-0572 — LOW: Replace 57 console.log/error/warn in backend production code with structured logger (LOW)
+
+**Ticket ID**: GCP-STG-0572
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, GCP Parity
+**Source**: Regression Audit — AUDIT YY
+
+**Problem**: 57 instances of `console.log`, `console.error`, or `console.warn` in `backend/src/` (excluding test files). Production code should use the structured logger (`import { log } from '../lib/logger'` → `log.info()`, `log.warn()`, `log.error()`) for consistent log formatting, JSON output, and Cloud Logging integration.
+
+**Exceptions** (do NOT change):
+- `console.error` in process-level handlers (uncaughtException, unhandledRejection) — these run before logger is initialized
+- `console.log` in startup banner (server.ts) — intentional for human-readable startup info
+
+**Fix**: Replace remaining `console.log/error/warn` with `log.info/error/warn` from the structured logger. Import `log` from `../lib/logger` where not already imported.
+
+**Files to modify**: ~20 backend source files containing console.* calls
+
+**Test Requirements**: `grep -rn "console\.\(log\|error\|warn\)" backend/src/ --include="*.ts" | grep -v __tests__ | grep -v ".test." | wc -l` should be ≤5 (only process-level + startup exceptions)
+
+**12-Layer Verification**: L6 Backend ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0573 — LOW: Remove 3 stale TODO comments in sync.ts and translations.ts (LOW)
+
+**Ticket ID**: GCP-STG-0573
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend
+**Source**: Regression Audit — AUDIT YY
+
+**Problem**: 3 stale TODO comments remain in production code:
+1. `backend/src/routes/v1/pos/sync.ts:69` — "TODO: Migrate SALE_CREATED to catalog schema in MT-6"
+2. `backend/src/routes/v1/pos/sync.ts:423` — same TODO duplicated
+3. `backend/src/routes/v1/pos/translations.ts:26` — "TODO: Add requireDeviceToken + requireActiveStore to mutation routes when auth chain is clarified"
+
+These TODOs reference tasks that are either completed or no longer relevant.
+
+**Fix**: Remove the TODO comments. If the migration/auth tasks are still pending, convert to proper tickets instead of code comments.
+
+**Files to modify**: `backend/src/routes/v1/pos/sync.ts`, `backend/src/routes/v1/pos/translations.ts`
+
+**Test Requirements**: `grep -rn "TODO\|FIXME" backend/src/routes/ --include="*.ts" | grep -v __tests__` should return 0
+
+**12-Layer Verification**: L6 Backend ✅
+
+---
+
+## GCP-STG-0574 — LOW: Create API Gateway Dockerfile for Cloud Run deployment (LOW)
+
+**Ticket ID**: GCP-STG-0574
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: Regression Audit — AUDIT ZZ
+
+**Problem**: `backend/services/api-gateway/` exists as a service but has NO Dockerfile. All other 5 services have Dockerfiles. Without a Dockerfile, the API Gateway cannot be deployed to Cloud Run independently.
+
+**Current deployment**: The API Gateway may be bundled with the main backend Dockerfile (`backend/Dockerfile.main`) rather than deployed separately. Verify whether it needs its own Dockerfile or if the main Dockerfile handles it.
+
+**Fix**: If API Gateway is a separate Cloud Run service:
+- Create `backend/services/api-gateway/Dockerfile` with Node.js multi-stage build
+- Add `.dockerignore` (exclude node_modules, tests, .git)
+- Match the pattern of `backend/Dockerfile.main`
+
+If API Gateway is bundled with main backend (runs as part of the same process):
+- Document this in a comment in the api-gateway directory
+- No Dockerfile needed
+
+**Files to modify**: New `backend/services/api-gateway/Dockerfile` (if separate) or documentation
+
+**Test Requirements**: `docker build -f backend/services/api-gateway/Dockerfile .` must succeed (if created)
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+<!-- next ticket: GCP-STG-0575 -->
