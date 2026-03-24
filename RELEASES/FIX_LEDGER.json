@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1095,
+  "version": 1096,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -30593,6 +30593,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:41:38.462Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0662",
+      "file": "backend/src/services/creditNoteService.ts",
+      "start_line": 1,
+      "end_line": 80,
+      "checksum": "c5f900b3920b85f8",
+      "description": "Debit/credit note service stub for GST compliance — interface + stub functions pending goods return flow",
+      "test_file": "backend/src/__tests__/services/creditNoteService.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T22:43:19.251Z",
       "status": "ACTIVE"
     }
   ],
