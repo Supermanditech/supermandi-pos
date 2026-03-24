@@ -17922,4 +17922,324 @@ pos-tests:
 
 ---
 
-<!-- next ticket: GCP-STG-0700 -->
+## GCP-STG-0700 — HIGH: APK pre-build gate script (HIGH)
+
+**Ticket ID**: GCP-STG-0700
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: No automated pre-build validation before APK assembly. Broken TypeScript, failing tests, missing google-services.json, version mismatches, or wrong permissions can slip into release builds undetected.
+
+**Fix**: Create scripts/apk-pre-build-gate.sh that runs: tsc --noEmit, jest --ci, node scripts/fix-guard.js check, google-services.json existence + package name check, versionCode/versionName match between build.gradle and app.json, AndroidManifest.xml permission whitelist check. Exit 1 on any failure.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0701 — HIGH: APK post-build gate (HIGH)
+
+**Ticket ID**: GCP-STG-0701
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: After APK build completes, there is no verification that the output is valid — APK could be missing, oversized, unsigned (debug keystore), or have wrong versionCode.
+
+**Fix**: Create scripts/apk-post-build-gate.sh that verifies: APK file exists at expected path, file size < 50MB, APK is signed with release keystore (not debug), log extracted versionCode and versionName. Exit 1 on any check failure.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0702 — MED: APK version auto-increment (MED)
+
+**Ticket ID**: GCP-STG-0702
+**Severity**: P2 MED
+**Platforms**: POS
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: versionCode in build.gradle and versionName in app.json must be manually incremented before each release. Forgetting causes Play Store rejection or stale version deployed.
+
+**Fix**: Create scripts/apk-version-bump.sh that reads current versionCode from build.gradle, increments by 1, writes back. Also bumps versionName patch segment in app.json. Run automatically as part of release workflow before build.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0703 — MED: APK build excludes test files (MED)
+
+**Ticket ID**: GCP-STG-0703
+**Severity**: P2 MED
+**Platforms**: POS
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: APK bundle may include __tests__/ directories, *.test.* files, RELEASES/ documentation, CLAUDE.md, and *.png screenshots, inflating bundle size and leaking internal docs.
+
+**Fix**: Add post-build verification script that inspects APK/bundle contents and fails if any of: __tests__/, *.test.ts, *.test.tsx, RELEASES/, CLAUDE.md, or *.png files are found in the output. Configure metro.config.js blockList to exclude these patterns at bundle time.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0704 — HIGH: Retailer web pre-build gate (HIGH)
+
+**Ticket ID**: GCP-STG-0704
+**Severity**: P1 HIGH
+**Platforms**: Retailer-Web
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: Retailer admin portal has no pre-build validation. TypeScript errors, test failures, or broken imports only surface during or after vite build, wasting CI time and risking broken deploys.
+
+**Fix**: Create scripts/retailer-pre-build-gate.sh that runs sequentially: tsc --noEmit (in retailer-admin/), vite build, vitest run --reporter=verbose. All three must exit 0. Exit 1 on first failure with clear error message.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0705 — MED: Retailer web build output verification (MED)
+
+**Ticket ID**: GCP-STG-0705
+**Severity**: P2 MED
+**Platforms**: Retailer-Web
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: No post-build verification for retailer admin. Missing index.html, oversized bundles, leaked source maps, or test files in dist/ would go undetected until runtime.
+
+**Fix**: Create scripts/retailer-post-build-gate.sh that checks: dist/index.html exists, total dist/ size < 5MB, no *.map files in dist/, no __tests__/ or *.test.* files in dist/. Exit 1 on any failure.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0706 — MED: Retailer web env var gate (MED)
+
+**Ticket ID**: GCP-STG-0706
+**Severity**: P2 MED
+**Platforms**: Retailer-Web
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: Retailer admin build can succeed with missing VITE_API_BASE_URL or VITE_FIREBASE_* env vars, producing a bundle that fails at runtime with cryptic errors.
+
+**Fix**: Add env var validation at build start. Check VITE_API_BASE_URL and all VITE_FIREBASE_* vars (apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId) are set and non-empty. Build fails immediately if any are missing.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0707 — HIGH: Supplier portal pre-build gate (HIGH)
+
+**Ticket ID**: GCP-STG-0707
+**Severity**: P1 HIGH
+**Platforms**: Supplier-Portal
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: Supplier portal (Next.js) has no pre-build gate. TypeScript errors or broken SSR pages only surface during next build, with no early validation step.
+
+**Fix**: Create scripts/supplier-pre-build-gate.sh that runs: tsc --noEmit (in supplier-portal/), next build. Both must exit 0. Exit 1 on first failure. Log build duration and page count for monitoring.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0708 — MED: Supplier portal build output verification (MED)
+
+**Ticket ID**: GCP-STG-0708
+**Severity**: P2 MED
+**Platforms**: Supplier-Portal
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: No validation that supplier portal build output is complete and clean. Missing .next/ directory, broken SSR pages, or test files in output go undetected.
+
+**Fix**: Create scripts/supplier-post-build-gate.sh that verifies: .next/ directory exists and is non-empty, no __tests__/ or *.test.* files in .next/, SSR pages return valid HTML (next start + curl key pages). Exit 1 on any failure.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0709 — MED: Supplier portal env var gate (MED)
+
+**Ticket ID**: GCP-STG-0709
+**Severity**: P2 MED
+**Platforms**: Supplier-Portal
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: Supplier portal can build without NEXT_PUBLIC_API_BASE_URL or NEXT_PUBLIC_FIREBASE_* env vars, producing pages that crash at runtime when calling undefined API endpoints.
+
+**Fix**: Add env var validation before next build. Check NEXT_PUBLIC_API_BASE_URL and all NEXT_PUBLIC_FIREBASE_* vars are set and non-empty. Fail build immediately with descriptive error listing missing vars.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0710 — HIGH: SuperAdmin pre-build gate (HIGH)
+
+**Ticket ID**: GCP-STG-0710
+**Severity**: P1 HIGH
+**Platforms**: SuperAdmin
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: SuperAdmin portal has no pre-build validation. TypeScript errors or test failures are not caught before vite build, allowing broken code to reach deploy.
+
+**Fix**: Create scripts/superadmin-pre-build-gate.sh that runs: tsc --noEmit (in supermandi-superadmin/), vite build, vitest run --reporter=verbose. All must exit 0. Exit 1 on first failure.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0711 — MED: SuperAdmin build output verification (MED)
+
+**Ticket ID**: GCP-STG-0711
+**Severity**: P2 MED
+**Platforms**: SuperAdmin
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: No post-build checks for SuperAdmin portal. Oversized bundles, source map leaks, or test artifacts in dist/ go undetected.
+
+**Fix**: Create scripts/superadmin-post-build-gate.sh that checks: dist/ total size < 5MB, no *.map source map files, no __tests__/ or *.test.* files in output. Exit 1 on failure.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0712 — MED: SuperAdmin env var gate (MED)
+
+**Ticket ID**: GCP-STG-0712
+**Severity**: P2 MED
+**Platforms**: SuperAdmin
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: SuperAdmin build can proceed without VITE_API_BASE_URL, and ADMIN_EMAIL_ALLOWLIST could contain malformed entries, leading to runtime auth failures.
+
+**Fix**: Validate at build start: VITE_API_BASE_URL is set and non-empty, ADMIN_EMAIL_ALLOWLIST is set and contains only valid email addresses (regex check). Fail build with descriptive error on any violation.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0713 — HIGH: CI master gate for all platforms (HIGH)
+
+**Ticket ID**: GCP-STG-0713
+**Severity**: P1 HIGH
+**Platforms**: All
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: No single CI gate aggregates ALL platform build results. Individual platform builds can pass while cross-platform concerns (shared types, API contract mismatches, migration state) fail silently.
+
+**Fix**: Create CI master gate job that depends on all platform build jobs. Runs: all platform pre-build gates, fix-guard check (zero drift), migration validation (sequential, no gaps), shared type consistency check. Deploy step is blocked unless master gate exits 0.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0714 — HIGH: CI regression detection via test count (HIGH)
+
+**Ticket ID**: GCP-STG-0714
+**Severity**: P1 HIGH
+**Platforms**: All
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: Tests can be silently deleted or skipped (test.skip) without detection. Test count can decrease over time, eroding coverage without any CI alert.
+
+**Fix**: Add CI gate that parses test runner output and extracts test count per platform. Enforce minimums: backend >= 2900 tests, superadmin >= 2300, retailer >= 1700. Fail CI if any platform drops below its minimum. Store test counts as CI artifact for trend tracking.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0715 — MED: CI migration sequence gate (MED)
+
+**Ticket ID**: GCP-STG-0715
+**Severity**: P2 MED
+**Platforms**: Backend
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: Migration files could have gaps in numbering, duplicates, or missing ROLLBACK sections. Sequential integrity from migration 187 onward is not validated in CI.
+
+**Fix**: Add CI gate script that scans backend/migrations/ directory: verify sequential numbering with no gaps starting from 187, detect duplicate migration numbers, verify each migration file contains a ROLLBACK comment or DOWN section. Exit 1 on any violation.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0716 — MED: CI bundle size gate (MED)
+
+**Ticket ID**: GCP-STG-0716
+**Severity**: P2 MED
+**Platforms**: All
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: Bundle size can grow unchecked. A single commit adding large dependencies or assets could push bundles past acceptable limits without any warning.
+
+**Fix**: Add CI gate that measures build output size for each platform. Alert (warning annotation) if any bundle grows > 20% compared to previous build. Block (exit 1) if any single bundle exceeds 10MB. Store sizes as CI artifact for historical tracking.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0717 — HIGH: CD pre-deploy gate (HIGH)
+
+**Ticket ID**: GCP-STG-0717
+**Severity**: P1 HIGH
+**Platforms**: All
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: Deploy can proceed even if CI had partial failures, Docker images are missing, migrations would fail, or fix-guard detects drift. No single pre-deploy checkpoint validates everything.
+
+**Fix**: Create CD pre-deploy gate that runs before any gcloud run deploy: verify CI pipeline passed (all jobs green), all 6 Docker images exist in Artifact Registry with correct SHA tag, migration dry-run passes against staging DB, fix-guard check returns zero drift. Block deploy on any failure.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0718 — HIGH: CD post-deploy gate with auto-rollback (HIGH)
+
+**Ticket ID**: GCP-STG-0718
+**Severity**: P1 HIGH
+**Platforms**: All
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: After deploy, no automated health check verifies services are actually responding. A broken deploy could sit undetected until a user reports it.
+
+**Fix**: Create CD post-deploy gate that curls 5 critical URLs (api-gateway /health, retailer-admin /, supplier-portal /, superadmin /, landing /) and expects HTTP 200 from each. 60-second timeout per URL. If any URL fails, automatically trigger rollback to previous Cloud Run revision. Log all results.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+## GCP-STG-0719 — MED: CD env var verification against deploy config (MED)
+
+**Ticket ID**: GCP-STG-0719
+**Severity**: P2 MED
+**Platforms**: All
+**Layers**: L12 Build Gates
+**Source**: Build + CI/CD Gates Audit
+
+**Problem**: Env vars defined in deploy.yml may not match what is actually set on the Cloud Run service. Missing or stale env vars cause runtime failures that are hard to diagnose.
+
+**Fix**: Create CD post-deploy verification that compares env var names from deploy.yml against gcloud run services describe output for each service. Flag any vars present in deploy.yml but missing from the live service, or vice versa. Block promotion to production on any mismatch.
+
+**12-Layer Verification**: L12 Build Gates ✅
+
+---
+
+<!-- next ticket: GCP-STG-0720 -->
