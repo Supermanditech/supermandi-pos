@@ -16,10 +16,15 @@ dist
 # Test files
 **/*.test.ts
 **/*.spec.ts
+__tests__/
+**/__tests__/
 tests/
 **/tests/
+*.test.*
+*.spec.*
 coverage/
 **/coverage/
+e2e-tests/
 
 # Development files
 .env
@@ -45,7 +50,23 @@ docker-compose*.yml
 
 # Documentation
 *.md
+!README.md
 docs/
+
+# Planning docs — not needed at runtime
+RELEASES/
+CLAUDE.md
+.claude/
+
+# Screenshots
+*.png
+*.jpg
+
+# Tooling
+scripts/
+.github/
+.husky/
+FIX_LEDGER.json
 
 # OS files
 .DS_Store

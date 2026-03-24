@@ -2,7 +2,30 @@ node_modules
 .next
 .git
 *.md
+!README.md
 .env
 .env.local
 .env.*.local
 .vscode
+
+# Planning docs — not needed at runtime
+RELEASES/
+CLAUDE.md
+.claude/
+
+# Screenshots
+*.png
+*.jpg
+
+# Test files
+__tests__/
+*.test.*
+*.spec.*
+tests/
+e2e-tests/
+
+# Tooling
+scripts/
+.github/
+.husky/
+FIX_LEDGER.json

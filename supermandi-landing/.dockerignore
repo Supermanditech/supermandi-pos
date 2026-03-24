@@ -1,5 +1,28 @@
 node_modules
 .git
 *.md
+!README.md
 .env*
 .vscode
+
+# Planning docs — not needed at runtime
+RELEASES/
+CLAUDE.md
+.claude/
+
+# Screenshots
+*.png
+*.jpg
+
+# Test files
+__tests__/
+*.test.*
+*.spec.*
+tests/
+e2e-tests/
+
+# Tooling
+scripts/
+.github/
+.husky/
+FIX_LEDGER.json
