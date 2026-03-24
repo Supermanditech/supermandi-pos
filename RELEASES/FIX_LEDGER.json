@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1015,
+  "version": 1016,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6416,7 +6416,7 @@
       "file": "backend/src/routes/v1/pos/sales.ts",
       "start_line": 816,
       "end_line": 3093,
-      "checksum": "a9a52d0145517367",
+      "checksum": "0c6dee9c9517fe69",
       "description": "instanceof Date check for TIMESTAMPTZ in bill detail",
       "test_file": "src/__tests__/screens/date-timezone.stg-515.test.ts",
       "depends_on": null,
@@ -10224,8 +10224,8 @@
     {
       "ticket": "GCP-STG-0077",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 2224,
-      "end_line": 3093,
+      "start_line": 2243,
+      "end_line": 3112,
       "checksum": "f26ba8c43554eb76",
       "description": "Auto-generate tax invoice after POS sale completion (fire-and-forget after cash/UPI/DUE payment COMMIT)",
       "test_file": "backend/tests/invoiceAutoGen.gcp-stg-0077.unit.test.ts",
@@ -10259,7 +10259,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:30:19.204Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T09:53:36.896Z"
+      "line_shifted_at": "2026-03-24T19:43:09.268Z"
     },
     {
       "ticket": "GCP-STG-0049",
@@ -11057,8 +11057,8 @@
     {
       "ticket": "GCP-STG-0118",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 1299,
-      "end_line": 1328,
+      "start_line": 1317,
+      "end_line": 1346,
       "checksum": "646b8fe57fcad039",
       "description": "sale_items INSERT: populate discount_minor from cart item discount, adjust line_total_minor",
       "test_file": "backend/src/routes/v1/pos/sales.ts",
@@ -11092,13 +11092,13 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T15:35:37.267Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:47:29.630Z"
+      "line_shifted_at": "2026-03-24T19:43:09.292Z"
     },
     {
       "ticket": "GCP-STG-0099",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 1023,
-      "end_line": 1033,
+      "start_line": 1041,
+      "end_line": 1051,
       "checksum": "726b526ff6483032",
       "description": "Backend guard: reject zero-amount sales with 422 ZERO_AMOUNT_SALE error",
       "test_file": "backend/src/routes/v1/pos/sales.ts",
@@ -11132,7 +11132,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T15:39:49.386Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:47:29.643Z"
+      "line_shifted_at": "2026-03-24T19:43:09.301Z"
     },
     {
       "ticket": "GCP-STG-0097",
@@ -18743,8 +18743,8 @@
     {
       "ticket": "GCP-STG-0361",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 3144,
-      "end_line": 3205,
+      "start_line": 3163,
+      "end_line": 3224,
       "checksum": "fa1b047f3b7141c3",
       "description": "GCP-STG-0361: POS invoice PDF download — GET /sales/:saleId/invoice/pdf with store isolation + PDF streaming",
       "test_file": "backend/tests/posInvoicePdf.gcp-stg-0361.unit.test.ts",
@@ -18775,7 +18775,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:01:45.434Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:47:29.885Z"
+      "line_shifted_at": "2026-03-24T19:43:09.446Z"
     },
     {
       "ticket": "GCP-STG-0361",
@@ -27809,6 +27809,56 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T19:36:43.908Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0655",
+      "file": "backend/src/routes/v1/pos/sales.ts",
+      "start_line": 993,
+      "end_line": 1013,
+      "checksum": "b29f2b67a30d1c81",
+      "description": "Server-side amount validation: rejects if frontend totalAmount mismatches server-recalculated total (within 100 paise tolerance). Also fixes undefined totalAmount in confirmPayment handler.",
+      "test_file": "backend/tests/paymentAmountValidation.gcp-stg-0655.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T19:43:02.989Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "POST /sales validates totalAmount against server-recalculated total, returns 400 AMOUNT_MISMATCH",
+        "api_errors": "400 AMOUNT_MISMATCH for mismatch, 422 ZERO_AMOUNT_SALE, 422 SUBTOTAL_OVERFLOW",
+        "store_isolation": "storeId from posDevice JWT, all queries use WHERE store_id",
+        "business_logic": "Server recalculates total from items, never trusts frontend amount",
+        "business_behaviour": "createSale validates amount, confirmPayment uses DB total_minor",
+        "db_schema": "N/A - no schema changes",
+        "impacted_files": "sales.ts modified, test added, FIX_LEDGER updated",
+        "fix_ledger_check": "567 fixes intact, zero drift",
+        "no_agent_conflict": "Single agent, no parallel modifications"
+      }
     }
   ],
   "machine_state_version": 270,

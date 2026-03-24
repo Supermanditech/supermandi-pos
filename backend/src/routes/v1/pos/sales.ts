@@ -898,11 +898,13 @@ async function getCollectionStoreStatus(
 // GO-LIVE-184: Rate limit sales creation to 60/min per store
 // SEC-001: POST /sales requires ACTIVE store status
 posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateLimiter, async (req, res) => {
-  const { items, discountMinor, currency, saleId: requestedSaleIdRaw } = req.body as {
+  // GCP-STG-0655: Accept optional totalAmount from frontend for server-side validation
+  const { items, discountMinor, currency, saleId: requestedSaleIdRaw, totalAmount: frontendTotalAmount } = req.body as {
     items?: SaleItemInput[];
     discountMinor?: number;
     currency?: string;
     saleId?: string;
+    totalAmount?: number;
   };
 
   if (!Array.isArray(items) || items.length === 0) {
@@ -995,6 +997,22 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
   const rawDiscount = Math.max(0, Math.round(discountMinor ?? 0));
   const discount = Math.min(rawDiscount, subtotal);
   const total = subtotal - discount; // No Math.max(0,...) needed since discount <= subtotal
+
+  // GCP-STG-0655: Server-side amount validation — if frontend sends totalAmount, verify it matches
+  // server-recalculated total within ₹1 tolerance (100 paise) for rounding differences.
+  // The server NEVER trusts the frontend amount; this is a defense-in-depth mismatch detector.
+  if (typeof frontendTotalAmount === "number" && Number.isFinite(frontendTotalAmount)) {
+    const AMOUNT_TOLERANCE_MINOR = 100; // ₹1 in paise
+    if (Math.abs(total - frontendTotalAmount) > AMOUNT_TOLERANCE_MINOR) {
+      return res.status(400).json({
+        error: "AMOUNT_MISMATCH",
+        message: "Frontend total does not match server-calculated total",
+        serverTotal: total,
+        frontendTotal: frontendTotalAmount,
+      });
+    }
+  }
+
   const saleCurrency = typeof currency === "string" && currency.trim() ? currency.trim() : "INR";
   const requestedSaleId = asTrimmedString(requestedSaleIdRaw);
 
@@ -1616,7 +1634,8 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
     // GCP-STG-0077: Fire-and-forget invoice generation after successful payment confirmation
     generateSaleInvoice(pool, saleId, storeId, paymentMode).catch(() => {});
     // GCP-STG-0233: Log SALE_COMPLETED event for admin Events tab
-    void logPosEventSafe({ deviceId: (req as any).deviceId ?? "backend", storeId, eventType: "SALE_COMPLETED", payload: { saleId, paymentMode, totalMinor: totalAmount } });
+    // GCP-STG-0655: Use sale.total_minor (server-derived) instead of undefined totalAmount
+    void logPosEventSafe({ deviceId: (req as any).deviceId ?? "backend", storeId, eventType: "SALE_COMPLETED", payload: { saleId, paymentMode, totalMinor: Number(sale.total_minor) } });
     // GCP-STG-0382: Fire-and-forget payment_completed lifecycle event
     void publishLifecycleEvent({
       eventType: "payment_completed",
@@ -1624,7 +1643,7 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
       storeId,
       supplierId: null,
       targets: [{ role: "retailer", channels: ["in_app", "whatsapp"] }],
-      payload: { saleId, method: paymentMode, totalMinor: totalAmount },
+      payload: { saleId, method: paymentMode, totalMinor: Number(sale.total_minor) },
       timestamp: new Date().toISOString(),
     }).catch(() => {});
 
