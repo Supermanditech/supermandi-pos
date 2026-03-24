@@ -80,6 +80,7 @@ import { supplierBnplRouter } from "./supplier/bnplVisibility";  // T-280: Suppl
 import { chatRouter } from "./chat";  // T-291→T-302: In-app chat
 import { aiIntelligenceRouter } from "./ai/intelligence";  // T-303→T-316: AI Intelligence
 import { adminMaintenanceRouter } from "./admin/maintenance";  // SA-P0-007: System maintenance mode
+import { adminReconciliationRouter } from "./admin/reconciliation";  // GCP-STG-0658: Payment reconciliation
 import { maintenanceGate } from "../../middleware/maintenanceMode";  // SA-P0-007: Maintenance gate
 import { demoRouter } from "./demo";
 import { microserviceHealthRouter } from "./microserviceHealth";
@@ -260,6 +261,7 @@ v1Router.use("/admin", adminAllocationsRouter);  // V3-FIX-187: Allocation dashb
 v1Router.use("/admin/quality", qualityDashboardRouter);  // T-223: Quality dashboard API
 v1Router.use("/admin/credit-providers", adminCreditProvidersRouter);  // T-281/T-289/T-290: Provider health + management
 v1Router.use("/admin", adminMaintenanceRouter);  // SA-P0-007: System maintenance mode
+v1Router.use("/admin", adminReconciliationRouter);  // GCP-STG-0658: Payment reconciliation
 
 // GCP-STG-0627: File upload rate limit — 10 uploads/min per IP (authenticated users share IP key)
 // Applied to all routes that handle multipart/file uploads via multer
