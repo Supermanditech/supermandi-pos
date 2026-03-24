@@ -8,6 +8,8 @@ import { Router, Request, Response } from "express";
 import { getPool } from "../../db/client";
 import { getRedis } from "../../db/redis";
 import { logger } from "../../lib/logger";
+// GCP-STG-0606: Rate limit webhook endpoints — 100 req/min per IP
+import { redisRateLimit } from "../../middleware/rateLimit";
 import {
   verifyWebhookSignature,
   handlePayoutWebhook,
@@ -235,7 +237,17 @@ function timingSafeKeyEqual(a: string, b: string): boolean {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
+// GCP-STG-0606: Rate limit all webhook endpoints — 100 req/min per IP
+const webhookRateLimit = redisRateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  keyPrefix: 'webhook',
+});
+
 export const webhooksRouter = Router();
+
+// Apply rate limit to all webhook routes
+webhooksRouter.use(webhookRateLimit);
 
 /**
  * POST /api/v1/webhooks/razorpay

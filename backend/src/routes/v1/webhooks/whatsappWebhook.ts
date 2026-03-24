@@ -7,8 +7,17 @@ import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { getWebhookVerifyToken } from "../../../services/whatsappService";
 import { log } from "../../../lib/logger";
+// GCP-STG-0606: Rate limit webhook endpoints
+import { redisRateLimit } from "../../../middleware/rateLimit";
 
 export const whatsappWebhookRouter = Router();
+
+// GCP-STG-0606: Rate limit WhatsApp webhook — 100 req/min per IP
+whatsappWebhookRouter.use(redisRateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  keyPrefix: 'webhook:whatsapp',
+}));
 
 const WHATSAPP_APP_SECRET = process.env.WHATSAPP_APP_SECRET || "";
 

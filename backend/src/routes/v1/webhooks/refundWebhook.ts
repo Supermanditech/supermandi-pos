@@ -13,8 +13,17 @@ import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import { getPool } from '../../../db/client';
 import { log } from "../../../lib/logger";
+// GCP-STG-0606: Rate limit webhook endpoints
+import { redisRateLimit } from "../../../middleware/rateLimit";
 
 export const refundWebhookRouter = Router();
+
+// GCP-STG-0606: Rate limit refund webhook — 100 req/min per IP
+refundWebhookRouter.use(redisRateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  keyPrefix: 'webhook:refund',
+}));
 
 /**
  * Constant-time signature comparison to prevent timing attacks.
