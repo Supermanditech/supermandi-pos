@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
-import { View, Pressable, StyleSheet, Text, Animated, Modal } from "react-native";
+import { View, Pressable, StyleSheet, Text, Animated, Modal, FlatList } from "react-native";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 
@@ -32,7 +32,11 @@ type VoiceOverlayV3Props = {
   onProductMatched: (productName: string, quantity: number) => void;
 };
 
-type VoiceState = "idle" | "listening" | "processing" | "matched" | "error";
+// GCP-STG-0565: Added "clarify" state for multi-candidate picker
+type VoiceState = "idle" | "listening" | "processing" | "matched" | "clarify" | "error";
+
+// GCP-STG-0565: Candidate option from voice clarification
+type ClarifyCandidate = { label: string; value: string; confidence?: number };
 
 export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: VoiceOverlayV3Props) {
   const { t } = useTranslation();
@@ -44,6 +48,8 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
   const [matchedQty, setMatchedQty] = useState(1);
   // GCP-STG-0027: Track matched product price for display
   const [matchedPrice, setMatchedPrice] = useState(0);
+  // GCP-STG-0565: Multi-candidate picker state
+  const [candidates, setCandidates] = useState<ClarifyCandidate[]>([]);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // Pulse animation for mic icon
@@ -61,7 +67,7 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
 
   // V3-003: Real voice flow — startRecording on visible, submit on stop
   useEffect(() => {
-    if (!visible) { setState("idle"); setTranscript(""); setMatchedProduct(""); return; }
+    if (!visible) { setState("idle"); setTranscript(""); setMatchedProduct(""); setCandidates([]); return; }
     let cancelled = false;
 
     const runVoice = async () => {
@@ -106,7 +112,14 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
       const intent = result.intent;
       const productName = intent?.productName ?? intent?.slots?.query ?? "";
       const qty = intent?.quantity ?? intent?.slots?.quantity ?? 1;
-      if (result.success && productName) {
+      // GCP-STG-0565: Multi-candidate clarification flow
+      if (result.needsClarification && result.clarifyOptions && result.clarifyOptions.length > 1) {
+        setTranscript(result.transcript ?? "");
+        setMatchedQty(qty);
+        setCandidates(result.clarifyOptions);
+        setState("clarify");
+        logger.debug("VoiceV3", `clarify:${result.clarifyOptions.length} candidates`);
+      } else if (result.success && productName) {
         setTranscript(result.transcript ?? "");
         setMatchedProduct(productName);
         setMatchedQty(qty);
@@ -163,11 +176,25 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
     }
   }, [matchedProduct, matchedQty, onProductMatched, onClose]);
 
+  // GCP-STG-0565: Select a candidate from the multi-candidate picker
+  const handleCandidateSelect = useCallback((candidate: ClarifyCandidate) => {
+    setMatchedProduct(candidate.label);
+    setCandidates([]);
+    // Look up price for display
+    const products = useProductsStore.getState().products;
+    const priceMatch = products.find((p) => p.name.toLowerCase() === candidate.label.toLowerCase())
+      ?? products.find((p) => p.name.toLowerCase().includes(candidate.label.toLowerCase()));
+    setMatchedPrice(priceMatch?.priceMinor ?? 0);
+    setState("matched");
+    logger.debug("VoiceV3", `clarify_selected:${candidate.label}`);
+  }, []);
+
   const handleRetry = useCallback(() => {
     setState("listening");
     setTranscript("");
     setMatchedProduct("");
     setMatchedPrice(0);
+    setCandidates([]);
   }, []);
 
   if (!visible) return null;
@@ -209,6 +236,38 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
             <View style={styles.matchBox}>
               <Text style={styles.matchText}>✓ {matchedProduct} × {matchedQty}</Text>
               {matchedPrice > 0 ? <Text style={styles.matchPrice}>₹{Math.round(matchedPrice * matchedQty / 100).toLocaleString("en-IN")}</Text> : null}
+            </View>
+          ) : null}
+
+          {/* GCP-STG-0565: Multi-candidate picker */}
+          {state === "clarify" && candidates.length > 0 ? (
+            <View style={styles.clarifyContainer} testID="voice-clarify-list">
+              <Text style={styles.clarifyTitle}>Multiple matches — pick one:</Text>
+              <FlatList
+                data={candidates}
+                keyExtractor={(item) => item.value}
+                scrollEnabled={candidates.length > 4}
+                style={{ maxHeight: 200 }}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.clarifyRow}
+                    onPress={() => handleCandidateSelect(item)}
+                    testID={`voice-candidate-${item.value}`}
+                  >
+                    <Text style={styles.clarifyLabel}>{item.label}</Text>
+                    {item.confidence != null ? (
+                      <Text style={styles.clarifyConf}>{Math.round(item.confidence * 100)}%</Text>
+                    ) : null}
+                  </Pressable>
+                )}
+              />
+              <Pressable
+                style={styles.clarifyNoneBtn}
+                onPress={() => { setCandidates([]); onClose(); }}
+                testID="voice-candidate-none"
+              >
+                <Text style={styles.clarifyNoneText}>None of these</Text>
+              </Pressable>
             </View>
           ) : null}
 
@@ -261,5 +320,13 @@ function createStyles(colors: ColorPalette) {
     retryBtn: { flex: 1, backgroundColor: "rgba(255,255,255,0.1)", paddingVertical: 14, borderRadius: 14, alignItems: "center" },
     retryText: { color: "#fff", fontSize: 15, fontWeight: "700" },
     hint: { color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: "500", textAlign: "center", marginTop: 20, lineHeight: 16 },
+    // GCP-STG-0565: Multi-candidate picker styles
+    clarifyContainer: { width: "100%", marginTop: 16 },
+    clarifyTitle: { color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: "600", marginBottom: 8, textAlign: "center" },
+    clarifyRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "rgba(255,255,255,0.08)", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, marginBottom: 6 },
+    clarifyLabel: { color: "#fff", fontSize: 15, fontWeight: "600", flex: 1 },
+    clarifyConf: { color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: "500", marginLeft: 8 },
+    clarifyNoneBtn: { backgroundColor: "rgba(255,255,255,0.05)", paddingVertical: 12, borderRadius: 10, alignItems: "center", marginTop: 4 },
+    clarifyNoneText: { color: "rgba(255,255,255,0.5)", fontSize: 13, fontWeight: "600" },
   });
 }
