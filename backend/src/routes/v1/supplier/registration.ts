@@ -501,6 +501,26 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
       return;
     }
 
+    // GCP-STG-0551: Prevent duplicate supplier applications on same phone
+    // Block if a non-draft, non-terminal application already exists (KYC_SUBMITTED, UNDER_REVIEW, ACTIVE, etc.)
+    // DRAFTs/OTP_VERIFIED are handled by the upsert logic below; REJECTED/WITHDRAWN/EXPIRED are terminal
+    const dupPhoneCheck = await pool.query(
+      `SELECT id FROM auth.applications
+       WHERE phone = $1 AND entity_type = 'supplier'
+         AND status NOT IN ('DRAFT', 'OTP_VERIFIED', 'REJECTED', 'WITHDRAWN', 'EXPIRED')
+       LIMIT 1`,
+      [phoneNormalized]
+    );
+    if (dupPhoneCheck.rows.length > 0) {
+      res.status(409).json({
+        error: {
+          code: "APPLICATION_EXISTS",
+          message: "Application already exists for this phone number"
+        }
+      });
+      return;
+    }
+
     // Check GSTIN uniqueness
     const gstinCheck = await pool.query(
       `SELECT * FROM auth.check_gstin_uniqueness($1, 'supplier')`,
