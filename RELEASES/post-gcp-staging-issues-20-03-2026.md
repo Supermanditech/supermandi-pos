@@ -16720,4 +16720,486 @@ pos-tests:
 
 ---
 
-<!-- next ticket: GCP-STG-0625 -->
+## GCP-STG-0625 — HIGH: Add security headers to ALL web portals — CSP, X-Frame-Options, HSTS (HIGH)
+
+**Ticket ID**: GCP-STG-0625
+**Severity**: P1 HIGH
+**Platforms**: RETAILER-WEB, SUPPLIER-PORTAL, SUPERADMIN, LANDING
+**Layers**: GCP Parity
+**Source**: Security Hardening Audit
+
+**Problem**: Web portals served via nginx or Next.js may not have security headers. Missing headers expose to clickjacking (no X-Frame-Options), MIME sniffing (no X-Content-Type-Options), XSS (no CSP), and downgrade attacks (no HSTS).
+
+**Fix**: Add to each nginx config or Next.js middleware: `Content-Security-Policy`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Strict-Transport-Security: max-age=31536000`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0626 — MEDIUM: Add request body size limit (10MB) to API Gateway + backend (MEDIUM)
+
+**Ticket ID**: GCP-STG-0626
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, GCP Parity
+**Source**: Security Hardening Audit
+
+**Problem**: Without explicit body size limits, attackers can send massive payloads causing memory exhaustion. Express default is 100KB for JSON but file uploads (multer) may allow larger. Need consistent 10MB limit across all routes.
+
+**Fix**: Add `express.json({ limit: '10mb' })` and `express.urlencoded({ limit: '10mb' })` in app.ts. Verify multer file size limits match.
+
+**Files to modify**: `backend/src/app.ts`
+**12-Layer Verification**: L6 Backend ✅
+
+---
+
+## GCP-STG-0627 — MEDIUM: Add rate limit on file upload endpoints (MEDIUM)
+
+**Ticket ID**: GCP-STG-0627
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, GCP Parity
+**Source**: Security Hardening Audit
+
+**Problem**: File upload endpoints (KYC documents, product images) have no rate limiting. An attacker could upload thousands of files, filling GCS storage and exhausting API resources.
+
+**Fix**: Add rate limiter: 10 uploads/min per authenticated user on document and image upload endpoints.
+
+**12-Layer Verification**: L6 Backend ✅
+
+---
+
+## GCP-STG-0628 — MEDIUM: API Gateway request logging/audit trail for compliance (MEDIUM)
+
+**Ticket ID**: GCP-STG-0628
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: Security Hardening Audit
+
+**Problem**: API Gateway logs requests but may not include enough detail for compliance audit: IP, user ID, endpoint, status code, response time, request size. Need structured access logging for security forensics and compliance.
+
+**Fix**: Add structured access log middleware to API Gateway that logs: timestamp, method, path, status, latency_ms, user_id (from JWT), ip, user_agent, request_size, response_size. Output as JSON for Cloud Logging indexing.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0629 — LOW: Add SQL injection scan to CI pipeline (LOW)
+
+**Ticket ID**: GCP-STG-0629
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: Security Hardening Audit
+
+**Problem**: While all queries use parameterized $1/$2 (verified in audit), a CI gate scanning for raw string interpolation in SQL would prevent future regressions.
+
+**Fix**: Add CI step that greps for backtick SQL with `${` interpolation patterns and fails on any match.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0630 — LOW: Document secret rotation schedule for all 11 secrets (LOW)
+
+**Ticket ID**: GCP-STG-0630
+**Severity**: P3 LOW
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: Security Hardening Audit
+
+**Problem**: 11 secrets in Secret Manager but no documented rotation schedule. Best practice: rotate every 90 days for API keys, annually for JWT secrets.
+
+**Fix**: Create `RELEASES/SECRET_ROTATION.md` with rotation schedule, procedure, and responsible party for each secret.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0631 — LOW: Verify no sensitive data in Cloud Run logs (PII masking) (LOW)
+
+**Ticket ID**: GCP-STG-0631
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: Security Hardening Audit
+
+**Problem**: Cloud Run logs may contain PII (phone numbers, emails, names) from request/error logging. Need to verify log sanitization and add masking where needed.
+
+**Fix**: Audit Cloud Logging output, add PII masking to structured logger for phone/email/name fields.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0632 — MEDIUM: Verify GCS buckets are in asia-south1 for Indian data residency (MEDIUM)
+
+**Ticket ID**: GCP-STG-0632
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: Indian Compliance Audit
+
+**Problem**: Indian data residency requires storing personal data (KYC docs, Aadhaar scans, PAN copies) in India. GCS buckets must be in `asia-south1` (Mumbai) region.
+
+**Fix**: Verify: `gcloud storage buckets describe gs://supermandi-pos-documents --format="value(location)"`. If not asia-south1, create new bucket in correct region and migrate.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0633 — MEDIUM: Invoice numbering — verify sequential with no gaps per FY (MEDIUM)
+
+**Ticket ID**: GCP-STG-0633
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Business
+**Source**: Indian Compliance Audit
+
+**Problem**: GST compliance requires sequential invoice numbering within a financial year (April-March) with no gaps. Need to verify the invoice generation logic enforces this — no skipped numbers, no duplicates, proper FY prefix.
+
+**Fix**: Verify invoice numbering in `invoiceService.ts`. Ensure: 1) Sequence per store per FY. 2) No gaps on failed transactions. 3) FY prefix (e.g., INV-2526-0001 for FY 2025-26).
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0634 — LOW: GSTIN checksum digit validation (not just 15-char format) (LOW)
+
+**Ticket ID**: GCP-STG-0634
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Business
+**Source**: Indian Compliance Audit
+
+**Problem**: GSTIN validation currently checks 15-character alphanumeric format. The 15th character is a checksum digit that can be mathematically verified. Adding checksum validation catches typos at input time.
+
+**Fix**: Implement Luhn-based GSTIN checksum verification in GSTIN validation helper.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0635 — LOW: Data export capability for merchants (download my data) (LOW)
+
+**Ticket ID**: GCP-STG-0635
+**Severity**: P3 LOW
+**Platforms**: RETAILER-WEB, BACKEND
+**Layers**: Business
+**Source**: Indian Compliance Audit (DPDPA)
+
+**Problem**: Indian Digital Personal Data Protection Act (DPDPA) 2023 gives data principals right to access their data. Retailers should be able to export their store data (sales, inventory, customers, invoices) as CSV/JSON.
+
+**Fix**: Add "Export My Data" button in retailer settings → triggers backend job → generates ZIP with CSV files → download link.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0636 — LOW: Data deletion capability (DPDPA right to erasure) (LOW)
+
+**Ticket ID**: GCP-STG-0636
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Business
+**Source**: Indian Compliance Audit (DPDPA)
+
+**Problem**: DPDPA requires data fiduciaries to delete personal data when requested. Need a mechanism to delete a retailer/supplier account and all associated data.
+
+**Fix**: Add account deletion endpoint that: soft-deletes user, anonymizes PII, retains financial records (GST compliance requires 8-year retention for invoices).
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0637 — HIGH: Cloud Run error rate alerting — 5xx > 5% triggers alert (HIGH)
+
+**Ticket ID**: GCP-STG-0637
+**Severity**: P1 HIGH
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: Operational Readiness Audit
+
+**Problem**: No alerting on Cloud Run 5xx error rate. If backend starts returning 500 errors, no one knows until users complain. Need automated alerting.
+
+**Fix**: Create Cloud Monitoring alert policy: if 5xx rate > 5% for 5 minutes, send email + Slack notification. One alert per Cloud Run service.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0638 — MEDIUM: Cloud SQL alerting — CPU > 80%, connections > 80% (MEDIUM)
+
+**Ticket ID**: GCP-STG-0638
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: Operational Readiness Audit
+
+**Problem**: Cloud SQL can silently hit resource limits. Need alerts before users are impacted.
+
+**Fix**: Create Cloud Monitoring alerts: CPU utilization > 80% for 5 min, active connections > 80% of max_connections, disk usage > 80%.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0639 — MEDIUM: Redis alerting — memory > 80% (MEDIUM)
+
+**Ticket ID**: GCP-STG-0639
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: Operational Readiness Audit
+
+**Problem**: Memorystore Redis can hit memory limit causing evictions or OOM. Need alerting before rate limiters and caches start failing.
+
+**Fix**: Create Cloud Monitoring alert: Redis memory > 80% of maxmemory for 5 min.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0640 — MEDIUM: Schedule daily ledger reconciliation cron job (MEDIUM)
+
+**Ticket ID**: GCP-STG-0640
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Business
+**Source**: Operational Readiness Audit
+
+**Problem**: GCP-STG-0283 created stock reconciliation endpoints (`/stock-reconciliation/check` + `/run`). But no automated daily run. Stock divergence could accumulate undetected.
+
+**Fix**: Add Cloud Scheduler job that calls `/admin/stock-reconciliation/check` daily at 2 AM. If divergence found, alert + auto-reconcile.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0641 — LOW: Create incident runbook for DB/Redis/Firebase down (LOW)
+
+**Ticket ID**: GCP-STG-0641
+**Severity**: P3 LOW
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: Operational Readiness Audit
+
+**Problem**: No documented incident response for infrastructure failures. What does the operator do when: DB is down? Redis is down? Firebase is down? WhatsApp API is down?
+
+**Fix**: Create `RELEASES/INCIDENT_RUNBOOK.md` with step-by-step procedures for each failure scenario.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0642 — LOW: Run load test and document results (LOW)
+
+**Ticket ID**: GCP-STG-0642
+**Severity**: P3 LOW
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: Operational Readiness Audit
+
+**Problem**: `stress-test.yml` workflow exists but has never been executed against staging. Need baseline performance numbers before production.
+
+**Fix**: Run stress-test.yml against staging with: 50 concurrent users, 5 min duration. Document: p50/p95/p99 latency, max throughput, error rate.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0643 — LOW: Capacity planning document (LOW)
+
+**Ticket ID**: GCP-STG-0643
+**Severity**: P3 LOW
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: Operational Readiness Audit
+
+**Problem**: No documented capacity limits. How many stores can the system handle? At what point do we need to scale DB/Redis/Cloud Run?
+
+**Fix**: Document in `RELEASES/CAPACITY_PLAN.md`: current limits, scaling triggers, cost projections for 100/500/1000 stores.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0644 — LOW: Disaster recovery plan for regional outage (LOW)
+
+**Ticket ID**: GCP-STG-0644
+**Severity**: P3 LOW
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: Operational Readiness Audit
+
+**Problem**: All infrastructure is in asia-south1. A regional outage would cause total downtime. Need documented DR plan even if multi-region is not implemented yet.
+
+**Fix**: Document in `RELEASES/DR_PLAN.md`: current single-region risk, RPO/RTO targets, Cloud SQL backup restore procedure, DNS failover plan.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0645 — MEDIUM: Bundle analysis report in CI (MEDIUM)
+
+**Ticket ID**: GCP-STG-0645
+**Severity**: P2 MEDIUM
+**Platforms**: RETAILER-WEB, SUPERADMIN
+**Layers**: GCP Parity
+**Source**: Frontend Production Audit
+
+**Problem**: No bundle size monitoring. A single accidental `import moment` could add 300KB to the bundle. Need CI gate that reports bundle size and warns on significant increase.
+
+**Fix**: Add `rollup-plugin-visualizer` or `vite-bundle-analyzer` to CI. Report total JS size. Warn if > 500KB gzipped.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0646 — LOW: Verify favicon + OG meta tags on all web portals (LOW)
+
+**Ticket ID**: GCP-STG-0646
+**Severity**: P3 LOW
+**Platforms**: ALL WEB
+**Layers**: UI
+**Source**: Frontend Production Audit
+
+**Problem**: Missing favicon shows browser default icon. Missing OG tags mean shared links show no preview image/description.
+
+**Fix**: Verify each portal has: favicon.ico, apple-touch-icon, og:title, og:description, og:image meta tags.
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0647 — LOW: Hindi i18n completeness verification (LOW)
+
+**Ticket ID**: GCP-STG-0647
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI
+**Source**: Frontend Production Audit
+
+**Problem**: POS app supports Hindi via i18n. Need to verify ALL user-facing strings have Hindi translations — no English fallback visible to Hindi-speaking users.
+
+**Fix**: Compare en.json and hi.json key counts. Flag any keys in en.json missing from hi.json.
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0648 — LOW: Accessibility audit (WCAG AA) on critical screens (LOW)
+
+**Ticket ID**: GCP-STG-0648
+**Severity**: P3 LOW
+**Platforms**: ALL WEB
+**Layers**: UI
+**Source**: Frontend Production Audit
+
+**Problem**: No WCAG compliance audit done. Critical screens (login, registration, product catalog) should meet WCAG AA for color contrast, keyboard navigation, screen reader support.
+
+**Fix**: Run Lighthouse accessibility audit on each portal's login + main page. Fix critical violations (contrast ratio < 4.5:1, missing alt text, no focus indicators).
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0649 — LOW: Source map upload to error monitoring (LOW)
+
+**Ticket ID**: GCP-STG-0649
+**Severity**: P3 LOW
+**Platforms**: ALL WEB
+**Layers**: GCP Parity
+**Source**: Frontend Production Audit
+
+**Problem**: Production JS is minified. Without source maps uploaded to error monitoring (Sentry/Cloud Error Reporting), stack traces show obfuscated names making debugging impossible.
+
+**Fix**: Add source map upload step to CI after build. Upload to Sentry or configure Cloud Error Reporting source map resolver.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0650 — HIGH: App version check — force update for critical patches (HIGH)
+
+**Ticket ID**: GCP-STG-0650
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: Business
+**Source**: POS Production Audit
+
+**Problem**: If a critical security patch is released, old POS app versions must be forced to update. Currently `MIN_APP_VERSION` env var exists in deploy.yml but the POS app may not check it on launch.
+
+**Fix**: On app launch, POS calls `/api/v1/pos/ui-status` which returns `minAppVersion`. If current app version < minAppVersion, show blocking modal: "Please update SuperMandi POS to continue." Block all functionality until updated.
+
+**Files to modify**: `src/screens/v3/SplashScreenV3.tsx` or App.tsx
+**12-Layer Verification**: L1 UI ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0651 — MEDIUM: Analytics SDK integration for POS (screen views, funnels) (MEDIUM)
+
+**Ticket ID**: GCP-STG-0651
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: Business
+**Source**: POS Production Audit
+
+**Problem**: POS has cloudEventLogger for custom events but no screen view tracking or funnel analytics. Can't measure: which screens users spend most time on, where they drop off in checkout, scan-to-cart conversion rate.
+
+**Fix**: Add screen tracking via `useNavigationState` hook that logs screen name changes. Use existing cloudEventLogger for events.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0652 — LOW: Deep link / universal link configuration (LOW)
+
+**Ticket ID**: GCP-STG-0652
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: POS Production Audit
+
+**Problem**: No deep link configuration. Can't send WhatsApp messages with links that open directly in the POS app (e.g., "Open your store: supermandi://store/SU260305-003").
+
+**Fix**: Configure `expo-linking` scheme in app.json. Add Android intent filters in AndroidManifest. Test deep link on device.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0653 — LOW: Background sync reliability test (LOW)
+
+**Ticket ID**: GCP-STG-0653
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: POS Production Audit
+
+**Problem**: POS syncs products/sales in background. If app is backgrounded during sync (Android kills process), is the sync state corrupted? Is it resumable?
+
+**Fix**: Test: start product sync → background app → kill process → reopen → verify sync resumes from checkpoint (not restart from zero).
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0654 — LOW: Low-memory device test (2GB RAM + 10K products) (LOW)
+
+**Ticket ID**: GCP-STG-0654
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: POS Production Audit
+
+**Problem**: Kirana stores may use budget Android devices (2GB RAM). With 10K products in memory + barcode Map index + image cache, the app may OOM on low-end devices.
+
+**Fix**: Test on a 2GB RAM device (or Android emulator with memory limit). Load 10K products. Verify: app doesn't crash, scroll is smooth, search responds < 500ms.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+<!-- next ticket: GCP-STG-0655 -->
