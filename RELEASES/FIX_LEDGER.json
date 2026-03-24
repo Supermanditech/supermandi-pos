@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1022,
+  "version": 1024,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -28016,6 +28016,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:03:16.047Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0681",
+      "file": "scripts/gcp/verify-encryption.sh",
+      "start_line": 1,
+      "end_line": 78,
+      "checksum": "0bf8b0a2ba185526",
+      "description": "PII encryption at rest verification script — documents Cloud SQL AES-256 encryption covers all PII (phone, GSTIN, bank, addresses, email), includes CMEK upgrade path",
+      "test_file": "backend/tests/gcp-stg-0681.pii-encryption.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T20:06:46.615Z",
       "status": "ACTIVE"
     }
   ],
