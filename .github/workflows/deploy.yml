@@ -999,6 +999,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # GCP-STG-0583: Run URL-level post-deploy gate script before detailed GCP checks
+      - name: "Gate 0: Post-deploy URL smoke (cd-post-deploy-gate.sh)"
+        run: bash scripts/gates/cd-post-deploy-gate.sh ${{ env.STAGING_URL }}
+
       - name: Authenticate to GCP (WIF)
         uses: google-github-actions/auth@v2
         with:

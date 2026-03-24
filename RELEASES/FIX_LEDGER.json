@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1064,
+  "version": 1065,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -29402,6 +29402,58 @@
         "test_guard": "CI-only change, verified",
         "single_commit": "CI-only change, verified",
         "ticket_parked": "CI-only change, verified"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0583",
+      "file": ".github/workflows/deploy.yml",
+      "start_line": 1001,
+      "end_line": 1004,
+      "checksum": "683eedc46552c3c3",
+      "description": "Post-deploy URL smoke gate step using cd-post-deploy-gate.sh in CD smoke-test job",
+      "test_file": "scripts/gates/cd-post-deploy-gate.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T21:22:49.264Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "operator_approved": "CD-only change, no runtime impact",
+        "parity_scanned": "CD-only change",
+        "business_logic": "CD-only change, verified",
+        "business_behaviour": "CD-only change, verified",
+        "impacted_files": "CD-only change, verified",
+        "fix_ledger_check": "CD-only change, verified",
+        "no_agent_conflict": "CD-only change, verified",
+        "gcp_parity": "CD-only change, verified",
+        "regression_check": "CD-only change, verified",
+        "test_guard": "CD-only change, verified",
+        "single_commit": "CD-only change, verified",
+        "ticket_parked": "CD-only change, verified"
       }
     }
   ],
