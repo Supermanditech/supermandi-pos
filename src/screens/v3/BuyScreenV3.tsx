@@ -417,6 +417,10 @@ export default function BuyScreenV3() {
               category: item.category,
               unit: item.unit,
               caseSize: item.caseSize,
+              // GCP-STG-0561: Pass all B2B fields for rich BUY tile display
+              imageUrl: item.imageUrl,          // product image for tile
+              stock: item.currentStock,          // stock dot indicator
+              description: item.packSize,        // pack size text below name (e.g. "100g")
             }}
             context="buy"
             sellMode="bulk"
