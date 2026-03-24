@@ -873,13 +873,16 @@ if (command === 'check') {
   const stagedSourceFiles = stagedFilesForMax.filter(f =>
     !f.startsWith('RELEASES/') && !f.endsWith('.md') && !f.endsWith('.json') && f !== 'package.json'
   );
-  if (stagedSourceFiles.length > 15) {
+  // GCP-STG-0542: Allow test-only commits with >15 files (all *.test.ts are test-only)
+  const stagedTestOnly = stagedSourceFiles.every(f => f.includes('.test.'));
+  const maxFiles = stagedTestOnly ? 30 : 15;
+  if (stagedSourceFiles.length > maxFiles) {
     console.log(`  ❌ BLOCKED: ${stagedSourceFiles.length} source files staged (max 15) — ticket scope too broad`);
     console.log('    Split into multiple tickets or verify this is a legitimate cross-cutting change.');
     console.log('    Affected files:', stagedSourceFiles.slice(0, 10).join(', '), stagedSourceFiles.length > 10 ? `... +${stagedSourceFiles.length - 10} more` : '');
     blocked = true;
   } else {
-    console.log(`  ✅ ${stagedSourceFiles.length} source files staged (≤15 limit)`);
+    console.log(`  ✅ ${stagedSourceFiles.length} source files staged (≤${maxFiles} limit${stagedTestOnly ? ', test-only' : ''})`);
   }
 
   // Gate 13: Typecheck gate — BLOCKS if TypeScript has errors
