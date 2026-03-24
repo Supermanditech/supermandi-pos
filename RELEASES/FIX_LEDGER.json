@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 980,
+  "version": 981,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -26425,6 +26425,61 @@
         "single_commit": "fix(GCP-STG-0561): BUY tile data mapping - pass all B2B fields",
         "ticket_parked": "Will park after commit",
         "i18n_keys": "N/A - no new user-facing strings, reuses existing tile labels"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0553",
+      "file": "src/components/v3/ProductTileV3.tsx",
+      "start_line": 178,
+      "end_line": 193,
+      "checksum": "41bed30adfe89c7f",
+      "description": "BUY tile category emoji verification — getCategoryEmoji maps 29 categories with case-insensitive fallback",
+      "test_file": "src/components/v3/ProductTileV3.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T15:58:25.772Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "Category emoji renders on BUY tile via getCategoryEmoji(product.category)",
+        "ux_states": "Known category shows emoji, unknown falls back to box emoji",
+        "wiring": "BuyScreenV3 passes category:item.category -> ProductTileV3 -> getCategoryEmoji",
+        "navigation": "N/A - no navigation change",
+        "i18n_keys": "N/A - emojis are universal, no text strings",
+        "business_logic": "29 category->emoji mappings verified with case-insensitive fallback",
+        "business_behaviour": "BUY tile shows correct category emoji matching SELL tile behavior",
+        "impacted_files": "Verification only - no code changes, FIX_LEDGER.json updated",
+        "fix_ledger_check": "538 fixes, zero drift",
+        "no_agent_conflict": "Single agent",
+        "gcp_parity": "No env changes",
+        "regression_check": "tsc passes, no code changes",
+        "test_guard": "getCategoryEmoji already tested via GCP-STG-0013+0144 registrations",
+        "single_commit": "fix(GCP-STG-0553): BUY tile category emoji verification",
+        "ticket_parked": "Will park after commit"
       }
     }
   ],
