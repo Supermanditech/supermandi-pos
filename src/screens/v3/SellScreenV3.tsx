@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, FlatList, TextInput, Pressable, ActivityIndicator, RefreshControl, StyleSheet, Text, Modal } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { skGuide } from "../../constants/storageKeys";
+import { skGuide, SK_VOICE_HINT_DISMISSED } from "../../constants/storageKeys";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { getGridColumns, getScreenPadding, getChipPadding, getChipFontSize, SCREEN_W } from "../../theme/responsive";
@@ -133,6 +133,19 @@ export default function SellScreenV3() {
   // V3-FIX-039: Feature flags from settingsStore
   const voiceEnabled = useSettingsStore((s) => (s as any).voiceEnabled ?? true);
   const categoryBrowsingEnabled = useSettingsStore((s) => (s as any).categoryBrowsingEnabled ?? true);
+
+  // GCP-STG-0568: Voice hint — show once until dismissed
+  const [showVoiceHint, setShowVoiceHint] = useState(false);
+  useEffect(() => {
+    if (!voiceEnabled) return;
+    AsyncStorage.getItem(SK_VOICE_HINT_DISMISSED).then((v) => {
+      if (v !== "1") setShowVoiceHint(true);
+    }).catch(() => {});
+  }, [voiceEnabled]);
+  const dismissVoiceHint = useCallback(() => {
+    setShowVoiceHint(false);
+    AsyncStorage.setItem(SK_VOICE_HINT_DISMISSED, "1").catch(() => {});
+  }, []);
 
   // V3-FIX-041: Frequent products state
   const [frequentProducts, setFrequentProducts] = useState<Product[]>([]);
@@ -422,6 +435,18 @@ export default function SellScreenV3() {
         ) : null}
       </View>
 
+      {/* GCP-STG-0568: Dismissible voice hint tip */}
+      {voiceEnabled && showVoiceHint ? (
+        <View style={styles.voiceHint} testID="sell-voice-hint">
+          <Text style={styles.voiceHintText}>
+            {"\uD83C\uDFA4"} Say "Add 2 kg sugar" in Hindi or English
+          </Text>
+          <Pressable onPress={dismissVoiceHint} style={styles.voiceHintDismiss} testID="sell-voice-hint-dismiss">
+            <Text style={styles.voiceHintDismissText}>Got it</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       {/* GCP-STG-0142: Retail/Bulk toggle — enabled now that B2B pricing exists (GCP-STG-0087) */}
       <CustomerTypeToggle mode={sellMode} onModeChange={setSellMode} />
 
@@ -614,5 +639,10 @@ function createStyles(colors: ColorPalette) {
     payButtonText: { color: colors.primary, fontSize: 14, fontWeight: "800" },
     cartEmpty: { marginHorizontal: 12, marginBottom: 8, borderRadius: 18, padding: 14, borderWidth: 2, borderStyle: "dashed", borderColor: colors.border, alignItems: "center" },
     cartEmptyText: { fontSize: 12, fontWeight: "500", color: colors.textTertiary },
+    // GCP-STG-0568: Voice hint styles
+    voiceHint: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginHorizontal: 14, marginTop: 4, marginBottom: 2, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: colors.primaryLight },
+    voiceHintText: { fontSize: 12, fontWeight: "600", color: colors.primary, flex: 1 },
+    voiceHintDismiss: { marginLeft: 8, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, backgroundColor: colors.primary },
+    voiceHintDismissText: { fontSize: 11, fontWeight: "700", color: colors.textInverse },
   });
 }

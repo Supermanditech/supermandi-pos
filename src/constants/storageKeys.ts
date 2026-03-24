@@ -62,3 +62,5 @@ export const skGuide = (storeId: string, version: string) =>
   `supermandi.guide.${storeId}.v${version}`;
 export const skPaymentOnce = (transactionId: string, eventType: string) =>
   `supermandi.payment.once.${transactionId}.${eventType}`;
+// GCP-STG-0568: Voice hint dismissal key
+export const SK_VOICE_HINT_DISMISSED = "supermandi.voice_hint_dismissed";
