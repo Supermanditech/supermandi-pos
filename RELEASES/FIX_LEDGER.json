@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1097,
+  "version": 1099,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -30202,8 +30202,8 @@
     {
       "ticket": "GCP-STG-0627",
       "file": "backend/src/routes/v1/index.ts",
-      "start_line": 266,
-      "end_line": 274,
+      "start_line": 268,
+      "end_line": 276,
       "checksum": "83b11f972e868cd6",
       "description": "File upload rate limit: 10 uploads/min per IP on /documents, /uploads, /chat, /voice routes",
       "test_file": "backend/src/routes/v1/index.ts",
@@ -30234,7 +30234,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:08:25.238Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T22:39:32.190Z"
+      "line_shifted_at": "2026-03-24T22:54:44.854Z"
     },
     {
       "ticket": "GCP-STG-0628",
@@ -30630,7 +30630,9 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:43:19.251Z",
-      "status": "ACTIVE"
+      "status": "SUPERSEDED",
+      "superseded_by": "GCP-STG-0662 real implementation",
+      "superseded_at": "2026-03-25T10:00:00.000Z"
     },
     {
       "ticket": "GCP-STG-0663",
@@ -30666,6 +30668,78 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:45:22.237Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0662",
+      "file": "backend/src/services/creditNoteService.ts",
+      "start_line": 1,
+      "end_line": 113,
+      "checksum": "c06b92a92095cbae",
+      "description": "Real credit/debit note service with generate/get/list backed by invoicing.credit_notes table",
+      "test_file": "backend/tests/creditNotes.gcp-stg-0662.unit.test.ts",
+      "depends_on": null,
+      "migration": "backend/migrations/244_gcp_stg_0662_credit_notes.sql",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T10:00:00.000Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0662",
+      "file": "backend/src/routes/v1/admin/creditNotes.ts",
+      "start_line": 1,
+      "end_line": 57,
+      "checksum": "0b54311f20fe0fa6",
+      "description": "Admin CRUD routes for credit/debit notes — POST create, GET list, GET by id",
+      "test_file": "backend/tests/creditNotes.gcp-stg-0662.unit.test.ts",
+      "depends_on": null,
+      "migration": "backend/migrations/244_gcp_stg_0662_credit_notes.sql",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": true,
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T10:00:00.000Z",
       "status": "ACTIVE"
     }
   ],
