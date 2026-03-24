@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1078,
+  "version": 1080,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -29793,8 +29793,8 @@
     {
       "ticket": "GCP-STG-0584",
       "file": "backend/.env.cloudrun.example",
-      "start_line": 148,
-      "end_line": 163,
+      "start_line": 154,
+      "end_line": 169,
       "checksum": "4398e3f6a8d1f326",
       "description": "SMS provider configuration docs for MSG91 and Twilio",
       "test_file": "backend/.env.cloudrun.example",
@@ -29824,7 +29824,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:44:12.287Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-24T21:54:55.172Z"
     },
     {
       "ticket": "GCP-STG-0606",
@@ -29968,6 +29969,78 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:52:50.063Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0615",
+      "file": "scripts/gcp/setup-error-reporting.sh",
+      "start_line": 1,
+      "end_line": 16,
+      "checksum": "0a8c6167e9823de8",
+      "description": "Error monitoring setup script — Cloud Error Reporting + Sentry recommendation",
+      "test_file": "scripts/gcp/setup-error-reporting.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T21:54:22.145Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0615",
+      "file": "backend/.env.cloudrun.example",
+      "start_line": 137,
+      "end_line": 142,
+      "checksum": "7952a11428874602",
+      "description": "ERROR_REPORTING_ENABLED documentation in env example",
+      "test_file": "backend/.env.cloudrun.example",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T21:54:22.368Z",
       "status": "ACTIVE"
     }
   ],

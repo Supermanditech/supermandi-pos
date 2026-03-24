@@ -1,0 +1,16 @@
+#!/bin/bash
+# GCP-STG-0615: Enable Cloud Error Reporting
+echo "=== ERROR MONITORING SETUP ==="
+echo "Option A: Cloud Error Reporting (GCP native, free)"
+echo "  - Auto-detects errors from Cloud Run structured logs"
+echo "  - Enable: gcloud services enable clouderrorreporting.googleapis.com"
+echo "  - View: console.cloud.google.com/errors"
+echo ""
+echo "Option B: Sentry (cross-platform, POS + backend)"
+echo "  - Add SENTRY_DSN to deploy.yml secrets"
+echo "  - Backend: @sentry/node"
+echo "  - POS: @sentry/react-native"
+echo ""
+echo "Recommendation: Cloud Error Reporting for backend (free + integrated),"
+echo "Sentry for POS app (cross-platform crash reporting)."
+echo "=== SETUP COMPLETE ==="
