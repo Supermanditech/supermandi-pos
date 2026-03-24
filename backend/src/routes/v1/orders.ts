@@ -2475,3 +2475,63 @@ ordersRouter.post("/procurement/payment-callback", async (req: Request, res: Res
     client.release();
   }
 });
+
+// =============================================================================
+// GCP-STG-0664: GOODS RETURN / REJECTION FLOW
+// =============================================================================
+
+/**
+ * POST /api/v1/orders/stores/:storeId/orders/:orderId/return
+ * GCP-STG-0664: Return damaged/wrong goods to supplier.
+ * items: [{ productId, qty, reasonCode: 'DAMAGED'|'WRONG_ITEM'|'EXPIRED'|'QUALITY' }]
+ */
+ordersRouter.post("/stores/:storeId/orders/:orderId/return", requireDeviceToken, async (req: Request, res: Response) => {
+  const { items, reason } = req.body || {};
+
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: "items required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "Service unavailable" });
+
+  const storeId = getStoreIdFromDevice(req);
+
+  try {
+    // Verify order exists and belongs to store
+    const order = await pool.query(
+      "SELECT id, status FROM orders.purchase_orders WHERE id = $1 AND store_id = $2",
+      [req.params.orderId, storeId]
+    );
+    if (!order.rows[0]) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    // Only allow return on DELIVERED orders
+    const orderStatus = (order.rows[0].status || "").toLowerCase();
+    if (orderStatus !== "delivered") {
+      return res.status(400).json({
+        error: { code: "NOT_RETURNABLE", message: "Can only return delivered orders" },
+      });
+    }
+
+    // Insert return record
+    const result = await pool.query(
+      `INSERT INTO orders.goods_returns (order_id, store_id, items, reason, status)
+       VALUES ($1, $2, $3, $4, 'PENDING')
+       RETURNING id, status, created_at`,
+      [req.params.orderId, storeId, JSON.stringify(items), reason || null]
+    );
+
+    log.info(`[GCP-STG-0664] Goods return created: order=${req.params.orderId}, store=${storeId}, items=${items.length}`);
+
+    return res.status(201).json({
+      id: result.rows[0].id,
+      status: "PENDING",
+      message: "Return request submitted",
+    });
+  } catch (err: any) {
+    log.error("[GCP-STG-0664] Goods return error:", err.message);
+    return res.status(500).json({ error: "Failed to submit return request" });
+  }
+});
