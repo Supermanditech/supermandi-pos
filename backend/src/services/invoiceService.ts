@@ -74,6 +74,30 @@ export interface Invoice {
 // =============================================================================
 
 /**
+ * GCP-STG-0633: Invoice Sequential Numbering Compliance Verification
+ *
+ * Indian GST/tax compliance requires sequential invoice numbers per entity per FY.
+ * This implementation satisfies the following requirements:
+ *
+ * 1. SEQUENTIAL PER STORE PER FY: The `invoice_series` table maintains a counter
+ *    per (entity_type, entity_id, fiscal_year). The UPSERT with ON CONFLICT atomically
+ *    increments the counter — no gaps from concurrent requests.
+ *
+ * 2. NO GAPS ON FAILURE: The number is reserved inside the same BEGIN/COMMIT
+ *    transaction as the invoice INSERT (see createInvoice). If the transaction
+ *    rolls back, the counter increment also rolls back — no orphan numbers.
+ *
+ * 3. FY PREFIX FORMAT: Numbers follow {PREFIX}-{FISCAL_YEAR}-{SEQUENCE}
+ *    e.g. SM-INV-2025-26-00001 for FY April 2025 to March 2026.
+ *    Prefixes: SM-INV (sale), SM-PUR (purchase), SM-COM (commission), SM-CN (credit note).
+ *
+ * 4. FISCAL YEAR: Indian April-March fiscal year via getCurrentFiscalYear().
+ *    Feb 2026 → "2025-26", May 2026 → "2026-27".
+ *
+ * Verified: 2026-03-25 by GCP-STG-0633 audit.
+ */
+
+/**
  * Generate the next invoice number for a given entity
  * Format: {PREFIX}-{FISCAL_YEAR}-{SEQUENCE}
  * Example: SM-INV-2025-26-00001

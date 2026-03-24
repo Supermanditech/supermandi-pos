@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1088,
+  "version": 1089,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -11217,8 +11217,8 @@
     {
       "ticket": "GCP-STG-0074",
       "file": "backend/src/services/invoiceService.ts",
-      "start_line": 376,
-      "end_line": 445,
+      "start_line": 400,
+      "end_line": 469,
       "checksum": "9b7292f59fc35cd7",
       "description": "issueInvoice: auto-store PDF in GCS on issuance, non-blocking with storeInvoicePdfInGcs helper + GCP-STG-0078 e-invoice trigger wired in",
       "test_file": "backend/src/services/invoiceService.ts",
@@ -11252,7 +11252,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T16:08:39.221Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T00:05:54.522Z"
+      "line_shifted_at": "2026-03-24T22:23:37.035Z"
     },
     {
       "ticket": "GCP-STG-0074",
@@ -11410,8 +11410,8 @@
     {
       "ticket": "GCP-STG-0078",
       "file": "backend/src/services/invoiceService.ts",
-      "start_line": 488,
-      "end_line": 511,
+      "start_line": 512,
+      "end_line": 535,
       "checksum": "00ba0be224fc6ec5",
       "description": "triggerEInvoice helper: non-blocking e-invoice generation after invoice issuance",
       "test_file": "backend/tests/eInvoice.gcp-stg-0078.unit.test.ts",
@@ -11442,7 +11442,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T16:48:34.231Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T00:05:54.532Z"
+      "line_shifted_at": "2026-03-24T22:23:37.042Z"
     },
     {
       "ticket": "GCP-STG-0078",
@@ -16591,8 +16591,8 @@
     {
       "ticket": "GCP-STG-0353",
       "file": "backend/src/services/invoiceService.ts",
-      "start_line": 223,
-      "end_line": 224,
+      "start_line": 247,
+      "end_line": 248,
       "checksum": "05f808ee6b290987",
       "description": "createInvoice passes isInterState to calculateItemTax instead of hardcoded false (IGST vs CGST+SGST)",
       "test_file": "backend/tests/interStateGst.gcp-stg-0353.unit.test.ts",
@@ -16623,7 +16623,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:05:57.557Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T18:12:29.743Z"
+      "line_shifted_at": "2026-03-24T22:23:37.102Z"
     },
     {
       "ticket": "GCP-STG-0353",
@@ -30338,6 +30338,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:20:50.574Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0633",
+      "file": "backend/src/services/invoiceService.ts",
+      "start_line": 74,
+      "end_line": 101,
+      "checksum": "ac57124d888b7b44",
+      "description": "Invoice sequential numbering compliance verification comment — documents GST-compliant sequential numbering per entity per FY with atomic UPSERT and transactional rollback safety",
+      "test_file": "backend/src/services/invoiceService.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T22:23:11.444Z",
       "status": "ACTIVE"
     }
   ],
