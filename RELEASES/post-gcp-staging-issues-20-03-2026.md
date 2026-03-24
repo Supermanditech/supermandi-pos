@@ -15029,4 +15029,296 @@ If a more formal flow is desired:
 
 ---
 
-<!-- next ticket: GCP-STG-0552 -->
+## GCP-STG-0552 — HIGH: BUY screen tile redesign — match SELL grid layout with B2B metadata overlay (HIGH)
+
+**Ticket ID**: GCP-STG-0552
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, UX, Wiring, Navigation, Business
+**Source**: Sell vs Buy Design Parity Audit — V3 Prototype Compliance
+
+**Problem**: The BUY screen (BuyScreenV3.tsx:388-424) already uses ProductTileV3 in a 3-column grid matching the SELL screen. However, the current mapping at lines 410-420 drops critical B2B metadata:
+- PTR (wholesale price) not shown — tile shows MRP instead
+- Margin percentage not visible on tile
+- MOQ (minimum order qty) not indicated
+- Supplier name not on tile
+- No visual distinction between SELL and BUY modes
+- "MRP · case/unit" line shows consumer MRP, not PTR
+
+The screenshot shows the SELL screen with: product image (centered, rounded), brand pill below image, product name (2 lines centered), **price in blue** (₹XX large), **MRP · case info** below in grey. The BUY screen needs the SAME tile layout but with:
+- **PTR in green** (instead of sell price in blue) — distinguishes BUY from SELL at a glance
+- **MRP · margin%** below PTR (instead of MRP · case)
+- **MOQ indicator** if MOQ > 1
+- Supplier brand chip below image (same position as brand in SELL)
+
+**Fix — Extend ProductTileV3 for BUY context**:
+
+### 1. Add `context` prop to ProductTileV3
+```typescript
+type TileContext = 'sell' | 'buy';
+// Add to ProductTileV3Props:
+context?: TileContext; // default 'sell'
+```
+
+### 2. When `context === 'buy'`:
+- Primary price color: `colors.success` (green) instead of `colors.primary` (blue)
+- Primary price source: `priceTradeMinor` (PTR) instead of `priceMrpMinor`
+- Subtitle line: "PTR · Margin {X}%" instead of "MRP · {case}/{unit}"
+- If `moq > 1`: Show small "MOQ: {moq}" tag below price
+- If `supplierName`: Show as brand label (same position, same style)
+
+### 3. BuyScreenV3 renderItem update (line 408-424):
+Pass `context="buy"` and additional B2B fields:
+```typescript
+<ProductTileV3
+  product={{ ...mapped }}
+  context="buy"
+  sellMode="bulk"
+  cartQty={orderQtys[item.id] ?? 0}
+  onPress={() => setDetailProduct(item)}
+  moq={item.moq}
+  marginPct={Math.round((1 - item.ptrMinor / item.mrpMinor) * 100)}
+  supplierName={item.supplierName}
+/>
+```
+
+### 4. No layout changes — same 3-column grid, same tile dimensions, same image/name/price stack
+
+**Files to modify**:
+- `src/components/v3/ProductTileV3.tsx` — add `context` prop, conditional color/text
+- `src/screens/v3/BuyScreenV3.tsx` — pass `context="buy"` + B2B props
+
+**Test Requirements**:
+- Behavioral: render ProductTileV3 with context="buy" → price color is success (green)
+- Behavioral: render with context="sell" → price color is primary (blue)
+- Behavioral: moq > 1 → "MOQ: X" visible
+- Behavioral: margin percentage shown in buy context
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0553 — MEDIUM: BUY tile product image — use category emoji from SELL tile's getCategoryEmoji map (MEDIUM)
+
+**Ticket ID**: GCP-STG-0553
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI
+**Source**: Sell vs Buy Design Parity Audit
+
+**Problem**: The BUY tile (when no image URL) falls back to generic "📦" emoji. The SELL tile uses `getCategoryEmoji()` which maps category names to relevant emojis (🍪 Biscuits, 🥛 Dairy, 🧴 HPC, etc.). Since the BUY tile now uses ProductTileV3, this is already handled — but verify that the `category` field is passed through correctly in BuyScreenV3 renderItem mapping.
+
+**Fix**: Verify `category` is mapped in BuyScreenV3:410-420. If missing, add `category: item.category` to the product prop. The getCategoryEmoji() in ProductTileV3 will handle the rest.
+
+**Files to modify**: `src/screens/v3/BuyScreenV3.tsx` (verify category mapping)
+
+**Test Requirements**: Behavioral: BUY tile with category "Dairy" shows 🥛 not 📦
+
+**12-Layer Verification**: L1 UI ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0554 — MEDIUM: BUY tile stock dot — show retailer's current stock level as colored dot (MEDIUM)
+
+**Ticket ID**: GCP-STG-0554
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, Business
+**Source**: Sell vs Buy Design Parity Audit
+
+**Problem**: The SELL tile shows a green/yellow/red stock dot at top-right (ProductTileV3 lines 93-100, 215-228). The BUY tile should also show this dot based on the retailer's current stock of this product — critical for procurement decisions. If `currentStock > 10` → green, `currentStock 1-10` → yellow, `currentStock 0` → red, `null` → hidden.
+
+**Fix**: Pass `stockQty: item.currentStock` in BuyScreenV3 renderItem mapping. ProductTileV3 already has stock dot logic — just needs the data.
+
+**Files to modify**: `src/screens/v3/BuyScreenV3.tsx` (pass currentStock)
+
+**Test Requirements**: Behavioral: BUY tile with currentStock=5 shows yellow dot
+
+**12-Layer Verification**: L1 UI ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0555 — MEDIUM: BUY detail sheet — show PTR, margin, MOQ, supplier terms prominently (MEDIUM)
+
+**Ticket ID**: GCP-STG-0555
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX, Wiring
+**Source**: Sell vs Buy Design Parity Audit
+
+**Problem**: When a retailer taps a BUY tile, the detail sheet should show B2B procurement metadata prominently:
+- PTR (Price to Retailer) as primary price — green, large
+- MRP next to PTR with strikethrough or "Save X%" badge
+- Margin percentage highlighted
+- MOQ clearly stated
+- Supplier name + rating
+- Delivery days estimate
+- Credit days (if applicable)
+- BNPL eligibility badge
+- Scheme/offers (e.g., "Buy 10 get 1 free")
+- Trade discount percentage
+- "Add to Purchase Cart" CTA (case qty picker)
+
+**Current state**: BuyScreenV3 opens a detail surface via `setDetailProduct(item)` — check what component renders and whether it shows these fields.
+
+**Fix**: Read the detail component (likely ProductDetailSheetV3 or a BUY-specific variant). Ensure ALL B2B fields are displayed with proper formatting. Add any missing fields.
+
+**Files to modify**: Detail sheet component (identify which one), `src/screens/v3/BuyScreenV3.tsx`
+
+**Test Requirements**: Behavioral: open BUY detail → PTR, margin, MOQ, supplier all visible
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0556 — MEDIUM: BUY screen "Retail / Wholesale" toggle — show PTR prices in wholesale mode (MEDIUM)
+
+**Ticket ID**: GCP-STG-0556
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX, Business
+**Source**: V3 Prototype Compliance — screenshot shows "Retail / Bulk Trade" toggle
+
+**Problem**: The SELL screen has a "Retail / Bulk Trade" toggle (GCP-STG-0142, SellScreenV3:411). The BUY screen should have a similar toggle or always show wholesale pricing. Currently BUY passes `sellMode="bulk"` (line 421) which shows trade prices — but there's no visible mode indicator on the BUY screen like the SELL screen has.
+
+**Fix**: Add a visual "WHOLESALE" mode badge or "PTR Pricing" label above the grid to clearly indicate the BUY screen shows procurement prices, not consumer prices. This avoids confusion between SELL and BUY tabs.
+
+**Files to modify**: `src/screens/v3/BuyScreenV3.tsx` — add pricing mode indicator
+
+**Test Requirements**: Behavioral: BUY screen renders "Wholesale/PTR" pricing label
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0557 — LOW: BUY tile — add long-press to open detail sheet (like SELL tile) (LOW)
+
+**Ticket ID**: GCP-STG-0557
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX, Navigation
+**Source**: Sell vs Buy Design Parity Audit
+
+**Problem**: SELL tile supports both tap (add to cart) and long-press (open detail). BUY tile only supports tap (open detail). For consistency, BUY should support long-press as secondary action — but since BUY tile already opens detail on tap, long-press could do something else (e.g., quick-add to cart with MOQ quantity).
+
+**Fix**: Add `onLongPress` to BUY tile → quick-add with MOQ quantity to purchase cart (skip detail sheet for experienced users who know the product).
+
+**Files to modify**: `src/screens/v3/BuyScreenV3.tsx` — add onLongPress handler
+
+**Test Requirements**: Behavioral: long-press BUY tile → item added to purchase cart with MOQ qty
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0558 — LOW: BUY tile — add accessibility label with B2B context (LOW)
+
+**Ticket ID**: GCP-STG-0558
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI
+**Source**: Sell vs Buy Design Parity Audit
+
+**Problem**: SELL tile has `accessibilityLabel` (ProductTileV3:85) but BUY context doesn't customize it. In BUY mode, the label should include PTR and supplier name for screen reader users.
+
+**Fix**: When `context === 'buy'`, set accessibilityLabel to: "{name}, PTR ₹{ptr}, from {supplier}, tap for details"
+
+**Files to modify**: `src/components/v3/ProductTileV3.tsx` — conditional accessibility label
+
+**Test Requirements**: Behavioral: BUY tile accessibilityLabel includes "PTR" and supplier name
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0559 — LOW: BUY screen cart strip — show purchase order total with case count (LOW)
+
+**Ticket ID**: GCP-STG-0559
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX, Business
+**Source**: V3 Prototype Compliance — screenshot shows "Cart empty — tap product or scan barcode"
+
+**Problem**: The SELL screen shows a cart strip at bottom with "Cart empty — tap product or scan barcode" or "N items · ₹XXX → Checkout". The BUY screen has a hero banner at top (line 316-319) but no bottom cart strip matching the SELL design.
+
+**Fix**: Add a bottom cart strip to BUY screen:
+- Empty: "Purchase cart empty — tap product to add"
+- Has items: "N items · {totalCases} cases · ₹{total} → Review Order"
+- Tap → navigate to purchase cart review / checkout
+
+**Files to modify**: `src/screens/v3/BuyScreenV3.tsx` — add bottom cart strip component
+
+**Test Requirements**: Behavioral: BUY screen with items in cart shows cart strip with case count
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0560 — LOW: BUY screen voice search — add microphone button like SELL screen (LOW)
+
+**Ticket ID**: GCP-STG-0560
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, UX, Wiring
+**Source**: V3 Prototype Compliance — screenshot shows microphone icon in search bar
+
+**Problem**: The SELL screen screenshot shows a microphone icon button next to the search bar for voice search. The BUY screen only has a barcode scan button (line 327-329). Voice search is especially useful for procurement — "Show me Tata Tea" is faster than typing.
+
+**Fix**: Add microphone button to BUY search bar (same position as SELL). Wire to speech-to-text API (reuse SELL screen's voice search handler if it exists).
+
+**Files to modify**: `src/screens/v3/BuyScreenV3.tsx` — add voice button
+
+**Test Requirements**: Behavioral: BUY screen search bar has microphone button
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅
+
+---
+
+## GCP-STG-0561 — MEDIUM: BUY screen — pass all B2B fields to ProductTileV3 for complete display (MEDIUM)
+
+**Ticket ID**: GCP-STG-0561
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, Wiring, Business
+**Source**: Sell vs Buy Design Parity Audit — data mapping gap
+
+**Problem**: BuyScreenV3 renderItem (lines 410-420) maps SupplierProduct to ProductTileV3's product prop, but only passes basic fields: id, name, priceMrpMinor, priceTradeMinor, barcode, brand, category, unit, caseSize. Missing from mapping:
+- `imageUrl` → needed for product image (GCP-STG-0408)
+- `packSize` → needed for pack size display
+- `currentStock` → needed for stock dot
+- `moq` → needed for MOQ display
+- `supplierName` → needed for supplier attribution
+- `marginPct` → needed for profit indicator
+- `scheme` → needed for offer display
+- `creditDays` → needed for credit indicator
+
+Without these fields, the BUY tile renders identically to a SELL tile with no B2B differentiation.
+
+**Fix**: Update the product mapping in BuyScreenV3:410-420 to include ALL available fields:
+```typescript
+product={{
+  id: item.id,
+  name: item.name,
+  priceMrpMinor: item.mrpMinor,
+  priceTradeMinor: item.ptrMinor,
+  barcode: item.barcode,
+  brand: item.brand,
+  category: item.category,
+  unit: item.unit,
+  caseSize: item.caseSize,
+  imageUrl: item.imageUrl,        // ADD
+  packSize: item.packSize,        // ADD
+  stockQty: item.currentStock,    // ADD
+  netContentValue: item.packSize, // ADD
+}}
+```
+
+**Files to modify**: `src/screens/v3/BuyScreenV3.tsx` — expand product mapping
+
+**Test Requirements**: Behavioral: BUY tile shows product image when imageUrl available
+
+**12-Layer Verification**: L1 UI ✅, L3 Wiring ✅, L10 Business ✅
+
+---
+
+<!-- next ticket: GCP-STG-0562 -->
