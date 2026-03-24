@@ -1435,25 +1435,28 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
       const bnplCreditLimit = store.bnpl_credit_limit || 5000000; // Default 50k
       const bnplMaxDays = store.bnpl_max_days || 7;
 
-      // 2. Check current BNPL usage (active drawdowns)
+      // 2. GCP-STG-0661: Check current BNPL usage (active + partial drawdowns)
+      // Include 'partial' status to count partially-paid drawdowns against the limit.
+      // Use (principal_minor - COALESCE(paid_amount_minor, 0)) for accurate outstanding balance.
       const usageResult = await client.query(
-        `SELECT COALESCE(SUM(principal_minor), 0) as used
+        `SELECT COALESCE(SUM(principal_minor - COALESCE(paid_amount_minor, 0)), 0) as outstanding
          FROM payments.bnpl_drawdowns
-         WHERE store_id = $1 AND status = 'active'`,
+         WHERE store_id = $1 AND status IN ('active', 'partial')`,
         [storeId]
       );
-      const bnplUsed = parseInt(usageResult.rows[0]?.used || '0', 10);
-      const bnplAvailable = Math.max(0, bnplCreditLimit - bnplUsed);
+      const bnplOutstanding = parseInt(usageResult.rows[0]?.outstanding || '0', 10);
+      const bnplAvailable = Math.max(0, bnplCreditLimit - bnplOutstanding);
 
       if (bnplAvailable < order.total_amount) {
         await client.query("ROLLBACK");
         return res.status(400).json({
           success: false,
           error: "bnpl_limit_exceeded",
-          message: "Insufficient BNPL credit",
+          message: "Order exceeds BNPL credit limit",
           availableCredit: bnplAvailable,
           requestedAmount: order.total_amount,
-          creditLimit: bnplCreditLimit
+          creditLimit: bnplCreditLimit,
+          outstandingAmount: bnplOutstanding
         });
       }
 

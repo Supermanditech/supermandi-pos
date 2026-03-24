@@ -99,9 +99,9 @@ posBnplRouter.get("/bnpl/active", requireDeviceToken, async (req: Request, res: 
     // STG-468: Max days configurable per store type
     const maxDays = getMaxDaysForStoreType(store.store_type, store.bnpl_max_days);
 
-    // Calculate totals
+    // GCP-STG-0661: Calculate totals using outstanding balance (principal minus paid)
     const totalOutstanding = drawdownsResult.rows.reduce(
-      (sum, d) => sum + d.principalMinor, 0
+      (sum, d) => sum + (d.principalMinor - parseInt(d.paidAmountMinor || '0', 10)), 0
     );
     const availableCredit = Math.max(0, creditLimit - totalOutstanding);
 
