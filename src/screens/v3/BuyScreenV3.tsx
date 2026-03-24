@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { View, FlatList, Pressable, ActivityIndicator, TextInput, StyleSheet, Text, Modal, Alert } from "react-native";
-import Svg, { Rect, Path, Circle } from "react-native-svg";
+import Svg, { Rect, Path, Circle, Line } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
 import { getScreenPadding, getChipPadding, getChipFontSize, getGridColumns } from "../../theme/responsive";
@@ -330,6 +330,15 @@ export default function BuyScreenV3() {
           <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth={2}><Circle cx={11} cy={11} r={8} /><Path d="M21 21l-4.35-4.35" /></Svg>
           <TextInput ref={searchInputRef} style={styles.searchTextInput} value={searchQuery} onChangeText={setSearchQuery} placeholder="Search supplier products..." placeholderTextColor={colors.textTertiary} testID="buy-search-input" />
         </View>
+        {/* GCP-STG-0560: Voice search microphone button (placeholder — recognition wired later) */}
+        <Pressable style={styles.scanBtn} accessibilityLabel="Voice search" onPress={() => { /* placeholder: voice search not yet wired */ }}>
+          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}>
+            <Path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <Path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <Line x1={12} y1={19} x2={12} y2={23} />
+            <Line x1={8} y1={23} x2={16} y2={23} />
+          </Svg>
+        </Pressable>
         <Pressable style={styles.scanBtn} accessibilityLabel="Scan barcode" onPress={() => navigation.navigate("V3Scan", { defaultContext: "supplier_catalog_procurement_scan" })}>
           <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}><Rect x={3} y={3} width={18} height={18} rx={2} /><Path d="M7 7h.01M7 12h10M7 17h.01" /></Svg>
         </Pressable>
