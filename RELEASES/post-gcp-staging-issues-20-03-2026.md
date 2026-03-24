@@ -16294,4 +16294,182 @@ The `/health/detailed` endpoint already returns `gitSha` (from GIT_SHA env var).
 
 ---
 
-<!-- next ticket: GCP-STG-0600 -->
+## GCP-STG-0600 — MEDIUM: Validate 512Mi memory sufficient — add monitoring + increase to 1Gi if needed (MEDIUM)
+
+**Ticket ID**: GCP-STG-0600
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 4
+
+**Problem**: All Cloud Run services configured with 512Mi memory. For the main backend handling 10K+ products, voice AI, invoice generation, and PDF processing, 512Mi may cause OOM kills under load. Need memory monitoring to validate before scaling to production.
+
+**Fix**: 1) Add Cloud Monitoring memory usage alerts (>80% threshold). 2) Run load test with `stress-test.yml` targeting staging. 3) If memory exceeds 400Mi sustained, increase to 1Gi in deploy.yml. 4) Document memory requirements per service.
+
+**Files to modify**: `.github/workflows/deploy.yml`, monitoring config
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0601 — MEDIUM: Supplier portal needs test coverage — zero test suites in build (MEDIUM)
+
+**Ticket ID**: GCP-STG-0601
+**Severity**: P2 MEDIUM
+**Platforms**: SUPPLIER-PORTAL
+**Layers**: Business
+**Source**: GCP Deployment Readiness Audit — Section 1
+
+**Problem**: Build verification shows supplier portal has TypeScript ✅ and build ✅ but tests show "—" (no test runner configured). While `supplier-portal/tests/` has test files, they aren't run in CI. The 3 test files that exist use vitest but the portal's package.json may not have a test script.
+
+**Fix**: 1) Add `"test": "vitest run"` to supplier-portal/package.json if missing. 2) Verify existing tests pass. 3) Add supplier portal test step to `ci-gates.yml`.
+
+**Files to modify**: `supplier-portal/package.json`, `.github/workflows/ci-gates.yml`
+**12-Layer Verification**: L6 Backend ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0602 — MEDIUM: POS app tests must run in CI — 305 test files exist but not in pipeline (MEDIUM)
+
+**Ticket ID**: GCP-STG-0602
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: Business
+**Source**: GCP Deployment Readiness Audit — Section 1
+
+**Problem**: POS app has 305 test files in `src/__tests__/` but the build verification shows "N/A" for tests. These tests run locally with `npx jest` but are not part of the CI pipeline (`ci-gates.yml`). A broken POS screen could ship without being caught.
+
+**Fix**: Add POS test job to `ci-gates.yml`:
+```yaml
+pos-tests:
+  name: POS Jest Tests
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - run: npm ci
+    - run: npx jest --forceExit --ci
+```
+
+**Files to modify**: `.github/workflows/ci-gates.yml`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0603 — MEDIUM: CORS production domain config — separate from staging (MEDIUM)
+
+**Ticket ID**: GCP-STG-0603
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 5
+
+**Problem**: deploy.yml has `CORS_ALLOWED_ORIGINS=https://staging.supermandi.tech`. When promoting to production, this must change to `https://supermandi.tech,https://www.supermandi.tech`. If forgotten, all web portals will get CORS errors on production.
+
+**Fix**: 1) Document CORS domain change in RELEASE_POLICY.md promotion checklist. 2) Add production-specific CORS config to deploy.yml with environment conditional. 3) Add post-deploy CORS verification to smoke test.
+
+**Files to modify**: `.github/workflows/deploy.yml`, `RELEASES/RELEASE_POLICY.md`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0604 — MEDIUM: SSL certificate validation — verify auto-renewal and expiry (MEDIUM)
+
+**Ticket ID**: GCP-STG-0604
+**Severity**: P2 MEDIUM
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 5
+
+**Problem**: staging.supermandi.tech needs valid SSL. GCP-managed SSL certificates auto-renew, but need to verify: 1) Certificate is GCP-managed (not manual). 2) Certificate covers all subdomains. 3) Auto-renewal is working. 4) No certificate expiry within 30 days.
+
+**Fix**: Run `gcloud compute ssl-certificates list` to verify. Add SSL expiry check to `uptime-probe.yml`. Document certificate type in infrastructure docs.
+
+**Files to modify**: `.github/workflows/uptime-probe.yml`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0605 — LOW: Redis connection — use DNS instead of hardcoded IP (LOW)
+
+**Ticket ID**: GCP-STG-0605
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 4
+
+**Problem**: deploy.yml has `REDIS_HOST=10.107.71.27` (hardcoded private IP). If Memorystore instance is recreated or IP changes, all services break. Should use DNS name or make IP configurable via Secret Manager.
+
+**Fix**: 1) If Memorystore supports DNS (check `gcloud redis instances describe`), switch to DNS. 2) If not, move REDIS_HOST to Secret Manager so it can be updated without redeploying. 3) Add REDIS_HOST to pre-deploy verification.
+
+**Files to modify**: `.github/workflows/deploy.yml`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0606 — MEDIUM: Add rate limit to webhook endpoints — DDoS prevention (MEDIUM)
+
+**Ticket ID**: GCP-STG-0606
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 5
+
+**Problem**: `POST /webhooks/whatsapp` receives inbound WhatsApp messages from Meta. This endpoint has signature verification but no rate limiting. A DDoS attack or Meta webhook storm could overwhelm the backend.
+
+**Fix**: Add rate limiter to webhook routes: 100 req/min per IP for WhatsApp webhooks. Also verify Meta webhook signature is checked BEFORE any DB operations (fail fast on invalid signature).
+
+**Files to modify**: `backend/src/routes/v1/webhooks/whatsapp.ts`
+**12-Layer Verification**: L6 Backend ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0607 — MEDIUM: Verify Cloud SQL max connections vs pool total (MEDIUM)
+
+**Ticket ID**: GCP-STG-0607
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: DB, GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 13
+
+**Problem**: Cloud Run deploys with `max-instances=10` and `DB_POOL_MAX=10` (GCP-STG-0365). That's 10 instances × 10 connections = 100 max concurrent DB connections. Cloud SQL staging tier may have a lower max_connections limit (e.g., 100 for db-f1-micro, 200 for db-g1-small).
+
+**Fix**: 1) Check Cloud SQL tier: `gcloud sql instances describe supermandi-staging --format="value(settings.tier)"`. 2) Check max_connections: `SHOW max_connections;` via proxy. 3) If 100 connections ≥ 80% of max_connections, either reduce DB_POOL_MAX or upgrade tier. 4) Add connection pool monitoring.
+
+**12-Layer Verification**: L7 DB ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0608 — LOW: Verify uptime-probe.yml actually alerts on service failure (LOW)
+
+**Ticket ID**: GCP-STG-0608
+**Severity**: P3 LOW
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 10
+
+**Problem**: `uptime-probe.yml` runs every 5 minutes via cron. But need to verify: 1) It actually sends alerts (email/Slack) when a service is down. 2) The workflow doesn't silently fail if GitHub Actions has an issue. 3) Alert recipients are configured.
+
+**Fix**: 1) Read uptime-probe.yml and verify alert mechanism. 2) Test by temporarily breaking a health endpoint. 3) Add Slack/email notification on failure.
+
+**Files to modify**: `.github/workflows/uptime-probe.yml`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0609 — LOW: Landing page Dockerfile — optimize to multi-stage build (LOW)
+
+**Ticket ID**: GCP-STG-0609
+**Severity**: P3 LOW
+**Platforms**: LANDING
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 2
+
+**Problem**: Landing page Dockerfile has only 1 build stage (all others have 2). Since it's static HTML served by nginx, a single stage works — but a multi-stage build could reduce image size by separating build tools from the final nginx image.
+
+**Fix**: If the landing page has a build step (minification, asset optimization), add a build stage. If it's purely static HTML files copied into nginx, the single stage is correct — document why and close.
+
+**Files to modify**: `supermandi-landing/Dockerfile` (if optimization needed)
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+<!-- next ticket: GCP-STG-0610 -->
