@@ -157,6 +157,17 @@ v1Router.use("/public", publicConfigRouter);
 // GCP-STG-0084 FIX: Set RLS store context on all POS routes (from posDevice.storeId)
 import { setRlsStoreContext, setRlsAdminContext } from "../../middleware/rlsContext";
 v1Router.use("/pos", setRlsStoreContext);
+
+// GCP-STG-0685: Per-store API rate limit — 300 req/min per store to prevent one store
+// from overwhelming the API. Applied after RLS context so storeId is available.
+const perStoreRateLimit = redisRateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  keyGenerator: (req) => `store:${(req as any).posDevice?.storeId || (req as any).storeId || 'unknown'}`,
+  keyPrefix: 'per-store',
+});
+v1Router.use("/pos", perStoreRateLimit);
+
 v1Router.use("/pos", posEventsRouter);
 v1Router.use("/pos", posScanRouter);
 v1Router.use("/pos", posSalesRouter);
