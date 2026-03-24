@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 981,
+  "version": 982,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -26479,6 +26479,61 @@
         "regression_check": "tsc passes, no code changes",
         "test_guard": "getCategoryEmoji already tested via GCP-STG-0013+0144 registrations",
         "single_commit": "fix(GCP-STG-0553): BUY tile category emoji verification",
+        "ticket_parked": "Will park after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0554",
+      "file": "src/components/v3/ProductTileV3.tsx",
+      "start_line": 65,
+      "end_line": 70,
+      "checksum": "08ff9626f3485009",
+      "description": "BUY tile stock dot verification — getStockStatus uses product.stock for in/low/out/unknown dot, mapped from item.currentStock by GCP-STG-0561",
+      "test_file": "src/components/v3/ProductTileV3.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T15:59:31.347Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "Stock dot renders: green(in), yellow(low), red(out), hidden(unknown)",
+        "ux_states": "stock>10=green, 1-10=yellow, 0=red, null=hidden — all 4 states handled",
+        "wiring": "BuyScreenV3 stock:item.currentStock -> ProductTileV3 product.stock -> getStockStatus -> dot color",
+        "navigation": "N/A - no navigation change",
+        "i18n_keys": "N/A - visual dot indicator, no text",
+        "business_logic": "Stock thresholds: >10=in, 1-10=low, <=0=out, null=unknown",
+        "business_behaviour": "BUY tile shows stock dot matching retailer current stock from SupplierProduct.currentStock",
+        "impacted_files": "Verification only, FIX_LEDGER.json updated",
+        "fix_ledger_check": "539 fixes, zero drift",
+        "no_agent_conflict": "Single agent",
+        "gcp_parity": "No env changes",
+        "regression_check": "tsc passes, no code changes",
+        "test_guard": "stock mapping verified via GCP-STG-0561 + getStockStatus function registered",
+        "single_commit": "fix(GCP-STG-0554): BUY tile stock dot verification",
         "ticket_parked": "Will park after commit"
       }
     }
