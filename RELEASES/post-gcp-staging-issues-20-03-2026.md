@@ -16472,4 +16472,252 @@ pos-tests:
 
 ---
 
-<!-- next ticket: GCP-STG-0610 -->
+## GCP-STG-0610 — MEDIUM: Verify Firebase authorized domains include staging.supermandi.tech (MEDIUM)
+
+**Ticket ID**: GCP-STG-0610
+**Severity**: P2 MEDIUM
+**Platforms**: RETAILER-WEB, SUPPLIER-PORTAL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 7 (Firebase)
+
+**Problem**: Firebase Phone Auth requires the calling domain to be in the authorized domains list. If `staging.supermandi.tech` is NOT added, Firebase OTP on retailer-admin and supplier-portal will fail with "auth/unauthorized-domain".
+
+**Fix**: 1) Go to Firebase Console → Authentication → Settings → Authorized domains. 2) Add `staging.supermandi.tech`. 3) For production, add `supermandi.tech` and `www.supermandi.tech`. 4) Document in RELEASE_POLICY.md.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0611 — MEDIUM: Verify Firebase billing plan is Blaze for Phone Auth at scale (MEDIUM)
+
+**Ticket ID**: GCP-STG-0611
+**Severity**: P2 MEDIUM
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 7 (Firebase)
+
+**Problem**: Firebase Spark (free) plan limits Phone Auth to 10K verifications/month. Blaze (pay-as-you-go) is required for production scale. If still on Spark, OTP will stop working after 10K verifications.
+
+**Fix**: Verify Firebase Console → Project Settings → Usage and billing → Plan is "Blaze". If Spark, upgrade. Document monthly OTP cost estimate.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0612 — MEDIUM: Verify Firebase App Check reCAPTCHA site key in env vars (MEDIUM)
+
+**Ticket ID**: GCP-STG-0612
+**Severity**: P2 MEDIUM
+**Platforms**: RETAILER-WEB, SUPPLIER-PORTAL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 7 (Firebase)
+
+**Problem**: GCP-STG-0468 added Firebase App Check with dynamic import. But the reCAPTCHA Enterprise site key must be configured as `VITE_RECAPTCHA_SITE_KEY` (retailer-admin) or `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` (supplier-portal). If not set, App Check silently fails and Firebase requests may be rejected.
+
+**Fix**: 1) Get reCAPTCHA Enterprise site key from Google Cloud Console. 2) Add to build env vars in deploy.yml for retailer-admin and supplier-portal. 3) Verify App Check enforcement in Firebase Console.
+
+**Files to modify**: `.github/workflows/deploy.yml`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0613 — MEDIUM: Add Razorpay webhook secret to Secret Manager + verify signature (MEDIUM)
+
+**Ticket ID**: GCP-STG-0613
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 8 (Third-Party)
+
+**Problem**: Razorpay payment gateway requires webhook signature verification to prevent spoofed payment events. `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` are mentioned in `.env.cloudrun.example` but NOT in deploy.yml `--set-secrets`. Also need `RAZORPAY_WEBHOOK_SECRET` for webhook signature validation.
+
+**Fix**: 1) Add RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET to Secret Manager. 2) Add to deploy.yml `--set-secrets`. 3) Verify webhook handler validates `x-razorpay-signature` header.
+
+**Files to modify**: `.github/workflows/deploy.yml`
+**12-Layer Verification**: L6 Backend ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0614 — MEDIUM: Verify GCS bucket permissions for Cloud Run service account (MEDIUM)
+
+**Ticket ID**: GCP-STG-0614
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 8 (Third-Party)
+
+**Problem**: Backend uploads documents (KYC docs, invoices) and product images to GCS buckets (`supermandi-pos-documents`, `supermandi-pos-images`). The Cloud Run service account (`cloudrun-backend@...`) needs `storage.objects.get` and `storage.objects.create` permissions on both buckets.
+
+**Fix**: 1) Verify IAM: `gcloud storage buckets get-iam-policy gs://supermandi-pos-documents`. 2) If missing, grant: `gcloud storage buckets add-iam-policy-binding gs://supermandi-pos-documents --member=serviceAccount:cloudrun-backend@supermandi-backend.iam.gserviceaccount.com --role=roles/storage.objectUser`.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0615 — MEDIUM: Add error monitoring — Sentry or Cloud Error Reporting (MEDIUM)
+
+**Ticket ID**: GCP-STG-0615
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND, POS
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 8
+
+**Problem**: No centralized error monitoring. Backend errors go to Cloud Logging (unstructured). POS app errors are only visible in device logs. Need a crash reporting service that: aggregates errors, deduplicates, alerts on new error types, tracks error rates.
+
+**Fix**: Option A: Enable Cloud Error Reporting (free with GCP, works with structured logging). Option B: Add Sentry DSN to backend + POS. Document chosen approach. Add SENTRY_DSN or ERROR_REPORTING_ENABLED env var.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0616 — MEDIUM: Add LOG_LEVEL env var to deploy.yml (MEDIUM)
+
+**Ticket ID**: GCP-STG-0616
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 6
+
+**Problem**: Backend logger level defaults to `'info'` in code. No way to change to `'debug'` or `'warn'` without redeploying. Adding `LOG_LEVEL` env var allows runtime log verbosity control.
+
+**Fix**: 1) Add `LOG_LEVEL=info` to deploy.yml env vars. 2) Read `process.env.LOG_LEVEL` in logger initialization. 3) Can change to `debug` for troubleshooting without code changes.
+
+**Files to modify**: `.github/workflows/deploy.yml`, `backend/src/lib/logger.ts`
+**12-Layer Verification**: L6 Backend ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0617 — MEDIUM: Document SERVICE_TOKEN_SECRET + ADMIN_TOKEN purpose and rotation (MEDIUM)
+
+**Ticket ID**: GCP-STG-0617
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 6
+
+**Problem**: `SERVICE_TOKEN_SECRET` and `ADMIN_TOKEN` are in Secret Manager and deploy.yml but their purpose, usage, and rotation schedule are not documented. If either expires or is rotated incorrectly, inter-service communication or admin health checks break.
+
+**Fix**: Document in `.env.cloudrun.example`: what each secret is for, which services use it, rotation procedure, what breaks if wrong.
+
+**Files to modify**: `backend/.env.cloudrun.example`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0618 — LOW: Verify CD pipeline uses correct Dockerfile names (LOW)
+
+**Ticket ID**: GCP-STG-0618
+**Severity**: P3 LOW
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 10
+
+**Problem**: Backend uses `Dockerfile.main` (not `Dockerfile`). CD pipeline must reference the correct filename. If deploy.yml has `docker build -f Dockerfile` it will fail for backend.
+
+**Fix**: Verify deploy.yml Docker build commands use correct Dockerfile paths for each service. Cross-reference with actual filenames.
+
+**Files to modify**: Verification only
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0619 — LOW: Add Cloud Run old revision cleanup (LOW)
+
+**Ticket ID**: GCP-STG-0619
+**Severity**: P3 LOW
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 4
+
+**Problem**: Each deploy creates a new Cloud Run revision. Old revisions accumulate (currently ~50+ per service). While they don't cost money (only active revisions use resources), they clutter the console and slow down `gcloud run revisions list`.
+
+**Fix**: Add cleanup step to deploy.yml or scheduled job: `gcloud run revisions list --service=$SVC --filter="status.conditions.status!=True" --format="value(name)" | tail -n +10 | xargs -I{} gcloud run revisions delete {} --quiet`.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0620 — LOW: Verify VITE_FIREBASE_* config values for retailer-admin build (LOW)
+
+**Ticket ID**: GCP-STG-0620
+**Severity**: P3 LOW
+**Platforms**: RETAILER-WEB
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 6
+
+**Problem**: Retailer-admin uses Firebase for phone OTP. Vite build requires `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID` at BUILD time (baked into JS bundle). If not set in CI build args, Firebase will fail at runtime.
+
+**Fix**: Verify deploy.yml passes Firebase config as build args: `--build-arg VITE_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}` etc.
+
+**Files to modify**: `.github/workflows/deploy.yml`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0621 — LOW: Add crash reporting SDK to POS app (Sentry/Crashlytics) (LOW)
+
+**Ticket ID**: GCP-STG-0621
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Dependencies
+**Source**: GCP Deployment Readiness Audit — Section 12
+
+**Problem**: POS app has no crash reporting. If the app crashes in the field, the only way to know is user complaint. Need automatic crash reporting that captures: stack trace, device info, app version, user actions before crash.
+
+**Fix**: Option A: `@sentry/react-native` (cross-platform, self-hosted or cloud). Option B: Firebase Crashlytics (free, Google-integrated). Add SDK initialization in App.tsx, configure source map upload for readable stack traces.
+
+**12-Layer Verification**: L11 Dependencies ✅
+
+---
+
+## GCP-STG-0622 — LOW: Verify ProGuard/R8 minification enabled in release APK (LOW)
+
+**Ticket ID**: GCP-STG-0622
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 12
+
+**Problem**: Need to verify `minifyEnabled true` and `shrinkResources true` in `android/app/build.gradle` release buildType. Without R8 minification, APK is larger and JS bundle is not obfuscated.
+
+**Fix**: Read build.gradle release config. If minification not enabled, add it with proper ProGuard rules for React Native.
+
+**Files to modify**: `android/app/build.gradle`, `android/app/proguard-rules.pro`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0623 — LOW: Configure Expo OTA updates for hot-fix capability (LOW)
+
+**Ticket ID**: GCP-STG-0623
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 12
+
+**Problem**: Without OTA (Over-the-Air) updates, every JS-only fix requires a new APK build + Play Store upload + user update cycle (days). Expo EAS Update enables pushing JS bundle updates instantly to all installed apps.
+
+**Fix**: 1) Configure `expo-updates` in app.json. 2) Set up EAS Update channel (staging/production). 3) Document OTA update procedure in RELEASE_POLICY.md. 4) Add `eas update` command to deploy workflow for JS-only changes.
+
+**Files to modify**: `app.json`, `eas.json` (create if missing)
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0624 — LOW: Verify Cloud SQL automated backup + point-in-time recovery (LOW)
+
+**Ticket ID**: GCP-STG-0624
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: DB, GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 13
+
+**Problem**: Cloud SQL should have automated backups enabled with point-in-time recovery (PITR) for disaster recovery. Need to verify: 1) Automated backups enabled. 2) Backup retention (7+ days). 3) PITR enabled. 4) Backup window doesn't overlap with peak usage.
+
+**Fix**: `gcloud sql instances describe supermandi-staging --format="json(settings.backupConfiguration)"`. If not enabled: `gcloud sql instances patch supermandi-staging --backup-start-time=02:00 --enable-point-in-time-recovery`.
+
+**12-Layer Verification**: L7 DB ✅, L9 GCP ✅
+
+---
+
+<!-- next ticket: GCP-STG-0625 -->
