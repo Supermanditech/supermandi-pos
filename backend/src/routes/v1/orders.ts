@@ -891,6 +891,126 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/cancel", requireDeviceToken,
 });
 
 /**
+ * PATCH /api/v1/orders/stores/:storeId/orders/:orderId/amend
+ * GCP-STG-0663: PO amendment — edit submitted PO before dispatch.
+ * Allows editing item quantities on a submitted/confirmed PO.
+ * Only amendable when status is draft, submitted, confirmed, or pending.
+ * GO-LIVE: Requires device token authentication
+ *
+ * Request: { items: [{ productId: string, newQty: number }] }
+ */
+ordersRouter.patch("/stores/:storeId/orders/:orderId/amend", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromDevice(req);
+  const { orderId } = req.params;
+  const { items } = req.body || {};
+
+  // Validate input
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: "invalid_items",
+      message: "items array is required with at least one { productId, newQty }",
+    });
+  }
+
+  for (const item of items) {
+    if (!item.productId || typeof item.newQty !== "number" || item.newQty < 0) {
+      return res.status(400).json({
+        success: false,
+        error: "invalid_item",
+        message: "Each item must have productId (string) and newQty (non-negative number)",
+      });
+    }
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // 1. Get PO with row lock — store isolation via JWT storeId
+    const poRes = await client.query(
+      `SELECT id, status, order_number FROM orders.purchase_orders
+       WHERE id = $1 AND store_id = $2
+       FOR UPDATE`,
+      [orderId, storeId]
+    );
+
+    if (!poRes.rows[0]) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "PO not found" });
+    }
+
+    const status = poRes.rows[0].status;
+
+    // GCP-STG-0663: Only allow amendment before dispatch
+    const amendableStatuses = ["draft", "submitted", "confirmed", "pending"];
+    if (!amendableStatuses.includes(status)) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        error: { code: "PO_NOT_AMENDABLE", message: `Cannot amend PO in ${status} status` },
+      });
+    }
+
+    // 2. Update item quantities
+    let updatedCount = 0;
+    for (const item of items) {
+      const updateRes = await client.query(
+        `UPDATE orders.purchase_order_items
+         SET quantity = $1, updated_at = NOW()
+         WHERE purchase_order_id = $2
+           AND product_id = $3
+           AND EXISTS (SELECT 1 FROM orders.purchase_orders WHERE id = $2 AND store_id = $4)`,
+        [item.newQty, orderId, item.productId, storeId]
+      );
+      updatedCount += (updateRes.rowCount ?? 0);
+    }
+
+    // 3. Recalculate PO total from updated items
+    await client.query(
+      `UPDATE orders.purchase_orders
+       SET total_amount = (
+         SELECT COALESCE(SUM(quantity * unit_price), 0)
+         FROM orders.purchase_order_items
+         WHERE purchase_order_id = $1
+       ), updated_at = NOW()
+       WHERE id = $1 AND store_id = $2`,
+      [orderId, storeId]
+    );
+
+    // 4. Log amendment in order events audit trail
+    await client.query(
+      `INSERT INTO orders.order_events (purchase_order_id, event_type, from_status, to_status, actor_type, metadata)
+       VALUES ($1, 'amended', $2, $2, 'device', $3)`,
+      [orderId, status, JSON.stringify({ itemsAmended: items.length, updatedCount })]
+    );
+
+    await client.query("COMMIT");
+
+    log.info(`[GCP-STG-0663] PO amended: orderId=${orderId}, storeId=${storeId}, items=${items.length}, updated=${updatedCount}`);
+
+    return res.json({
+      success: true,
+      message: "PO amended",
+      orderId,
+      itemsAmended: items.length,
+      updatedCount,
+    });
+  } catch (err: any) {
+    await client.query("ROLLBACK");
+    log.error("[GCP-STG-0663] PO amendment error:", err);
+    if (err.code === "42P01") {
+      return res.status(400).json({ success: false, error: "Order system not initialized" });
+    }
+    return res.status(500).json({ success: false, error: "Failed to amend PO" });
+  } finally {
+    client.release();
+  }
+});
+
+/**
  * PATCH /api/v1/orders/stores/:storeId/orders/:orderId/tracking
  * GO-LIVE-242: Update tracking number for a purchase order.
  * Can be called for any non-cancelled order.

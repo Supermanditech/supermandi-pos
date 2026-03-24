@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1096,
+  "version": 1097,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -4513,8 +4513,8 @@
     {
       "ticket": "STG-509",
       "file": "backend/src/routes/v1/orders.ts",
-      "start_line": 1728,
-      "end_line": 2287,
+      "start_line": 1848,
+      "end_line": 2407,
       "checksum": "d7698c169f317b06",
       "description": "Reject GRN receive if total qty > ordered * 1.1 (10% tolerance)",
       "test_file": "src/__tests__/screens/grn-excess-qty.stg-509.test.ts",
@@ -4564,7 +4564,7 @@
         "store_isolation": "storeId from JWT via getStoreIdFromDevice",
         "db_schema": "N/A — no schema changes"
       },
-      "line_shifted_at": "2026-03-24T19:54:06.681Z"
+      "line_shifted_at": "2026-03-24T22:45:27.056Z"
     },
     {
       "ticket": "STG-510",
@@ -14872,8 +14872,8 @@
     {
       "ticket": "GCP-STG-0287",
       "file": "backend/src/routes/v1/orders.ts",
-      "start_line": 1930,
-      "end_line": 1970,
+      "start_line": 2050,
+      "end_line": 2090,
       "checksum": "817df5908b5729e4",
       "description": "GRN receive writes to inventory_ledger (was missing) for dual-ledger invariant",
       "test_file": "backend/tests/dualLedger.gcp-stg-0287.unit.test.ts",
@@ -14904,7 +14904,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:14:11.121Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T19:54:06.899Z"
+      "line_shifted_at": "2026-03-24T22:45:27.171Z"
     },
     {
       "ticket": "GCP-STG-0296",
@@ -19438,8 +19438,8 @@
     {
       "ticket": "GCP-STG-0392",
       "file": "backend/src/routes/v1/orders.ts",
-      "start_line": 1962,
-      "end_line": 1979,
+      "start_line": 2082,
+      "end_line": 2099,
       "checksum": "2534ee4e586b9ae2",
       "description": "GRN receive inserts into inventory.stock_batches when batchNumber or expiryDate provided (batch-level stock tracking) (FEFO-ordered batches)",
       "test_file": "backend/tests/stockBatches.gcp-stg-0392.unit.test.ts",
@@ -19470,7 +19470,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:23:06.232Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T19:54:07.001Z"
+      "line_shifted_at": "2026-03-24T22:45:27.233Z"
     },
     {
       "ticket": "GCP-STG-0392",
@@ -27905,8 +27905,8 @@
     {
       "ticket": "GCP-STG-0661",
       "file": "backend/src/routes/v1/orders.ts",
-      "start_line": 1438,
-      "end_line": 1462,
+      "start_line": 1558,
+      "end_line": 1582,
       "checksum": "5ac513233675cf71",
       "description": "BNPL credit limit enforcement: includes partial drawdowns in usage check, subtracts paid_amount_minor from principal for accurate outstanding balance, returns outstandingAmount in error response.",
       "test_file": "backend/tests/bnplCreditLimit.gcp-stg-0661.unit.test.ts",
@@ -27939,7 +27939,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T19:54:01.677Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-24T22:45:27.311Z"
     },
     {
       "ticket": "GCP-STG-0637",
@@ -30629,6 +30630,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:43:19.251Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0663",
+      "file": "backend/src/routes/v1/orders.ts",
+      "start_line": 893,
+      "end_line": 1009,
+      "checksum": "34524f789c578428",
+      "description": "PO amendment endpoint — PATCH /orders/:storeId/orders/:orderId/amend with status gate (draft/submitted/confirmed/pending only)",
+      "test_file": "backend/src/__tests__/orders/po-amend.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T22:45:22.237Z",
       "status": "ACTIVE"
     }
   ],
