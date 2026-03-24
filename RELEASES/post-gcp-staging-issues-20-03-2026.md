@@ -14281,4 +14281,139 @@ In JS, use `wrapper.classList.add('visible')` instead of `wrapper.style.display 
 
 ---
 
-<!-- next ticket: GCP-STG-0536 -->
+## GCP-STG-0536 — MEDIUM: Implement ESC/POS barcode label printing — replace 0527 stub with real implementation (MEDIUM)
+
+**Ticket ID**: GCP-STG-0536
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, Business, Backend
+**Source**: Audit — GCP-STG-0527 stub rejection + go-live requirement
+**Supersedes**: GCP-STG-0527 (stub only — returns `false`, no ESC/POS bytes generated)
+
+**Problem**: `printerService.ts:281` `printBarcodeLabel()` is a stub that returns `false` with a `// TODO` comment. Cashiers tap "Print Label" and nothing happens — no label, no error feedback, confusing UX. Kirana stores need barcode labels for:
+- New products added without manufacturer barcode (loose items, store-packed)
+- Shelf price tags with barcode for future scanning
+- Re-labeling damaged/unreadable barcodes
+- Bulk label printing for restock batches
+
+**Current state (0527 stub)**:
+```typescript
+export async function printBarcodeLabel(barcode: string, productName: string): Promise<boolean> {
+  // TODO: Implement ESC/POS label mode or Bluetooth label printer protocol
+  return false;
+}
+```
+
+**Required implementation**:
+
+### 1. ESC/POS Barcode Label Byte Generation (`printerService.ts`)
+Replace the stub with actual ESC/POS command sequence:
+
+```
+ESC @                    → Initialize printer
+ESC a 1                  → Center alignment
+ESC ! 0x10               → Double-height text for product name
+[product name bytes]     → UTF-8 product name (truncate to 24 chars for 58mm paper)
+LF                       → Line feed
+ESC ! 0x00               → Normal text for price
+"MRP: ₹" + price         → Price line
+LF LF                    → Spacing
+GS h 60                  → Set barcode height = 60 dots
+GS w 2                   → Set barcode width = 2 (medium)
+GS H 2                   → Print HRI (human-readable) below barcode
+GS k 73 [len] [data]     → Print Code128 barcode (type 73 = Code128)
+LF LF LF                 → Feed for tear-off
+GS V 66 3                → Partial cut (if supported)
+```
+
+### 2. Label Format Options
+Support 3 standard label formats via a `labelSize` parameter:
+- **`small`** (38×25mm): Barcode + price only. For shelf edge labels.
+- **`medium`** (50×25mm, DEFAULT): Product name (1 line) + barcode + price. Standard shelf label.
+- **`large`** (50×50mm): Product name (2 lines) + brand + barcode + price + store name. Full info label.
+
+### 3. Printer Discovery & Connection
+Reuse existing `printerService.ts` BLE connection logic:
+- `getConnectedPrinter()` → returns connected BLE printer or `null`
+- If no printer connected → show toast: "No printer connected. Go to Settings → Printer to pair."
+- If printer connected → send byte array via existing `writeToPrinter()` function
+- Support both 58mm and 80mm thermal paper widths (auto-detect from printer model or default 58mm)
+
+### 4. UI Integration — "Print Label" Button
+**Product Detail screen** (`ScanScreenV3.tsx` product info section):
+- Add `<TouchableOpacity>` "Print Label" button with printer icon
+- Only visible when product has a barcode (don't show for products without barcode)
+- Button states: idle → printing (spinner) → success (checkmark, 2s) → idle
+- On press: call `printBarcodeLabel(barcode, productName, price, labelSize)`
+
+**New Product screen** (after creating product with auto-generated barcode):
+- Show "Print Label" CTA after successful product creation
+- Pre-select `medium` label size
+- "Print 5 labels" quick-action for bulk shelf labeling
+
+**Batch Print** (product list long-press):
+- Long-press product in SELL grid → context menu includes "Print Label"
+- Multi-select mode: select multiple products → "Print Labels (N)" button
+- Prints sequentially with 500ms delay between labels (prevent BLE buffer overflow)
+
+### 5. Label Preview (Optional but recommended)
+Before printing, show a preview modal:
+- Rendered label layout (React Native `<View>` matching label proportions)
+- Product name, barcode (as `<Barcode>` SVG component), price, store name
+- "Print" / "Cancel" buttons
+- Label size selector (small/medium/large radio)
+- Quantity input (1-50, default 1)
+
+### 6. Error Handling
+- **Printer not connected**: Toast "Connect a printer in Settings → Printer"
+- **Printer busy**: Queue the label, print when ready. Toast "Label queued"
+- **BLE disconnect mid-print**: Toast "Print failed — printer disconnected. Reconnect and retry."
+- **Paper out**: If printer returns paper-out status, Toast "Paper out — replace roll"
+- **Invalid barcode**: If barcode is empty/null, disable "Print Label" button entirely
+- **Offline**: Label printing is LOCAL only (BLE) — works offline. No network needed.
+
+### 7. Barcode Generation Utility (`src/utils/barcodeGenerator.ts`)
+- `generateCode128Bytes(data: string): Uint8Array` — pure function, no dependencies
+- Validates input: alphanumeric + subset of ASCII (Code128-B character set)
+- Returns raw byte array for ESC/POS `GS k` command
+- Also export `generateBarcodeSVG(data: string): string` for preview rendering
+
+### 8. Store Name on Label
+- Read store name from `authStore.getState().storeName`
+- Print at bottom of label in small font: "SuperMandi — [Store Name]"
+- Configurable via POS Settings → "Show store name on labels" toggle (default: ON)
+
+### 9. Test Requirements (BEHAVIORAL — mandatory)
+- **Unit test**: `barcodeGenerator.test.ts` — `generateCode128Bytes('8901234567890')` returns correct byte array. Test with EAN-13, short codes, alphanumeric Code128.
+- **Unit test**: `printBarcodeLabel.test.ts` — mock `writeToPrinter`, call `printBarcodeLabel()`, verify ESC/POS byte sequence contains `GS k 73`, product name bytes, price bytes. Verify `false` returned when no printer connected.
+- **Unit test**: Label size variants — `small` omits product name, `large` includes brand + store.
+- **Integration test**: Mock BLE printer, send label, verify bytes received match expected ESC/POS sequence.
+
+**Files to modify**:
+- `src/services/printerService.ts` — replace stub at L281 with full implementation
+- New `src/utils/barcodeGenerator.ts` — Code128 byte generation + SVG generation
+- `src/screens/v3/ScanScreenV3.tsx` — "Print Label" button in product detail
+- `src/screens/v3/SellScreenV3.tsx` — long-press context menu "Print Label"
+- `src/stores/settingsStore.ts` — `showStoreNameOnLabel: boolean` setting
+
+**Dependencies**: None new — uses existing `printerService.ts` BLE infrastructure
+
+**Risk**: LOW — additive feature, no existing code modified except replacing the stub. BLE printing already works for receipts.
+
+**12-Layer Verification**:
+- L1 UI: Print Label button visible, states (idle/printing/success), preview modal ✅
+- L2 UX: Loading spinner during print, success checkmark, error toasts ✅
+- L3 Wiring: Button → printBarcodeLabel() → writeToPrinter() → BLE ✅
+- L4 Navigation: Preview modal opens/closes correctly, doesn't break back button ✅
+- L5 API: N/A (local BLE only) ✅
+- L6 Backend: N/A ✅
+- L7 DB: N/A ✅
+- L8 Migrations: N/A ✅
+- L9 GCP: N/A (local feature) ✅
+- L10 Business: Correct barcode encoding, price formatting with ₹, store name ✅
+- L11 Dependencies: No new deps — reuses existing BLE stack ✅
+- L12 Store Isolation: Store name from JWT-derived authStore, not user input ✅
+
+---
+
+<!-- next ticket: GCP-STG-0537 -->
