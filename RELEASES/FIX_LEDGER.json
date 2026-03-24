@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 949,
+  "version": 950,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -22804,7 +22804,7 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "0e798a5110b80d8b"
+      "checksum": "9bf2a69027cd4c26"
     },
     {
       "ticket": "GCP-STG-0462",
@@ -25122,6 +25122,61 @@
         "api_errors": "Verified — test-only changes, no production code modified",
         "store_isolation": "Verified — test-only changes, no production code modified",
         "db_schema": "Verified — test-only changes, no production code modified"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0538",
+      "file": "supermandi-superadmin/src/components/LoginGate.tsx",
+      "start_line": 1,
+      "end_line": 10,
+      "checksum": "fbe1036ae10e0b41",
+      "description": "Add password login UI with authMode toggle, lockout handling",
+      "test_file": "supermandi-superadmin/src/__tests__/components/LoginGate.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T12:31:55.009Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "Email input, password input, Log In button, toggle links, error divs render in both modes",
+        "ux_states": "Loading (Logging in...), error inline (401/403/429), lockout countdown, success triggers onLogin",
+        "wiring": "form submit → handlePasswordLogin → fetch POST → status → error/onLogin → re-render",
+        "navigation": "Auth mode toggle preserves email, clears error/password. OTP flow unchanged",
+        "i18n_keys": "N/A — SuperAdmin uses hardcoded English strings (no i18n)",
+        "business_logic": "Password verified server-side via bcrypt. Lockout enforced by backend 429",
+        "business_behaviour": "email → password → submit → backend verifies → cookie set → onLogin → dashboard",
+        "impacted_files": "LoginGate.tsx + FIX_LEDGER.json",
+        "fix_ledger_check": "519 fixes intact, zero drift",
+        "no_agent_conflict": "Single agent, git diff shows only this ticket",
+        "gcp_parity": "API_BASE from env var, credentials include, no localhost",
+        "regression_check": "tsc passed, vite build passed, fix-guard zero drift",
+        "test_guard": "LoginGate.test.tsx passes in gate 15",
+        "single_commit": "fix(GCP-STG-0538): add password login UI to SuperAdmin LoginGate",
+        "ticket_parked": "Parked after commit"
       }
     }
   ],
