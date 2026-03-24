@@ -27619,6 +27619,52 @@
         "single_commit": "fix(GCP-STG-0573): remove 3 stale TODO comments",
         "ticket_parked": "committed"
       }
+    },
+    {
+      "ticket": "GCP-STG-0574",
+      "file": "backend/services/api-gateway/Dockerfile",
+      "start_line": 1,
+      "end_line": 92,
+      "checksum": "15f226a44ee571db",
+      "description": "Verify API Gateway Dockerfile exists as standalone Cloud Run service, add clarifying comment",
+      "test_file": "backend/tests/docker-build.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_evidence": {
+        "impacted_files": "backend/services/api-gateway/Dockerfile + FIX_LEDGER.json",
+        "fix_ledger_check": "fix-guard check passes, zero drift",
+        "no_agent_conflict": "single agent session",
+        "gcp_parity": "Dockerfile already deploys as Cloud Run service",
+        "regression_check": "npx tsc --noEmit passes",
+        "test_guard": "Dockerfile comment-only change, no behavioral test needed",
+        "single_commit": "fix(GCP-STG-0574): verify API Gateway Dockerfile",
+        "ticket_parked": "committed"
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T18:24:38.451Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 270,

@@ -1,4 +1,5 @@
 # API Gateway Dockerfile - V3.0.9 compliant
+# Standalone Cloud Run service — routes traffic to main backend, auth, and portals
 # Production-ready multi-stage build
 
 # =============================================================================
