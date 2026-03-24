@@ -118,7 +118,10 @@ posOtpAuthRouter.post("/auth/send-otp", otpSendLimiter, async (req, res) => {
     }
 
     // GCP-STG-0467: SMS fallback when WhatsApp fails or is not configured
-    if (!otpDelivered) {
+    // GCP-STG-0576: SMS is architecturally disabled — SuperMandi uses WhatsApp (POS OTP)
+    // + Firebase Phone Auth (web portals). This code path is retained for future use
+    // but SMS_DISABLED=true is the permanent production setting.
+    if (!otpDelivered && process.env.SMS_DISABLED !== 'true') {
       log.info(`[OTP] WhatsApp failed, SMS fallback attempted for ${phone.slice(0, 3)}***`);
       try {
         const smsSent = await sendSms(`+91${phone}`, otpMessage);
@@ -128,6 +131,8 @@ posOtpAuthRouter.post("/auth/send-otp", otpSendLimiter, async (req, res) => {
       } catch (smsErr) {
         log.error(`[OTP] SMS fallback also failed for ${phone.slice(0, 3)}***:`, asError(smsErr).message);
       }
+    } else if (!otpDelivered) {
+      log.info(`[OTP] WhatsApp failed for ${phone.slice(0, 3)}***; SMS disabled by architecture (SMS_DISABLED=true)`);
     }
 
     // GCP-STG-0489: Audit log — OTP sent for POS device
