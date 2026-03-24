@@ -81,6 +81,7 @@ import { chatRouter } from "./chat";  // T-291→T-302: In-app chat
 import { aiIntelligenceRouter } from "./ai/intelligence";  // T-303→T-316: AI Intelligence
 import { adminMaintenanceRouter } from "./admin/maintenance";  // SA-P0-007: System maintenance mode
 import { adminReconciliationRouter } from "./admin/reconciliation";  // GCP-STG-0658: Payment reconciliation
+import { supplierSlaRouter } from "./admin/supplierSla";  // GCP-STG-0665: Supplier SLA monitoring
 import { creditNotesRouter } from "./admin/creditNotes";  // GCP-STG-0662: Credit/debit notes
 import { maintenanceGate } from "../../middleware/maintenanceMode";  // SA-P0-007: Maintenance gate
 import { demoRouter } from "./demo";
@@ -263,6 +264,7 @@ v1Router.use("/admin/quality", qualityDashboardRouter);  // T-223: Quality dashb
 v1Router.use("/admin/credit-providers", adminCreditProvidersRouter);  // T-281/T-289/T-290: Provider health + management
 v1Router.use("/admin", adminMaintenanceRouter);  // SA-P0-007: System maintenance mode
 v1Router.use("/admin", adminReconciliationRouter);  // GCP-STG-0658: Payment reconciliation
+v1Router.use("/admin", supplierSlaRouter);  // GCP-STG-0665: Supplier SLA monitoring
 v1Router.use("/admin", creditNotesRouter);  // GCP-STG-0662: Credit/debit notes
 
 // GCP-STG-0627: File upload rate limit — 10 uploads/min per IP (authenticated users share IP key)
