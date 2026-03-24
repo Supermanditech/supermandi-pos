@@ -521,6 +521,19 @@ export default function BuyScreenV3() {
           </Pressable>
         </View>
       ) : null}
+      {/* GCP-STG-0559: Bottom cart strip with case count — always visible */}
+      <Pressable
+        style={styles.bottomCartStrip}
+        onPress={() => { if (cartItemCount > 0) setCheckoutVisible(true); }}
+        accessibilityRole="button"
+        accessibilityLabel={cartItemCount > 0 ? `Review order with ${cartItemCount} items` : 'Purchase cart empty'}
+      >
+        <Text style={styles.bottomCartStripText}>
+          {cartItemCount > 0
+            ? `${cartItemCount} items \u00B7 \u20B9${Math.round(cartTotal / 100).toLocaleString('en-IN')} \u2192 Review Order`
+            : 'Purchase cart empty \u2014 tap product to add'}
+        </Text>
+      </Pressable>
       {/* V3-FIX-175+176: Procurement checkout modal */}
       <Modal visible={checkoutVisible} transparent animationType="slide" onRequestClose={() => !ordering && setCheckoutVisible(false)}>
         <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
@@ -915,5 +928,8 @@ function createStyles(colors: ColorPalette) {
     cartTotal: { fontSize: 18, fontWeight: "900", color: colors.textInverse, marginHorizontal: 12 },
     orderBtn: { backgroundColor: colors.textInverse, paddingHorizontal: 22, paddingVertical: 10, borderRadius: 12 },
     orderBtnText: { color: colors.accent, fontSize: 14, fontWeight: "800" },
+    // GCP-STG-0559: Bottom cart strip — always visible summary bar
+    bottomCartStrip: { backgroundColor: colors.backgroundSecondary, padding: 12, borderTopWidth: 1, borderTopColor: colors.border, alignItems: "center" as const },
+    bottomCartStripText: { fontSize: 13, fontWeight: "600" as const, color: colors.textSecondary },
   });
 }
