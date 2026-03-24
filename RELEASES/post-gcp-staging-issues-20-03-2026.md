@@ -18242,4 +18242,109 @@ pos-tests:
 
 ---
 
-<!-- next ticket: GCP-STG-0720 -->
+## GCP-STG-0720 — HIGH: POS APK backend URL gate — verify all POS API endpoints reachable (HIGH)
+
+**Ticket ID**: GCP-STG-0720
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: GCP Parity, Business
+**Source**: Backend URL Connectivity Gates
+
+**Problem**: APK can be built and released while backend endpoints are down or misconfigured. POS app would install but fail on first OTP/enrollment/sync. Need a pre-build gate that verifies ALL critical POS API endpoints are reachable.
+
+**Fix**: Create `scripts/gates/pos-api-gate.sh`:
+- Accept `$API_BASE_URL` (default: `https://staging.supermandi.tech/api/v1`)
+- Test each endpoint with `curl -s -o /dev/null -w "%{http_code}" --max-time 5`
+- Endpoints: `POST /pos/auth/send-otp` (200/400), `POST /pos/auth/verify-otp` (200/400), `POST /pos/auth/enroll` (200/400), `GET /pos/store-products/list` (401), `POST /pos/sales/cash` (401), `GET /pos/store-products/freshness` (401), `GET /public/whatsapp-cta-config` (200), `GET /health` (200)
+- Accept 200, 400, 401 as VALID (reachable). FAIL on 000 (refused), 502, 503, 504 (down)
+- Print colored PASS/FAIL per endpoint. Exit 0 (all pass) or 1 (any fail)
+- Integrate into APK pre-build gate (0700) and CI pipeline
+
+**Files to modify**: New `scripts/gates/pos-api-gate.sh`
+**12-Layer Verification**: L5 API ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0721 — HIGH: Retailer web backend URL gate — verify all retailer API endpoints (HIGH)
+
+**Ticket ID**: GCP-STG-0721
+**Severity**: P1 HIGH
+**Platforms**: RETAILER-WEB
+**Layers**: GCP Parity, Business
+**Source**: Backend URL Connectivity Gates
+
+**Problem**: Retailer portal can build and deploy while backend auth/products/orders endpoints are down. Users would see login page but OTP/registration would fail.
+
+**Fix**: Create `scripts/gates/retailer-api-gate.sh`:
+- Accept `$API_BASE_URL` (default: staging URL)
+- Endpoints: `POST /retailer-admin/auth/login` (200/400), `GET /retailer-admin/products` (401), `POST /retailer-admin/auth/register` (200/400), `GET /retailer-admin/purchase-orders` (401), `GET /retailer-admin/settings` (401), `GET /public/whatsapp-cta-config` (200), `GET /health` (200)
+- Same curl + status validation pattern as POS gate
+- Integrate into retailer Docker build + CI
+
+**Files to modify**: New `scripts/gates/retailer-api-gate.sh`
+**12-Layer Verification**: L5 API ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0722 — HIGH: Supplier portal backend URL gate — verify all supplier API endpoints (HIGH)
+
+**Ticket ID**: GCP-STG-0722
+**Severity**: P1 HIGH
+**Platforms**: SUPPLIER-PORTAL
+**Layers**: GCP Parity, Business
+**Source**: Backend URL Connectivity Gates
+
+**Problem**: Supplier portal can deploy while supplier auth/products/orders endpoints are down.
+
+**Fix**: Create `scripts/gates/supplier-api-gate.sh`:
+- Endpoints: `POST /supplier/auth/login` (200/400), `GET /supplier/products` (401), `POST /supplier/auth/register` (200/400), `GET /supplier/orders` (401), `GET /health` (200)
+- Same validation pattern. Integrate into supplier Docker build + CI.
+
+**Files to modify**: New `scripts/gates/supplier-api-gate.sh`
+**12-Layer Verification**: L5 API ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0723 — HIGH: SuperAdmin backend URL gate — verify all admin API endpoints (HIGH)
+
+**Ticket ID**: GCP-STG-0723
+**Severity**: P1 HIGH
+**Platforms**: SUPERADMIN
+**Layers**: GCP Parity, Business
+**Source**: Backend URL Connectivity Gates
+
+**Problem**: SuperAdmin portal can deploy while admin auth/stores/applications endpoints are down.
+
+**Fix**: Create `scripts/gates/superadmin-api-gate.sh`:
+- Endpoints: `POST /admin/auth/send-otp` (200/400), `GET /admin/stores` (401), `GET /admin/applications` (401), `GET /admin/catalog/products` (401), `GET /admin/analytics/overview` (401), `GET /health` (200)
+- Same validation pattern. Integrate into superadmin Docker build + CI.
+
+**Files to modify**: New `scripts/gates/superadmin-api-gate.sh`
+**12-Layer Verification**: L5 API ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0724 — MEDIUM: Unified backend URL gate for CD — all platforms post-deploy (MEDIUM)
+
+**Ticket ID**: GCP-STG-0724
+**Severity**: P2 MEDIUM
+**Platforms**: ALL
+**Layers**: GCP Parity, Business
+**Source**: Backend URL Connectivity Gates
+
+**Problem**: After Cloud Run deploy, need to verify ALL routes are accessible through load balancer + API gateway routing. Individual platform gates run pre-build but don't test the full production routing chain.
+
+**Fix**: Create `scripts/gates/all-api-gate.sh`:
+- Combines all 4 platform gates against `https://staging.supermandi.tech`
+- Verifies path-based routing: `/api/v1/*` → gateway → backend, `/retailer/*`, `/supplier/*`, `/admin/*`, `/` (landing)
+- ~25 total endpoint checks across all platforms
+- Auto-rollback trigger if >2 endpoints fail
+- Structured JSON output for monitoring integration
+- Integrate into deploy.yml as post-deploy step
+
+**Files to modify**: New `scripts/gates/all-api-gate.sh`, `.github/workflows/deploy.yml`
+**12-Layer Verification**: L5 API ✅, L9 GCP ✅
+
+---
+
+<!-- next ticket: GCP-STG-0725 -->
