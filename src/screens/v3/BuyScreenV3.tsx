@@ -316,6 +316,12 @@ export default function BuyScreenV3() {
       <View style={styles.buyHero}>
         <Text style={styles.buyHeroLabel}>🛒 PROCUREMENT</Text>
         <Text style={styles.buyHeroSub}>{cartItemCount > 0 ? `${cartItemCount} items · ₹${Math.round(cartTotal / 100).toLocaleString("en-IN")}` : 'Browse & order from suppliers'}</Text>
+        {/* GCP-STG-0556: PTR Wholesale pricing mode indicator */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+          <View style={{ backgroundColor: colors.successSoft, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: colors.success }}>PTR WHOLESALE</Text>
+          </View>
+        </View>
       </View>
 
       {/* V3-FIX-076: Real search input */}
