@@ -8,6 +8,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import SupplierProductCardV3, { type SupplierProduct } from "../../components/v3/SupplierProductCardV3";
 import ProductDetailSheetV3 from "../../components/v3/ProductDetailSheetV3";
+import VoiceOverlayV3 from "../../components/v3/VoiceOverlayV3";
 import ProductTileV3, { type ProductTileData } from "../../components/v3/ProductTileV3";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -109,6 +110,8 @@ export default function BuyScreenV3() {
   const [serverSearchResults, setServerSearchResults] = useState<SupplierProduct[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // GCP-STG-0562: Voice overlay state for BUY screen
+  const [voiceVisible, setVoiceVisible] = useState(false);
   // V3-FIX-175: Procurement checkout state
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [paymentMode, setPaymentMode] = useState<"UPI" | "BANK" | "BNPL" | "CREDIT" | "CASH" | "CARD">("CASH");
@@ -330,11 +333,8 @@ export default function BuyScreenV3() {
           <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth={2}><Circle cx={11} cy={11} r={8} /><Path d="M21 21l-4.35-4.35" /></Svg>
           <TextInput ref={searchInputRef} style={styles.searchTextInput} value={searchQuery} onChangeText={setSearchQuery} placeholder="Search supplier products..." placeholderTextColor={colors.textTertiary} testID="buy-search-input" />
         </View>
-        {/* GCP-STG-0560: Voice search — focuses search input so OS keyboard mic is accessible */}
-        <Pressable style={styles.scanBtn} accessibilityLabel="Voice search" onPress={() => {
-          searchInputRef.current?.focus();
-          Alert.alert("Voice Search", "Tap the microphone on your keyboard to speak your search.", [{ text: "OK" }]);
-        }}>
+        {/* GCP-STG-0562: Voice search — opens full VoiceOverlayV3 with Whisper STT */}
+        <Pressable style={styles.scanBtn} accessibilityLabel="Voice search" onPress={() => setVoiceVisible(true)}>
           <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}>
             <Path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
             <Path d="M19 10v2a7 7 0 0 1-14 0v-2" />
@@ -518,6 +518,25 @@ export default function BuyScreenV3() {
           }}
         />
       ) : null}
+
+      {/* GCP-STG-0562: Voice overlay — same VoiceOverlayV3 as SELL screen */}
+      <VoiceOverlayV3
+        visible={voiceVisible}
+        onClose={() => setVoiceVisible(false)}
+        onProductMatched={(name, qty) => {
+          // Voice match → add to PURCHASE cart with MOQ enforcement
+          const match = products.find((p) => p.name.toLowerCase() === name.toLowerCase())
+            ?? products.find((p) => p.name.toLowerCase().includes(name.toLowerCase()));
+          if (match) {
+            const moq = match.moq ?? 1;
+            const finalQty = Math.max(qty || moq, moq);
+            handleQtyChange(match.id, finalQty);
+            showToast(`${match.name} ×${finalQty} cases added via voice`);
+          } else {
+            showToast(`"${name}" not in supplier catalog — try search`);
+          }
+        }}
+      />
 
       {/* Purchase cart strip */}
       {cartItemCount > 0 ? (
