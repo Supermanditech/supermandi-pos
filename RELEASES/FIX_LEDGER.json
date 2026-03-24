@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1018,
+  "version": 1020,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -27938,6 +27938,49 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T19:54:01.677Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0637",
+      "file": "scripts/gcp/create-error-alerts.sh",
+      "start_line": 1,
+      "end_line": 99,
+      "checksum": "75f0951147124f32",
+      "description": "5xx error rate alerting script for all 6 Cloud Run services with 5% threshold, 5-min window, runbook docs",
+      "test_file": "backend/tests/gcp-stg-0637.error-alerts-script.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T19:59:26.851Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "N/A — infrastructure script, no business logic changes",
+        "business_behaviour": "N/A — gcloud alerting script, no user workflow impact",
+        "impacted_files": "scripts/gcp/create-error-alerts.sh + test file",
+        "fix_ledger_check": "570 fixes intact, zero drift",
+        "no_agent_conflict": "Single agent, no parallel modifications"
+      }
     }
   ],
   "machine_state_version": 270,
