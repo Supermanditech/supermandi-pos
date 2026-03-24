@@ -39,7 +39,9 @@ export type PosEventType =
   // STG-383: Void/refund
   | "SALE_VOIDED"
   // GCP-STG-0536: Label printing
-  | "PRINT_LABEL";
+  | "PRINT_LABEL"
+  // GCP-STG-0567: Voice command analytics
+  | "VOICE_COMMAND";
 
 type QueuedPosEvent = {
   id: string; // local event id (not stored in DB, included inside payload for reconciliation)

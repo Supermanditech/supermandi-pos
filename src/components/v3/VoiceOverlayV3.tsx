@@ -17,6 +17,8 @@ import { useProductsStore } from "../../stores/productsStore";
 import { useCartStore } from "../../stores/cartStore";
 import { buildCartItemFromVoice, buildCartItem } from "../../services/cartPayload";
 import { logger } from "../../services/logger";
+// GCP-STG-0567: Voice analytics event
+import { logPosEvent } from "../../services/cloudEventLogger";
 
 // V3-003: Voice overlay wired to real voice services
 // V3-FIX-120: Voice confirm now adds to cart through canonical builder
@@ -135,12 +137,22 @@ export default function VoiceOverlayV3({ visible, onClose, onProductMatched }: V
         setState("error");
         showToast(result.message || "Could not match product — try again");
       }
+      // GCP-STG-0567: Fire voice analytics event (fire-and-forget)
+      void logPosEvent("VOICE_COMMAND", {
+        action: intent?.action,
+        success: !!result.success,
+        language: voiceLocale,
+        transcript: result.transcript,
+        matched: !!productName,
+      });
     } catch (err) {
       if (err instanceof VoiceTimeoutError) {
         showToast("Voice timed out");
       }
       setState("error");
       logger.debug("VoiceV3", `submit_failed:${String(err)}`);
+      // GCP-STG-0567: Log failed voice attempt
+      void logPosEvent("VOICE_COMMAND", { success: false, error: String(err) });
     }
   }, []);
 

@@ -6821,8 +6821,8 @@
       "ticket": "STG-558",
       "file": "src/components/v3/VoiceOverlayV3.tsx",
       "start_line": 1,
-      "end_line": 300,
-      "checksum": "c4dde6bbbce20183",
+      "end_line": 310,
+      "checksum": "493b8e160881c947",
       "description": "Voice overlay v3 — mic pulse, transcript, match confirm, Hindi+English",
       "test_file": "src/__tests__/screens/voice-v3.stg-558.test.ts",
       "depends_on": null,
@@ -10462,8 +10462,8 @@
     {
       "ticket": "GCP-STG-0027",
       "file": "src/components/v3/VoiceOverlayV3.tsx",
-      "start_line": 226,
-      "end_line": 237,
+      "start_line": 238,
+      "end_line": 249,
       "checksum": "754fd708c8b0107d",
       "description": "Voice match result shows estimated price + Add button has ✓ prefix",
       "test_file": "src/__tests__/components/voiceOverlay.gcp-stg-0027.test.ts",
@@ -10497,7 +10497,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T12:21:48.049Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T17:27:43.190Z"
+      "line_shifted_at": "2026-03-24T17:33:29.124Z"
     },
     {
       "ticket": "GCP-STG-0028",
@@ -26980,8 +26980,8 @@
     {
       "ticket": "GCP-STG-0563",
       "file": "src/components/v3/VoiceOverlayV3.tsx",
-      "start_line": 73,
-      "end_line": 83,
+      "start_line": 75,
+      "end_line": 85,
       "checksum": "cd37f395bbc4888c",
       "description": "Offline check before voice recording — shows error + toast if not online",
       "test_file": "src/components/v3/__tests__/VoiceOverlayV3.test.tsx",
@@ -27024,7 +27024,7 @@
         "fix_ledger_check": "fix-guard check passes — 550 fixes, zero drift",
         "no_agent_conflict": "Single agent — no parallel modifications"
       },
-      "line_shifted_at": "2026-03-24T17:27:43.307Z"
+      "line_shifted_at": "2026-03-24T17:33:29.267Z"
     },
     {
       "ticket": "GCP-STG-0563",
