@@ -330,8 +330,11 @@ export default function BuyScreenV3() {
           <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth={2}><Circle cx={11} cy={11} r={8} /><Path d="M21 21l-4.35-4.35" /></Svg>
           <TextInput ref={searchInputRef} style={styles.searchTextInput} value={searchQuery} onChangeText={setSearchQuery} placeholder="Search supplier products..." placeholderTextColor={colors.textTertiary} testID="buy-search-input" />
         </View>
-        {/* GCP-STG-0560: Voice search microphone button (placeholder — recognition wired later) */}
-        <Pressable style={styles.scanBtn} accessibilityLabel="Voice search" onPress={() => { /* placeholder: voice search not yet wired */ }}>
+        {/* GCP-STG-0560: Voice search — focuses search input so OS keyboard mic is accessible */}
+        <Pressable style={styles.scanBtn} accessibilityLabel="Voice search" onPress={() => {
+          searchInputRef.current?.focus();
+          Alert.alert("Voice Search", "Tap the microphone on your keyboard to speak your search.", [{ text: "OK" }]);
+        }}>
           <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth={2}>
             <Path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
             <Path d="M19 10v2a7 7 0 0 1-14 0v-2" />
