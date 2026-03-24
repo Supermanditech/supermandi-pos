@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1031,
+  "version": 1032,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -28343,6 +28343,49 @@
         "test_guard": "Script is self-testing gate",
         "single_commit": "fix(GCP-STG-0710): add superadmin pre-build gate",
         "ticket_parked": "Will be parked after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0714",
+      "file": "scripts/gates/test-count-check.sh",
+      "start_line": 1,
+      "end_line": 28,
+      "checksum": "6eea6f7c97f81c27",
+      "description": "CI regression detection - test count must not decrease below minimums",
+      "test_file": "scripts/gates/test-count-check.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T20:29:50.713Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "Shell gate script only — no domain logic affected",
+        "business_behaviour": "CI gate script — does not alter user workflows",
+        "impacted_files": "scripts/gates/test-count-check.sh + FIX_LEDGER.json",
+        "fix_ledger_check": "Zero drift confirmed",
+        "no_agent_conflict": "Single agent session"
       }
     }
   ],
