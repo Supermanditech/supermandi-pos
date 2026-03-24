@@ -14838,4 +14838,195 @@ Option 3 is safest — test files don't need to be type-checked during productio
 
 ---
 
-<!-- next ticket: GCP-STG-0549 -->
+## GCP-STG-0549 — MEDIUM: Default PIN "1234" on POS enrollment — force PIN change on first staff login (MEDIUM)
+
+**Ticket ID**: GCP-STG-0549
+**Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: Backend, Business, UI, UX
+**Source**: Comprehensive Auth Audit — AUDIT AA + AUDIT DD
+
+**Problem**: `backend/src/routes/v1/pos/enroll.ts:659` hardcodes `const defaultPin = "1234"` for the auto-created MANAGER staff on first device enrollment. While the PIN is bcrypt-hashed (10 rounds) and only created if no staff exist (line 629-632), every new store starts with the same known PIN. An attacker who obtains a valid enrollment code could gain MANAGER access with the default PIN.
+
+**Current behavior**:
+1. Device enrolls → auto-creates MANAGER staff with PIN "1234" (bcrypt hashed)
+2. Staff can login immediately with "1234" — no prompt to change
+3. PIN stays "1234" forever unless manually changed via SuperAdmin portal
+
+**Mitigations already in place**:
+- Enrollment rate-limited: 3/min + 10/15min + 20/day per store (enroll.ts:20-44)
+- PIN bcrypt-hashed (not stored plaintext)
+- Staff login has 5-attempt lockout (staff.ts:94-106)
+
+**Fix** (implement ALL of these):
+
+### 1. Generate random 6-digit PIN instead of "1234"
+```typescript
+// enroll.ts:659 — replace hardcoded PIN
+const defaultPin = String(Math.floor(100000 + Math.random() * 900000)); // 6-digit random
+```
+
+### 2. Send random PIN to store owner via WhatsApp + SMS
+After creating the staff entry, send the generated PIN to the store owner's phone:
+```typescript
+// After staff INSERT succeeds
+await sendWhatsAppMessage(ownerPhone, `Your POS Manager PIN is: ${defaultPin}. Please change it after first login.`);
+// SMS fallback if WhatsApp fails
+await sendSms(ownerPhone, `SuperMandi POS Manager PIN: ${defaultPin}. Change after login.`);
+```
+
+### 3. Force PIN change on first login (backend)
+Add a `must_change_pin` boolean column to `platform.store_staff`:
+- Default `TRUE` for auto-created staff
+- After PIN change → set to `FALSE`
+- On staff login, if `must_change_pin = TRUE`, return `{ requiresPinChange: true }` in response
+
+### 4. Force PIN change on first login (POS frontend)
+In `StaffLoginScreenV3.tsx`, after successful PIN verification:
+- If `response.requiresPinChange === true`, navigate to a "Change PIN" screen
+- Show: "Your default PIN must be changed for security. Enter a new PIN."
+- New PIN input (6 digits, no sequential/repeated digits like 123456 or 111111)
+- Confirm PIN input (must match)
+- Call `PATCH /pos/staff/:id/change-pin` → update PIN hash + set `must_change_pin = FALSE`
+- Only THEN allow access to POS screens
+
+### 5. PIN strength validation
+Reject weak PINs on create + change:
+- No sequential digits: 1234, 4321, 123456
+- No repeated digits: 1111, 0000, 222222
+- No common patterns: 0000, 9999
+
+### 6. Migration
+```sql
+-- Migration 242: Add must_change_pin column
+ALTER TABLE platform.store_staff ADD COLUMN must_change_pin BOOLEAN NOT NULL DEFAULT FALSE;
+-- Backfill: mark any staff with pin matching bcrypt("1234") as must_change_pin = TRUE
+-- (Can't reverse bcrypt, so mark ALL staff created before this migration)
+UPDATE platform.store_staff SET must_change_pin = TRUE
+  WHERE created_at < NOW() AND role = 'MANAGER';
+```
+
+**Files to modify**:
+- `backend/src/routes/v1/pos/enroll.ts` — random PIN + WhatsApp delivery
+- `backend/src/routes/v1/pos/staff.ts` — return `requiresPinChange` on login, add change-pin endpoint
+- `src/screens/v3/StaffLoginScreenV3.tsx` — force PIN change flow
+- New `src/screens/v3/ChangePinScreenV3.tsx` — PIN change UI
+- New migration 242: `must_change_pin` column
+
+**Test Requirements**:
+- Behavioral (backend): supertest POST /staff/login with must_change_pin=true → response includes requiresPinChange
+- Behavioral (backend): supertest PATCH /staff/:id/change-pin → PIN updated, must_change_pin=false
+- Behavioral (backend): weak PIN rejected (1234, 0000, 123456)
+- Unit: random PIN generator produces 6-digit numeric string, never "1234"
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅, L5 API ✅, L6 Backend ✅, L7 DB ✅, L8 Migrations ✅, L10 Business ✅, L12 Store Isolation ✅
+
+---
+
+## GCP-STG-0550 — LOW: SuperAdmin has no forgot-password flow — OTP-only recovery (LOW)
+
+**Ticket ID**: GCP-STG-0550
+**Severity**: P3 LOW
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: Backend, UI, UX
+**Source**: Comprehensive Auth Audit — AUDIT CC
+
+**Problem**: SuperAdmin portal has email OTP login AND password login (GCP-STG-0471/0538), but NO forgot-password flow. If a SuperAdmin sets a password and then forgets it, the only recovery path is email OTP login. While this works, it creates a confusing UX — the password login form shows "Invalid password" with no "Forgot password?" link.
+
+**Current state**:
+- `POST /admin/auth/set-password` exists (adminAuth.ts:614) — sets password with JWT auth
+- `POST /admin/auth/login-password` exists (adminAuth.ts:672) — password login with lockout
+- No `POST /admin/auth/forgot-password` or reset flow
+- LoginGate.tsx shows OTP toggle but no "Forgot password?" link in password mode
+
+**Why this is LOW (not MEDIUM)**:
+- Email OTP login always works as fallback — admin is NEVER locked out
+- Admin email allowlist means only authorized users can even attempt login
+- Only 1-3 admin users total — can coordinate out-of-band
+
+**Fix**:
+
+### 1. Add "Forgot password?" link in LoginGate.tsx (password mode)
+When `authMode === 'password'`, show a link: "Forgot password? Use OTP login instead"
+- On click: switch `authMode` to `'otp'` (no API call needed)
+- This is the simplest, most secure approach — no new reset flow needed
+
+### 2. Add "Reset password" option after OTP login
+After successful OTP login, if admin has a password set:
+- Show optional "Reset your password" link in settings
+- Clicking it navigates to set-password form (reuses existing `POST /admin/auth/set-password`)
+- Requires current JWT (already authenticated via OTP)
+
+### 3. Optional: Add password reset via OTP verification
+If a more formal flow is desired:
+- `POST /admin/auth/forgot-password` — sends OTP to admin email
+- `POST /admin/auth/reset-password` — verifies OTP + sets new password in one step
+- Rate-limited: same as send-email-otp (5/min/IP)
+- Allowlist enforced
+
+**Files to modify**:
+- `supermandi-superadmin/src/components/LoginGate.tsx` — "Forgot password?" link
+- `supermandi-superadmin/src/tabs/SettingsTab.tsx` — "Reset password" option (optional)
+- `backend/src/routes/v1/admin/adminAuth.ts` — forgot-password endpoint (optional)
+
+**Test Requirements**:
+- Behavioral: render LoginGate in password mode, verify "Forgot password?" link exists
+- Behavioral: click link, verify authMode switches to 'otp'
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0551 — MEDIUM: Supplier duplicate phone allows unlimited DRAFT applications (MEDIUM)
+
+**Ticket ID**: GCP-STG-0551
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND, SUPPLIER-PORTAL
+**Layers**: Backend, Business, DB
+**Source**: Comprehensive Auth Audit — AUDIT BB
+
+**Problem**: `supplier-portal/src/app/register/page.tsx:239` calls `lookupSupplierRegistration()` which returns the next step for an existing phone. But if the lookup returns `not_onboarded` (no existing application), the user can submit a new application. If the backend doesn't enforce uniqueness on phone number across DRAFT/PENDING applications, an attacker could create unlimited DRAFT applications with the same phone — filling the applications table and creating noise for SuperAdmin reviewers.
+
+**Current mitigations**:
+- `lookupSupplierRegistration()` checks existing status (line 118-145)
+- If `PENDING_APPROVAL` → shows "under review" (blocks re-registration)
+- If `INCOMPLETE` → allows resumption
+
+**Potential gap**: If an attacker:
+1. Starts registration → creates DRAFT application
+2. Abandons before submit
+3. Clears sessionStorage
+4. Starts again → new DRAFT created (old one still in DB)
+5. Repeat → N DRAFT applications
+
+**Fix**:
+1. **Backend**: On `POST /supplier/registration/submit`, check for existing non-REJECTED applications with same phone:
+   ```sql
+   SELECT id FROM supplier.applications
+   WHERE phone = $1 AND status NOT IN ('REJECTED', 'WITHDRAWN')
+   LIMIT 1
+   ```
+   If found → return 409 "Application already exists for this phone number"
+
+2. **Database constraint**: Add partial unique index:
+   ```sql
+   CREATE UNIQUE INDEX idx_supplier_app_phone_active
+   ON supplier.applications (phone)
+   WHERE status NOT IN ('REJECTED', 'WITHDRAWN');
+   ```
+
+3. **Cleanup job**: Expire DRAFT applications older than 7 days (optional, reduces noise)
+
+**Files to modify**:
+- `backend/src/routes/v1/supplier/registration.ts` — add duplicate phone check on submit
+- New migration 242 (or 243): partial unique index on supplier.applications(phone)
+
+**Test Requirements**:
+- Behavioral: supertest POST /supplier/registration/submit with duplicate phone → 409
+- Behavioral: REJECTED application → allows re-registration (no conflict)
+
+**12-Layer Verification**: L6 Backend ✅, L7 DB ✅, L8 Migrations ✅, L10 Business ✅, L12 Store Isolation ✅
+
+---
+
+<!-- next ticket: GCP-STG-0552 -->
