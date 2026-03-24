@@ -15892,4 +15892,406 @@ Also update `app.json`:
 
 ---
 
-<!-- next ticket: GCP-STG-0578 -->
+## GCP-STG-0578 — MEDIUM: Add HEALTHCHECK to SuperAdmin + Landing nginx Dockerfiles (MEDIUM)
+
+**Ticket ID**: GCP-STG-0578
+**Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN, LANDING
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 2
+
+**Problem**: Backend, API Gateway, and Supplier Portal Dockerfiles have `HEALTHCHECK` directives. SuperAdmin and Landing Page Dockerfiles (nginx-based) do NOT. Cloud Run uses health checks for readiness probes — without them, unhealthy containers may receive traffic.
+
+**Fix**: Add to both `supermandi-superadmin/Dockerfile` and `supermandi-landing/Dockerfile`:
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
+```
+
+**Files to modify**: `supermandi-superadmin/Dockerfile`, `supermandi-landing/Dockerfile`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0579 — LOW: Prune 25 stale merged git branches (LOW)
+
+**Ticket ID**: GCP-STG-0579
+**Severity**: P3 LOW
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 9
+
+**Problem**: 25 branches merged into main but not deleted. Clutters branch list.
+
+**Fix**: `git branch --merged main | grep -v "main\|master\|\*" | xargs git branch -d`
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0580 — LOW: Gitignore 82 screenshot PNGs from repo root (LOW)
+
+**Ticket ID**: GCP-STG-0580
+**Severity**: P3 LOW
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 11
+
+**Problem**: 82 .png screenshot files in repo root (~10MB). These are test/debug screenshots that bloat the repo and Docker images.
+
+**Fix**: Add `*.png` to root `.gitignore`. Move existing PNGs to `screenshots/` directory (gitignored). Or `git rm --cached *.png` to untrack without deleting.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0581 — MEDIUM: Add Docker build verification gate to CI pipeline (MEDIUM)
+
+**Ticket ID**: GCP-STG-0581
+**Severity**: P2 MEDIUM
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 10
+
+**Problem**: CI gates (`ci-gates.yml`) run typecheck + tests + lint but do NOT verify Docker builds. A Dockerfile syntax error or missing build context would only be caught during deploy — too late.
+
+**Fix**: Add a `docker-build` job to `ci-gates.yml` that runs `docker build` for all 6 Dockerfiles (no push — just verify they build). Use `--target builder` for multi-stage builds to save time.
+
+**Files to modify**: `.github/workflows/ci-gates.yml`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0582 — MEDIUM: Add npm audit gate to CI — block critical/high vulnerabilities (MEDIUM)
+
+**Ticket ID**: GCP-STG-0582
+**Severity**: P2 MEDIUM
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 10
+
+**Problem**: No `npm audit` in CI. Dependabot flags 63 vulnerabilities (45 high) on GitHub but nothing blocks merges.
+
+**Fix**: Add `security-audit` job to `ci-gates.yml`:
+```yaml
+- run: npm audit --production --audit-level=critical
+  working-directory: backend
+```
+Block on CRITICAL only (HIGH as warnings). Run for all 5 platforms.
+
+**Files to modify**: `.github/workflows/ci-gates.yml`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0583 — MEDIUM: Add post-deploy automated smoke test to CD pipeline (MEDIUM)
+
+**Ticket ID**: GCP-STG-0583
+**Severity**: P2 MEDIUM
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 5 + Section 10
+
+**Problem**: After deploy, there's no automated check that all 5 URL paths return 200. `deploy-verify.yml` exists but is manual-only (`workflow_dispatch`).
+
+**Fix**: Add a `smoke-test` job at the end of `deploy.yml` that:
+```bash
+for url in / /api/v1/admin/health /retailer/ /supplier/ /admin/; do
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://staging.supermandi.tech${url}")
+  if [ "$STATUS" != "200" ]; then echo "FAIL: $url returned $STATUS"; exit 1; fi
+done
+```
+
+**Files to modify**: `.github/workflows/deploy.yml`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0584 — MEDIUM: SMS provider production config + SMS_DISABLED toggle documentation (MEDIUM)
+
+**Ticket ID**: GCP-STG-0584
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 6
+
+**Problem**: `SMS_DISABLED=true` is set but not documented as a permanent architectural decision. If someone enables SMS in production without configuring MSG91/Twilio, the fallback path would crash or silently fail.
+
+**Fix**: Document in `.env.cloudrun.example` and `RELEASES/RELEASE_POLICY.md` that SMS is permanently disabled. Add env var validation: if `SMS_DISABLED=false` but no `SMS_PROVIDER_API_KEY`, fail fast at startup.
+
+**Files to modify**: `backend/.env.cloudrun.example`, `backend/src/services/smsService.ts`
+**12-Layer Verification**: L6 Backend ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0585 — MEDIUM: JWT_SECRET rotation documentation + add JWT_SECRET_PREVIOUS to env template (MEDIUM)
+
+**Ticket ID**: GCP-STG-0585
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 6
+
+**Problem**: GCP-STG-0480 implemented dual-secret JWT rotation (`JWT_SECRET` + `JWT_SECRET_PREVIOUS`), but `JWT_SECRET_PREVIOUS` is NOT in the deploy.yml `--set-secrets` list. First rotation will require manual Secret Manager + deploy config update.
+
+**Fix**: Add `JWT_SECRET_PREVIOUS` to deploy.yml `--set-secrets` (initially empty/same as JWT_SECRET). Document rotation procedure in `.env.cloudrun.example`.
+
+**Files to modify**: `.github/workflows/deploy.yml`, `backend/.env.cloudrun.example`
+**12-Layer Verification**: L6 Backend ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0586 — LOW: Add ROLLBACK comments to ~10 early migrations (000-023) (LOW)
+
+**Ticket ID**: GCP-STG-0586
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: DB
+**Source**: GCP Deployment Readiness Audit — Section 3
+
+**Problem**: ~10 migrations in the 000-023 range don't have ROLLBACK comments. These are early-era migrations that predate the Zero-Regression protocol. While they've already been applied to staging DB, the missing comments violate the ROLLBACK documentation standard.
+
+**Fix**: Add `-- ROLLBACK: DROP TABLE/INDEX/COLUMN IF EXISTS ...` comments to each migration file.
+
+**12-Layer Verification**: L7 DB ✅
+
+---
+
+## GCP-STG-0587 — LOW: Clean up 943 prestage tags — keep latest 50 (LOW)
+
+**Ticket ID**: GCP-STG-0587
+**Severity**: P3 LOW
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 9
+
+**Problem**: 943 `prestage-*` tags in the repo. These were created for every ticket during the pre-staging implementation cycle. They clutter `git tag` output and slow down tag operations.
+
+**Fix**: Delete all but the latest 50 tags: `git tag -l 'prestage-*' | sort | head -893 | xargs git tag -d && git push origin --delete $(...)`. Keep the most recent 50 for rollback reference.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0588 — LOW: Increment APK versionCode + versionName for release (LOW)
+
+**Ticket ID**: GCP-STG-0588
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 12
+
+**Problem**: `versionCode=1` and `versionName="1.0.1"` in build.gradle. Play Store requires incrementing versionCode for every upload. With 574 tickets of changes since 1.0.1, this should be 1.1.0 or 2.0.0.
+
+**Fix**: Update `android/app/build.gradle` versionCode to 2, versionName to "1.1.0". Also update `app.json` version to "1.1.0".
+
+**Files to modify**: `android/app/build.gradle`, `app.json`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0589 — MEDIUM: Add automated E2E smoke test to CI (replace manual maestro) (MEDIUM)
+
+**Ticket ID**: GCP-STG-0589
+**Severity**: P2 MEDIUM
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 10
+
+**Problem**: `maestro-e2e.yml` is manual-only (`workflow_dispatch`). No automated E2E tests run in CI. A broken screen or navigation could ship to staging without being caught.
+
+**Fix**: Add a lightweight smoke E2E job to CI that runs Playwright against the production build outputs (retailer-admin, supplier-portal, superadmin). For POS, use the existing Jest tests as a proxy.
+
+**Files to modify**: `.github/workflows/ci-gates.yml`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0590 — LOW: Verify RECORD_AUDIO runtime permission request on POS (LOW)
+
+**Ticket ID**: GCP-STG-0590
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, Business
+**Source**: GCP Deployment Readiness Audit — Section 12
+
+**Problem**: AndroidManifest declares `RECORD_AUDIO` but need to verify the runtime permission request flow works correctly — Android requires runtime permission dialogs for dangerous permissions (RECORD_AUDIO is dangerous).
+
+**Fix**: Verify `voicePermissions.ts` uses `Audio.requestPermissionsAsync()` which triggers the Android runtime dialog. Test on device: first voice tap should show "Allow SuperMandi POS to record audio?" dialog.
+
+**Files to modify**: Verification only — `src/services/voice/voicePermissions.ts` (already implemented, just verify)
+**12-Layer Verification**: L1 UI ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0591 — MEDIUM: Add INVOICE_SIGNING_KEY to deploy.yml secrets (MEDIUM)
+
+**Ticket ID**: GCP-STG-0591
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 6
+
+**Problem**: `INVOICE_SIGNING_KEY` is used for HMAC signing of invoice PDFs but is NOT in the deploy.yml `--set-secrets` or `--set-env-vars` list. Invoices may fail to generate with correct signature on staging.
+
+**Fix**: Add `INVOICE_SIGNING_KEY` to Secret Manager and deploy.yml `--set-secrets`. If not yet needed (invoicing disabled), add as placeholder with documentation.
+
+**Files to modify**: `.github/workflows/deploy.yml`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0592 — MEDIUM: Add DB_POOL_MAX + MAX_COMMISSION_PERCENT to deploy.yml env vars (MEDIUM)
+
+**Ticket ID**: GCP-STG-0592
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 6
+
+**Problem**: `DB_POOL_MAX` (GCP-STG-0365: set to 10 for Cloud Run) and `MAX_COMMISSION_PERCENT` (business config: default 30) are not in the deploy.yml env vars. They fall back to code defaults which may not match production intent.
+
+**Fix**: Add to deploy.yml `--set-env-vars`:
+```
+DB_POOL_MAX=10
+MAX_COMMISSION_PERCENT=30
+```
+
+**Files to modify**: `.github/workflows/deploy.yml`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0593 — LOW: PhonePe API integration — wire actual endpoints (LOW)
+
+**Ticket ID**: GCP-STG-0593
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, Business
+**Source**: GCP Deployment Readiness Audit — Section 8
+
+**Problem**: PhonePe payment abstraction exists in codebase but actual API endpoints are not integrated. PhonePe is planned for B2B supplier payments — not blocking for initial launch but needed for settlement payouts.
+
+**Fix**: Wire PhonePe Standard Checkout API for supplier settlement payouts. Requires PhonePe merchant credentials (PHONEPE_MERCHANT_ID, PHONEPE_SALT_KEY).
+
+**12-Layer Verification**: L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0594 — LOW: PineLabs POS terminal integration — wire actual endpoints (LOW)
+
+**Ticket ID**: GCP-STG-0594
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Business
+**Source**: GCP Deployment Readiness Audit — Section 8
+
+**Problem**: PineLabs POS terminal abstraction exists but API not wired. PineLabs is planned for in-store card/UPI terminal integration — not blocking for initial WhatsApp-OTP POS launch.
+
+**Fix**: Wire PineLabs Plutus API for card + UPI terminal payments at physical POS counter. Requires PineLabs merchant credentials.
+
+**12-Layer Verification**: L10 Business ✅
+
+---
+
+## GCP-STG-0595 — MEDIUM: Create Cloud SQL backup script for pre-migration safety (MEDIUM)
+
+**Ticket ID**: GCP-STG-0595
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: DB, GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 13
+
+**Problem**: 56 new migrations (188-243) need to be applied to staging DB. Before running, a Cloud SQL backup should be taken as a rollback safety net. No automated backup script exists.
+
+**Fix**: Create `scripts/backup-cloudsql.sh`:
+```bash
+gcloud sql backups create --instance=supermandi-staging --description="Pre-migration backup $(date +%Y%m%d_%H%M)"
+```
+Add to deploy.yml as a pre-migration step.
+
+**Files to modify**: New `scripts/backup-cloudsql.sh`, `.github/workflows/deploy.yml`
+**12-Layer Verification**: L7 DB ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0596 — MEDIUM: Create migration dry-run script for pre-deploy validation (MEDIUM)
+
+**Ticket ID**: GCP-STG-0596
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: DB, GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 3 + Section 13
+
+**Problem**: 56 pending migrations need validation before deploy. Need a script that: lists pending migrations, checks SQL syntax, verifies no destructive operations (DROP TABLE), confirms all use IF NOT EXISTS patterns.
+
+**Fix**: Create `scripts/migrate-dry-run.js` that reads pending migrations, validates syntax, and reports. Add to CI as a gate.
+
+**Files to modify**: New `scripts/migrate-dry-run.js`
+**12-Layer Verification**: L7 DB ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0597 — LOW: Verify placeholder migrations (115-117, 158) are safe to re-run (LOW)
+
+**Ticket ID**: GCP-STG-0597
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: DB
+**Source**: GCP Deployment Readiness Audit — Section 3
+
+**Problem**: Migrations 115, 116, 117, 158 are placeholder/intentional-gap files. Need to verify they contain only comments or `SELECT 1` and won't fail on re-run.
+
+**Fix**: Read each file, verify idempotent content. If any have real SQL, ensure IF NOT EXISTS guards.
+
+**12-Layer Verification**: L7 DB ✅
+
+---
+
+## GCP-STG-0598 — LOW: Add test exclusion to .dockerignore for 4 portal platforms (LOW)
+
+**Ticket ID**: GCP-STG-0598
+**Severity**: P3 LOW
+**Platforms**: RETAILER-WEB, SUPPLIER-PORTAL, SUPERADMIN, LANDING
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 2
+
+**Problem**: Backend .dockerignore excludes `__tests__/` and `*.test.*` but the other 4 platforms do NOT. Test files get included in production Docker images unnecessarily.
+
+**Fix**: Add to retailer-admin, supplier-portal, supermandi-superadmin, supermandi-landing .dockerignore:
+```
+__tests__/
+*.test.*
+*.spec.*
+tests/
+```
+
+Note: This overlaps with GCP-STG-0575 but is listed separately for tracking. Can be bundled with 0575.
+
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+## GCP-STG-0599 — MEDIUM: Create post-deploy SHA verification — confirm deployed image matches HEAD (MEDIUM)
+
+**Ticket ID**: GCP-STG-0599
+**Severity**: P2 MEDIUM
+**Platforms**: ALL
+**Layers**: GCP Parity
+**Source**: GCP Deployment Readiness Audit — Section 4
+
+**Problem**: After deploy, need to verify the deployed Docker image SHA matches the intended commit SHA. A stale image cache or failed push could deploy old code.
+
+**Fix**: Add verification step to deploy.yml:
+```bash
+DEPLOYED_SHA=$(curl -s https://staging.supermandi.tech/api/v1/admin/health/detailed | jq -r '.gitSha')
+if [ "$DEPLOYED_SHA" != "$EXPECTED_SHA" ]; then echo "SHA MISMATCH"; exit 1; fi
+```
+The `/health/detailed` endpoint already returns `gitSha` (from GIT_SHA env var).
+
+**Files to modify**: `.github/workflows/deploy.yml`
+**12-Layer Verification**: L9 GCP ✅
+
+---
+
+<!-- next ticket: GCP-STG-0600 -->
