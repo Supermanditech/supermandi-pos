@@ -324,6 +324,7 @@ export interface Supplier {
     bankName?: string;
   };
   bankVerificationStatus?: 'pending' | 'verified' | 'rejected'; // SA-P1-008
+  totpEnabled?: boolean; // GCP-STG-0541: TOTP 2FA status
 }
 
 export interface AuthResponse {

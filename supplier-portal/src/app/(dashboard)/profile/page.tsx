@@ -8,6 +8,8 @@ import { updateSupplierProfile, changePassword } from '@/lib/api';
 // T-113: Breadcrumb navigation
 import Breadcrumb from '@/components/Breadcrumb';
 import { useUnsavedChanges } from '@/hooks/useNavigationSafety';
+// GCP-STG-0541: TOTP 2FA setup card
+import TotpSetupCard from '@/components/TotpSetupCard';
 
 // STG-372: Password strength checklist (parity with forgot-password page)
 function PasswordChecklist({ password }: { password: string }) {
@@ -215,6 +217,9 @@ export default function ProfilePage() {
           {verificationStatusBadge()}
         </div>
       </div>
+
+      {/* GCP-STG-0541: TOTP 2FA setup card */}
+      <TotpSetupCard totpEnabled={supplier?.totpEnabled} />
 
       {/* Tabs — STG-371: Added tablist/tab semantics */}
       <div className="card mb-6 p-0">
