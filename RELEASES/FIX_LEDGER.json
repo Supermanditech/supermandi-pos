@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 966,
+  "version": 967,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -13102,6 +13102,9 @@
       "test_file": "src/__tests__/screens/BarcodeSheetScreen.stg-267.i18n.unit.test.ts",
       "depends_on": null,
       "migration": null,
+      "status": "SUPERSEDED",
+      "superseded_by": "GCP-STG-0536",
+      "superseded_reason": "Imports and header updated with printBarcodeLabel import and label printing state",
       "checklist": {
         "operator_approved": true,
         "ui_elements": true,
@@ -13128,8 +13131,7 @@
         "ticket_parked": true
       },
       "checklist_version": 5,
-      "registered_at": "2026-03-21T20:30:19.885Z",
-      "status": "ACTIVE"
+      "registered_at": "2026-03-21T20:30:19.885Z"
     },
     {
       "ticket": "GCP-STG-0068",
@@ -21251,6 +21253,9 @@
       "test_file": "src/__tests__/screens/barcodeSheetSafeArea.gcp-stg-0448.test.ts",
       "depends_on": null,
       "migration": null,
+      "status": "SUPERSEDED",
+      "superseded_by": "GCP-STG-0536",
+      "superseded_reason": "Screen body expanded with Print Label/Print All buttons, safe area insets preserved",
       "checklist": {
         "ui_elements": true,
         "ux_states": true,
@@ -21274,8 +21279,7 @@
         "ticket_parked": true
       },
       "checklist_version": 5,
-      "registered_at": "2026-03-23T14:57:09.031Z",
-      "status": "ACTIVE"
+      "registered_at": "2026-03-23T14:57:09.031Z"
     },
     {
       "ticket": "GCP-STG-0450",
@@ -24705,7 +24709,9 @@
       "description": "Barcode label printing stub — printBarcodeLabel function",
       "test_file": "N/A",
       "registered_at": "2026-03-23T22:07:38.672Z",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
+      "superseded_by": "GCP-STG-0536",
+      "superseded_reason": "Stub replaced with real ESC/POS label printing implementation",
       "checklist": {
         "ui_elements": "N/A",
         "ux_states": "N/A",
@@ -25987,9 +25993,157 @@
         "parity_scanned": "28 files updated, all imports verified",
         "parity_fixed": "No parity gaps found"
       }
+    },
+    {
+      "ticket": "GCP-STG-0536",
+      "file": "src/services/printer/escPosBarcode.ts",
+      "start_line": 1,
+      "end_line": 138,
+      "checksum": "9d4ac37c2e5e20c2",
+      "description": "ESC/POS command builder for thermal barcode label printing — EAN-13, EAN-8, UPC-A, Code128 symbologies, 3 label sizes",
+      "test_file": "src/__tests__/services/escPosBarcode.test.ts",
+      "registered_at": "2026-03-24T18:00:00.000Z",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_evidence": {
+        "business_logic": "Builds valid ESC/POS byte sequences with correct command codes for 4 barcode symbologies",
+        "gcp_parity": "Pure utility module — no env vars, no URLs, no runtime dependencies",
+        "regression_check": "New file, no existing code modified",
+        "test_guard": "17 behavioral tests in escPosBarcode.test.ts — all pass",
+        "operator_approved": "operator verified typecheck + tests pass",
+        "parity_scanned": "New file — no parity issues",
+        "parity_fixed": "N/A — new file"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0536",
+      "file": "src/services/printerService.ts",
+      "start_line": 277,
+      "end_line": 356,
+      "checksum": "c9d17e4fac21ab18",
+      "description": "Real printBarcodeLabel implementation replacing stub — builds ESC/POS bytes + falls back to expo-print HTML label preview",
+      "test_file": "src/__tests__/services/escPosBarcode.test.ts",
+      "registered_at": "2026-03-24T18:00:00.000Z",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_evidence": {
+        "business_logic": "Replaces false-returning stub with real ESC/POS label builder + expo-print fallback",
+        "gcp_parity": "No hardcoded URLs, uses existing printerService connectivity check",
+        "regression_check": "Supersedes GCP-STG-0527 stub — strictly more capable",
+        "test_guard": "ESC/POS byte output tested in escPosBarcode.test.ts",
+        "operator_approved": "operator verified typecheck + tests pass",
+        "parity_scanned": "Single file modified, function signature extended with optional params",
+        "parity_fixed": "N/A"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0536",
+      "file": "src/screens/v3/BarcodeSheetScreenV3.tsx",
+      "start_line": 1,
+      "end_line": 20,
+      "checksum": "085a02dfe92bb281",
+      "description": "Print Label button per item + Print All Labels batch button with 500ms delay, loading states, toast feedback",
+      "test_file": "src/__tests__/services/escPosBarcode.test.ts",
+      "registered_at": "2026-03-24T18:00:00.000Z",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "business_logic": true,
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_evidence": {
+        "ui_elements": "Print button per item row + Print All Labels button in footer",
+        "ux_states": "Loading spinner during print, disabled during batch, toast on success/error/no-printer",
+        "wiring": "Calls printBarcodeLabel from printerService, converts sellPrice paise to rupees",
+        "navigation": "No navigation changes — buttons are inline",
+        "business_logic": "Batch print with 500ms delay, abort on first failure if no printer",
+        "gcp_parity": "No env vars, no URLs — pure UI",
+        "regression_check": "Preserves all existing functionality (tier toggle, generate sheet, safe area insets)",
+        "test_guard": "ESC/POS byte builder tested, UI wiring verified via typecheck",
+        "operator_approved": "operator verified typecheck + tests pass",
+        "parity_scanned": "Supersedes GCP-STG-0062 and GCP-STG-0448 entries",
+        "parity_fixed": "N/A"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0536",
+      "file": "src/services/cloudEventLogger.ts",
+      "start_line": 39,
+      "end_line": 42,
+      "checksum": "3eb6ff432581268e",
+      "description": "Added PRINT_LABEL to PosEventType union for label print event logging",
+      "test_file": "src/__tests__/services/escPosBarcode.test.ts",
+      "registered_at": "2026-03-24T18:00:00.000Z",
+      "status": "ACTIVE",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": "N/A",
+        "business_logic": true,
+        "backend_api": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_evidence": {
+        "business_logic": "New event type for analytics — no behavior change to existing events",
+        "gcp_parity": "Type-only change, no runtime impact",
+        "regression_check": "Additive union member — no existing code affected",
+        "test_guard": "TypeScript compiler verifies type correctness",
+        "operator_approved": "operator verified typecheck passes",
+        "parity_scanned": "Single type addition",
+        "parity_fixed": "N/A"
+      }
     }
   ],
-  "last_commit_ticket": "GCP-STG-0544",
+  "last_commit_ticket": "GCP-STG-0536",
   "last_updated": "2026-03-24",
   "metadata": {
     "last_audit": "2026-03-20",

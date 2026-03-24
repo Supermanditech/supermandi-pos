@@ -37,7 +37,9 @@ export type PosEventType =
   | "WHATSAPP_BILL_FAILED"
   | "WHATSAPP_BILL_ERROR"
   // STG-383: Void/refund
-  | "SALE_VOIDED";
+  | "SALE_VOIDED"
+  // GCP-STG-0536: Label printing
+  | "PRINT_LABEL";
 
 type QueuedPosEvent = {
   id: string; // local event id (not stored in DB, included inside payload for reconciliation)
