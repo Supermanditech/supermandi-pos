@@ -12,6 +12,8 @@ import Breadcrumb from '../components/Breadcrumb';
 import { validateUpiVpa } from '../components/UpiInput';
 import { useUnsavedChanges } from '../hooks/useNavigationSafety';
 import { logger } from '../lib/logger';
+// GCP-STG-0540: TOTP 2FA setup card
+import TotpSetupCard from '../components/TotpSetupCard';
 
 interface StoreSettings {
   upiVpa: string;
@@ -786,6 +788,9 @@ export default function SettingsPage() {
             </button>
           </div>
         </section>
+
+        {/* GCP-STG-0540: TOTP 2FA Setup */}
+        <TotpSetupCard />
 
         {/* T-004: Change Password */}
         <section className="card set-section">

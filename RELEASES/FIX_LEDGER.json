@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 950,
+  "version": 951,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -25177,6 +25177,62 @@
         "test_guard": "LoginGate.test.tsx passes in gate 15",
         "single_commit": "fix(GCP-STG-0538): add password login UI to SuperAdmin LoginGate",
         "ticket_parked": "Parked after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0540",
+      "file": "retailer-admin/src/components/TotpSetupCard.tsx",
+      "start_line": 1,
+      "end_line": 10,
+      "checksum": "84a99446676c8b47",
+      "description": "TOTP 2FA setup card for retailer portal — QR code, verify, enable/disable",
+      "test_file": "retailer-admin/src/__tests__/TotpSetupCard.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T12:36:54.751Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "TotpSetupCard renders: Enable 2FA button, QR code img, secret key code block, 6-digit input, Verify & Enable button, Cancel button, 2FA Enabled badge, Disable 2FA button, Confirm Disable button. vite build passes.",
+        "ux_states": "4 states: idle (enable button), loading (spinner text), setup (QR+verify wizard), enabled (badge+disable). Error via set-pw-error div role=alert. No blank screens.",
+        "wiring": "Enable→handleEnable→POST /totp-setup→setSetupData. Verify→handleVerify→POST /totp-verify→setStep(enabled). Disable→handleDisable→POST /totp-disable→setStep(idle). All use authFetch.",
+        "navigation": "Mounted in SettingsPage behind ProtectedLayout auth guard. No new routes. Back button unaffected.",
+        "i18n_keys": "Inline English strings — matches existing SettingsPage pattern. No i18n framework in retailer-admin.",
+        "business_logic": "TOTP setup/verify/disable delegated to backend. No client-side crypto. 6-digit code sanitized to digits-only max 6.",
+        "business_behaviour": "Enable→QR→scan→enter code→Verify→Enabled badge. Disable→enter code→Confirm→back to idle. Cancel returns to previous step.",
+        "impacted_files": "TotpSetupCard.tsx (new), SettingsPage.tsx (import+mount), FIX_LEDGER.json (registration).",
+        "fix_ledger_check": "520 fixes intact, zero drift. SettingsPage import area has no registered fix regions.",
+        "no_agent_conflict": "git diff shows only TotpSetupCard.tsx (new) and SettingsPage.tsx (2-line import + 3-line mount). No parallel modifications.",
+        "gcp_parity": "No localhost URLs. Relative API paths via authFetch. staging.supermandi.tech compatible.",
+        "regression_check": "tsc --noEmit passes. vite build succeeds. fix-guard check 520 intact zero drift.",
+        "test_guard": "Fix registered at retailer-admin/src/__tests__/TotpSetupCard.test.tsx. Backend TOTP tests from GCP-STG-0464.",
+        "single_commit": "Single commit: fix(GCP-STG-0540): add TOTP 2FA setup UI to Retailer portal",
+        "ticket_parked": "Will be marked PARKED after commit with SHA and tag."
       }
     }
   ],
