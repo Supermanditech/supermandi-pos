@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1020,
+  "version": 1022,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -27981,6 +27981,42 @@
         "fix_ledger_check": "570 fixes intact, zero drift",
         "no_agent_conflict": "Single agent, no parallel modifications"
       }
+    },
+    {
+      "ticket": "GCP-STG-0650",
+      "file": "src/screens/v3/SplashScreenV3.tsx",
+      "start_line": 62,
+      "end_line": 124,
+      "checksum": "b381eaf89cdd5146",
+      "description": "POS force update mechanism — SplashScreenV3 checks forceUpdate from ui-status, navigates to ForceUpdate screen with version params. Complete chain: backend MIN_APP_VERSION -> compareSemver -> forceUpdate flag -> SplashScreen -> ForceUpdateScreen blocking modal with Play Store link",
+      "test_file": "backend/tests/gcp-stg-0650.force-update-mechanism.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T20:03:16.047Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 270,
