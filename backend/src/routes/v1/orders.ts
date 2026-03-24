@@ -259,10 +259,10 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
     }
 
     // Helper: create a single purchase order for a group of items sharing the same billing model
-    async function createSingleOrder(
+    const createSingleOrder = async (
       groupItems: typeof validatedItems,
       groupBillingModel: string,
-    ): Promise<{ order: Record<string, any>; insertedItems: Array<Record<string, unknown>> }> {
+    ): Promise<{ order: Record<string, any>; insertedItems: Array<Record<string, unknown>> }> => {
       // 4. Generate order number
       const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, "");
       const shortId = randomUUID().slice(0, 6).toUpperCase();
@@ -423,7 +423,7 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
       }
 
       return { order, insertedItems };
-    }
+    };
 
     // GCP-STG-0350: Create one order per billing model group (single group = backward-compatible)
     const createdOrders: Array<Record<string, any>> = [];
