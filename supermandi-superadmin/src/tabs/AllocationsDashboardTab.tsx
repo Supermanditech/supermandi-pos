@@ -103,7 +103,6 @@ export function AllocationsDashboardTab() {
             </tr>
           </thead>
           <tbody>
-            {/* GCP-STG-0426: Paginated drill-down */}
             {storeAllocations.slice(allocPage * ALLOC_PAGE_SIZE, (allocPage + 1) * ALLOC_PAGE_SIZE).map((a) => (
               <tr key={a.id}>
                 <td style={{ padding: 8, fontSize: 12, fontFamily: 'monospace' }}>{a.id.slice(0, 8)}</td>
@@ -126,17 +125,14 @@ export function AllocationsDashboardTab() {
             ))}
           </tbody>
         </table>
-        {/* GCP-STG-0426: Pagination controls */}
-        {storeAllocations.length > ALLOC_PAGE_SIZE && (() => {
-          const totalPages = Math.ceil(storeAllocations.length / ALLOC_PAGE_SIZE);
-          return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, padding: '8px 0' }}>
-              <button disabled={allocPage === 0} onClick={() => setAllocPage(p => p - 1)}>Prev</button>
-              <span style={{ fontSize: 13, color: '#666' }}>Page {allocPage + 1} of {totalPages}</span>
-              <button disabled={allocPage >= totalPages - 1} onClick={() => setAllocPage(p => p + 1)}>Next</button>
-            </div>
-          );
-        })()}
+      )}
+      {/* GCP-STG-0537: Pagination controls — moved outside table conditional, replaced IIFE with simple conditional */}
+      {storeAllocations.length > ALLOC_PAGE_SIZE && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, padding: '8px 0' }}>
+          <button disabled={allocPage === 0} onClick={() => setAllocPage(p => p - 1)}>Prev</button>
+          <span style={{ fontSize: 13, color: '#666' }}>Page {allocPage + 1} of {Math.ceil(storeAllocations.length / ALLOC_PAGE_SIZE)}</span>
+          <button disabled={allocPage >= Math.ceil(storeAllocations.length / ALLOC_PAGE_SIZE) - 1} onClick={() => setAllocPage(p => p + 1)}>Next</button>
+        </div>
       )}
     </div>
   );
