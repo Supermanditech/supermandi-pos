@@ -306,6 +306,13 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
               {loading ? "Logging in..." : lockoutCountdown > 0 ? `Locked (${lockoutCountdown}s)` : "Log In"}
             </button>
 
+            {/* GCP-STG-0550: Forgot password link — switches to OTP mode */}
+            <p style={{ textAlign: 'center', marginTop: 12 }}>
+              <a href="#" onClick={(e) => { e.preventDefault(); setAuthMode('otp'); setError(''); setPassword(''); }} style={{ color: '#2563eb', fontSize: 13 }}>
+                Forgot password? Use OTP instead
+              </a>
+            </p>
+
             <div className="loginInfo">
               Only authorised admin emails can sign in. Contact the platform owner if you need access.
             </div>
