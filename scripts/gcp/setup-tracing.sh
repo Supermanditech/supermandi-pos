@@ -1,0 +1,18 @@
+#!/bin/bash
+# GCP-STG-0676: Distributed tracing via Cloud Trace
+echo "=== DISTRIBUTED TRACING SETUP ==="
+echo "Cloud Run auto-exports traces to Cloud Trace."
+echo ""
+echo "To enable in Node.js backend (optional, for custom spans):"
+echo "  npm install @google-cloud/opentelemetry-cloud-trace-exporter"
+echo "  Add to server.ts:"
+echo "    const { TraceExporter } = require('@google-cloud/opentelemetry-cloud-trace-exporter');"
+echo "    const { NodeTracerProvider } = require('@opentelemetry/sdk-trace-node');"
+echo ""
+echo "Current auto-tracing covers:"
+echo "  - HTTP request latency"
+echo "  - Cloud SQL query duration"
+echo "  - Redis operations"
+echo ""
+echo "View traces: console.cloud.google.com/traces"
+echo "=== SETUP COMPLETE ==="

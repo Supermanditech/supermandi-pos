@@ -60,11 +60,25 @@ function createProxyOptions(service: ServiceConfig): Options {
       // x-forwarded-host that can confuse the second GFE. Remove them.
       proxyReq.removeHeader('x-forwarded-host');
       proxyReq.removeHeader('x-forwarded-server');
-      proxyReq.removeHeader('x-cloud-trace-context');
-      proxyReq.removeHeader('traceparent');
       proxyReq.removeHeader('x-forwarded-for');
       proxyReq.removeHeader('x-forwarded-proto');
       proxyReq.removeHeader('via');
+
+      // GCP-STG-0676: Forward trace-context headers for distributed tracing
+      // Cloud Run auto-injects x-cloud-trace-context; preserve it and W3C traceparent/tracestate
+      // so downstream services can correlate spans in Cloud Trace.
+      const traceContext = req.headers['x-cloud-trace-context'];
+      if (traceContext) {
+        proxyReq.setHeader('x-cloud-trace-context', traceContext as string);
+      }
+      const traceparent = req.headers['traceparent'];
+      if (traceparent) {
+        proxyReq.setHeader('traceparent', traceparent as string);
+      }
+      const tracestate = req.headers['tracestate'];
+      if (tracestate) {
+        proxyReq.setHeader('tracestate', tracestate as string);
+      }
 
       // STAGING-FIX-002: Belt-and-suspenders — also set Host in onProxyReq
       if (targetHost) {
