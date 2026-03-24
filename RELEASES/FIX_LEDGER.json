@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1094,
+  "version": 1095,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -30557,6 +30557,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:39:28.067Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0659",
+      "file": "backend/src/routes/v1/pos/payments.ts",
+      "start_line": 348,
+      "end_line": 435,
+      "checksum": "60dbe041ec1cbbce",
+      "description": "UPI payment timeout retry — retryable flag in status poll, timeout documentation",
+      "test_file": "backend/src/__tests__/pos/payments.upi-status.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T22:41:38.462Z",
       "status": "ACTIVE"
     }
   ],

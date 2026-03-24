@@ -347,13 +347,26 @@ posPaymentsRouter.post(
 
 // =============================================================================
 // SM-011: UPI Status Polling
+// GCP-STG-0659: UPI payment timeout handling
+//
+// Timeout / retry architecture:
+// 1. POS app polls this endpoint every 3-5s while QR is displayed.
+// 2. Server checks local DB status first. If 'initiated' and QR expired (5 min),
+//    server marks as 'failed' with reason 'expired'.
+// 3. If Razorpay is configured, a webhook callback updates payment status
+//    server-side (see webhooksRouter). No explicit server-side retry is needed
+//    because Razorpay webhooks are the source of truth for gateway payments.
+// 4. For non-gateway UPI (direct VPA intent), the POS app handles retry by
+//    allowing the user to re-initiate payment (new QR) via upi/generate.
+// 5. If the status poll itself times out (network), the POS app retries the
+//    poll — this endpoint is idempotent (GET, no side effects except expiry mark).
 // =============================================================================
 
 /**
  * GET /api/v1/pos/payments/upi/:paymentId/status
  * Poll UPI payment status
  *
- * Response: { status, upiTxnRef?, payerVpa? }
+ * Response: { status, upiTxnRef?, payerVpa?, retryable? }
  */
 posPaymentsRouter.get(
   "/payments/upi/:paymentId/status",
@@ -398,15 +411,24 @@ posPaymentsRouter.get(
         );
         return res.json({
           status: 'failed',
-          failureReason: 'expired'
+          failureReason: 'expired',
+          // GCP-STG-0659: Tell client this payment can be retried (new QR)
+          retryable: true,
         });
       }
+
+      // GCP-STG-0659: For pending/initiated payments approaching timeout,
+      // signal retryable so POS can offer "Retry Payment" to the user
+      const isApproachingTimeout = payment.status === 'initiated' &&
+        (expiresAt.getTime() - Date.now()) < 30_000; // <30s remaining
 
       return res.json({
         status: payment.status,
         upiTxnRef: payment.upi_txn_ref || null,
         payerVpa: payment.upi_payer_vpa || null,
-        failureReason: payment.failure_reason || null
+        failureReason: payment.failure_reason || null,
+        // GCP-STG-0659: retryable when failed or about to expire
+        retryable: payment.status === 'failed' || isApproachingTimeout || false,
       });
 
     } catch (err: any) {
