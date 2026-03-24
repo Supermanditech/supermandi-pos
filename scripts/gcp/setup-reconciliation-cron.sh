@@ -1,0 +1,17 @@
+#!/bin/bash
+# GCP-STG-0640: Schedule daily stock reconciliation via Cloud Scheduler
+echo "=== STOCK RECONCILIATION CRON ==="
+echo "GCP-STG-0283 created /admin/stock-reconciliation/check endpoint."
+echo ""
+echo "Setup Cloud Scheduler job:"
+echo "  gcloud scheduler jobs create http stock-reconciliation-daily \\"
+echo "    --schedule='0 2 * * *' \\"
+echo "    --uri='https://staging.supermandi.tech/api/v1/admin/stock-reconciliation/check' \\"
+echo "    --http-method=GET \\"
+echo "    --headers='Authorization=Bearer \$ADMIN_TOKEN' \\"
+echo "    --time-zone='Asia/Kolkata' \\"
+echo "    --description='Daily stock ledger reconciliation check (2 AM IST)'"
+echo ""
+echo "If divergence found, the endpoint logs it."
+echo "To auto-fix: change endpoint to /admin/stock-reconciliation/run"
+echo "=== SETUP COMPLETE ==="
