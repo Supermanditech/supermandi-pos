@@ -120,14 +120,30 @@ export default function ProductDetailSheetV3({
             {product.brand ? <Text style={styles.brand}>{product.brand}</Text> : null}
 
             {/* Price row — BUY shows trade price prominently, SELL shows MRP */}
+            {/* GCP-STG-0555: BUY context — PTR in green as primary, MRP with Save badge, margin highlight */}
             <View style={styles.priceRow}>
-              <Text style={styles.price}>{priceLabel}</Text>
+              <Text style={[styles.price, context === "BUY" && { color: colors.success }]}>{priceLabel}</Text>
               {context === "BUY" && mrpLabel ? (
-                <Text style={styles.tradePrice}>{mrpLabel}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={[styles.tradePrice, { textDecorationLine: "line-through", color: colors.textTertiary }]}>{mrpLabel}</Text>
+                  {product.priceMrpMinor > 0 && product.priceTradeMinor && product.priceTradeMinor < product.priceMrpMinor ? (
+                    <View style={{ backgroundColor: colors.successSoft, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: colors.success }}>
+                        Save {Math.round((1 - product.priceTradeMinor / product.priceMrpMinor) * 100)}%
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
               ) : context === "SELL" && product.priceTradeMinor ? (
                 <Text style={styles.tradePrice}>Trade: ₹{(product.priceTradeMinor / 100).toFixed(0)}</Text>
               ) : null}
             </View>
+            {/* GCP-STG-0555: Margin highlight for BUY context */}
+            {context === "BUY" && product.priceMrpMinor > 0 && product.priceTradeMinor && product.priceTradeMinor < product.priceMrpMinor ? (
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.success, marginTop: 4 }} testID="buy-margin-line">
+                Margin: {Math.round((1 - product.priceTradeMinor / product.priceMrpMinor) * 100)}% ({"\u20B9"}{((product.priceMrpMinor - product.priceTradeMinor) / 100).toFixed(2)}/unit)
+              </Text>
+            ) : null}
 
             {/* GCP-STG-0400: Profit margin line for SELL context */}
             {context === "SELL" && product.purchasePriceMinor && product.purchasePriceMinor > 0 ? (() => {

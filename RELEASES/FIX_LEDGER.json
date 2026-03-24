@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 982,
+  "version": 983,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -17536,8 +17536,8 @@
     {
       "ticket": "GCP-STG-0401",
       "file": "src/components/v3/ProductDetailSheetV3.tsx",
-      "start_line": 267,
-      "end_line": 309,
+      "start_line": 283,
+      "end_line": 325,
       "checksum": "d4fb93bcb15f561b",
       "description": "Display elements for 6 procurement fields: deliveryTerms, financeEligible badge, publishedTermsVersion label, moqTiers breakdown, procurementUnit, procurementPackQty (6 fields wired)",
       "test_file": "src/__tests__/components/buyDetailFields.gcp-stg-0401.test.ts",
@@ -17568,7 +17568,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:32:59.779Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T10:58:31.237Z"
+      "line_shifted_at": "2026-03-24T16:03:24.366Z"
     },
     {
       "ticket": "GCP-STG-0401",
@@ -17647,8 +17647,8 @@
     {
       "ticket": "GCP-STG-0400",
       "file": "src/components/v3/ProductDetailSheetV3.tsx",
-      "start_line": 132,
-      "end_line": 144,
+      "start_line": 148,
+      "end_line": 160,
       "checksum": "d44ac75febe8d5d6",
       "description": "ProductDetailSheetV3 profit line with rupee amount and percentage in SELL context",
       "test_file": "src/__tests__/components/marginIndicator.gcp-stg-0400.test.ts",
@@ -17678,7 +17678,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:33:27.863Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-24T16:03:24.370Z"
     },
     {
       "ticket": "GCP-STG-0374",
@@ -19215,8 +19216,8 @@
     {
       "ticket": "GCP-STG-0410",
       "file": "src/components/v3/ProductDetailSheetV3.tsx",
-      "start_line": 171,
-      "end_line": 196,
+      "start_line": 187,
+      "end_line": 212,
       "checksum": "5d2e4863e5f6ff2e",
       "description": "SELL detail info section — expiry date with red/yellow/green color coding and cost price display (expiry+cost in SELL context)",
       "test_file": "src/__tests__/components/sellDetailInfo.gcp-stg-0410.test.tsx",
@@ -19246,7 +19247,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:00:06.813Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-24T16:03:24.392Z"
     },
     {
       "ticket": "GCP-STG-0410",
@@ -26535,6 +26537,61 @@
         "test_guard": "stock mapping verified via GCP-STG-0561 + getStockStatus function registered",
         "single_commit": "fix(GCP-STG-0554): BUY tile stock dot verification",
         "ticket_parked": "Will park after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0555",
+      "file": "src/components/v3/ProductDetailSheetV3.tsx",
+      "start_line": 122,
+      "end_line": 145,
+      "checksum": "7c3d7de3f13e5ce2",
+      "description": "BUY detail sheet: PTR in green as primary price, MRP with Save X% badge, margin percentage highlight line",
+      "test_file": "src/components/v3/ProductDetailSheetV3.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T16:03:19.587Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "PTR green price, Save X% badge, strikethrough MRP, margin line — all render in BUY detail sheet",
+        "ux_states": "BUY context shows enhanced pricing; SELL context unchanged; null/zero PTR gracefully hidden",
+        "wiring": "Price calculation: margin = (1 - PTR/MRP)*100, savings badge same formula",
+        "navigation": "N/A — no navigation changes",
+        "i18n_keys": "Display-only price labels, no user-facing translatable strings added",
+        "business_logic": "Margin calc correct: (1-PTR/MRP)*100, guarded by PTR < MRP check",
+        "business_behaviour": "BUY tile tap → detail sheet → PTR green + Save badge + margin line visible",
+        "impacted_files": "src/components/v3/ProductDetailSheetV3.tsx + RELEASES/FIX_LEDGER.json",
+        "fix_ledger_check": "Registered, zero drift confirmed",
+        "no_agent_conflict": "Single agent, no parallel changes",
+        "gcp_parity": "No localhost URLs, no env vars, pure UI display",
+        "regression_check": "tsc --noEmit passes, SELL context unchanged",
+        "test_guard": "tsc --noEmit passes, display-only UI change",
+        "single_commit": "fix(GCP-STG-0555): BUY detail sheet shows PTR in green, margin %, Save badge",
+        "ticket_parked": "Parked after commit"
       }
     }
   ],
