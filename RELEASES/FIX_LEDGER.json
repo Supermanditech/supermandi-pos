@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1002,
+  "version": 1003,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -27198,6 +27198,54 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T18:05:04.303Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0571",
+      "file": "retailer-admin/src/__tests__/lib/AuthContext.test.tsx",
+      "start_line": 937,
+      "end_line": 940,
+      "checksum": "fb3f8fcc33728951",
+      "description": "Fix idle timeout test constants: IDLE_TIMEOUT_MS from 60min to 30min matching actual AuthContext default (VITE_IDLE_TIMEOUT_MINUTES=30)",
+      "test_file": "retailer-admin/src/__tests__/lib/AuthContext.test.tsx",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_evidence": {
+        "impacted_files": "retailer-admin/src/__tests__/lib/AuthContext.test.tsx + FIX_LEDGER.json",
+        "fix_ledger_check": "fix-guard check passes, zero drift",
+        "no_agent_conflict": "single agent session",
+        "operator_approved": "N/A — test-only fix, no UI to verify",
+        "gcp_parity": "N/A — test file only",
+        "regression_check": "1706/1706 tests pass",
+        "test_guard": "AuthContext.test.tsx 36/36 pass",
+        "single_commit": "fix(GCP-STG-0571): fix idle timeout test constants",
+        "ticket_parked": "committed"
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T18:08:43.156Z",
       "status": "ACTIVE"
     }
   ],

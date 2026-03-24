@@ -934,9 +934,9 @@ describe('Refresh skips when no auth cookie', () => {
 // ── Idle Timeout Warning and Logout (J20-TEST-005) ───────────────────────
 
 describe('Idle timeout warning and logout (J20-TEST-005)', () => {
-  // Constants matching AuthContext.tsx (V3-SESSION-025: default 60 minutes)
-  const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes
-  const WARNING_BEFORE_MS = 5 * 60 * 1000; // 5 minutes before timeout (capped at IDLE_TIMEOUT_MS / 6)
+  // GCP-STG-0571: Constants matching AuthContext.tsx (default 30 minutes via VITE_IDLE_TIMEOUT_MINUTES || '30')
+  const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes (actual default)
+  const WARNING_BEFORE_MS = Math.min(5 * 60 * 1000, IDLE_TIMEOUT_MS / 6); // 5 min, capped at timeout/6
   const IDLE_CHECK_INTERVAL = 30_000; // 30 seconds
 
   async function loginFirst() {
