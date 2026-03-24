@@ -3293,3 +3293,55 @@ posSalesRouter.get("/sales/:saleId/invoice/pdf", requireDeviceToken, async (req,
     return res.status(500).json({ error: "Failed to generate invoice PDF" });
   }
 });
+
+// =============================================================================
+// GCP-STG-0668: SHIFT CLOSE / CASH RECONCILIATION
+// =============================================================================
+
+/**
+ * POST /api/v1/pos/sales/shift-close
+ * GCP-STG-0668: Day-end cash reconciliation. Returns today's sales summary
+ * with cash/UPI/due breakdown and variance calculation.
+ */
+posSalesRouter.post("/shift-close", requireDeviceToken, requireActiveStore, async (req, res) => {
+  const { actualCashAmount, staffId } = req.body || {};
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "Service unavailable" });
+
+  const storeId = getStoreIdFromPosDevice(req as any, "shift-close");
+
+  try {
+    const summary = await pool.query(`
+      SELECT
+        COUNT(*) as total_sales,
+        COALESCE(SUM(total_minor), 0) as total_revenue,
+        COALESCE(SUM(CASE WHEN payment_method = 'CASH' THEN total_minor ELSE 0 END), 0) as cash_total,
+        COALESCE(SUM(CASE WHEN payment_method = 'UPI' THEN total_minor ELSE 0 END), 0) as upi_total,
+        COALESCE(SUM(CASE WHEN payment_method = 'DUE' THEN total_minor ELSE 0 END), 0) as due_total
+      FROM pos.sales
+      WHERE store_id = $1 AND created_at >= CURRENT_DATE AND status = 'COMPLETED'
+    `, [storeId]);
+
+    const row = summary.rows[0];
+    const expectedCash = parseInt(row.cash_total) || 0;
+    const actualCash = actualCashAmount != null ? parseInt(String(actualCashAmount)) : null;
+    const variance = actualCash !== null ? actualCash - expectedCash : null;
+
+    return res.json({
+      date: new Date().toISOString().split("T")[0],
+      storeId,
+      staffId: staffId || null,
+      totalSales: parseInt(row.total_sales) || 0,
+      totalRevenue: parseInt(row.total_revenue) || 0,
+      cashTotal: expectedCash,
+      upiTotal: parseInt(row.upi_total) || 0,
+      dueTotal: parseInt(row.due_total) || 0,
+      actualCashAmount: actualCash,
+      cashVariance: variance,
+      status: variance === null ? "UNCOUNTED" : Math.abs(variance) <= 100 ? "BALANCED" : "VARIANCE",
+    });
+  } catch (err: any) {
+    log.error("[GCP-STG-0668] Shift close error:", err.message);
+    return res.status(500).json({ error: "Failed to generate shift close report" });
+  }
+});
