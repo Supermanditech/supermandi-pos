@@ -20,6 +20,11 @@ import { logger } from "../../services/logger";
 
 // V3-003: Voice overlay wired to real voice services
 // V3-FIX-120: Voice confirm now adds to cart through canonical builder
+// GCP-STG-0564: Voice is inherently blocked during payment because SellScreenV3
+// is a tab screen and payment flows (V3Payment, V3Cash, V3Upi) are stack screens
+// rendered on top — the mic FAB on SellScreenV3 is not visible/tappable.
+// The `visible` prop acts as a defensive gate: it can only be true when
+// SellScreenV3 is the active screen (voiceVisible state lives there).
 
 type VoiceOverlayV3Props = {
   visible: boolean;

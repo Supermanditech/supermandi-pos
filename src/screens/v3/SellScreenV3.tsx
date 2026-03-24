@@ -5,7 +5,7 @@ import { skGuide } from "../../constants/storageKeys";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { getGridColumns, getScreenPadding, getChipPadding, getChipFontSize, SCREEN_W } from "../../theme/responsive";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import BrandedHeader from "../../components/v3/BrandedHeader";
@@ -124,6 +124,11 @@ export default function SellScreenV3() {
     const storeId = await getDeviceStoreId();
     if (storeId) await dismissGuide(storeId);
   }, []);
+
+  // GCP-STG-0564: Defensive gate — disable voice when SellScreenV3 is not focused
+  // (e.g. payment stack screen is on top). The mic FAB is already not visible in
+  // that scenario, but this ensures voiceVisible can't be set true programmatically.
+  const isFocused = useIsFocused();
 
   // V3-FIX-039: Feature flags from settingsStore
   const voiceEnabled = useSettingsStore((s) => (s as any).voiceEnabled ?? true);
@@ -400,8 +405,11 @@ export default function SellScreenV3() {
         </Pressable>
         {/* V3-FIX-039: Hide voice when voiceEnabled=false */}
         {/* GCP-STG-0563: Grey-out mic FAB when offline */}
+        {/* GCP-STG-0564: Voice blocked during payment — isFocused is false when
+            a stack screen (V3Payment/V3Cash/V3Upi) is on top of this tab */}
         {voiceEnabled ? (
           <Pressable style={[styles.iconButton, { backgroundColor: colors.primaryLight }]} accessibilityLabel="Voice input" testID="sell-mic-btn" onPress={async () => {
+            if (!isFocused) { showToast("Complete payment first"); return; }
             const online = await isOnline();
             if (!online) { showToast("Voice requires internet"); return; }
             setVoiceVisible(true);

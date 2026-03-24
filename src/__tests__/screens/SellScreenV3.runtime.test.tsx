@@ -24,6 +24,8 @@ jest.mock("@react-navigation/native", () => ({
     navigate: mockNavigate,
     getParent: () => ({ navigate: mockParentNavigate }),
   }),
+  // GCP-STG-0564: Mock useIsFocused — SellScreenV3 uses it to block voice during payment
+  useIsFocused: () => true,
 }));
 
 // ─── react-native-svg mock ───────────────────────────────────────────────────
