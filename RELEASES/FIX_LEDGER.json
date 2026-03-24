@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1003,
+  "version": 1009,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -9826,8 +9826,8 @@
     {
       "ticket": "GCP-STG-0007",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 219,
-      "end_line": 260,
+      "start_line": 220,
+      "end_line": 261,
       "checksum": "246e55faa13c52da",
       "description": "Deactivate old devices + create new one in transaction on OTP verify (race-condition safe) — checksum updated by GCP-STG-0484 (added token_expires_at to INSERT)",
       "test_file": "backend/src/__tests__/pos/otpAuth.test.ts",
@@ -9861,7 +9861,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:25:31.465Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T19:05:37.573Z"
+      "line_shifted_at": "2026-03-24T18:12:29.654Z"
     },
     {
       "ticket": "GCP-STG-0008",
@@ -11218,7 +11218,7 @@
       "file": "backend/src/services/invoiceService.ts",
       "start_line": 376,
       "end_line": 445,
-      "checksum": "98b3fee94b740a62",
+      "checksum": "9b7292f59fc35cd7",
       "description": "issueInvoice: auto-store PDF in GCS on issuance, non-blocking with storeInvoicePdfInGcs helper + GCP-STG-0078 e-invoice trigger wired in",
       "test_file": "backend/src/services/invoiceService.ts",
       "depends_on": null,
@@ -11411,7 +11411,7 @@
       "file": "backend/src/services/invoiceService.ts",
       "start_line": 488,
       "end_line": 511,
-      "checksum": "4c6156d7fffe999c",
+      "checksum": "00ba0be224fc6ec5",
       "description": "triggerEInvoice helper: non-blocking e-invoice generation after invoice issuance",
       "test_file": "backend/tests/eInvoice.gcp-stg-0078.unit.test.ts",
       "depends_on": null,
@@ -15092,8 +15092,8 @@
     {
       "ticket": "GCP-STG-0311",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 52,
-      "end_line": 67,
+      "start_line": 53,
+      "end_line": 68,
       "checksum": "f0a5bfc3c3475bf0",
       "description": "send-otp checks u.is_active = true to block deactivated users",
       "test_file": "backend/tests/otpDeactivatedUser.gcp-stg-0311.unit.test.ts",
@@ -15124,7 +15124,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:53:31.193Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T18:31:15.947Z"
+      "line_shifted_at": "2026-03-24T18:12:29.725Z"
     },
     {
       "ticket": "GCP-STG-0298",
@@ -16589,8 +16589,8 @@
     {
       "ticket": "GCP-STG-0353",
       "file": "backend/src/services/invoiceService.ts",
-      "start_line": 222,
-      "end_line": 223,
+      "start_line": 223,
+      "end_line": 224,
       "checksum": "05f808ee6b290987",
       "description": "createInvoice passes isInterState to calculateItemTax instead of hardcoded false (IGST vs CGST+SGST)",
       "test_file": "backend/tests/interStateGst.gcp-stg-0353.unit.test.ts",
@@ -16620,7 +16620,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:05:57.557Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-24T18:12:29.743Z"
     },
     {
       "ticket": "GCP-STG-0353",
@@ -21431,8 +21432,8 @@
     {
       "ticket": "GCP-STG-0453",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 186,
-      "end_line": 194,
+      "start_line": 187,
+      "end_line": 195,
       "checksum": "59a47e2f6aeaad4c",
       "description": "verify-otp checks u.is_active = true matching send-otp parity",
       "test_file": "backend/tests/verifyOtpIsActive.gcp-stg-0453.unit.test.ts",
@@ -21463,7 +21464,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T16:25:03.203Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T19:05:37.676Z"
+      "line_shifted_at": "2026-03-24T18:12:29.786Z"
     },
     {
       "ticket": "GCP-STG-0454",
@@ -21541,8 +21542,8 @@
     {
       "ticket": "GCP-STG-0459",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 158,
-      "end_line": 178,
+      "start_line": 159,
+      "end_line": 179,
       "checksum": "0e12ec1a50706d82",
       "description": "pos_otp SELECT/UPDATE uses normalizedPhone (+91 E.164) in verify-otp",
       "test_file": "backend/tests/otpAuth.gcp-stg-0459.unit.test.ts",
@@ -21573,7 +21574,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:17:57.355Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-23T19:05:37.679Z"
+      "line_shifted_at": "2026-03-24T18:12:29.789Z"
     },
     {
       "ticket": "GCP-STG-0461",
@@ -21617,7 +21618,7 @@
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
       "start_line": 95,
       "end_line": 100,
-      "checksum": "ff06c7a0b907c6d0",
+      "checksum": "1f4a641e5679a5d9",
       "description": "Replace __DEV__ OTP log guard with process.env.LOG_OTP_PLAINTEXT check — prevents plaintext OTP in console outside local dev",
       "test_file": "backend/tests/otpAuth.gcp-stg-0478.unit.test.ts",
       "depends_on": null,
@@ -21872,8 +21873,8 @@
     {
       "ticket": "GCP-STG-0484",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 256,
-      "end_line": 262,
+      "start_line": 257,
+      "end_line": 263,
       "checksum": "1c43371cc26bb892",
       "description": "POS device token expiry: INSERT via otpAuth sets token_expires_at = NOW() + 90 days",
       "test_file": "backend/tests/deviceTokenExpiry.gcp-stg-0484.unit.test.ts",
@@ -21924,14 +21925,14 @@
         "single_commit": "fix(GCP-STG-0484)",
         "ticket_parked": "pending commit"
       },
-      "line_shifted_at": "2026-03-23T19:21:04.265Z"
+      "line_shifted_at": "2026-03-24T18:12:29.795Z"
     },
     {
       "ticket": "GCP-STG-0467",
       "file": "backend/src/services/smsService.ts",
       "start_line": 1,
       "end_line": 115,
-      "checksum": "19cc9b96d2fe7940",
+      "checksum": "f04794b5fe7b3f14",
       "description": "SMS fallback service for OTP delivery — supports MSG91, Twilio, disabled (default). Never throws.",
       "test_file": "backend/tests/smsFallback.gcp-stg-0467.unit.test.ts",
       "depends_on": null,
@@ -21986,7 +21987,7 @@
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
       "start_line": 103,
       "end_line": 130,
-      "checksum": "333cc14c260879fb",
+      "checksum": "47f2bb92838ec5b4",
       "description": "SMS fallback in send-otp: tries WhatsApp first, falls back to SMS if WA fails or not configured",
       "test_file": "backend/tests/smsFallback.gcp-stg-0467.unit.test.ts",
       "depends_on": null,
@@ -22205,7 +22206,7 @@
         "single_commit": "fix(GCP-STG-0489)",
         "ticket_parked": "pending"
       },
-      "checksum": "a139d704782434b8"
+      "checksum": "374f401d72bd98a8"
     },
     {
       "ticket": "GCP-STG-0468",
@@ -22939,8 +22940,8 @@
     {
       "ticket": "GCP-STG-0477",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 65,
-      "end_line": 70,
+      "start_line": 66,
+      "end_line": 71,
       "description": "Expired OTP cleanup before INSERT",
       "test_file": "backend/tests/otpCleanup.gcp-stg-0477.unit.test.ts",
       "status": "ACTIVE",
@@ -22990,13 +22991,14 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "d748e9136d56a67c"
+      "checksum": "d748e9136d56a67c",
+      "line_shifted_at": "2026-03-24T18:12:29.805Z"
     },
     {
       "ticket": "GCP-STG-0474",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 58,
-      "end_line": 64,
+      "start_line": 59,
+      "end_line": 65,
       "description": "30-second OTP send cooldown",
       "test_file": "backend/tests/otpCleanup.gcp-stg-0477.unit.test.ts",
       "status": "ACTIVE",
@@ -23046,13 +23048,14 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "a5d9b12360c5a5d8"
+      "checksum": "a5d9b12360c5a5d8",
+      "line_shifted_at": "2026-03-24T18:12:29.806Z"
     },
     {
       "ticket": "GCP-STG-0460",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 177,
-      "end_line": 190,
+      "start_line": 178,
+      "end_line": 191,
       "description": "Per-store max device quota from platform.stores",
       "test_file": "N/A",
       "status": "ACTIVE",
@@ -23102,7 +23105,8 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "c4267eb3bf668674"
+      "checksum": "c4267eb3bf668674",
+      "line_shifted_at": "2026-03-24T18:12:29.807Z"
     },
     {
       "ticket": "GCP-STG-0481",
@@ -27247,6 +27251,282 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T18:08:43.156Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0572",
+      "file": "backend/src/services/authAudit.ts",
+      "start_line": 1,
+      "end_line": 51,
+      "checksum": "70b79b4b11aea605",
+      "description": "Replace console.error with log.error in authAudit service",
+      "test_file": "backend/src/__tests__/services/authAudit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T18:13:18.870Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "impacted_files": "6 backend source files + FIX_LEDGER.json",
+        "fix_ledger_check": "fix-guard check passes, zero drift, 559 fixes intact",
+        "no_agent_conflict": "single agent session",
+        "gcp_parity": "structured logger outputs JSON in production for Cloud Logging",
+        "regression_check": "npx tsc --noEmit passes",
+        "test_guard": "logging-only change, no behavioral test needed",
+        "single_commit": "fix(GCP-STG-0572): replace console with structured logger",
+        "ticket_parked": "committed"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0572",
+      "file": "backend/src/routes/v1/pos/otpAuth.ts",
+      "start_line": 19,
+      "end_line": 20,
+      "checksum": "2c423091c0743392",
+      "description": "Replace console.log/error with log.info/error in OTP auth routes",
+      "test_file": "backend/src/__tests__/pos/otpAuth.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T18:13:24.404Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "impacted_files": "6 backend source files + FIX_LEDGER.json",
+        "fix_ledger_check": "fix-guard check passes, zero drift, 559 fixes intact",
+        "no_agent_conflict": "single agent session",
+        "gcp_parity": "structured logger outputs JSON in production for Cloud Logging",
+        "regression_check": "npx tsc --noEmit passes",
+        "test_guard": "logging-only change, no behavioral test needed",
+        "single_commit": "fix(GCP-STG-0572): replace console with structured logger",
+        "ticket_parked": "committed"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0572",
+      "file": "backend/src/services/smsService.ts",
+      "start_line": 9,
+      "end_line": 9,
+      "checksum": "bbecfd018e794c04",
+      "description": "Replace console.log/error with log.info/error in SMS service",
+      "test_file": "backend/src/__tests__/services/smsService.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T18:13:28.857Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "impacted_files": "6 backend source files + FIX_LEDGER.json",
+        "fix_ledger_check": "fix-guard check passes, zero drift, 559 fixes intact",
+        "no_agent_conflict": "single agent session",
+        "gcp_parity": "structured logger outputs JSON in production for Cloud Logging",
+        "regression_check": "npx tsc --noEmit passes",
+        "test_guard": "logging-only change, no behavioral test needed",
+        "single_commit": "fix(GCP-STG-0572): replace console with structured logger",
+        "ticket_parked": "committed"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0572",
+      "file": "backend/src/services/invoiceService.ts",
+      "start_line": 4,
+      "end_line": 5,
+      "checksum": "bc6d18bf82d1c16e",
+      "description": "Replace console.error with log.error in invoice service",
+      "test_file": "backend/src/__tests__/services/invoiceService.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T18:13:34.167Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "impacted_files": "6 backend source files + FIX_LEDGER.json",
+        "fix_ledger_check": "fix-guard check passes, zero drift, 559 fixes intact",
+        "no_agent_conflict": "single agent session",
+        "gcp_parity": "structured logger outputs JSON in production for Cloud Logging",
+        "regression_check": "npx tsc --noEmit passes",
+        "test_guard": "logging-only change, no behavioral test needed",
+        "single_commit": "fix(GCP-STG-0572): replace console with structured logger",
+        "ticket_parked": "committed"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0572",
+      "file": "backend/src/services/stockReconciliation.ts",
+      "start_line": 13,
+      "end_line": 14,
+      "checksum": "95732bddf3d06c8a",
+      "description": "Replace console.log with log.info in stock reconciliation service",
+      "test_file": "backend/src/__tests__/services/stockReconciliation.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T18:13:38.921Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "impacted_files": "6 backend source files + FIX_LEDGER.json",
+        "fix_ledger_check": "fix-guard check passes, zero drift, 559 fixes intact",
+        "no_agent_conflict": "single agent session",
+        "gcp_parity": "structured logger outputs JSON in production for Cloud Logging",
+        "regression_check": "npx tsc --noEmit passes",
+        "test_guard": "logging-only change, no behavioral test needed",
+        "single_commit": "fix(GCP-STG-0572): replace console with structured logger",
+        "ticket_parked": "committed"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0572",
+      "file": "backend/src/routes/v1/uploads/images.ts",
+      "start_line": 13,
+      "end_line": 13,
+      "checksum": "a38224b49ed3e3d3",
+      "description": "Replace console.warn with log.warn in uploads/images route",
+      "test_file": "backend/src/__tests__/routes/uploads.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-24T18:13:43.895Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "impacted_files": "6 backend source files + FIX_LEDGER.json",
+        "fix_ledger_check": "fix-guard check passes, zero drift, 559 fixes intact",
+        "no_agent_conflict": "single agent session",
+        "gcp_parity": "structured logger outputs JSON in production for Cloud Logging",
+        "regression_check": "npx tsc --noEmit passes",
+        "test_guard": "logging-only change, no behavioral test needed",
+        "single_commit": "fix(GCP-STG-0572): replace console with structured logger",
+        "ticket_parked": "committed"
+      }
     }
   ],
   "machine_state_version": 270,

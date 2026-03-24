@@ -6,6 +6,8 @@
  * Never throws — always returns boolean (true = sent, false = failed/disabled).
  */
 
+import { log } from '../lib/logger';
+
 type SmsProvider = 'msg91' | 'twilio' | 'disabled';
 
 function getProvider(): SmsProvider {
@@ -22,7 +24,7 @@ export async function sendSms(to: string, body: string): Promise<boolean> {
   const provider = getProvider();
 
   if (provider === 'disabled') {
-    console.log(`[SMS] Provider disabled — would send to ${to.slice(0, 5)}***: ${body.slice(0, 30)}...`);
+    log.info(`[SMS] Provider disabled — would send to ${to.slice(0, 5)}***: ${body.slice(0, 30)}...`);
     return false;
   }
 
@@ -36,7 +38,7 @@ export async function sendSms(to: string, body: string): Promise<boolean> {
     return false;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error(`[SMS] ${provider} send failed: ${message}`);
+    log.error(`[SMS] ${provider} send failed: ${message}`);
     return false;
   }
 }
@@ -46,7 +48,7 @@ async function sendViaMsg91(to: string, body: string): Promise<boolean> {
   const templateId = process.env.MSG91_TEMPLATE_ID;
 
   if (!authKey || !templateId) {
-    console.error('[SMS] MSG91 not configured — missing MSG91_AUTH_KEY or MSG91_TEMPLATE_ID');
+    log.error('[SMS] MSG91 not configured — missing MSG91_AUTH_KEY or MSG91_TEMPLATE_ID');
     return false;
   }
 
@@ -75,11 +77,11 @@ async function sendViaMsg91(to: string, body: string): Promise<boolean> {
 
   if (!response.ok) {
     const text = await response.text().catch(() => '');
-    console.error(`[SMS] MSG91 HTTP ${response.status}: ${text.slice(0, 200)}`);
+    log.error(`[SMS] MSG91 HTTP ${response.status}: ${text.slice(0, 200)}`);
     return false;
   }
 
-  console.log(`[SMS] MSG91 sent to ${to.slice(0, 5)}***`);
+  log.info(`[SMS] MSG91 sent to ${to.slice(0, 5)}***`);
   return true;
 }
 
@@ -89,7 +91,7 @@ async function sendViaTwilio(to: string, body: string): Promise<boolean> {
   const from = process.env.TWILIO_FROM;
 
   if (!sid || !authToken || !from) {
-    console.error('[SMS] Twilio not configured — missing TWILIO_SID, TWILIO_AUTH_TOKEN, or TWILIO_FROM');
+    log.error('[SMS] Twilio not configured — missing TWILIO_SID, TWILIO_AUTH_TOKEN, or TWILIO_FROM');
     return false;
   }
 
@@ -113,10 +115,10 @@ async function sendViaTwilio(to: string, body: string): Promise<boolean> {
 
   if (!response.ok) {
     const text = await response.text().catch(() => '');
-    console.error(`[SMS] Twilio HTTP ${response.status}: ${text.slice(0, 200)}`);
+    log.error(`[SMS] Twilio HTTP ${response.status}: ${text.slice(0, 200)}`);
     return false;
   }
 
-  console.log(`[SMS] Twilio sent to ${to.slice(0, 5)}***`);
+  log.info(`[SMS] Twilio sent to ${to.slice(0, 5)}***`);
   return true;
 }

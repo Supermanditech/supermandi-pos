@@ -9,6 +9,12 @@ jest.mock('../src/db/client', () => ({
   getPool: jest.fn(),
 }));
 
+// Mock structured logger
+const mockLogError = jest.fn();
+jest.mock('../src/lib/logger', () => ({
+  log: { info: jest.fn(), warn: jest.fn(), error: (...args: unknown[]) => mockLogError(...args), debug: jest.fn() },
+}));
+
 import { getPool } from '../src/db/client';
 const mockGetPool = getPool as jest.MockedFunction<typeof getPool>;
 
@@ -55,8 +61,6 @@ describe('logAuthEvent', () => {
     mockGetPool.mockReturnValue({ query: mockQuery } as any);
     mockQuery.mockRejectedValue(new Error('DB connection lost'));
 
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
     // Should not throw
     await expect(
       logAuthEvent({
@@ -66,11 +70,10 @@ describe('logAuthEvent', () => {
       })
     ).resolves.toBeUndefined();
 
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(mockLogError).toHaveBeenCalledWith(
       '[AUTH-AUDIT] Failed to log event:',
       'DB connection lost'
     );
-    consoleSpy.mockRestore();
   });
 
   it('does not throw when pool is unavailable', async () => {

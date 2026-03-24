@@ -11,6 +11,7 @@
  */
 
 import { getPool } from "../db/client.js";
+import { log } from "../lib/logger";
 
 export interface ReconciliationResult {
   checked: number;
@@ -71,7 +72,7 @@ export async function reconcileStockBalances(
           [row.ledger_stock, row.store_product_id]
         );
         result.corrected++;
-        console.log(
+        log.info(
           `[StockReconciliation] Corrected store_product ${row.store_product_id}: ` +
           `cache=${row.cache_stock} → ledger=${row.ledger_stock} (delta=${row.delta})`
         );
@@ -83,7 +84,7 @@ export async function reconcileStockBalances(
     result.errors.push(`Reconciliation query failed: ${String(err)}`);
   }
 
-  console.log(
+  log.info(
     `[StockReconciliation] Complete: checked=${result.checked}, ` +
     `diverged=${result.diverged}, corrected=${result.corrected}, errors=${result.errors.length}`
   );

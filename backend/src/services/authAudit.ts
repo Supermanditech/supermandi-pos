@@ -2,6 +2,7 @@
 // Non-blocking — audit logging should never break auth flows
 
 import { getPool } from '../db/client';
+import { log } from '../lib/logger';
 
 export type AuthActorType = 'admin' | 'retailer' | 'supplier' | 'pos_device';
 export type AuthEventType =
@@ -44,6 +45,6 @@ export async function logAuthEvent(params: AuthEventParams): Promise<void> {
     );
   } catch (err) {
     // Non-blocking — audit logging should never break auth flow
-    console.error('[AUTH-AUDIT] Failed to log event:', (err as Error).message);
+    log.error('[AUTH-AUDIT] Failed to log event:', (err as Error).message);
   }
 }

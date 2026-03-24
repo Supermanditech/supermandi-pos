@@ -2,6 +2,7 @@
 // Core functions for creating, managing, and querying invoices
 
 import type { Pool, PoolClient } from "pg";
+import { log } from "../lib/logger";
 
 // =============================================================================
 // Types
@@ -389,12 +390,12 @@ export async function issueInvoice(pool: Pool, invoiceId: string): Promise<void>
   // GCP-STG-0074: Store PDF in GCS on issuance (non-blocking)
   storeInvoicePdfInGcs(pool, invoiceId, result.rows[0].invoice_number).catch((err) => {
     // Non-blocking — log but don't fail issuance
-    console.error(`[GCP-STG-0074] PDF storage failed for invoice ${invoiceId}:`, err?.message);
+    log.error(`[GCP-STG-0074] PDF storage failed for invoice ${invoiceId}:`, err?.message);
   });
 
   // GCP-STG-0078: Trigger e-invoice IRN generation (non-blocking)
   triggerEInvoice(pool, invoiceId).catch((err) => {
-    console.error(`[GCP-STG-0078] E-invoice generation failed for invoice ${invoiceId}:`, err?.message);
+    log.error(`[GCP-STG-0078] E-invoice generation failed for invoice ${invoiceId}:`, err?.message);
   });
 }
 
@@ -481,7 +482,7 @@ async function storeInvoicePdfInGcs(pool: Pool, invoiceId: string, invoiceNumber
     );
   } catch (err: any) {
     // Log but don't rethrow — PDF storage is best-effort
-    console.error(`[GCP-STG-0074] storeInvoicePdfInGcs error:`, err?.message);
+    log.error(`[GCP-STG-0074] storeInvoicePdfInGcs error:`, err?.message);
   }
 }
 
@@ -506,7 +507,7 @@ async function triggerEInvoice(pool: Pool, invoiceId: string): Promise<void> {
     await generateIrn(pool, invoiceId);
   } catch (err: any) {
     // Non-blocking — log but don't fail issuance
-    console.error(`[GCP-STG-0078] triggerEInvoice error:`, err?.message);
+    log.error(`[GCP-STG-0078] triggerEInvoice error:`, err?.message);
   }
 }
 

@@ -17,6 +17,7 @@ import { sendTextMessage, isWhatsAppConfigured } from "../../../services/whatsap
 import { sendSms } from "../../../services/smsService";
 import { redisRateLimit } from "../../../middleware/rateLimit";
 import { logAuthEvent } from "../../../services/authAudit";
+import { log } from "../../../lib/logger";
 
 // GCP-STG-0308: Rate limiter on send-otp to prevent OTP table flooding
 const otpSendLimiter = redisRateLimit({
@@ -95,9 +96,9 @@ posOtpAuthRouter.post("/auth/send-otp", otpSendLimiter, async (req, res) => {
     // Send OTP via WhatsApp (primary) with masked console fallback
     // SECURITY: Never enable LOG_OTP_PLAINTEXT in staging or production
     if (process.env.LOG_OTP_PLAINTEXT === 'true') {
-      console.log(`[OTP-DEV] Phone: ${phone}, OTP: ${otp}`);
+      log.info(`[OTP-DEV] Phone: ${phone}, OTP: ${otp}`);
     } else {
-      console.log(`[OTP] Phone: ${phone.slice(0, 3)}***${phone.slice(-2)}, OTP: ****** (expires: ${expiresAt.toISOString()})`);
+      log.info(`[OTP] Phone: ${phone.slice(0, 3)}***${phone.slice(-2)}, OTP: ****** (expires: ${expiresAt.toISOString()})`);
     }
 
     // GCP-STG-0467: WhatsApp primary + SMS fallback for OTP delivery
@@ -112,20 +113,20 @@ posOtpAuthRouter.post("/auth/send-otp", otpSendLimiter, async (req, res) => {
         });
         otpDelivered = true;
       } catch (waErr) {
-        console.error(`[OTP] WhatsApp failed for ${phone.slice(0, 3)}***:`, asError(waErr).message);
+        log.error(`[OTP] WhatsApp failed for ${phone.slice(0, 3)}***:`, asError(waErr).message);
       }
     }
 
     // GCP-STG-0467: SMS fallback when WhatsApp fails or is not configured
     if (!otpDelivered) {
-      console.log(`[OTP] WhatsApp failed, SMS fallback attempted for ${phone.slice(0, 3)}***`);
+      log.info(`[OTP] WhatsApp failed, SMS fallback attempted for ${phone.slice(0, 3)}***`);
       try {
         const smsSent = await sendSms(`+91${phone}`, otpMessage);
         if (smsSent) {
           otpDelivered = true;
         }
       } catch (smsErr) {
-        console.error(`[OTP] SMS fallback also failed for ${phone.slice(0, 3)}***:`, asError(smsErr).message);
+        log.error(`[OTP] SMS fallback also failed for ${phone.slice(0, 3)}***:`, asError(smsErr).message);
       }
     }
 
@@ -140,7 +141,7 @@ posOtpAuthRouter.post("/auth/send-otp", otpSendLimiter, async (req, res) => {
 
     res.json({ success: true, message: "OTP sent to your phone" });
   } catch (err) {
-    console.error("[OTP] send-otp error:", asError(err).message);
+    log.error("[OTP] send-otp error:", asError(err).message);
     res.status(500).json({ error: { code: "OTP_SEND_FAILED", message: "Failed to send OTP" } });
   }
 });
@@ -297,7 +298,7 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
       storeCode: store.store_code,
     });
   } catch (err) {
-    console.error("[OTP] verify-otp error:", asError(err).message);
+    log.error("[OTP] verify-otp error:", asError(err).message);
     res.status(500).json({ error: { code: "OTP_VERIFY_FAILED", message: "OTP verification failed" } });
   }
 });
