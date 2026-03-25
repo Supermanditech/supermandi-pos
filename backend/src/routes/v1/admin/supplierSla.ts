@@ -1,11 +1,12 @@
 // GCP-STG-0665: Supplier SLA monitoring — track promised vs actual delivery
 import { Router } from 'express';
 import { getPool } from '../../../db/client';
+import { requireAdminToken } from '../../../middleware/adminToken';
 
 const router = Router();
 
 // GET /admin/suppliers/:supplierId/sla — delivery SLA performance
-router.get('/suppliers/:supplierId/sla', async (req, res) => {
+router.get('/suppliers/:supplierId/sla', requireAdminToken, async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: 'Service unavailable' });
 

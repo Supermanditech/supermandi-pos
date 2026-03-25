@@ -4,9 +4,18 @@
  * Mounts supplierSlaRouter, mocks getPool, verifies HTTP responses.
  */
 
+// Set JWT_SECRET before any imports (adminToken.ts reads it at module load)
+process.env.JWT_SECRET = "test-secret-for-sla";
+process.env.NODE_ENV = "test";
+
 const mockQuery = jest.fn();
 jest.mock("../src/db/client", () => ({
   getPool: () => ({ query: mockQuery }),
+}));
+
+// Mock adminToken middleware to pass through in tests
+jest.mock("../src/middleware/adminToken", () => ({
+  requireAdminToken: (_req: any, _res: any, next: any) => next(),
 }));
 
 import express from "express";
