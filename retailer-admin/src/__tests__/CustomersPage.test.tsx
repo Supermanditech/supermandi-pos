@@ -94,6 +94,7 @@ const customerA = {
   address: '123 Main St, Delhi',
   creditLimitMinor: 500000,
   totalPurchasesMinor: 1250000,
+  creditBalance: 250000,  // GCP-STG-0740: outstanding khata balance
   visitCount: 12,
   lastVisitAt: '2026-03-08T10:00:00Z',
   createdAt: '2026-01-01T00:00:00Z',
@@ -108,6 +109,7 @@ const customerB = {
   address: null,
   creditLimitMinor: 0,
   totalPurchasesMinor: 50000,
+  creditBalance: 0,  // GCP-STG-0740
   visitCount: 2,
   lastVisitAt: null,
   createdAt: '2026-02-15T00:00:00Z',
@@ -250,15 +252,15 @@ describe('customer list', () => {
     expect(screen.getByText('Total Purchases')).toBeInTheDocument();
     expect(screen.getByText('Visits')).toBeInTheDocument();
     expect(screen.getByText('Last Visit')).toBeInTheDocument();
-    expect(screen.getByText('Credit Limit')).toBeInTheDocument();
+    expect(screen.getByText('Credit Balance')).toBeInTheDocument();
   });
 
-  it('formats currency for purchases and credit limit', async () => {
+  it('formats currency for purchases and credit balance', async () => {
     setupMocks({});
     renderPage();
     await waitFor(() => {
       expect(screen.getByText('₹12500')).toBeInTheDocument();
-      expect(screen.getByText('₹5000')).toBeInTheDocument();
+      expect(screen.getByText('₹2500')).toBeInTheDocument();
     });
   });
 
