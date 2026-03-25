@@ -3505,7 +3505,7 @@ posSalesRouter.get("/sales/:saleId/invoice/pdf", requireDeviceToken, async (req,
     // Falls through to regeneration until GCS streaming is wired up
     if (invoice.pdfGcsPath) {
       // TODO: Stream from GCS when client is configured
-      console.log(`[pos/sales/invoice/pdf] GCS path exists (${invoice.pdfGcsPath}), regenerating`);
+      log.info(`[pos/sales/invoice/pdf] GCS path exists (${invoice.pdfGcsPath}), regenerating`);
     }
 
     // Generate QR code buffer if signed QR string exists (e-invoice)

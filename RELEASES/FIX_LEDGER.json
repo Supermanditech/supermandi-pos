@@ -19134,7 +19134,7 @@
       "file": "backend/src/routes/v1/pos/sales.ts",
       "start_line": 3465,
       "end_line": 3532,
-      "checksum": "4a0665b4c6a7568f",
+      "checksum": "28154e8638ec9deb",
       "description": "GCP-STG-0361: POS invoice PDF download â€” GET /sales/:saleId/invoice/pdf with store isolation + PDF streaming + GCP-STG-0727 GCS stub",
       "test_file": "backend/tests/posInvoicePdf.gcp-stg-0361.unit.test.ts",
       "depends_on": null,

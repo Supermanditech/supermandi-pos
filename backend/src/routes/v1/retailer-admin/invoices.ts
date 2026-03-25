@@ -7,6 +7,7 @@ import { getStoreId, requireStoreContext } from "../../../middleware/retailerSto
 import { listInvoices, getInvoice } from "../../../services/invoiceService";
 import { generateInvoicePdf } from "../../../services/invoicePdfService";
 import { generateQrCodeBuffer } from "../../../services/eInvoiceService";
+import { log } from "../../../lib/logger";
 
 export const retailerInvoicesRouter = Router();
 
@@ -95,7 +96,7 @@ retailerInvoicesRouter.get("/invoices/:invoiceId/pdf", async (req: Request, res:
     // Falls through to regeneration until GCS streaming is wired up
     if (invoice.pdfGcsPath) {
       // TODO: Stream from GCS when client is configured
-      console.log(`[retailer/invoices/pdf] GCS path exists (${invoice.pdfGcsPath}), regenerating`);
+      log.info(`[retailer/invoices/pdf] GCS path exists (${invoice.pdfGcsPath}), regenerating`);
     }
 
     // GCP-STG-0078: Include QR code if e-invoice signed QR exists
