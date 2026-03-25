@@ -627,7 +627,9 @@ export async function getInvoice(pool: Pool, invoiceId: string): Promise<any> {
       i.irn_generated_at as "irnGeneratedAt",
       i.signed_qr_string as "signedQrString",
       i.ack_number as "ackNumber",
-      i.ack_date as "ackDate"
+      i.ack_date as "ackDate",
+      i.pdf_gcs_path as "pdfGcsPath",
+      i.pdf_signature as "pdfSignature"
     FROM invoicing.invoices i
     WHERE i.id = $1::uuid`,
     [invoiceId]

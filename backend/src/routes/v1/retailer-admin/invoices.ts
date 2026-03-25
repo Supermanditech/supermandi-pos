@@ -91,6 +91,13 @@ retailerInvoicesRouter.get("/invoices/:invoiceId/pdf", async (req: Request, res:
       return;
     }
 
+    // GCP-STG-0727: Check if PDF is archived in GCS — prefer streaming when GCS client configured
+    // Falls through to regeneration until GCS streaming is wired up
+    if (invoice.pdfGcsPath) {
+      // TODO: Stream from GCS when client is configured
+      console.log(`[retailer/invoices/pdf] GCS path exists (${invoice.pdfGcsPath}), regenerating`);
+    }
+
     // GCP-STG-0078: Include QR code if e-invoice signed QR exists
     let qrCodeBuffer: Buffer | undefined;
     if (invoice.signedQrString) {

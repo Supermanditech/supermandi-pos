@@ -3501,6 +3501,13 @@ posSalesRouter.get("/sales/:saleId/invoice/pdf", requireDeviceToken, async (req,
       return res.status(404).json({ error: "invoice_not_found" });
     }
 
+    // GCP-STG-0727: Check if PDF is archived in GCS — prefer streaming when GCS client configured
+    // Falls through to regeneration until GCS streaming is wired up
+    if (invoice.pdfGcsPath) {
+      // TODO: Stream from GCS when client is configured
+      console.log(`[pos/sales/invoice/pdf] GCS path exists (${invoice.pdfGcsPath}), regenerating`);
+    }
+
     // Generate QR code buffer if signed QR string exists (e-invoice)
     let qrCodeBuffer: Buffer | undefined;
     if (invoice.signedQrString) {

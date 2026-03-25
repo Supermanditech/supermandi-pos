@@ -1,4 +1,5 @@
 // T-218: Customer CRM for retailer-admin portal
+// GCP-STG-0740: Enhanced with credit_balance, search alias, total_spent, visits
 // Provides customer list + detail endpoints using retailer JWT auth (x-actor-id = storeId)
 
 import { Router, Request, Response } from "express";
@@ -14,18 +15,33 @@ function getStoreId(req: Request): string | null {
 }
 
 const CUSTOMER_COLUMNS = `
-  id, store_id AS "storeId", name, phone, email, address,
-  credit_limit_minor AS "creditLimitMinor",
-  total_purchases_minor AS "totalPurchasesMinor",
-  visit_count AS "visitCount",
-  last_visit_at AS "lastVisitAt",
-  created_at AS "createdAt",
-  updated_at AS "updatedAt"
+  cp.id, cp.store_id AS "storeId", cp.name, cp.phone, cp.email, cp.address,
+  cp.credit_limit_minor AS "creditLimitMinor",
+  cp.total_purchases_minor AS "totalPurchasesMinor",
+  cp.total_purchases_minor AS "totalSpent",
+  cp.visit_count AS "visitCount",
+  cp.visit_count AS "visits",
+  cp.last_visit_at AS "lastVisitAt",
+  cp.last_visit_at AS "lastVisit",
+  COALESCE(kb.balance_minor, 0) AS "creditBalance",
+  cp.created_at AS "createdAt",
+  cp.updated_at AS "updatedAt"
+`;
+
+/** GCP-STG-0740: Join to get latest khata balance as credit_balance */
+const KHATA_BALANCE_JOIN = `
+  LEFT JOIN LATERAL (
+    SELECT balance_minor FROM orders.khata_entries ke
+    WHERE ke.store_id = cp.store_id AND ke.customer_phone = cp.phone
+    ORDER BY ke.created_at DESC LIMIT 1
+  ) kb ON true
 `;
 
 /**
  * GET /retailer-admin/customers
- * List customers for this store with optional search.
+ * GCP-STG-0740: List customers for this store with optional search.
+ * Supports both ?q= and ?search= query parameters.
+ * Returns: name, phone, total_spent, visits, credit_balance, last_visit.
  */
 retailerAdminCustomersRouter.get("/customers", async (req: Request, res: Response) => {
   const pool = getPool();
@@ -34,8 +50,9 @@ retailerAdminCustomersRouter.get("/customers", async (req: Request, res: Respons
   const storeId = getStoreId(req);
   if (!storeId) return res.status(401).json({ error: "missing store context" });
 
-  const q = req.query.q as string | undefined;
-  const limit = Math.min(Math.max(1, Number(req.query.limit) || 50), 200);
+  // GCP-STG-0740: Accept both ?q= and ?search= for flexibility
+  const q = (req.query.q as string | undefined) || (req.query.search as string | undefined);
+  const limit = Math.min(Math.max(1, Number(req.query.limit) || 20), 200);
   const offset = Math.max(0, Number(req.query.offset) || 0);
 
   try {
@@ -45,7 +62,7 @@ retailerAdminCustomersRouter.get("/customers", async (req: Request, res: Respons
     let countSearchClause = "";
 
     if (q && q.trim()) {
-      searchClause = "AND (name ILIKE $4 OR phone ILIKE $4)";
+      searchClause = "AND (cp.name ILIKE $4 OR cp.phone ILIKE $4)";
       countSearchClause = "AND (name ILIKE $2 OR phone ILIKE $2)";
       params.push(`%${q.trim()}%`);
     }
@@ -53,9 +70,10 @@ retailerAdminCustomersRouter.get("/customers", async (req: Request, res: Respons
     const [dataResult, countResult] = await Promise.all([
       pool.query(
         `SELECT ${CUSTOMER_COLUMNS}
-         FROM platform.customer_profiles
-         WHERE store_id = $1 ${searchClause}
-         ORDER BY last_visit_at DESC NULLS LAST
+         FROM platform.customer_profiles cp
+         ${KHATA_BALANCE_JOIN}
+         WHERE cp.store_id = $1 ${searchClause}
+         ORDER BY cp.last_visit_at DESC NULLS LAST
          LIMIT $2 OFFSET $3`,
         params
       ),
@@ -73,7 +91,7 @@ retailerAdminCustomersRouter.get("/customers", async (req: Request, res: Respons
     });
   } catch (_error: unknown) {
     const error = asError(_error);
-    log.error("[T-218] Customer list error:", error.message);
+    log.error("[GCP-STG-0740] Customer list error:", error.message);
     return res.status(500).json({ error: "Failed to list customers" });
   }
 });

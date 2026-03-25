@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1230,
+  "version": 1235,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -8959,8 +8959,8 @@
     {
       "ticket": "DEEP-001",
       "file": "retailer-admin/src/pages/CustomersPage.tsx",
-      "start_line": 35,
-      "end_line": 42,
+      "start_line": 36,
+      "end_line": 43,
       "checksum": "fc479ed3e115bf24",
       "description": "Client-side search sanitization â€” strip control chars, cap 100 chars",
       "test_file": "retailer-admin/src/__tests__/pages/CustomersPage.test.tsx",
@@ -9011,7 +9011,8 @@
         "test_guard": "retailer-admin/src/__tests__/pages/CustomersPage.test.tsx exists",
         "single_commit": "fix(DEEP-001): one commit",
         "ticket_parked": "DEEP-001 is audit finding, not STG ticket"
-      }
+      },
+      "line_shifted_at": "2026-03-25T14:57:20.224Z"
     },
     {
       "ticket": "GCP-STG-0002",
@@ -11496,8 +11497,8 @@
     {
       "ticket": "GCP-STG-0078",
       "file": "backend/src/routes/v1/admin/invoices.ts",
-      "start_line": 713,
-      "end_line": 818,
+      "start_line": 724,
+      "end_line": 829,
       "checksum": "75e2d2b6499ba871",
       "description": "Admin e-invoice routes: generate-irn, cancel-irn, einvoice-status + QR on PDF download",
       "test_file": "backend/tests/eInvoice.gcp-stg-0078.unit.test.ts",
@@ -11531,7 +11532,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T16:49:43.538Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T14:13:55.145Z"
+      "line_shifted_at": "2026-03-25T14:57:20.282Z"
     },
     {
       "ticket": "GCP-STG-0087",
@@ -19132,9 +19133,9 @@
       "ticket": "GCP-STG-0361",
       "file": "backend/src/routes/v1/pos/sales.ts",
       "start_line": 3465,
-      "end_line": 3526,
-      "checksum": "fa1b047f3b7141c3",
-      "description": "GCP-STG-0361: POS invoice PDF download â€” GET /sales/:saleId/invoice/pdf with store isolation + PDF streaming",
+      "end_line": 3532,
+      "checksum": "4a0665b4c6a7568f",
+      "description": "GCP-STG-0361: POS invoice PDF download â€” GET /sales/:saleId/invoice/pdf with store isolation + PDF streaming + GCP-STG-0727 GCS stub",
       "test_file": "backend/tests/posInvoicePdf.gcp-stg-0361.unit.test.ts",
       "depends_on": null,
       "migration": null,
@@ -20905,8 +20906,8 @@
     {
       "ticket": "GCP-STG-0416",
       "file": "retailer-admin/src/pages/CustomersPage.tsx",
-      "start_line": 42,
-      "end_line": 76,
+      "start_line": 43,
+      "end_line": 77,
       "checksum": "6eef7cdd8b6df4e4",
       "description": "Server-side pagination for customer list (limit 50, offset-based) with Previous/Next controls and page indicator",
       "test_file": "N/A",
@@ -20945,7 +20946,8 @@
         "regression_check": "Search reset to page 0, refresh uses current page",
         "parity_scanned": "Parity clean",
         "parity_fixed": "No gaps"
-      }
+      },
+      "line_shifted_at": "2026-03-25T14:57:20.521Z"
     },
     {
       "ticket": "GCP-STG-0418",
@@ -31012,8 +31014,8 @@
     {
       "ticket": "GCP-STG-0627",
       "file": "backend/src/routes/v1/index.ts",
-      "start_line": 282,
-      "end_line": 290,
+      "start_line": 281,
+      "end_line": 289,
       "checksum": "83b11f972e868cd6",
       "description": "File upload rate limit: 10 uploads/min per IP on /documents, /uploads, /chat, /voice routes",
       "test_file": "backend/src/routes/v1/index.ts",
@@ -31047,7 +31049,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:08:25.238Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T14:48:41.084Z"
+      "line_shifted_at": "2026-03-25T14:54:50.076Z"
     },
     {
       "ticket": "GCP-STG-0628",
@@ -31753,8 +31755,8 @@
     {
       "ticket": "GCP-STG-0668",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 3532,
-      "end_line": 3582,
+      "start_line": 3539,
+      "end_line": 3589,
       "checksum": "4a03a47ddb642c54",
       "description": "Shift close cash reconciliation â€” POST endpoint for day-end cash counting",
       "test_file": "backend/tests/shiftClose.stg-0668.unit.test.ts",
@@ -31788,7 +31790,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:17:47.575Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T14:39:54.130Z"
+      "line_shifted_at": "2026-03-25T14:57:20.689Z"
     },
     {
       "ticket": "GCP-STG-0669",
@@ -32066,8 +32068,8 @@
     {
       "ticket": "GCP-STG-0685",
       "file": "backend/src/routes/v1/index.ts",
-      "start_line": 161,
-      "end_line": 171,
+      "start_line": 160,
+      "end_line": 170,
       "checksum": "60c65ff7089ad3f2",
       "description": "Per-store API rate limit: 300 req/min per store on POS routes via Redis-backed limiter",
       "test_file": "scripts/gcp/setup-tracing.sh",
@@ -32101,7 +32103,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:34:54.451Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T14:48:41.103Z"
+      "line_shifted_at": "2026-03-25T14:54:50.088Z"
     },
     {
       "ticket": "GCP-STG-0668",
@@ -37178,6 +37180,114 @@
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:48:28.249Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0727",
+      "file": "backend/src/services/invoiceService.ts",
+      "start_line": 629,
+      "end_line": 632,
+      "checksum": "65da80e49d69655a",
+      "description": "Add pdfGcsPath and pdfSignature to getInvoice SELECT for GCS PDF retrieval stub",
+      "test_file": "backend/tests/invoiceGcsStub.gcp-stg-0727.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T14:57:10.558Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "verified",
+        "backend_api": "verified",
+        "db_schema": "verified",
+        "api_errors": "verified",
+        "store_isolation": "verified",
+        "business_behaviour": "verified",
+        "impacted_files": "verified",
+        "fix_ledger_check": "verified",
+        "no_agent_conflict": "verified",
+        "single_commit": "verified"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0740",
+      "file": "backend/src/routes/v1/retailer-admin/customers.ts",
+      "start_line": 1,
+      "end_line": 100,
+      "checksum": "c988d31f4b1231d9",
+      "description": "Enhanced customer list with creditBalance from khata, search alias, totalSpent/visits fields",
+      "test_file": "backend/tests/retailerCustomers.gcp-stg-0740.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T14:58:21.149Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "verified",
+        "ux_states": "verified",
+        "wiring": "verified",
+        "navigation": "verified",
+        "i18n_keys": "verified",
+        "backend_api": "verified",
+        "api_errors": "verified",
+        "store_isolation": "verified",
+        "business_logic": "verified",
+        "business_behaviour": "verified",
+        "db_schema": "verified",
+        "impacted_files": "verified",
+        "fix_ledger_check": "verified",
+        "no_agent_conflict": "verified",
+        "gcp_parity": "verified",
+        "regression_check": "verified",
+        "test_guard": "verified",
+        "single_commit": "verified",
+        "ticket_parked": "verified"
+      }
     }
   ],
   "machine_state_version": 270,

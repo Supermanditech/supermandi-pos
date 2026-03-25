@@ -17,6 +17,7 @@ interface Customer {
   address: string | null;
   creditLimitMinor: number;
   totalPurchasesMinor: number;
+  creditBalance: number;  // GCP-STG-0740: outstanding khata balance
   visitCount: number;
   lastVisitAt: string | null;
   createdAt: string;
@@ -267,8 +268,8 @@ export default function CustomersPage() {
                 <th>Phone</th>
                 <th>Total Purchases</th>
                 <th>Visits</th>
+                <th>Credit Balance</th>
                 <th>Last Visit</th>
-                <th>Credit Limit</th>
               </tr>
             </thead>
             <tbody>
@@ -290,8 +291,8 @@ export default function CustomersPage() {
                   </td>
                   <td>{formatCurrency(c.totalPurchasesMinor || 0)}</td>
                   <td>{c.visitCount || 0}</td>
+                  <td>{formatCurrency(c.creditBalance || 0)}</td>
                   <td>{c.lastVisitAt ? formatDateTime(c.lastVisitAt) : '\u2014'}</td>
-                  <td>{formatCurrency(c.creditLimitMinor || 0)}</td>
                 </tr>
               ))}
             </tbody>

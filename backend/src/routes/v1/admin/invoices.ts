@@ -697,6 +697,17 @@ adminInvoicesRouter.get("/invoices/:invoiceId/pdf", requireAdminToken, requirePe
       return res.status(404).json({ error: "Invoice not found" });
     }
 
+    // GCP-STG-0727: Check if PDF is archived in GCS — prefer streaming from GCS
+    // when GCS client is configured. For now, falls through to regeneration.
+    if (invoice.pdfGcsPath) {
+      // TODO: When GCS streaming is configured, stream from bucket:
+      //   const bucket = storage.bucket(process.env.GCS_DOCUMENTS_BUCKET);
+      //   const file = bucket.file(invoice.pdfGcsPath);
+      //   const [exists] = await file.exists();
+      //   if (exists) { file.createReadStream().pipe(res); return; }
+      log.info(`[admin/invoices/pdf] GCS path exists (${invoice.pdfGcsPath}), falling through to regeneration`);
+    }
+
     // GCP-STG-0078: Generate QR code buffer if signed QR string exists
     let qrCodeBuffer: Buffer | undefined;
     if (invoice.signedQrString) {
