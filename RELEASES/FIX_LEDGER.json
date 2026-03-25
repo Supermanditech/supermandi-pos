@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1165,
+  "version": 1166,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -33456,6 +33456,57 @@
         "regression_check": "No source code changes",
         "test_guard": "Self-documenting script",
         "single_commit": "fix(GCP-STG-0643)",
+        "ticket_parked": "Parked after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0644",
+      "file": "scripts/docs/disaster-recovery.sh",
+      "start_line": 1,
+      "end_line": 35,
+      "checksum": "f5f6303a76555fce",
+      "description": "Disaster recovery plan for asia-south1 outage",
+      "test_file": "scripts/docs/disaster-recovery.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T11:03:17.460Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "Docs script - no business logic",
+        "business_behaviour": "DR plan docs - no runtime impact",
+        "impacted_files": "scripts/docs/disaster-recovery.sh",
+        "fix_ledger_check": "Registered, zero drift",
+        "no_agent_conflict": "No conflicts",
+        "gcp_parity": "Docs script, no GCP parity issues",
+        "regression_check": "No source code changes",
+        "test_guard": "Self-documenting DR script",
+        "single_commit": "fix(GCP-STG-0644)",
         "ticket_parked": "Parked after commit"
       }
     }
