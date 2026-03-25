@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1118,
+  "version": 1121,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -31435,6 +31435,93 @@
         "test_guard": "cloudEventLogger.gcp-stg-0651.analytics-sdk.unit.test.ts created",
         "single_commit": "One commit for GCP-STG-0651",
         "ticket_parked": "Will be parked after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0686",
+      "file": "scripts/gcp/setup-cdn-images.sh",
+      "start_line": 1,
+      "end_line": 25,
+      "checksum": "acac2652fff4facf",
+      "description": "CDN configuration script for product images from GCS with Cloud CDN and signed URL options",
+      "test_file": "scripts/gcp/__tests__/setup-cdn-images.gcp-stg-0686.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T08:51:52.387Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "impacted_files": "setup-cdn-images.sh created",
+        "fix_ledger_check": "fix-guard check zero drift",
+        "no_agent_conflict": "Single agent session",
+        "gcp_parity": "GCP-native gcloud commands only",
+        "regression_check": "New file only, no existing code modified",
+        "test_guard": "setup-cdn-images.gcp-stg-0686.unit.test.ts",
+        "single_commit": "One commit for GCP-STG-0686",
+        "ticket_parked": "Will be parked after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0611",
+      "file": "scripts/gcp/verify-firebase-billing.sh",
+      "start_line": 1,
+      "end_line": 19,
+      "checksum": "bffbcc81ea5ef9e0",
+      "description": "Firebase billing plan verification script",
+      "test_file": "scripts/gcp/verify-firebase-billing.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": "N/A",
+        "regression_check": "N/A",
+        "test_guard": "N/A",
+        "single_commit": "N/A",
+        "ticket_parked": "N/A"
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T08:51:54.634Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "impacted_files": "scripts/gcp/verify-firebase-billing.sh only",
+        "fix_ledger_check": "zero drift",
+        "no_agent_conflict": "single agent"
       }
     }
   ],
