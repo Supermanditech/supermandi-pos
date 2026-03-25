@@ -27,6 +27,8 @@ import FinanceScreenV3 from "./FinanceScreenV3";
 import ReportsScreenV3 from "./ReportsScreenV3";
 import CustomersScreenV3 from "./CustomersScreenV3";
 import SettingsScreenV3 from "./SettingsScreenV3";
+import OrderTrackingScreenV3 from "./OrderTrackingScreenV3";
+import NotificationsScreenV3 from "./NotificationsScreenV3"; // GCP-STG-0749
 
 type Nav = NativeStackNavigationProp<any>;
 
@@ -182,6 +184,19 @@ export function V3CustomersWrapper() {
 export function V3SalesHistoryWrapper() {
   const nav = useNavigation<Nav>();
   return <SalesHistoryScreenV3 onClose={() => nav.goBack()} />;
+}
+
+// GCP-STG-0748: Order tracking screen wrapper
+export function V3OrderTrackingWrapper({ route }: any) {
+  const nav = useNavigation<Nav>();
+  const orderId = route?.params?.orderId ?? "";
+  return <OrderTrackingScreenV3 orderId={orderId} onClose={() => nav.goBack()} />;
+}
+
+// GCP-STG-0749: Notifications screen wrapper
+export function V3NotificationsWrapper() {
+  const nav = useNavigation<Nav>();
+  return <NotificationsScreenV3 onClose={() => nav.goBack()} />;
 }
 
 export function V3SettingsWrapper() {

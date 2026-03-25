@@ -402,7 +402,7 @@ export default function SellScreenV3() {
         // for cross-navigator tab switching.
         const parent = navigation.getParent?.();
         if (parent) parent.navigate("MORE" as never);
-      }} />
+      }} onAlertPress={() => navigation.navigate("V3Notifications" as any)} />
 
       {/* GCP-STG-0033: Removed redundant "BILLING MODE" strip — replaced by
          Retail/Bulk toggle (GCP-STG-0142). Cart info is in the cart strip at bottom. */}

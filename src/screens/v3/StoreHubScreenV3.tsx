@@ -15,11 +15,14 @@ import { logger } from "../../services/logger";
 
 type StoreHubScreenV3Props = {
   onNavigate: (screen: "grn" | "reorder" | "stock" | "barcode") => void;
+  // GCP-STG-0748: Navigate to order tracking screen
+  onOrderPress?: (orderId: string) => void;
 };
 
-type RecentOrder = { supplier: string; daysAgo: number; items: number; total: number; status: "Delivered" | "In Transit" };
+// GCP-STG-0748: Added id for order tracking navigation
+type RecentOrder = { id: string; supplier: string; daysAgo: number; items: number; total: number; status: "Delivered" | "In Transit" };
 
-export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) {
+export default function StoreHubScreenV3({ onNavigate, onOrderPress }: StoreHubScreenV3Props) {
   const colors = useThemeColors();
   // GCP-STG-0450: Use safe area insets instead of hardcoded padding
   const insets = useSafeAreaInsets();
@@ -41,6 +44,8 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
         const orders: RecentOrder[] = (result.entries ?? []).map((e: any) => {
           const daysAgo = Math.max(1, Math.round((Date.now() - new Date(e.created_at ?? e.createdAt ?? Date.now()).getTime()) / 86400000));
           return {
+            // GCP-STG-0748: Include order ID for tracking navigation
+            id: e.id ?? e.order_id ?? "",
             supplier: e.supplier_name ?? e.supplierName ?? "Supplier",
             daysAgo,
             items: e.item_count ?? e.itemCount ?? 0,
@@ -149,8 +154,13 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
         ) : null}
         {recentOrders.map((order, i) => (
           <Pressable key={i} style={styles.orderCard} onPress={() => {
-            // GCP-STG-0059: Show order detail on tap
-            Alert.alert(order.supplier, `${order.items} items · ₹${order.total.toLocaleString("en-IN")}\n${order.daysAgo} days ago\nStatus: ${order.status}`, [{ text: "OK" }]);
+            // GCP-STG-0748: Navigate to order tracking if handler provided and order has ID
+            if (onOrderPress && order.id) {
+              onOrderPress(order.id);
+            } else {
+              // GCP-STG-0059: Fallback — show order detail alert
+              Alert.alert(order.supplier, `${order.items} items · ₹${order.total.toLocaleString("en-IN")}\n${order.daysAgo} days ago\nStatus: ${order.status}`, [{ text: "OK" }]);
+            }
           }}>
             <View style={{ flex: 1 }}>
               <Text style={styles.orderSupplier}>{order.supplier}</Text>

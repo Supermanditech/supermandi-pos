@@ -477,6 +477,31 @@ export async function getReceiveRecord(
 }
 
 // =============================================================================
+// GCP-STG-0748: ORDER TRACKING
+// =============================================================================
+
+/**
+ * GCP-STG-0748: Get order tracking data (order + events in a single call).
+ * Falls back to separate getOrder + getOrderEvents if the endpoint is not available.
+ */
+export async function getOrderTracking(
+  storeId: string,
+  orderId: string
+): Promise<{ order: PurchaseOrderWithItems; events: OrderEvent[] }> {
+  try {
+    const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/tracking`;
+    return await apiClient.get<{ order: PurchaseOrderWithItems; events: OrderEvent[] }>(path);
+  } catch {
+    // Fallback: fetch order + events separately if /tracking endpoint doesn't exist yet
+    const [order, events] = await Promise.all([
+      getOrder(storeId, orderId),
+      getOrderEvents(storeId, orderId),
+    ]);
+    return { order, events };
+  }
+}
+
+// =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 

@@ -108,7 +108,7 @@ export default function PosRootLayoutV3() {
             <StoreHubScreenV3 onNavigate={(s) => {
               const map: Record<string, string> = { grn: "V3GRN", reorder: "V3Reorder", stock: "V3Stock", barcode: "BarcodeSheet" };
               if (map[s]) navigateTo(map[s]);
-            }} />
+            }} onOrderPress={(orderId) => navigateTo("V3OrderTracking", { orderId })} />
           </ScreenErrorBoundary>
         ) : null}
         {activeTab === "MORE" ? (

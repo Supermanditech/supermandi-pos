@@ -46,7 +46,7 @@ import {
   V3SuccessWrapper, V3ScanWrapper, V3NewProductWrapper,
   V3CompareWrapper, V3CounterPurchaseWrapper, V3GRNWrapper, V3ReorderWrapper,
   V3StockWrapper, V3BarcodeSheetWrapper, V3KhataWrapper, V3FinanceWrapper, V3ReportsWrapper,
-  V3CustomersWrapper, V3SalesHistoryWrapper, V3SettingsWrapper,
+  V3CustomersWrapper, V3SalesHistoryWrapper, V3OrderTrackingWrapper, V3NotificationsWrapper, V3SettingsWrapper,
 } from "./src/screens/v3/V3ScreenWrappers";
 
 import { useThemeColors } from "./src/theme";
@@ -192,6 +192,8 @@ export default function App() {
           <Stack.Screen name="V3Reports" component={V3ReportsWrapper} />
           <Stack.Screen name="V3Customers" component={V3CustomersWrapper} />
           <Stack.Screen name="V3SalesHistory" component={V3SalesHistoryWrapper} />
+          <Stack.Screen name="V3OrderTracking" component={V3OrderTrackingWrapper} />
+          <Stack.Screen name="V3Notifications" component={V3NotificationsWrapper} />
           <Stack.Screen name="V3Settings" component={V3SettingsWrapper} />
         </Stack.Navigator>
       </NavigationContainer>

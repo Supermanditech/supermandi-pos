@@ -14,9 +14,10 @@ import { apiClient } from "../../services/api/apiClient"; // GCP-STG-0737
 
 type BrandedHeaderProps = {
   onMenuPress?: () => void;
+  onAlertPress?: () => void; // GCP-STG-0749: Navigate to notifications
 };
 
-export default function BrandedHeader({ onMenuPress }: BrandedHeaderProps) {
+export default function BrandedHeader({ onMenuPress, onAlertPress }: BrandedHeaderProps) {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets(); // GCP-STG-0302
   const styles = React.useMemo(() => createStyles(colors), [colors]);
@@ -58,12 +59,20 @@ export default function BrandedHeader({ onMenuPress }: BrandedHeaderProps) {
           <View style={[styles.statusDot, isOnline ? styles.dotOnline : styles.dotOffline]} />
           <Text style={styles.statusText}>{isOnline ? "Online" : "Offline"}</Text>
         </View>
-        {/* GCP-STG-0737: Alert badge */}
-        {alertCount > 0 ? (
-          <View style={styles.alertBadge} testID="alert-badge">
+        {/* GCP-STG-0737: Alert badge — GCP-STG-0749: Pressable to open notifications */}
+        <Pressable
+          onPress={onAlertPress}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+          testID="alert-badge-btn"
+          style={alertCount > 0 ? styles.alertBadge : undefined}
+        >
+          {alertCount > 0 ? (
             <Text style={styles.alertBadgeText}>{alertCount > 99 ? "99+" : String(alertCount)}</Text>
-          </View>
-        ) : null}
+          ) : (
+            <Text style={styles.bellIcon}>{"\uD83D\uDD14"}</Text>
+          )}
+        </Pressable>
         {onMenuPress ? (
           <Pressable
             style={styles.menuButton}
@@ -161,6 +170,11 @@ function createStyles(colors: ColorPalette) {
       color: "#fff",
       fontSize: 10,
       fontWeight: "800" as const,
+    },
+    // GCP-STG-0749: Bell icon when no unread alerts
+    bellIcon: {
+      color: colors.textInverse,
+      fontSize: 18,
     },
   });
 }
