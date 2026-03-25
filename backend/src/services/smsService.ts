@@ -14,6 +14,11 @@ if (!SMS_DISABLED && !process.env.MSG91_AUTH_KEY && !process.env.TWILIO_SID) {
   log.warn('[SMS] SMS enabled but no provider configured — SMS delivery will fail');
 }
 
+/** Check if SMS service is enabled (not disabled and has provider credentials) */
+export function isSmsServiceEnabled(): boolean {
+  return !SMS_DISABLED && getProvider() !== 'disabled';
+}
+
 type SmsProvider = 'msg91' | 'twilio' | 'disabled';
 
 function getProvider(): SmsProvider {

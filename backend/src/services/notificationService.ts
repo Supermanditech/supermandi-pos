@@ -5,7 +5,17 @@
  * Failures are logged as warnings — never blocks registration.
  */
 
-import { sendSms, isSmsServiceEnabled } from "./smsService";
+import { sendSms as _sendSmsRaw, isSmsServiceEnabled } from "./smsService";
+
+/** Wrapper: sendSms returns boolean, notification code expects { sent, errorMessage } */
+async function sendSms(to: string, body: string): Promise<{ sent: boolean; errorMessage?: string }> {
+  try {
+    const result = await _sendSmsRaw(to, body);
+    return { sent: result };
+  } catch (err) {
+    return { sent: false, errorMessage: err instanceof Error ? err.message : String(err) };
+  }
+}
 import {
   isEmailServiceEnabled,
   type SendEmailResult,

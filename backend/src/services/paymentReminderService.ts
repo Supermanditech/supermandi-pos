@@ -11,7 +11,12 @@
  */
 
 import { getPool } from '../db/client';
-import { sendSms, isSmsServiceEnabled } from './smsService';
+import { sendSms as _sendSmsRaw, isSmsServiceEnabled } from './smsService';
+
+async function sendSms(to: string, body: string): Promise<{ sent: boolean; errorMessage?: string }> {
+  try { return { sent: await _sendSmsRaw(to, body) }; }
+  catch (err) { return { sent: false, errorMessage: err instanceof Error ? err.message : String(err) }; }
+}
 import { sendAndPersistNotification } from './fcmService';
 import { log } from "../lib/logger";
 
