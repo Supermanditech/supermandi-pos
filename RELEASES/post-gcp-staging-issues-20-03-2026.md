@@ -19116,4 +19116,84 @@ pos-tests:
 
 ---
 
-<!-- next ticket: GCP-STG-0750 -->
+## GCP-STG-0750 — MEDIUM: Fix posInvoicePdf.gcp-stg-0361 test failures — 2 tests fail (MEDIUM)
+
+**Ticket ID**: GCP-STG-0750
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend
+**Source**: Pre-GCP Staging Deployment Audit — Section 3
+
+**Problem**: `backend/tests/posInvoicePdf.gcp-stg-0361.unit.test.ts` has 2 failing tests. This causes backend test suite to report 259/260 pass. The failures are pre-existing (not from recent changes) but must be fixed before deploy for CI green status.
+
+**Fix**: Read the test file, run it isolated (`npx jest tests/posInvoicePdf.gcp-stg-0361.unit.test.ts --forceExit`), identify the root cause (likely mock shape mismatch after invoice service changes), fix the mock to match current `invoicePdfService.ts` response shape.
+
+**12-Layer Verification**: L6 Backend ✅
+
+---
+
+## GCP-STG-0751 — MEDIUM: Fix CustomersPage.test.tsx failures — 2 tests fail (MEDIUM)
+
+**Ticket ID**: GCP-STG-0751
+**Severity**: P2 MEDIUM
+**Platforms**: RETAILER-WEB
+**Layers**: UI
+**Source**: Pre-GCP Staging Deployment Audit — Section 4
+
+**Problem**: `retailer-admin/src/__tests__/CustomersPage.test.tsx` has 2 failing tests: "shows table headers" and "formats currency for purchases and credit limit". The CustomersPage was enhanced in GCP-STG-0740 (added credit balance column) but the test mock wasn't updated to include the new fields.
+
+**Fix**: Read the test, update the mock customer data to include `creditBalance` or `outstandingMinor` field. Verify the table headers match the new column layout.
+
+**12-Layer Verification**: L1 UI ✅
+
+---
+
+## GCP-STG-0752 — LOW: Prune 25 stale merged git branches (LOW)
+
+**Ticket ID**: GCP-STG-0752
+**Severity**: P3 LOW
+**Platforms**: INFRA
+**Layers**: Git Discipline
+**Source**: Pre-GCP Staging Deployment Audit — Section 5
+
+**Problem**: 25 local branches that are already merged into main still exist. They add noise to `git branch` output and are unnecessary.
+
+**Fix**: Run `git branch --merged main | grep -v "main\|\*" | xargs git branch -d`. Script already exists at `scripts/cleanup/prune-merged-branches.sh`.
+
+**12-Layer Verification**: N/A (git housekeeping)
+
+---
+
+## GCP-STG-0753 — LOW: Replace 30 remaining console.log with structured logger (LOW)
+
+**Ticket ID**: GCP-STG-0753
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend
+**Source**: Pre-GCP Staging Deployment Audit — Section 9
+
+**Problem**: GCP-STG-0572 replaced most console.log/error/warn with structured logger, but 30 remain in backend/src/ (excluding tests). Some are legitimate startup logs, but production code should use `log.info/warn/error` from `lib/logger.ts` for structured Cloud Logging integration.
+
+**Fix**: `grep -rn "console\.log\|console\.error\|console\.warn" backend/src/ --include="*.ts" | grep -v __tests__ | grep -v ".test."` — review each, replace with `log.info/warn/error` where appropriate. Keep `console.error` only in top-level crash handlers.
+
+**12-Layer Verification**: L6 Backend ✅
+
+---
+
+## GCP-STG-0754 — LOW: Clean up 943 prestage tags — keep latest 50 (LOW)
+
+**Ticket ID**: GCP-STG-0754
+**Severity**: P3 LOW
+**Platforms**: INFRA
+**Layers**: Git Discipline
+**Source**: Pre-GCP Staging Deployment Audit — Section 5
+
+**Problem**: 943 prestage tags clutter git tag list. Only the most recent ~50 are useful for rollback reference. Script already exists at `scripts/cleanup/prune-prestage-tags.sh`.
+
+**Fix**: Run the dry-run script, review output, then execute: `git tag -l 'prestage-*' --sort=creatordate | head -n 893 | xargs git tag -d` (keep latest 50).
+
+**12-Layer Verification**: N/A (git housekeeping)
+
+---
+
+<!-- next ticket: GCP-STG-0755 -->
