@@ -16,6 +16,20 @@ jest.mock("../src/db/client", () => ({
   pool: { query: mockQuery },
 }));
 
+// Mock rateLimit, authAudit, logger, errorUtils
+jest.mock("../src/middleware/rateLimit", () => ({
+  redisRateLimit: () => (_req: any, _res: any, next: any) => next(),
+}));
+jest.mock("../src/services/authAudit", () => ({
+  logAuthEvent: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock("../src/lib/logger", () => ({
+  log: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+}));
+jest.mock("../src/lib/errorUtils", () => ({
+  asError: (e: unknown) => (e instanceof Error ? e : new Error(String(e))),
+}));
+
 // Mock whatsappService
 jest.mock("../src/services/whatsappService", () => ({
   isWhatsAppConfigured: () => false,
