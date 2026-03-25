@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1134,
+  "version": 1135,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -31929,6 +31929,45 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T09:49:54.888Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0709",
+      "file": "scripts/gates/supplier-env-gate.sh",
+      "start_line": 1,
+      "end_line": 25,
+      "checksum": "1e3236c9b8d768ff",
+      "description": "Supplier portal env var gate script",
+      "test_file": "scripts/gates/__tests__/supplier-env-gate.test.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T09:50:36.981Z",
       "status": "ACTIVE"
     }
   ],
