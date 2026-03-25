@@ -14,12 +14,16 @@ CLAUDE.md
 *.png
 *.jpg
 
-# Test files
+# Test files (GCP-STG-0598)
 __tests__/
-*.test.*
-*.spec.*
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
 tests/
 e2e-tests/
+vitest.config.*
+jest.config.*
 
 # Tooling
 scripts/
