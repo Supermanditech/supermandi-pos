@@ -15,14 +15,20 @@ jest.mock('next/link', () => {
 // Mock lucide-react icons
 jest.mock('lucide-react', () => {
   const React = require('react');
+  const icon = (name: string) => (p: any) => React.createElement('span', { 'data-testid': `icon-${name}` });
   return {
-    Package: (p: any) => React.createElement('span', { 'data-testid': 'icon-package' }),
-    Clock: (p: any) => React.createElement('span', { 'data-testid': 'icon-clock' }),
-    ShoppingCart: (p: any) => React.createElement('span', { 'data-testid': 'icon-cart' }),
-    DollarSign: (p: any) => React.createElement('span', { 'data-testid': 'icon-dollar' }),
-    AlertTriangle: (p: any) => React.createElement('span', { 'data-testid': 'icon-alert' }),
-    FileText: (p: any) => React.createElement('span', { 'data-testid': 'icon-file' }),
-    Plus: (p: any) => React.createElement('span', { 'data-testid': 'icon-plus' }),
+    Package: icon('package'),
+    Clock: icon('clock'),
+    ShoppingCart: icon('cart'),
+    DollarSign: icon('dollar'),
+    AlertTriangle: icon('alert'),
+    FileText: icon('file'),
+    Plus: icon('plus'),
+    Truck: icon('truck'),
+    Timer: icon('timer'),
+    CheckCircle: icon('check'),
+    Banknote: icon('banknote'),
+    TrendingUp: icon('trending'),
   };
 });
 
@@ -64,7 +70,14 @@ jest.mock('@tanstack/react-query', () => ({
     if (queryKey[0] === 'products') {
       return { data: { data: [], pagination: { total: 0 } }, isLoading: false, isError: false, refetch: mockRefetchProducts };
     }
-    return { data: null };
+    // GCP-STG-0741/0742: fulfillment + settlement dashboard queries
+    if (queryKey[0] === 'fulfillment-summary') {
+      return { data: { pendingOrders: 3, todayDispatch: 1, overdueOrders: 0, completedThisWeek: 8, avgFulfillmentDays: 2.5 }, isLoading: false, isError: false };
+    }
+    if (queryKey[0] === 'settlement-summary') {
+      return { data: { totalReceivable: 50000, paidThisMonth: 30000, overdueAmount: 5000, agingBuckets: { current: 40000, days30: 5000, days60: 3000, days90plus: 2000 } }, isLoading: false, isError: false };
+    }
+    return { data: null, isLoading: false, isError: false };
   },
 }));
 
