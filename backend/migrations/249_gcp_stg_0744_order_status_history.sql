@@ -2,6 +2,7 @@
 -- GCP-STG-0744: Order status history table for real-time tracking
 -- Records every status transition for purchase orders
 -- Safe to run multiple times (idempotent)
+-- ROLLBACK: DROP TABLE IF EXISTS orders.order_status_history;
 
 BEGIN;
 

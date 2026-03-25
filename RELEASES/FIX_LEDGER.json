@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1264,
+  "version": 1270,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -29747,8 +29747,8 @@
     {
       "ticket": "GCP-STG-0585",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 658,
-      "end_line": 658,
+      "start_line": 664,
+      "end_line": 664,
       "checksum": "f413bb6b65657398",
       "description": "JWT_SECRET_PREVIOUS + INVOICE_SIGNING_KEY added to --set-secrets (updated by GCP-STG-0591)",
       "test_file": ".github/workflows/deploy.yml",
@@ -29780,13 +29780,13 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:57:48.015Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T21:32:29.328Z"
+      "line_shifted_at": "2026-03-25T16:20:01.208Z"
     },
     {
       "ticket": "GCP-STG-0591",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 658,
-      "end_line": 658,
+      "start_line": 664,
+      "end_line": 664,
       "checksum": "f413bb6b65657398",
       "description": "INVOICE_SIGNING_KEY added to --set-secrets for invoice PDF integrity",
       "test_file": ".github/workflows/deploy.yml",
@@ -29818,13 +29818,13 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:00:49.965Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T21:32:29.333Z"
+      "line_shifted_at": "2026-03-25T16:20:01.213Z"
     },
     {
       "ticket": "GCP-STG-0592",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 657,
-      "end_line": 657,
+      "start_line": 663,
+      "end_line": 663,
       "checksum": "e0cb99d9d065da69",
       "description": "Add DB_POOL_MAX=10 and MAX_COMMISSION_PERCENT=30 to backend --set-env-vars",
       "test_file": "scripts/gates/config-parity.sh",
@@ -29870,7 +29870,7 @@
         "single_commit": "One ticket one commit",
         "ticket_parked": "Parked after commit"
       },
-      "line_shifted_at": "2026-03-24T21:32:29.336Z"
+      "line_shifted_at": "2026-03-25T16:20:01.217Z"
     },
     {
       "ticket": "GCP-STG-0592",
@@ -30175,8 +30175,8 @@
     {
       "ticket": "GCP-STG-0583",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 1007,
-      "end_line": 1010,
+      "start_line": 1024,
+      "end_line": 1027,
       "checksum": "683eedc46552c3c3",
       "description": "Post-deploy URL smoke gate step using cd-post-deploy-gate.sh in CD smoke-test job",
       "test_file": "scripts/gates/cd-post-deploy-gate.sh",
@@ -30223,7 +30223,7 @@
         "single_commit": "CD-only change, verified",
         "ticket_parked": "CD-only change, verified"
       },
-      "line_shifted_at": "2026-03-24T21:32:29.345Z"
+      "line_shifted_at": "2026-03-25T16:20:01.227Z"
     },
     {
       "ticket": "GCP-STG-0589",
@@ -30419,8 +30419,8 @@
     {
       "ticket": "GCP-STG-0603",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 629,
-      "end_line": 635,
+      "start_line": 635,
+      "end_line": 641,
       "checksum": "c7e608b2b7e79b94",
       "description": "CORS production domain documentation comments in deploy.yml and .env.cloudrun.example",
       "test_file": "backend/.env.cloudrun.example",
@@ -30453,7 +30453,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:32:04.617Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-25T16:20:01.234Z"
     },
     {
       "ticket": "GCP-STG-0604",
@@ -30850,8 +30851,8 @@
     {
       "ticket": "GCP-STG-0616",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 657,
-      "end_line": 657,
+      "start_line": 663,
+      "end_line": 663,
       "checksum": "e0cb99d9d065da69",
       "description": "Add LOG_LEVEL=info and LOG_FORMAT=json to Cloud Run set-env-vars",
       "test_file": ".github/workflows/deploy.yml",
@@ -30884,7 +30885,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:56:01.842Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-25T16:20:01.240Z"
     },
     {
       "ticket": "GCP-STG-0616",
@@ -32527,8 +32529,8 @@
     {
       "ticket": "GCP-STG-0613",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 658,
-      "end_line": 658,
+      "start_line": 664,
+      "end_line": 664,
       "checksum": "f413bb6b65657398",
       "description": "Add RAZORPAY_WEBHOOK_SECRET to Cloud Run set-secrets for webhook signature verification",
       "test_file": "scripts/gcp/verify-firebase-appcheck.sh",
@@ -32566,7 +32568,8 @@
         "impacted_files": ".github/workflows/deploy.yml â€” added RAZORPAY_WEBHOOK_SECRET to set-secrets",
         "fix_ledger_check": "zero drift",
         "no_agent_conflict": "single agent"
-      }
+      },
+      "line_shifted_at": "2026-03-25T16:20:01.257Z"
     },
     {
       "ticket": "GCP-STG-0614",
@@ -37997,6 +38000,174 @@
         "single_commit": "verified",
         "ticket_parked": "verified"
       }
+    },
+    {
+      "ticket": "GCP-STG-MIGRATION",
+      "file": "scripts/gates/migration-production-gate.sh",
+      "start_line": 1,
+      "end_line": 222,
+      "checksum": "bdab952e583438e8",
+      "description": "10-gate migration production validator: sequential numbering, ROLLBACK comments, idempotency, NOT NULL safety, SQL syntax, file size, hardcoded data, schema prefix, count verification",
+      "test_file": "scripts/gates/migration-production-gate.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T16:20:21.403Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "Shell scripts only — no domain logic changes, no stock/ledger/price code modified",
+        "business_behaviour": "Gate scripts are validation-only — no user workflow changes, verified gate passes with exit 0",
+        "impacted_files": "3 new gate scripts + deploy.yml step + migration 249 ROLLBACK comment + FIX_LEDGER.json",
+        "fix_ledger_check": "fix-guard check shows 776 fixes intact, zero drift",
+        "no_agent_conflict": "Single agent session, git diff shows only migration gate additions",
+        "gcp_parity": "No localhost URLs, uses staging.supermandi.tech, env-var driven",
+        "regression_check": "Contract tests pass, migration-production-gate.sh exits 0 with 0 failures",
+        "test_guard": "migration-production-gate.sh is self-testing gate script — runs 10 gates, exits 0",
+        "single_commit": "Single commit for GCP-STG-MIGRATION ticket",
+        "ticket_parked": "Infrastructure ticket — no STAGING_TICKETS entry, committed to main"
+      }
+    },
+    {
+      "ticket": "GCP-STG-MIGRATION",
+      "file": "scripts/gates/migration-pre-apply.sh",
+      "start_line": 1,
+      "end_line": 107,
+      "checksum": "c7f640801fa11360",
+      "description": "Pre-apply checklist: DB connectivity, migration state, Cloud SQL backup, dry-run, connection headroom",
+      "test_file": "scripts/gates/migration-pre-apply.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T16:20:22.893Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-MIGRATION",
+      "file": "scripts/gates/migration-post-apply.sh",
+      "start_line": 1,
+      "end_line": 134,
+      "checksum": "7c7eed4662589414",
+      "description": "Post-apply verification: migration version check, table existence, column existence, health check",
+      "test_file": "scripts/gates/migration-post-apply.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T16:20:24.307Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-MIGRATION",
+      "file": ".github/workflows/deploy.yml",
+      "start_line": 239,
+      "end_line": 243,
+      "checksum": "f83f33f2d3605f7d",
+      "description": "Migration production gate integrated as blocking step in pre-deploy-safety job",
+      "test_file": "scripts/gates/migration-production-gate.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T16:20:26.112Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 270,

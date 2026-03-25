@@ -236,6 +236,12 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SA_EMAIL }}
 
+      # GCP-STG-MIGRATION: 10-gate migration production validator — blocking pre-deploy check
+      # Validates sequential numbering, ROLLBACK comments, idempotency, NOT NULL safety,
+      # SQL syntax, file sizes, hardcoded data, schema prefixes, and migration count.
+      - name: Migration Production Gate
+        run: bash scripts/gates/migration-production-gate.sh
+
       # V3-HARDEN-104: Production audit gate — blocking pre-deploy check
       # DEPLOY_TIER=staging: payment/WhatsApp secrets are warnings (degrade gracefully)
       - name: Production Audit Gate
@@ -1004,6 +1010,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # GCP-STG-MIGRATION: Post-deploy migration verification
+      # Checks migration version, new tables/columns, and health endpoint.
+      # Requires DATABASE_URL for automated checks; prints manual SQL if unavailable.
+      - name: "Migration Post-Apply Verification"
+        continue-on-error: true
+        run: bash scripts/gates/migration-post-apply.sh
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL != '' && secrets.DATABASE_URL || '' }}
+          STAGING_URL: https://staging.supermandi.tech
+          EXPECTED_MIGRATION_VERSION: "250"
 
       # GCP-STG-0583: Run URL-level post-deploy gate script before detailed GCP checks
       - name: "Gate 0: Post-deploy URL smoke (cd-post-deploy-gate.sh)"
