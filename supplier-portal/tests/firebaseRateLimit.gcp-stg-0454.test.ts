@@ -7,7 +7,6 @@
  * 3. Login page auto-switches to password mode on rate-limit error
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 

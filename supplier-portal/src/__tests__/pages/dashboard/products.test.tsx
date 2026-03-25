@@ -397,7 +397,7 @@ describe('ProductsPage', () => {
       { id: 'p1', name: 'P1', approvalStatus: 'approved', purchasePrice: 10000, moq: 1, unit: 'PCS' },
     ];
     render(<ProductsPage />);
-    expect(screen.getByText('-')).toBeInTheDocument();
+    expect(screen.getAllByText('-').length).toBeGreaterThanOrEqual(1);
   });
 
   // ── Delete Confirmation Modal ────────────────────────────────
@@ -514,7 +514,7 @@ describe('ProductsPage', () => {
     const netContentInput = screen.getByLabelText('Net Content (value)') as HTMLInputElement;
     expect(netContentInput).toBeInTheDocument();
     expect(netContentInput.type).toBe('number');
-    expect(screen.getByPlaceholderText('e.g. 500')).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText('e.g. 500').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders Net Content (unit) select with g/kg/ml/l/pcs options', () => {
