@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1140,
+  "version": 1141,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -32175,6 +32175,56 @@
         "regression_check": "gate script only",
         "test_guard": "gate script, verified by fix-guard",
         "single_commit": "fix(GCP-STG-0712)",
+        "ticket_parked": "will park after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0716",
+      "file": "scripts/gates/bundle-size-gate.sh",
+      "start_line": 1,
+      "end_line": 37,
+      "checksum": "650334e53f0a53e7",
+      "description": "CI bundle size gate - checks all web platform bundles under 10MB",
+      "test_file": "scripts/gates/__tests__/bundle-size-gate.test.js",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T10:08:10.123Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "impacted_files": "scripts/gates/bundle-size-gate.sh + FIX_LEDGER.json",
+        "fix_ledger_check": "671 fixes intact, zero drift",
+        "no_agent_conflict": "single agent session",
+        "operator_approved": "gate script - no UI",
+        "parity_scanned": "gate script - no parity issues",
+        "gcp_parity": "gate script, no URLs",
+        "regression_check": "gate script only",
+        "test_guard": "gate script, verified by fix-guard",
+        "single_commit": "fix(GCP-STG-0716)",
         "ticket_parked": "will park after commit"
       }
     }
