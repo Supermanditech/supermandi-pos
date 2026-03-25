@@ -1,4 +1,5 @@
 -- Migration: 016_add_enrollment_tracking_columns.sql
+-- ROLLBACK: DROP INDEX IF EXISTS idx_enrollments_code; DROP INDEX IF EXISTS idx_enrollments_revoked_at; (columns added idempotently in 012/015, safe to leave)
 -- Ensures all required tracking columns exist for enrollment management
 -- Safe to run multiple times (idempotent)
 

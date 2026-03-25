@@ -1,4 +1,5 @@
 -- Migration: 006_orders_schema
+-- ROLLBACK: DROP SCHEMA IF EXISTS orders CASCADE;
 -- V3.0.9 Foundation: Orders schema with purchase orders
 -- Safe to run multiple times (idempotent)
 

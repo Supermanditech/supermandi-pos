@@ -1,4 +1,5 @@
 -- Migration: 005_inventory_schema
+-- ROLLBACK: DROP SCHEMA IF EXISTS inventory CASCADE;
 -- V3.0.9 Foundation: Inventory schema with ledger and stock balances
 -- Safe to run multiple times (idempotent)
 

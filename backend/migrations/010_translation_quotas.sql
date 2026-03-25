@@ -1,4 +1,5 @@
 -- Migration: 010_translation_quotas
+-- ROLLBACK: DROP FUNCTION IF EXISTS catalog.get_translation_quota_status(UUID); DROP FUNCTION IF EXISTS catalog.check_translation_quota(UUID, INTEGER, INTEGER); DROP TABLE IF EXISTS catalog.translation_quotas CASCADE;
 -- TR-PEND-004: Cost + Quota Guards for Bulk Translation
 -- Tracks per-store daily translation usage to prevent runaway costs
 -- Safe to run multiple times (idempotent)

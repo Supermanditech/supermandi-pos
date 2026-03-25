@@ -1,5 +1,6 @@
 -- =============================================================================
 -- Migration: 019_seed_v1_demo_products
+-- ROLLBACK: DELETE FROM public.retailer_variants WHERE store_id IN (SELECT id::TEXT FROM platform.stores WHERE code='DEMO001'); DELETE FROM public.barcodes WHERE variant_id IN (SELECT id FROM public.variants WHERE product_id IN (SELECT id FROM public.products WHERE brand='Demo Brand'));
 -- Seeds demo products into V1 schema tables (public.products, variants, barcodes, retailer_variants)
 -- Required for V1 scan/resolve and products/lookup endpoints
 -- Safe to run multiple times (idempotent)

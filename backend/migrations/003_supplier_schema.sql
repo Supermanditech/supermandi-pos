@@ -1,4 +1,5 @@
 -- Migration: 003_supplier_schema
+-- ROLLBACK: DROP SCHEMA IF EXISTS supplier CASCADE;
 -- V3.0.9 Foundation: Supplier schema with suppliers, links, requests
 -- Safe to run multiple times (idempotent)
 

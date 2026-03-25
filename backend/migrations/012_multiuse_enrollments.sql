@@ -1,4 +1,5 @@
 -- Migration: 012_multiuse_enrollments.sql
+-- ROLLBACK: ALTER TABLE pos_devices DROP COLUMN IF EXISTS enrollment_id, DROP COLUMN IF EXISTS device_fingerprint; ALTER TABLE pos_device_enrollments DROP COLUMN IF EXISTS uses_count, DROP COLUMN IF EXISTS max_uses;
 -- DEV-071: Multi-use enrollment codes for DEMO stores + device fingerprint support
 --
 -- Features:

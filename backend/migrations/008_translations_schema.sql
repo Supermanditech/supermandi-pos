@@ -1,4 +1,5 @@
 -- Migration: 008_translations_schema
+-- ROLLBACK: DROP TABLE IF EXISTS catalog.translation_glossary, catalog.translation_cache, catalog.translation_overrides, catalog.product_translations CASCADE;
 -- V3.0.10 I18N: Product translations and store-level overrides
 -- Safe to run multiple times (idempotent)
 

@@ -1,4 +1,5 @@
 -- Migration: 013_store_code_counters
+-- ROLLBACK: DROP FUNCTION IF EXISTS platform.generate_store_code(TEXT); DROP TABLE IF EXISTS platform.store_code_counters CASCADE;
 -- STORECODE-001: Transaction-safe store code generation
 -- Safe to run multiple times (idempotent)
 

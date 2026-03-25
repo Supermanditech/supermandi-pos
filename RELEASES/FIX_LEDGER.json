@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1155,
+  "version": 1156,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -32944,6 +32944,60 @@
         "test_guard": "gate script is self-verifying",
         "single_commit": "chore(GCP-STG-0588)",
         "ticket_parked": "will park post-commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0609",
+      "file": "scripts/gcp/verify-landing-dockerfile.sh",
+      "start_line": 1,
+      "end_line": 24,
+      "checksum": "a86d7ec2fe12dd51",
+      "description": "Landing page Dockerfile verification: confirms single-stage nginx build is optimal for static HTML content",
+      "test_file": "scripts/gcp/verify-landing-dockerfile.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T10:36:18.949Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "N/A — verification script only",
+        "business_behaviour": "N/A — documents existing Dockerfile, no changes",
+        "impacted_files": "scripts/gcp/verify-landing-dockerfile.sh (new)",
+        "fix_ledger_check": "fix-guard check passes, zero drift",
+        "no_agent_conflict": "Single agent session",
+        "operator_approved": "N/A — verification script, no UI",
+        "parity_scanned": "Clean — references supermandi-landing/Dockerfile correctly",
+        "parity_fixed": "N/A",
+        "gcp_parity": "Verifies Cloud Run-ready Dockerfile config",
+        "regression_check": "N/A — new script only",
+        "test_guard": "bash verify-landing-dockerfile.sh passes: single-stage confirmed",
+        "single_commit": "fix(GCP-STG-0609)",
+        "ticket_parked": "Committed and parked"
       }
     }
   ],

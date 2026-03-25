@@ -1,4 +1,5 @@
 -- Migration: 004_catalog_schema
+-- ROLLBACK: DROP SCHEMA IF EXISTS catalog CASCADE;
 -- V3.0.9 Foundation: Catalog schema with products, barcodes, mappings
 -- Safe to run multiple times (idempotent)
 

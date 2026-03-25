@@ -1,5 +1,6 @@
 -- =============================================================================
 -- Migration: 022_seed_prelive_store
+-- ROLLBACK: DELETE FROM platform.stores WHERE code = 'PRELIVE001'; (seed data only)
 -- Seeds the prelive store with isolated sample data
 -- Does NOT touch demo store data (complete isolation)
 --

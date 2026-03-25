@@ -1,5 +1,6 @@
 -- =============================================================================
 -- Migration: 023_store_product_barcodes
+-- ROLLBACK: DROP TABLE IF EXISTS catalog.store_product_barcodes CASCADE;
 -- SD-ONBOARD-001B: Store-scoped barcode mapping for multi-tenant correctness
 -- Safe to run multiple times (idempotent)
 -- =============================================================================

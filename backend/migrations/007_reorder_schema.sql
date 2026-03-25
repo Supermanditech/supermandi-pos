@@ -1,4 +1,5 @@
 -- Migration: 007_reorder_schema
+-- ROLLBACK: DROP SCHEMA IF EXISTS reorder CASCADE;
 -- V3.0.9 Foundation: Reorder schema with policies and pending reorders
 -- Safe to run multiple times (idempotent)
 

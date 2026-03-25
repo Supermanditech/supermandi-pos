@@ -1,4 +1,5 @@
 -- Migration: 017_fix_legacy_demo_codes.sql
+-- ROLLBACK: (data-only update — not safely reversible; restore from backup if needed)
 -- CRITICAL: Fix legacy demo enrollment codes (SM-DEMO01, SM-DEMO02, etc.)
 -- These codes were created before multi-use logic and have:
 --   max_uses = 1 (or NULL)

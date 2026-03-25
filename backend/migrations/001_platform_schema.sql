@@ -1,4 +1,5 @@
 -- Migration: 001_platform_schema
+-- ROLLBACK: DROP VIEW IF EXISTS public.stores; DROP TABLE IF EXISTS platform.feature_flags, platform.stores CASCADE; DROP FUNCTION IF EXISTS platform.update_updated_at_column(); DROP SCHEMA IF EXISTS platform CASCADE;
 -- V3.0.9 Foundation: Platform schema with stores and feature flags
 -- Safe to run multiple times (idempotent)
 

@@ -1,4 +1,5 @@
 -- Migration: 011b_ensure_runtime_tables.sql
+-- ROLLBACK: DROP TABLE IF EXISTS pos_events, scan_events, pos_devices, pos_device_enrollments CASCADE;
 -- Creates tables that ensureSchema.ts normally creates at runtime.
 -- Required because subsequent migrations (012+) ALTER these tables.
 -- Only includes tables NOT created by later migrations (018, etc.)

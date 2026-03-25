@@ -1,5 +1,6 @@
 -- =============================================================================
 -- Migration: 021_prelive_store_isolation
+-- ROLLBACK: ALTER TABLE platform.stores DROP COLUMN IF EXISTS store_class; (data updates not reversible)
 -- TICKET 6: Prelive Store Isolation Rules
 --
 -- PURPOSE: Add store classification and create isolated prelive store

@@ -1,4 +1,5 @@
 -- Migration: 009_translation_search_indexes
+-- ROLLBACK: DROP INDEX IF EXISTS catalog.idx_product_translations_product_locale, catalog.idx_product_translations_brand_trgm, catalog.idx_product_translations_hindi_active, catalog.idx_translation_overrides_store_product_locale, catalog.idx_translation_overrides_store_hindi, catalog.idx_translation_cache_key_lookup, catalog.idx_translation_cache_locale, catalog.idx_translation_glossary_locale_domain, catalog.idx_translation_glossary_source_lower;
 -- TR-PEND-001: Performance indexes for Hindi search parity
 -- Safe to run multiple times (idempotent)
 

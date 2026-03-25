@@ -1,4 +1,5 @@
 -- Migration: 002_auth_schema
+-- ROLLBACK: DROP SCHEMA IF EXISTS auth CASCADE;
 -- V3.0.9 Foundation: Auth schema with users, roles, tokens
 -- Safe to run multiple times (idempotent)
 

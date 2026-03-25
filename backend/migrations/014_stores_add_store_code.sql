@@ -1,4 +1,5 @@
 -- Migration: 014_stores_add_store_code
+-- ROLLBACK: DROP VIEW IF EXISTS public.stores; ALTER TABLE platform.stores DROP COLUMN IF EXISTS scan_lookup_v2_enabled, DROP COLUMN IF EXISTS upi_vpa, DROP COLUMN IF EXISTS active, DROP COLUMN IF EXISTS store_code;
 -- Adds store_code column to platform.stores and updates VIEW
 -- GO-LIVE: Ensures backend routes can access store_code
 -- Safe: Idempotent, additive-only

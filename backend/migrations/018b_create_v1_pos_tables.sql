@@ -1,5 +1,6 @@
 -- =============================================================================
 -- Migration: 018b_create_v1_pos_tables
+-- ROLLBACK: DROP TABLE IF EXISTS public.retailer_variants, public.barcodes, public.variants, public.products CASCADE;
 -- Creates V1 POS tables required by scan/resolve and products/lookup endpoints
 -- These tables are normally created by ensureSchema.ts at runtime
 -- Safe to run multiple times (idempotent)

@@ -1,4 +1,5 @@
 -- Migration: 015_fix_demo_enrollments.sql
+-- ROLLBACK: ALTER TABLE pos_device_enrollments DROP COLUMN IF EXISTS updated_at, DROP COLUMN IF EXISTS revoked_at, DROP COLUMN IF EXISTS last_used_at; (data updates are not reversible)
 -- DEV-071 BUG-FIX: Update existing demo enrollment codes to multi-use
 --
 -- Problem: Demo enrollment codes (like SM-DEMO02) were created before multi-use

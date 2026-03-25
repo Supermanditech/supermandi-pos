@@ -1,4 +1,5 @@
 -- Migration: 018_sales_schema
+-- ROLLBACK: DROP VIEW IF EXISTS public.stores; DROP TABLE IF EXISTS public.collections, public.sale_items, public.sales, public.bill_sequences CASCADE;
 -- V3.0.9 Production: Sales schema for POS transactions
 -- Safe to run multiple times (idempotent)
 
