@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1126,
+  "version": 1127,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -31648,6 +31648,47 @@
       "status": "ACTIVE",
       "checklist_evidence": {
         "impacted_files": ".github/workflows/deploy.yml — added RAZORPAY_WEBHOOK_SECRET to set-secrets",
+        "fix_ledger_check": "zero drift",
+        "no_agent_conflict": "single agent"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0614",
+      "file": "scripts/gcp/verify-gcs-permissions.sh",
+      "start_line": 1,
+      "end_line": 26,
+      "checksum": "2c11600a6199d5b3",
+      "description": "GCS bucket permissions verification script for Cloud Run SA",
+      "test_file": "scripts/gcp/verify-gcs-permissions.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": "N/A",
+        "regression_check": "N/A",
+        "test_guard": "N/A",
+        "single_commit": "N/A",
+        "ticket_parked": "N/A"
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T08:55:18.307Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "impacted_files": "scripts/gcp/verify-gcs-permissions.sh only",
         "fix_ledger_check": "zero drift",
         "no_agent_conflict": "single agent"
       }
