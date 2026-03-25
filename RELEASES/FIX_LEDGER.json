@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1277,
+  "version": 1278,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -38330,6 +38330,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T18:19:41.574Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0749",
+      "file": "backend/migrations/251_gcp_stg_0749_check_constraints.sql",
+      "start_line": 1,
+      "end_line": 22,
+      "checksum": "eda8bdc857ac1dde",
+      "description": "CHECK constraints on order_status_history + platform.notifications",
+      "test_file": "backend/migrations/251_gcp_stg_0749_check_constraints.sql",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": false,
+        "api_errors": false,
+        "store_isolation": false,
+        "business_logic": false,
+        "business_behaviour": false,
+        "db_schema": false,
+        "migration_safe": false,
+        "impacted_files": false,
+        "fix_ledger_check": false,
+        "no_agent_conflict": false,
+        "gcp_parity": false,
+        "regression_check": false,
+        "test_guard": false,
+        "single_commit": false,
+        "ticket_parked": false
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T18:29:55.444Z",
       "status": "ACTIVE"
     }
   ],
