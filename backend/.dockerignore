@@ -64,6 +64,8 @@ CLAUDE.md
 
 # Tooling
 scripts/
+!scripts/docker-entrypoint.sh
+!scripts/migrate-prod.js
 .github/
 .husky/
 FIX_LEDGER.json
