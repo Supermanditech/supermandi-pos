@@ -191,6 +191,17 @@ async function processStatusUpdate(
     }
   } catch (err) {
     log.error(`[WA-001] Failed to update status for wamid ${wamid}:`, err);
+    // Retry once after 1s — delivery status is important for tracking
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await pool.query(
+        `UPDATE whatsapp.message_logs SET delivery_status = $1, updated_at = NOW() WHERE wamid = $2`,
+        [mappedStatus, wamid]
+      );
+      log.info(`[WA-001] Retry succeeded for wamid ${wamid}`);
+    } catch (retryErr) {
+      log.error(`[WA-001] Retry also failed for wamid ${wamid} — status update lost:`, retryErr);
+    }
   }
 }
 

@@ -9,6 +9,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    "isolatedModules": true,
     "sourceMap": true,
     "noImplicitAny": true,
     "typeRoots": ["../node_modules/@types"],
