@@ -247,6 +247,16 @@ export async function createInvoice(
     // GCP-STG-0353: Use explicit isInterState flag, or derive from seller/buyer GSTIN
     const isInterState = input.isInterState ?? deriveInterState(input.seller.gstin, input.buyer.gstin);
 
+    // GCP-STG-0731: Place of supply validation — compare GSTIN state code (first 2 digits)
+    // against buyer's registered state. Log warning on mismatch (non-blocking).
+    if (input.seller.gstin && input.buyer.gstin) {
+      const sellerStateCode = input.seller.gstin.substring(0, 2);
+      const buyerStateCode = input.buyer.gstin.substring(0, 2);
+      if (sellerStateCode !== buyerStateCode && !isInterState) {
+        log.warn(`[invoice] GCP-STG-0731: GSTIN state codes differ (seller=${sellerStateCode}, buyer=${buyerStateCode}) but isInterState=false — possible place-of-supply mismatch for ${invoiceNumber}`);
+      }
+    }
+
     for (let i = 0; i < input.items.length; i++) {
       const item = input.items[i];
       const lineTotal = Math.round(item.quantity * item.unitPriceMinor);
