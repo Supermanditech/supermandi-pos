@@ -2,11 +2,20 @@
 import { describe, it, expect, beforeEach } from "@jest/globals";
 
 // Mock AsyncStorage before importing the store
+// Zustand persist uses createJSONStorage(() => AsyncStorage) which calls
+// AsyncStorage.getItem/setItem/removeItem directly on the default export.
+const mockStorage: Record<string, string> = {};
 jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
   default: {
-    getItem: jest.fn(() => Promise.resolve(null)),
-    setItem: jest.fn(() => Promise.resolve()),
-    removeItem: jest.fn(() => Promise.resolve()),
+    getItem: jest.fn((key: string) => Promise.resolve(mockStorage[key] ?? null)),
+    setItem: jest.fn((key: string, value: string) => { mockStorage[key] = value; return Promise.resolve(); }),
+    removeItem: jest.fn((key: string) => { delete mockStorage[key]; return Promise.resolve(); }),
+    getAllKeys: jest.fn(() => Promise.resolve(Object.keys(mockStorage))),
+    multiGet: jest.fn((keys: string[]) => Promise.resolve(keys.map((k: string) => [k, mockStorage[k] ?? null]))),
+    multiSet: jest.fn((pairs: [string, string][]) => { pairs.forEach(([k, v]: [string, string]) => { mockStorage[k] = v; }); return Promise.resolve(); }),
+    multiRemove: jest.fn((keys: string[]) => { keys.forEach((k: string) => { delete mockStorage[k]; }); return Promise.resolve(); }),
+    clear: jest.fn(() => { Object.keys(mockStorage).forEach(k => delete mockStorage[k]); return Promise.resolve(); }),
   },
 }));
 
