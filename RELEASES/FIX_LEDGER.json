@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1128,
+  "version": 1130,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -31471,7 +31471,7 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T08:51:52.387Z",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist_evidence": {
         "impacted_files": "setup-cdn-images.sh created",
         "fix_ledger_check": "fix-guard check zero drift",
@@ -31481,7 +31481,9 @@
         "test_guard": "setup-cdn-images.gcp-stg-0686.unit.test.ts",
         "single_commit": "One commit for GCP-STG-0686",
         "ticket_parked": "Will be parked after commit"
-      }
+      },
+      "superseded_by": "GCP-STG-0686",
+      "superseded_at": "2026-03-25T08:58:27.889Z"
     },
     {
       "ticket": "GCP-STG-0611",
@@ -31599,7 +31601,7 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T08:53:34.416Z",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist_evidence": {
         "impacted_files": "apk-version-bump.sh created",
         "fix_ledger_check": "fix-guard check zero drift",
@@ -31609,7 +31611,9 @@
         "test_guard": "apk-version-bump.gcp-stg-0702.unit.test.ts",
         "single_commit": "One commit for GCP-STG-0702",
         "ticket_parked": "Will be parked after commit"
-      }
+      },
+      "superseded_by": "GCP-STG-0702",
+      "superseded_at": "2026-03-25T08:58:32.861Z"
     },
     {
       "ticket": "GCP-STG-0613",
@@ -31692,6 +31696,78 @@
         "fix_ledger_check": "zero drift",
         "no_agent_conflict": "single agent"
       }
+    },
+    {
+      "ticket": "GCP-STG-0686",
+      "file": "scripts/gcp/setup-cdn-images.sh",
+      "start_line": 1,
+      "end_line": 30,
+      "checksum": "2112e37393b911f3",
+      "description": "CDN configuration script for product images from GCS",
+      "test_file": "scripts/gcp/setup-cdn-images.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": false,
+        "business_behaviour": false,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": false,
+        "fix_ledger_check": false,
+        "no_agent_conflict": false,
+        "gcp_parity": false,
+        "regression_check": false,
+        "test_guard": false,
+        "single_commit": false,
+        "ticket_parked": false
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T08:58:27.889Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0702",
+      "file": "scripts/gates/apk-version-bump.sh",
+      "start_line": 1,
+      "end_line": 40,
+      "checksum": "2981d507176512f2",
+      "description": "APK version auto-increment script for release builds",
+      "test_file": "scripts/gates/apk-version-bump.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": false,
+        "business_behaviour": false,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": false,
+        "fix_ledger_check": false,
+        "no_agent_conflict": false,
+        "gcp_parity": false,
+        "regression_check": false,
+        "test_guard": false,
+        "single_commit": false,
+        "ticket_parked": false
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T08:58:32.860Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 270,
