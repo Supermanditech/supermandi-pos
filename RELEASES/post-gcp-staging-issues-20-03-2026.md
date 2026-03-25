@@ -19046,4 +19046,74 @@ pos-tests:
 
 ---
 
-<!-- next ticket: GCP-STG-0748 -->
+## GCP-STG-0748 — MEDIUM: POS order tracking UI — status timeline for purchase orders (MEDIUM)
+
+**Ticket ID**: GCP-STG-0748
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX, Wiring, Navigation
+**Source**: Claude B Verification — Missing UI for GCP-STG-0744 backend
+
+**Problem**: GCP-STG-0744 added backend order tracking (migration 249 `orders.order_status_history`, `GET /pos/orders/:orderId/tracking`, `PATCH /supplier/orders/:orderId/status`). The API client is wired at `orderApi.ts:403`. But there is NO POS screen showing the order status timeline. Retailers cannot see where their purchase order is in the fulfillment pipeline.
+
+**Fix**:
+
+### POS App:
+1. **OrderTrackingScreen** (new `src/screens/v3/OrderTrackingScreenV3.tsx`):
+   - Status timeline stepper: 5 dots connected by line (SUBMITTED → CONFIRMED → PACKED → DISPATCHED → DELIVERED)
+   - Current status highlighted with accent color, completed steps in green, pending in grey
+   - Status history list below stepper: each entry shows `{ fromStatus → toStatus, changedBy, note, timestamp }`
+   - Estimated delivery date (based on supplier SLA days + dispatch date)
+   - Order summary: PO number, supplier name, item count, total amount
+   - Pull-to-refresh for status updates
+
+2. **Navigation**: Register `V3OrderTracking` in App.tsx stack + V3ScreenWrappers
+3. **Entry point**: Tap PO row in StoreHubScreenV3 purchase history → navigate to OrderTrackingScreenV3
+4. **API call**: `getOrderTracking(orderId)` from `orderApi.ts`
+5. **4-state UX**: Loading spinner, data display, error with retry, empty state ("No tracking data yet")
+
+**Files to create**: `src/screens/v3/OrderTrackingScreenV3.tsx`
+**Files to modify**: `App.tsx` (register screen), `src/screens/v3/V3ScreenWrappers.tsx` (add wrapper), `src/screens/v3/StoreHubScreenV3.tsx` (add navigation on PO tap)
+
+**Test**: Verify screen renders with mocked tracking data, status stepper shows correct step highlighted.
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅, L5 API ✅
+
+---
+
+## GCP-STG-0749 — MEDIUM: POS notification center UI — bell icon + notification list screen (MEDIUM)
+
+**Ticket ID**: GCP-STG-0749
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX, Wiring, Navigation
+**Source**: Claude B Verification — Missing UI for GCP-STG-0745 backend
+
+**Problem**: GCP-STG-0745 added backend notification center (migration 250 `platform.notifications`, `GET /pos/notifications`, `PATCH /pos/notifications/:id/read`, `createNotification()` helper). GCP-STG-0737 added the red alert badge on BrandedHeader. But there is NO notification list screen. The badge shows a count but tapping it does nothing — no screen to see what the notifications are.
+
+**Fix**:
+
+### POS App:
+1. **NotificationsScreenV3** (new `src/screens/v3/NotificationsScreenV3.tsx`):
+   - Header: "Notifications" with unread filter toggle (All / Unread)
+   - Notification list (FlatList): icon + title + body + time ago + unread dot
+   - Tap notification: mark as read (PATCH), navigate to relevant screen via `data.deepLink` or `data.screen`
+   - Pull-to-refresh
+   - Empty state: "No notifications yet"
+   - Notification types with icons: ORDER_STATUS (📦), LOW_STOCK (⚠️), PAYMENT_RECEIVED (💰), EXPIRY_ALERT (🔴), SYSTEM (ℹ️)
+
+2. **BrandedHeader wiring**: Alert badge already exists (GCP-STG-0737). Wire `onPress` on the badge → navigate to NotificationsScreenV3
+3. **Navigation**: Register `V3Notifications` in App.tsx stack + V3ScreenWrappers
+4. **API calls**: `getNotifications({ unread: true, limit: 50 })`, `markNotificationRead(id)`
+5. **Mark all read**: "Mark all read" button in header → `PATCH /pos/notifications/read-all`
+
+**Files to create**: `src/screens/v3/NotificationsScreenV3.tsx`
+**Files to modify**: `App.tsx` (register screen), `src/screens/v3/V3ScreenWrappers.tsx` (add wrapper), `src/components/v3/BrandedHeader.tsx` (wire badge onPress to navigate)
+
+**Test**: Verify screen renders notification list, tap marks as read, unread filter works.
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅, L5 API ✅
+
+---
+
+<!-- next ticket: GCP-STG-0750 -->
