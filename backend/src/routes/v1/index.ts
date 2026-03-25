@@ -140,6 +140,7 @@ import { posDemandSignalsRouter } from "./pos/demandSignals";  // V3-HARDEN-185:
 import { posBuyAgainRouter } from "./pos/buyAgain";  // V3-FIX-186: Buy-again / repeat-last-order
 import { posLifecycleEventsRouter } from "./pos/lifecycleEvents";  // V3-HARDEN-188: Lifecycle events
 import { retailerDemandSignalsRouter } from "./retailer-admin/demandSignals";  // V3-HARDEN-185: Retailer demand
+import { retailerAnalyticsRouter } from "./retailer-admin/analytics";  // GCP-STG-0739: Retailer dashboard analytics
 import { adminDemandSignalsRouter } from "./admin/demandSignals";  // V3-HARDEN-185: Admin demand
 import { adminAllocationsRouter } from "./admin/allocations";  // V3-FIX-187: Admin allocation dashboard
 import { supplierAllocationsRouter } from "./supplier/allocations";  // V3-FIX-187: Supplier allocation mgmt
@@ -336,6 +337,7 @@ v1Router.use("/retailer-admin", retailerReconciliationRouter);  // T-260: Paymen
 v1Router.use("/retailer-admin", retailerCreditDashboardRouter);  // T-277: Credit dashboard
 v1Router.use("/retailer-admin", retailerPurchaseOrdersRouter);  // T-180: Purchase order visibility
 v1Router.use("/retailer-admin", retailerDemandSignalsRouter);  // V3-HARDEN-185: Retailer demand signals
+v1Router.use("/retailer-admin", retailerAnalyticsRouter);  // GCP-STG-0739: Retailer dashboard analytics
 v1Router.use("/credit", creditProvidersRouter);  // T-263/T-274/T-275/T-276/T-278: Credit provider APIs
 v1Router.use("/demo", demoRouter);
 v1Router.use("/webhooks", webhooksRouter);  // SM-018: Razorpay payout webhooks

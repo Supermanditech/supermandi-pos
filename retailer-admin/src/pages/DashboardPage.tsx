@@ -49,6 +49,17 @@ export default function DashboardPage() {
   const [dailySummaryLoading, setDailySummaryLoading] = useState(true);
   const [dailySummaryError, setDailySummaryError] = useState<string | null>(null);
 
+  // GCP-STG-0739: Analytics chart data
+  const [salesTrend, setSalesTrend] = useState<{ date: string; revenueMinor: number; transactions: number }[]>([]);
+  const [salesTrendLoading, setSalesTrendLoading] = useState(true);
+  const [salesTrendError, setSalesTrendError] = useState<string | null>(null);
+  const [topProducts, setTopProducts] = useState<{ name: string; revenueMinor: number; qtySold: number }[]>([]);
+  const [topProductsLoading, setTopProductsLoading] = useState(true);
+  const [topProductsError, setTopProductsError] = useState<string | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<{ method: string; totalMinor: number; count: number; percentage: number }[]>([]);
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
+  const [paymentMethodsError, setPaymentMethodsError] = useState<string | null>(null);
+
   // RCAT-CAT-002: Category edit/delete state
   const [editingCategory, setEditingCategory] = useState<FmcgCategory | null>(null);
   const [catEditNameEn, setCatEditNameEn] = useState('');
@@ -194,9 +205,70 @@ export default function DashboardPage() {
       }
     };
 
+    // GCP-STG-0739: Load analytics chart data
+    const loadSalesTrend = async () => {
+      setSalesTrendLoading(true);
+      setSalesTrendError(null);
+      try {
+        const res = await authFetch('/api/v1/retailer-admin/analytics/sales-trend?days=7', accessToken);
+        if (cancelled) return;
+        if (res.ok) {
+          const json = await safeJson(res);
+          setSalesTrend(json?.data || []);
+        } else {
+          setSalesTrendError('Failed to load sales trend');
+        }
+      } catch {
+        if (!cancelled) setSalesTrendError('Failed to load sales trend');
+      } finally {
+        if (!cancelled) setSalesTrendLoading(false);
+      }
+    };
+
+    const loadTopProducts = async () => {
+      setTopProductsLoading(true);
+      setTopProductsError(null);
+      try {
+        const res = await authFetch('/api/v1/retailer-admin/analytics/top-products?limit=5&days=30', accessToken);
+        if (cancelled) return;
+        if (res.ok) {
+          const json = await safeJson(res);
+          setTopProducts(json?.data || []);
+        } else {
+          setTopProductsError('Failed to load top products');
+        }
+      } catch {
+        if (!cancelled) setTopProductsError('Failed to load top products');
+      } finally {
+        if (!cancelled) setTopProductsLoading(false);
+      }
+    };
+
+    const loadPaymentMethods = async () => {
+      setPaymentMethodsLoading(true);
+      setPaymentMethodsError(null);
+      try {
+        const res = await authFetch('/api/v1/retailer-admin/analytics/payment-methods?days=30', accessToken);
+        if (cancelled) return;
+        if (res.ok) {
+          const json = await safeJson(res);
+          setPaymentMethods(json?.data || []);
+        } else {
+          setPaymentMethodsError('Failed to load payment methods');
+        }
+      } catch {
+        if (!cancelled) setPaymentMethodsError('Failed to load payment methods');
+      } finally {
+        if (!cancelled) setPaymentMethodsLoading(false);
+      }
+    };
+
     loadInventory();
     loadCategories();
     loadDailySummary();
+    loadSalesTrend();
+    loadTopProducts();
+    loadPaymentMethods();
 
     return () => { cancelled = true; };
   }, [accessToken]);
@@ -572,6 +644,103 @@ export default function DashboardPage() {
             No sales data for today
           </div>
         )}
+      </div>
+
+      {/* GCP-STG-0739: Analytics Charts Section */}
+      <div className="dash-section-mb">
+        <h2 className="dash-section-title">Analytics</h2>
+        <div className="dash-metrics-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+          {/* Sales Trend (7-day) */}
+          <div className="dash-daily-card" style={{ margin: 0 }}>
+            <h3 className="dash-daily-title" style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>
+              Sales Trend (7 days)
+            </h3>
+            {salesTrendLoading ? (
+              <div className="dash-daily-shimmer-grid">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="dash-daily-shimmer-item">
+                    <div className="dash-daily-shimmer-val dash-shimmer" />
+                  </div>
+                ))}
+              </div>
+            ) : salesTrendError ? (
+              <div className="dash-daily-error">{salesTrendError}</div>
+            ) : salesTrend.length === 0 ? (
+              <div className="dash-daily-empty">No sales data for this period</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {salesTrend.map(d => (
+                  <div key={d.date} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>{formatDateShort(d.date)}</span>
+                    <span style={{ fontWeight: 600 }}>{formatCurrency(d.revenueMinor)}</span>
+                    <span style={{ color: 'var(--color-text-muted)' }}>{d.transactions} txns</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Top Products (30-day) */}
+          <div className="dash-daily-card" style={{ margin: 0 }}>
+            <h3 className="dash-daily-title" style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>
+              Top Products (30 days)
+            </h3>
+            {topProductsLoading ? (
+              <div className="dash-daily-shimmer-grid">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="dash-daily-shimmer-item">
+                    <div className="dash-daily-shimmer-val dash-shimmer" />
+                  </div>
+                ))}
+              </div>
+            ) : topProductsError ? (
+              <div className="dash-daily-error">{topProductsError}</div>
+            ) : topProducts.length === 0 ? (
+              <div className="dash-daily-empty">No product data for this period</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                {topProducts.map((p, i) => (
+                  <div key={p.name} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', alignItems: 'center' }}>
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {i + 1}. {p.name}
+                    </span>
+                    <span style={{ fontWeight: 600, marginLeft: '0.5rem' }}>{formatCurrency(p.revenueMinor)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Payment Methods (30-day) */}
+          <div className="dash-daily-card" style={{ margin: 0 }}>
+            <h3 className="dash-daily-title" style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>
+              Payment Methods (30 days)
+            </h3>
+            {paymentMethodsLoading ? (
+              <div className="dash-daily-shimmer-grid">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="dash-daily-shimmer-item">
+                    <div className="dash-daily-shimmer-val dash-shimmer" />
+                  </div>
+                ))}
+              </div>
+            ) : paymentMethodsError ? (
+              <div className="dash-daily-error">{paymentMethodsError}</div>
+            ) : paymentMethods.length === 0 ? (
+              <div className="dash-daily-empty">No payment data for this period</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                {paymentMethods.map(pm => (
+                  <div key={pm.method} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', alignItems: 'center' }}>
+                    <span>{pm.method}</span>
+                    <span style={{ fontWeight: 600 }}>{formatCurrency(pm.totalMinor)}</span>
+                    <span style={{ color: 'var(--color-text-muted)' }}>{pm.percentage}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Quick Actions Section */}
