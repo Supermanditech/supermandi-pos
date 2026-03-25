@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1187,
+  "version": 1188,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -35446,6 +35446,42 @@
         "single_commit": "Docs script - no runtime impact",
         "ticket_parked": "Docs script - no runtime impact"
       }
+    },
+    {
+      "ticket": "GCP-STG-0672",
+      "file": "scripts/docs/quick-reorder-feature.sh",
+      "start_line": 1,
+      "end_line": 116,
+      "checksum": "898418ca1d9f6efb",
+      "description": "Quick re-order feature design: repeat last week PO with stock-level adjustments",
+      "test_file": "scripts/docs/__tests__/docs-exist.test.js",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T11:56:28.068Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 270,
