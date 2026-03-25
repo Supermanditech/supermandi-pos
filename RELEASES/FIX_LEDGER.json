@@ -22578,7 +22578,7 @@
       "file": "backend/src/services/smsService.ts",
       "start_line": 1,
       "end_line": 130,
-      "checksum": "91298c043fe6e1c1",
+      "checksum": "43681340450a1998",
       "description": "SMS fallback service for OTP delivery â€” supports MSG91, Twilio, disabled (default). Never throws.",
       "test_file": "backend/tests/smsFallback.gcp-stg-0467.unit.test.ts",
       "depends_on": null,
