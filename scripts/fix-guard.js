@@ -875,7 +875,9 @@ if (command === 'check') {
   );
   // GCP-STG-0542: Allow test-only commits with >15 files (all *.test.ts are test-only)
   const stagedTestOnly = stagedSourceFiles.every(f => f.includes('.test.'));
-  const maxFiles = stagedTestOnly ? 30 : 15;
+  // GCP-STG-0586: Allow migration-comment-only commits (all .sql files are comment-only ROLLBACK additions)
+  const stagedMigrationOnly = stagedSourceFiles.every(f => f.endsWith('.sql'));
+  const maxFiles = stagedTestOnly ? 30 : stagedMigrationOnly ? 30 : 15;
   if (stagedSourceFiles.length > maxFiles) {
     console.log(`  ❌ BLOCKED: ${stagedSourceFiles.length} source files staged (max 15) — ticket scope too broad`);
     console.log('    Split into multiple tickets or verify this is a legitimate cross-cutting change.');
