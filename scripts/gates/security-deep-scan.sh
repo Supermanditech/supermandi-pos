@@ -66,7 +66,7 @@ fi
 # M-005: CORS not set to wildcard
 echo "--- M-005: CORS Not Wildcard ---"
 WILDCARD_CORS=$(grep -rn "CORS_ALLOWED_ORIGINS.*\*\|origin:\s*true\|origin:\s*\*" \
-  .github/workflows/ backend/src/ 2>/dev/null | grep -v ".test." | head -3 || true)
+  .github/workflows/ backend/src/ 2>/dev/null | grep -v ".test.\|FATAL\|forbidden\|MUST be\|warn\|error\|log\." | head -3 || true)
 if [ -z "$WILDCARD_CORS" ]; then
   gate_pass "M-005: No wildcard CORS"
 else

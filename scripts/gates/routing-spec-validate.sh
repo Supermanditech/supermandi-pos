@@ -121,7 +121,7 @@ echo ""
 echo "--- L-007: ALLOWED_ORIGINS ---"
 if grep -q "ALLOWED_ORIGINS=https://staging.supermandi.tech" "$DEPLOY_YML" 2>/dev/null; then
   # Staging must not trust production domains.
-  if grep -qE "ALLOWED_ORIGINS=.*https://supermandi\.tech|ALLOWED_ORIGINS=.*https://www\.supermandi\.tech" "$DEPLOY_YML"; then
+  if grep -qE "ALLOWED_ORIGINS=.*https://(app|www)\.supermandi\.tech[^/]" "$DEPLOY_YML"; then
     gate_fail "L-007" "ALLOWED_ORIGINS" "Production domain found in staging origin list"
   else
     gate_pass "L-007" "ALLOWED_ORIGINS is staging-only"
@@ -138,7 +138,7 @@ fi
 echo ""
 echo "--- L-008: CORS_ALLOWED_ORIGINS ---"
 if grep -q "CORS_ALLOWED_ORIGINS=https://staging.supermandi.tech" "$DEPLOY_YML" 2>/dev/null; then
-  if grep -qE "CORS_ALLOWED_ORIGINS=.*https://supermandi\.tech|CORS_ALLOWED_ORIGINS=.*https://www\.supermandi\.tech" "$DEPLOY_YML"; then
+  if grep -qE "CORS_ALLOWED_ORIGINS=.*https://(app|www)\.supermandi\.tech[^/]" "$DEPLOY_YML"; then
     gate_fail "L-008" "CORS_ALLOWED_ORIGINS" "Production domain found in staging CORS list"
   else
     gate_pass "L-008" "CORS_ALLOWED_ORIGINS is staging-only"

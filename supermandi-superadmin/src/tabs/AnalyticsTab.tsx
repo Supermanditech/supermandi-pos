@@ -79,7 +79,8 @@ export function AnalyticsTab({
     } catch { /* ignore */ }
     setKpisLoading(false);
   }, []);
-  useEffect(() => { void loadKpis(); }, [loadKpis]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- loadKpis is a data fetcher, not a cascading render
+  useEffect(() => { void loadKpis(); }, [loadKpis]); // eslint-disable-line react-hooks/set-state-in-effect
 
   return (
     <>

@@ -612,7 +612,7 @@ export function CatalogTab() {
                             data-testid={`product-thumb-${product.id}`}
                             style={{ width: 32, height: 32, objectFit: "cover", borderRadius: 4, flexShrink: 0, border: "1px solid #e2e8f0" }}
                             loading="lazy"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling && ((e.target as HTMLImageElement).nextElementSibling as HTMLElement).style.removeProperty("display"); }}
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; const sib = (e.target as HTMLImageElement).nextElementSibling; if (sib) { (sib as HTMLElement).style.removeProperty("display"); } }}
                           />
                         ) : null}
                         <div
