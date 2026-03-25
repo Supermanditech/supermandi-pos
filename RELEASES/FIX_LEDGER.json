@@ -31059,7 +31059,7 @@
       "file": "backend/services/api-gateway/src/middleware/requestLogger.ts",
       "start_line": 1,
       "end_line": 50,
-      "checksum": "26d63b92dfc9f4c8",
+      "checksum": "a6591a9e07898e22",
       "description": "API Gateway structured access logging: method, path, status, duration_ms, ip, user_agent on every request via res.on(finish), skips health checks",
       "test_file": "backend/services/api-gateway/src/middleware/requestLogger.ts",
       "depends_on": null,
