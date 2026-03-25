@@ -85,6 +85,7 @@ posNotificationsRouter.delete('/notifications/device-token', async (req: Request
 });
 
 // GET /notifications — Get notification history (paginated)
+// GCP-STG-0745: Added ?unread=true filter support
 posNotificationsRouter.get('/notifications', async (req: Request, res: Response) => {
   const userId = (req as any).deviceUserId || (req as any).storeUserId;
   if (!userId) {
@@ -97,6 +98,8 @@ posNotificationsRouter.get('/notifications', async (req: Request, res: Response)
   const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
   const offset = parseInt(req.query.offset as string) || 0;
   const type = req.query.type as string | undefined;
+  // GCP-STG-0745: Filter by unread status
+  const unreadOnly = req.query.unread === 'true';
 
   try {
     let query = `
@@ -108,6 +111,10 @@ posNotificationsRouter.get('/notifications', async (req: Request, res: Response)
     const params: (string | number)[] = [userId];
     let paramIdx = 2;
 
+    if (unreadOnly) {
+      query += ` AND is_read = false`;
+    }
+
     if (type) {
       query += ` AND notification_type = $${paramIdx++}`;
       params.push(type);
@@ -116,7 +123,11 @@ posNotificationsRouter.get('/notifications', async (req: Request, res: Response)
     query += ` ORDER BY created_at DESC LIMIT $${paramIdx++} OFFSET $${paramIdx++}`;
     params.push(limit, offset);
 
-    const countQuery = `SELECT COUNT(*)::int AS total FROM notifications.notifications WHERE recipient_id = $1`;
+    // GCP-STG-0745: Count query respects unread filter
+    let countQuery = `SELECT COUNT(*)::int AS total FROM notifications.notifications WHERE recipient_id = $1`;
+    if (unreadOnly) {
+      countQuery += ` AND is_read = false`;
+    }
 
     const [dataResult, countResult] = await Promise.all([
       pool.query(query, params),
@@ -180,7 +191,8 @@ posNotificationsRouter.get('/notifications/unread-count', async (req: Request, r
 });
 
 // PUT /notifications/:id/read — Mark a single notification as read
-posNotificationsRouter.put('/notifications/:id/read', async (req: Request, res: Response) => {
+// GCP-STG-0745: Also support PATCH method for consistency
+async function markNotificationRead(req: Request, res: Response) {
   const userId = (req as any).deviceUserId || (req as any).storeUserId;
   if (!userId) {
     return res.status(401).json({ error: 'Authentication required' });
@@ -209,7 +221,10 @@ posNotificationsRouter.put('/notifications/:id/read', async (req: Request, res: 
     log.error('[POS Notifications] Mark read error:', err);
     return res.status(500).json({ error: 'Failed to mark notification as read' });
   }
-});
+}
+posNotificationsRouter.put('/notifications/:id/read', markNotificationRead);
+// GCP-STG-0745: PATCH alias for mark-read
+posNotificationsRouter.patch('/notifications/:id/read', markNotificationRead);
 
 // PUT /notifications/read-all — Mark all notifications as read
 posNotificationsRouter.put('/notifications/read-all', async (req: Request, res: Response) => {
