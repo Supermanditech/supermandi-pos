@@ -161,6 +161,19 @@ cloud-sql-proxy.exe
 # Screenshots / debug captures
 pos_screen.png
 
+# GCP-STG-0580: Screenshot PNGs (development/audit artifacts)
+pos-*.png
+retailer-web-*.png
+pos-screenshot*.png
+pos-test-*.png
+pos-after-*.png
+pos-fresh-*.png
+pos-live-*.png
+pos-pay-*.png
+pos-flow-*.png
+pos-tap-*.png
+pos-r2-*.png
+
 # Firebase service account keys (NEVER commit)
 firebase-service-account*.json
 *-firebase-adminsdk-*.json

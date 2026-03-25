@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1148,
+  "version": 1149,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -32580,6 +32580,56 @@
         "test_guard": "Script self-tests: bash pos-audio-permission-check.sh passes all 3 checks",
         "single_commit": "fix(GCP-STG-0590): add RECORD_AUDIO permission verification gate script",
         "ticket_parked": "Committed and parked"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0580",
+      "file": ".gitignore",
+      "start_line": 162,
+      "end_line": 173,
+      "checksum": "dfc635cd6c998403",
+      "description": "Gitignore patterns for screenshot PNGs to prevent tracking dev artifacts",
+      "test_file": ".gitignore",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T10:25:42.929Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "impacted_files": ".gitignore only",
+        "fix_ledger_check": "678 fixes intact",
+        "no_agent_conflict": "single agent",
+        "operator_approved": "N/A - gitignore config only",
+        "parity_scanned": "N/A - gitignore config only",
+        "gcp_parity": "gitignore, no staging deps",
+        "regression_check": "no source code changed",
+        "test_guard": "gitignore config, self-verifiable",
+        "single_commit": "chore(GCP-STG-0580)",
+        "ticket_parked": "will park post-commit"
       }
     }
   ],
