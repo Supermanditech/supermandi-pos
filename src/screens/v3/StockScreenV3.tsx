@@ -9,6 +9,7 @@ import { getStockStatement, getStockBatches } from "../../services/api/inventory
 import type { StockBatch } from "../../services/api/inventoryApi";
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
+import { logScreenView } from "../../services/cloudEventLogger";
 
 // V3-044: Stock screen v3 — wire real getStockStatement API
 
@@ -26,6 +27,9 @@ export default function StockScreenV3({ onClose, onOpeningStock }: Props) {
   const [items, setItems] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+
+  // GCP-STG-0651: Log screen view on mount
+  useEffect(() => { logScreenView("StockScreen"); }, []);
 
   const loadStock = useCallback(async () => {
     setLoading(true);

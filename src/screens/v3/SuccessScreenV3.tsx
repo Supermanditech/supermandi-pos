@@ -16,6 +16,7 @@ import { voidSale } from "../../services/api/posApi";
 import { isOnline } from "../../services/networkStatus";
 import { shareBillWhatsApp } from "../../services/billing/billShare";
 import { logger } from "../../services/logger";
+import { logScreenView, logFunnelEvent } from "../../services/cloudEventLogger";
 
 // STG-557: Success screen v3 — profit display, streak, confetti, WhatsApp bill, new sale
 // GCP-STG-0042: In-memory daily sales streak counter
@@ -44,6 +45,9 @@ export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, 
   const timeStr = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 
   const totalDisplay = `₹${Math.round(totalMinor / 100).toLocaleString("en-IN")}`;
+
+  // GCP-STG-0651: Log screen view + funnel completion on mount
+  useEffect(() => { logScreenView("SuccessScreen"); logFunnelEvent("checkout", "payment_completed"); }, []);
 
   // GCP-STG-0042: Daily sales streak counter (in-memory per session)
   const [dailyCount, setDailyCount] = useState(0);

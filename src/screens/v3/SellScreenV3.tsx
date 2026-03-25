@@ -8,6 +8,7 @@ import { getGridColumns, getScreenPadding, getChipPadding, getChipFontSize, SCRE
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
+import { logScreenView, logFunnelEvent } from "../../services/cloudEventLogger";
 import BrandedHeader from "../../components/v3/BrandedHeader";
 import CustomerTypeToggle, { type SellMode } from "../../components/v3/CustomerTypeToggle";
 import ProductTileV3, { type ProductTileData } from "../../components/v3/ProductTileV3";
@@ -110,6 +111,9 @@ export default function SellScreenV3() {
       if (groups.length > 0) setCategories(groups.map((g) => g.label));
     })();
   }, []);
+
+  // GCP-STG-0651: Log screen view on mount
+  useEffect(() => { logScreenView("SellScreen"); }, []);
 
   // V3-FIX-036: Welcome guide state
   const [showGuide, setShowGuide] = useState(false);
@@ -263,6 +267,8 @@ export default function SellScreenV3() {
     } else {
       // V3-FIX-120: Use canonical cart payload builder
       addItem(buildCartItemFromSearch(result));
+      // GCP-STG-0651: Track first item added to cart
+      if (cartItems.length === 0) logFunnelEvent("checkout", "cart_started");
       showToast(`${result.name} added`);
     }
     setSearchVisible(false);

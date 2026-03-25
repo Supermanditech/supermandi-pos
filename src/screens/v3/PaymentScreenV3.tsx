@@ -3,7 +3,7 @@
  * Prototype route chain: payment (chooser) → cash | upi | udhar → success
  * Back flow: child → chooser → cart
  */
-import React, { useMemo, useState, useCallback, useRef } from "react";
+import React, { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { View, Pressable, TextInput, KeyboardAvoidingView, Platform, StyleSheet, Text, ScrollView, Modal, Alert } from "react-native";
 import Svg, { Path, Rect, Circle, Line } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,6 +16,7 @@ import { createSale, createSplitPayment, type SaleItemInput, type SplitPaymentIt
 import { isOnline } from "../../services/networkStatus";
 import { showToast } from "../../utils/showToast";
 import { logger } from "../../services/logger";
+import { logScreenView, logFunnelEvent } from "../../services/cloudEventLogger";
 
 type PaymentScreenV3Props = {
   onBack: () => void;
@@ -29,6 +30,9 @@ export default function PaymentScreenV3({ onBack, onCash, onUpi, onUdhar, onComp
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, insets.top), [colors, insets.top]);
+
+  // GCP-STG-0651: Log screen view + funnel event on mount
+  useEffect(() => { logScreenView("PaymentScreen"); logFunnelEvent("checkout", "payment_selected"); }, []);
 
   const items = useCartStore((s) => s.items);
   const total = useCartStore((s) => s.total);

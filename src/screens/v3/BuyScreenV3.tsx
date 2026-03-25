@@ -6,6 +6,7 @@ import { useNavigation } from "@react-navigation/native";
 import { getScreenPadding, getChipPadding, getChipFontSize, getGridColumns } from "../../theme/responsive";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
+import { logScreenView } from "../../services/cloudEventLogger";
 import SupplierProductCardV3, { type SupplierProduct } from "../../components/v3/SupplierProductCardV3";
 import ProductDetailSheetV3 from "../../components/v3/ProductDetailSheetV3";
 import VoiceOverlayV3 from "../../components/v3/VoiceOverlayV3";
@@ -144,6 +145,9 @@ export default function BuyScreenV3() {
     setScanRuntime({ intent: "PURCHASE", mode: "SELL" });
     return () => { setScanRuntime({ intent: "SELL", mode: "SELL" }); };
   }, []);
+
+  // GCP-STG-0651: Log screen view on mount
+  useEffect(() => { logScreenView("BuyScreen"); }, []);
 
   // V3-013: Fetch real catalog data
   useEffect(() => {
