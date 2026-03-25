@@ -9,7 +9,7 @@ process.env.NODE_ENV = "test";
 
 const mockQuery = jest.fn();
 jest.mock("../src/db/client", () => ({
-  getPool: () => ({ query: mockQuery }),
+  getPool: () => ({ query: mockQuery, connect: jest.fn().mockResolvedValue({ query: mockQuery, release: jest.fn() }) }),
 }));
 
 jest.mock("../src/middleware/deviceToken", () => ({
