@@ -19379,3 +19379,27 @@ No new tables or columns required.
 ---
 
 <!-- next ticket: GCP-STG-0756 -->
+
+## GCP-STG-0756 — LOW: Upgrade GitHub Actions to Node.js 24 compatible versions when available (LOW)
+
+**Ticket ID**: GCP-STG-0756
+**Severity**: P3 LOW
+**Platforms**: CI/CD
+**Layers**: Infrastructure
+**Source**: GCP Deployment CI Warnings
+
+**Problem**: 19 warnings from GitHub Actions deprecation of Node.js 20 runners. Actions `checkout@v4`, `setup-node@v4`, `upload-artifact@v4`, `gitleaks-action@v2` all target Node.js 20. GitHub will force Node.js 24 by June 2026. These are third-party action versions — `@v5` not yet available.
+
+**Fix**: When `@v5` versions are released, update all workflow files:
+- `actions/checkout@v4` → `@v5`
+- `actions/setup-node@v4` → `@v5`
+- `actions/upload-artifact@v4` → `@v5`
+- `gitleaks/gitleaks-action@v2` → `@v3`
+
+**Impact**: Zero — warnings only, no functional impact. All CI jobs pass despite warnings.
+
+**12-Layer Verification**: N/A (GitHub infrastructure)
+
+---
+
+<!-- next ticket: GCP-STG-0757 -->
