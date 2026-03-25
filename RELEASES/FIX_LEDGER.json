@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1179,
+  "version": 1180,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -34164,6 +34164,57 @@
         "regression_check": "No source code changes, docs/gate only",
         "test_guard": "Self-documenting script",
         "single_commit": "fix(GCP-STG-0642)",
+        "ticket_parked": "Parked after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0646",
+      "file": "scripts/gates/favicon-og-check.sh",
+      "start_line": 1,
+      "end_line": 97,
+      "checksum": "8dd8a5b549447b2d",
+      "description": "Favicon and OG meta tags verification gate for all web portals",
+      "test_file": "scripts/gates/favicon-og-check.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T11:33:55.274Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "Docs/gate script - no business logic impact",
+        "business_behaviour": "Docs/gate script - no runtime behavior change",
+        "impacted_files": "scripts/gates/favicon-og-check.sh",
+        "fix_ledger_check": "Registered, zero drift",
+        "no_agent_conflict": "Single agent, no parallel changes",
+        "gcp_parity": "Script only, no GCP parity issues",
+        "regression_check": "No source code changes, docs/gate only",
+        "test_guard": "Gate script self-validates by checking public dirs and index.html",
+        "single_commit": "fix(GCP-STG-0646)",
         "ticket_parked": "Parked after commit"
       }
     }
