@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1149,
+  "version": 1150,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -32630,6 +32630,60 @@
         "test_guard": "gitignore config, self-verifiable",
         "single_commit": "chore(GCP-STG-0580)",
         "ticket_parked": "will park post-commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0597",
+      "file": "scripts/tests/placeholder-migration-check.sh",
+      "start_line": 1,
+      "end_line": 29,
+      "checksum": "c87a3429d18a248b",
+      "description": "Verification script confirming placeholder migrations 115-117,158 are safe to re-run (comment-only, no DDL)",
+      "test_file": "scripts/tests/placeholder-migration-check.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T10:27:06.684Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "N/A — verification script only",
+        "business_behaviour": "N/A — verifies existing migrations, no behavior change",
+        "impacted_files": "scripts/tests/placeholder-migration-check.sh (new)",
+        "fix_ledger_check": "fix-guard check passes, zero drift",
+        "operator_approved": "N/A — test script only, no UI changes",
+        "parity_scanned": "Parity scan clean — test script only",
+        "parity_fixed": "N/A — no parity issues",
+        "gcp_parity": "N/A — bash test script, no staging deps",
+        "regression_check": "N/A — new test script only",
+        "test_guard": "bash placeholder-migration-check.sh passes: 4/4 safe",
+        "single_commit": "fix(GCP-STG-0597)",
+        "ticket_parked": "Committed and parked",
+        "no_agent_conflict": "Single agent session"
       }
     }
   ],
