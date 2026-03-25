@@ -39,6 +39,7 @@ on:
   #   - cron: '0 6 * * *'  # 6 AM UTC daily
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # INFRA-018: Default to staging domain
   TARGET_URL: ${{ github.event.inputs.target_url || 'https://staging.supermandi.tech' }}
   NODE_VERSION: '20'

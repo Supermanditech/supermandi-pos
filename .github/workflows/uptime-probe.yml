@@ -16,6 +16,7 @@ on:
         default: 'true'
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # INFRA-017: Use staging domain (load balancer routes to Cloud Run services)
   DOMAIN: staging.supermandi.tech
 

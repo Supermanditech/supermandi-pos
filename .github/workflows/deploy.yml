@@ -18,6 +18,7 @@ on:
         type: string
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   GCP_PROJECT: supermandi-backend
   GCP_REGION: asia-south1
   AR_REPO: asia-south1-docker.pkg.dev/supermandi-backend/supermandi

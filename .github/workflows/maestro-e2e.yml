@@ -22,6 +22,9 @@ concurrency:
   group: maestro-e2e-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   maestro-android:
     name: Maestro E2E (Android Emulator)
