@@ -28783,8 +28783,8 @@
     {
       "ticket": "GCP-STG-0713",
       "file": ".github/workflows/ci-gates.yml",
-      "start_line": 1050,
-      "end_line": 1090,
+      "start_line": 1051,
+      "end_line": 1091,
       "checksum": "65d2c2c102755072",
       "description": "CI master gate â€” added POS typecheck and fix-guard check as blocking jobs in gate-check aggregation. All 7 required categories now covered: backend tsc+eslint+jest, superadmin tsc+build+vitest, retailer tsc+build+vitest, supplier tsc+next-build, POS tsc, fix-guard check, migration validation [UPDATED by GCP-STG-0581: added docker-build-check to needs]",
       "test_file": "backend/tests/gcp-stg-0713.ci-master-gate.unit.test.ts",
@@ -28817,7 +28817,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:11:18.737Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-25T22:18:28.906Z"
     },
     {
       "ticket": "GCP-STG-0700",
@@ -29359,7 +29360,7 @@
       "file": "backend/.dockerignore",
       "start_line": 1,
       "end_line": 72,
-      "checksum": "1e58a4436292e575",
+      "checksum": "c106c8b93f70a53c",
       "description": "Updated .dockerignore with RELEASES, screenshots, test files, tooling exclusions",
       "test_file": "scripts/gates/cd-pre-deploy-gate.sh",
       "depends_on": null,
@@ -29748,8 +29749,8 @@
     {
       "ticket": "GCP-STG-0585",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 664,
-      "end_line": 664,
+      "start_line": 665,
+      "end_line": 665,
       "checksum": "f413bb6b65657398",
       "description": "JWT_SECRET_PREVIOUS + INVOICE_SIGNING_KEY added to --set-secrets (updated by GCP-STG-0591)",
       "test_file": ".github/workflows/deploy.yml",
@@ -29781,13 +29782,13 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:57:48.015Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T16:20:01.208Z"
+      "line_shifted_at": "2026-03-25T22:18:28.915Z"
     },
     {
       "ticket": "GCP-STG-0591",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 664,
-      "end_line": 664,
+      "start_line": 665,
+      "end_line": 665,
       "checksum": "f413bb6b65657398",
       "description": "INVOICE_SIGNING_KEY added to --set-secrets for invoice PDF integrity",
       "test_file": ".github/workflows/deploy.yml",
@@ -29819,13 +29820,13 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:00:49.965Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T16:20:01.213Z"
+      "line_shifted_at": "2026-03-25T22:18:28.919Z"
     },
     {
       "ticket": "GCP-STG-0592",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 663,
-      "end_line": 663,
+      "start_line": 664,
+      "end_line": 664,
       "checksum": "e0cb99d9d065da69",
       "description": "Add DB_POOL_MAX=10 and MAX_COMMISSION_PERCENT=30 to backend --set-env-vars",
       "test_file": "scripts/gates/config-parity.sh",
@@ -29871,7 +29872,7 @@
         "single_commit": "One ticket one commit",
         "ticket_parked": "Parked after commit"
       },
-      "line_shifted_at": "2026-03-25T16:20:01.217Z"
+      "line_shifted_at": "2026-03-25T22:18:28.923Z"
     },
     {
       "ticket": "GCP-STG-0592",
@@ -30072,8 +30073,8 @@
     {
       "ticket": "GCP-STG-0581",
       "file": ".github/workflows/ci-gates.yml",
-      "start_line": 1057,
-      "end_line": 1073,
+      "start_line": 1058,
+      "end_line": 1074,
       "checksum": "2988baa523952173",
       "description": "Docker build syntax check CI job verifies all 6 Dockerfiles parse",
       "test_file": ".github/workflows/ci-gates.yml",
@@ -30119,13 +30120,14 @@
         "test_guard": "CI-only change, verified",
         "single_commit": "CI-only change, verified",
         "ticket_parked": "CI-only change, verified"
-      }
+      },
+      "line_shifted_at": "2026-03-25T22:18:28.935Z"
     },
     {
       "ticket": "GCP-STG-0582",
       "file": ".github/workflows/ci-gates.yml",
-      "start_line": 1074,
-      "end_line": 1098,
+      "start_line": 1075,
+      "end_line": 1099,
       "checksum": "28d50798ac0b7cc8",
       "description": "npm audit CI job blocks on critical vulnerabilities, warns on high",
       "test_file": ".github/workflows/ci-gates.yml",
@@ -30171,13 +30173,14 @@
         "test_guard": "CI-only change, verified",
         "single_commit": "CI-only change, verified",
         "ticket_parked": "CI-only change, verified"
-      }
+      },
+      "line_shifted_at": "2026-03-25T22:18:28.951Z"
     },
     {
       "ticket": "GCP-STG-0583",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 1024,
-      "end_line": 1027,
+      "start_line": 1025,
+      "end_line": 1028,
       "checksum": "683eedc46552c3c3",
       "description": "Post-deploy URL smoke gate step using cd-post-deploy-gate.sh in CD smoke-test job",
       "test_file": "scripts/gates/cd-post-deploy-gate.sh",
@@ -30224,13 +30227,13 @@
         "single_commit": "CD-only change, verified",
         "ticket_parked": "CD-only change, verified"
       },
-      "line_shifted_at": "2026-03-25T16:20:01.227Z"
+      "line_shifted_at": "2026-03-25T22:18:28.957Z"
     },
     {
       "ticket": "GCP-STG-0589",
       "file": ".github/workflows/ci-gates.yml",
-      "start_line": 1099,
-      "end_line": 1133,
+      "start_line": 1100,
+      "end_line": 1134,
       "checksum": "79a23951c1409f61",
       "description": "E2E build smoke CI job builds Vite portals and verifies dist/index.html exists",
       "test_file": ".github/workflows/ci-gates.yml",
@@ -30276,7 +30279,8 @@
         "test_guard": "CI-only change, verified",
         "single_commit": "CI-only change, verified",
         "ticket_parked": "CI-only change, verified"
-      }
+      },
+      "line_shifted_at": "2026-03-25T22:18:28.979Z"
     },
     {
       "ticket": "GCP-STG-0600",
@@ -30333,8 +30337,8 @@
     {
       "ticket": "GCP-STG-0601",
       "file": ".github/workflows/ci-gates.yml",
-      "start_line": 1154,
-      "end_line": 1169,
+      "start_line": 1155,
+      "end_line": 1170,
       "checksum": "e67bda80f892a76d",
       "description": "Dedicated supplier-portal test job in CI pipeline for explicit coverage visibility",
       "test_file": "supplier-portal/package.json",
@@ -30375,13 +30379,13 @@
         "fix_ledger_check": "fix-guard check: 609 fixes, zero drift",
         "no_agent_conflict": "Single agent, no parallel modifications"
       },
-      "line_shifted_at": "2026-03-24T22:27:25.990Z"
+      "line_shifted_at": "2026-03-25T22:18:28.992Z"
     },
     {
       "ticket": "GCP-STG-0602",
       "file": ".github/workflows/ci-gates.yml",
-      "start_line": 1170,
-      "end_line": 1186,
+      "start_line": 1171,
+      "end_line": 1187,
       "checksum": "a317d8da15e21158",
       "description": "POS Jest test job in CI pipeline, separate from pos-typecheck, added to gate-check needs",
       "test_file": "package.json",
@@ -30415,13 +30419,13 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:30:41.944Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T22:27:26.001Z"
+      "line_shifted_at": "2026-03-25T22:18:29.004Z"
     },
     {
       "ticket": "GCP-STG-0603",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 635,
-      "end_line": 641,
+      "start_line": 636,
+      "end_line": 642,
       "checksum": "c7e608b2b7e79b94",
       "description": "CORS production domain documentation comments in deploy.yml and .env.cloudrun.example",
       "test_file": "backend/.env.cloudrun.example",
@@ -30455,7 +30459,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:32:04.617Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T16:20:01.234Z"
+      "line_shifted_at": "2026-03-25T22:18:29.014Z"
     },
     {
       "ticket": "GCP-STG-0604",
@@ -30852,8 +30856,8 @@
     {
       "ticket": "GCP-STG-0616",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 663,
-      "end_line": 663,
+      "start_line": 664,
+      "end_line": 664,
       "checksum": "e0cb99d9d065da69",
       "description": "Add LOG_LEVEL=info and LOG_FORMAT=json to Cloud Run set-env-vars",
       "test_file": ".github/workflows/deploy.yml",
@@ -30887,7 +30891,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:56:01.842Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T16:20:01.240Z"
+      "line_shifted_at": "2026-03-25T22:18:29.022Z"
     },
     {
       "ticket": "GCP-STG-0616",
@@ -31291,8 +31295,8 @@
     {
       "ticket": "GCP-STG-0645",
       "file": ".github/workflows/ci-gates.yml",
-      "start_line": 1135,
-      "end_line": 1150,
+      "start_line": 1136,
+      "end_line": 1151,
       "checksum": "1338dfbc135058d1",
       "description": "Bundle size reporting in CI e2e-smoke job â€” warns if retailer or superadmin bundle exceeds 10MB",
       "test_file": ".github/workflows/ci-gates.yml",
@@ -31325,7 +31329,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:27:02.400Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-25T22:18:29.041Z"
     },
     {
       "ticket": "GCP-STG-0657",
@@ -32530,8 +32535,8 @@
     {
       "ticket": "GCP-STG-0613",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 664,
-      "end_line": 664,
+      "start_line": 665,
+      "end_line": 665,
       "checksum": "f413bb6b65657398",
       "description": "Add RAZORPAY_WEBHOOK_SECRET to Cloud Run set-secrets for webhook signature verification",
       "test_file": "scripts/gcp/verify-firebase-appcheck.sh",
@@ -32570,7 +32575,7 @@
         "fix_ledger_check": "zero drift",
         "no_agent_conflict": "single agent"
       },
-      "line_shifted_at": "2026-03-25T16:20:01.257Z"
+      "line_shifted_at": "2026-03-25T22:18:29.052Z"
     },
     {
       "ticket": "GCP-STG-0614",
@@ -38145,8 +38150,8 @@
     {
       "ticket": "GCP-STG-MIGRATION",
       "file": ".github/workflows/deploy.yml",
-      "start_line": 239,
-      "end_line": 243,
+      "start_line": 240,
+      "end_line": 244,
       "checksum": "f83f33f2d3605f7d",
       "description": "Migration production gate integrated as blocking step in pre-deploy-safety job",
       "test_file": "scripts/gates/migration-production-gate.sh",
@@ -38179,7 +38184,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T16:20:26.112Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-25T22:18:29.086Z"
     },
     {
       "ticket": "GCP-STG-0739",
