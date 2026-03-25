@@ -18347,4 +18347,209 @@ pos-tests:
 
 ---
 
-<!-- next ticket: GCP-STG-0725 -->
+## GCP-STG-0725 — MEDIUM: Bulk invoice issue/void/cancel endpoint for SuperAdmin (MEDIUM)
+
+**Ticket ID**: GCP-STG-0725
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND, SUPERADMIN
+**Layers**: Backend, API, Business
+**Source**: Tax Invoice + B2B Commercial Flow Audit
+
+**Problem**: SuperAdmin InvoicesTab can only issue/cancel invoices one at a time. When a batch of 50 purchase orders comes in, the admin must click "Issue" 50 times. No bulk action endpoint exists for invoice status transitions.
+
+**Impact**: Medium — operational friction for SuperAdmin managing high-volume invoice flows. At 100+ daily invoices, one-by-one becomes unworkable.
+
+**Fix**:
+1. Backend: `POST /admin/invoices/bulk-action` — accepts `{ invoiceIds: string[], action: 'issue' | 'void' | 'cancel', reason?: string }`
+2. Transaction: All invoices updated atomically (BEGIN/COMMIT). If any fails, ROLLBACK all.
+3. Validation: Only draft→issued, issued→void, issued→cancelled transitions allowed. Mixed states rejected.
+4. Audit log: Each invoice status change logged with admin ID, timestamp, reason.
+5. Response: `{ success: number, failed: number, errors: [{ invoiceId, reason }] }`
+6. SuperAdmin UI: Checkbox selection in InvoicesTab + "Bulk Issue" / "Bulk Cancel" buttons (same pattern as GCP-STG-0360 bulk product approve).
+
+**Files to modify**:
+- `backend/src/routes/v1/admin/invoices.ts` — new POST endpoint
+- `backend/src/services/invoiceService.ts` — `bulkUpdateStatus()` function
+- `supermandi-superadmin/src/tabs/InvoicesTab.tsx` — checkbox selection + bulk action buttons
+- `supermandi-superadmin/src/api/invoices.ts` — `bulkInvoiceAction()` API call
+
+**Test**: Behavioral supertest — POST with 3 invoice IDs, verify all transition to 'issued'. POST with mixed states, verify rejection. POST with invalid IDs, verify error response.
+
+**12-Layer Verification**: L1 UI ✅, L3 Wiring ✅, L5 API ✅, L6 Backend ✅, L10 Business ✅, L12 Store Isolation ✅
+
+---
+
+## GCP-STG-0726 — MEDIUM: Auto-trigger credit note on GRN rejection/goods return (MEDIUM)
+
+**Ticket ID**: GCP-STG-0726
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND, POS, SUPERADMIN
+**Layers**: Backend, Business, DB
+
+**Problem**: When a retailer receives goods (GRN) and rejects items (damaged, wrong product, short delivery), the goods return is recorded in `invoicing.goods_returns` (GCP-STG-0664) but NO credit note is auto-generated. The retailer must manually request a credit note from SuperAdmin, and the admin must manually create it via `POST /admin/credit-notes`. This breaks the GST compliance requirement: every goods return MUST have a corresponding credit note within 30 days.
+
+**Impact**: Medium — GST audit risk. Unmatched goods returns without credit notes create reconciliation issues during GST filing. At scale (100+ returns/month), manual tracking is impossible.
+
+**Fix**:
+1. In `backend/src/routes/v1/orders.ts` — when goods return status changes to `CONFIRMED`:
+   - Auto-call `generateCreditNote()` from `creditNoteService.ts`
+   - Link credit note to original purchase invoice via `reference_invoice_id`
+   - Items: copy from goods return (product, qty, amount, reason)
+   - Type: `CREDIT_NOTE` (supplier issued to buyer)
+   - Status: `DRAFT` (SuperAdmin reviews and issues)
+2. For SUPERMANDI_PRINCIPAL: Credit note from SuperMandi → Retailer (reducing retailer payable)
+3. For DIRECT_SUPPLIER: Credit note from Supplier → Retailer (reducing supplier receivable)
+4. SuperAdmin notification: Flag auto-generated credit notes for review in InvoicesTab
+5. POS: Show credit note reference on goods return detail screen
+
+**Files to modify**:
+- `backend/src/routes/v1/orders.ts` — goods return confirmation handler
+- `backend/src/services/creditNoteService.ts` — auto-generation from goods return
+- `backend/src/services/orderInvoiceService.ts` — lookup original invoice for reference
+- `supermandi-superadmin/src/tabs/InvoicesTab.tsx` — filter for auto-generated credit notes
+
+**Test**: Behavioral supertest — confirm goods return, verify credit note auto-created with correct items/amounts/reference. Verify PRINCIPAL vs DIRECT model creates different seller/buyer pairs.
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅, L7 DB ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0727 — LOW: Archived PDF retrieval from GCS — serve stored PDF instead of regenerating (LOW)
+
+**Ticket ID**: GCP-STG-0727
+**Severity**: P3 LOW
+**Platforms**: BACKEND, ALL WEB
+**Layers**: Backend, API, GCP Parity
+
+**Problem**: Every invoice PDF download call (`GET /invoices/:id/pdf`) regenerates the PDF from scratch using PDFKit. The original PDF IS stored in GCS on issuance (`invoiceService.ts:427-511`, `pdf_gcs_path` column), but no endpoint serves the archived version. This means: (a) regenerated PDF might differ from original if code changes, (b) unnecessary CPU usage on every download, (c) if invoice data is later corrected, the "original" PDF is lost.
+
+**Impact**: Low — PDFs are deterministic from DB data. But for legal compliance, the ORIGINAL issued PDF should be the canonical version, not a regeneration.
+
+**Fix**:
+1. In each PDF download endpoint, check `pdf_gcs_path` first:
+   - If GCS path exists → stream directly from GCS bucket (fast, canonical)
+   - If GCS path missing → regenerate (fallback for pre-GCS invoices)
+2. Add `GET /admin/invoices/:id/pdf/archived` for explicit archived access
+3. Set `Content-Disposition: attachment; filename="SM-INV-2025-26-00001.pdf"`
+4. Cache-Control: `private, max-age=3600` (invoices are immutable once issued)
+
+**Files to modify**:
+- `backend/src/routes/v1/admin/invoices.ts` — add GCS retrieval before regeneration
+- `backend/src/routes/v1/retailer-admin/invoices.ts` — same pattern
+- `backend/src/routes/v1/supplier/invoices.ts` — same pattern
+- `backend/src/routes/v1/pos/sales.ts` — same pattern for POS invoice download
+- `backend/src/services/invoiceService.ts` — `getArchivedPdf(invoiceId)` helper
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅, L9 GCP ✅
+
+---
+
+## GCP-STG-0728 — LOW: Invoice signature verification endpoint — verify HMAC integrity (LOW)
+
+**Ticket ID**: GCP-STG-0728
+**Severity**: P3 LOW
+**Platforms**: BACKEND, SUPERADMIN
+**Layers**: Backend, API, Business
+
+**Problem**: Invoice PDFs are signed with HMAC-SHA256 (`invoiceService.ts:476-506`) and the signature is stored in `pdf_signature` column. But there is NO endpoint for users to verify that a downloaded PDF matches the original. If someone tampers with a PDF (change amounts, add items), there's no way to detect it through the system.
+
+**Impact**: Low — invoice tampering is an unlikely attack vector for kirana stores. But for GST audit compliance, signature verification adds a trust layer.
+
+**Fix**:
+1. `POST /admin/invoices/:id/verify-signature` — accepts uploaded PDF buffer, computes HMAC, compares against stored `pdf_signature`
+2. Response: `{ valid: true, invoiceNumber: "SM-INV-...", issuedAt: "..." }` or `{ valid: false, reason: "Signature mismatch" }`
+3. SuperAdmin UI: "Verify PDF" button in InvoicesTab detail view — upload PDF, show valid/invalid badge
+4. Public verification (future): `POST /public/verify-invoice` with invoice number + PDF — for GST auditors
+
+**Files to modify**:
+- `backend/src/routes/v1/admin/invoices.ts` — new verify endpoint
+- `backend/src/services/invoiceService.ts` — `verifyPdfSignature(invoiceId, pdfBuffer)` function
+- `supermandi-superadmin/src/tabs/InvoicesTab.tsx` — "Verify" button in detail view
+
+**12-Layer Verification**: L5 API ✅, L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0729 — LOW: POS invoice offline caching — cache recent sale invoices locally (LOW)
+
+**Ticket ID**: GCP-STG-0729
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, Business
+
+**Problem**: `BillDetailScreenV3.tsx:36-37` downloads invoice PDF via API call. If the POS device is offline (common in rural kirana stores with spotty internet), the "Download Invoice" button fails silently or shows a network error. The retailer cannot show the customer a receipt for a sale they just completed.
+
+**Impact**: Low — receipt printing via thermal printer works offline (ESC/POS). But PDF download for WhatsApp sharing or record-keeping requires internet.
+
+**Fix**:
+1. After successful sale + invoice generation, cache the invoice JSON response in AsyncStorage:
+   - Key: `invoice:${saleId}` — store invoice metadata (number, date, items, totals, tax)
+   - TTL: 30 days (auto-purge older invoices)
+   - Max cache: 100 invoices (LRU eviction)
+2. In BillDetailScreenV3: check AsyncStorage first, fall back to API
+3. For PDF: generate a simple HTML receipt from cached JSON and offer "Save as Image" via `react-native-view-shot`
+4. Show clear indicator: "Cached" vs "Live" invoice data
+
+**Files to modify**:
+- `src/screens/v3/BillDetailScreenV3.tsx` — AsyncStorage cache check before API call
+- `src/screens/v3/SuccessScreenV3.tsx` — cache invoice data after successful sale
+- `src/services/invoiceCache.ts` (new) — LRU cache manager for invoice JSON
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0730 — LOW: WhatsApp invoice share — handle missing phone gracefully (LOW)
+
+**Ticket ID**: GCP-STG-0730
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, Business
+
+**Problem**: `invoiceService.ts:670-688` sends WhatsApp invoice notification after issuance. It queries `supplier.suppliers.primary_phone` (for supplier) and `platform.stores.phone` (for retailer). If either phone is NULL or empty, the WhatsApp send fails silently — no error logged, no retry, no alternative notification.
+
+**Impact**: Low — most stores and suppliers have phone numbers (required during registration). But edge cases exist: phone removed, phone format invalid, WhatsApp not available on that number.
+
+**Fix**:
+1. Before WhatsApp send, validate phone: not null, matches E.164 format, at least 10 digits
+2. If phone missing: log warning `[INVOICE] Cannot send WhatsApp — no phone for {entityType} {entityId}`
+3. If WhatsApp fails: log error with invoice ID for manual follow-up
+4. Add fallback: email notification if `email` field exists and WhatsApp fails
+5. SuperAdmin: show "WhatsApp sent: ✅/❌" indicator in InvoicesTab detail
+
+**Files to modify**:
+- `backend/src/services/invoiceService.ts` — phone validation before WhatsApp send
+- `supermandi-superadmin/src/tabs/InvoicesTab.tsx` — WhatsApp delivery status indicator
+
+**12-Layer Verification**: L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0731 — LOW: Place of supply validation — verify against buyer GSTIN state (LOW)
+
+**Ticket ID**: GCP-STG-0731
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, Business
+
+**Problem**: `invoicePdfService.ts:102-122` derives place of supply from buyer GSTIN (first 2 digits = state code). But there's no validation that the derived place of supply is consistent with the buyer's registered address state. If a buyer has GSTIN starting with "27" (Maharashtra) but their `platform.stores.state` says "Rajasthan", this mismatch would create an invalid invoice for GST filing.
+
+**Impact**: Low — GSTIN registration validates state code, so mismatches should not occur in practice. But data entry errors during store creation could cause issues.
+
+**Fix**:
+1. In `invoiceService.ts` during invoice creation, compare:
+   - `placeOfSupply` (from GSTIN first 2 digits)
+   - `buyerState` (from `platform.stores.state` or `supplier.suppliers.state`)
+2. If mismatch: log warning `[INVOICE] Place of supply mismatch — GSTIN state: {X}, registered state: {Y} for {entityId}`
+3. Do NOT block invoice generation (warning only — GSTIN is authoritative for GST)
+4. SuperAdmin: show mismatch warning in StoresTab for stores where GSTIN state ≠ address state
+
+**Files to modify**:
+- `backend/src/services/invoiceService.ts` — add mismatch check during invoice creation
+- `supermandi-superadmin/src/tabs/StoresTab.tsx` — GSTIN/state mismatch warning indicator
+
+**12-Layer Verification**: L6 Backend ✅, L10 Business ✅
+
+---
+
+<!-- next ticket: GCP-STG-0732 -->
