@@ -19196,4 +19196,186 @@ pos-tests:
 
 ---
 
-<!-- next ticket: GCP-STG-0755 -->
+## GCP-STG-0755 — HIGH: SuperAdmin password setup UI — first-time set + change + security settings panel (HIGH)
+
+**Ticket ID**: GCP-STG-0755
+**Severity**: P1 HIGH
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: UI, UX, Wiring, Navigation, API, Backend, DB, GCP Parity, Business
+**Source**: Operator Security Review — Password Login Gap
+
+**Problem**: `POST /admin/auth/set-password` exists (GCP-STG-0471, adminAuth.ts:614) and requires an existing JWT to set/change the password. The password login UI exists (GCP-STG-0538, LoginGate.tsx). But there is **NO UI anywhere in the SuperAdmin portal** to actually SET a password for the first time. After the admin logs in via OTP, there is no "Set Password" button, no "Security Settings" section, no way to configure password login — the admin would have to call the API manually via curl.
+
+**Impact**: HIGH — Password login (GCP-STG-0538) is completely inaccessible to any admin who hasn't manually set a password via API. The "Use password instead" toggle on the login screen will always fail with "Password not configured. Use email OTP." for all admins, making the feature dead in practice.
+
+**Fix — End to End**:
+
+### 1. UI — Security Settings Card in SuperAdmin Portal
+
+Create `supermandi-superadmin/src/components/SecuritySettingsCard.tsx`:
+
+**Section A: Password Management**
+- If NO password set (check via `GET /admin/auth/security-status`):
+  - Show: "Password login not configured" with yellow warning badge
+  - Button: "Set Password" → opens password form
+- If password IS set:
+  - Show: "Password login active" with green badge + last changed date
+  - Button: "Change Password" → opens change form
+- **Set Password Form**:
+  - New password input (type="password", min 8 chars, at least 1 number)
+  - Confirm password input (must match)
+  - Password strength indicator (weak/medium/strong)
+  - "Save Password" button → `POST /admin/auth/set-password`
+  - Success: "Password set! You can now use 'Use password instead' on the login screen."
+- **Change Password Form**:
+  - Current password input (verify old password before allowing change)
+  - New password input + confirm
+  - "Update Password" button → `POST /admin/auth/change-password` (new endpoint)
+
+**Section B: TOTP 2FA Status** (already exists in TotpSetupCard — link to it)
+- Show: "2FA enabled" / "2FA not configured"
+- Link: "Manage 2FA" → scroll to TotpSetupCard
+
+**Section C: Active Sessions**
+- Show: current session info (login time, IP, browser)
+- Button: "Log out all other sessions" → `POST /admin/auth/logout-all`
+
+### 2. UX — Where to Place the Security Card
+
+Read `supermandi-superadmin/src/tabs/SettingsTab.tsx` — add SecuritySettingsCard as a section within the Settings tab. OR create a dedicated "Security" sub-tab within Settings. The card should be prominently visible — not buried at the bottom.
+
+**Placement priority**: Settings tab → first card (above other settings) OR a dedicated SettingsTab section header "Account Security".
+
+**First-time nudge**: After OTP login, if `passwordConfigured === false`, show a non-dismissable banner at the top of the portal: "Secure your account — Set a password for faster login." with "Set Password" CTA that scrolls to SecuritySettingsCard.
+
+### 3. Wiring — API Integration
+
+**New API functions** in `supermandi-superadmin/src/api/auth.ts`:
+
+```typescript
+// Check if password is configured + TOTP status
+export async function getSecurityStatus(): Promise<{
+  passwordConfigured: boolean;
+  passwordLastChanged: string | null;
+  totpEnabled: boolean;
+  activeSessions: number;
+}> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/auth/security-status`, {
+    credentials: 'include',
+  });
+  return res.json();
+}
+
+// Set password (first time)
+export async function setAdminPassword(password: string): Promise<{ success: boolean }> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/auth/set-password`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  return res.json();
+}
+
+// Change password (requires current password)
+export async function changeAdminPassword(currentPassword: string, newPassword: string): Promise<{ success: boolean }> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/auth/change-password`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  return res.json();
+}
+```
+
+### 4. Navigation — No new routes needed
+
+SecuritySettingsCard lives inside existing SettingsTab — no new navigation required.
+The first-time nudge banner appears in the main App.tsx layout (above tabs).
+
+### 5. API — New Backend Endpoints
+
+**5A. `GET /admin/auth/security-status`** (new)
+In `backend/src/routes/v1/admin/adminAuth.ts`:
+- Requires admin JWT (`extractAdminToken`)
+- Queries `admin_totp` table for the admin email
+- Returns: `{ passwordConfigured: !!row?.password_hash, passwordLastChanged: row?.updated_at, totpEnabled: !!row?.totp_enabled, activeSessions: 1 }`
+
+**5B. `POST /admin/auth/change-password`** (new)
+In `backend/src/routes/v1/admin/adminAuth.ts`:
+- Requires admin JWT
+- Accepts `{ currentPassword, newPassword }`
+- Verify current password: `bcrypt.compare(currentPassword, storedHash)`
+- If wrong: return 401 `{ error: "Current password incorrect" }`
+- Validate new password: min 8 chars + 1 number (same rules as set-password)
+- Hash new password: `bcrypt.hash(newPassword, 12)`
+- Update: `UPDATE admin_totp SET password_hash = $2, updated_at = NOW() WHERE email = $1`
+- Log auth event: `logAuthEvent({ eventType: 'password_changed', actorType: 'admin', actorId: email })`
+- Return: `{ success: true }`
+
+**5C. Existing `POST /admin/auth/set-password`** — already works, no changes needed
+
+### 6. Backend — Validation + Security
+
+- **Password validation** (shared function):
+  - Min 8 characters
+  - At least 1 number
+  - At least 1 uppercase letter (NEW — add for stronger policy)
+  - NOT same as email prefix
+  - NOT in common password list ("password", "12345678", "admin123")
+- **Rate limit**: Reuse `otpRateLimiter` on change-password endpoint
+- **Audit log**: Log `password_set` and `password_changed` events via `logAuthEvent()` (GCP-STG-0489)
+
+### 7. DB — No new migration needed
+
+`admin_totp.password_hash` column already exists (migration 238). `admin_totp.updated_at` tracks last change.
+No new tables or columns required.
+
+### 8. GCP Parity
+
+- `ADMIN_EMAIL_ALLOWLIST` controls who can set passwords (same as OTP)
+- Password hash stored in Cloud SQL (encrypted at rest via Cloud SQL AES-256)
+- No new secrets needed — password is user-managed, not infrastructure
+- `JWT_SECRET` signs the session — already deployed
+
+### 9. Business Logic
+
+- **First login flow**: OTP → Land on portal → See "Set Password" nudge → Set password → Next login can use password
+- **Forgot password**: Already handled — "Forgot password? Use OTP instead" link on login screen (GCP-STG-0550)
+- **Password reset by another admin**: `POST /admin/auth/set-password` requires the admin's OWN JWT — one admin cannot set another's password
+- **Password + TOTP**: If TOTP is enabled, password login still requires TOTP code after password verification (already wired in login-password handler)
+
+### 10. Test Requirements (BEHAVIORAL)
+
+**Backend tests** — `backend/tests/adminSecuritySettings.gcp-stg-0755.unit.test.ts`:
+- `GET /admin/auth/security-status` → returns `passwordConfigured: false` when no hash
+- `GET /admin/auth/security-status` → returns `passwordConfigured: true` after set-password
+- `POST /admin/auth/change-password` with wrong current → 401
+- `POST /admin/auth/change-password` with correct current → 200 + hash updated
+- `POST /admin/auth/change-password` with weak new password → 400
+- `POST /admin/auth/change-password` without JWT → 401
+
+**Frontend test** — `supermandi-superadmin/src/__tests__/components/SecuritySettingsCard.test.tsx`:
+- Renders "Set Password" button when `passwordConfigured === false`
+- Renders "Change Password" button when `passwordConfigured === true`
+- Form validation: mismatched passwords show error
+- Form validation: weak password shows error
+- Submit calls correct API endpoint
+
+### Files to create:
+- `supermandi-superadmin/src/components/SecuritySettingsCard.tsx` (new)
+- `supermandi-superadmin/src/api/auth.ts` (add 3 functions)
+- `backend/tests/adminSecuritySettings.gcp-stg-0755.unit.test.ts` (new)
+- `supermandi-superadmin/src/__tests__/components/SecuritySettingsCard.test.tsx` (new)
+
+### Files to modify:
+- `backend/src/routes/v1/admin/adminAuth.ts` — add `security-status` + `change-password` endpoints
+- `supermandi-superadmin/src/tabs/SettingsTab.tsx` — add SecuritySettingsCard
+- `supermandi-superadmin/src/App.tsx` — add first-time password nudge banner (optional)
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅, L5 API ✅, L6 Backend ✅, L7 DB ✅ (existing), L8 Migration ✅ (none needed), L9 GCP ✅, L10 Business ✅, L12 Store Isolation ✅ (admin-scoped, not store-scoped)
+
+---
+
+<!-- next ticket: GCP-STG-0756 -->
