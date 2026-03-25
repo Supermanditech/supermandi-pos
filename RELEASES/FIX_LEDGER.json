@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1150,
+  "version": 1152,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -11139,9 +11139,9 @@
       "ticket": "GCP-STG-0097",
       "file": "backend/.env.cloudrun.example",
       "start_line": 1,
-      "end_line": 132,
-      "checksum": "01bebb12b19d9ae7",
-      "description": "Comprehensive Cloud Run env var parity reference: REQUIRED vs RECOMMENDED vs OPTIONAL categories with all 80+ env vars [UPDATED by GCP-STG-0617: added SERVICE_TOKEN_SECRET + ADMIN_TOKEN docs]",
+      "end_line": 137,
+      "checksum": "f7a2581ab1ada8e8",
+      "description": "Comprehensive Cloud Run env var parity reference: REQUIRED vs RECOMMENDED vs OPTIONAL categories with all 80+ env vars [UPDATED by GCP-STG-0617: added SERVICE_TOKEN_SECRET + ADMIN_TOKEN docs] [UPDATED by GCP-STG-0605: Redis Memorystore IP documentation]",
       "test_file": "backend/.env.cloudrun.example",
       "depends_on": null,
       "migration": null,
@@ -29118,8 +29118,8 @@
     {
       "ticket": "GCP-STG-0592",
       "file": "backend/.env.cloudrun.example",
-      "start_line": 136,
-      "end_line": 140,
+      "start_line": 142,
+      "end_line": 146,
       "checksum": "1d99ae77a7b112a2",
       "description": "Document DB_POOL_MAX=10 with pool math and MAX_COMMISSION_PERCENT=30",
       "test_file": "scripts/gates/config-parity.sh",
@@ -29153,7 +29153,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:04:01.599Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T21:59:56.047Z"
+      "line_shifted_at": "2026-03-25T10:29:24.310Z"
     },
     {
       "ticket": "GCP-STG-0595",
@@ -29800,8 +29800,8 @@
     {
       "ticket": "GCP-STG-0584",
       "file": "backend/.env.cloudrun.example",
-      "start_line": 168,
-      "end_line": 183,
+      "start_line": 174,
+      "end_line": 189,
       "checksum": "4398e3f6a8d1f326",
       "description": "SMS provider configuration docs for MSG91 and Twilio",
       "test_file": "backend/.env.cloudrun.example",
@@ -29832,7 +29832,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:44:12.287Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T21:59:56.055Z"
+      "line_shifted_at": "2026-03-25T10:29:24.318Z"
     },
     {
       "ticket": "GCP-STG-0606",
@@ -30017,8 +30017,8 @@
     {
       "ticket": "GCP-STG-0615",
       "file": "backend/.env.cloudrun.example",
-      "start_line": 151,
-      "end_line": 156,
+      "start_line": 157,
+      "end_line": 162,
       "checksum": "7952a11428874602",
       "description": "ERROR_REPORTING_ENABLED documentation in env example",
       "test_file": "backend/.env.cloudrun.example",
@@ -30049,7 +30049,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:54:22.368Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T21:59:56.057Z"
+      "line_shifted_at": "2026-03-25T10:29:24.321Z"
     },
     {
       "ticket": "GCP-STG-0616",
@@ -30090,8 +30090,8 @@
     {
       "ticket": "GCP-STG-0616",
       "file": "backend/.env.cloudrun.example",
-      "start_line": 145,
-      "end_line": 149,
+      "start_line": 151,
+      "end_line": 155,
       "checksum": "e4f88aad005ab3fb",
       "description": "LOG_LEVEL documentation with values: debug, info, warn, error",
       "test_file": "backend/.env.cloudrun.example",
@@ -30122,7 +30122,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:56:02.036Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T21:59:56.059Z"
+      "line_shifted_at": "2026-03-25T10:29:24.324Z"
     },
     {
       "ticket": "GCP-STG-0617",
@@ -32685,6 +32685,96 @@
         "ticket_parked": "Committed and parked",
         "no_agent_conflict": "Single agent session"
       }
+    },
+    {
+      "ticket": "GCP-STG-0605",
+      "file": "backend/.env.cloudrun.example",
+      "start_line": 40,
+      "end_line": 47,
+      "checksum": "2bf283b602943af1",
+      "description": "Document Redis Memorystore private IP with DNS alternative and verification command",
+      "test_file": "scripts/tests/placeholder-migration-check.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T10:28:50.083Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "N/A — documentation-only change to .env.cloudrun.example",
+        "business_behaviour": "N/A — env var documentation, no runtime changes",
+        "impacted_files": "backend/.env.cloudrun.example (updated Redis section)",
+        "fix_ledger_check": "fix-guard check passes, zero drift",
+        "no_agent_conflict": "Single agent session",
+        "operator_approved": "N/A — env example doc, no UI changes",
+        "parity_scanned": "Clean — uses correct 10.107.71.27 Memorystore IP",
+        "parity_fixed": "N/A",
+        "gcp_parity": "Uses actual Memorystore IP, documents gcloud verify command",
+        "regression_check": "N/A — documentation-only",
+        "test_guard": "N/A — env example file, no test needed",
+        "single_commit": "fix(GCP-STG-0605)",
+        "ticket_parked": "Committed and parked"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0586",
+      "file": "backend/migrations/000_extensions.sql",
+      "start_line": 1,
+      "end_line": 2,
+      "checksum": "0cb341a171773ca1",
+      "description": "ROLLBACK comments added to migrations 000-023 (except 011 which already had one)",
+      "test_file": "backend/migrations/000_extensions.sql",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": false,
+        "api_errors": false,
+        "store_isolation": false,
+        "business_logic": false,
+        "business_behaviour": false,
+        "db_schema": false,
+        "migration_safe": false,
+        "impacted_files": false,
+        "fix_ledger_check": false,
+        "no_agent_conflict": false,
+        "gcp_parity": false,
+        "regression_check": false,
+        "test_guard": false,
+        "single_commit": false,
+        "ticket_parked": false
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T10:30:02.553Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 270,
