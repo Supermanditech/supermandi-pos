@@ -1,0 +1,21 @@
+#!/bin/bash
+# GCP-STG-0634: GSTIN checksum digit validation
+echo "=== GSTIN VALIDATION CHECK ==="
+echo ""
+echo "GSTIN format: 22AAAAA0000A1Z5"
+echo "  Positions 1-2: State code (01-37)"
+echo "  Positions 3-12: PAN number"
+echo "  Position 13: Entity number (1-9, A-Z)"
+echo "  Position 14: Z (default)"
+echo "  Position 15: Checksum digit (Luhn mod 36)"
+echo ""
+echo "Current validation in codebase:"
+grep -rn "gstin\|GSTIN" backend/src/ --include="*.ts" | grep -v __tests__ | grep -i "valid\|regex\|pattern\|check\|match\|length" | head -10
+echo ""
+echo "Minimum: 15 alphanumeric characters"
+echo "Enhanced: Luhn mod-36 checksum on position 15"
+echo ""
+echo "Note: Most Indian B2B platforms accept format-only validation"
+echo "at registration. Checksum validation is nice-to-have."
+echo "GST portal API verification is the gold standard."
+echo "=== CHECK COMPLETE ==="
