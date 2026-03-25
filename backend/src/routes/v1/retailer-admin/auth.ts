@@ -131,7 +131,7 @@ setInterval(() => {
       loginAttempts.delete(key);
     }
   }
-}, 60000);
+}, 60000).unref();
 
 const router = Router();
 

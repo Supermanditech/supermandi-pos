@@ -895,7 +895,7 @@
       "file": "src/theme/typography.ts",
       "start_line": 1,
       "end_line": 77,
-      "checksum": "1634c99a1bee1848",
+      "checksum": "81123b3e40e87363",
       "description": "POS-grade readability audit: all sizes >= 14px, body >= 16px, proper line height ratios",
       "test_file": "src/__tests__/theme/typography.stg-011.pos-readability.unit.test.ts",
       "depends_on": null,
@@ -4221,7 +4221,7 @@
       "end_line": 557,
       "description": "Webhook idempotency atomic claim â€” SET NX EX eliminates TOCTOU race between check and mark",
       "test_file": "src/__tests__/screens/webhooks.stg-500.idempotency-race.test.ts",
-      "checksum": "5cc61326d1f3c0ee",
+      "checksum": "6078eb829077adb2",
       "checklist": {
         "backend_api": true,
         "api_errors": true,
@@ -19922,8 +19922,8 @@
     {
       "ticket": "GCP-STG-0392",
       "file": "backend/src/routes/v1/pos/inventory.ts",
-      "start_line": 875,
-      "end_line": 921,
+      "start_line": 877,
+      "end_line": 923,
       "checksum": "d438f943225cf6e0",
       "description": "GET /inventory/batches/:productId â€” returns FEFO-ordered batch breakdown per product from inventory.stock_batches (FEFO-ordered batches)",
       "test_file": "backend/tests/stockBatches.gcp-stg-0392.unit.test.ts",
@@ -19957,7 +19957,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:23:21.959Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T14:25:19.999Z"
+      "line_shifted_at": "2026-03-25T21:41:15.660Z"
     },
     {
       "ticket": "GCP-STG-0392",
@@ -28325,7 +28325,7 @@
       "file": "backend/services/api-gateway/Dockerfile",
       "start_line": 1,
       "end_line": 92,
-      "checksum": "2c67f160020424bf",
+      "checksum": "15f226a44ee571db",
       "description": "Verify API Gateway Dockerfile exists as standalone Cloud Run service, add clarifying comment",
       "test_file": "backend/tests/docker-build.test.ts",
       "depends_on": null,
@@ -30619,7 +30619,7 @@
       "file": "backend/src/routes/v1/webhooks.ts",
       "start_line": 7,
       "end_line": 249,
-      "checksum": "2451820bf59af5c8",
+      "checksum": "884fc36e6b395598",
       "description": "Rate limit all webhook endpoints â€” 100 req/min per IP via redisRateLimit",
       "test_file": "backend/src/routes/v1/webhooks.ts",
       "depends_on": null,

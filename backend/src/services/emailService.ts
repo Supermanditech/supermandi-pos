@@ -820,4 +820,4 @@ setInterval(() => {
       emailRateLimits.delete(email);
     }
   }
-}, 5 * 60 * 1000); // Cleanup every 5 minutes
+}, 5 * 60 * 1000).unref(); // Cleanup every 5 minutes

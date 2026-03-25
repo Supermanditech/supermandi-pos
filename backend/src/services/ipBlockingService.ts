@@ -193,7 +193,7 @@ setInterval(() => {
       ipFailures.delete(ip);
     }
   }
-}, 5 * 60 * 1000); // Every 5 minutes
+}, 5 * 60 * 1000).unref(); // Every 5 minutes
 
 // =============================================================================
 // EXPRESS MIDDLEWARE

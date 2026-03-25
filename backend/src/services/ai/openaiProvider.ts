@@ -163,7 +163,7 @@ setInterval(() => {
   for (const [key, entry] of rateLimitByIP.entries()) {
     if (entry.windowStart < cutoff) rateLimitByIP.delete(key);
   }
-}, 5 * 60 * 1000);
+}, 5 * 60 * 1000).unref();
 
 /**
  * Check and update rate limits.

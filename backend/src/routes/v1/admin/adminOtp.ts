@@ -385,4 +385,4 @@ setInterval(() => {
   for (const [email, data] of _otpVerifyFailures.entries()) {
     if (data.lockedUntil && now > data.lockedUntil) _otpVerifyFailures.delete(email);
   }
-}, 60000);
+}, 60000).unref();

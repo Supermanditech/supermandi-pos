@@ -43,7 +43,7 @@ setInterval(() => {
       processedWebhookEventsFallback.delete(eventId);
     }
   }
-}, 60 * 60 * 1000);
+}, 60 * 60 * 1000).unref();
 
 /**
  * STG-500: Atomic claim — SET NX EX eliminates TOCTOU race between check and mark.

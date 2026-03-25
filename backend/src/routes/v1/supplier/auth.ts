@@ -171,7 +171,7 @@ setInterval(() => {
       phoneLoginAttempts.delete(phone);
     }
   }
-}, 10 * 60 * 1000);
+}, 10 * 60 * 1000).unref();
 
 // =============================================================================
 // T-214: Password Strength Validation
