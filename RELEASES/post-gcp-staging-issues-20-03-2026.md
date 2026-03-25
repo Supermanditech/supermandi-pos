@@ -18552,4 +18552,445 @@ pos-tests:
 
 ---
 
-<!-- next ticket: GCP-STG-0732 -->
+## GCP-STG-0732 — HIGH: Customer Udhar (Credit) Ledger on POS — view balance, partial payment, history (HIGH)
+
+**Ticket ID**: GCP-STG-0732
+**Severity**: P1 HIGH
+**Platforms**: POS, BACKEND
+**Layers**: UI, UX, Wiring, API, Backend, DB, Business
+**Source**: Feature-Rich Audit — Kirana Day-1 Critical
+
+**Problem**: Kirana stores run on Udhar (credit). "Kitna baaki hai?" (how much pending?) is asked 50+ times/day. Currently the POS creates Udhar sales but there is NO customer-level credit ledger visible to the cashier. The cashier cannot see: total credit outstanding per customer, list of unpaid bills, partial payment history, or aging of receivables.
+
+**Impact**: HIGH — Udhar is 30-50% of kirana revenue. Without a ledger, retailers track credit in paper notebooks, defeating the purpose of a digital POS.
+
+**Fix — End to End**:
+
+### Backend:
+1. **New table**: `orders.customer_ledger` (id, store_id, customer_id, sale_id, type ENUM('CREDIT','PAYMENT','ADJUSTMENT'), amount_minor BIGINT, balance_after_minor BIGINT, note TEXT, created_at, created_by)
+2. **Migration**: `246_gcp_stg_0732_customer_ledger.sql`
+3. **On Udhar sale**: INSERT ledger entry type=CREDIT, amount=sale total, update running balance
+4. **Partial payment endpoint**: `POST /pos/customers/:customerId/payments` — accepts amount, creates PAYMENT entry, reduces balance
+5. **Ledger endpoint**: `GET /pos/customers/:customerId/ledger` — returns paginated ledger entries + current balance
+6. **Balance endpoint**: `GET /pos/customers/:customerId/balance` — returns { outstanding_minor, last_payment_date, oldest_unpaid_date }
+7. **Store isolation**: All queries scoped by store_id from device token
+
+### POS App:
+1. **CustomersScreenV3**: Add "₹{balance}" badge next to each customer name. Tap → open ledger
+2. **CustomerLedgerScreen** (new): Shows chronological list — "₹500 credit (Bill #123)" / "₹200 payment received" / balance running total
+3. **Record Payment button**: Amount input + payment method (cash/UPI) + optional note
+4. **SellScreenV3**: When Udhar customer selected, show outstanding balance in header: "Raju — ₹2,500 pending"
+5. **Settlement reminder**: Long-press customer → "Send WhatsApp reminder" with balance amount
+
+### Retailer Web:
+1. **CustomersPage**: Table with customer name, phone, total credit, last payment, aging
+2. **Customer detail**: Full ledger view with filters (date range, type)
+3. **Bulk reminder**: Select customers → send WhatsApp balance reminders
+
+**Test**: Behavioral supertest — create Udhar sale, verify ledger entry. Record payment, verify balance decreases. Verify store isolation (customer from store A not visible to store B).
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅, L5 API ✅, L6 Backend ✅, L7 DB ✅, L8 Migration ✅, L10 Business ✅, L12 Store Isolation ✅
+
+---
+
+## GCP-STG-0733 — MEDIUM: Product expiry date tracking per batch — alert near-expiry items (MEDIUM)
+
+**Ticket ID**: GCP-STG-0733
+**Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND, SUPERADMIN
+**Layers**: UI, Backend, DB, Business
+**Source**: Feature-Rich Audit — Kirana Day-1 Critical
+
+**Problem**: Kirana stores lose 3-5% revenue on expired products (dairy, snacks, medicines). The POS has `inventory.stock_batches` table (GCP-STG-0392) with `expiry_date` column, but there is NO alert system when products approach expiry. Cashier discovers expiry only when customer complains.
+
+**Fix — End to End**:
+
+### Backend:
+1. **Expiry check endpoint**: `GET /pos/inventory/expiring?days=7` — returns products expiring within N days, grouped by urgency (expired / this week / this month)
+2. **Scheduled check**: Cloud Scheduler daily at 6 AM IST → scan all stores → create expiry alerts
+3. **Alert storage**: `platform.store_alerts` table (store_id, alert_type, product_id, message, severity, read_at, created_at)
+
+### POS App:
+1. **StoreHubScreenV3**: "Expiring Soon" card showing count of products expiring in 7 days
+2. **ExpiryAlertScreen** (new): List of near-expiry products sorted by urgency — product name, batch, qty, expiry date, days remaining
+3. **Red badge on SELL tile**: If product has batch expiring within 7 days, show red "EXP" badge on tile
+4. **GRN screen**: When receiving goods, mandatory expiry date input per batch
+
+### Retailer Web:
+1. **DashboardPage**: "Expiring Products" widget with count + "View All" link
+
+**Test**: Behavioral — create product with expiry date 3 days from now, call /expiring?days=7, verify product returned. Verify products expiring in 30 days NOT returned for days=7.
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L5 API ✅, L6 Backend ✅, L7 DB ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0734 — MEDIUM: Return/exchange from SELL screen — scan receipt, return item, issue store credit (MEDIUM)
+
+**Ticket ID**: GCP-STG-0734
+**Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: UI, UX, Wiring, API, Backend, DB, Business
+**Source**: Feature-Rich Audit — Kirana Day-1 Critical
+
+**Problem**: Customer returns happen 5-10 times/day in a kirana store. Currently the only return flow is via SuperAdmin (GCP-STG-0664 goods return for BUY orders). There is NO customer-facing return flow on the SELL screen. If a customer returns a purchased item, the cashier has no way to process it digitally — must void the entire sale or give cash refund manually with no record.
+
+**Fix — End to End**:
+
+### Backend:
+1. **Return endpoint**: `POST /pos/sales/:saleId/return` — accepts items to return (productId, qty, reason)
+2. **Validation**: Sale must exist, items must be in original sale, qty <= original qty, return within configurable window (default 7 days from GCP-STG-0657)
+3. **Stock reversal**: Add returned qty back to stock_balances + inventory_ledger (RETURN entry)
+4. **Refund options**: `refund_type` ENUM('CASH','STORE_CREDIT','EXCHANGE') — cash refund records payment out, store credit adds to customer balance (GCP-STG-0732 Udhar ledger), exchange creates a new sale
+5. **Return record**: `orders.sale_returns` table (id, sale_id, store_id, items JSONB, refund_type, refund_amount_minor, reason, processed_by, created_at)
+
+### POS App:
+1. **SalesHistoryScreenV3**: "Return" button on each sale row (only within 7-day window)
+2. **ReturnFlowScreen** (new): Show original sale items with checkboxes → select items to return → qty input → reason dropdown (damaged/wrong/expired/other) → refund type selection → confirm
+3. **Success state**: "Return processed — ₹{amount} refunded via {method}"
+4. **Receipt**: Print return receipt with original invoice reference
+
+**Test**: Behavioral supertest — create sale, return 1 item, verify stock increased, refund record created. Attempt return after 7 days, verify 400 error.
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅, L5 API ✅, L6 Backend ✅, L7 DB ✅, L8 Migration ✅, L10 Business ✅, L12 Store Isolation ✅
+
+---
+
+## GCP-STG-0735 — MEDIUM: Daily P&L summary on POS — today's profit visible to store owner (MEDIUM)
+
+**Ticket ID**: GCP-STG-0735
+**Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: UI, API, Backend, Business
+**Source**: Feature-Rich Audit — Kirana Day-1 Critical
+
+**Problem**: Store owner closes shop at 9 PM and wants to know: "How much profit did I make today?" Currently the POS shows total sales but NOT profit. The owner must mentally calculate: revenue - cost of goods - expenses. With 200+ transactions/day, this is impossible without a summary screen.
+
+**Fix — End to End**:
+
+### Backend:
+1. **P&L endpoint**: `GET /pos/reports/daily-pl?date=YYYY-MM-DD` — returns:
+   - `totalRevenue`: SUM of sale totals for the day
+   - `costOfGoods`: SUM of purchase_price × qty for sold items
+   - `grossProfit`: revenue - COGS
+   - `grossMarginPct`: (grossProfit / revenue) × 100
+   - `transactionCount`: number of sales
+   - `averageBasket`: revenue / transactionCount
+   - `topProducts`: top 5 by revenue
+   - `paymentBreakdown`: { cash, upi, udhar, split }
+
+### POS App:
+1. **MoreScreenV3**: "Today's P&L" card at top — shows gross profit with green/red indicator
+2. **DailyPLScreen** (new): Full P&L breakdown with sections: Revenue, COGS, Gross Profit, Payment Methods, Top Products
+3. **Visual**: Large profit number with up/down arrow compared to yesterday
+4. **Shift-level**: If shift close (GCP-STG-0668) implemented, show per-shift P&L
+
+**Test**: Create 3 sales with known cost/sell prices, call /daily-pl, verify grossProfit = sum(sell - cost).
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L5 API ✅, L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0736 — MEDIUM: Quick price update from POS tile — long-press → edit sell price inline (MEDIUM)
+
+**Ticket ID**: GCP-STG-0736
+**Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: UI, UX, Wiring, API, Backend, Business
+**Source**: Feature-Rich Audit — Kirana Day-1 Critical
+
+**Problem**: Vegetable and dairy prices change daily. Currently to update a product price, the retailer must: open Retailer Web → find product → edit → save. Most kirana owners don't use the web portal daily. They need to update prices directly from the POS app between customers.
+
+**Fix — End to End**:
+
+### Backend:
+1. **Price update endpoint**: `PATCH /pos/store-products/:productId/price` — accepts `{ sellPriceMinor, mrpMinor? }`
+2. **Validation**: Price > 0, sellPrice <= MRP (if MRP provided), store_id from device token
+3. **LWW guard**: Use `price_updated_at` timestamp (GCP-STG-0335) to prevent stale overwrites
+4. **Audit log**: Record old price → new price in `catalog.price_history` or inventory_ledger
+
+### POS App:
+1. **ProductTileV3**: Long-press → show context menu with "Edit Price" option (alongside existing "View Details")
+2. **PriceEditModal** (new): Shows current price, MRP, input for new sell price, "Update" button
+3. **Confirmation**: "Update Sugar 5kg from ₹250 to ₹260?"
+4. **Instant update**: Tile refreshes with new price immediately (optimistic update + sync)
+5. **Role guard**: Only MANAGER role can edit prices (CASHIER sees menu but "Edit Price" disabled)
+
+**Test**: Behavioral — PATCH price from ₹100 to ₹120, verify store_products updated, verify tile shows ₹120.
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L5 API ✅, L6 Backend ✅, L10 Business ✅, L12 Store Isolation ✅
+
+---
+
+## GCP-STG-0737 — MEDIUM: Minimum stock auto-reorder alert — push notification on low stock (MEDIUM)
+
+**Ticket ID**: GCP-STG-0737
+**Severity**: P2 MEDIUM
+**Platforms**: POS, BACKEND
+**Layers**: UI, Backend, Business
+**Source**: Feature-Rich Audit — Kirana Day-1 Critical
+
+**Problem**: When Sugar stock drops to 2 kg, the retailer doesn't know until a customer asks and it's out. The `low_stock_alert_qty` field exists on `store_products` (GCP-STG-0288) but NO alert mechanism fires when stock crosses below this threshold. The data exists but the notification doesn't.
+
+**Fix — End to End**:
+
+### Backend:
+1. **Stock check after every sale**: In sales.ts after stock deduction, check if new qty < `low_stock_alert_qty`
+2. **If below threshold**: INSERT into `platform.store_alerts` (type='LOW_STOCK', product_id, message="Sugar stock is {qty}kg — below {threshold}kg")
+3. **Avoid duplicates**: Only create alert if no unread LOW_STOCK alert exists for this product
+4. **Endpoint**: `GET /pos/alerts/unread` — returns unread alerts for this store
+
+### POS App:
+1. **BrandedHeader**: Red badge with unread alert count (like notification bell)
+2. **Tap badge**: Opens AlertsScreen — list of alerts: "⚠️ Sugar: 2kg remaining (threshold: 5kg)" with "Order Now" button → navigates to BUY screen with product pre-selected
+3. **SELL tile**: Yellow "LOW" badge already exists — ensure it uses `low_stock_alert_qty` not hardcoded 10
+
+**Test**: Set threshold to 5, sell until stock = 4, verify alert created. Verify no duplicate alert on next sale.
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L5 API ✅, L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0738 — LOW: Receipt customization — store name, logo, UPI QR, footer message on thermal receipt (LOW)
+
+**Ticket ID**: GCP-STG-0738
+**Severity**: P3 LOW
+**Platforms**: POS, BACKEND
+**Layers**: UI, Backend, Business
+**Source**: Feature-Rich Audit — Kirana Day-1 Critical
+
+**Problem**: Every retailer asks "Can I put my store name on the bill?" Current thermal receipt uses generic SuperMandi branding. Retailers want their OWN store name, optional logo, their UPI QR code for customer payments, and a custom footer ("Thank you! Visit again" or "Follow us on Instagram").
+
+**Fix — End to End**:
+
+### Backend:
+1. **Receipt config endpoint**: `GET /pos/store/receipt-config` — returns { storeName, storePhone, storeAddress, logoUrl, upiVpa, footerLine1, footerLine2, showGst }
+2. **Config update**: `PATCH /pos/store/receipt-config` (MANAGER only) — updates `platform.stores` receipt columns
+3. **Migration**: Add `receipt_footer_line1`, `receipt_footer_line2`, `receipt_show_logo` to `platform.stores`
+
+### POS App:
+1. **SettingsScreenV3**: "Receipt Settings" section — edit store name, footer messages, toggle UPI QR, toggle GST display
+2. **printerService.ts**: Use receipt config in ESC/POS header (store name in double-height), footer (custom messages), and optionally print UPI QR code for customer to scan and pay
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L5 API ✅, L6 Backend ✅, L7 DB ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0739 — MEDIUM: Retailer dashboard charts — daily/weekly/monthly sales graph, top products (MEDIUM)
+
+**Ticket ID**: GCP-STG-0739
+**Severity**: P2 MEDIUM
+**Platforms**: RETAILER-WEB, BACKEND
+**Layers**: UI, API, Backend, Business
+**Source**: Feature-Rich Audit — Kirana Day-1 Critical
+
+**Problem**: Retailer web DashboardPage shows numbers (total sales, total orders) but NO visual charts. Retailers want to see trends: "Are my sales growing?", "What sells most?", "When is my peak hour?" Without charts, the dashboard is just a table of numbers that's hard to interpret.
+
+**Fix — End to End**:
+
+### Backend:
+1. **Time-series endpoint**: `GET /retailer-admin/analytics/sales-trend?period=daily&days=30` — returns `[{ date, revenue, transactions, avgBasket }]`
+2. **Top products endpoint**: `GET /retailer-admin/analytics/top-products?limit=10&days=30` — returns `[{ productName, revenue, qty, rank }]`
+3. **Peak hours endpoint**: `GET /retailer-admin/analytics/peak-hours?days=7` — returns `[{ hour, transactions, revenue }]`
+4. **Payment split**: `GET /retailer-admin/analytics/payment-methods?days=30` — returns `{ cash, upi, udhar, split }`
+
+### Retailer Web:
+1. **DashboardPage**: Add 4 chart widgets using lightweight chart library (recharts or chart.js):
+   - Line chart: Daily revenue trend (30 days)
+   - Bar chart: Top 10 products by revenue
+   - Heatmap or bar: Peak hours by transaction count
+   - Pie chart: Payment method distribution
+2. **Period selector**: Toggle between 7d / 30d / 90d
+3. **Loading skeletons** for each chart while data loads
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L5 API ✅, L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0740 — MEDIUM: Customer database — name, phone, purchase history, Udhar balance (MEDIUM)
+
+**Ticket ID**: GCP-STG-0740
+**Severity**: P2 MEDIUM
+**Platforms**: RETAILER-WEB, POS, BACKEND
+**Layers**: UI, API, Backend, DB, Business
+**Source**: Feature-Rich Audit — Kirana Day-1 Critical
+
+**Problem**: POS has `pos.pos_customers` table and CustomersScreenV3, but the Retailer Web portal has NO customer management page. The retailer cannot see their customer list, search customers by phone, view purchase history, or manage Udhar balances from the web. All customer work must be done on the POS device.
+
+**Fix — End to End**:
+
+### Backend:
+1. **Retailer customer endpoints**: `GET /retailer-admin/customers?search=&page=&limit=` — paginated customer list with balance
+2. **Customer detail**: `GET /retailer-admin/customers/:id` — profile + purchase history + Udhar ledger
+3. **Customer stats**: total_spent, total_visits, avg_basket, last_visit, outstanding_credit
+
+### Retailer Web:
+1. **CustomersPage** (new): Table with columns: Name, Phone, Total Spent, Visits, Credit Balance, Last Visit
+2. **Customer detail modal**: Purchase history timeline + Udhar ledger (from GCP-STG-0732)
+3. **Search**: By name or phone
+4. **Export**: CSV download of customer list with balances
+
+### POS App:
+1. **CustomersScreenV3**: Already exists — verify it shows credit balance (GCP-STG-0732 dependency)
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L5 API ✅, L6 Backend ✅, L7 DB ✅, L10 Business ✅, L12 Store Isolation ✅
+
+---
+
+## GCP-STG-0741 — MEDIUM: Supplier order fulfillment dashboard — pending, dispatched, overdue (MEDIUM)
+
+**Ticket ID**: GCP-STG-0741
+**Severity**: P2 MEDIUM
+**Platforms**: SUPPLIER-WEB, BACKEND
+**Layers**: UI, API, Backend, Business
+**Source**: Feature-Rich Audit — Kirana Day-1 Critical
+
+**Problem**: Supplier portal has an Orders page but it's a flat list. Suppliers need an operational dashboard: how many orders pending dispatch? Which ones are overdue? Today's dispatch queue? Weekly order volume trend? Without this, suppliers manage orders via WhatsApp messages from retailers.
+
+**Fix — End to End**:
+
+### Backend:
+1. **Fulfillment summary**: `GET /supplier/dashboard/fulfillment` — returns:
+   - `pendingOrders`: count of orders in SUBMITTED/CONFIRMED status
+   - `todayDispatch`: orders scheduled for dispatch today
+   - `overdueOrders`: orders past SLA delivery date
+   - `completedThisWeek`: orders delivered this week
+   - `avgFulfillmentDays`: average days from order to delivery (last 30 days)
+
+### Supplier Web:
+1. **Dashboard page**: 4 KPI cards at top (Pending, Today's Dispatch, Overdue, Completed)
+2. **Quick action buttons**: "View Pending" → filtered orders list, "Dispatch Now" → batch update to DISPATCHED
+3. **Order timeline**: List of today's orders with status badges (color-coded by urgency)
+4. **SLA indicator**: Green/yellow/red based on how close to promised delivery date
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L5 API ✅, L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0742 — MEDIUM: Supplier payment/settlement dashboard — receivables, aging report (MEDIUM)
+
+**Ticket ID**: GCP-STG-0742
+**Severity**: P2 MEDIUM
+**Platforms**: SUPPLIER-WEB, BACKEND
+**Layers**: UI, API, Backend, Business
+**Source**: Feature-Rich Audit — Kirana Day-1 Critical
+
+**Problem**: Supplier's #1 question: "Where is my money?" The supplier portal has an earnings section but NO dedicated settlement/payment dashboard. Suppliers need: total receivables, paid this month, overdue payments, aging buckets (0-30d, 30-60d, 60-90d, 90d+), and payment history with invoice references.
+
+**Fix — End to End**:
+
+### Backend:
+1. **Settlement summary**: `GET /supplier/dashboard/settlements` — returns:
+   - `totalReceivable`: outstanding amount across all invoices
+   - `paidThisMonth`: total settled this month
+   - `overdueAmount`: invoices past payment terms
+   - `agingBuckets`: { current, days30, days60, days90plus }
+   - `recentPayments`: last 10 settlements with dates and amounts
+
+### Supplier Web:
+1. **SettlementsPage** (new or enhanced): Aging table with buckets, total receivable card, recent payments timeline
+2. **Invoice-level breakdown**: Click aging bucket → see individual invoices with amounts and dates
+3. **Download statement**: CSV/PDF of settlement statement for accounting
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L5 API ✅, L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0743 — MEDIUM: SuperAdmin revenue dashboard — GMV, commission, active stores/suppliers (MEDIUM)
+
+**Ticket ID**: GCP-STG-0743
+**Severity**: P2 MEDIUM
+**Platforms**: SUPERADMIN, BACKEND
+**Layers**: UI, API, Backend, Business
+**Source**: Feature-Rich Audit — Kirana Day-1 Critical
+
+**Problem**: SuperAdmin AnalyticsTab shows basic metrics but NO real-time business KPI dashboard. The platform operator needs: today's GMV (gross merchandise value), total commission earned, active stores count, active suppliers, daily revenue trend, and top-performing stores. Without this, the operator runs SQL queries manually.
+
+**Fix — End to End**:
+
+### Backend:
+1. **Platform KPIs endpoint**: `GET /admin/dashboard/kpis` — returns:
+   - `todayGmv`: total sale value across all stores today
+   - `monthGmv`: this month's total
+   - `commissionEarned`: total platform fees/commissions this month
+   - `activeStores`: stores with at least 1 sale in last 7 days
+   - `activeSuppliers`: suppliers with at least 1 order in last 7 days
+   - `totalStores`, `totalSuppliers`: registered counts
+   - `newStoresThisMonth`, `newSuppliersThisMonth`
+
+### SuperAdmin:
+1. **DashboardTab** (new or replace AnalyticsTab): 6 KPI cards at top + daily GMV chart (30 days) + top 10 stores by revenue table + store/supplier growth trend
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L5 API ✅, L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0744 — MEDIUM: Real-time order tracking — confirmed → packed → dispatched → delivered (MEDIUM)
+
+**Ticket ID**: GCP-STG-0744
+**Severity**: P2 MEDIUM
+**Platforms**: POS, RETAILER-WEB, SUPPLIER-WEB, BACKEND
+**Layers**: UI, UX, API, Backend, DB, Business
+**Source**: Feature-Rich Audit — Cross-Platform Day-1 Critical
+
+**Problem**: When a retailer places a BUY order, they have no visibility into fulfillment status beyond "submitted". Amazon/Flipkart have trained all Indian users to expect real-time tracking. Without it, retailers call suppliers on WhatsApp asking "mera order kab aayega?" (when will my order come?).
+
+**Fix — End to End**:
+
+### Backend:
+1. **Order status transitions**: SUBMITTED → CONFIRMED → PACKED → DISPATCHED → DELIVERED (+ CANCELLED, REJECTED)
+2. **Status update endpoint** (supplier): `PATCH /supplier/orders/:orderId/status` — accepts `{ status, note?, trackingInfo? }`
+3. **Status history**: `orders.order_status_history` table (order_id, from_status, to_status, changed_by, note, created_at)
+4. **SSE/webhook**: Push status updates to retailer via SSE (existing GCP-STG-0378 infrastructure)
+5. **ETA calculation**: Based on supplier's `delivery_sla_days` + dispatch date
+
+### POS App:
+1. **BuyScreenV3 → Order Detail**: Status stepper UI (5 dots connected by line, current step highlighted)
+2. **Push notification**: When status changes, POS shows toast "Order #PO-123 dispatched!"
+
+### Retailer Web:
+1. **PurchaseOrdersPage**: Status column with color-coded badges + stepper on detail view
+2. **ETA display**: "Expected delivery: March 28"
+
+### Supplier Web:
+1. **OrdersPage**: "Update Status" dropdown on each order → select next status → confirm
+2. **Batch dispatch**: Select multiple orders → "Mark Dispatched"
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅, L5 API ✅, L6 Backend ✅, L7 DB ✅, L8 Migration ✅, L10 Business ✅, L12 Store Isolation ✅
+
+---
+
+## GCP-STG-0745 — MEDIUM: Notification center — unified alerts across all platforms (MEDIUM)
+
+**Ticket ID**: GCP-STG-0745
+**Severity**: P2 MEDIUM
+**Platforms**: POS, RETAILER-WEB, SUPPLIER-WEB, SUPERADMIN, BACKEND
+**Layers**: UI, UX, API, Backend, DB, Business
+**Source**: Feature-Rich Audit — Cross-Platform Day-1 Critical
+
+**Problem**: Notifications are scattered: order updates via WhatsApp, stock alerts in console logs, payment reminders nowhere. Each platform needs a unified notification center: bell icon with badge count, list of notifications grouped by type, mark as read, and deep-link to relevant screen.
+
+**Fix — End to End**:
+
+### Backend:
+1. **Notifications table**: `platform.notifications` (id, recipient_type ENUM('store','supplier','admin'), recipient_id, type, title, body, data JSONB, read_at, created_at)
+2. **Create notification helper**: `createNotification({ recipientType, recipientId, type, title, body, data })` — called from order status change, payment received, stock alert, approval status, etc.
+3. **Endpoints**:
+   - `GET /pos/notifications?unread=true&limit=20` (POS)
+   - `GET /retailer-admin/notifications` (Retailer web)
+   - `GET /supplier/notifications` (Supplier)
+   - `GET /admin/notifications` (SuperAdmin)
+   - `PATCH /*/notifications/:id/read` (mark read)
+   - `PATCH /*/notifications/read-all` (mark all read)
+
+### All Platforms:
+1. **Bell icon**: In header/navbar with unread count badge
+2. **Notification dropdown/sheet**: List with icon + title + time ago + tap action
+3. **Types**: ORDER_STATUS, PAYMENT_RECEIVED, LOW_STOCK, EXPIRY_ALERT, APPROVAL_STATUS, NEW_ORDER, SETTLEMENT, SYSTEM_ALERT
+4. **Deep link**: Tap notification → navigate to relevant screen (order detail, product, customer)
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅, L5 API ✅, L6 Backend ✅, L7 DB ✅, L8 Migration ✅, L10 Business ✅, L12 Store Isolation ✅
+
+---
+
+<!-- next ticket: GCP-STG-0746 -->
