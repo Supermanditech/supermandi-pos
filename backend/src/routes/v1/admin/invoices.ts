@@ -484,6 +484,71 @@ adminInvoicesRouter.post("/invoices/supplier-sale", requireAdminToken, requirePe
 });
 
 // =============================================================================
+// GCP-STG-0725: Bulk invoice status update (issue/void/cancel)
+// =============================================================================
+
+/**
+ * POST /api/v1/admin/invoices/bulk-action
+ * GCP-STG-0725: Bulk issue, void, or cancel invoices
+ */
+adminInvoicesRouter.post("/invoices/bulk-action", requireAdminToken, requirePermission("products", "approve"), async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "Service unavailable" });
+
+  const { invoiceIds, action, reason } = req.body || {};
+  if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0 || !action) {
+    return res.status(400).json({ error: "invoiceIds and action required" });
+  }
+  if (!["issue", "void", "cancel"].includes(action)) {
+    return res.status(400).json({ error: "action must be issue, void, or cancel" });
+  }
+
+  const statusMap: Record<string, string> = { issue: "issued", void: "void", cancel: "cancelled" };
+  const validFrom: Record<string, string[]> = { issue: ["draft"], void: ["issued"], cancel: ["issued", "draft"] };
+  const targetStatus = statusMap[action];
+
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      let success = 0;
+      let failed = 0;
+      const errors: Array<{ invoiceId: string; reason: string }> = [];
+
+      for (const id of invoiceIds) {
+        const inv = await client.query("SELECT id, status FROM invoicing.invoices WHERE id = $1", [id]);
+        if (!inv.rows[0]) {
+          errors.push({ invoiceId: id, reason: "Not found" });
+          failed++;
+          continue;
+        }
+        if (!validFrom[action].includes(inv.rows[0].status)) {
+          errors.push({ invoiceId: id, reason: `Cannot ${action} from ${inv.rows[0].status}` });
+          failed++;
+          continue;
+        }
+        await client.query(
+          "UPDATE invoicing.invoices SET status = $1, updated_at = NOW() WHERE id = $2",
+          [targetStatus, id]
+        );
+        success++;
+      }
+
+      await client.query("COMMIT");
+      res.json({ success, failed, errors });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    log.error("[admin/invoices/bulk-action] Error:", err);
+    res.status(500).json({ error: "Bulk action failed" });
+  }
+});
+
+// =============================================================================
 // Invoice Management (shared across models)
 // =============================================================================
 

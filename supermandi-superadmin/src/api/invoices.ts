@@ -239,6 +239,27 @@ export async function cancelInvoice(invoiceId: string, reason?: string): Promise
   if (!res.ok) throw new Error('Failed to cancel invoice. Please try again.');
 }
 
+// GCP-STG-0725: Bulk invoice action
+export interface BulkActionResult {
+  success: number;
+  failed: number;
+  errors: Array<{ invoiceId: string; reason: string }>;
+}
+
+export async function bulkInvoiceAction(
+  invoiceIds: string[],
+  action: "issue" | "void" | "cancel",
+  reason?: string
+): Promise<BulkActionResult> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/invoices/bulk-action`, {
+    method: "POST",
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ invoiceIds, action, reason }),
+  });
+  if (!res.ok) throw new Error("Bulk action failed. Please try again.");
+  return res.json();
+}
+
 export function getInvoicePdfUrl(invoiceId: string): string {
   return `${API_BASE}/api/v1/admin/invoices/${encodeURIComponent(invoiceId)}/pdf`;
 }

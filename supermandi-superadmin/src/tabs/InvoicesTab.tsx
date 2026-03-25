@@ -1,7 +1,7 @@
 // T-073: SuperAdmin Invoices Tab — list, filter, detail, PDF download
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { InvoiceListItem, InvoiceDetail, InvoiceListFilters, InvoiceModel, InvoiceType, InvoiceStatus } from "../api/invoices";
-import { listInvoices, getInvoice, issueInvoice, cancelInvoice, downloadInvoicePdf } from "../api/invoices";
+import { listInvoices, getInvoice, issueInvoice, cancelInvoice, downloadInvoicePdf, bulkInvoiceAction } from "../api/invoices";
 import { formatDateTime } from "../lib/formatters";
 // UIUX-SA-008: Styled confirmation dialog instead of bare confirm()
 import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
@@ -41,6 +41,9 @@ export function InvoicesTab() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   // R2-FIX INV-002: Detail open guard
   const detailInFlightRef = useRef(false);
+  // GCP-STG-0725: Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkActionInFlight, setBulkActionInFlight] = useState(false);
   // R1-FIX: In-flight guard to prevent pagination race conditions
   const inFlightRef = useRef(false);
 
@@ -150,6 +153,25 @@ export function InvoicesTab() {
     }
   };
 
+  // GCP-STG-0725: Bulk action handler
+  const handleBulkAction = async (action: "issue" | "cancel") => {
+    if (bulkActionInFlight || selectedIds.size === 0) return;
+    setBulkActionInFlight(true);
+    setError("");
+    try {
+      const result = await bulkInvoiceAction(Array.from(selectedIds), action);
+      setSelectedIds(new Set());
+      await refresh();
+      if (result.failed > 0) {
+        setError(`Bulk ${action}: ${result.success} succeeded, ${result.failed} failed`);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : `Bulk ${action} failed`);
+    } finally {
+      setBulkActionInFlight(false);
+    }
+  };
+
   return (
     <section className="card">
       {/* UIUX-SA-008: Confirmation dialog */}
@@ -194,12 +216,42 @@ export function InvoicesTab() {
 
       {error && <div className="banner sa-mb-12" role="alert">{error}</div>}
 
+      {/* GCP-STG-0725: Bulk actions toolbar */}
+      {selectedIds.size > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", marginBottom: 12, background: "var(--color-primary-light)", borderRadius: 8 }}>
+          <span className="sa-fw-600 sa-text-sm">{selectedIds.size} selected</span>
+          <button className="btn btnSm" onClick={() => handleBulkAction("issue")} disabled={bulkActionInFlight}>
+            {bulkActionInFlight ? "Processing..." : "Bulk Issue"}
+          </button>
+          <button className="btnGhost btnSm sa-text-danger" onClick={() => handleBulkAction("cancel")} disabled={bulkActionInFlight}>
+            {bulkActionInFlight ? "Processing..." : "Bulk Cancel"}
+          </button>
+          <button className="btnGhost btnSm" onClick={() => setSelectedIds(new Set())} disabled={bulkActionInFlight} style={{ marginLeft: "auto" }}>
+            Clear Selection
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       {invoices.length > 0 && (
         <div className="tableWrap">
           <table className="table">
             <thead>
               <tr>
+                <th style={{ width: 36 }}>
+                  <input
+                    type="checkbox"
+                    checked={invoices.length > 0 && invoices.every(inv => selectedIds.has(inv.id))}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(new Set(invoices.map(inv => inv.id)));
+                      } else {
+                        setSelectedIds(new Set());
+                      }
+                    }}
+                    aria-label="Select all invoices"
+                  />
+                </th>
                 <th>Invoice #</th><th>Date</th><th>Model</th><th>Type</th>
                 <th>Seller</th><th>Buyer</th><th className="sa-text-right">Total</th>
                 <th className="sa-text-right">Balance</th><th>Status</th><th>Actions</th>
@@ -210,6 +262,18 @@ export function InvoicesTab() {
                 const st = STATUS_STYLES[inv.status] || STATUS_STYLES.draft;
                 return (
                   <tr key={inv.id}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(inv.id)}
+                        onChange={(e) => {
+                          const next = new Set(selectedIds);
+                          if (e.target.checked) next.add(inv.id); else next.delete(inv.id);
+                          setSelectedIds(next);
+                        }}
+                        aria-label={`Select invoice ${inv.invoiceNumber}`}
+                      />
+                    </td>
                     <td className="sa-fw-600 sa-text-sm sa-text-brand" style={{ cursor: "pointer" }} tabIndex={0} role="button" onClick={() => openDetail(inv.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(inv.id); } }}>{inv.invoiceNumber}</td>
                     <td className="sa-text-sm">{formatDateTime(inv.invoiceDate)}</td>
                     <td className="sa-text-xs">{inv.invoiceModel === "buy_resell" ? "Buy-Resell" : "Platform Fee"}</td>
