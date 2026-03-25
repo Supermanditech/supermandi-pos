@@ -3,6 +3,7 @@ import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
 import { log } from "../../../lib/logger";
+import { asError } from "../../../lib/errorUtils";
 
 export const posReportsRouter = Router();
 
@@ -116,6 +117,132 @@ posReportsRouter.get(
     } catch (err) {
       log.error("[reports/daily] Error:", err);
       return res.status(500).json({ error: "Failed to generate daily report" });
+    }
+  }
+);
+
+// =============================================================================
+// GCP-STG-0735: Daily P&L summary — revenue, COGS, gross profit, margin
+// =============================================================================
+posReportsRouter.get(
+  "/reports/daily-pl",
+  requireDeviceToken,
+  async (req: Request, res: Response) => {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    const { storeId } = (req as PosRequest).posDevice;
+    const date = (req.query.date as string) || new Date().toISOString().split("T")[0];
+
+    try {
+      // Revenue + payment breakdown
+      const revenueResult = await pool.query(
+        `SELECT
+          COALESCE(SUM(s.total_minor), 0)::text as total_revenue_minor,
+          COUNT(*)::text as transaction_count,
+          COALESCE(SUM(CASE WHEN s.status = 'PAID_CASH' THEN s.total_minor ELSE 0 END), 0)::text as cash_minor,
+          COALESCE(SUM(CASE WHEN s.status = 'PAID_UPI' THEN s.total_minor ELSE 0 END), 0)::text as upi_minor,
+          COALESCE(SUM(CASE WHEN s.status = 'DUE' THEN s.total_minor ELSE 0 END), 0)::text as udhar_minor
+        FROM sales s
+        WHERE s.store_id = $1
+          AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2
+          AND s.status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')`,
+        [storeId, date]
+      );
+
+      // COGS: sum(qty * purchase_price) for sold items, joining to store_products for cost
+      const cogsResult = await pool.query(
+        `SELECT
+          COALESCE(SUM(si.quantity * COALESCE(sp.purchase_price_minor, 0)), 0)::text as cogs_minor
+        FROM sale_items si
+        JOIN sales s ON si.sale_id = s.id
+        LEFT JOIN catalog.store_products sp ON sp.store_id = s.store_id AND sp.product_id = si.product_id
+        WHERE s.store_id = $1
+          AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2
+          AND s.status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')`,
+        [storeId, date]
+      );
+
+      // Previous day P&L for comparison
+      const prevDate = new Date(date);
+      prevDate.setDate(prevDate.getDate() - 1);
+      const prevDateStr = prevDate.toISOString().split("T")[0];
+
+      const prevResult = await pool.query(
+        `SELECT
+          COALESCE(SUM(s.total_minor), 0)::text as prev_revenue_minor
+        FROM sales s
+        WHERE s.store_id = $1
+          AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2
+          AND s.status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')`,
+        [storeId, prevDateStr]
+      );
+
+      const prevCogsResult = await pool.query(
+        `SELECT
+          COALESCE(SUM(si.quantity * COALESCE(sp.purchase_price_minor, 0)), 0)::text as prev_cogs_minor
+        FROM sale_items si
+        JOIN sales s ON si.sale_id = s.id
+        LEFT JOIN catalog.store_products sp ON sp.store_id = s.store_id AND sp.product_id = si.product_id
+        WHERE s.store_id = $1
+          AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2
+          AND s.status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')`,
+        [storeId, prevDateStr]
+      );
+
+      const rev = revenueResult.rows[0];
+      const cogs = cogsResult.rows[0];
+
+      const totalRevenue = parseInt(rev.total_revenue_minor, 10);
+      const costOfGoods = parseInt(cogs.cogs_minor, 10);
+      const grossProfit = totalRevenue - costOfGoods;
+      const grossMarginPct = totalRevenue > 0 ? Math.round((grossProfit / totalRevenue) * 10000) / 100 : 0;
+      const transactionCount = parseInt(rev.transaction_count, 10);
+      const averageBasket = transactionCount > 0 ? Math.round(totalRevenue / transactionCount) : 0;
+
+      // Previous day for arrow comparison
+      const prevRevenue = parseInt(prevResult.rows[0]?.prev_revenue_minor ?? "0", 10);
+      const prevCogs = parseInt(prevCogsResult.rows[0]?.prev_cogs_minor ?? "0", 10);
+      const prevGrossProfit = prevRevenue - prevCogs;
+
+      return res.json({
+        date,
+        totalRevenue,
+        costOfGoods,
+        grossProfit,
+        grossMarginPct,
+        transactionCount,
+        averageBasket,
+        paymentBreakdown: {
+          cash: parseInt(rev.cash_minor, 10),
+          upi: parseInt(rev.upi_minor, 10),
+          udhar: parseInt(rev.udhar_minor, 10),
+        },
+        previousDay: {
+          totalRevenue: prevRevenue,
+          grossProfit: prevGrossProfit,
+          trend: grossProfit > prevGrossProfit ? "up" : grossProfit < prevGrossProfit ? "down" : "flat",
+        },
+      });
+    } catch (_err: unknown) {
+      const err = asError(_err);
+      // Graceful fallback if purchase_price_minor column missing
+      if ((err as any).code === "42703") {
+        log.warn("[reports/daily-pl] purchase_price_minor column missing, returning revenue-only");
+        return res.json({
+          date,
+          totalRevenue: 0,
+          costOfGoods: 0,
+          grossProfit: 0,
+          grossMarginPct: 0,
+          transactionCount: 0,
+          averageBasket: 0,
+          paymentBreakdown: { cash: 0, upi: 0, udhar: 0 },
+          previousDay: { totalRevenue: 0, grossProfit: 0, trend: "flat" },
+        });
+      }
+      log.error("[reports/daily-pl] Error:", err.message);
+      return res.status(500).json({ error: "Failed to generate P&L report" });
     }
   }
 );
