@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect, useState, useCallback } from "react";
-import { View, Pressable, TextInput, FlatList, ActivityIndicator, Modal, StyleSheet, Text, Linking, Alert } from "react-native";
+import { View, Pressable, TextInput, FlatList, ActivityIndicator, Modal, StyleSheet, Text, Linking, Alert, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { useThemeColors } from "../../theme";
@@ -10,8 +10,19 @@ import { showToast } from "../../utils/showToast";
 
 // STG-575: Customers v3 — list with WhatsApp contact, purchase history inline
 
+// GCP-STG-0732: Ledger entry type
+type LedgerEntry = {
+  id: string;
+  type: "CREDIT" | "PAYMENT" | "ADJUSTMENT";
+  amountMinor: number;
+  balanceAfterMinor: number;
+  note: string | null;
+  paymentMethod: string | null;
+  createdAt: string;
+};
+
 // V3-FIX-091: Customer type preserves phone for WhatsApp CTA
-type Customer = { name: string; initial: string; visits: number; total: number; phone?: string };
+type Customer = { id?: string; name: string; initial: string; visits: number; total: number; phone?: string; outstandingMinor?: number };
 
 type Props = { onClose: () => void };
 
@@ -27,7 +38,9 @@ export default function CustomersScreenV3({ onClose }: Props) {
   useEffect(() => { fetchCustomers().catch(() => showToast("Could not load customers")); }, [fetchCustomers]);
 
   // V3-FIX-091: Preserve phone for WhatsApp CTA
+  // GCP-STG-0732: Include id for balance lookup
   const realCustomers: Customer[] = customers.map((c) => ({
+    id: c.id,
     name: c.name,
     initial: c.name?.[0] ?? "?",
     visits: c.visitCount ?? 0,
@@ -35,6 +48,47 @@ export default function CustomersScreenV3({ onClose }: Props) {
     phone: (c as any).phone ?? undefined,
   }));
   const displayCustomers = realCustomers;
+
+  // GCP-STG-0732: Customer balance cache + ledger modal state
+  const [balances, setBalances] = useState<Record<string, number>>({});
+  const [ledgerCustomer, setLedgerCustomer] = useState<Customer | null>(null);
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+
+  // GCP-STG-0732: Fetch balances for all customers
+  useEffect(() => {
+    if (customers.length === 0) return;
+    const fetchBalances = async () => {
+      try {
+        const { apiClient } = require("../../services/api/apiClient");
+        const results: Record<string, number> = {};
+        await Promise.all(
+          customers.map(async (c) => {
+            try {
+              const resp = await apiClient.get(`/api/v1/pos/customers/${c.id}/balance`);
+              if (resp.outstandingMinor) results[c.id] = resp.outstandingMinor;
+            } catch { /* ignore individual failures */ }
+          })
+        );
+        setBalances(results);
+      } catch { /* ignore */ }
+    };
+    fetchBalances();
+  }, [customers]);
+
+  // GCP-STG-0732: Open ledger for a customer
+  const openLedger = useCallback(async (customer: Customer) => {
+    if (!customer.id) return;
+    setLedgerCustomer(customer);
+    setLedgerLoading(true);
+    setLedgerEntries([]);
+    try {
+      const { apiClient } = require("../../services/api/apiClient");
+      const resp = await apiClient.get(`/api/v1/pos/customers/${customer.id}/ledger?limit=50`);
+      setLedgerEntries(resp.entries || []);
+    } catch { showToast("Could not load ledger"); }
+    setLedgerLoading(false);
+  }, []);
 
   // RI-012: Controlled search with filtering
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,20 +125,77 @@ export default function CustomersScreenV3({ onClose }: Props) {
       {loading ? <ActivityIndicator size="small" color={colors.primary} style={{ padding: 20 }} /> : null}
       <FlatList data={filteredCustomers} keyExtractor={(c) => c.name} contentContainerStyle={{ padding: 14 }}
         ListEmptyComponent={!loading ? <View style={{ padding: 32, alignItems: "center" }}><Text style={{ fontSize: 36, marginBottom: 8 }}>{searchQuery.trim() ? "🔍" : "👥"}</Text><Text style={{ fontSize: 15, fontWeight: "700", color: colors.textSecondary }}>{searchQuery.trim() ? `No results for '${searchQuery.trim()}'` : "No customers yet"}</Text><Text style={{ fontSize: 12, color: colors.textTertiary, marginTop: 4 }}>{searchQuery.trim() ? "Try a different search term" : "Customers are added when you create due/credit sales"}</Text></View> : null}
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
+        const bal = item.id ? balances[item.id] : undefined;
+        return (
         <Pressable style={styles.card} onPress={() => {
-          // GCP-STG-0065: Customer detail on tap
-          Alert.alert(item.name, `Visits: ${item.visits}\nTotal spent: ₹${item.total.toLocaleString("en-IN")}${item.phone ? `\nPhone: ${item.phone}` : ""}`, [{ text: "OK" }]);
+          // GCP-STG-0732: Tap customer to open Udhar ledger if balance exists, else show detail
+          if (bal && bal > 0) {
+            openLedger(item);
+          } else {
+            // GCP-STG-0065: Customer detail on tap
+            Alert.alert(item.name, `Visits: ${item.visits}\nTotal spent: ₹${item.total.toLocaleString("en-IN")}${item.phone ? `\nPhone: ${item.phone}` : ""}`, [{ text: "OK" }]);
+          }
         }}>
           <View style={styles.avatar}><Text style={styles.initial}>{item.initial}</Text></View>
-          <View style={{ flex: 1 }}><Text style={styles.name}>{item.name}</Text><Text style={styles.meta}>{item.visits} visits · ₹{item.total.toLocaleString("en-IN")} total</Text></View>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={styles.name}>{item.name}</Text>
+              {/* GCP-STG-0732: Balance badge */}
+              {bal && bal > 0 ? (
+                <View style={styles.balanceBadge}>
+                  <Text style={styles.balanceBadgeText}>{"\u20B9"}{Math.round(bal / 100).toLocaleString("en-IN")}</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text style={styles.meta}>{item.visits} visits · {"\u20B9"}{item.total.toLocaleString("en-IN")} total</Text>
+          </View>
           {/* V3-FIX-091: WhatsApp only with real stored phone data */}
           {item.phone ? (
             <Pressable style={styles.waBtn} onPress={() => Linking.openURL(`https://wa.me/91${item.phone}`).catch(() => showToast("WhatsApp not available"))} accessibilityLabel={`WhatsApp ${item.name}`} testID={`wa-${item.name}`}><Svg width={10} height={10} viewBox="0 0 24 24" fill="#fff"><Path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479c0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" /></Svg></Pressable>
           ) : null}
           <Text style={styles.arrow}>›</Text>
         </Pressable>
-      )} />
+      );}} />
+
+      {/* GCP-STG-0732: Customer Udhar ledger modal */}
+      <Modal visible={!!ledgerCustomer} transparent animationType="slide" onRequestClose={() => setLedgerCustomer(null)}>
+        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: "80%" }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <Text style={{ fontSize: 18, fontWeight: "800" }}>{ledgerCustomer?.name} — Udhar</Text>
+              <Pressable onPress={() => setLedgerCustomer(null)}><Text style={{ fontSize: 22, color: colors.textTertiary }}>x</Text></Pressable>
+            </View>
+            {ledgerCustomer?.id && balances[ledgerCustomer.id] ? (
+              <View style={{ backgroundColor: colors.error + "15", padding: 12, borderRadius: 12, marginBottom: 12 }}>
+                <Text style={{ fontSize: 13, color: colors.textSecondary }}>Outstanding</Text>
+                <Text style={{ fontSize: 22, fontWeight: "800", color: colors.error }}>{"\u20B9"}{Math.round((balances[ledgerCustomer.id] || 0) / 100).toLocaleString("en-IN")}</Text>
+              </View>
+            ) : null}
+            {ledgerLoading ? <ActivityIndicator size="small" color={colors.primary} style={{ padding: 20 }} /> : (
+              <ScrollView style={{ maxHeight: 300 }}>
+                {ledgerEntries.length === 0 ? (
+                  <Text style={{ textAlign: "center", color: colors.textTertiary, padding: 20 }}>No ledger entries</Text>
+                ) : ledgerEntries.map((entry) => (
+                  <View key={entry.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: entry.type === "CREDIT" ? colors.error : colors.success }}>{entry.type}</Text>
+                      <Text style={{ fontSize: 11, color: colors.textTertiary }}>{entry.note || (entry.type === "PAYMENT" ? entry.paymentMethod || "Payment" : "Credit")}</Text>
+                      <Text style={{ fontSize: 10, color: colors.textTertiary }}>{new Date(entry.createdAt).toLocaleDateString("en-IN")}</Text>
+                    </View>
+                    <View style={{ alignItems: "flex-end" }}>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: entry.type === "CREDIT" ? colors.error : colors.success }}>
+                        {entry.type === "CREDIT" ? "+" : "-"}{"\u20B9"}{Math.round(entry.amountMinor / 100).toLocaleString("en-IN")}
+                      </Text>
+                      <Text style={{ fontSize: 10, color: colors.textTertiary }}>Bal: {"\u20B9"}{Math.round(entry.balanceAfterMinor / 100).toLocaleString("en-IN")}</Text>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* V3-FIX-091: Cross-platform add customer modal */}
       <Modal visible={addModalVisible} transparent animationType="slide" onRequestClose={() => setAddModalVisible(false)}>
@@ -121,6 +232,8 @@ function createStyles(colors: ColorPalette) {
     name: { fontSize: 14, fontWeight: "700" },
     meta: { fontSize: 11, color: colors.textTertiary },
     waBtn: { backgroundColor: "#25D366", padding: 6, borderRadius: 6 },
+    balanceBadge: { backgroundColor: "#FF3B3014", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+    balanceBadgeText: { fontSize: 10, fontWeight: "700", color: "#FF3B30" },
     arrow: { fontSize: 14, color: colors.border, marginLeft: 4 },
   });
 }

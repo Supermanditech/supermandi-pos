@@ -209,6 +209,164 @@ posCustomersRouter.post("/customers", requireDeviceToken, requireActiveStore, as
   }
 });
 
+// =============================================================================
+// GCP-STG-0732: Customer Udhar (Credit) Ledger endpoints
+// =============================================================================
+
+/**
+ * GET /api/v1/pos/customers/:customerId/balance
+ * Returns outstanding credit balance for a customer.
+ */
+posCustomersRouter.get("/customers/:customerId/balance", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as PosRequest).posDevice;
+  const { customerId } = req.params;
+
+  try {
+    // Sum CREDIT entries (positive) and PAYMENT/ADJUSTMENT entries (negative towards balance)
+    const balanceResult = await pool.query(
+      `SELECT
+        COALESCE(SUM(CASE WHEN type = 'CREDIT' THEN amount_minor ELSE 0 END), 0)
+          - COALESCE(SUM(CASE WHEN type IN ('PAYMENT', 'ADJUSTMENT') THEN amount_minor ELSE 0 END), 0)
+          AS outstanding_minor,
+        MAX(CASE WHEN type = 'PAYMENT' THEN created_at ELSE NULL END) AS last_payment_date,
+        MIN(CASE WHEN type = 'CREDIT' AND amount_minor > 0 THEN created_at ELSE NULL END) AS oldest_unpaid_date
+      FROM orders.customer_ledger
+      WHERE store_id = $1 AND customer_id = $2`,
+      [storeId, customerId]
+    );
+
+    const row = balanceResult.rows[0] || {};
+    return res.json({
+      outstandingMinor: Number(row.outstanding_minor ?? 0),
+      lastPaymentDate: row.last_payment_date || null,
+      oldestUnpaidDate: row.oldest_unpaid_date || null,
+    });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[CustomersAPI] Balance error:", error.message);
+    return res.status(500).json({ error: "Failed to get customer balance" });
+  }
+});
+
+/**
+ * GET /api/v1/pos/customers/:customerId/ledger
+ * Returns paginated ledger entries for a customer.
+ * Query params: ?limit=20&offset=0
+ */
+posCustomersRouter.get("/customers/:customerId/ledger", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as PosRequest).posDevice;
+  const { customerId } = req.params;
+  const limit = Math.min(Math.max(1, Number(req.query.limit) || 20), 100);
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+
+  try {
+    const result = await pool.query(
+      `SELECT
+        id,
+        store_id AS "storeId",
+        customer_id AS "customerId",
+        sale_id AS "saleId",
+        type,
+        amount_minor AS "amountMinor",
+        balance_after_minor AS "balanceAfterMinor",
+        note,
+        payment_method AS "paymentMethod",
+        created_at AS "createdAt",
+        created_by AS "createdBy"
+      FROM orders.customer_ledger
+      WHERE store_id = $1 AND customer_id = $2
+      ORDER BY created_at DESC
+      LIMIT $3 OFFSET $4`,
+      [storeId, customerId, limit, offset]
+    );
+
+    // Coerce bigint columns
+    const entries = result.rows.map((row: any) => ({
+      ...row,
+      amountMinor: Number(row.amountMinor ?? 0),
+      balanceAfterMinor: Number(row.balanceAfterMinor ?? 0),
+    }));
+
+    return res.json({ entries, limit, offset });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[CustomersAPI] Ledger error:", error.message);
+    return res.status(500).json({ error: "Failed to get customer ledger" });
+  }
+});
+
+/**
+ * POST /api/v1/pos/customers/:customerId/payments
+ * Record a payment against customer credit (Udhar).
+ * Body: { amountMinor, paymentMethod?, note? }
+ */
+posCustomersRouter.post("/customers/:customerId/payments", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as PosRequest).posDevice;
+  const { customerId } = req.params;
+  const { amountMinor, paymentMethod, note } = req.body;
+
+  if (!amountMinor || typeof amountMinor !== "number" || amountMinor <= 0) {
+    return res.status(400).json({ error: "amountMinor must be a positive number" });
+  }
+
+  try {
+    // Calculate current outstanding balance
+    const balanceResult = await pool.query(
+      `SELECT
+        COALESCE(SUM(CASE WHEN type = 'CREDIT' THEN amount_minor ELSE 0 END), 0)
+          - COALESCE(SUM(CASE WHEN type IN ('PAYMENT', 'ADJUSTMENT') THEN amount_minor ELSE 0 END), 0)
+          AS outstanding_minor
+      FROM orders.customer_ledger
+      WHERE store_id = $1 AND customer_id = $2`,
+      [storeId, customerId]
+    );
+
+    const currentOutstanding = Number(balanceResult.rows[0]?.outstanding_minor ?? 0);
+    const newBalance = currentOutstanding - amountMinor;
+
+    // Insert PAYMENT entry
+    const insertResult = await pool.query(
+      `INSERT INTO orders.customer_ledger
+        (store_id, customer_id, type, amount_minor, balance_after_minor, payment_method, note, created_by)
+      VALUES ($1, $2, 'PAYMENT', $3, $4, $5, $6, $7)
+      RETURNING
+        id,
+        store_id AS "storeId",
+        customer_id AS "customerId",
+        type,
+        amount_minor AS "amountMinor",
+        balance_after_minor AS "balanceAfterMinor",
+        payment_method AS "paymentMethod",
+        note,
+        created_at AS "createdAt"`,
+      [storeId, customerId, amountMinor, newBalance, paymentMethod || null, note || null, (req as PosRequest).posDevice.deviceId || null]
+    );
+
+    const entry = insertResult.rows[0];
+    return res.status(200).json({
+      entry: {
+        ...entry,
+        amountMinor: Number(entry.amountMinor ?? 0),
+        balanceAfterMinor: Number(entry.balanceAfterMinor ?? 0),
+      },
+      outstandingMinor: newBalance,
+    });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    log.error("[CustomersAPI] Payment error:", error.message);
+    return res.status(500).json({ error: "Failed to record payment" });
+  }
+});
+
 /**
  * PATCH /api/v1/pos/customers/:customerId
  * Update customer profile fields.
