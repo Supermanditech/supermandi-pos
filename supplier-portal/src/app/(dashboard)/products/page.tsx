@@ -93,7 +93,7 @@ export default function ProductsPage() {
 
   const [formData, setFormData] = useState<ProductInput>({
     name: '',
-    brand: '', // GCP-STG-0292
+    brand: '', // GCP-STG-0292 + GCP-STG-0405
     description: '',
     category: '',
     barcode: '',
@@ -244,7 +244,7 @@ export default function ProductsPage() {
     setIsDragOver(false);
     setFormData({
       name: '',
-      brand: '', // GCP-STG-0292
+      brand: '', // GCP-STG-0292 + GCP-STG-0405
       description: '',
       category: '',
       barcode: '',
@@ -326,7 +326,7 @@ export default function ProductsPage() {
     setIsUploadingImage(false);
     setFormData({
       name: product.name,
-      brand: product.brand || '', // GCP-STG-0292
+      brand: product.brand || '', // GCP-STG-0292 + GCP-STG-0405
       description: product.description || '',
       category: product.category || '',
       barcode: product.barcode || '',
@@ -670,7 +670,7 @@ export default function ProductsPage() {
                 />
               </div>
 
-              {/* GCP-STG-0292: Brand input */}
+              {/* GCP-STG-0292 + GCP-STG-0405: Brand input field */}
               <div>
                 <label htmlFor="product-brand" className="label">Brand</label>
                 <input
