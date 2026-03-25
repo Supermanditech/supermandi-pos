@@ -66,7 +66,7 @@ qualityDashboardRouter.get('/overview', async (_req: Request, res: Response) => 
           const r = await pool.query(`SELECT COUNT(*) as c FROM ${qualifiedName}`);
           tableStats[label] = parseInt(r.rows[0]?.c || '0', 10);
         } catch {
-          tableStats[table] = -1; // table doesn't exist
+          tableStats[label] = -1; // table doesn't exist
         }
       }
     }

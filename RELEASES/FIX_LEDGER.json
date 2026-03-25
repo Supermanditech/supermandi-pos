@@ -895,7 +895,7 @@
       "file": "src/theme/typography.ts",
       "start_line": 1,
       "end_line": 77,
-      "checksum": "1634c99a1bee1848",
+      "checksum": "81123b3e40e87363",
       "description": "POS-grade readability audit: all sizes >= 14px, body >= 16px, proper line height ratios",
       "test_file": "src/__tests__/theme/typography.stg-011.pos-readability.unit.test.ts",
       "depends_on": null,
@@ -6416,8 +6416,8 @@
       "ticket": "STG-515",
       "file": "backend/src/routes/v1/pos/sales.ts",
       "start_line": 816,
-      "end_line": 3093,
-      "checksum": "4990669837e852a2",
+      "end_line": 3103,
+      "checksum": "6a4d06aa9f512406",
       "description": "instanceof Date check for TIMESTAMPTZ in bill detail",
       "test_file": "src/__tests__/screens/date-timezone.stg-515.test.ts",
       "depends_on": null,
@@ -10229,8 +10229,8 @@
     {
       "ticket": "GCP-STG-0077",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 2492,
-      "end_line": 3361,
+      "start_line": 2502,
+      "end_line": 3371,
       "checksum": "ae6d1f357bf1151a",
       "description": "Auto-generate tax invoice after POS sale completion (fire-and-forget after cash/UPI/DUE payment COMMIT)",
       "test_file": "backend/tests/invoiceAutoGen.gcp-stg-0077.unit.test.ts",
@@ -10264,7 +10264,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:30:19.204Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T14:39:53.605Z"
+      "line_shifted_at": "2026-03-25T23:07:41.986Z"
     },
     {
       "ticket": "GCP-STG-0049",
@@ -11062,8 +11062,8 @@
     {
       "ticket": "GCP-STG-0118",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 1343,
-      "end_line": 1372,
+      "start_line": 1353,
+      "end_line": 1382,
       "checksum": "646b8fe57fcad039",
       "description": "sale_items INSERT: populate discount_minor from cart item discount, adjust line_total_minor",
       "test_file": "backend/src/routes/v1/pos/sales.ts",
@@ -11097,13 +11097,13 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T15:35:37.267Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T14:39:53.637Z"
+      "line_shifted_at": "2026-03-25T23:07:42.016Z"
     },
     {
       "ticket": "GCP-STG-0099",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 1067,
-      "end_line": 1077,
+      "start_line": 1071,
+      "end_line": 1081,
       "checksum": "726b526ff6483032",
       "description": "Backend guard: reject zero-amount sales with 422 ZERO_AMOUNT_SALE error",
       "test_file": "backend/src/routes/v1/pos/sales.ts",
@@ -11137,7 +11137,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T15:39:49.386Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T14:39:53.651Z"
+      "line_shifted_at": "2026-03-25T23:07:42.026Z"
     },
     {
       "ticket": "GCP-STG-0097",
@@ -19132,8 +19132,8 @@
     {
       "ticket": "GCP-STG-0361",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 3465,
-      "end_line": 3532,
+      "start_line": 3475,
+      "end_line": 3542,
       "checksum": "28154e8638ec9deb",
       "description": "GCP-STG-0361: POS invoice PDF download â€” GET /sales/:saleId/invoice/pdf with store isolation + PDF streaming + GCP-STG-0727 GCS stub",
       "test_file": "backend/tests/posInvoicePdf.gcp-stg-0361.unit.test.ts",
@@ -19167,7 +19167,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:01:45.434Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T14:39:53.849Z"
+      "line_shifted_at": "2026-03-25T23:07:42.216Z"
     },
     {
       "ticket": "GCP-STG-0361",
@@ -28325,7 +28325,7 @@
       "file": "backend/services/api-gateway/Dockerfile",
       "start_line": 1,
       "end_line": 92,
-      "checksum": "2c67f160020424bf",
+      "checksum": "15f226a44ee571db",
       "description": "Verify API Gateway Dockerfile exists as standalone Cloud Run service, add clarifying comment",
       "test_file": "backend/tests/docker-build.test.ts",
       "depends_on": null,
@@ -28528,8 +28528,8 @@
     {
       "ticket": "GCP-STG-0655",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 1019,
-      "end_line": 1039,
+      "start_line": 1023,
+      "end_line": 1043,
       "checksum": "b29f2b67a30d1c81",
       "description": "Server-side amount validation: rejects if frontend totalAmount mismatches server-recalculated total (within 100 paise tolerance). Also fixes undefined totalAmount in confirmPayment handler.",
       "test_file": "backend/tests/paymentAmountValidation.gcp-stg-0655.unit.test.ts",
@@ -28574,13 +28574,13 @@
         "fix_ledger_check": "567 fixes intact, zero drift",
         "no_agent_conflict": "Single agent, no parallel modifications"
       },
-      "line_shifted_at": "2026-03-25T14:39:53.934Z"
+      "line_shifted_at": "2026-03-25T23:07:42.297Z"
     },
     {
       "ticket": "GCP-STG-0656",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 1517,
-      "end_line": 1548,
+      "start_line": 1527,
+      "end_line": 1558,
       "checksum": "31ea2264474b3482",
       "description": "Double-payment idempotency: confirm/cash/due endpoints accept idempotencyKey, check for existing payment within 5-minute window, return existing result instead of duplicate.",
       "test_file": "backend/tests/paymentIdempotency.gcp-stg-0656.unit.test.ts",
@@ -28614,7 +28614,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T19:48:47.012Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T14:39:53.955Z"
+      "line_shifted_at": "2026-03-25T23:07:42.319Z"
     },
     {
       "ticket": "GCP-STG-0661",
@@ -31335,8 +31335,8 @@
     {
       "ticket": "GCP-STG-0657",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 2134,
-      "end_line": 2209,
+      "start_line": 2144,
+      "end_line": 2219,
       "checksum": "6c63e640dd94dae5",
       "description": "Configurable refund time limit â€” REFUND_MAX_DAYS env var enforced in void handler",
       "test_file": "backend/src/__tests__/pos/sales.void.test.ts",
@@ -31370,7 +31370,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:32:05.275Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T14:39:54.050Z"
+      "line_shifted_at": "2026-03-25T23:07:42.402Z"
     },
     {
       "ticket": "GCP-STG-0658",
@@ -31763,8 +31763,8 @@
     {
       "ticket": "GCP-STG-0668",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 3539,
-      "end_line": 3589,
+      "start_line": 3549,
+      "end_line": 3599,
       "checksum": "4a03a47ddb642c54",
       "description": "Shift close cash reconciliation â€” POST endpoint for day-end cash counting",
       "test_file": "backend/tests/shiftClose.stg-0668.unit.test.ts",
@@ -31798,13 +31798,13 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:17:47.575Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T14:57:20.689Z"
+      "line_shifted_at": "2026-03-25T23:07:42.478Z"
     },
     {
       "ticket": "GCP-STG-0669",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 3350,
-      "end_line": 3395,
+      "start_line": 3360,
+      "end_line": 3405,
       "checksum": "138dbec19ab86f3c",
       "description": "Z-report daily tax summary â€” GET endpoint for GST compliance daily totals",
       "test_file": "backend/tests/zReport.stg-0669.unit.test.ts",
@@ -31837,7 +31837,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:20:07.511Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-25T23:07:42.541Z"
     },
     {
       "ticket": "GCP-STG-0670",
@@ -37007,8 +37008,8 @@
     {
       "ticket": "GCP-STG-0734",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 1963,
-      "end_line": 2117,
+      "start_line": 1973,
+      "end_line": 2127,
       "checksum": "a263b3ef4b5b3ce5",
       "description": "Item-level sale return with 7-day window, refund type (CASH/STORE_CREDIT), partial qty, orders.sale_returns table",
       "test_file": "backend/tests/saleReturn.gcp-stg-0734.unit.test.ts",
@@ -37040,7 +37041,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:40:59.359Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-25T23:07:42.700Z"
     },
     {
       "ticket": "GCP-STG-0734",

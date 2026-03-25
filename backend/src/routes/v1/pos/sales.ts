@@ -971,7 +971,11 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       barcode: asTrimmedString(item.barcode) ?? undefined,
       quantity,
       priceMinor,
-      batchNumber: asTrimmedString(item.batchNumber) ?? undefined
+      batchNumber: asTrimmedString(item.batchNumber) ?? undefined,
+      // GCP-STG-0118: Carry item-level discount fields from cart
+      itemDiscountMinor: typeof item.itemDiscountMinor === "number" ? item.itemDiscountMinor : undefined,
+      itemDiscount: typeof item.itemDiscount === "number" ? item.itemDiscount : undefined,
+      item_discount: typeof item.item_discount === "number" ? item.item_discount : undefined
     };
   });
 
@@ -1131,6 +1135,9 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       barcode?: string;
       globalProductId?: string;
       batchNumber?: string | null;
+      itemDiscountMinor?: number;
+      itemDiscount?: number;
+      item_discount?: number;
     }> = [];
 
     for (const item of cleanedItems) {
@@ -1243,7 +1250,10 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
         name: item.name,
         barcode: item.barcode,
         globalProductId: catalogGlobalProductId ?? item.globalProductId ?? undefined,
-        batchNumber: item.batchNumber ?? null
+        batchNumber: item.batchNumber ?? null,
+        itemDiscountMinor: item.itemDiscountMinor,
+        itemDiscount: item.itemDiscount,
+        item_discount: item.item_discount
       });
     }
 
