@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1153,
+  "version": 1154,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -32844,6 +32844,56 @@
         "single_commit": "fix(GCP-STG-0608)",
         "ticket_parked": "Committed and parked",
         "no_agent_conflict": "Single agent session"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0587",
+      "file": "scripts/cleanup/prune-prestage-tags.sh",
+      "start_line": 1,
+      "end_line": 30,
+      "checksum": "db214f1b4acfad8d",
+      "description": "Dry-run script to prune old prestage tags keeping latest 50",
+      "test_file": "scripts/cleanup/prune-prestage-tags.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": "N/A",
+        "business_behaviour": "N/A",
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T10:33:44.815Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "impacted_files": "scripts/cleanup/prune-prestage-tags.sh only",
+        "fix_ledger_check": "zero drift",
+        "no_agent_conflict": "single agent",
+        "operator_approved": "N/A - tooling script only",
+        "parity_scanned": "N/A - tooling script only",
+        "gcp_parity": "dry-run script, no staging deps",
+        "regression_check": "tooling-only",
+        "test_guard": "self-verifying dry-run",
+        "single_commit": "chore(GCP-STG-0587)",
+        "ticket_parked": "will park post-commit"
       }
     }
   ],
