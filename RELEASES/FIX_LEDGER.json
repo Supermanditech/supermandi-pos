@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1243,
+  "version": 1249,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -4673,7 +4673,7 @@
       "file": "supplier-portal/src/lib/api.ts",
       "start_line": 4,
       "end_line": 1482,
-      "checksum": "d2fc550ccdf668ca",
+      "checksum": "324831faeaa1f3ea",
       "description": "HTTPS enforcement for supplier-portal in production",
       "test_file": "src/__tests__/screens/https-enforcement.stg-518.test.ts",
       "depends_on": null,
@@ -11695,7 +11695,7 @@
       "file": "backend/src/routes/v1/supplier/settlements.ts",
       "start_line": 1,
       "end_line": 41,
-      "checksum": "e1869d3bb8c132a3",
+      "checksum": "28d17e2fcf8ad718",
       "description": "Supplier settlement history endpoint with summary",
       "test_file": "backend/tests/settlement.gcp-stg-0106.unit.test.ts",
       "depends_on": null,
@@ -37451,6 +37451,45 @@
         "single_commit": "verified",
         "ticket_parked": "verified"
       }
+    },
+    {
+      "ticket": "GCP-STG-0730",
+      "file": "backend/src/services/invoiceService.ts",
+      "start_line": 693,
+      "end_line": 707,
+      "checksum": "d85a7d530abeb5b8",
+      "description": "Validate phone numbers in getInvoice before WhatsApp send - log warning for null or <10 digits",
+      "test_file": "backend/tests/invoicePhoneValidation.gcp-stg-0730.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T15:14:49.383Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 270,

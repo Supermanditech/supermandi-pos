@@ -689,10 +689,25 @@ export async function getInvoice(pool: Pool, invoiceId: string): Promise<any> {
     buyerPhone = bp.rows[0]?.phone || null;
   }
 
+  // GCP-STG-0730: Validate phone numbers before they're used for WhatsApp send
+  // Warn if phone is null or too short (< 10 digits) — prevents silent WhatsApp failures
+  const validatePhone = (phone: string | null, party: string): string | null => {
+    if (!phone) {
+      log.warn(`[invoice] ${party} phone is null for invoice ${invoice.id} — WhatsApp send will be skipped`);
+      return null;
+    }
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 10) {
+      log.warn(`[invoice] ${party} phone "${phone}" has fewer than 10 digits for invoice ${invoice.id} — WhatsApp send will be skipped`);
+      return null;
+    }
+    return phone;
+  };
+
   return {
     ...invoice,
-    sellerPhone,
-    buyerPhone,
+    sellerPhone: validatePhone(sellerPhone, "seller"),
+    buyerPhone: validatePhone(buyerPhone, "buyer"),
     items: itemsResult.rows,
     payments: paymentsResult.rows,
   };
