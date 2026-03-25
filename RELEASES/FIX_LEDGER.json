@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1235,
+  "version": 1238,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -11497,9 +11497,9 @@
     {
       "ticket": "GCP-STG-0078",
       "file": "backend/src/routes/v1/admin/invoices.ts",
-      "start_line": 724,
-      "end_line": 829,
-      "checksum": "75e2d2b6499ba871",
+      "start_line": 776,
+      "end_line": 866,
+      "checksum": "257de7e682a7bd2c",
       "description": "Admin e-invoice routes: generate-irn, cancel-irn, einvoice-status + QR on PDF download",
       "test_file": "backend/tests/eInvoice.gcp-stg-0078.unit.test.ts",
       "depends_on": null,

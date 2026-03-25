@@ -736,6 +736,43 @@ adminInvoicesRouter.get("/invoices/:invoiceId/pdf", requireAdminToken, requirePe
 });
 
 // =============================================================================
+// GCP-STG-0728: Invoice Signature Verification
+// =============================================================================
+
+/**
+ * POST /api/v1/admin/invoices/:invoiceId/verify-signature
+ * GCP-STG-0728: Verify an invoice PDF's integrity by comparing its hash
+ * against the stored pdf_signature.
+ */
+adminInvoicesRouter.post("/invoices/:invoiceId/verify-signature", requireAdminToken, requirePermission("products", "read"), async (req, res) => {
+  const { pdfHash } = req.body || {};
+  if (!pdfHash || typeof pdfHash !== "string") {
+    return res.status(400).json({ error: "pdfHash is required (hex string)" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    const invoice = await getInvoice(pool, req.params.invoiceId);
+    if (!invoice) {
+      return res.status(404).json({ error: "Invoice not found" });
+    }
+
+    const storedSignature = invoice.pdfSignature;
+    if (!storedSignature) {
+      return res.status(200).json({ valid: false, reason: "no_signature_stored", message: "Invoice has no stored PDF signature" });
+    }
+
+    const valid = pdfHash.toLowerCase() === storedSignature.toLowerCase();
+    return res.status(200).json({ valid, invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber });
+  } catch (err: any) {
+    log.error("[admin/invoices/verify-signature] Error:", err);
+    return res.status(500).json({ error: "Failed to verify signature" });
+  }
+});
+
+// =============================================================================
 // GCP-STG-0078: E-Invoice Management
 // =============================================================================
 
