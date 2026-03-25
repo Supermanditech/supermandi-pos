@@ -64,7 +64,7 @@ describe("GCP-STG-0399: Supplier notification on new purchase order", () => {
     // The actual integration is tested via the route handler, but we verify the
     // function signature and event type are correct here.
 
-    const { publishLifecycleEvent } = await import("../src/services/lifecycleEventService");
+    const { publishLifecycleEvent } = require("../src/services/lifecycleEventService");
 
     const event = {
       eventType: "supplier_action_required" as const,
@@ -104,7 +104,7 @@ describe("GCP-STG-0399: Supplier notification on new purchase order", () => {
   });
 
   it("should include supplierId in payload for SSE supplier fan-out", async () => {
-    const { publishLifecycleEvent } = await import("../src/services/lifecycleEventService");
+    const { publishLifecycleEvent } = require("../src/services/lifecycleEventService");
 
     await publishLifecycleEvent({
       eventType: "supplier_action_required",
@@ -130,7 +130,7 @@ describe("GCP-STG-0399: Supplier notification on new purchase order", () => {
   it("should not throw if publishLifecycleEvent rejects (fire-and-forget)", async () => {
     mockPublishLifecycleEvent.mockRejectedValueOnce(new Error("SSE connection lost"));
 
-    const { publishLifecycleEvent } = await import("../src/services/lifecycleEventService");
+    const { publishLifecycleEvent } = require("../src/services/lifecycleEventService");
 
     // Fire-and-forget: catch the rejection, should not throw
     await expect(

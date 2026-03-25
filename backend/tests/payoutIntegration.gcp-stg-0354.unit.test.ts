@@ -43,7 +43,7 @@ describe("GCP-STG-0354: Settlement ↔ Payout Integration", () => {
   // -----------------------------------------------------------------------
   describe("markSettlementPaid — payoutId parameter", () => {
     it("includes payout_id in the UPDATE query when provided", async () => {
-      const { markSettlementPaid } = await import("../src/services/settlementService");
+      const { markSettlementPaid } = require("../src/services/settlementService");
       const pool = createMockPool(async () => ({ rows: [], rowCount: 1 }));
 
       await markSettlementPaid(
@@ -62,7 +62,7 @@ describe("GCP-STG-0354: Settlement ↔ Payout Integration", () => {
     });
 
     it("passes null when payoutId is omitted (backward-compatible)", async () => {
-      const { markSettlementPaid } = await import("../src/services/settlementService");
+      const { markSettlementPaid } = require("../src/services/settlementService");
       const pool = createMockPool(async () => ({ rows: [], rowCount: 1 }));
 
       await markSettlementPaid(pool as any, "sett-001", "ref-123");
@@ -78,7 +78,7 @@ describe("GCP-STG-0354: Settlement ↔ Payout Integration", () => {
   // -----------------------------------------------------------------------
   describe("markSettlementPaidByPayout — direct FK match", () => {
     it("updates settlement via payout_id and returns count", async () => {
-      const { markSettlementPaidByPayout } = await import("../src/services/settlementService");
+      const { markSettlementPaidByPayout } = require("../src/services/settlementService");
       const pool = createMockPool(async (sql: string) => {
         if (sql.includes("WHERE payout_id")) {
           return { rows: [{ id: "sett-1" }], rowCount: 1 };
@@ -105,7 +105,7 @@ describe("GCP-STG-0354: Settlement ↔ Payout Integration", () => {
   // -----------------------------------------------------------------------
   describe("markSettlementPaidByPayout — fallback match", () => {
     it("falls back to supplier_id + order_id match when payout_id has no hits", async () => {
-      const { markSettlementPaidByPayout } = await import("../src/services/settlementService");
+      const { markSettlementPaidByPayout } = require("../src/services/settlementService");
       let callIndex = 0;
       const pool = createMockPool(async (sql: string) => {
         callIndex++;
@@ -136,7 +136,7 @@ describe("GCP-STG-0354: Settlement ↔ Payout Integration", () => {
     });
 
     it("returns 0 when no settlement matches at all", async () => {
-      const { markSettlementPaidByPayout } = await import("../src/services/settlementService");
+      const { markSettlementPaidByPayout } = require("../src/services/settlementService");
       const pool = createMockPool(async () => ({ rows: [], rowCount: 0 }));
 
       const count = await markSettlementPaidByPayout(

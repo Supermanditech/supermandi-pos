@@ -110,7 +110,7 @@ describe("GCP-STG-0382: WhatsApp template for payment_completed", () => {
   // but we can verify the module loads without error and the event type is wired.
   it("lifecycleEventService module loads without error", async () => {
     // Dynamic import to verify the module compiles and exports correctly
-    const mod = await import("../src/services/lifecycleEventService");
+    const mod = require("../src/services/lifecycleEventService");
     expect(typeof mod.publishLifecycleEvent).toBe("function");
     expect(typeof mod.getLifecycleStats).toBe("function");
   });
