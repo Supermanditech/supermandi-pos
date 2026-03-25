@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1249,
+  "version": 1250,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -37490,6 +37490,58 @@
       "checklist_version": 5,
       "registered_at": "2026-03-25T15:14:49.383Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0742",
+      "file": "backend/src/routes/v1/supplier/settlements.ts",
+      "start_line": 43,
+      "end_line": 107,
+      "checksum": "d1485c52f94968ad",
+      "description": "Supplier settlement dashboard endpoint: totalReceivable, paidThisMonth, overdueAmount, agingBuckets, recentPayments",
+      "test_file": "backend/tests/supplierSettlementDashboard.gcp-stg-0742.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T15:16:34.766Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "verified",
+        "api_errors": "verified",
+        "store_isolation": "verified",
+        "business_logic": "verified",
+        "business_behaviour": "verified",
+        "db_schema": "verified",
+        "impacted_files": "verified",
+        "fix_ledger_check": "verified",
+        "no_agent_conflict": "verified",
+        "gcp_parity": "verified",
+        "regression_check": "verified",
+        "test_guard": "verified",
+        "single_commit": "verified",
+        "ticket_parked": "verified"
+      }
     }
   ],
   "machine_state_version": 270,

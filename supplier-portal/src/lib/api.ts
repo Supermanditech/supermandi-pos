@@ -811,6 +811,19 @@ export async function getFulfillmentStats(): Promise<FulfillmentStats> {
   return apiFetch<FulfillmentStats>('/api/v1/supplier/dashboard/fulfillment');
 }
 
+// GCP-STG-0742: Settlement dashboard
+export interface SettlementDashboard {
+  totalReceivable: number;
+  paidThisMonth: number;
+  overdueAmount: number;
+  agingBuckets: { current: number; days30: number; days60: number; days90Plus: number };
+  recentPayments: { id: string; amountMinor: number; paidAt: string; referenceNumber: string; storeId: string }[];
+}
+
+export async function getSettlementDashboard(): Promise<SettlementDashboard> {
+  return apiFetch<SettlementDashboard>('/api/v1/supplier/settlements/dashboard');
+}
+
 // ============================================================================
 // CSV UPLOAD APIs (SM-007)
 // ============================================================================

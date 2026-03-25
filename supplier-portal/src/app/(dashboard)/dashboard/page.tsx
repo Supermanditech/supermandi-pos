@@ -2,12 +2,12 @@
 
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { getDashboardStats, getFulfillmentStats, getOrders, getProducts } from '@/lib/api';
+import { getDashboardStats, getFulfillmentStats, getSettlementDashboard, getOrders, getProducts } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatCurrency } from '@/lib/formatters';
 // T-113: Breadcrumb navigation
 import Breadcrumb from '@/components/Breadcrumb';
-import { Package, Clock, ShoppingCart, DollarSign, AlertTriangle, FileText, Plus, Truck, Timer, CheckCircle } from 'lucide-react';
+import { Package, Clock, ShoppingCart, DollarSign, AlertTriangle, FileText, Plus, Truck, Timer, CheckCircle, Banknote, TrendingUp } from 'lucide-react';
 
 function StatCard({
   title,
@@ -65,6 +65,12 @@ export default function DashboardPage() {
   const { data: fulfillment, isLoading: fulfillmentLoading } = useQuery({
     queryKey: ['fulfillment-stats'],
     queryFn: getFulfillmentStats,
+  });
+
+  // GCP-STG-0742: Settlement dashboard data
+  const { data: settlement, isLoading: settlementLoading } = useQuery({
+    queryKey: ['settlement-dashboard'],
+    queryFn: getSettlementDashboard,
   });
 
   // GL-WF-063: Use paginated API calls
@@ -200,6 +206,29 @@ export default function DashboardPage() {
           value={fulfillmentLoading ? '-' : (fulfillment?.completedThisWeek ?? '—')}
           icon={<CheckCircle size={24} className="text-green-600" />}
           color="bg-green-100"
+        />
+      </div>
+
+      {/* GCP-STG-0742: Settlement Summary */}
+      <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">Payments & Settlements</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <StatCard
+          title="Total Receivable"
+          value={settlementLoading ? '-' : (settlement?.totalReceivable != null ? formatCurrency(settlement.totalReceivable) : '—')}
+          icon={<Banknote size={24} className="text-indigo-600" />}
+          color="bg-indigo-100"
+        />
+        <StatCard
+          title="Paid This Month"
+          value={settlementLoading ? '-' : (settlement?.paidThisMonth != null ? formatCurrency(settlement.paidThisMonth) : '—')}
+          icon={<TrendingUp size={24} className="text-green-600" />}
+          color="bg-green-100"
+        />
+        <StatCard
+          title="Overdue Amount"
+          value={settlementLoading ? '-' : (settlement?.overdueAmount != null ? formatCurrency(settlement.overdueAmount) : '—')}
+          icon={<AlertTriangle size={24} className="text-red-600" />}
+          color="bg-red-100"
         />
       </div>
 
