@@ -15,6 +15,8 @@ import { log } from "../../lib/logger";
 import { asError } from "../../lib/errorUtils";
 // GCP-STG-0399: Supplier notification on new purchase order
 import { publishLifecycleEvent } from "../../services/lifecycleEventService";
+// GCP-STG-0726: Auto credit note on goods return confirmation
+import { generateCreditNote } from "../../services/creditNoteService";
 
 export const ordersRouter = Router();
 
@@ -2533,5 +2535,85 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/return", requireDeviceToken,
   } catch (err: any) {
     log.error("[GCP-STG-0664] Goods return error:", err.message);
     return res.status(500).json({ error: "Failed to submit return request" });
+  }
+});
+
+/**
+ * POST /api/v1/orders/stores/:storeId/returns/:returnId/confirm
+ * GCP-STG-0726: Confirm a pending goods return and auto-generate credit note
+ */
+ordersRouter.post("/stores/:storeId/returns/:returnId/confirm", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "Service unavailable" });
+
+  const storeId = getStoreIdFromDevice(req);
+
+  try {
+    // Fetch the pending return with store isolation
+    const returnResult = await pool.query(
+      `SELECT gr.id, gr.order_id, gr.store_id, gr.items, gr.reason, gr.status
+       FROM orders.goods_returns gr
+       WHERE gr.id = $1 AND gr.store_id = $2`,
+      [req.params.returnId, storeId]
+    );
+
+    if (!returnResult.rows[0]) {
+      return res.status(404).json({ error: "Goods return not found" });
+    }
+
+    const goodsReturn = returnResult.rows[0];
+    if (goodsReturn.status !== "PENDING") {
+      return res.status(400).json({ error: `Cannot confirm return in ${goodsReturn.status} status` });
+    }
+
+    // Update status to CONFIRMED
+    await pool.query(
+      "UPDATE orders.goods_returns SET status = 'CONFIRMED', updated_at = NOW() WHERE id = $1",
+      [goodsReturn.id]
+    );
+
+    // Fetch order details for supplier info
+    const orderResult = await pool.query(
+      "SELECT id, supplier_id FROM orders.purchase_orders WHERE id = $1 AND store_id = $2",
+      [goodsReturn.order_id, storeId]
+    );
+
+    const returnItems = typeof goodsReturn.items === "string"
+      ? JSON.parse(goodsReturn.items)
+      : goodsReturn.items;
+
+    // GCP-STG-0726: Auto-generate credit note on confirmed goods return
+    if (returnItems.length > 0) {
+      try {
+        const supplierId = orderResult.rows[0]?.supplier_id || undefined;
+        await generateCreditNote({
+          type: "CREDIT_NOTE",
+          storeId,
+          supplierId,
+          items: returnItems.map((i: any) => ({
+            productId: i.productId,
+            productName: i.productName || i.productId,
+            qty: i.qty,
+            amountMinor: i.amountMinor || 0,
+            gstMinor: i.gstMinor || 0,
+            reason: i.reasonCode || i.reason || "Goods returned",
+          })),
+          reason: "Auto-generated from goods return",
+        });
+        log.info(`[GCP-STG-0726] Auto credit note generated for return=${goodsReturn.id}`);
+      } catch (creditErr: any) {
+        log.error("[GCP-STG-0726] Auto credit note failed:", creditErr.message);
+        // Non-blocking — goods return confirmation still succeeds
+      }
+    }
+
+    return res.json({
+      id: goodsReturn.id,
+      status: "CONFIRMED",
+      message: "Goods return confirmed",
+    });
+  } catch (err: any) {
+    log.error("[GCP-STG-0726] Goods return confirm error:", err.message);
+    return res.status(500).json({ error: "Failed to confirm goods return" });
   }
 });
