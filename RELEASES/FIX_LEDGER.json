@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1221,
+  "version": 1224,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -7155,8 +7155,8 @@
       "ticket": "STG-567",
       "file": "src/screens/v3/StoreHubScreenV3.tsx",
       "start_line": 1,
-      "end_line": 156,
-      "checksum": "80924ffeb23e14d9",
+      "end_line": 194,
+      "checksum": "f2efdcc729f57a2d",
       "description": "Store hub v3 â€” 4 SVG action cards, recent orders (updated GCP-STG-0450: SafeArea insets)",
       "test_file": "src/__tests__/screens/store-layer4.stg-567-570.test.ts",
       "depends_on": null,
@@ -17826,8 +17826,8 @@
     {
       "ticket": "GCP-STG-0401",
       "file": "src/components/v3/ProductDetailSheetV3.tsx",
-      "start_line": 283,
-      "end_line": 325,
+      "start_line": 330,
+      "end_line": 372,
       "checksum": "d4fb93bcb15f561b",
       "description": "Display elements for 6 procurement fields: deliveryTerms, financeEligible badge, publishedTermsVersion label, moqTiers breakdown, procurementUnit, procurementPackQty (6 fields wired)",
       "test_file": "src/__tests__/components/buyDetailFields.gcp-stg-0401.test.ts",
@@ -17861,7 +17861,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:32:59.779Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T16:03:24.366Z"
+      "line_shifted_at": "2026-03-25T14:25:19.933Z"
     },
     {
       "ticket": "GCP-STG-0401",
@@ -17946,8 +17946,8 @@
     {
       "ticket": "GCP-STG-0400",
       "file": "src/components/v3/ProductDetailSheetV3.tsx",
-      "start_line": 148,
-      "end_line": 160,
+      "start_line": 195,
+      "end_line": 207,
       "checksum": "d44ac75febe8d5d6",
       "description": "ProductDetailSheetV3 profit line with rupee amount and percentage in SELL context",
       "test_file": "src/__tests__/components/marginIndicator.gcp-stg-0400.test.ts",
@@ -17981,7 +17981,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:33:27.863Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T16:03:24.370Z"
+      "line_shifted_at": "2026-03-25T14:25:19.939Z"
     },
     {
       "ticket": "GCP-STG-0374",
@@ -19644,8 +19644,8 @@
     {
       "ticket": "GCP-STG-0410",
       "file": "src/components/v3/ProductDetailSheetV3.tsx",
-      "start_line": 187,
-      "end_line": 212,
+      "start_line": 234,
+      "end_line": 259,
       "checksum": "5d2e4863e5f6ff2e",
       "description": "SELL detail info section â€” expiry date with red/yellow/green color coding and cost price display (expiry+cost in SELL context)",
       "test_file": "src/__tests__/components/sellDetailInfo.gcp-stg-0410.test.tsx",
@@ -19679,7 +19679,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:00:06.813Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T16:03:24.392Z"
+      "line_shifted_at": "2026-03-25T14:25:19.967Z"
     },
     {
       "ticket": "GCP-STG-0410",
@@ -19921,8 +19921,8 @@
     {
       "ticket": "GCP-STG-0392",
       "file": "backend/src/routes/v1/pos/inventory.ts",
-      "start_line": 824,
-      "end_line": 870,
+      "start_line": 875,
+      "end_line": 921,
       "checksum": "d438f943225cf6e0",
       "description": "GET /inventory/batches/:productId â€” returns FEFO-ordered batch breakdown per product from inventory.stock_batches (FEFO-ordered batches)",
       "test_file": "backend/tests/stockBatches.gcp-stg-0392.unit.test.ts",
@@ -19955,7 +19955,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:23:21.959Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-25T14:25:19.999Z"
     },
     {
       "ticket": "GCP-STG-0392",
@@ -21884,8 +21885,8 @@
       "ticket": "GCP-STG-0450",
       "file": "src/screens/v3/StoreHubScreenV3.tsx",
       "start_line": 1,
-      "end_line": 160,
-      "checksum": "a43f7ea6d2d96ff2",
+      "end_line": 194,
+      "checksum": "f2efdcc729f57a2d",
       "description": "SafeAreaView: useSafeAreaInsets for paddingTop (status bar) and paddingBottom (gesture bar) on StoreHubScreenV3",
       "test_file": "src/__tests__/screens/safeArea.gcp-stg-0450-0451.test.ts",
       "depends_on": null,
@@ -27207,8 +27208,8 @@
     {
       "ticket": "GCP-STG-0555",
       "file": "src/components/v3/ProductDetailSheetV3.tsx",
-      "start_line": 122,
-      "end_line": 145,
+      "start_line": 169,
+      "end_line": 192,
       "checksum": "7c3d7de3f13e5ce2",
       "description": "BUY detail sheet: PTR in green as primary price, MRP with Save X% badge, margin percentage highlight line",
       "test_file": "src/components/v3/ProductDetailSheetV3.tsx",
@@ -27257,7 +27258,8 @@
         "test_guard": "tsc --noEmit passes, display-only UI change",
         "single_commit": "fix(GCP-STG-0555): BUY detail sheet shows PTR in green, margin %, Save badge",
         "ticket_parked": "Parked after commit"
-      }
+      },
+      "line_shifted_at": "2026-03-25T14:25:20.061Z"
     },
     {
       "ticket": "GCP-STG-0556",
@@ -36826,6 +36828,127 @@
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:19:10.148Z",
       "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0733",
+      "file": "backend/src/routes/v1/pos/inventory.ts",
+      "start_line": 46,
+      "end_line": 92,
+      "checksum": "e11b57105075f3df",
+      "description": "Batch-level expiry tracking endpoint: GET /pos/inventory/expiring-batches?days=N queries inventory.stock_batches",
+      "test_file": "backend/tests/expiryTracking.gcp-stg-0733.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T14:26:33.971Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0733",
+      "file": "src/screens/v3/StoreHubScreenV3.tsx",
+      "start_line": 33,
+      "end_line": 150,
+      "checksum": "f9129dae6c2f669c",
+      "description": "Expiring Soon summary card on StoreHubScreenV3 — fetches /inventory/expiring-batches?days=7 and shows count",
+      "test_file": "backend/tests/expiryTracking.gcp-stg-0733.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T14:26:40.917Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0736",
+      "file": "backend/src/routes/v1/pos/storeProducts.ts",
+      "start_line": 1708,
+      "end_line": 1814,
+      "checksum": "8025a3184e21b5f5",
+      "description": "Quick price update PATCH /store-products/:productId/price with LWW guard and MRP support",
+      "test_file": "backend/tests/quickPriceUpdate.gcp-stg-0736.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T14:26:53.497Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "verified",
+        "api_errors": "verified",
+        "store_isolation": "verified",
+        "business_logic": "verified",
+        "business_behaviour": "verified",
+        "db_schema": "verified",
+        "impacted_files": "verified",
+        "fix_ledger_check": "verified",
+        "no_agent_conflict": "verified"
+      }
     }
   ],
   "machine_state_version": 270,

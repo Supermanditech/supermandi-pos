@@ -1706,6 +1706,122 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, req
 });
 
 /**
+ * GCP-STG-0736: PATCH /api/v1/pos/store-products/:productId/price
+ * Quick price update from POS product detail tile (MANAGER only on client).
+ * Accepts sellPriceMinor (required) and mrpMinor (optional).
+ * Uses LWW guard via price_updated_at to prevent stale writes.
+ */
+posStoreProductsRouter.patch("/store-products/:productId/price", requireDeviceToken, requireActiveStore, async (req, res) => {
+  const storeId = getStoreIdFromPosDevice(req, "pos/store-products/quick-price");
+  const { productId } = req.params;
+  const { sellPriceMinor, mrpMinor, expectedPriceUpdatedAt } = req.body as {
+    sellPriceMinor: number;
+    mrpMinor?: number;
+    expectedPriceUpdatedAt?: string;
+  };
+
+  // Validate sellPriceMinor
+  if (typeof sellPriceMinor !== "number" || !Number.isFinite(sellPriceMinor) || sellPriceMinor <= 0) {
+    return res.status(422).json({ error: "VALIDATION_ERROR", message: "sellPriceMinor must be a positive number" });
+  }
+  const MAX_PRICE_MINOR = 1000000000;
+  if (sellPriceMinor > MAX_PRICE_MINOR) {
+    return res.status(422).json({ error: "VALIDATION_ERROR", message: "sellPriceMinor exceeds maximum allowed value" });
+  }
+  // Validate mrpMinor if provided
+  if (mrpMinor !== undefined && mrpMinor !== null) {
+    if (typeof mrpMinor !== "number" || !Number.isFinite(mrpMinor) || mrpMinor <= 0) {
+      return res.status(422).json({ error: "VALIDATION_ERROR", message: "mrpMinor must be a positive number" });
+    }
+    if (mrpMinor > MAX_PRICE_MINOR) {
+      return res.status(422).json({ error: "VALIDATION_ERROR", message: "mrpMinor exceeds maximum allowed value" });
+    }
+  }
+  // SA-P0-003: Global price bounds enforcement
+  const sellBoundsCheck = await validatePriceBounds(sellPriceMinor);
+  if (!sellBoundsCheck.valid) {
+    return res.status(422).json({ error: "PRICE_OUT_OF_BOUNDS", message: sellBoundsCheck.error });
+  }
+
+  if (!productId || productId.length < 10) {
+    return res.status(422).json({ error: "VALIDATION_ERROR", message: "Invalid productId" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
+  }
+
+  // LWW guard
+  const parsedPriceTs = expectedPriceUpdatedAt ? new Date(expectedPriceUpdatedAt) : null;
+  const validPriceTs = parsedPriceTs && !isNaN(parsedPriceTs.getTime()) ? parsedPriceTs : null;
+  const lwwClause = validPriceTs ? "AND (price_updated_at IS NULL OR price_updated_at <= $5)" : "";
+
+  try {
+    const setClauses = ["sell_price = $1", "updated_at = NOW()", "price_updated_at = NOW()"];
+    const params: (string | number)[] = [Math.round(sellPriceMinor)];
+    let mrpParamIdx: number | null = null;
+
+    if (mrpMinor !== undefined && mrpMinor !== null) {
+      mrpParamIdx = params.length + 1;
+      params.push(Math.round(mrpMinor));
+      setClauses.push(`mrp = $${mrpParamIdx}`);
+    }
+
+    // productId is either a store_product UUID or a catalog product UUID
+    // Try store_product_id first, then product_id
+    params.push(storeId); // $2 or $3
+    const storeIdIdx = params.length;
+    params.push(productId); // $3 or $4
+    const productIdIdx = params.length;
+    if (validPriceTs) {
+      params.push(validPriceTs.toISOString()); // $5
+    }
+
+    // Try by store_product id
+    let updateResult = await pool.query(
+      `UPDATE catalog.store_products
+       SET ${setClauses.join(", ")}
+       WHERE id = $${productIdIdx} AND store_id = $${storeIdIdx} AND is_active = true ${lwwClause}
+       RETURNING id, product_id, sell_price, mrp, display_name, updated_at, price_updated_at`,
+      params
+    );
+
+    // Fallback: try by product_id
+    if ((updateResult.rowCount ?? 0) === 0 && !validPriceTs) {
+      updateResult = await pool.query(
+        `UPDATE catalog.store_products
+         SET ${setClauses.join(", ")}
+         WHERE product_id = $${productIdIdx} AND store_id = $${storeIdIdx} AND is_active = true
+         RETURNING id, product_id, sell_price, mrp, display_name, updated_at, price_updated_at`,
+        params.slice(0, params.length) // same params without LWW
+      );
+    }
+
+    if ((updateResult.rowCount ?? 0) === 0) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Product not found in store" });
+    }
+
+    const row = updateResult.rows[0];
+    return res.json({
+      success: true,
+      data: {
+        storeProductId: row.id,
+        productId: row.product_id,
+        sellPrice: row.sell_price,
+        mrp: row.mrp,
+        name: row.display_name || undefined,
+        updatedAt: row.updated_at,
+        priceUpdatedAt: row.price_updated_at,
+      },
+    });
+  } catch (error) {
+    log.error("[GCP-STG-0736] Quick price update error:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Price update failed" });
+  }
+});
+
+/**
  * PATCH /api/v1/pos/store-products/:storeProductId/metadata
  * SYNC-PRD-001: Update product metadata (display name) from POS (legacy path-param endpoint)
  * Last-write-wins: server sets metadata_updated_at = NOW() on every write

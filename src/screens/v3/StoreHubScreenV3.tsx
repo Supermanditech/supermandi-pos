@@ -28,6 +28,8 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [orderError, setOrderError] = useState(false);
   const [lowStockCount, setLowStockCount] = useState<number | null>(null);
+  // GCP-STG-0733: Expiring-soon batch count
+  const [expiringCount, setExpiringCount] = useState<number | null>(null);
 
   // V3-019: Fetch real purchase history
   useEffect(() => {
@@ -53,6 +55,13 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
           const { apiClient } = require("../../services/api/apiClient");
           const stockRes = await apiClient.get("/api/v1/pos/inventory/low-stock-count");
           if (typeof stockRes?.count === "number") setLowStockCount(stockRes.count);
+        } catch { /* non-critical */ }
+
+        // GCP-STG-0733: Fetch expiring-soon batch count (7 days)
+        try {
+          const { apiClient } = require("../../services/api/apiClient");
+          const expRes = await apiClient.get("/api/v1/pos/inventory/expiring-batches?days=7");
+          if (typeof expRes?.total === "number") setExpiringCount(expRes.total);
         } catch { /* non-critical */ }
       } catch (err) {
         logger.debug("StoreHubV3", `fetch_failed:${String(err)}`);
@@ -102,6 +111,26 @@ export default function StoreHubScreenV3({ onNavigate }: StoreHubScreenV3Props) 
           </Pressable>
         </View>
 
+        {/* GCP-STG-0733: Expiring Soon summary card */}
+        {expiringCount != null && expiringCount > 0 ? (
+          <Pressable
+            style={styles.expiryCard}
+            onPress={() => onNavigate("stock")}
+            accessibilityRole="button"
+            accessibilityLabel={`${expiringCount} products expiring within 7 days`}
+            testID="expiring-soon-card"
+          >
+            <View style={styles.expiryIcon}>
+              <Text style={{ fontSize: 22 }}>⏰</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.expiryTitle}>Expiring Soon</Text>
+              <Text style={styles.expirySub}>{expiringCount} product{expiringCount !== 1 ? "s" : ""} expiring within 7 days</Text>
+            </View>
+            <Text style={{ fontSize: 14, color: colors.textTertiary }}>›</Text>
+          </Pressable>
+        ) : null}
+
         <Text style={styles.sectionTitle}>RECENT ORDERS</Text>
         {loadingOrders ? <ActivityIndicator size="small" color={colors.primary} style={{ padding: 20 }} /> : null}
         {!loadingOrders && orderError ? (
@@ -150,6 +179,11 @@ function createStyles(colors: ColorPalette) {
     cardWarning: { borderColor: colors.warning },
     cardTitle: { fontSize: 15, fontWeight: "800", color: colors.textPrimary, marginTop: 8, letterSpacing: -0.3 },
     cardSub: { fontSize: 11, color: colors.textTertiary, marginTop: 4 },
+    // GCP-STG-0733: Expiring soon card styles
+    expiryCard: { flexDirection: "row", alignItems: "center", marginHorizontal: getScreenPadding(), marginTop: 10, padding: 14, backgroundColor: colors.warningSoft ?? colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.warning, gap: 12 },
+    expiryIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.warning, alignItems: "center", justifyContent: "center" },
+    expiryTitle: { fontSize: 14, fontWeight: "700", color: colors.textPrimary },
+    expirySub: { fontSize: 11, color: colors.warning, fontWeight: "600", marginTop: 1 },
     sectionTitle: { fontSize: 10, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, paddingHorizontal: getScreenPadding(), marginTop: 8, marginBottom: 8 },
     orderCard: { flexDirection: "row", alignItems: "center", marginHorizontal: getScreenPadding(), marginBottom: 8, padding: 14, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border },
     orderSupplier: { fontSize: 13, fontWeight: "700", color: colors.textPrimary },

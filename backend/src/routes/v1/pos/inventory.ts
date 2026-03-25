@@ -44,6 +44,57 @@ posInventoryRouter.get("/inventory/low-stock-count", requireDeviceToken, async (
   }
 });
 
+// GCP-STG-0733: Batch-level expiry tracking — queries inventory.stock_batches for near-expiry products
+posInventoryRouter.get("/inventory/expiring-batches", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = (req as any).posDevice?.storeId;
+  if (!storeId) return res.status(401).json({ error: "store not identified" });
+
+  const rawDays = parseInt(String(req.query['days'] ?? '7'), 10);
+  const days = isNaN(rawDays) || rawDays < 1 ? 7 : rawDays > 365 ? 365 : rawDays;
+
+  try {
+    const result = await pool.query(
+      `SELECT
+        sb.product_id AS "productId",
+        p.name AS "productName",
+        sb.id AS "batchId",
+        sb.current_qty AS qty,
+        TO_CHAR(sb.expiry_date, 'YYYY-MM-DD') AS "expiryDate",
+        (sb.expiry_date - CURRENT_DATE) AS "daysRemaining"
+      FROM inventory.stock_batches sb
+      JOIN catalog.products p ON p.id = sb.product_id
+      WHERE sb.store_id = $1
+        AND sb.current_qty > 0
+        AND sb.expiry_date IS NOT NULL
+        AND sb.expiry_date <= CURRENT_DATE + ($2 || ' days')::interval
+      ORDER BY sb.expiry_date ASC`,
+      [storeId, days]
+    );
+
+    const expiring = result.rows.map((r: any) => ({
+      productId: r.productId,
+      productName: r.productName,
+      batchId: r.batchId,
+      qty: Number(r.qty) || 0,
+      expiryDate: r.expiryDate,
+      daysRemaining: Number(r.daysRemaining),
+    }));
+
+    return res.json({ expiring, total: expiring.length });
+  } catch (_error: unknown) {
+    const error = asError(_error);
+    // Graceful fallback if stock_batches table not yet applied
+    if ((error as any).code === "42P01") {
+      return res.json({ expiring: [], total: 0 });
+    }
+    log.error("[ExpiringBatches] Error:", error.message);
+    return res.status(500).json({ error: "Failed to get expiring batches" });
+  }
+});
+
 /**
  * BLK-SP1: PostgreSQL NUMERIC type serializes as string in JSON (e.g. "10.000").
  * This helper ensures stock values are always returned as JS numbers in API responses.

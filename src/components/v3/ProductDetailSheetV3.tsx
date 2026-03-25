@@ -6,13 +6,15 @@
  * Add-to-cart only happens from explicit CTAs inside this surface.
  */
 import React, { useMemo, useState, useCallback } from "react";
-import { View, Pressable, Modal, ScrollView, StyleSheet, Text, Image } from "react-native";
+import { View, Pressable, Modal, ScrollView, StyleSheet, Text, Image, TextInput, ActivityIndicator } from "react-native";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
 import type { ProductTileData } from "./ProductTileV3";
 import { computeMargin } from "./ProductTileV3";
 import { showToast } from "../../utils/showToast";
+import { useStaffSessionStore } from "../../stores/staffSessionStore"; // GCP-STG-0736
+import { apiClient } from "../../services/api/apiClient"; // GCP-STG-0736
 
 // V3-FIX-136: Procurement metadata for BUY context
 export interface ProcurementData {
@@ -57,6 +59,51 @@ export default function ProductDetailSheetV3({
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [qty, setQty] = useState(1);
+
+  // GCP-STG-0736: Quick price edit state (MANAGER only)
+  const staffRole = useStaffSessionStore((s) => s.session?.role);
+  const [showPriceEdit, setShowPriceEdit] = useState(false);
+  const [newSellPrice, setNewSellPrice] = useState("");
+  const [newMrp, setNewMrp] = useState("");
+  const [priceEditSaving, setPriceEditSaving] = useState(false);
+  const [priceEditError, setPriceEditError] = useState<string | null>(null);
+
+  const handleOpenPriceEdit = useCallback(() => {
+    if (!product) return;
+    setNewSellPrice(product.priceMrpMinor > 0 ? String(product.priceMrpMinor / 100) : "");
+    setNewMrp(product.priceMrpMinor > 0 ? String(product.priceMrpMinor / 100) : "");
+    setPriceEditError(null);
+    setShowPriceEdit(true);
+  }, [product]);
+
+  const handleSavePrice = useCallback(async () => {
+    if (!product) return;
+    const sellMinor = Math.round(parseFloat(newSellPrice) * 100);
+    if (!Number.isFinite(sellMinor) || sellMinor <= 0) {
+      setPriceEditError("Enter a valid sell price");
+      return;
+    }
+    const mrpMinor = newMrp.trim() ? Math.round(parseFloat(newMrp) * 100) : undefined;
+    if (mrpMinor !== undefined && (!Number.isFinite(mrpMinor) || mrpMinor <= 0)) {
+      setPriceEditError("Enter a valid MRP");
+      return;
+    }
+    setPriceEditSaving(true);
+    setPriceEditError(null);
+    try {
+      const productId = product.storeProductId || product.id;
+      await apiClient.patch(`/api/v1/pos/store-products/${productId}/price`, {
+        sellPriceMinor: sellMinor,
+        ...(mrpMinor ? { mrpMinor } : {}),
+      });
+      showToast("Price updated");
+      setShowPriceEdit(false);
+    } catch (err: any) {
+      setPriceEditError(err?.message || "Failed to update price");
+    } finally {
+      setPriceEditSaving(false);
+    }
+  }, [product, newSellPrice, newMrp]);
 
   const handleAdd = useCallback(() => {
     if (!product) return;
@@ -334,6 +381,69 @@ export default function ProductDetailSheetV3({
                 ) : null}
               </View>
             ) : null}
+
+            {/* GCP-STG-0736: Edit Price button (MANAGER only, SELL context) */}
+            {context === "SELL" && staffRole === "MANAGER" ? (
+              <Pressable
+                style={{ backgroundColor: colors.warning + "20", borderWidth: 1, borderColor: colors.warning, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16, marginTop: 12, alignItems: "center" }}
+                onPress={handleOpenPriceEdit}
+                testID="edit-price-btn"
+                accessibilityLabel="Edit Price"
+              >
+                <Text style={{ fontSize: 14, fontWeight: "700", color: colors.warning }}>Edit Price</Text>
+              </Pressable>
+            ) : null}
+
+            {/* GCP-STG-0736: Price edit modal */}
+            <Modal visible={showPriceEdit} transparent animationType="fade" onRequestClose={() => setShowPriceEdit(false)} testID="price-edit-modal">
+              <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" }}>
+                <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 24, width: "85%", maxWidth: 340 }}>
+                  <Text style={{ fontSize: 18, fontWeight: "800", color: colors.textPrimary, marginBottom: 16 }}>Edit Price</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textTertiary, marginBottom: 4 }}>Sell Price (INR)</Text>
+                  <TextInput
+                    style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 16, color: colors.textPrimary, marginBottom: 12 }}
+                    value={newSellPrice}
+                    onChangeText={setNewSellPrice}
+                    keyboardType="decimal-pad"
+                    placeholder="e.g. 25.00"
+                    placeholderTextColor={colors.textTertiary}
+                    testID="price-edit-sell-input"
+                  />
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textTertiary, marginBottom: 4 }}>MRP (optional)</Text>
+                  <TextInput
+                    style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 16, color: colors.textPrimary, marginBottom: 12 }}
+                    value={newMrp}
+                    onChangeText={setNewMrp}
+                    keyboardType="decimal-pad"
+                    placeholder="e.g. 30.00"
+                    placeholderTextColor={colors.textTertiary}
+                    testID="price-edit-mrp-input"
+                  />
+                  {priceEditError ? <Text style={{ color: colors.error, fontSize: 12, marginBottom: 8 }} testID="price-edit-error">{priceEditError}</Text> : null}
+                  <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
+                    <Pressable
+                      style={{ flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: colors.backgroundSecondary, alignItems: "center" }}
+                      onPress={() => setShowPriceEdit(false)}
+                      disabled={priceEditSaving}
+                    >
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textSecondary }}>Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      style={{ flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: colors.primary, alignItems: "center", opacity: priceEditSaving ? 0.6 : 1 }}
+                      onPress={handleSavePrice}
+                      disabled={priceEditSaving}
+                      testID="price-edit-save-btn"
+                    >
+                      {priceEditSaving ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                      ) : (
+                        <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>Update</Text>
+                      )}
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            </Modal>
 
             {/* Quantity selector — V3-HARDEN-171: unit-aware stepping */}
             {(() => {
