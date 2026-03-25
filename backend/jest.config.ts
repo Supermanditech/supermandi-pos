@@ -48,7 +48,10 @@ const config: Config = {
     }]
   },
   // Only load DB setup when database is available
-  setupFilesAfterEnv: hasDbConfig ? ['<rootDir>/tests/setup.ts'] : [],
+  setupFilesAfterEnv: [
+    '<rootDir>/tests/jest.suppressConsole.ts',
+    ...(hasDbConfig ? ['<rootDir>/tests/setup.ts'] : []),
+  ],
   testTimeout: hasDbConfig ? 30000 : 10000,
   verbose: true,
   forceExit: true,

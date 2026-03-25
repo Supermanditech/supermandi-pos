@@ -169,15 +169,17 @@ export function invalidateStockCache(storeId: string, productId?: string): void 
   }
 }
 
-// Periodic cache cleanup
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of stockCache.entries()) {
-    if (now - entry.cachedAt > STOCK_CACHE_TTL_MS) {
-      stockCache.delete(key);
+// Periodic cache cleanup (skip in test to prevent Jest open handle)
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of stockCache.entries()) {
+      if (now - entry.cachedAt > STOCK_CACHE_TTL_MS) {
+        stockCache.delete(key);
+      }
     }
-  }
-}, CACHE_CLEANUP_INTERVAL_MS);
+  }, CACHE_CLEANUP_INTERVAL_MS);
+}
 
 // =============================================================================
 // LEDGER ENDPOINT - GO-LIVE-006/007

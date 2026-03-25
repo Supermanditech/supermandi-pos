@@ -18,6 +18,7 @@ const config = {
     '!src/__tests__/**',
     '!src/**/layout.tsx',
   ],
+  setupFilesAfterEnv: ['<rootDir>/tests/jest.suppressConsole.ts'],
   coverageThreshold: {
     global: {
       statements: 25,
