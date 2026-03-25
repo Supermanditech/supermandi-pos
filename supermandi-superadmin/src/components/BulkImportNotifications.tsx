@@ -1,5 +1,5 @@
 // SA-P2-008: Bulk Import Notification — shows recent CSV import jobs across stores
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { fetchImportJobs, type ImportJobRecord } from "../api/imports";
 import { formatDateTime } from "../lib/formatters";
 
@@ -22,27 +22,34 @@ export function BulkImportNotifications() {
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
-  const refresh = useCallback(async (p: number, status: string) => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await fetchImportJobs({
-        limit: PAGE_SIZE,
-        offset: p * PAGE_SIZE,
-        status: status || undefined,
-      });
-      setImports(data.imports);
-      setTotal(data.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load import jobs");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    refresh(page, statusFilter);
-  }, [refresh, page, statusFilter]);
+    let cancelled = false;
+    const refresh = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const data = await fetchImportJobs({
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
+          status: statusFilter || undefined,
+        });
+        if (!cancelled) {
+          setImports(data.imports);
+          setTotal(data.total);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load import jobs");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+    refresh();
+    return () => { cancelled = true; };
+  }, [page, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
