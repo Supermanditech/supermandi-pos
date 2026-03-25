@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1158,
+  "version": 1159,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -33100,6 +33100,57 @@
         "test_guard": "Script is self-verifying",
         "single_commit": "Already committed",
         "ticket_parked": "Parked"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0619",
+      "file": "scripts/gcp/cleanup-old-revisions.sh",
+      "start_line": 1,
+      "end_line": 27,
+      "checksum": "55e514631be83327",
+      "description": "Cloud Run revision cleanup script - dry run mode, lists old revisions older than 30 days",
+      "test_file": "scripts/gcp/cleanup-old-revisions.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T10:53:37.131Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "GCP cleanup script - no business logic",
+        "business_behaviour": "Ops script only - deletes old Cloud Run revisions",
+        "impacted_files": "scripts/gcp/cleanup-old-revisions.sh",
+        "fix_ledger_check": "Registered in ledger",
+        "no_agent_conflict": "No conflicts",
+        "gcp_parity": "GCP ops script",
+        "regression_check": "New script only",
+        "test_guard": "Script is self-verifying",
+        "single_commit": "One commit",
+        "ticket_parked": "Will park"
       }
     }
   ],
