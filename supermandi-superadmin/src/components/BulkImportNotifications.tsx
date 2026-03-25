@@ -21,6 +21,7 @@ export function BulkImportNotifications() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,7 +50,7 @@ export function BulkImportNotifications() {
     };
     refresh();
     return () => { cancelled = true; };
-  }, [page, statusFilter]);
+  }, [page, statusFilter, refreshKey]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -84,7 +85,7 @@ export function BulkImportNotifications() {
           </div>
           <div className="control">
             <label>&nbsp;</label>
-            <button onClick={() => refresh(page, statusFilter)} disabled={loading}>
+            <button onClick={() => setRefreshKey(k => k + 1)} disabled={loading}>
               {loading ? "Loading..." : "Refresh"}
             </button>
           </div>
