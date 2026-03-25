@@ -96,4 +96,60 @@ router.get("/dashboard/stats", requireSupplierAuth, async (req: SupplierAuthRequ
   }
 });
 
+/**
+ * GET /api/v1/supplier/dashboard/fulfillment
+ * GCP-STG-0741: Fulfillment KPI dashboard
+ * Returns: pendingOrders, todayDispatch, overdueOrders, completedThisWeek, avgFulfillmentDays
+ */
+router.get("/dashboard/fulfillment", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    const supplierId = req.supplierId;
+
+    // Fulfillment KPIs in a single query
+    const result = await pool.query(
+      `SELECT
+        COUNT(DISTINCT po.id) FILTER (WHERE po.status IN ('pending','confirmed')) AS pending_orders,
+        COUNT(DISTINCT po.id) FILTER (WHERE po.status = 'shipped' AND DATE(po.updated_at) = CURRENT_DATE) AS today_dispatch,
+        COUNT(DISTINCT po.id) FILTER (
+          WHERE po.status IN ('pending','confirmed')
+          AND po.created_at < NOW() - INTERVAL '3 days'
+        ) AS overdue_orders,
+        COUNT(DISTINCT po.id) FILTER (
+          WHERE po.status = 'delivered'
+          AND po.updated_at >= DATE_TRUNC('week', CURRENT_DATE)
+        ) AS completed_this_week,
+        COALESCE(
+          ROUND(AVG(EXTRACT(EPOCH FROM (po.updated_at - po.created_at)) / 86400)
+            FILTER (WHERE po.status = 'delivered' AND po.updated_at >= NOW() - INTERVAL '30 days')
+          , 1),
+        0) AS avg_fulfillment_days
+      FROM orders.purchase_orders po
+      JOIN orders.purchase_order_items poi ON poi.order_id = po.id
+      JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
+      WHERE sp.supplier_id = $1`,
+      [supplierId]
+    );
+
+    const r = result.rows[0];
+
+    res.json({
+      data: {
+        pendingOrders: parseInt(r.pending_orders) || 0,
+        todayDispatch: parseInt(r.today_dispatch) || 0,
+        overdueOrders: parseInt(r.overdue_orders) || 0,
+        completedThisWeek: parseInt(r.completed_this_week) || 0,
+        avgFulfillmentDays: parseFloat(r.avg_fulfillment_days) || 0,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export const supplierDashboardRouter = router;

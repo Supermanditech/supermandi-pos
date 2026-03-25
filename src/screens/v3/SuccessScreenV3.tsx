@@ -17,6 +17,7 @@ import { isOnline } from "../../services/networkStatus";
 import { shareBillWhatsApp } from "../../services/billing/billShare";
 import { logger } from "../../services/logger";
 import { logScreenView, logFunnelEvent } from "../../services/cloudEventLogger";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // STG-557: Success screen v3 — profit display, streak, confetti, WhatsApp bill, new sale
 // GCP-STG-0042: In-memory daily sales streak counter
@@ -48,6 +49,22 @@ export default function SuccessScreenV3({ paymentMethod, totalMinor, itemCount, 
 
   // GCP-STG-0651: Log screen view + funnel completion on mount
   useEffect(() => { logScreenView("SuccessScreen"); logFunnelEvent("checkout", "payment_completed"); }, []);
+
+  // GCP-STG-0729: Cache invoice metadata to AsyncStorage for offline retrieval
+  useEffect(() => {
+    if (!saleId) return;
+    const cacheKey = `invoice:${saleId}`;
+    const metadata = {
+      saleId,
+      billRef,
+      paymentMethod,
+      totalMinor,
+      itemCount,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 day TTL
+    };
+    AsyncStorage.setItem(cacheKey, JSON.stringify(metadata)).catch(() => {});
+  }, [saleId, billRef, paymentMethod, totalMinor, itemCount]);
 
   // GCP-STG-0042: Daily sales streak counter (in-memory per session)
   const [dailyCount, setDailyCount] = useState(0);

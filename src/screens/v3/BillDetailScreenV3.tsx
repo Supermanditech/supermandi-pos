@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { View, Pressable, ScrollView, StyleSheet, Text, Linking, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "../../theme";
@@ -7,6 +7,7 @@ import { showToast } from "../../utils/showToast";
 import { printerService } from "../../services/printerService";
 import { apiClient } from "../../services/api/apiClient";
 import { isOnline } from "../../services/networkStatus";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // V3-067: Bill detail sub-screen — view bill items, reprint, WhatsApp share
 
@@ -29,6 +30,24 @@ export default function BillDetailScreenV3({ saleId, billRef, date, method, tota
   const total = Math.round(totalMinor / 100);
   const [printing, setPrinting] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  // GCP-STG-0729: Check AsyncStorage cache for offline invoice metadata
+  const [cachedMeta, setCachedMeta] = useState<{ createdAt?: string; paymentMethod?: string } | null>(null);
+  useEffect(() => {
+    if (!saleId) return;
+    AsyncStorage.getItem(`invoice:${saleId}`).then((raw) => {
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        // Check TTL
+        if (parsed.expiresAt && new Date(parsed.expiresAt).getTime() < Date.now()) {
+          AsyncStorage.removeItem(`invoice:${saleId}`).catch(() => {});
+          return;
+        }
+        setCachedMeta(parsed);
+      } catch { /* ignore parse errors */ }
+    }).catch(() => {});
+  }, [saleId]);
 
   // GCP-STG-0361: Download invoice PDF
   const handleDownloadInvoice = async () => {

@@ -798,6 +798,19 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   return apiFetch<DashboardStats>('/api/v1/supplier/dashboard/stats');
 }
 
+// GCP-STG-0741: Fulfillment dashboard
+export interface FulfillmentStats {
+  pendingOrders: number;
+  todayDispatch: number;
+  overdueOrders: number;
+  completedThisWeek: number;
+  avgFulfillmentDays: number;
+}
+
+export async function getFulfillmentStats(): Promise<FulfillmentStats> {
+  return apiFetch<FulfillmentStats>('/api/v1/supplier/dashboard/fulfillment');
+}
+
 // ============================================================================
 // CSV UPLOAD APIs (SM-007)
 // ============================================================================

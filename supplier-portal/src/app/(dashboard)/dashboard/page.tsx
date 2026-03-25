@@ -2,12 +2,12 @@
 
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { getDashboardStats, getOrders, getProducts } from '@/lib/api';
+import { getDashboardStats, getFulfillmentStats, getOrders, getProducts } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatCurrency } from '@/lib/formatters';
 // T-113: Breadcrumb navigation
 import Breadcrumb from '@/components/Breadcrumb';
-import { Package, Clock, ShoppingCart, DollarSign, AlertTriangle, FileText, Plus } from 'lucide-react';
+import { Package, Clock, ShoppingCart, DollarSign, AlertTriangle, FileText, Plus, Truck, Timer, CheckCircle } from 'lucide-react';
 
 function StatCard({
   title,
@@ -59,6 +59,12 @@ export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: getDashboardStats,
+  });
+
+  // GCP-STG-0741: Fulfillment KPI data
+  const { data: fulfillment, isLoading: fulfillmentLoading } = useQuery({
+    queryKey: ['fulfillment-stats'],
+    queryFn: getFulfillmentStats,
   });
 
   // GL-WF-063: Use paginated API calls
@@ -163,6 +169,37 @@ export default function DashboardPage() {
           value={statsLoading ? '-' : (displayStats.totalRevenue != null ? formatCurrency(displayStats.totalRevenue) : '—')}
           icon={<DollarSign size={24} className="text-purple-600" />}
           color="bg-purple-100"
+        />
+      </div>
+
+      {/* GCP-STG-0741: Fulfillment KPIs */}
+      <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">Order Fulfillment</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard
+          title="Pending Orders"
+          value={fulfillmentLoading ? '-' : (fulfillment?.pendingOrders ?? '—')}
+          icon={<Clock size={24} className="text-amber-600" />}
+          color="bg-amber-100"
+          href="/orders"
+        />
+        <StatCard
+          title="Dispatched Today"
+          value={fulfillmentLoading ? '-' : (fulfillment?.todayDispatch ?? '—')}
+          icon={<Truck size={24} className="text-blue-600" />}
+          color="bg-blue-100"
+        />
+        <StatCard
+          title="Overdue (>3 days)"
+          value={fulfillmentLoading ? '-' : (fulfillment?.overdueOrders ?? '—')}
+          icon={<Timer size={24} className="text-red-600" />}
+          color="bg-red-100"
+          href="/orders"
+        />
+        <StatCard
+          title="Completed This Week"
+          value={fulfillmentLoading ? '-' : (fulfillment?.completedThisWeek ?? '—')}
+          icon={<CheckCircle size={24} className="text-green-600" />}
+          color="bg-green-100"
         />
       </div>
 
