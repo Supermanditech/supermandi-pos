@@ -88,6 +88,7 @@ import { demoRouter } from "./demo";
 import { microserviceHealthRouter } from "./microserviceHealth";
 import { webhooksRouter } from "./webhooks";  // SM-018: Razorpay payout webhooks
 import { supplierRouter } from "./supplier";  // SM-005, SM-006, SM-007: Supplier portal APIs
+import { posOrderTrackingRouter } from "./pos/orderTracking";  // GCP-STG-0744: Order tracking
 import { posSyncEventsRouter } from "./pos/syncEvents";  // T-173: SSE real-time sync
 import { voiceRouter } from "./pos/voice";  // GO-LIVE: Voice order with OpenAI
 import { uploadsRouter } from "./uploads/images";  // T-160: Image upload endpoint
@@ -213,6 +214,7 @@ v1Router.use("/pos", posSalesVelocityRouter);
 v1Router.use("/pos", posDemandSignalsRouter);  // V3-HARDEN-185: POS demand signals
 v1Router.use("/pos", posBuyAgainRouter);  // V3-FIX-186: Buy-again / repeat-last-order
 v1Router.use("/pos", posLifecycleEventsRouter);  // V3-HARDEN-188: Lifecycle events
+v1Router.use("/pos", posOrderTrackingRouter);  // GCP-STG-0744: Order tracking
 v1Router.use("/pos/translations", posTranslationsRouter);
 v1Router.use("/", consentRouter);  // STG-485: DPDP consent API (available to POS + portals)
 v1Router.use("/reorder", reorderRouter);

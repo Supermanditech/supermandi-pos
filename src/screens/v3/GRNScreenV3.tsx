@@ -238,7 +238,7 @@ export default function GRNScreenV3({ onClose }: GRNScreenV3Props) {
               <Text style={[styles.qtyVal, !item.checked && styles.qtyValPending]}>{item.received}</Text>
               <Pressable style={styles.qtyBtn} onPress={() => changeReceived(idx, 1)}><Text style={styles.qtyBtnText}>+</Text></Pressable>
             </View>
-            <Text style={styles.editBtn}>Edit ▸</Text>
+            {/* GCP-STG-0747: Removed dead "Edit" text — qty editing available via +/- buttons above */}
             {/* GCP-STG-0391: Damaged/missing input — shown when item is checked */}
             {item.checked && item.received > 0 ? (
               <View style={styles.damagedRow}>
@@ -426,7 +426,7 @@ function createStyles(colors: ColorPalette) {
     qtyBtnText: { fontSize: 16, fontWeight: "700", color: colors.primary },
     qtyVal: { fontSize: 14, fontWeight: "800", minWidth: 20, textAlign: "center" },
     qtyValPending: { color: colors.error },
-    editBtn: { fontSize: 11, color: colors.primary, fontWeight: "700", padding: 6 },
+    // GCP-STG-0747: editBtn style removed — dead "Edit" text was replaced by +/- buttons
     // GCP-STG-0391: Damaged/missing input styles
     damagedRow: { width: "100%", flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6, paddingLeft: 36, paddingTop: 4 },
     damagedLabel: { fontSize: 11, color: colors.textTertiary, fontWeight: "600" },

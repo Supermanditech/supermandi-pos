@@ -19,6 +19,8 @@ import { supplierNotificationsRouter } from "./notifications";  // Phase 8: Supp
 import { supplierBnplRouter } from "./bnplVisibility";
 // GCP-STG-0378: Supplier SSE events (service existed but no route)
 import { supplierSseRouter } from "./sseEvents";
+// GCP-STG-0744: Supplier order tracking status updates
+import { supplierOrderTrackingRouter } from "./orderTracking";
 
 export const supplierRouter = Router();
 
@@ -41,3 +43,5 @@ supplierRouter.use("/", supplierNotificationsRouter);  // Phase 8: Notifications
 supplierRouter.use("/bnpl", supplierBnplRouter);
 // GCP-STG-0378: Supplier SSE real-time events
 supplierRouter.use("/", supplierSseRouter);
+// GCP-STG-0744: Order status update tracking
+supplierRouter.use("/", supplierOrderTrackingRouter);
