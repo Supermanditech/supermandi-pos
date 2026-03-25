@@ -1020,6 +1020,110 @@ adminAuthRouter.post("/auth/totp/verify", otpRateLimiter, async (req: Request, r
  * Trust is cookie-based; this endpoint logs the revocation event
  * so the frontend can clear cookies and force re-verification.
  */
+// =========================================================================
+// GCP-STG-0755: Security status + password change endpoints
+// =========================================================================
+
+/**
+ * GET /api/v1/admin/auth/security-status
+ * GCP-STG-0755: Returns password + TOTP configuration status for current admin.
+ */
+adminAuthRouter.get("/auth/security-status", async (req: Request, res: Response) => {
+  const admin = extractAdminToken(req);
+  if (!admin) {
+    return res.status(401).json({
+      error: { code: "NO_TOKEN", message: "Authentication required" }
+    });
+  }
+
+  try {
+    const record = await getTotpRecord(admin.email);
+
+    return res.json({
+      passwordConfigured: !!(record?.password_hash),
+      totpEnabled: !!(record?.totp_enabled),
+      email: admin.email,
+    });
+  } catch (err) {
+    log.error(`[GCP-STG-0755] security-status error for ${admin.email}:`, err);
+    return res.status(500).json({ error: "Failed to fetch security status" });
+  }
+});
+
+/**
+ * POST /api/v1/admin/auth/change-password
+ * GCP-STG-0755: Change admin password (requires current password verification).
+ */
+adminAuthRouter.post("/auth/change-password", async (req: Request, res: Response) => {
+  const admin = extractAdminToken(req);
+  if (!admin) {
+    return res.status(401).json({
+      error: { code: "NO_TOKEN", message: "Authentication required" }
+    });
+  }
+
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({
+      error: { code: "MISSING_FIELDS", message: "Current and new password required" }
+    });
+  }
+
+  // Validate new password: min 8 chars, 1 number
+  if (newPassword.length < 8) {
+    return res.status(400).json({
+      error: { code: "WEAK_PASSWORD", message: "Password must be at least 8 characters" }
+    });
+  }
+  if (!/\d/.test(newPassword)) {
+    return res.status(400).json({
+      error: { code: "WEAK_PASSWORD", message: "Password must contain at least 1 number" }
+    });
+  }
+
+  try {
+    const record = await getTotpRecord(admin.email);
+    if (!record?.password_hash) {
+      return res.status(400).json({
+        error: { code: "NO_PASSWORD", message: "No password set. Use set-password first." }
+      });
+    }
+
+    const valid = await bcrypt.compare(currentPassword, record.password_hash);
+    if (!valid) {
+      return res.status(401).json({
+        error: { code: "WRONG_PASSWORD", message: "Current password is incorrect" }
+      });
+    }
+
+    const hash = await bcrypt.hash(newPassword, 12);
+    const pool = getPool();
+    if (!pool) {
+      return res.status(503).json({ error: "Service unavailable" });
+    }
+    await pool.query(
+      'UPDATE admin_totp SET password_hash = $1, updated_at = NOW() WHERE email = $2',
+      [hash, admin.email]
+    );
+
+    // Log auth event
+    logAuthEvent({
+      actorType: 'admin',
+      actorId: admin.email,
+      eventType: 'password_changed',
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { action: 'change_password' },
+    });
+
+    log.info(`[GCP-STG-0755] Password changed for ${admin.email}`);
+    return res.json({ success: true });
+  } catch (err) {
+    log.error(`[GCP-STG-0755] change-password error for ${admin.email}:`, err);
+    return res.status(500).json({ error: "Failed to change password" });
+  }
+});
+
 adminAuthRouter.post("/auth/totp-revoke-devices", async (req: Request, res: Response) => {
   const admin = extractAdminToken(req);
   if (!admin) {

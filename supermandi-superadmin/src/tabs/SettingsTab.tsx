@@ -11,6 +11,7 @@ import { fetchPriceBounds, updatePriceBounds, type PriceBounds } from "../api/pr
 import type { StoreRecord } from "../api/stores";
 import { formatDateTime } from "../lib/formatters";
 import { TotpSetupCard } from "../components/TotpSetupCard";
+import { SecuritySettingsCard } from "../components/SecuritySettingsCard";
 
 interface SettingsTabProps {
   systemSettings: SystemSettings | null;
@@ -380,10 +381,13 @@ export function SettingsTab({
           )}
         </div>
 
-        {/* GCP-STG-0539: TOTP 2FA Setup */}
+        {/* GCP-STG-0755 + GCP-STG-0539: Account Security */}
         <div className="sa-mt-20">
           <h3 className="sa-text-lg sa-fw-700 sa-mb-12">Account Security</h3>
-          <TotpSetupCard />
+          <SecuritySettingsCard />
+          <div className="sa-mt-12">
+            <TotpSetupCard />
+          </div>
         </div>
       </div>
       {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />}
