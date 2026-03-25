@@ -37,7 +37,7 @@ describe("GCP-STG-0361: POS Invoice PDF download route", () => {
     const marker = 'GCP-STG-0361: GET /sales/:saleId/invoice/pdf';
     const routeStart = salesCode.indexOf(marker);
     expect(routeStart).toBeGreaterThan(0);
-    return salesCode.substring(routeStart, routeStart + 2500);
+    return salesCode.substring(routeStart, routeStart + 2700);
   }
 
   it("enforces store isolation — queries sales with store_id", () => {
