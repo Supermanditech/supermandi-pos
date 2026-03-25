@@ -41,7 +41,10 @@ export type PosEventType =
   // GCP-STG-0536: Label printing
   | "PRINT_LABEL"
   // GCP-STG-0567: Voice command analytics
-  | "VOICE_COMMAND";
+  | "VOICE_COMMAND"
+  // GCP-STG-0651: Analytics SDK — screen views & funnels
+  | "SCREEN_VIEW"
+  | "FUNNEL_STEP";
 
 type QueuedPosEvent = {
   id: string; // local event id (not stored in DB, included inside payload for reconciliation)
@@ -280,5 +283,19 @@ export async function logPaymentEvent(
   }
 
   await logPosEvent(eventType, { transactionId, ...rest });
+}
+
+/**
+ * GCP-STG-0651: Log a screen view event for analytics funnels.
+ */
+export function logScreenView(screenName: string): void {
+  void logPosEvent("SCREEN_VIEW", { screen: screenName, timestamp: Date.now() });
+}
+
+/**
+ * GCP-STG-0651: Log a funnel step event for conversion tracking.
+ */
+export function logFunnelEvent(funnel: string, step: string): void {
+  void logPosEvent("FUNNEL_STEP", { funnel, step, timestamp: Date.now() });
 }
 

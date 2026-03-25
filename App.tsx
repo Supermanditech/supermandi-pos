@@ -13,6 +13,9 @@ import { installGlobalErrorHandler, logAppStartup } from "./src/services/logger"
 installGlobalErrorHandler();
 logAppStartup();
 
+// GCP-STG-0651: Analytics SDK — screen views
+import { logScreenView } from "./src/services/cloudEventLogger";
+
 // I18N: Internationalization
 import i18n, { initI18n } from "./src/i18n";
 
@@ -139,7 +142,13 @@ export default function App() {
         />
         <HidKeyboardCapture />
         <ErrorBoundary>
-        <NavigationContainer linking={linking}>
+        <NavigationContainer
+          linking={linking}
+          onStateChange={(state) => {
+            const currentRoute = state?.routes[state.index]?.name;
+            if (currentRoute) logScreenView(currentRoute);
+          }}
+        >
         <Stack.Navigator
           initialRouteName="Splash"
           screenOptions={{
