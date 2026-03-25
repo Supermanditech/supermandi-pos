@@ -54,6 +54,11 @@ type SettingsState = {
   // V3-FIX-124: Canonical UPI setter — must use this, never mutate .upiVpa directly
   setUpiVpa: (vpa: string | null) => void;
   setLastSyncAt: (ts: string | null) => void;
+  // GCP-STG-0738: Receipt footer customization (MANAGER only)
+  receiptFooterLine1: string;
+  receiptFooterLine2: string;
+  setReceiptFooterLine1: (line: string) => void;
+  setReceiptFooterLine2: (line: string) => void;
   // LIVE.POS.THEME: Theme actions
   toggleTheme: () => void;
   setThemeMode: (mode: ThemeMode) => void;
@@ -110,6 +115,11 @@ export const useSettingsStore = create<SettingsState>()(
       // V3-FIX-124: Canonical UPI setter — persists via zustand middleware
       setUpiVpa: (vpa) => set({ upiVpa: vpa }),
       setLastSyncAt: (ts) => set({ lastSyncAt: ts }),
+      // GCP-STG-0738: Receipt footer customization
+      receiptFooterLine1: '',
+      receiptFooterLine2: '',
+      setReceiptFooterLine1: (line) => set({ receiptFooterLine1: line }),
+      setReceiptFooterLine2: (line) => set({ receiptFooterLine2: line }),
       // LIVE.POS.THEME: Theme toggle actions
       toggleTheme: () => set((state) => ({ themeMode: state.themeMode === 'dark' ? 'light' : 'dark' })),
       setThemeMode: (mode) => set({ themeMode: mode }),

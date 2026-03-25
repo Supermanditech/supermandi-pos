@@ -245,3 +245,18 @@ export async function fetchAnalyticsDues(params: { storeId?: string; from?: stri
   const query = qs.toString();
   return getJson<DuesResponse>(`/api/v1/admin/analytics/dues${query ? `?${query}` : ""}`);
 }
+
+// GCP-STG-0743: Revenue dashboard KPIs
+export interface DashboardKpis {
+  todayGmv: number;
+  monthGmv: number;
+  commissionEarned: number;
+  activeStores: number;
+  totalStores: number;
+  activeSuppliers: number;
+  totalSuppliers: number;
+}
+
+export async function fetchDashboardKpis(): Promise<{ data: DashboardKpis }> {
+  return getJson<{ data: DashboardKpis }>('/api/v1/admin/dashboard/kpis');
+}

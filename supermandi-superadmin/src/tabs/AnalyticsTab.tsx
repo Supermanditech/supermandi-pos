@@ -1,5 +1,6 @@
 // SA-001: Analytics tab extracted from App.tsx
-import { useEffect } from "react";
+// GCP-STG-0743: Revenue dashboard KPIs
+import { useEffect, useState, useCallback } from "react";
 import type { AnalyticsTabKey } from "../types";
 import type {
   OverviewResponse,
@@ -8,8 +9,10 @@ import type {
   PurchasesResponse,
   ConsumerSalesResponse,
   ActivityResponse,
-  DuesResponse
+  DuesResponse,
+  DashboardKpis,
 } from "../api/analytics";
+import { fetchDashboardKpis } from "../api/analytics";
 import { isDeviceOnline } from "../ui/status";
 import { formatDateTime, formatDate, formatCurrency } from "../lib/formatters";
 
@@ -65,7 +68,45 @@ export function AnalyticsTab({
     }
   }, [productsGroupBy]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // GCP-STG-0743: Revenue dashboard KPIs
+  const [kpis, setKpis] = useState<DashboardKpis | null>(null);
+  const [kpisLoading, setKpisLoading] = useState(false);
+  const loadKpis = useCallback(async () => {
+    setKpisLoading(true);
+    try {
+      const resp = await fetchDashboardKpis();
+      setKpis(resp.data);
+    } catch { /* ignore */ }
+    setKpisLoading(false);
+  }, []);
+  useEffect(() => { void loadKpis(); }, [loadKpis]);
+
   return (
+    <>
+    {/* GCP-STG-0743: Revenue KPI Banner */}
+    <section className="card" style={{ marginBottom: 16 }}>
+      <div className="cardHeader">
+        <div className="cardTitle">Revenue Dashboard</div>
+        <button onClick={() => void loadKpis()} disabled={kpisLoading} style={{ fontSize: 13 }}>
+          {kpisLoading ? "Loading..." : "\u21BB Refresh"}
+        </button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, padding: '8px 0' }}>
+        {[
+          { label: "Today GMV", value: kpis ? formatCurrency(kpis.todayGmv) : "..." },
+          { label: "Month GMV", value: kpis ? formatCurrency(kpis.monthGmv) : "..." },
+          { label: "Commission", value: kpis ? formatCurrency(kpis.commissionEarned) : "..." },
+          { label: "Active Stores", value: kpis ? `${kpis.activeStores} / ${kpis.totalStores}` : "..." },
+          { label: "Active Suppliers", value: kpis ? `${kpis.activeSuppliers} / ${kpis.totalSuppliers}` : "..." },
+        ].map(item => (
+          <div key={item.label} style={{ textAlign: 'center', padding: 8, background: 'var(--bg-secondary, #f8fafc)', borderRadius: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginBottom: 4 }}>{item.label}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary, #1e293b)' }}>{item.value}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+
     <section className="card">
       <div className="cardHeader">
         <div>
@@ -608,5 +649,6 @@ export function AnalyticsTab({
         )}
       </div>
     </section>
+    </>
   );
 }

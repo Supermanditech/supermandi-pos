@@ -449,3 +449,68 @@ adminAnalyticsRouter.get("/analytics/slow-movers", async (req, res) => {
     res.status(500).json({ error: { code: "ANALYTICS_FAILED", message: "Failed to fetch slow-mover report" } });
   }
 });
+
+/**
+ * GET /admin/dashboard/kpis
+ * GCP-STG-0743: SuperAdmin revenue dashboard KPIs
+ * Returns: todayGmv, monthGmv, commissionEarned, activeStores, activeSuppliers, totalStores, totalSuppliers
+ */
+adminAnalyticsRouter.get("/dashboard/kpis", async (_req, res) => {
+  try {
+    const pool = getPool();
+    if (!pool) { res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } }); return; }
+
+    // GMV metrics
+    const gmvResult = await pool.query(
+      `SELECT
+        COALESCE(SUM(total_amount) FILTER (WHERE DATE(created_at) = CURRENT_DATE), 0)::bigint AS today_gmv,
+        COALESCE(SUM(total_amount) FILTER (WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)), 0)::bigint AS month_gmv
+      FROM orders.sales
+      WHERE status IN ('PAID','COMPLETED')`
+    );
+
+    // Platform commission (estimated at 3% of delivered PO value)
+    const commissionResult = await pool.query(
+      `SELECT COALESCE(SUM(poi.line_total) * 3 / 100, 0)::bigint AS commission
+       FROM orders.purchase_orders po
+       JOIN orders.purchase_order_items poi ON poi.order_id = po.id
+       WHERE po.status = 'delivered'
+         AND po.updated_at >= DATE_TRUNC('month', CURRENT_DATE)`
+    );
+
+    // Store and supplier counts
+    const countsResult = await pool.query(
+      `SELECT
+        COUNT(*) FILTER (WHERE status = 'active')::int AS active_stores,
+        COUNT(*)::int AS total_stores
+      FROM platform.stores`
+    );
+
+    const supplierResult = await pool.query(
+      `SELECT
+        COUNT(*) FILTER (WHERE verification_status = 'verified')::int AS active_suppliers,
+        COUNT(*)::int AS total_suppliers
+      FROM supplier.applications`
+    );
+
+    const g = gmvResult.rows[0];
+    const c = countsResult.rows[0];
+    const s = supplierResult.rows[0];
+
+    res.json({
+      data: {
+        todayGmv: parseInt(g.today_gmv) || 0,
+        monthGmv: parseInt(g.month_gmv) || 0,
+        commissionEarned: parseInt(commissionResult.rows[0]?.commission) || 0,
+        activeStores: parseInt(c.active_stores) || 0,
+        totalStores: parseInt(c.total_stores) || 0,
+        activeSuppliers: parseInt(s.active_suppliers) || 0,
+        totalSuppliers: parseInt(s.total_suppliers) || 0,
+      },
+    });
+  } catch (_e: unknown) {
+    const e = asError(_e);
+    log.error("[GCP-STG-0743] Dashboard KPIs failed:", e?.message);
+    res.status(500).json({ error: { code: "ANALYTICS_FAILED", message: "Failed to fetch dashboard KPIs" } });
+  }
+});

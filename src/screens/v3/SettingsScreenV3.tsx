@@ -36,6 +36,11 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
   const upiVpa = useSettingsStore((s) => s.upiVpa);
   const lastSyncAt = useSettingsStore((s) => s.lastSyncAt);
   const outboxCount = useSyncStore((s) => s.outboxCount); // GCP-STG-0067
+  // GCP-STG-0738: Receipt footer customization (MANAGER only)
+  const receiptFooterLine1 = useSettingsStore((s) => s.receiptFooterLine1);
+  const receiptFooterLine2 = useSettingsStore((s) => s.receiptFooterLine2);
+  const setReceiptFooterLine1 = useSettingsStore((s) => s.setReceiptFooterLine1);
+  const setReceiptFooterLine2 = useSettingsStore((s) => s.setReceiptFooterLine2);
   // GCP-STG-0068: Express checkout persisted in settingsStore
   const expressCheckout = useSettingsStore((s) => s.expressCheckout);
   const setExpressCheckout = useSettingsStore((s) => s.setExpressCheckout);
@@ -164,6 +169,49 @@ export default function SettingsScreenV3({ onClose, onSwitchStaff, onLogout }: P
             </View>
           </View>
         ))}
+        {/* GCP-STG-0738: Receipt footer customization (MANAGER only) */}
+        {(() => {
+          const session = useStaffSessionStore.getState().session;
+          if (session?.role !== "MANAGER") return null;
+          return (
+            <View>
+              <Text style={styles.sectionTitle}>RECEIPT FOOTER</Text>
+              <View style={styles.sectionCard}>
+                <View style={styles.row}>
+                  <Text style={styles.rowIcon}>🧾</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textTertiary, marginBottom: 4 }}>Footer Line 1</Text>
+                    <TextInput
+                      style={{ padding: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border, fontSize: 14, fontWeight: "500" }}
+                      value={receiptFooterLine1}
+                      onChangeText={setReceiptFooterLine1}
+                      placeholder="e.g., Thank you for shopping!"
+                      placeholderTextColor={colors.textTertiary}
+                      maxLength={60}
+                      testID="receipt-footer-line1"
+                    />
+                  </View>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.rowIcon}>🧾</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textTertiary, marginBottom: 4 }}>Footer Line 2</Text>
+                    <TextInput
+                      style={{ padding: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border, fontSize: 14, fontWeight: "500" }}
+                      value={receiptFooterLine2}
+                      onChangeText={setReceiptFooterLine2}
+                      placeholder="e.g., Visit again!"
+                      placeholderTextColor={colors.textTertiary}
+                      maxLength={60}
+                      testID="receipt-footer-line2"
+                    />
+                  </View>
+                </View>
+              </View>
+            </View>
+          );
+        })()}
+
         {/* V3-POS-024: Staff Management (owner/manager only) */}
         {(() => {
           const session = useStaffSessionStore.getState().session;
