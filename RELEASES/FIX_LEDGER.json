@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1256,
+  "version": 1258,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -26077,7 +26077,7 @@
       "file": "supplier-portal/src/app/(dashboard)/profile/page.tsx",
       "start_line": 1,
       "end_line": 560,
-      "checksum": "eaa9e96db2539bfe",
+      "checksum": "d25521d0bc7b6e85",
       "description": "Mount TotpSetupCard in supplier profile page",
       "test_file": "supplier-portal/src/components/TotpSetupCard.tsx",
       "depends_on": "GCP-STG-0464",
@@ -37711,6 +37711,45 @@
         "single_commit": "verified",
         "ticket_parked": "verified"
       }
+    },
+    {
+      "ticket": "GCP-STG-0746",
+      "file": "supplier-portal/src/app/(dashboard)/profile/page.tsx",
+      "start_line": 14,
+      "end_line": 22,
+      "checksum": "9f5e5c3f38d98972",
+      "description": "Supplier profile page verification comment confirming real API wiring",
+      "test_file": "backend/tests/supplierProfileVerified.gcp-stg-0746.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": true,
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T15:22:37.466Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 270,

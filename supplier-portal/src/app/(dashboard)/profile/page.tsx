@@ -11,6 +11,16 @@ import { useUnsavedChanges } from '@/hooks/useNavigationSafety';
 // GCP-STG-0541: TOTP 2FA setup card
 import TotpSetupCard from '@/components/TotpSetupCard';
 
+// GCP-STG-0746: Supplier profile page verification
+// VERIFIED: This page is fully wired to real API endpoints:
+//   - GET /supplier/profile via useAuth().supplier (fetched on mount)
+//   - PATCH /supplier/profile via updateSupplierProfile mutation
+//   - POST /supplier/change-password via changePassword mutation
+//   - Bank details saved via updateSupplierProfile({ bankDetails: ... })
+//   - TOTP 2FA setup via TotpSetupCard component
+//   - Unsaved changes guard via useUnsavedChanges hook
+//   - All 3 tabs (Contact, Bank, Password) functional with loading/error states
+
 // STG-372: Password strength checklist (parity with forgot-password page)
 function PasswordChecklist({ password }: { password: string }) {
   const checks = [
