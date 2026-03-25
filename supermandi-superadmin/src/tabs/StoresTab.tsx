@@ -1,7 +1,8 @@
 // SA-001: Stores tab extracted from App.tsx
 import React from "react";
 import type { StoreRecord, StoreSettings, InvoiceSettings } from "../api/stores";
-import { fetchInvoiceSettings, updateInvoiceSettings } from "../api/stores";
+import { fetchInvoiceSettings, updateInvoiceSettings, fetchStoreStock } from "../api/stores";
+import type { StoreStockItem } from "../api/stores";
 import type { GlobalFeatureFlag, StoreFeatureFlag } from "../api/featureFlags";
 import type { EnrollmentRecord } from "../api/deviceEnrollments";
 import { formatDateTime } from "../lib/formatters";
@@ -696,6 +697,8 @@ export function StoresTab({
                               <span className="sa-text-sm sa-text-muted">No enrollment codes yet</span>
                             )}
                           </div>
+                          {/* GCP-STG-0384: Per-Store Stock Level Browser */}
+                          <StoreStockSection storeId={s.id} />
                           {/* GCP-STG-0358: Invoice Template Settings */}
                           <InvoiceSettingsSection storeId={s.id} />
                           {/* SA-P1-014: Store Settings (read-only audit view) */}
@@ -1210,6 +1213,112 @@ function InvoiceSettingsSection({ storeId }: { storeId: string }) {
             </button>
             {isDirty && <span className="muted" style={{ fontSize: 12 }}>Unsaved changes</span>}
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// GCP-STG-0384: Per-Store Stock Level Browser — self-contained section per store
+// =============================================================================
+
+const STOCK_PAGE_SIZE = 50;
+
+function StoreStockSection({ storeId }: { storeId: string }) {
+  const [items, setItems] = React.useState<StoreStockItem[]>([]);
+  const [total, setTotal] = React.useState(0);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [loaded, setLoaded] = React.useState(false);
+  const [page, setPage] = React.useState(0);
+
+  async function loadStock(pageNum: number) {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await fetchStoreStock(storeId, STOCK_PAGE_SIZE, pageNum * STOCK_PAGE_SIZE);
+      setItems(data.items);
+      setTotal(data.total);
+      setLoaded(true);
+      setPage(pageNum);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load stock levels");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function getStockStatus(qty: number): { label: string; className: string } {
+    if (qty <= 0) return { label: "Out", className: "sa-badge-error" };
+    if (qty <= 10) return { label: "Low", className: "sa-badge-warn" };
+    return { label: "In Stock", className: "sa-badge-ok" };
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / STOCK_PAGE_SIZE));
+
+  return (
+    <div className="sa-mt-12">
+      <div className="sa-flex sa-gap-8 sa-items-center sa-mb-6">
+        <label className="sa-form-label" style={{ margin: 0 }}>Stock Levels</label>
+        {!loaded && !loading && (
+          <button
+            className="sa-btn-ghost-sm"
+            onClick={() => loadStock(0)}
+            title="Load stock levels for this store"
+            data-testid={`view-stock-${storeId}`}
+          >
+            View Stock
+          </button>
+        )}
+        {loaded && (
+          <button
+            className="sa-btn-ghost-sm"
+            onClick={() => loadStock(page)}
+            disabled={loading}
+            title="Refresh stock levels"
+          >
+            {loading ? "Loading..." : "Refresh"}
+          </button>
+        )}
+      </div>
+      {error && <div className="banner sa-mt-4" role="alert" style={{ fontSize: 13 }}>{error}</div>}
+      {loading && !loaded && <span className="sa-text-sm sa-text-muted">Loading stock...</span>}
+      {loaded && items.length === 0 && (
+        <span className="sa-text-sm sa-text-muted">No stock records found for this store.</span>
+      )}
+      {loaded && items.length > 0 && (
+        <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 6, padding: 8 }}>
+          <table className="table" style={{ fontSize: 13 }}>
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th style={{ width: 90, textAlign: "right" }}>Current Stock</th>
+                <th style={{ width: 80 }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => {
+                const status = getStockStatus(item.currentQty);
+                return (
+                  <tr key={item.productId}>
+                    <td>{item.productName}</td>
+                    <td className="mono" style={{ textAlign: "right" }}>{item.currentQty}</td>
+                    <td><span className={`mono ${status.className}`} style={{ fontSize: 11 }}>{status.label}</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {totalPages > 1 && (
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, padding: "8px 0 4px" }}>
+              <button className="btnSm" disabled={page === 0 || loading} onClick={() => loadStock(page - 1)}>Prev</button>
+              <span className="muted" style={{ fontSize: 12 }}>
+                Page {page + 1} of {totalPages} ({total} items)
+              </span>
+              <button className="btnSm" disabled={page >= totalPages - 1 || loading} onClick={() => loadStock(page + 1)}>Next</button>
+            </div>
+          )}
         </div>
       )}
     </div>

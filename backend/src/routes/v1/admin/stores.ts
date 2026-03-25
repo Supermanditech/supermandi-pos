@@ -1572,6 +1572,48 @@ adminStoresRouter.get("/stores/:storeId/invoice-settings", requirePermission("st
   }
 });
 
+/**
+ * GET /api/v1/admin/stores/:storeId/stock
+ * GCP-STG-0384: Per-store stock level browser for SuperAdmin
+ * Returns stock_balances joined with store_products for display names.
+ * Query params: limit (default 100, max 500), offset (default 0)
+ */
+adminStoresRouter.get("/stores/:storeId/stock", async (req, res) => {
+  try {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+    const { storeId } = req.params;
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit)) || 100, 1), 500);
+    const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM inventory.stock_balances WHERE store_id = $1::uuid`,
+      [storeId]
+    );
+    const total = countResult.rows[0]?.total ?? 0;
+
+    const result = await pool.query(
+      `SELECT
+        sb.product_id AS "productId",
+        COALESCE(sp.display_name, p.name, 'Unknown') AS "productName",
+        sb.current_qty AS "currentQty",
+        sb.updated_at AS "updatedAt"
+      FROM inventory.stock_balances sb
+      LEFT JOIN catalog.store_products sp ON sp.store_id = sb.store_id AND sp.product_id = sb.product_id
+      LEFT JOIN catalog.products p ON p.id = sb.product_id
+      WHERE sb.store_id = $1::uuid
+      ORDER BY sb.updated_at DESC
+      LIMIT $2 OFFSET $3`,
+      [storeId, limit, offset]
+    );
+
+    return res.json({ items: result.rows, total, limit, offset });
+  } catch (err) {
+    log.error("[GCP-STG-0384] Admin stock browser error:", asError(err));
+    return res.status(500).json({ error: "Failed to load stock levels" });
+  }
+});
+
 adminStoresRouter.patch("/stores/:storeId/invoice-settings", requirePermission("stores", "write"), async (req, res) => {
   try {
     const pool = getPool();

@@ -489,3 +489,37 @@ export async function updateInvoiceSettings(
     throw new Error(await parseError(res));
   }
 }
+
+// GCP-STG-0384: Per-store stock level browser
+export type StoreStockItem = {
+  productId: string;
+  productName: string;
+  currentQty: number;
+  updatedAt: string;
+};
+
+export type StoreStockResponse = {
+  items: StoreStockItem[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export async function fetchStoreStock(storeId: string, limit = 100, offset = 0): Promise<StoreStockResponse> {
+  const base = requireApiBase();
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/stock?limit=${limit}&offset=${offset}`,
+    {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        ...getAuthHeaders(),
+      },
+    }
+  );
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+  return res.json();
+}
