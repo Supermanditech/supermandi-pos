@@ -32,15 +32,7 @@ export function requestLoggerMiddleware(
   // GCP-STG-0628: Log on response finish (catches all responses including streams)
   res.on('finish', () => {
     const duration_ms = Date.now() - start;
-    logger.info({
-      method: req.method,
-      path: req.path,
-      status: res.statusCode,
-      duration_ms,
-      ip: req.ip || req.socket?.remoteAddress || 'unknown',
-      user_agent: req.get('user-agent')?.substring(0, 100),
-      correlation_id: req.correlationId || 'unknown',
-    }, 'api_request');
+    logger.info(`[api_request] ${req.method} ${req.path} ${res.statusCode} ${duration_ms}ms ip=${req.ip || req.socket?.remoteAddress || 'unknown'} cid=${req.correlationId || 'unknown'}`);
   });
 
   next();
