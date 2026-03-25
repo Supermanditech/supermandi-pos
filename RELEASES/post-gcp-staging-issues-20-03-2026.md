@@ -18993,4 +18993,33 @@ pos-tests:
 
 ---
 
-<!-- next ticket: GCP-STG-0746 -->
+## GCP-STG-0746 — LOW: Supplier portal profile page — verify implementation vs test comment conflict (LOW)
+
+**Ticket ID**: GCP-STG-0746
+**Severity**: P3 LOW
+**Platforms**: SUPPLIER-WEB
+**Layers**: UI, Wiring, API
+**Source**: Final Screen-Level UI/UX Audit — Audit C (Supplier Portal)
+
+**Problem**: `supplier-portal/src/app/(dashboard)/profile/page.tsx` exists and is routed in the navigation sidebar (`navItems` includes `/profile`). However, a test file comment references "FIX-054: Profile removed — page not yet implemented". This creates ambiguity: either the profile page IS implemented (page.tsx exists with real content) or it's a stub/skeleton that renders but has no real functionality.
+
+**Impact**: Low — if the profile page is a stub, suppliers clicking "Profile" in the sidebar will see an empty or broken page. This is a poor UX but not a blocker since profile settings (business name, GSTIN, address, bank details) are entered during KYC registration and can be viewed in the Settings/KYC page.
+
+**Fix**:
+1. Read `supplier-portal/src/app/(dashboard)/profile/page.tsx` — verify it has real API calls (GET /supplier/profile), loading state, and displays supplier business info
+2. If REAL implementation: Remove stale test comment. Add behavioral test verifying page renders supplier data.
+3. If STUB: Either (a) implement the profile page with real data from `GET /supplier/profile` endpoint — show business name, GSTIN, address, bank details, contact info, KYC status, all read-only with "Edit" button for non-KYC fields, OR (b) remove the nav link so suppliers don't land on a dead page
+4. Verify the backend endpoint `GET /supplier/profile` returns supplier details (or create if missing)
+
+**Files to check**:
+- `supplier-portal/src/app/(dashboard)/profile/page.tsx` — is it real or stub?
+- `supplier-portal/src/app/(dashboard)/layout.tsx` — navItems includes /profile?
+- `backend/src/routes/v1/supplier/` — does GET /supplier/profile exist?
+
+**Test**: Behavioral — render profile page with mocked fetch returning supplier data, verify business name + GSTIN displayed.
+
+**12-Layer Verification**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L5 API ✅
+
+---
+
+<!-- next ticket: GCP-STG-0747 -->
