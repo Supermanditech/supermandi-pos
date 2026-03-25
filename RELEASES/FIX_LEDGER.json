@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1204,
+  "version": 1205,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -36256,6 +36256,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T12:21:45.728Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0652",
+      "file": "scripts/docs/deep-links-setup.sh",
+      "start_line": 1,
+      "end_line": 50,
+      "checksum": "7f4eeb826ebc093e",
+      "description": "Deep links / universal links configuration documentation",
+      "test_file": "scripts/docs/deep-links-setup.sh",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": false,
+        "business_behaviour": false,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": false,
+        "fix_ledger_check": false,
+        "no_agent_conflict": false,
+        "gcp_parity": false,
+        "regression_check": false,
+        "test_guard": false,
+        "single_commit": false,
+        "ticket_parked": false
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T12:57:23.563Z",
       "status": "ACTIVE"
     }
   ],
