@@ -58,6 +58,32 @@ import type { Pool } from "pg";
 
 export const posSalesRouter = Router();
 
+/**
+ * GCP-STG-0737: GET /api/v1/pos/alerts/unread
+ * Returns unread alerts for the store (low stock, expiry, etc.)
+ */
+posSalesRouter.get("/alerts/unread", requireDeviceToken, async (req, res) => {
+  const storeId = getStoreIdFromPosDevice(req, "pos/alerts/unread");
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
+  }
+  try {
+    const result = await pool.query(
+      `SELECT id, alert_type, product_id, title, message, created_at
+       FROM platform.store_alerts
+       WHERE store_id = $1 AND is_read = false
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [storeId]
+    );
+    return res.json({ alerts: result.rows, count: result.rows.length });
+  } catch (error) {
+    log.error("[GCP-STG-0737] Failed to fetch unread alerts:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch alerts" });
+  }
+});
+
 type SaleItemInput = {
   productId?: string;
   storeProductId?: string;  // AUD-VM-042: catalog.store_products.id
@@ -1367,6 +1393,41 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
     // Sale status is PENDING until payment is confirmed.
     // If payment fails, sale can be cancelled via cancelSale endpoint.
 
+    // GCP-STG-0737: Check for low stock alerts after deduction
+    try {
+      for (const item of resolvedItems) {
+        if (!item.globalProductId) continue;
+        const stockRow = await client.query(
+          `SELECT sb.current_qty, sp.low_stock_alert_qty, sp.display_name
+           FROM inventory.stock_balances sb
+           JOIN catalog.store_products sp ON sp.product_id = sb.product_id AND sp.store_id = sb.store_id
+           WHERE sb.store_id = $1 AND sb.product_id = $2
+           LIMIT 1`,
+          [storeId, item.globalProductId]
+        );
+        if (stockRow.rows[0]) {
+          const { current_qty, low_stock_alert_qty, display_name } = stockRow.rows[0];
+          const qty = Number(current_qty) || 0;
+          const threshold = Number(low_stock_alert_qty) || 0;
+          if (threshold > 0 && qty < threshold) {
+            // Insert alert, skip duplicate (unread alert for same product)
+            await client.query(
+              `INSERT INTO platform.store_alerts (store_id, alert_type, product_id, title, message)
+               SELECT $1, 'LOW_STOCK', $2::uuid, $3, $4
+               WHERE NOT EXISTS (
+                 SELECT 1 FROM platform.store_alerts
+                 WHERE store_id = $1 AND product_id = $2::uuid AND alert_type = 'LOW_STOCK' AND is_read = false
+               )`,
+              [storeId, item.globalProductId, `Low stock: ${display_name || item.name || 'Unknown'}`, `Stock is ${qty}, below threshold of ${threshold}`]
+            );
+          }
+        }
+      }
+    } catch (alertErr) {
+      // Non-critical: log but don't fail the sale
+      log.warn("[GCP-STG-0737] Low stock alert check failed:", alertErr);
+    }
+
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
@@ -1891,6 +1952,179 @@ posSalesRouter.post("/sales/:saleId/return", requireDeviceToken, requireActiveSt
   } catch (error) {
     await client.query("ROLLBACK");
     log.error("[sales/return] Error:", error);
+    return res.status(500).json({ error: "failed to process return" });
+  } finally {
+    client.release();
+  }
+});
+
+// =============================================================================
+// GCP-STG-0734: Item-level sale return with 7-day window + refund type
+// Partial returns: specify which items and quantities to return
+// =============================================================================
+const RETURN_WINDOW_DAYS = parseInt(process.env.RETURN_WINDOW_DAYS || '7', 10);
+
+posSalesRouter.post("/sales/:saleId/item-return", requireDeviceToken, requireActiveStore, async (req, res) => {
+  const saleId = typeof req.params.saleId === "string" ? req.params.saleId.trim() : "";
+  if (!saleId) return res.status(400).json({ error: "saleId is required" });
+
+  const { items, refundType } = req.body as {
+    items?: { productId: string; qty: number; reason?: string }[];
+    refundType?: "CASH" | "STORE_CREDIT";
+  };
+
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: "items array is required and must not be empty" });
+  }
+
+  const validRefundType = refundType === "STORE_CREDIT" ? "STORE_CREDIT" : "CASH";
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromPosDevice(req, "pos/sales/item-return");
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+    await client.query("SELECT set_config('app.current_store_id', $1::text, true)", [storeId]);
+
+    // Get sale with lock
+    const saleRes = await client.query(
+      `SELECT id, store_id, status, total_minor, created_at
+       FROM sales WHERE id = $1 AND store_id = $2 FOR UPDATE`,
+      [saleId, storeId]
+    );
+
+    const sale = saleRes.rows[0];
+    if (!sale) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "sale_not_found" });
+    }
+
+    // 7-day return window
+    const saleAge = Date.now() - new Date(sale.created_at).getTime();
+    if (saleAge > RETURN_WINDOW_DAYS * 86400000) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ error: "return_window_expired", message: `Returns are only allowed within ${RETURN_WINDOW_DAYS} days of purchase` });
+    }
+
+    // Only completed sales
+    const allowed = ["PAID_CASH", "PAID_UPI", "DUE", "SPLIT", "completed"];
+    if (!allowed.includes(sale.status)) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ error: "cannot_return", message: `Cannot return sale in ${sale.status} status` });
+    }
+
+    // Get original sale items
+    const origItemsRes = await client.query(
+      `SELECT si.id, si.variant_id, si.quantity, si.stock_quantity, si.price_minor, si.name, v.product_id
+       FROM sale_items si
+       LEFT JOIN variants v ON v.id = si.variant_id
+       WHERE si.sale_id = $1`,
+      [saleId]
+    );
+    const origMap = new Map(origItemsRes.rows.map((r: any) => [String(r.product_id ?? r.variant_id), r]));
+
+    // Validate return items against original sale
+    let totalRefundMinor = 0;
+    const returnItems: { variantId: string; quantity: number; unitSellMinor: number; globalProductId: string | null; name: string | null; reason: string }[] = [];
+
+    for (const item of items) {
+      if (!item.productId || typeof item.qty !== "number" || item.qty <= 0) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "invalid_item", message: "Each item needs productId and qty > 0" });
+      }
+
+      const orig = origMap.get(item.productId);
+      if (!orig) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "item_not_in_sale", message: `Product ${item.productId} was not in this sale` });
+      }
+
+      const origQty = Number(orig.quantity ?? 0);
+      if (item.qty > origQty) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "qty_exceeds_original", message: `Return qty ${item.qty} exceeds original qty ${origQty}` });
+      }
+
+      const unitPrice = Number(orig.price_minor ?? 0);
+      totalRefundMinor += Math.round(unitPrice * item.qty);
+
+      returnItems.push({
+        variantId: String(orig.variant_id),
+        quantity: item.qty,
+        unitSellMinor: unitPrice,
+        globalProductId: orig.product_id ? String(orig.product_id) : null,
+        name: orig.name ?? null,
+        reason: item.reason ?? "Customer return",
+      });
+    }
+
+    // Generate return record
+    const returnId = randomUUID();
+    const returnRef = `RTN-${Date.now().toString(36).toUpperCase()}`;
+
+    // Record in orders.sale_returns
+    try {
+      await client.query(
+        `INSERT INTO orders.sale_returns (id, store_id, sale_id, return_ref, items, refund_type, total_refund_minor, reason)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [returnId, storeId, saleId, returnRef, JSON.stringify(returnItems.map(ri => ({
+          productId: ri.globalProductId,
+          variantId: ri.variantId,
+          qty: ri.quantity,
+          refundMinor: Math.round(ri.unitSellMinor * ri.quantity),
+          reason: ri.reason,
+        }))), validRefundType, totalRefundMinor, returnItems.map(ri => ri.reason).join("; ")]
+      );
+    } catch (e: any) {
+      // Graceful if orders.sale_returns table not yet applied
+      if (e.code !== "42P01") throw e;
+      log.warn("[item-return] orders.sale_returns table not found, skipping record");
+    }
+
+    // Reverse stock via ledger
+    await recordSaleReturnMovements({
+      client,
+      storeId,
+      saleId,
+      returnId,
+      items: returnItems,
+      reason: `Item return: ${returnRef}`,
+    });
+
+    // Invalidate stock cache
+    for (const ri of returnItems) {
+      if (ri.globalProductId) invalidateStockCache(storeId, ri.globalProductId);
+    }
+
+    // If all items returned, mark sale as REFUNDED; otherwise keep original status
+    const totalOrigQty = origItemsRes.rows.reduce((sum: number, r: any) => sum + Number(r.quantity ?? 0), 0);
+    const totalReturnQty = returnItems.reduce((sum, r) => sum + r.quantity, 0);
+    if (totalReturnQty >= totalOrigQty) {
+      await client.query(
+        `UPDATE sales SET status = 'REFUNDED', payment_status = 'refunded', updated_at = NOW()
+         WHERE id = $1 AND store_id = $2`,
+        [saleId, storeId]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    return res.json({
+      saleId,
+      returnId,
+      returnRef,
+      refundType: validRefundType,
+      totalRefundMinor,
+      itemsReturned: returnItems.length,
+      message: "Return processed successfully. Stock has been restored.",
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    log.error("[sales/item-return] Error:", error);
     return res.status(500).json({ error: "failed to process return" });
   } finally {
     client.release();

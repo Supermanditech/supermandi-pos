@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1224,
+  "version": 1227,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -6417,7 +6417,7 @@
       "file": "backend/src/routes/v1/pos/sales.ts",
       "start_line": 816,
       "end_line": 3093,
-      "checksum": "cb4ab3b1a25de020",
+      "checksum": "4990669837e852a2",
       "description": "instanceof Date check for TIMESTAMPTZ in bill detail",
       "test_file": "src/__tests__/screens/date-timezone.stg-515.test.ts",
       "depends_on": null,
@@ -10228,8 +10228,8 @@
     {
       "ticket": "GCP-STG-0077",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 2258,
-      "end_line": 3127,
+      "start_line": 2492,
+      "end_line": 3361,
       "checksum": "ae6d1f357bf1151a",
       "description": "Auto-generate tax invoice after POS sale completion (fire-and-forget after cash/UPI/DUE payment COMMIT)",
       "test_file": "backend/tests/invoiceAutoGen.gcp-stg-0077.unit.test.ts",
@@ -10263,7 +10263,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T11:30:19.204Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T22:32:17.572Z"
+      "line_shifted_at": "2026-03-25T14:39:53.605Z"
     },
     {
       "ticket": "GCP-STG-0049",
@@ -11061,8 +11061,8 @@
     {
       "ticket": "GCP-STG-0118",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 1317,
-      "end_line": 1346,
+      "start_line": 1343,
+      "end_line": 1372,
       "checksum": "646b8fe57fcad039",
       "description": "sale_items INSERT: populate discount_minor from cart item discount, adjust line_total_minor",
       "test_file": "backend/src/routes/v1/pos/sales.ts",
@@ -11096,13 +11096,13 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T15:35:37.267Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T19:43:09.292Z"
+      "line_shifted_at": "2026-03-25T14:39:53.637Z"
     },
     {
       "ticket": "GCP-STG-0099",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 1041,
-      "end_line": 1051,
+      "start_line": 1067,
+      "end_line": 1077,
       "checksum": "726b526ff6483032",
       "description": "Backend guard: reject zero-amount sales with 422 ZERO_AMOUNT_SALE error",
       "test_file": "backend/src/routes/v1/pos/sales.ts",
@@ -11136,7 +11136,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T15:39:49.386Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T19:43:09.301Z"
+      "line_shifted_at": "2026-03-25T14:39:53.651Z"
     },
     {
       "ticket": "GCP-STG-0097",
@@ -16130,7 +16130,7 @@
       "file": "src/screens/v3/SalesHistoryScreenV3.tsx",
       "start_line": 1,
       "end_line": 270,
-      "checksum": "1e03399a0c3a0c47",
+      "checksum": "3709fc7ca8c07407",
       "description": "GCP-STG-0324: Search bar + payment mode filter chips on SalesHistoryScreenV3 â€” client-side filtering by billRef, amount, paymentMode (bill ref + amount + payment mode)",
       "test_file": "src/__tests__/screens/salesHistorySearch.gcp-stg-0324.test.ts",
       "depends_on": null,
@@ -19131,8 +19131,8 @@
     {
       "ticket": "GCP-STG-0361",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 3231,
-      "end_line": 3292,
+      "start_line": 3465,
+      "end_line": 3526,
       "checksum": "fa1b047f3b7141c3",
       "description": "GCP-STG-0361: POS invoice PDF download â€” GET /sales/:saleId/invoice/pdf with store isolation + PDF streaming",
       "test_file": "backend/tests/posInvoicePdf.gcp-stg-0361.unit.test.ts",
@@ -19166,7 +19166,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:01:45.434Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T22:32:17.715Z"
+      "line_shifted_at": "2026-03-25T14:39:53.849Z"
     },
     {
       "ticket": "GCP-STG-0361",
@@ -21418,7 +21418,7 @@
       "file": "src/screens/v3/SalesHistoryScreenV3.tsx",
       "start_line": 6,
       "end_line": 28,
-      "checksum": "21dedc8fc8f34468",
+      "checksum": "35beb5d995e43873",
       "description": "SafeArea insets on SalesHistoryScreenV3: import useSafeAreaInsets, apply paddingTop:insets.top to container",
       "test_file": "src/__tests__/screens/salesHistorySafeArea.gcp-stg-0437.test.ts",
       "depends_on": null,
@@ -28525,8 +28525,8 @@
     {
       "ticket": "GCP-STG-0655",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 993,
-      "end_line": 1013,
+      "start_line": 1019,
+      "end_line": 1039,
       "checksum": "b29f2b67a30d1c81",
       "description": "Server-side amount validation: rejects if frontend totalAmount mismatches server-recalculated total (within 100 paise tolerance). Also fixes undefined totalAmount in confirmPayment handler.",
       "test_file": "backend/tests/paymentAmountValidation.gcp-stg-0655.unit.test.ts",
@@ -28570,13 +28570,14 @@
         "impacted_files": "sales.ts modified, test added, FIX_LEDGER updated",
         "fix_ledger_check": "567 fixes intact, zero drift",
         "no_agent_conflict": "Single agent, no parallel modifications"
-      }
+      },
+      "line_shifted_at": "2026-03-25T14:39:53.934Z"
     },
     {
       "ticket": "GCP-STG-0656",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 1456,
-      "end_line": 1487,
+      "start_line": 1517,
+      "end_line": 1548,
       "checksum": "31ea2264474b3482",
       "description": "Double-payment idempotency: confirm/cash/due endpoints accept idempotencyKey, check for existing payment within 5-minute window, return existing result instead of duplicate.",
       "test_file": "backend/tests/paymentIdempotency.gcp-stg-0656.unit.test.ts",
@@ -28609,7 +28610,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T19:48:47.012Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-25T14:39:53.955Z"
     },
     {
       "ticket": "GCP-STG-0661",
@@ -31323,8 +31325,8 @@
     {
       "ticket": "GCP-STG-0657",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 1900,
-      "end_line": 1975,
+      "start_line": 2134,
+      "end_line": 2209,
       "checksum": "6c63e640dd94dae5",
       "description": "Configurable refund time limit â€” REFUND_MAX_DAYS env var enforced in void handler",
       "test_file": "backend/src/__tests__/pos/sales.void.test.ts",
@@ -31357,7 +31359,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:32:05.275Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-25T14:39:54.050Z"
     },
     {
       "ticket": "GCP-STG-0658",
@@ -31750,8 +31753,8 @@
     {
       "ticket": "GCP-STG-0668",
       "file": "backend/src/routes/v1/pos/sales.ts",
-      "start_line": 3298,
-      "end_line": 3348,
+      "start_line": 3532,
+      "end_line": 3582,
       "checksum": "4a03a47ddb642c54",
       "description": "Shift close cash reconciliation â€” POST endpoint for day-end cash counting",
       "test_file": "backend/tests/shiftClose.stg-0668.unit.test.ts",
@@ -31784,14 +31787,15 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:17:47.575Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-25T14:39:54.130Z"
     },
     {
       "ticket": "GCP-STG-0669",
       "file": "backend/src/routes/v1/pos/sales.ts",
       "start_line": 3350,
       "end_line": 3395,
-      "checksum": "98b7602bf756e546",
+      "checksum": "138dbec19ab86f3c",
       "description": "Z-report daily tax summary â€” GET endpoint for GST compliance daily totals",
       "test_file": "backend/tests/zReport.stg-0669.unit.test.ts",
       "depends_on": null,
@@ -36949,6 +36953,116 @@
         "fix_ledger_check": "verified",
         "no_agent_conflict": "verified"
       }
+    },
+    {
+      "ticket": "GCP-STG-0737",
+      "file": "backend/src/routes/v1/pos/sales.ts",
+      "start_line": 62,
+      "end_line": 87,
+      "checksum": "8e5fb41d9c1317ab",
+      "description": "GET /pos/alerts/unread endpoint + low stock alert insertion after sale stock deduction",
+      "test_file": "backend/tests/stockAlert.gcp-stg-0737.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T14:39:14.110Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0734",
+      "file": "backend/src/routes/v1/pos/sales.ts",
+      "start_line": 1963,
+      "end_line": 2117,
+      "checksum": "a263b3ef4b5b3ce5",
+      "description": "Item-level sale return with 7-day window, refund type (CASH/STORE_CREDIT), partial qty, orders.sale_returns table",
+      "test_file": "backend/tests/saleReturn.gcp-stg-0734.unit.test.ts",
+      "depends_on": null,
+      "migration": "247_gcp_stg_0734_sale_returns.sql",
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T14:40:59.359Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0734",
+      "file": "src/screens/v3/SalesHistoryScreenV3.tsx",
+      "start_line": 127,
+      "end_line": 165,
+      "checksum": "b9d41dfd973b5700",
+      "description": "Return button on sale rows within 7-day window in SalesHistoryScreenV3",
+      "test_file": "backend/tests/saleReturn.gcp-stg-0734.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-25T14:41:13.188Z",
+      "status": "ACTIVE"
     }
   ],
   "machine_state_version": 270,

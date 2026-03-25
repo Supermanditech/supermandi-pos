@@ -8,6 +8,7 @@ import { getScreenPadding, getHeaderSpacing, getNavIconSize } from "../../theme/
 import { shell } from "../../theme/brand";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { isOnline as checkOnline } from "../../services/networkStatus";
+import { apiClient } from "../../services/api/apiClient"; // GCP-STG-0737
 
 // STG-553: Branded header for v3 sell screen — SuperMandi logo + online status + menu
 
@@ -21,9 +22,21 @@ export default function BrandedHeader({ onMenuPress }: BrandedHeaderProps) {
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const storeName = useSettingsStore((s) => s.storeName) ?? "SuperMandi";
   const [isOnline, setIsOnline] = React.useState(true);
+  // GCP-STG-0737: Unread alert count badge
+  const [alertCount, setAlertCount] = React.useState(0);
   React.useEffect(() => {
     checkOnline().then(setIsOnline).catch(() => setIsOnline(false));
     const interval = setInterval(() => { checkOnline().then(setIsOnline).catch(() => setIsOnline(false)); }, 15000);
+    return () => clearInterval(interval);
+  }, []);
+  React.useEffect(() => {
+    const fetchAlerts = () => {
+      apiClient.get<{ count: number }>("/api/v1/pos/alerts/unread")
+        .then((data) => setAlertCount(data?.count ?? 0))
+        .catch(() => setAlertCount(0));
+    };
+    fetchAlerts();
+    const interval = setInterval(fetchAlerts, 60000); // refresh every minute
     return () => clearInterval(interval);
   }, []);
 
@@ -45,6 +58,12 @@ export default function BrandedHeader({ onMenuPress }: BrandedHeaderProps) {
           <View style={[styles.statusDot, isOnline ? styles.dotOnline : styles.dotOffline]} />
           <Text style={styles.statusText}>{isOnline ? "Online" : "Offline"}</Text>
         </View>
+        {/* GCP-STG-0737: Alert badge */}
+        {alertCount > 0 ? (
+          <View style={styles.alertBadge} testID="alert-badge">
+            <Text style={styles.alertBadgeText}>{alertCount > 99 ? "99+" : String(alertCount)}</Text>
+          </View>
+        ) : null}
         {onMenuPress ? (
           <Pressable
             style={styles.menuButton}
@@ -127,6 +146,21 @@ function createStyles(colors: ColorPalette) {
       color: colors.textInverse,
       fontSize: 18,
       fontWeight: "700",
+    },
+    // GCP-STG-0737: Alert badge styles
+    alertBadge: {
+      backgroundColor: colors.error,
+      minWidth: 20,
+      height: 20,
+      borderRadius: 10,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      paddingHorizontal: 4,
+    },
+    alertBadgeText: {
+      color: "#fff",
+      fontSize: 10,
+      fontWeight: "800" as const,
     },
   });
 }

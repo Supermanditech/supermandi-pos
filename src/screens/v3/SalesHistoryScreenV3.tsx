@@ -3,7 +3,7 @@
  * Prototype: bill rows with payment type, amount, item/time metadata
  */
 import React, { useMemo, useState, useEffect, useCallback } from "react";
-import { View, Pressable, FlatList, ActivityIndicator, StyleSheet, Text, TextInput } from "react-native";
+import { View, Pressable, FlatList, ActivityIndicator, StyleSheet, Text, TextInput, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
@@ -124,6 +124,42 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
 
   const handleSearchChange = useCallback((text: string) => setSearchQuery(text), []);
 
+  // GCP-STG-0734: Check if sale is within 7-day return window
+  const isWithinReturnWindow = (createdAt: string) => {
+    if (!createdAt) return false;
+    const age = Date.now() - new Date(createdAt).getTime();
+    return age <= 7 * 86400000;
+  };
+
+  // GCP-STG-0734: Handle return flow
+  const handleReturn = async (sale: SaleRow) => {
+    Alert.alert(
+      "Return Sale",
+      `Return all items from bill ${sale.billRef}?\nRefund: ₹${Math.round(sale.totalMinor / 100).toLocaleString("en-IN")}`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Return (Cash)",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const online = await isOnline();
+              if (!online) { showToast("Offline — cannot process return"); return; }
+              const res = await apiClient.post<any>(`/api/v1/pos/sales/${sale.id}/return`, { reason: "Customer return from POS" });
+              if (res?.returnId) {
+                showToast("Return processed successfully");
+                // Refresh sales list
+                setDateFilter((prev) => prev);
+              } else {
+                showToast(res?.error ?? "Return failed");
+              }
+            } catch { showToast("Could not process return"); }
+          },
+        },
+      ]
+    );
+  };
+
   const modeIcon = (m: string) => m === "CASH" ? "💵" : m === "UPI" ? "📱" : m === "DUE" ? "📋" : "💰";
   const modeLabel = (m: string) => m === "CASH" ? "Cash" : m === "UPI" ? "UPI" : m === "DUE" ? "Udhar" : m;
 
@@ -204,18 +240,32 @@ export default function SalesHistoryScreenV3({ onClose }: Props) {
           </View>
         ) : null}
         renderItem={({ item }) => (
-          <Pressable style={styles.row} onPress={() => handleBillTap(item)}>
-            <Text style={styles.modeIcon}>{modeIcon(item.paymentMode)}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.billRef}>{item.billRef}</Text>
-              <Text style={styles.meta}>{item.itemCount} item{item.itemCount !== 1 ? "s" : ""} · {formatTime(item.createdAt)}</Text>
-            </View>
-            <View style={{ alignItems: "flex-end" }}>
-              <Text style={styles.amount}>₹{Math.round(item.totalMinor / 100).toLocaleString("en-IN")}</Text>
-              <Text style={styles.mode}>{modeLabel(item.paymentMode)}</Text>
-            </View>
-            <Text style={{ fontSize: 12, color: colors.textTertiary, marginLeft: 4 }}>›</Text>
-          </Pressable>
+          <View>
+            <Pressable style={styles.row} onPress={() => handleBillTap(item)}>
+              <Text style={styles.modeIcon}>{modeIcon(item.paymentMode)}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.billRef}>{item.billRef}</Text>
+                <Text style={styles.meta}>{item.itemCount} item{item.itemCount !== 1 ? "s" : ""} · {formatTime(item.createdAt)}</Text>
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={styles.amount}>₹{Math.round(item.totalMinor / 100).toLocaleString("en-IN")}</Text>
+                <Text style={styles.mode}>{modeLabel(item.paymentMode)}</Text>
+              </View>
+              <Text style={{ fontSize: 12, color: colors.textTertiary, marginLeft: 4 }}>›</Text>
+            </Pressable>
+            {/* GCP-STG-0734: Return button within 7-day window */}
+            {isWithinReturnWindow(item.createdAt) && item.paymentMode !== "REFUNDED" ? (
+              <Pressable
+                style={styles.returnBtn}
+                onPress={() => handleReturn(item)}
+                accessibilityRole="button"
+                accessibilityLabel={`Return sale ${item.billRef}`}
+                testID={`return-btn-${item.id}`}
+              >
+                <Text style={styles.returnBtnText}>Return</Text>
+              </Pressable>
+            ) : null}
+          </View>
         )}
       />
 
@@ -268,5 +318,8 @@ function createStyles(colors: ColorPalette) {
     meta: { fontSize: 11, color: colors.textTertiary, marginTop: 1 },
     amount: { fontSize: 16, fontWeight: "800", color: colors.textPrimary },
     mode: { fontSize: 10, color: colors.textTertiary, fontWeight: "600", marginTop: 1 },
+    // GCP-STG-0734: Return button styles
+    returnBtn: { alignSelf: "flex-end", marginTop: -4, marginBottom: 8, marginRight: 14, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.error, opacity: 0.9 },
+    returnBtnText: { fontSize: 11, fontWeight: "700", color: "#fff" },
   });
 }
