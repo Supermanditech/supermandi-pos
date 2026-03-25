@@ -11,6 +11,6 @@ COMMENT ON COLUMN catalog.store_products.price_updated_at
   IS 'GCP-STG-0335: Timestamp of last price change, used for LWW conflict detection';
 
 -- Index for freshness queries that include price changes
-CREATE INDEX CONCURRENTLY IF NOT EXISTS store_products_price_updated_at_idx
+CREATE INDEX IF NOT EXISTS store_products_price_updated_at_idx
   ON catalog.store_products (store_id, price_updated_at)
   WHERE is_active = true AND price_updated_at IS NOT NULL;

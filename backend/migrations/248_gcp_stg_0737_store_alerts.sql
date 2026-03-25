@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS platform.store_alerts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  store_id TEXT NOT NULL REFERENCES platform.stores(id),
+  store_id UUID NOT NULL REFERENCES platform.stores(id),
   alert_type TEXT NOT NULL CHECK (alert_type IN ('LOW_STOCK', 'EXPIRY_SOON', 'REORDER_DUE', 'SYSTEM')),
   product_id UUID,
   title TEXT NOT NULL,
