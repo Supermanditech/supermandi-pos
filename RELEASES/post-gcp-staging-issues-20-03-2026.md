@@ -19022,4 +19022,28 @@ pos-tests:
 
 ---
 
-<!-- next ticket: GCP-STG-0747 -->
+## GCP-STG-0747 — LOW: GRNScreenV3 "Edit" button is dead — renders but no onPress handler (LOW)
+
+**Ticket ID**: GCP-STG-0747
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: UI, Wiring
+**Source**: Deep Sub-Screen + User Journey Audit — Audit H9 (GRN Sub-Interactions)
+
+**Problem**: `src/screens/v3/GRNScreenV3.tsx` line 241 renders `<Text style={styles.editBtn}>Edit ▸</Text>` on each GRN item row. The text looks like a tappable button (styled with accent color + arrow indicator) but has NO `onPress` handler. When a cashier taps "Edit" on a received item, nothing happens. This is the ONLY dead interactive element found across 500+ elements in 31 POS screens.
+
+**Impact**: Low — GRN item editing is not critical (qty +/- buttons work for adjusting received quantities). But a visible "Edit" button that does nothing is confusing UX.
+
+**Fix — Choose ONE**:
+1. **Wire it** (recommended): Wrap in `<Pressable onPress={() => openEditModal(item)}>`. Edit modal allows changing: received qty, damage notes, reason code, batch/expiry info. Same pattern as CartSheetV3 item edit modal.
+2. **Remove it**: Delete the "Edit ▸" text entirely if item-level editing is not needed (qty +/- and damage input already exist on the same row).
+
+**Files to modify**: `src/screens/v3/GRNScreenV3.tsx` — line 241
+
+**Test**: If wired: behavioral test verifying edit modal opens on press. If removed: verify text no longer renders.
+
+**12-Layer Verification**: L1 UI ✅, L3 Wiring ✅
+
+---
+
+<!-- next ticket: GCP-STG-0748 -->
