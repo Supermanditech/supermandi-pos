@@ -251,10 +251,17 @@ beforeAll(async () => {
   try {
     await seedTestDatabase();
     dbAvailable = true;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes('ECONNREFUSED') || msg.includes('timeout') || msg.includes('connect')) {
-      console.warn(`\n⚠ Database unavailable (${msg}). Integration tests will be skipped.`);
+  } catch (err: any) {
+    // Extract message from AggregateError sub-errors (Node 16+ wraps ECONNREFUSED etc.)
+    let msg = err instanceof Error ? err.message : String(err);
+    if (err?.errors?.length) {
+      msg += ' ' + err.errors.map((e: any) => (e instanceof Error ? e.message : String(e))).join(' ');
+    }
+    const isConnectionError = msg.includes('ECONNREFUSED') || msg.includes('timeout')
+      || msg.includes('connect') || msg.includes('ENOTFOUND')
+      || err?.constructor?.name === 'AggregateError';
+    if (isConnectionError) {
+      console.warn(`\n⚠ Database unavailable (${msg.trim()}). Integration tests will be skipped.`);
       console.warn('  Start PostgreSQL or run: pnpm test:unit for unit tests only.\n');
     } else {
       throw err; // Re-throw unexpected errors
