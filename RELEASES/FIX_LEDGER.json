@@ -7842,7 +7842,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-18T07:45:37.632Z",
@@ -11401,7 +11404,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T16:48:23.627Z",
@@ -11437,7 +11443,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T16:48:34.231Z",
@@ -11474,7 +11483,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T16:49:11.112Z",
@@ -11511,7 +11523,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T16:49:43.538Z",
@@ -11547,7 +11562,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T17:16:52.136Z",
@@ -11583,7 +11601,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T17:16:52.238Z",
@@ -11619,7 +11640,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T17:29:18.738Z",
@@ -11655,7 +11679,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T17:29:18.868Z",
@@ -11691,7 +11718,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T17:29:19.004Z",
@@ -11727,7 +11757,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T17:42:13.459Z",
@@ -11763,7 +11796,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T17:42:13.587Z",
@@ -11799,7 +11835,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T18:00:35.420Z",
@@ -11835,7 +11874,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T18:00:35.553Z",
@@ -11871,7 +11913,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T18:00:35.699Z",
@@ -11907,7 +11952,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T18:12:08.372Z",
@@ -11943,7 +11991,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T18:12:08.488Z",
@@ -11979,7 +12030,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T18:29:58.729Z",
@@ -12016,7 +12070,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T18:30:16.263Z",
@@ -12052,7 +12109,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T18:50:26.038Z",
@@ -14778,7 +14838,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T19:42:41.407Z",
@@ -14827,7 +14890,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:00:11.325Z",
@@ -14863,7 +14929,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:04:38.617Z",
@@ -14899,7 +14968,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:14:11.121Z",
@@ -14936,7 +15008,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:18:08.774Z",
@@ -14973,7 +15048,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:42:34.926Z",
@@ -15010,7 +15088,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:44:56.242Z",
@@ -15046,7 +15127,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:47:50.935Z",
@@ -15083,7 +15167,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:50:45.133Z",
@@ -15120,7 +15207,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T20:53:31.193Z",
@@ -15157,7 +15247,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T21:03:05.933Z",
@@ -15194,7 +15287,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T21:03:22.632Z",
@@ -15230,7 +15326,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T21:10:51.140Z",
@@ -15267,7 +15366,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T21:15:58.129Z",
@@ -15304,7 +15406,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T21:26:23.096Z",
@@ -15341,7 +15446,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T21:37:38.858Z",
@@ -15377,7 +15485,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T21:37:52.233Z",
@@ -15413,7 +15524,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T21:39:40.762Z",
@@ -15449,7 +15563,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T21:47:55.084Z",
@@ -15485,7 +15602,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T21:50:12.113Z",
@@ -15521,7 +15641,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:03:01.635Z",
@@ -15557,7 +15680,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:03:07.834Z",
@@ -15594,7 +15720,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:03:38.305Z",
@@ -15631,7 +15760,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:04:06.282Z",
@@ -15667,7 +15799,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:19:44.552Z",
@@ -15703,7 +15838,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:19:59.290Z",
@@ -15739,7 +15877,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:20:08.606Z",
@@ -15814,7 +15955,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:20:25.394Z",
@@ -15851,7 +15995,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:20:26.735Z",
@@ -15887,7 +16034,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:25:23.245Z",
@@ -15924,7 +16074,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:25:38.599Z",
@@ -15961,7 +16114,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:25:53.903Z",
@@ -15998,7 +16154,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:26:20.777Z",
@@ -16034,7 +16193,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:38:48.297Z",
@@ -16070,7 +16232,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:39:07.194Z",
@@ -16106,7 +16271,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:42:19.601Z",
@@ -16143,7 +16311,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:42:31.226Z",
@@ -16180,7 +16351,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:49:19.690Z",
@@ -16216,7 +16390,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T22:51:54.197Z",
@@ -16253,7 +16430,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T23:02:01.415Z",
@@ -16289,7 +16469,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T23:02:49.370Z",
@@ -16325,7 +16508,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T23:03:16.959Z",
@@ -16361,7 +16547,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T23:12:16.996Z",
@@ -16398,7 +16587,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T23:12:31.444Z",
@@ -16435,7 +16627,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T23:12:43.192Z",
@@ -16472,7 +16667,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T23:12:54.928Z",
@@ -16509,7 +16707,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-22T23:59:50.815Z",
@@ -16545,7 +16746,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:00:52.335Z",
@@ -16582,7 +16786,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:01:16.133Z",
@@ -16618,7 +16825,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:05:57.557Z",
@@ -16655,7 +16865,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:06:12.538Z",
@@ -16691,7 +16904,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:08:48.491Z",
@@ -16728,7 +16944,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:09:08.756Z",
@@ -16765,7 +16984,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:22:18.515Z",
@@ -16801,7 +17023,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:22:32.766Z",
@@ -16837,7 +17062,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:22:33.471Z",
@@ -16873,7 +17101,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:22:47.371Z",
@@ -16909,7 +17140,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:30:10.466Z",
@@ -16945,7 +17179,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:31:32.245Z",
@@ -16982,7 +17219,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:31:56.307Z",
@@ -17019,7 +17259,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T00:32:40.693Z",
@@ -17055,7 +17298,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T01:57:27.194Z",
@@ -17091,7 +17337,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T01:58:33.991Z",
@@ -17127,7 +17376,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T01:58:59.058Z",
@@ -17163,7 +17415,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T02:08:03.058Z",
@@ -17200,7 +17455,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T02:08:03.116Z",
@@ -17237,7 +17495,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T02:08:09.716Z",
@@ -17273,7 +17534,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T02:08:16.717Z",
@@ -17309,7 +17573,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T02:08:32.965Z",
@@ -17346,7 +17613,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:04:38.668Z",
@@ -17382,7 +17652,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:04:52.582Z",
@@ -17418,7 +17691,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:06:45.991Z",
@@ -17455,7 +17731,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:07:01.714Z",
@@ -17492,7 +17771,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:18:54.532Z",
@@ -17529,7 +17811,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:19:46.992Z",
@@ -17566,7 +17851,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:32:59.779Z",
@@ -17603,7 +17891,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:33:08.397Z",
@@ -17640,7 +17931,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:33:27.729Z",
@@ -17677,7 +17971,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:33:27.863Z",
@@ -17714,7 +18011,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:40:09.063Z",
@@ -17750,7 +18050,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:41:08.808Z",
@@ -17787,7 +18090,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:52:34.261Z",
@@ -17823,7 +18129,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:52:51.098Z",
@@ -17859,7 +18168,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:54:32.356Z",
@@ -17896,7 +18208,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T07:59:18.571Z",
@@ -17933,7 +18248,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:01:10.904Z",
@@ -17970,7 +18288,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:17:48.683Z",
@@ -18007,7 +18328,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:18:17.788Z",
@@ -18043,7 +18367,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:23:56.315Z",
@@ -18079,7 +18406,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:24:04.072Z",
@@ -18115,7 +18445,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:36:43.532Z",
@@ -18152,7 +18485,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:40:32.357Z",
@@ -18189,7 +18525,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:48:38.219Z",
@@ -18225,7 +18564,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:50:24.454Z",
@@ -18261,7 +18603,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:58:41.645Z",
@@ -18297,7 +18642,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T08:59:30.705Z",
@@ -18334,7 +18682,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:04:30.192Z",
@@ -18370,7 +18721,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:06:29.742Z",
@@ -18406,7 +18760,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:06:37.066Z",
@@ -18442,7 +18799,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:20:09.774Z",
@@ -18479,7 +18839,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:20:22.117Z",
@@ -18516,7 +18879,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:21:18.302Z",
@@ -18553,7 +18919,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:29:41.432Z",
@@ -18589,7 +18958,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:29:44.363Z",
@@ -18625,7 +18997,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:30:00.201Z",
@@ -18662,7 +19037,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:41:35.323Z",
@@ -18699,7 +19077,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:44:10.543Z",
@@ -18735,7 +19116,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T09:53:21.052Z",
@@ -18772,7 +19156,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:01:45.434Z",
@@ -18809,7 +19196,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:01:57.827Z",
@@ -18845,7 +19235,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:02:09.606Z",
@@ -18882,7 +19275,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:12:29.368Z",
@@ -18919,7 +19315,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:16:33.216Z",
@@ -18956,7 +19355,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:16:46.300Z",
@@ -18992,7 +19394,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:26:06.961Z",
@@ -19029,7 +19434,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:26:52.647Z",
@@ -19065,7 +19473,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:47:02.900Z",
@@ -19101,7 +19512,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:47:15.985Z",
@@ -19137,7 +19551,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:47:50.433Z",
@@ -19173,7 +19590,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:48:04.546Z",
@@ -19209,7 +19629,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T10:58:19.605Z",
@@ -19246,7 +19669,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:00:06.813Z",
@@ -19283,7 +19709,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:00:20.064Z",
@@ -19319,7 +19748,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:12:51.119Z",
@@ -19356,7 +19788,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:12:54.002Z",
@@ -19393,7 +19828,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:12:59.239Z",
@@ -19429,7 +19867,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:22:33.704Z",
@@ -19465,7 +19906,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:23:06.232Z",
@@ -19502,7 +19946,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:23:21.959Z",
@@ -19538,7 +19985,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:23:56.576Z",
@@ -19575,7 +20025,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:42:39.587Z",
@@ -19611,7 +20064,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:42:52.646Z",
@@ -19648,7 +20104,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:43:41.358Z",
@@ -19684,7 +20143,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:43:58.388Z",
@@ -19720,7 +20182,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T11:47:54.312Z",
@@ -19757,7 +20222,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:37:06.355Z",
@@ -19795,7 +20263,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:37:14.910Z"
@@ -19830,7 +20301,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:37:35.259Z",
@@ -19866,7 +20340,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:37:47.522Z",
@@ -19902,7 +20379,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:37:56.255Z",
@@ -19938,7 +20418,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:38:06.789Z",
@@ -19974,7 +20457,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:38:14.826Z",
@@ -20010,7 +20496,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:48:50.391Z",
@@ -20046,7 +20535,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:50:28.489Z",
@@ -20082,7 +20574,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:50:41.475Z",
@@ -20119,7 +20614,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:51:17.215Z",
@@ -20155,7 +20653,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T13:03:52.416Z",
@@ -20191,7 +20692,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T13:04:01.276Z",
@@ -20227,7 +20731,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T13:04:09.827Z",
@@ -20263,7 +20770,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T13:04:18.292Z",
@@ -20299,7 +20809,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T13:04:27.239Z",
@@ -20335,7 +20848,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T13:04:35.201Z",
@@ -20372,7 +20888,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T13:04:42.868Z",
@@ -20409,7 +20928,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_evidence": {
         "ui_elements": "Previous/Next buttons + Showing X-Y of Z label + Page N of M indicator",
@@ -20451,7 +20973,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_evidence": {
         "ui_elements": "Previous/Next buttons + Showing X-Y of Z + Page N of M",
@@ -20493,7 +21018,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_evidence": {
         "ui_elements": "Per-section Previous/Next + Showing X-Y of Z + Page indicator",
@@ -20535,7 +21063,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_evidence": {
         "ui_elements": "Previous/Next + Showing X-Y of Z + Page indicator below table",
@@ -20577,7 +21108,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_evidence": {
         "ui_elements": "Previous/Next + Showing X-Y of Z + Page indicator below table",
@@ -20619,7 +21153,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_evidence": {
         "ui_elements": "Previous/Next buttons + Showing X-Y of Z + Page indicator (Tailwind classes)",
@@ -20661,7 +21198,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_evidence": {
         "ui_elements": "Previous/Next buttons + Showing X-Y of Z + Page indicator",
@@ -20703,7 +21243,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:28:00.439Z",
@@ -20740,7 +21283,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:28:13.776Z",
@@ -20776,7 +21322,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:30:03.027Z",
@@ -20812,7 +21361,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:30:12.060Z",
@@ -20848,7 +21400,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:30:19.930Z",
@@ -20884,7 +21439,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T15:00:00.000Z",
@@ -20920,7 +21478,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T15:00:00.000Z",
@@ -20956,7 +21517,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T15:00:00.000Z",
@@ -20992,7 +21556,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T15:00:00.000Z",
@@ -21028,7 +21595,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T15:00:00.000Z",
@@ -21064,7 +21634,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:41:22.020Z",
@@ -21100,7 +21673,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:41:37.880Z",
@@ -21136,7 +21712,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:41:52.322Z",
@@ -21172,7 +21751,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:42:06.819Z",
@@ -21209,7 +21791,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:56:53.700Z",
@@ -21245,7 +21830,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:57:00.833Z",
@@ -21319,7 +21907,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:57:11.114Z",
@@ -21355,7 +21946,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:57:16.798Z",
@@ -21391,7 +21985,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:57:22.749Z",
@@ -21427,7 +22024,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T14:57:35.165Z",
@@ -21463,7 +22063,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T16:25:03.203Z",
@@ -21500,7 +22103,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:13:35.737Z",
@@ -21537,7 +22143,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:14:01.250Z",
@@ -21573,7 +22182,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:17:57.355Z",
@@ -21610,7 +22222,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:18:35.582Z",
@@ -21647,7 +22262,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:32:05.337Z",
@@ -21684,7 +22302,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:32:14.140Z",
@@ -21721,7 +22342,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:32:22.124Z",
@@ -21757,7 +22381,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:32:23.391Z",
@@ -21794,7 +22421,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:32:31.363Z",
@@ -21830,7 +22460,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:32:32.496Z",
@@ -21867,7 +22500,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:32:40.333Z",
@@ -25460,7 +26096,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T12:51:45.772Z",
@@ -25513,7 +26152,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T13:12:18.258Z",
@@ -25561,7 +26203,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T13:12:31.114Z",
@@ -25597,7 +26242,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T13:19:23.382Z",
@@ -26103,7 +26751,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_evidence": {
         "ui_elements": "9 tests verify backup codes, Copy All, Download, checkbox, Verify button render",
@@ -27016,7 +27667,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T17:10:40.138Z",
@@ -27065,7 +27719,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T17:10:46.588Z",
@@ -27102,7 +27759,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T17:10:48.665Z",
@@ -27289,7 +27949,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T18:13:18.870Z",
@@ -27335,7 +27998,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T18:13:24.404Z",
@@ -27381,7 +28047,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T18:13:28.857Z",
@@ -27427,7 +28096,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T18:13:34.167Z",
@@ -27473,7 +28145,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T18:13:38.921Z",
@@ -27519,7 +28194,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T18:13:43.895Z",
@@ -27565,7 +28243,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T18:21:00.815Z",
@@ -27611,7 +28292,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T18:21:08.163Z",
@@ -27657,7 +28341,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_evidence": {
         "impacted_files": "backend/services/api-gateway/Dockerfile + FIX_LEDGER.json",
@@ -27703,7 +28390,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T19:36:35.696Z",
@@ -27739,7 +28429,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T19:36:41.150Z",
@@ -27775,7 +28468,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T19:36:42.951Z",
@@ -27811,7 +28507,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T19:36:43.908Z",
@@ -27976,7 +28675,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T19:59:26.851Z",
@@ -28019,7 +28721,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:03:16.047Z",
@@ -28055,7 +28760,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:06:46.615Z",
@@ -28091,7 +28799,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:11:18.737Z",
@@ -28382,7 +29093,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:29:50.713Z",
@@ -28425,7 +29139,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:33:02.773Z",
@@ -28461,7 +29178,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:33:39.907Z",
@@ -28497,7 +29217,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:34:17.846Z",
@@ -28533,7 +29256,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:34:54.746Z",
@@ -28569,7 +29295,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:35:29.216Z",
@@ -28605,7 +29334,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:36:02.708Z",
@@ -28641,7 +29373,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:37:00.575Z",
@@ -28677,7 +29412,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:37:00.723Z",
@@ -28713,7 +29451,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:37:00.865Z",
@@ -28749,7 +29490,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:37:01.000Z",
@@ -28785,7 +29529,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:37:01.135Z",
@@ -29602,7 +30349,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:28:04.238Z",
@@ -29646,7 +30396,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:30:41.944Z",
@@ -29683,7 +30436,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:32:04.617Z",
@@ -29719,7 +30475,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:34:09.240Z",
@@ -29755,7 +30514,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:35:14.769Z",
@@ -29791,7 +30553,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:44:12.142Z",
@@ -29827,7 +30592,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:44:12.287Z",
@@ -29864,7 +30632,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:49:25.645Z",
@@ -29900,7 +30671,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:49:34.880Z",
@@ -29936,7 +30710,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:49:35.119Z",
@@ -29972,7 +30749,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:52:50.063Z",
@@ -30008,7 +30788,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:54:22.145Z",
@@ -30044,7 +30827,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:54:22.368Z",
@@ -30081,7 +30867,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:56:01.842Z",
@@ -30117,7 +30906,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:56:02.036Z",
@@ -30154,7 +30946,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:59:51.066Z",
@@ -30197,7 +30992,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:03:00.860Z",
@@ -30233,7 +31031,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:08:25.238Z",
@@ -30270,7 +31071,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:11:50.645Z",
@@ -30306,7 +31110,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:13:52.592Z",
@@ -30342,7 +31149,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:20:50.574Z",
@@ -30378,7 +31188,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:23:11.444Z",
@@ -30414,7 +31227,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:24:39.301Z",
@@ -30450,7 +31266,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:25:50.567Z",
@@ -30486,7 +31305,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:27:02.400Z",
@@ -30522,7 +31344,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:32:05.275Z",
@@ -30558,7 +31383,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:39:28.067Z",
@@ -30594,7 +31422,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:41:38.462Z",
@@ -30668,7 +31499,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:45:22.237Z",
@@ -30704,7 +31538,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T10:00:00.000Z",
@@ -30740,7 +31577,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T10:00:00.000Z",
@@ -30852,7 +31692,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:12:02.118Z",
@@ -30888,7 +31731,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:15:35.055Z",
@@ -30924,7 +31770,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:17:47.575Z",
@@ -30960,7 +31809,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:20:07.511Z",
@@ -30996,7 +31848,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:22:26.157Z",
@@ -31032,7 +31887,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:25:23.460Z",
@@ -31068,7 +31926,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:28:33.764Z",
@@ -31104,7 +31965,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:30:45.670Z",
@@ -31140,7 +32004,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:32:23.130Z",
@@ -31176,7 +32043,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:32:23.261Z",
@@ -31212,7 +32082,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:34:54.451Z",
@@ -31248,7 +32121,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:53:35.997Z",
@@ -31284,7 +32160,10 @@
         "regression_check": "N/A",
         "test_guard": "N/A",
         "single_commit": "N/A",
-        "ticket_parked": "N/A"
+        "ticket_parked": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T08:45:31.062Z",
@@ -31375,7 +32254,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T08:46:52.764Z",
@@ -31423,7 +32305,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T08:47:00.262Z",
@@ -31519,7 +32404,10 @@
         "regression_check": "N/A",
         "test_guard": "N/A",
         "single_commit": "N/A",
-        "ticket_parked": "N/A"
+        "ticket_parked": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T08:51:54.634Z",
@@ -31560,7 +32448,10 @@
         "regression_check": "N/A",
         "test_guard": "N/A",
         "single_commit": "N/A",
-        "ticket_parked": "N/A"
+        "ticket_parked": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T08:52:49.627Z",
@@ -31649,7 +32540,10 @@
         "regression_check": "N/A",
         "test_guard": "N/A",
         "single_commit": "N/A",
-        "ticket_parked": "N/A"
+        "ticket_parked": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T08:53:47.615Z",
@@ -31690,7 +32584,10 @@
         "regression_check": "N/A",
         "test_guard": "N/A",
         "single_commit": "N/A",
-        "ticket_parked": "N/A"
+        "ticket_parked": "N/A",
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T08:55:18.307Z",
@@ -31731,7 +32628,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T08:58:27.889Z",
@@ -31767,7 +32667,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T08:58:32.860Z",
@@ -31803,7 +32706,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T09:45:25.501Z",
@@ -32000,7 +32906,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T09:51:32.610Z",
@@ -32036,7 +32945,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T09:53:17.925Z",
@@ -32072,7 +32984,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T09:54:18.088Z",
@@ -34248,7 +35163,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T11:43:05.627Z",
@@ -34258,7 +35176,12 @@
         "business_behaviour": "Docs script - no runtime impact",
         "impacted_files": "Single script file only",
         "fix_ledger_check": "Registered, zero drift",
-        "no_agent_conflict": "No conflicts"
+        "no_agent_conflict": "No conflicts",
+        "gcp_parity": "Docs script, no GCP parity issues",
+        "regression_check": "No source code changes",
+        "test_guard": "Self-documenting script",
+        "single_commit": "fix(GCP-STG-0666)",
+        "ticket_parked": "Parked after commit"
       }
     },
     {
@@ -34329,7 +35252,10 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true,
+        "parity_fixed": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T11:44:51.671Z",
@@ -34339,7 +35265,12 @@
         "business_behaviour": "Docs script - no runtime impact",
         "impacted_files": "Single script file only",
         "fix_ledger_check": "Registered, zero drift",
-        "no_agent_conflict": "No conflicts"
+        "no_agent_conflict": "No conflicts",
+        "gcp_parity": "Docs script, no GCP parity issues",
+        "regression_check": "No source code changes",
+        "test_guard": "Self-documenting script",
+        "single_commit": "fix(GCP-STG-0680)",
+        "ticket_parked": "Parked after commit"
       }
     }
   ],
