@@ -19783,4 +19783,47 @@ All other keys use `supermandi.` prefix. Inconsistency makes key collision possi
 
 ---
 
-<!-- next ticket: GCP-STG-0780 -->
+## GCP-STG-0780 — CRITICAL: /pos/auth/* endpoints blocked by device token — OTP unreachable on fresh install (CRITICAL)
+
+**Ticket ID**: GCP-STG-0780
+**Severity**: P0 CRITICAL
+**Platforms**: BACKEND, API-GATEWAY
+**Layers**: Backend, API, Business
+**Source**: Live staging testing — send-otp returns 401 DEVICE_UNAUTHORIZED
+
+**Problem**: `POST /api/v1/pos/auth/send-otp` returns `{"error":{"code":"DEVICE_UNAUTHORIZED"}}` when called WITHOUT x-device-token header. This blocks the ENTIRE OTP enrollment flow — a fresh POS install has no device token, so it CANNOT send OTP. The individual route handler (`otpAuth.ts:42`) does NOT have `requireDeviceToken` middleware, but some GLOBAL middleware on `/pos/*` path intercepts the request before it reaches the handler.
+
+**Root Cause Investigation Required**:
+1. Check if API Gateway has a global device token check for `/pos/*` routes
+2. Check if `setRlsStoreContext` (index.ts:161) or `perStoreRateLimit` (index.ts:171) returns 401 when no device context
+3. Check if there's a middleware in `app.ts` that applies `requireDeviceToken` globally
+4. Check if the gateway proxy injects a device token validation step
+
+**Fix**: Exempt `/pos/auth/*` routes from device token requirement. These are PUBLIC auth routes (send-otp, verify-otp, enroll) that must work WITHOUT a device token:
+
+Option A (Backend): In `index.ts`, mount `posOtpAuthRouter` BEFORE the RLS/rate-limit middleware:
+```typescript
+// Auth routes FIRST (no device token needed)
+v1Router.use("/pos", posOtpAuthRouter);
+v1Router.use("/pos", posEnrollRouter);
+
+// THEN device-token-required routes
+v1Router.use("/pos", setRlsStoreContext);
+v1Router.use("/pos", perStoreRateLimit);
+v1Router.use("/pos", posSalesRouter);
+// ... rest
+```
+
+Option B (Gateway): Add `/api/v1/pos/auth` to PUBLIC_PATHS in jwtAuth.ts (may already be there — but check for other middleware).
+
+Option C (Middleware): Add path exclusion in the device token middleware for `/auth/` paths.
+
+**This is the #1 blocker for POS go-live.** Without this fix, no fresh install can authenticate.
+
+**Files to investigate**: `backend/src/routes/v1/index.ts`, `backend/services/api-gateway/src/index.ts`, `backend/src/middleware/deviceToken.ts`, `backend/src/app.ts`
+
+**12-Layer**: L5 API ✅, L6 Backend ✅, L10 Business ✅
+
+---
+
+<!-- next ticket: GCP-STG-0781 -->
