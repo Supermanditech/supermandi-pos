@@ -662,7 +662,9 @@ adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, r
 // GO-LIVE-185: Rate limit approval operations to 10/min per IP
 adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, requirePermission("suppliers", "reject"), supplierApprovalRateLimiter, async (req, res) => {
   const { supplierId } = req.params;
-  const { reason } = req.body || {};
+  // GCP-STG-0778: Accept `notes` (canonical) with `reason` fallback for backward compat
+  const { notes, reason: legacyReason } = req.body || {};
+  const reviewReason = notes || legacyReason || null;
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
   const adminId = (req as any).adminId;
 
@@ -713,7 +715,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, re
     await client.query(
       `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id, reason)
        VALUES ('supplier', $1::uuid, 'reject', 'pending', 'rejected', $2, $3)`,
-      [supplierId, adminId, reason || null]
+      [supplierId, adminId, reviewReason]
     );
 
     await client.query("COMMIT");
