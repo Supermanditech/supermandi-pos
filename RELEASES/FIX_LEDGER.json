@@ -32066,7 +32066,7 @@
       "file": "backend/src/services/authAudit.ts",
       "start_line": 31,
       "end_line": 53,
-      "checksum": "e22206a146027da2",
+      "checksum": "5ff1e0d938a2f50d",
       "description": "archiveOldAuthEvents deletes auth_events older than 90 days",
       "test_file": "scripts/gcp/setup-auth-event-retention.sh",
       "depends_on": null,
