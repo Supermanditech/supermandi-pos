@@ -164,18 +164,17 @@ posKhataRouter.get("/khata/entries", requireDeviceToken, async (req: Request, re
 /**
  * POST /api/v1/pos/khata/entries
  * Create a new khata entry (credit, debit, or payment).
- * Body: { customerPhone, customerName?, entryType, amountMinor, description?, saleId? }
+ * Body: { customerPhone, customerName?, type, amountMinor, description?, saleId? }
  */
 posKhataRouter.post("/khata/entries", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const { storeId } = (req as PosRequest).posDevice;
-  const { customerPhone, customerName, type: rawType, entryType: legacyEntryType, amountMinor, description, saleId } = req.body;
-  // Accept both "type" (frontend contract) and "entryType" (legacy) — prefer "type"
-  const requestType = rawType || legacyEntryType;
+  // GCP-STG-0777: Accept only `type` field (legacy `entryType` alias removed)
+  const { customerPhone, customerName, type: rawType, amountMinor, description, saleId } = req.body;
   // Frontend sends uppercase (CREDIT/DEBIT/PAYMENT), DB stores lowercase
-  const entryType = typeof requestType === "string" ? requestType.toLowerCase() : requestType;
+  const entryType = typeof rawType === "string" ? rawType.toLowerCase() : rawType;
 
   // Validation
   if (!customerPhone || typeof customerPhone !== "string") {
