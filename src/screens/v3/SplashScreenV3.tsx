@@ -7,7 +7,7 @@
  * - SuperMandi shortmark (blue square)
  * - "SuperMandi" brand text
  * - "Point of Sale" subtitle
- * - Spinner
+ * - GCP-STG-0758: Animated fade-in (no spinner), min 1.5s brand impression
  * - "Connecting to store..." status text
  * - Bottom "Continue" CTA (navigates based on session state)
  *
@@ -20,7 +20,7 @@
  */
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { View, Text, StyleSheet, Pressable, BackHandler, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, Pressable, BackHandler, Animated } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Rect, Circle } from "react-native-svg";
 import { useNavigation } from "@react-navigation/native";
@@ -47,6 +47,8 @@ export default function SplashScreenV3() {
   const [statusText, setStatusText] = useState("Connecting to store...");
   const [errorState, setErrorState] = useState<string | null>(null);
   const hasNavigated = useRef(false);
+  // GCP-STG-0758: Fade-in animation for brand impression
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // V3-NAV-002: Prevent Android back button during splash
   useEffect(() => {
@@ -123,7 +125,7 @@ export default function SplashScreenV3() {
     }
   }, [safeNavigate]);
 
-  // Boot infra + session check
+  // Boot infra + session check with brand impression
   useEffect(() => {
     // Non-blocking infra init
     startCloudEventLogger();
@@ -132,9 +134,19 @@ export default function SplashScreenV3() {
     syncOutbox().catch(() => {});
     startAutoSync();
 
-    // Instant session check (no splash delay in v3)
-    navigateAfterSession();
-  }, [navigateAfterSession]);
+    // GCP-STG-0758: Fade in logo (800ms) then navigate after min 1.5s brand impression
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
+
+    // Ensure minimum 1.5s brand impression before navigating
+    const brandTimer = setTimeout(() => {
+      navigateAfterSession();
+    }, 1500);
+    return () => clearTimeout(brandTimer);
+  }, [navigateAfterSession, fadeAnim]);
 
   const handleRetry = useCallback(() => {
     setErrorState(null);
@@ -155,30 +167,24 @@ export default function SplashScreenV3() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]} testID="splash-screen" accessibilityLabel="SuperMandi loading screen">
-      {/* SuperMandi shortmark */}
-      <View testID="splash-logo" accessibilityLabel="SuperMandi logo">
-        <Svg width={80} height={80} viewBox="0 0 32 32">
-          <Rect x={2} y={2} width={28} height={28} rx={8} fill="#2563EB" />
-          <Rect x={9} y={9} width={14} height={3.2} rx={1.6} fill="#fff" />
-          <Rect x={9} y={14.4} width={14} height={3.2} rx={1.6} fill="#fff" />
-          <Rect x={9} y={19.8} width={14} height={3.2} rx={1.6} fill="#fff" />
-          <Circle cx={16} cy={25.3} r={2.1} fill="#fff" />
-        </Svg>
-      </View>
+      {/* GCP-STG-0758: Animated brand impression — fade in logo + text */}
+      <Animated.View style={{ opacity: fadeAnim, alignItems: "center" }} testID="splash-brand-wrapper">
+        {/* SuperMandi shortmark */}
+        <View testID="splash-logo" accessibilityLabel="SuperMandi logo">
+          <Svg width={80} height={80} viewBox="0 0 32 32">
+            <Rect x={2} y={2} width={28} height={28} rx={8} fill="#2563EB" />
+            <Rect x={9} y={9} width={14} height={3.2} rx={1.6} fill="#fff" />
+            <Rect x={9} y={14.4} width={14} height={3.2} rx={1.6} fill="#fff" />
+            <Rect x={9} y={19.8} width={14} height={3.2} rx={1.6} fill="#fff" />
+            <Circle cx={16} cy={25.3} r={2.1} fill="#fff" />
+          </Svg>
+        </View>
 
-      <Text style={styles.brand} accessibilityRole="header">SuperMandi</Text>
-      <Text style={styles.sub}>Point of Sale</Text>
+        <Text style={styles.brand} accessibilityRole="header">SuperMandi</Text>
+        <Text style={styles.sub}>Point of Sale</Text>
+      </Animated.View>
 
-      {/* Spinner */}
-      <ActivityIndicator
-        size="small"
-        color="#2563EB"
-        style={styles.loader}
-        testID="splash-spinner"
-        accessibilityLabel="Loading"
-      />
-
-      {/* Status text */}
+      {/* Status text — subtle, below brand */}
       <Text style={styles.statusText} testID="splash-status">
         {errorState ? `Error: ${errorState}` : statusText}
       </Text>
@@ -205,8 +211,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   brand: { fontSize: 32, fontWeight: "900", color: "#2563EB", letterSpacing: -0.8, marginTop: 16 },
   sub: { fontSize: 14, color: "#64748B", fontWeight: "500", marginTop: 4 },
-  loader: { marginTop: 40 },
-  statusText: { color: "#64748B", fontSize: 12, fontWeight: "500", marginTop: 12 },
+  statusText: { color: "#94A3B8", fontSize: 12, fontWeight: "400", marginTop: 32 },
   bottomArea: { position: "absolute", bottom: 40, width: "100%", paddingHorizontal: 32 },
   continueBtn: { backgroundColor: "#2563EB", paddingVertical: 16, borderRadius: 16, alignItems: "center" },
   continueBtnText: { color: "#FFFFFF", fontSize: 17, fontWeight: "800" },

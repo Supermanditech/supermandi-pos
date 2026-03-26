@@ -42,10 +42,23 @@ describe("SplashScreenV3 (V3-BOOT-001 + V3-NAV-002)", () => {
   it("should have testIDs for automation", () => {
     const fs = require("fs");
     const splash = fs.readFileSync("src/screens/v3/SplashScreenV3.tsx", "utf8");
-    const requiredTestIds = ["splash-screen", "splash-logo", "splash-spinner", "splash-status", "splash-continue-cta"];
+    // GCP-STG-0758: splash-spinner removed, replaced by animated brand wrapper
+    const requiredTestIds = ["splash-screen", "splash-logo", "splash-brand-wrapper", "splash-status", "splash-continue-cta"];
     for (const id of requiredTestIds) {
       expect(splash).toContain(`testID="${id}"`);
     }
+  });
+
+  it("GCP-STG-0758: should use animated fade-in instead of spinner", () => {
+    const fs = require("fs");
+    const splash = fs.readFileSync("src/screens/v3/SplashScreenV3.tsx", "utf8");
+    // No ActivityIndicator — replaced by Animated.View fade
+    expect(splash).not.toContain("ActivityIndicator");
+    expect(splash).toContain("Animated.View");
+    expect(splash).toContain("Animated.timing");
+    expect(splash).toContain("useNativeDriver: true");
+    // Min 1.5s brand impression
+    expect(splash).toContain("1500");
   });
 
   it("should distinguish auth failure from network failure", () => {
