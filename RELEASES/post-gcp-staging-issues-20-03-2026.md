@@ -19783,46 +19783,105 @@ All other keys use `supermandi.` prefix. Inconsistency makes key collision possi
 
 ---
 
-## GCP-STG-0780 — CRITICAL: /pos/auth/* endpoints blocked by device token — OTP unreachable on fresh install (CRITICAL)
+## GCP-STG-0780 — CRITICAL: Move POS auth routes to /auth/pos/* — clean separation of public vs authenticated endpoints (CRITICAL)
 
 **Ticket ID**: GCP-STG-0780
 **Severity**: P0 CRITICAL
-**Platforms**: BACKEND, API-GATEWAY
-**Layers**: Backend, API, Business
-**Source**: Live staging testing — send-otp returns 401 DEVICE_UNAUTHORIZED
+**Platforms**: BACKEND, API-GATEWAY, POS
+**Layers**: Backend, API, Navigation, Wiring, GCP Parity, Business
+**Source**: Live staging testing — send-otp returns 401 DEVICE_UNAUTHORIZED on fresh install
 
-**Problem**: `POST /api/v1/pos/auth/send-otp` returns `{"error":{"code":"DEVICE_UNAUTHORIZED"}}` when called WITHOUT x-device-token header. This blocks the ENTIRE OTP enrollment flow — a fresh POS install has no device token, so it CANNOT send OTP. The individual route handler (`otpAuth.ts:42`) does NOT have `requireDeviceToken` middleware, but some GLOBAL middleware on `/pos/*` path intercepts the request before it reaches the handler.
+**Problem**: `POST /api/v1/pos/auth/send-otp` returns 401 `DEVICE_UNAUTHORIZED` without `x-device-token` header. POS auth routes (send-otp, verify-otp, enroll) are mounted under `/pos/*` prefix which has global device-token middleware. Fresh installs have no device token, so the ENTIRE OTP enrollment flow is blocked. This is a fundamental architecture issue — pre-authentication routes are inside an authenticated namespace.
 
-**Root Cause Investigation Required**:
-1. Check if API Gateway has a global device token check for `/pos/*` routes
-2. Check if `setRlsStoreContext` (index.ts:161) or `perStoreRateLimit` (index.ts:171) returns 401 when no device context
-3. Check if there's a middleware in `app.ts` that applies `requireDeviceToken` globally
-4. Check if the gateway proxy injects a device token validation step
-
-**Fix**: Exempt `/pos/auth/*` routes from device token requirement. These are PUBLIC auth routes (send-otp, verify-otp, enroll) that must work WITHOUT a device token:
-
-Option A (Backend): In `index.ts`, mount `posOtpAuthRouter` BEFORE the RLS/rate-limit middleware:
-```typescript
-// Auth routes FIRST (no device token needed)
-v1Router.use("/pos", posOtpAuthRouter);
-v1Router.use("/pos", posEnrollRouter);
-
-// THEN device-token-required routes
-v1Router.use("/pos", setRlsStoreContext);
-v1Router.use("/pos", perStoreRateLimit);
-v1Router.use("/pos", posSalesRouter);
-// ... rest
+**Current (broken)**:
+```
+/api/v1/pos/auth/send-otp     ← Inside /pos/* (device token required)
+/api/v1/pos/auth/verify-otp   ← Inside /pos/* (device token required)
+/api/v1/pos/enroll             ← Inside /pos/* (device token required)
+/api/v1/pos/token/refresh      ← Inside /pos/* (device token required)
 ```
 
-Option B (Gateway): Add `/api/v1/pos/auth` to PUBLIC_PATHS in jwtAuth.ts (may already be there — but check for other middleware).
+**All other platforms do it correctly**:
+```
+/api/v1/retailer-admin/auth/*  ← Public, no JWT required
+/api/v1/supplier/auth/*        ← Public, no JWT required
+/api/v1/admin/auth/*           ← Public, no admin token required
+```
 
-Option C (Middleware): Add path exclusion in the device token middleware for `/auth/` paths.
+**Fix — Production-Grade Architecture**:
 
-**This is the #1 blocker for POS go-live.** Without this fix, no fresh install can authenticate.
+Move POS auth routes to `/api/v1/auth/pos/*` (public namespace). Keep `/api/v1/pos/*` as fully authenticated (zero exceptions).
 
-**Files to investigate**: `backend/src/routes/v1/index.ts`, `backend/services/api-gateway/src/index.ts`, `backend/src/middleware/deviceToken.ts`, `backend/src/app.ts`
+**New route structure**:
+```
+/api/v1/auth/pos/send-otp      ← PUBLIC (no device token)
+/api/v1/auth/pos/verify-otp    ← PUBLIC (no device token)
+/api/v1/auth/pos/enroll         ← PUBLIC (no device token)
+/api/v1/auth/pos/refresh        ← PUBLIC (expired token accepted)
 
-**12-Layer**: L5 API ✅, L6 Backend ✅, L10 Business ✅
+/api/v1/pos/*                   ← ALL require device token (no exceptions, no exemptions)
+```
+
+### Implementation — 5 sub-tasks:
+
+**Sub-task A: Backend route restructuring** (`backend/src/routes/v1/index.ts`)
+1. Create new router: `v1Router.use("/auth/pos", posOtpAuthRouter)`
+2. Create new router: `v1Router.use("/auth/pos", posEnrollRouter)`
+3. Keep OLD routes as aliases for 90-day backward compatibility:
+   ```typescript
+   // DEPRECATED: Old paths kept for existing installed apps. Remove after 90 days.
+   v1Router.use("/pos", posOtpAuthRouter);  // Will be removed
+   v1Router.use("/pos", posEnrollRouter);   // Will be removed
+   ```
+4. Move auth routes BEFORE the RLS/rate-limit middleware in mount order
+5. Add `// PUBLIC — no device token required` comments
+
+**Sub-task B: API Gateway update** (`backend/services/api-gateway/src/middleware/jwtAuth.ts`)
+1. Add `/api/v1/auth/pos` to `PUBLIC_PATHS` array
+2. Ensure gateway proxies `/auth/pos/*` to main-backend without any auth check
+3. Add rate limiting: `app.use('/api/v1/auth/pos', authRateLimiter)` in gateway index.ts
+
+**Sub-task C: POS app API client update** (`src/services/api/`)
+1. Update `posApi.ts` or `enrollApi.ts`: change OTP endpoints from `/pos/auth/send-otp` to `/auth/pos/send-otp`
+2. Update `catalogApi.ts` or wherever enroll endpoint is called: `/pos/enroll` to `/auth/pos/enroll`
+3. Update token refresh endpoint if applicable
+4. Keep backward fallback: if new endpoint returns 404 (old backend), retry on old path
+
+**Sub-task D: Deploy.yml environment** (`.github/workflows/deploy.yml`)
+1. Verify no env vars reference the old `/pos/auth/*` paths
+2. Verify smoke tests use new paths
+
+**Sub-task E: Smoke test update** (`scripts/gates/otp-auth-smoke.sh`)
+1. Update test URLs from `/pos/auth/send-otp` to `/auth/pos/send-otp`
+2. Test both old and new paths during transition period
+3. After 90 days, remove old path tests
+
+### Backward Compatibility Plan:
+- **Day 0**: Deploy with BOTH old + new paths working
+- **Day 1-90**: Old POS apps (already installed) use old paths, new installs use new paths
+- **Day 90**: Remove old paths from backend. All apps must be updated by then.
+- Version check: `MIN_APP_VERSION` gate ensures old apps update before old paths are removed
+
+### Test Requirements (BEHAVIORAL):
+- `POST /auth/pos/send-otp` without device token → 200 (OTP sent) or 400 (validation error), NOT 401
+- `POST /auth/pos/verify-otp` without device token → 200 (token issued) or 400 (wrong OTP), NOT 401
+- `POST /auth/pos/enroll` without device token → 200 (device created) or 400 (invalid code), NOT 401
+- `POST /pos/sales/cash` without device token → 401 (correct — sales REQUIRE device token)
+- Old paths (`/pos/auth/send-otp`) still work during transition period
+
+### Files to modify:
+- `backend/src/routes/v1/index.ts` — move auth router mount points
+- `backend/services/api-gateway/src/middleware/jwtAuth.ts` — add to PUBLIC_PATHS
+- `backend/services/api-gateway/src/index.ts` — add rate limiter for new path
+- `src/services/api/enrollApi.ts` — update endpoint URLs
+- `src/services/api/posApi.ts` — update OTP endpoint URLs (if defined here)
+- `src/screens/v3/PhoneScreenV3.tsx` — verify API call uses updated path
+- `src/screens/v3/OTPScreenV3.tsx` — verify API call uses updated path
+- `scripts/gates/otp-auth-smoke.sh` — update test URLs
+
+**This is the #1 blocker for POS go-live.** Without this, no fresh install can authenticate.
+
+**12-Layer Verification**: L3 Wiring ✅, L5 API ✅, L6 Backend ✅, L9 GCP Parity ✅, L10 Business ✅
 
 ---
 
