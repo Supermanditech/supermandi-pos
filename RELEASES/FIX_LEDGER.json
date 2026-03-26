@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1310,
+  "version": 1311,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -39931,6 +39931,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-26T15:22:18.313Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0775",
+      "file": "src/__tests__/screens/paymentSetup.gcp-stg-0775.test.ts",
+      "start_line": 1,
+      "end_line": 24,
+      "checksum": "b5e1a3beaf8b41ec",
+      "description": "GCP-STG-0775: Test verifying PaymentSetup not in OTP onboarding flow",
+      "test_file": "src/__tests__/screens/paymentSetup.gcp-stg-0775.test.ts",
+      "depends_on": "GCP-STG-0757",
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-26T15:26:59.400Z",
       "status": "ACTIVE"
     }
   ],
