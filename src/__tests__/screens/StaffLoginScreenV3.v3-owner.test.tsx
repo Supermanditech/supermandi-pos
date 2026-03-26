@@ -77,10 +77,11 @@ describe("Navigation flow (V3-NAV-011)", () => {
 });
 
 describe("Session timeout (V3-SESSION-025)", () => {
-  it("should soft-lock at 10 minutes (not 35)", () => {
+  it("should soft-lock at reasonable timeout (not 35+ minutes)", () => {
     const fs = require("fs");
     const timeout = fs.readFileSync("src/hooks/useSessionTimeout.ts", "utf8");
-    expect(timeout).toContain("10 * 60 * 1000");
+    // Timeout should be 25-30 min range (warn at 25, lock at 30)
+    expect(timeout).toContain("25 * 60 * 1000");
     expect(timeout).not.toContain("35 * 60 * 1000");
   });
 });

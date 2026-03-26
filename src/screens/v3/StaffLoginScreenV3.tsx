@@ -4,8 +4,8 @@
  * Matches prototype: SuperMandi POS, store code/name, PIN input, Login CTA, Switch Store
  */
 
-import React, { useMemo, useState, useCallback } from "react";
-import { View, TextInput, Pressable, StyleSheet, Text, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
+import { View, TextInput, Pressable, StyleSheet, Text, ActivityIndicator, KeyboardAvoidingView, Platform, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Rect, Circle } from "react-native-svg";
 import { useNavigation } from "@react-navigation/native";
@@ -15,7 +15,7 @@ import { useThemeColors } from "../../theme";
 import type { ColorPalette } from "../../theme";
 import { getScreenPadding } from "../../theme/responsive";
 import { showToast } from "../../utils/showToast";
-import { staffLogin } from "../../services/api/staffApi";
+import { staffLogin, listStaff } from "../../services/api/staffApi";
 import { useStaffSessionStore } from "../../stores/staffSessionStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { clearDeviceSession } from "../../services/deviceSession";
@@ -34,9 +34,31 @@ export default function StaffLoginScreenV3() {
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // GCP-STG-0763: Track whether store has any staff configured
+  const [noStaff, setNoStaff] = useState(false);
+  const [checkingStaff, setCheckingStaff] = useState(true);
 
   const storeName = useSettingsStore((s) => s.storeName) ?? "SuperMandi Store";
   const storeCode = useSettingsStore((s) => s.storeCode) ?? "";
+
+  // GCP-STG-0763: Check if store has any staff on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await listStaff();
+        if (cancelled) return;
+        if (!result.staff || result.staff.length === 0) {
+          setNoStaff(true);
+        }
+      } catch {
+        // Network error — show PIN form anyway (might work offline)
+      } finally {
+        if (!cancelled) setCheckingStaff(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleLogin = useCallback(async () => {
     if (!pin || pin.length < 4) {
@@ -117,6 +139,23 @@ export default function StaffLoginScreenV3() {
         {storeCode ? `${storeCode} · ` : ""}{storeName}
       </Text>
 
+      {/* GCP-STG-0763: No staff configured message */}
+      {noStaff && !checkingStaff && (
+        <View style={styles.noStaffCard} testID="staff-login-no-staff">
+          <Text style={styles.noStaffTitle}>No staff configured</Text>
+          <Text style={styles.noStaffBody}>
+            Your POS Manager PIN was sent via WhatsApp when you enrolled this device. Check your messages.
+          </Text>
+          <Pressable
+            style={styles.noStaffContactBtn}
+            onPress={() => Linking.openURL("https://wa.me/917737914383?text=I%20need%20help%20with%20my%20POS%20staff%20setup")}
+            testID="staff-login-contact-admin"
+          >
+            <Text style={styles.noStaffContactText}>Contact Support on WhatsApp</Text>
+          </Pressable>
+        </View>
+      )}
+
       {/* PIN input */}
       <View style={styles.form}>
         <Text style={styles.label}>PIN</Text>
@@ -176,5 +215,11 @@ function createStyles(colors: ColorPalette) {
     loginBtnText: { fontSize: 17, fontWeight: "800", color: "#fff" },
     switchBtn: { marginTop: 24 },
     switchBtnText: { fontSize: 13, color: colors.primary, fontWeight: "600" },
+    // GCP-STG-0763: No staff card styles
+    noStaffCard: { width: "100%", backgroundColor: "#FEF3C7", borderRadius: 14, padding: 16, marginTop: 20, borderWidth: 1, borderColor: "#F59E0B" },
+    noStaffTitle: { fontSize: 15, fontWeight: "700", color: "#92400E", marginBottom: 4 },
+    noStaffBody: { fontSize: 13, color: "#92400E", lineHeight: 18, marginBottom: 12 },
+    noStaffContactBtn: { backgroundColor: "#25D366", paddingVertical: 12, borderRadius: 12, alignItems: "center" },
+    noStaffContactText: { fontSize: 14, fontWeight: "700", color: "#fff" },
   });
 }
