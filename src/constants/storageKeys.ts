@@ -34,7 +34,9 @@ export const SK_PURCHASE_DRAFT_LEGACY = "supermandi.purchase.draft";
 
 // ── Offline & Queues ────────────────────────────────────────────────────────
 export const SK_OFFLINE_QUEUE = "supermandi.offline.queue.v1";
-export const SK_OFFLINE_SCAN_QUEUE = "offline_scan_queue";
+// GCP-STG-0771: Namespaced (was "offline_scan_queue")
+export const SK_OFFLINE_SCAN_QUEUE = "supermandi.offline.scanQueue.v1";
+export const SK_OFFLINE_SCAN_QUEUE_LEGACY = "offline_scan_queue";
 export const SK_OFFLINE_SEQ_PREFIX = "supermandi.offline.seq";
 export const SK_DEADLETTER_QUEUE = "supermandi.deadletter.queue.v1";
 export const SK_CLOUD_EVENT_QUEUE = "supermandi.queue.posEvents.v1";
@@ -46,14 +48,19 @@ export const SK_SEARCH_HISTORY_V2 = "supermandi.sell.searchHistory.v2";
 // ── Settings & Preferences ──────────────────────────────────────────────────
 export const SK_LANGUAGE = "supermandi.language";
 export const SK_POS_MODE = "supermandi.pos.lastMode.v1";
-export const SK_TTS_ENABLED = "tts_enabled";
-export const SK_TTS_LANGUAGE = "tts_language";
+// GCP-STG-0771: Namespaced (were "tts_enabled", "tts_language")
+export const SK_TTS_ENABLED = "supermandi.tts.enabled";
+export const SK_TTS_ENABLED_LEGACY = "tts_enabled";
+export const SK_TTS_LANGUAGE = "supermandi.tts.language";
+export const SK_TTS_LANGUAGE_LEGACY = "tts_language";
 export const SK_BARCODE_PRINT_SETTINGS = "supermandi.barcode.printSettings";
 export const SK_AUTO_SYNC_INTERVAL = "supermandi.autoSync.intervalMs";
 
 // ── Health & Diagnostics ────────────────────────────────────────────────────
 export const SK_DB_HEALTH = "supermandi.db.health.v1";
-export const SK_EVENT_LOGS = "@pos_event_logs";
+// GCP-STG-0771: Namespaced (was "@pos_event_logs")
+export const SK_EVENT_LOGS = "supermandi.diagnostics.eventLogs.v1";
+export const SK_EVENT_LOGS_LEGACY = "@pos_event_logs";
 
 // ── Dynamic key builders (store-scoped) ─────────────────────────────────────
 export const skPaymentPrompted = (storeId: string) =>
@@ -64,3 +71,28 @@ export const skPaymentOnce = (transactionId: string, eventType: string) =>
   `supermandi.payment.once.${transactionId}.${eventType}`;
 // GCP-STG-0568: Voice hint dismissal key
 export const SK_VOICE_HINT_DISMISSED = "supermandi.voice_hint_dismissed";
+
+// ── GCP-STG-0771: One-time key migration (old → namespaced) ────────────────
+// Call once on app launch (SplashScreenV3 or App.tsx init)
+const LEGACY_KEY_MAP: Array<[string, string]> = [
+  [SK_OFFLINE_SCAN_QUEUE_LEGACY, SK_OFFLINE_SCAN_QUEUE],
+  [SK_TTS_ENABLED_LEGACY, SK_TTS_ENABLED],
+  [SK_TTS_LANGUAGE_LEGACY, SK_TTS_LANGUAGE],
+  [SK_EVENT_LOGS_LEGACY, SK_EVENT_LOGS],
+];
+
+export async function migrateStorageKeys(): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+  for (const [oldKey, newKey] of LEGACY_KEY_MAP) {
+    try {
+      const value = await AsyncStorage.getItem(oldKey);
+      if (value !== null) {
+        await AsyncStorage.setItem(newKey, value);
+        await AsyncStorage.removeItem(oldKey);
+      }
+    } catch {
+      // Non-critical — skip silently
+    }
+  }
+}
