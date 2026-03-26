@@ -37,7 +37,7 @@ let sendBillReceipt: typeof import("../src/services/whatsappService").sendBillRe
 let getWebhookVerifyToken: typeof import("../src/services/whatsappService").getWebhookVerifyToken;
 
 beforeAll(async () => {
-  const mod = await import("../src/services/whatsappService");
+  const mod = require("../src/services/whatsappService");
   normalizePhone = mod.normalizePhone;
   isWhatsAppConfigured = mod.isWhatsAppConfigured;
   sendTextMessage = mod.sendTextMessage;

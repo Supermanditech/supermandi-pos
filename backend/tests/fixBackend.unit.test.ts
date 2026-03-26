@@ -24,35 +24,35 @@ describe("FIX-002: Razorpay graceful degradation", () => {
   it("isRazorpayOrdersConfigured returns true when both vars set", async () => {
     process.env.RAZORPAY_KEY_ID = "rzp_test_abc";
     process.env.RAZORPAY_KEY_SECRET = "secret_xyz";
-    const mod = await import("../src/services/razorpayOrderService");
+    const mod = require("../src/services/razorpayOrderService");
     expect(mod.isRazorpayOrdersConfigured()).toBe(true);
   });
 
   it("isRazorpayOrdersConfigured returns false when KEY_ID missing", async () => {
     delete process.env.RAZORPAY_KEY_ID;
     process.env.RAZORPAY_KEY_SECRET = "secret_xyz";
-    const mod = await import("../src/services/razorpayOrderService");
+    const mod = require("../src/services/razorpayOrderService");
     expect(mod.isRazorpayOrdersConfigured()).toBe(false);
   });
 
   it("isRazorpayOrdersConfigured returns false when KEY_SECRET missing", async () => {
     process.env.RAZORPAY_KEY_ID = "rzp_test_abc";
     delete process.env.RAZORPAY_KEY_SECRET;
-    const mod = await import("../src/services/razorpayOrderService");
+    const mod = require("../src/services/razorpayOrderService");
     expect(mod.isRazorpayOrdersConfigured()).toBe(false);
   });
 
   it("isRazorpayOrdersConfigured returns false when both missing", async () => {
     delete process.env.RAZORPAY_KEY_ID;
     delete process.env.RAZORPAY_KEY_SECRET;
-    const mod = await import("../src/services/razorpayOrderService");
+    const mod = require("../src/services/razorpayOrderService");
     expect(mod.isRazorpayOrdersConfigured()).toBe(false);
   });
 
   it("createRazorpayOrder returns null when not configured", async () => {
     delete process.env.RAZORPAY_KEY_ID;
     delete process.env.RAZORPAY_KEY_SECRET;
-    const mod = await import("../src/services/razorpayOrderService");
+    const mod = require("../src/services/razorpayOrderService");
     const result = await mod.createRazorpayOrder({
       amountPaise: 5000,
       receipt: "test-001",
@@ -63,7 +63,7 @@ describe("FIX-002: Razorpay graceful degradation", () => {
   it("fetchRazorpayOrder returns null when not configured", async () => {
     delete process.env.RAZORPAY_KEY_ID;
     delete process.env.RAZORPAY_KEY_SECRET;
-    const mod = await import("../src/services/razorpayOrderService");
+    const mod = require("../src/services/razorpayOrderService");
     const result = await mod.fetchRazorpayOrder("order_xyz");
     expect(result).toBeNull();
   });
@@ -71,7 +71,7 @@ describe("FIX-002: Razorpay graceful degradation", () => {
   it("fetchOrderPayments returns empty array when not configured", async () => {
     delete process.env.RAZORPAY_KEY_ID;
     delete process.env.RAZORPAY_KEY_SECRET;
-    const mod = await import("../src/services/razorpayOrderService");
+    const mod = require("../src/services/razorpayOrderService");
     const result = await mod.fetchOrderPayments("order_xyz");
     expect(result).toEqual([]);
   });
