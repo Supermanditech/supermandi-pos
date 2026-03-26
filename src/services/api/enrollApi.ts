@@ -50,13 +50,9 @@ export async function enrollDevice(input: {
   // DEV-071: Get persistent device fingerprint for idempotent enrollment
   const deviceFingerprint = await getOrCreateDeviceFingerprint();
 
-  // Build request body with BOTH field names for backward/forward compatibility
-  // - Old servers expect: enrollmentCode
-  // - New servers expect: code
-  // Send both until all servers are upgraded (safe to remove enrollmentCode after v3.1)
+  // GCP-STG-0774: Send only `code` (canonical field name)
   const requestBody = {
     code: input.enrollmentCode,
-    enrollmentCode: input.enrollmentCode, // backward compat with old servers
     deviceMeta: {
       ...input.deviceMeta,
       deviceFingerprint,

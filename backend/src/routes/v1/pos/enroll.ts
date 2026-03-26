@@ -93,10 +93,8 @@ function isMultiUseDemoAllowed(): boolean {
 // POST /api/v1/pos/enroll (with rate limiting to prevent brute force)
 // AUD-061-A: Apply both burst limiter (3/min) and sustained limiter (10/15min)
 posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async (req, res) => {
-  // DEV-071: Accept both field names for backward/forward compatibility during rollout
-  // - Old clients send: enrollmentCode
-  // - New clients send: code
-  const rawCode = req.body?.code ?? req.body?.enrollmentCode ?? req.body?.enrollment_code;
+  // GCP-STG-0774: Accept only `code` (canonical). Legacy aliases removed.
+  const rawCode = req.body?.code;
   const code = asTrimmedString(rawCode)?.toUpperCase();
 
   // Dev logging to debug field name issues
@@ -731,7 +729,8 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
 // Check if a device label already exists for the store (before enrollment)
 // GO-LIVE-052: Added rate limiting to prevent abuse
 posEnrollRouter.post("/enroll/check-label", labelCheckLimiter, async (req, res) => {
-  const rawCode = req.body?.code ?? req.body?.enrollmentCode;
+  // GCP-STG-0774: Accept only `code` (canonical)
+  const rawCode = req.body?.code;
   const code = asTrimmedString(rawCode)?.toUpperCase();
   const label = asTrimmedString(req.body?.label);
 
