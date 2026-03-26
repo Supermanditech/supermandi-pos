@@ -13,6 +13,7 @@ import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { asError } from "../../../lib/errorUtils";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { sendTextMessage, isWhatsAppConfigured } from "../../../services/whatsappService";
 import { sendSms } from "../../../services/smsService";
 import { redisRateLimit } from "../../../middleware/rateLimit";
@@ -277,6 +278,61 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
     } finally {
       client.release();
     }
+
+    // GCP-STG-0762: Auto-create MANAGER staff if store has none
+    // Non-blocking: device enrollment succeeds even if staff creation fails.
+    (async () => {
+      try {
+        const existingStaff = await pool.query(
+          `SELECT id FROM platform.store_staff WHERE store_id = $1::uuid AND is_active = true LIMIT 1`,
+          [store.id]
+        );
+        if (existingStaff.rows.length > 0) {
+          log.info(`[OTP] GCP-STG-0762: Store ${store.id} already has active staff, skipping auto-create`);
+          return;
+        }
+
+        // Use the OTP phone as the staff phone (10-digit from request)
+        const staffPhone = phone;
+        const randomPin = String(crypto.randomInt(100000, 999999));
+        const pinHash = await bcrypt.hash(randomPin, 10);
+
+        await pool.query(
+          `INSERT INTO platform.store_staff (store_id, name, phone, pin_hash, role, must_change_pin)
+           VALUES ($1::uuid, $2, $3, $4, 'MANAGER', TRUE)
+           ON CONFLICT DO NOTHING`,
+          [store.id, `${store.store_name} Manager`, staffPhone, pinHash]
+        );
+
+        log.info(`[OTP] GCP-STG-0762: Auto-created MANAGER staff for store ${store.id} (phone: ***${staffPhone.slice(-4)})`);
+
+        // Send PIN via WhatsApp
+        if (isWhatsAppConfigured()) {
+          try {
+            await sendTextMessage({
+              to: `91${staffPhone}`,
+              body: `Your SuperMandi POS Manager PIN is: ${randomPin}\n\nPlease change this PIN on your first login. Do not share it with anyone.`,
+            });
+            log.info(`[OTP] GCP-STG-0762: PIN sent via WhatsApp to ***${staffPhone.slice(-4)}`);
+          } catch (waErr) {
+            log.warn(`[OTP] GCP-STG-0762: WhatsApp PIN delivery failed:`, asError(waErr).message);
+          }
+        } else {
+          log.warn(`[OTP] GCP-STG-0762: WhatsApp not configured — staff PIN not delivered. PIN: ${process.env.LOG_OTP_PLAINTEXT === 'true' ? randomPin : '******'}`);
+        }
+
+        logAuthEvent({
+          actorType: 'pos_device',
+          actorId: normalizedPhone,
+          eventType: 'staff_auto_created',
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+          metadata: { storeId: store.id, role: 'MANAGER', mustChangePin: true },
+        });
+      } catch (staffErr) {
+        log.warn("[OTP] GCP-STG-0762: Auto-create staff failed (non-blocking):", asError(staffErr).message);
+      }
+    })();
 
     // GCP-STG-0489: Audit log — OTP verified + device enrolled
     logAuthEvent({
