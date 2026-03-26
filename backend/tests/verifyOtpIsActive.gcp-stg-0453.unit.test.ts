@@ -83,12 +83,12 @@ describe("GCP-STG-0453: verify-otp is_active guard", () => {
       .post("/pos/auth/verify-otp")
       .send({ phone: "9876543210", otp: "654321" });
 
-    // Key assertion: should NOT be 404 (store was found because is_active=true)
-    // Will be 500 from incomplete mock, but proves the is_active filter passed
+    // Key assertion: should NOT be 404 (store was found because deleted_at IS NULL)
+    // Will be 500 from incomplete mock, but proves the soft-delete filter passed
     expect(res.status).not.toBe(404);
   });
 
-  test("verify-otp SQL includes u.is_active = true", async () => {
+  test("verify-otp SQL includes u.deleted_at IS NULL", async () => {
     // 1: pos_otp → valid
     mockQuery.mockResolvedValueOnce({
       rows: [{ otp_hash: otpHash("111111"), expires_at: new Date(Date.now() + 300000), attempts: 0 }],
@@ -105,7 +105,7 @@ describe("GCP-STG-0453: verify-otp is_active guard", () => {
     // 3rd call (index 2) is the store lookup query
     const storeCall = mockQuery.mock.calls[2];
     expect(storeCall).toBeDefined();
-    expect(storeCall[0]).toContain("u.is_active = true");
+    expect(storeCall[0]).toContain("u.deleted_at IS NULL");
     expect(storeCall[0]).toContain("auth.users");
     expect(storeCall[1]).toEqual(["+919876543210"]);
   });
