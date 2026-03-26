@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1300,
+  "version": 1301,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -9864,8 +9864,8 @@
     {
       "ticket": "GCP-STG-0007",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 226,
-      "end_line": 267,
+      "start_line": 227,
+      "end_line": 268,
       "checksum": "246e55faa13c52da",
       "description": "Deactivate old devices + create new one in transaction on OTP verify (race-condition safe) â€” checksum updated by GCP-STG-0484 (added token_expires_at to INSERT)",
       "test_file": "backend/src/__tests__/pos/otpAuth.test.ts",
@@ -9899,7 +9899,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T10:25:31.465Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-26T14:28:32.515Z"
+      "line_shifted_at": "2026-03-26T14:49:08.548Z"
     },
     {
       "ticket": "GCP-STG-0008",
@@ -22081,8 +22081,8 @@
     {
       "ticket": "GCP-STG-0453",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 193,
-      "end_line": 201,
+      "start_line": 194,
+      "end_line": 202,
       "checksum": "59a47e2f6aeaad4c",
       "description": "verify-otp checks u.is_active = true matching send-otp parity",
       "test_file": "backend/tests/verifyOtpIsActive.gcp-stg-0453.unit.test.ts",
@@ -22116,7 +22116,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T16:25:03.203Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-26T14:28:32.660Z"
+      "line_shifted_at": "2026-03-26T14:49:08.679Z"
     },
     {
       "ticket": "GCP-STG-0454",
@@ -22200,8 +22200,8 @@
     {
       "ticket": "GCP-STG-0459",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 165,
-      "end_line": 185,
+      "start_line": 166,
+      "end_line": 186,
       "checksum": "0e12ec1a50706d82",
       "description": "pos_otp SELECT/UPDATE uses normalizedPhone (+91 E.164) in verify-otp",
       "test_file": "backend/tests/otpAuth.gcp-stg-0459.unit.test.ts",
@@ -22235,7 +22235,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-23T17:17:57.355Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-26T14:28:32.663Z"
+      "line_shifted_at": "2026-03-26T14:49:08.683Z"
     },
     {
       "ticket": "GCP-STG-0461",
@@ -22558,8 +22558,8 @@
     {
       "ticket": "GCP-STG-0484",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 263,
-      "end_line": 269,
+      "start_line": 264,
+      "end_line": 270,
       "checksum": "1c43371cc26bb892",
       "description": "POS device token expiry: INSERT via otpAuth sets token_expires_at = NOW() + 90 days",
       "test_file": "backend/tests/deviceTokenExpiry.gcp-stg-0484.unit.test.ts",
@@ -22610,7 +22610,7 @@
         "single_commit": "fix(GCP-STG-0484)",
         "ticket_parked": "pending commit"
       },
-      "line_shifted_at": "2026-03-26T14:28:32.670Z"
+      "line_shifted_at": "2026-03-26T14:49:08.692Z"
     },
     {
       "ticket": "GCP-STG-0467",
@@ -22672,7 +22672,7 @@
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
       "start_line": 104,
       "end_line": 137,
-      "checksum": "aace4922814cd918",
+      "checksum": "dab47d64655f7568",
       "description": "SMS fallback in send-otp: tries WhatsApp first, falls back to SMS if WA fails or not configured (updated by GCP-STG-0576: SMS_DISABLED early return)",
       "test_file": "backend/tests/smsFallback.gcp-stg-0467.unit.test.ts",
       "depends_on": null,
@@ -23739,8 +23739,8 @@
     {
       "ticket": "GCP-STG-0460",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 184,
-      "end_line": 197,
+      "start_line": 185,
+      "end_line": 198,
       "description": "Per-store max device quota from platform.stores",
       "test_file": "N/A",
       "status": "ACTIVE",
@@ -23791,7 +23791,7 @@
         "ticket_parked": "pending"
       },
       "checksum": "c4267eb3bf668674",
-      "line_shifted_at": "2026-03-26T14:28:32.681Z"
+      "line_shifted_at": "2026-03-26T14:49:08.706Z"
     },
     {
       "ticket": "GCP-STG-0481",
@@ -29610,8 +29610,8 @@
     {
       "ticket": "GCP-STG-0576",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 121,
-      "end_line": 137,
+      "start_line": 122,
+      "end_line": 138,
       "checksum": "fe3f884746ed5c1a",
       "description": "SMS architecturally disabled â€” early return when SMS_DISABLED=true, clear comment documenting architecture decision",
       "test_file": "backend/src/routes/v1/pos/otpAuth.ts",
@@ -29655,7 +29655,7 @@
         "fix_ledger_check": "591 fixes intact, zero drift",
         "no_agent_conflict": "Single agent, clean diff"
       },
-      "line_shifted_at": "2026-03-26T14:28:32.727Z"
+      "line_shifted_at": "2026-03-26T14:49:08.749Z"
     },
     {
       "ticket": "GCP-STG-0577",
@@ -39222,8 +39222,8 @@
     {
       "ticket": "GCP-STG-0762",
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
-      "start_line": 282,
-      "end_line": 339,
+      "start_line": 283,
+      "end_line": 340,
       "checksum": "085186d2010dcf47",
       "description": "GCP-STG-0762: Auto-create MANAGER staff on OTP verify-otp with random PIN + WhatsApp delivery + must_change_pin=TRUE",
       "test_file": "backend/tests/otpAuth.gcp-stg-0762.unit.test.ts",
@@ -39269,7 +39269,8 @@
         "test_guard": "otpAuth.gcp-stg-0762.unit.test.ts — 10 behavioral tests",
         "single_commit": "fix(GCP-STG-0762)",
         "ticket_parked": "Will park after commit"
-      }
+      },
+      "line_shifted_at": "2026-03-26T14:49:08.819Z"
     },
     {
       "ticket": "GCP-STG-0758",
@@ -39570,6 +39571,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-26T14:46:30.804Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0761",
+      "file": "backend/src/routes/v1/pos/otpAuth.ts",
+      "start_line": 107,
+      "end_line": 108,
+      "checksum": "0ea30291860f49dc",
+      "description": "GCP-STG-0761: POS login context in OTP WhatsApp message",
+      "test_file": "backend/tests/otpAuth.gcp-stg-0761.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-26T14:49:08.278Z",
       "status": "ACTIVE"
     }
   ],

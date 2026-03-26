@@ -104,7 +104,8 @@ posOtpAuthRouter.post("/auth/send-otp", otpSendLimiter, async (req, res) => {
 
     // GCP-STG-0467: WhatsApp primary + SMS fallback for OTP delivery
     let otpDelivered = false;
-    const otpMessage = `Your SuperMandi POS verification code is: ${otp}\n\nThis code expires in 5 minutes. Do not share it with anyone.`;
+    // GCP-STG-0761: POS login context in OTP message
+    const otpMessage = `Your SuperMandi POS login OTP is: ${otp}\n\nValid for 5 minutes. Do not share this code with anyone.`;
 
     if (isWhatsAppConfigured()) {
       try {
