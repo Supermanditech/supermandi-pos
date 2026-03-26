@@ -24,6 +24,8 @@ export default function PhoneScreenV3() {
   const [loading, setLoading] = useState(false);
   // GCP-STG-0479: Track if user tried entering more than 10 digits
   const [showPhoneHint, setShowPhoneHint] = useState(false);
+  // GCP-STG-0760: Show registration CTA when phone is not registered
+  const [showRegisterCta, setShowRegisterCta] = useState(false);
 
   const handleContinue = useCallback(async () => {
     const clean = phone.replace(/\D/g, "").slice(-10);
@@ -36,8 +38,14 @@ export default function PhoneScreenV3() {
       logger.debug("PhoneV3", `otp_sent:${clean}`);
       navigation.navigate("V3OTP", { phone: clean });
     } catch (err: any) {
+      const errorCode = err?.response?.data?.error?.code ?? "";
       const msg = err?.response?.data?.error?.message ?? err?.message ?? "Failed to send OTP";
-      showToast(msg);
+      // GCP-STG-0760: Show registration CTA when phone not registered
+      if (errorCode === "PHONE_NOT_REGISTERED" || err?.response?.status === 404) {
+        setShowRegisterCta(true);
+      } else {
+        showToast(msg);
+      }
       logger.debug("PhoneV3", `send_otp_failed:${clean}:${String(err)}`);
     }
     setLoading(false);
@@ -68,6 +76,7 @@ export default function PhoneScreenV3() {
               onChangeText={(text) => {
                 // GCP-STG-0479: Show hint when user types more than 10 digits
                 const digits = text.replace(/\D/g, "");
+                setShowRegisterCta(false); // GCP-STG-0760: Reset CTA on phone change
                 if (digits.length > 10) {
                   setShowPhoneHint(true);
                   setPhone(digits.slice(0, 10));
@@ -98,6 +107,23 @@ export default function PhoneScreenV3() {
           {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.continueText}>Continue →</Text>}
         </Pressable>
 
+        {/* GCP-STG-0760: Prominent registration CTA when phone not found */}
+        {showRegisterCta && (
+          <View style={styles.registerCta} testID="phone-register-cta">
+            <Text style={styles.registerCtaTitle}>Phone not registered</Text>
+            <Text style={styles.registerCtaBody}>
+              Register your store online first, get approved, then log in here.
+            </Text>
+            <Pressable
+              style={styles.registerCtaBtn}
+              onPress={() => Linking.openURL("https://supermandi.tech/retailer/register")}
+              testID="phone-register-cta-btn"
+            >
+              <Text style={styles.registerCtaBtnText}>Register at supermandi.tech →</Text>
+            </Pressable>
+          </View>
+        )}
+
         <Pressable style={styles.registerLink} onPress={() => Linking.openURL("https://supermandi.tech/retailer/register")}>
           <Text style={styles.registerText}>New store? <Text style={styles.registerBold}>Register here</Text></Text>
         </Pressable>
@@ -122,6 +148,12 @@ function createStyles(colors: ColorPalette) {
     btnDisabled: { opacity: 0.6 },
     continueText: { fontSize: 17, fontWeight: "800", color: "#fff" },
     phoneHint: { fontSize: 12, color: "#E53E3E", marginTop: 4 },
+    // GCP-STG-0760: Registration CTA styles
+    registerCta: { width: "100%", backgroundColor: "#FEF3C7", borderRadius: 14, padding: 16, marginTop: 20, borderWidth: 1, borderColor: "#F59E0B" },
+    registerCtaTitle: { fontSize: 15, fontWeight: "700", color: "#92400E", marginBottom: 4 },
+    registerCtaBody: { fontSize: 13, color: "#92400E", lineHeight: 18, marginBottom: 12 },
+    registerCtaBtn: { backgroundColor: "#2563EB", paddingVertical: 12, borderRadius: 12, alignItems: "center" },
+    registerCtaBtnText: { fontSize: 14, fontWeight: "700", color: "#fff" },
     registerLink: { marginTop: 24 },
     registerText: { fontSize: 13, color: colors.textTertiary },
     registerBold: { color: colors.primary, fontWeight: "600" },

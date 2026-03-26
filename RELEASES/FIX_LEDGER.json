@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1297,
+  "version": 1298,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -24023,7 +24023,7 @@
       "ticket": "GCP-STG-0479",
       "file": "src/screens/v3/PhoneScreenV3.tsx",
       "start_line": 1,
-      "end_line": 30,
+      "end_line": 162,
       "description": "Phone input validation hint for >10 digits",
       "test_file": "N/A",
       "status": "ACTIVE",
@@ -24073,7 +24073,7 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "ad1e8e8a87f8e3b1"
+      "checksum": "554e92cbc36151a9"
     },
     {
       "ticket": "GCP-STG-0471",
@@ -38887,8 +38887,8 @@
       "ticket": "GCP-STG-0780",
       "file": "src/screens/v3/PhoneScreenV3.tsx",
       "start_line": 1,
-      "end_line": 112,
-      "checksum": "dbcbfa157ac08246",
+      "end_line": 162,
+      "checksum": "554e92cbc36151a9",
       "description": "GCP-STG-0780: Updated send-otp URL to /auth/pos/auth/send-otp (supersedes GCP-STG-0413 SafeAreaView insets unchanged)",
       "test_file": "backend/tests/posAuthRoutePublic.gcp-stg-0780.unit.test.ts",
       "depends_on": null,
@@ -39435,6 +39435,61 @@
         "regression_check": "6/6 tests pass",
         "test_guard": "EnrollDeviceScreen.gcp-stg-0759.test.ts — 6 tests",
         "single_commit": "fix(GCP-STG-0759)",
+        "ticket_parked": "Will park after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0760",
+      "file": "src/screens/v3/PhoneScreenV3.tsx",
+      "start_line": 39,
+      "end_line": 49,
+      "checksum": "0d541bcf1f794566",
+      "description": "GCP-STG-0760: Show registration CTA on PHONE_NOT_REGISTERED error in PhoneScreenV3",
+      "test_file": "src/__tests__/screens/PhoneScreenV3.gcp-stg-0760.test.ts",
+      "depends_on": "GCP-STG-0757",
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-26T14:39:37.726Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "Yellow CTA card with title, body text, blue register button",
+        "ux_states": "CTA shows on PHONE_NOT_REGISTERED, hides on phone change",
+        "wiring": "CTA button opens supermandi.tech/retailer/register via Linking",
+        "navigation": "No navigation changes — external link only",
+        "i18n_keys": "Hardcoded EN",
+        "business_logic": "No business logic changes",
+        "business_behaviour": "Unregistered phone → helpful guidance instead of confusing error",
+        "impacted_files": "PhoneScreenV3.tsx + test file",
+        "fix_ledger_check": "Zero drift after update",
+        "no_agent_conflict": "Single agent",
+        "operator_approved": "UI-only enhancement",
+        "gcp_parity": "Standard RN components + Linking",
+        "regression_check": "6/6 tests pass",
+        "test_guard": "PhoneScreenV3.gcp-stg-0760.test.ts — 6 tests",
+        "single_commit": "fix(GCP-STG-0760)",
         "ticket_parked": "Will park after commit"
       }
     }
