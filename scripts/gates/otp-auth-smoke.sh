@@ -19,9 +19,9 @@ echo "Target: $STAGING_URL"
 echo ""
 
 # Test 1: send-otp returns 400 for missing phone (endpoint reachable)
-echo "--- Test 1: POST /api/v1/pos/auth/send-otp (missing phone) ---"
+echo "--- Test 1: POST /api/v1/auth/pos/auth/send-otp (missing phone) ---"
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-  -X POST "$STAGING_URL/api/v1/pos/auth/send-otp" \
+  -X POST "$STAGING_URL/api/v1/auth/pos/auth/send-otp" \
   -H "Content-Type: application/json" \
   -d '{}' \
   --connect-timeout 10 --max-time 15)
@@ -32,9 +32,9 @@ else
 fi
 
 # Test 2: verify-otp returns 400 or 401 for missing input
-echo "--- Test 2: POST /api/v1/pos/auth/verify-otp (missing input) ---"
+echo "--- Test 2: POST /api/v1/auth/pos/auth/verify-otp (missing input) ---"
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-  -X POST "$STAGING_URL/api/v1/pos/auth/verify-otp" \
+  -X POST "$STAGING_URL/api/v1/auth/pos/auth/verify-otp" \
   -H "Content-Type: application/json" \
   -d '{}' \
   --connect-timeout 10 --max-time 15)
@@ -58,7 +58,7 @@ fi
 # Test 4: Migration 191 (pos_otp table) applied — checked via send-otp not returning 500
 echo "--- Test 4: send-otp does not 500 (migration 191 applied) ---"
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-  -X POST "$STAGING_URL/api/v1/pos/auth/send-otp" \
+  -X POST "$STAGING_URL/api/v1/auth/pos/auth/send-otp" \
   -H "Content-Type: application/json" \
   -d '{"phone":"0000000000"}' \
   --connect-timeout 10 --max-time 15)

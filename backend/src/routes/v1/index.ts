@@ -156,6 +156,13 @@ v1Router.use("/", configStatusRouter);
 // REQ.FEATURE.SUPERADMIN.WHATSAPP_CTA_LIVE_CONFIG.001: Public CTA config (no auth, safe display data only)
 v1Router.use("/public", publicConfigRouter);
 
+// =====================================================================
+// GCP-STG-0780: POS auth routes — PUBLIC namespace (no device token required)
+// These are pre-authentication routes for fresh installs.
+// =====================================================================
+v1Router.use("/auth/pos", posOtpAuthRouter);
+v1Router.use("/auth/pos", posEnrollRouter);
+
 // GCP-STG-0084 FIX: Set RLS store context on all POS routes (from posDevice.storeId)
 import { setRlsStoreContext, setRlsAdminContext } from "../../middleware/rlsContext";
 v1Router.use("/pos", setRlsStoreContext);
@@ -176,6 +183,7 @@ v1Router.use("/pos", posSalesRouter);
 v1Router.use("/pos", posPurchasesRouter);
 v1Router.use("/pos", posStoreRouter);
 v1Router.use("/pos", posSyncRouter);
+// DEPRECATED (GCP-STG-0780): Old path kept for installed apps. Remove after 90 days.
 v1Router.use("/pos", posEnrollRouter);
 v1Router.use("/pos", posDevicesRouter);
 v1Router.use("/pos", posUiStatusRouter);
@@ -205,7 +213,7 @@ v1Router.use("/pos", posNotificationsRouter);  // Phase 8: FCM push notification
 v1Router.use("/pos", posRefundRequestsRouter);  // T-219: UPI refund request management
 v1Router.use("/pos", posWhatsAppRouter);  // WA-001: WhatsApp Cloud API bill sharing
 v1Router.use("/pos", posExpiryAlertsRouter);  // SCALE-C2: Expiry alerts
-// V3: OTP auth (no device token required — this IS the auth)
+// DEPRECATED (GCP-STG-0780): Old paths kept for installed apps. Remove after 90 days.
 v1Router.use("/pos", posOtpAuthRouter);
 // V3-016: Wholesale B2B routes
 v1Router.use("/pos", posWholesaleRouter);

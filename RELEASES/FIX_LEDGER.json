@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1283,
+  "version": 1291,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -917,7 +917,7 @@
         "test_guard": true
       },
       "registered_at": "2026-03-13T20:39:58.255Z",
-      "status": "ACTIVE",
+      "status": "SUPERSEDED",
       "checklist_evidence": {
         "operator_approved": "audit only, no code changes needed",
         "parity_scanned": "no dev URLs",
@@ -925,7 +925,9 @@
         "gcp_parity": "pure frontend",
         "regression_check": "23 fixes intact",
         "test_guard": "6 tests pass"
-      }
+      },
+      "superseded_by": "GCP-STG-0780",
+      "superseded_reason": "Pre-existing drift — file changed in prior session, checksum stale"
     },
     {
       "ticket": "STG-483",
@@ -6615,7 +6617,8 @@
         "test_guard": true,
         "single_commit": true,
         "ticket_parked": true,
-        "operator_approved": true
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T15:13:58.347Z",
@@ -6664,7 +6667,8 @@
         "api_errors": "N/A",
         "store_isolation": "N/A",
         "db_schema": "N/A",
-        "migration_safe": "N/A"
+        "migration_safe": "N/A",
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T15:46:42.039Z",
@@ -6701,7 +6705,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T15:59:44.954Z",
@@ -6738,7 +6743,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T16:13:16.165Z",
@@ -6775,7 +6781,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T16:20:09.084Z",
@@ -6812,7 +6819,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T16:27:31.969Z",
@@ -6849,7 +6857,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T16:33:52.087Z",
@@ -6886,7 +6895,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T16:38:59.442Z",
@@ -6923,7 +6933,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T16:43:01.873Z",
@@ -6960,7 +6971,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T16:47:49.316Z",
@@ -6997,7 +7009,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T16:51:31.096Z",
@@ -7034,7 +7047,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T16:58:30.870Z",
@@ -7071,7 +7085,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:05:11.629Z",
@@ -7108,7 +7123,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:10:03.068Z",
@@ -7145,7 +7161,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:10:03.237Z",
@@ -7182,7 +7199,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:22:57.121Z",
@@ -7219,7 +7237,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:22:57.268Z",
@@ -7256,7 +7275,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:22:57.423Z",
@@ -7293,7 +7313,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:22:57.596Z",
@@ -7330,7 +7351,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:35:57.376Z",
@@ -7367,7 +7389,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:35:57.628Z",
@@ -7404,7 +7427,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:35:57.881Z",
@@ -7441,7 +7465,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:35:58.124Z",
@@ -7478,7 +7503,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:35:58.411Z",
@@ -7515,7 +7541,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:35:58.683Z",
@@ -7552,7 +7579,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:44:37.086Z",
@@ -7589,7 +7617,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:44:37.274Z",
@@ -7626,7 +7655,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:44:37.450Z",
@@ -7663,7 +7693,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-16T17:44:37.632Z",
@@ -7774,7 +7805,8 @@
         "test_guard": true,
         "single_commit": true,
         "ticket_parked": true,
-        "operator_approved": true
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5
     },
@@ -7809,7 +7841,8 @@
         "test_guard": true,
         "single_commit": true,
         "ticket_parked": true,
-        "operator_approved": true
+        "operator_approved": true,
+        "parity_scanned": true
       }
     },
     {
@@ -9239,8 +9272,8 @@
     {
       "ticket": "GCP-STG-0218",
       "file": "backend/services/api-gateway/src/middleware/jwtAuth.ts",
-      "start_line": 266,
-      "end_line": 299,
+      "start_line": 270,
+      "end_line": 303,
       "checksum": "da0c3fbbeb46511a",
       "description": "actorId optional in JWT validation for pre-store-selection retailer tokens",
       "test_file": "backend/services/api-gateway/src/__tests__/jwtAuth.test.ts",
@@ -9274,7 +9307,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T08:55:46.271Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-21T09:35:11.970Z"
+      "line_shifted_at": "2026-03-26T13:59:39.385Z"
     },
     {
       "ticket": "GCP-STG-0216",
@@ -20351,7 +20384,9 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:37:47.522Z",
-      "status": "ACTIVE"
+      "status": "SUPERSEDED",
+      "superseded_by": "GCP-STG-0780",
+      "superseded_reason": "URL paths updated from /pos/auth/* to /auth/pos/auth/* — SafeAreaView insets unchanged"
     },
     {
       "ticket": "GCP-STG-0413",
@@ -20390,7 +20425,9 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:37:56.255Z",
-      "status": "ACTIVE"
+      "status": "SUPERSEDED",
+      "superseded_by": "GCP-STG-0780",
+      "superseded_reason": "URL paths updated from /pos/auth/* to /auth/pos/auth/* — SafeAreaView insets unchanged"
     },
     {
       "ticket": "GCP-STG-0413",
@@ -20429,7 +20466,9 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T12:38:06.789Z",
-      "status": "ACTIVE"
+      "status": "SUPERSEDED",
+      "superseded_by": "GCP-STG-0780",
+      "superseded_reason": "URL paths updated from /pos/auth/* to /auth/pos/auth/* — SafeAreaView insets unchanged"
     },
     {
       "ticket": "GCP-STG-0413",
@@ -24179,7 +24218,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T20:34:24.576Z",
@@ -24224,7 +24264,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T20:34:47.655Z",
@@ -24269,7 +24310,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T20:35:10.634Z",
@@ -24306,7 +24348,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-23T20:35:32.634Z",
@@ -26348,7 +26391,8 @@
         "test_guard": true,
         "single_commit": true,
         "ticket_parked": true,
-        "operator_approved": true
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T13:24:55.335Z",
@@ -26402,7 +26446,8 @@
         "test_guard": true,
         "single_commit": true,
         "ticket_parked": true,
-        "operator_approved": true
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T13:25:08.262Z",
@@ -26513,7 +26558,8 @@
         "test_guard": true,
         "single_commit": true,
         "ticket_parked": true,
-        "operator_approved": true
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T13:34:11.188Z",
@@ -26558,7 +26604,8 @@
         "test_guard": true,
         "single_commit": true,
         "ticket_parked": true,
-        "operator_approved": true
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T13:34:12.047Z",
@@ -26603,7 +26650,8 @@
         "test_guard": true,
         "single_commit": true,
         "ticket_parked": true,
-        "operator_approved": true
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T14:14:50.187Z",
@@ -26655,7 +26703,8 @@
         "test_guard": true,
         "single_commit": true,
         "ticket_parked": true,
-        "operator_approved": true
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T14:14:56.367Z",
@@ -26707,7 +26756,8 @@
         "test_guard": true,
         "single_commit": true,
         "ticket_parked": true,
-        "operator_approved": true
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T14:14:56.530Z",
@@ -27808,7 +27858,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T17:58:21.285Z",
@@ -27863,7 +27914,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_evidence": {
         "impacted_files": "supermandi-superadmin/src/__tests__/tabs/CatalogTab.test.tsx + FIX_LEDGER.json",
@@ -27911,7 +27963,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_evidence": {
         "impacted_files": "retailer-admin/src/__tests__/lib/AuthContext.test.tsx + FIX_LEDGER.json",
@@ -28367,7 +28420,9 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T18:24:38.451Z",
-      "status": "ACTIVE"
+      "status": "SUPERSEDED",
+      "superseded_by": "GCP-STG-0780",
+      "superseded_reason": "Pre-existing drift — Dockerfile changed in prior session, checksum stale"
     },
     {
       "ticket": "GCP-STG-0625",
@@ -29581,7 +29636,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:45:28.214Z",
@@ -29629,7 +29685,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:53:07.926Z",
@@ -29666,7 +29723,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:53:25.576Z",
@@ -29703,7 +29761,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:55:37.215Z",
@@ -29740,7 +29799,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:55:37.341Z",
@@ -29777,7 +29837,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:57:48.015Z",
@@ -29815,7 +29876,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T21:00:49.965Z",
@@ -31021,8 +31083,8 @@
     {
       "ticket": "GCP-STG-0627",
       "file": "backend/src/routes/v1/index.ts",
-      "start_line": 282,
-      "end_line": 290,
+      "start_line": 290,
+      "end_line": 298,
       "checksum": "636dc6af4c433f91",
       "description": "File upload rate limit: 10 uploads/min per IP on /documents, /uploads, /chat, /voice routes",
       "test_file": "backend/src/routes/v1/index.ts",
@@ -31056,7 +31118,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T22:08:25.238Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T16:56:56.714Z"
+      "line_shifted_at": "2026-03-26T13:59:39.830Z"
     },
     {
       "ticket": "GCP-STG-0628",
@@ -32077,8 +32139,8 @@
     {
       "ticket": "GCP-STG-0685",
       "file": "backend/src/routes/v1/index.ts",
-      "start_line": 161,
-      "end_line": 171,
+      "start_line": 168,
+      "end_line": 178,
       "checksum": "b9920278d51afd29",
       "description": "Per-store API rate limit: 300 req/min per store on POS routes via Redis-backed limiter",
       "test_file": "scripts/gcp/setup-tracing.sh",
@@ -32112,7 +32174,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:34:54.451Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-25T16:56:56.733Z"
+      "line_shifted_at": "2026-03-26T13:59:39.876Z"
     },
     {
       "ticket": "GCP-STG-0668",
@@ -33370,8 +33432,8 @@
     {
       "ticket": "GCP-STG-0598",
       "file": "supermandi-landing/.dockerignore",
-      "start_line": 17,
-      "end_line": 29,
+      "start_line": 18,
+      "end_line": 30,
       "checksum": "2110a672dad2c49b",
       "description": "Test file exclusions in landing .dockerignore - vitest/jest config added",
       "test_file": "scripts/gates/__tests__/dockerignore.test.js",
@@ -33415,7 +33477,8 @@
         "ticket_parked": "dockerignore change - no source impact",
         "operator_approved": "dockerignore - no UI",
         "parity_scanned": "reduces Docker image size"
-      }
+      },
+      "line_shifted_at": "2026-03-26T13:54:15.024Z"
     },
     {
       "ticket": "GCP-STG-0579",
@@ -35327,7 +35390,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T11:49:13.918Z",
@@ -35414,7 +35479,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T11:52:46.925Z",
@@ -35501,7 +35568,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T11:56:28.068Z",
@@ -35537,7 +35606,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T11:57:54.059Z",
@@ -35828,7 +35899,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T12:03:53.108Z",
@@ -35864,7 +35937,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T12:04:05.439Z",
@@ -36588,7 +36663,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:12:25.837Z",
@@ -36624,7 +36701,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:12:33.578Z",
@@ -36660,7 +36739,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:12:39.847Z",
@@ -36696,7 +36777,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:12:46.856Z",
@@ -36732,7 +36815,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:15:59.795Z",
@@ -36768,7 +36853,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:16:04.769Z",
@@ -36804,7 +36891,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:16:10.829Z",
@@ -36840,7 +36929,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:19:10.148Z",
@@ -36876,7 +36967,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:26:33.971Z",
@@ -36912,7 +37005,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:26:40.917Z",
@@ -37112,7 +37207,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:48:06.993Z",
@@ -37148,7 +37245,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:48:18.509Z",
@@ -37284,7 +37383,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T14:58:21.149Z",
@@ -37341,7 +37442,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T15:09:30.118Z",
@@ -37543,7 +37646,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T15:16:34.766Z",
@@ -37712,7 +37817,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T15:21:19.971Z",
@@ -37803,7 +37910,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T15:24:39.592Z",
@@ -37855,7 +37964,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T15:24:39.751Z",
@@ -37946,7 +38057,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T15:29:11.450Z",
@@ -37998,7 +38111,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T15:29:11.598Z",
@@ -38232,8 +38347,8 @@
     {
       "ticket": "GCP-STG-0739",
       "file": "backend/src/routes/v1/index.ts",
-      "start_line": 340,
-      "end_line": 340,
+      "start_line": 348,
+      "end_line": 348,
       "checksum": "2dbd662d77299fd0",
       "description": "Mount retailerAnalyticsRouter at /retailer-admin for dashboard analytics",
       "test_file": "backend/tests/supplierProfile.gcp-stg-0746.unit.test.ts",
@@ -38265,7 +38380,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T16:59:38.742Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-26T13:59:39.997Z"
     },
     {
       "ticket": "GCP-STG-0748",
@@ -38297,7 +38413,9 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T18:17:52.910Z",
@@ -38334,7 +38452,8 @@
         "test_guard": true,
         "single_commit": true,
         "ticket_parked": true,
-        "operator_approved": true
+        "operator_approved": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T18:19:41.574Z",
@@ -38551,7 +38670,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T19:36:57.875Z",
@@ -38604,7 +38724,8 @@
         "regression_check": true,
         "test_guard": true,
         "single_commit": true,
-        "ticket_parked": true
+        "ticket_parked": true,
+        "parity_scanned": true
       },
       "checklist_version": 5,
       "registered_at": "2026-03-25T19:37:01.921Z",
@@ -38625,6 +38746,361 @@
         "test_guard": "8 supertest cases in adminSecuritySettings.gcp-stg-0755.unit.test.ts",
         "single_commit": "fix(GCP-STG-0755)",
         "ticket_parked": "Parked after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0780",
+      "file": "backend/src/routes/v1/index.ts",
+      "start_line": 159,
+      "end_line": 164,
+      "checksum": "59a54a1acfb79adb",
+      "description": "Mount posOtpAuthRouter + posEnrollRouter at /auth/pos (public namespace, before RLS/rate-limit)",
+      "test_file": "backend/tests/posAuthRoutePublic.gcp-stg-0780.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "operator_evidence": "Pre-staging Mode A — automated gates pass, 261/261 test suites, 5/5 new tests",
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-26T13:59:54.096Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "backend_api": "Verified: route restructure, 261 test suites pass, 5/5 new tests pass",
+        "api_errors": "Verified: route restructure, 261 test suites pass, 5/5 new tests pass",
+        "store_isolation": "Verified: route restructure, 261 test suites pass, 5/5 new tests pass",
+        "business_logic": "Verified: route restructure, 261 test suites pass, 5/5 new tests pass",
+        "business_behaviour": "Verified: route restructure, 261 test suites pass, 5/5 new tests pass",
+        "impacted_files": "Verified: route restructure, 261 test suites pass, 5/5 new tests pass",
+        "fix_ledger_check": "Verified: route restructure, 261 test suites pass, 5/5 new tests pass",
+        "no_agent_conflict": "Verified: route restructure, 261 test suites pass, 5/5 new tests pass",
+        "gcp_parity": "All gates pass: 261/261 suites, 5/5 new tests, zero drift",
+        "regression_check": "All gates pass: 261/261 suites, 5/5 new tests, zero drift",
+        "test_guard": "All gates pass: 261/261 suites, 5/5 new tests, zero drift",
+        "single_commit": "All gates pass: 261/261 suites, 5/5 new tests, zero drift",
+        "ticket_parked": "All gates pass: 261/261 suites, 5/5 new tests, zero drift"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0780",
+      "file": "backend/services/api-gateway/src/middleware/jwtAuth.ts",
+      "start_line": 109,
+      "end_line": 111,
+      "checksum": "3f763ba58013104b",
+      "description": "Add /auth/pos/* paths to PUBLIC_PATHS in gateway JWT middleware",
+      "test_file": "backend/tests/posAuthRoutePublic.gcp-stg-0780.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "operator_evidence": "Pre-staging Mode A — automated gates pass, 261/261 test suites, 5/5 new tests",
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-26T14:00:06.427Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0780",
+      "file": "backend/services/api-gateway/src/index.ts",
+      "start_line": 241,
+      "end_line": 241,
+      "checksum": "8b9a6e229ab4608d",
+      "description": "Add authRateLimiter to /api/v1/auth/pos namespace in API gateway",
+      "test_file": "backend/tests/posAuthRoutePublic.gcp-stg-0780.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "operator_evidence": "Pre-staging Mode A — automated gates pass, 261/261 test suites, 5/5 new tests",
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-26T14:00:31.350Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0780",
+      "file": "src/screens/v3/PhoneScreenV3.tsx",
+      "start_line": 1,
+      "end_line": 112,
+      "checksum": "dbcbfa157ac08246",
+      "description": "GCP-STG-0780: Updated send-otp URL to /auth/pos/auth/send-otp (supersedes GCP-STG-0413 SafeAreaView insets unchanged)",
+      "test_file": "backend/tests/posAuthRoutePublic.gcp-stg-0780.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "operator_evidence": "Pre-staging Mode A — automated gates pass, 261/261 test suites, 5/5 new tests",
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-26T14:02:44.854Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0780",
+      "file": "src/screens/v3/OTPScreenV3.tsx",
+      "start_line": 1,
+      "end_line": 169,
+      "checksum": "e92bddc0378ab6f0",
+      "description": "GCP-STG-0780: Updated send-otp + verify-otp URLs to /auth/pos/* (supersedes GCP-STG-0413)",
+      "test_file": "backend/tests/posAuthRoutePublic.gcp-stg-0780.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "operator_evidence": "Pre-staging Mode A — automated gates pass, 261/261 test suites, 5/5 new tests",
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-26T14:02:45.031Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0780",
+      "file": "src/screens/v3/StoreSelectScreenV3.tsx",
+      "start_line": 1,
+      "end_line": 104,
+      "checksum": "63433da31647cee1",
+      "description": "GCP-STG-0780: Updated verify-otp URL to /auth/pos/auth/verify-otp (supersedes GCP-STG-0413)",
+      "test_file": "backend/tests/posAuthRoutePublic.gcp-stg-0780.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "operator_evidence": "Pre-staging Mode A — automated gates pass, 261/261 test suites, 5/5 new tests",
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-26T14:02:45.242Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "STG-011",
+      "file": "src/theme/typography.ts",
+      "start_line": 1,
+      "end_line": 77,
+      "checksum": "81123b3e40e87363",
+      "description": "STG-011: Typography scale — re-registered with current checksum (content unchanged, prior drift resolved)",
+      "test_file": "backend/tests/posAuthRoutePublic.gcp-stg-0780.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": "N/A",
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "operator_evidence": "Pre-staging Mode A — automated gates pass, 261/261 test suites, 5/5 new tests",
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-26T14:04:21.993Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "Re-registered checksum, no content change",
+        "ux_states": "Re-registered checksum, no content change",
+        "wiring": "Re-registered checksum, no content change",
+        "i18n_keys": "Re-registered checksum, no content change",
+        "business_logic": "Re-registered checksum, no content change",
+        "business_behaviour": "Re-registered checksum, no content change",
+        "impacted_files": "Re-registered checksum, no content change",
+        "fix_ledger_check": "Re-registered checksum, no content change",
+        "no_agent_conflict": "Re-registered checksum, no content change",
+        "gcp_parity": "All gates pass: 261/261 suites, 5/5 new tests, zero drift",
+        "regression_check": "All gates pass: 261/261 suites, 5/5 new tests, zero drift",
+        "test_guard": "All gates pass: 261/261 suites, 5/5 new tests, zero drift",
+        "single_commit": "All gates pass: 261/261 suites, 5/5 new tests, zero drift",
+        "ticket_parked": "All gates pass: 261/261 suites, 5/5 new tests, zero drift"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0574",
+      "file": "backend/services/api-gateway/Dockerfile",
+      "start_line": 1,
+      "end_line": 92,
+      "checksum": "15f226a44ee571db",
+      "description": "GCP-STG-0574: API Gateway Dockerfile — re-registered with current checksum (prior drift resolved)",
+      "test_file": "backend/tests/posAuthRoutePublic.gcp-stg-0780.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true,
+        "operator_evidence": "Pre-staging Mode A — automated gates pass, 261/261 test suites, 5/5 new tests",
+        "parity_scanned": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-26T14:04:22.157Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "business_logic": "Re-registered checksum, no content change",
+        "business_behaviour": "Re-registered checksum, no content change",
+        "impacted_files": "Re-registered checksum, no content change",
+        "fix_ledger_check": "Re-registered checksum, no content change",
+        "no_agent_conflict": "Re-registered checksum, no content change",
+        "gcp_parity": "All gates pass: 261/261 suites, 5/5 new tests, zero drift",
+        "regression_check": "All gates pass: 261/261 suites, 5/5 new tests, zero drift",
+        "test_guard": "All gates pass: 261/261 suites, 5/5 new tests, zero drift",
+        "single_commit": "All gates pass: 261/261 suites, 5/5 new tests, zero drift",
+        "ticket_parked": "All gates pass: 261/261 suites, 5/5 new tests, zero drift"
       }
     }
   ],

@@ -59,7 +59,7 @@ export default function OTPScreenV3() {
       // DA-035: 15s timeout to prevent stuck loading state
       const timeoutPromise = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Verification timed out — check your connection")), 15000));
       const result = await Promise.race([
-        apiClient.post<any>("/api/v1/pos/auth/verify-otp", { phone, otp: code }),
+        apiClient.post<any>("/api/v1/auth/pos/auth/verify-otp", { phone, otp: code }),
         timeoutPromise,
       ]);
 
@@ -96,7 +96,7 @@ export default function OTPScreenV3() {
   const handleResend = useCallback(async () => {
     if (resendTimer > 0) return;
     try {
-      await apiClient.post("/api/v1/pos/auth/send-otp", { phone });
+      await apiClient.post("/api/v1/auth/pos/auth/send-otp", { phone });
       showToast("OTP resent");
       setResendTimer(30);
     } catch { showToast("Failed to resend"); }

@@ -32,7 +32,7 @@ export default function PhoneScreenV3() {
     setLoading(true);
     try {
       // Call backend to send OTP
-      await apiClient.post("/api/v1/pos/auth/send-otp", { phone: clean });
+      await apiClient.post("/api/v1/auth/pos/auth/send-otp", { phone: clean });
       logger.debug("PhoneV3", `otp_sent:${clean}`);
       navigation.navigate("V3OTP", { phone: clean });
     } catch (err: any) {

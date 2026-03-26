@@ -31,7 +31,7 @@ export default function StoreSelectScreenV3() {
     try {
       const result = await apiClient.post<{
         token: string; storeId: string; storeName: string; storeCode: string;
-      }>("/api/v1/pos/auth/verify-otp", { phone, otp: route.params?.otp, storeId: store.id });
+      }>("/api/v1/auth/pos/auth/verify-otp", { phone, otp: route.params?.otp, storeId: store.id });
 
       await saveDeviceSession({
         deviceId: `pos-${phone}`,

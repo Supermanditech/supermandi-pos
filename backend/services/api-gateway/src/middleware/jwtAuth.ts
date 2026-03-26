@@ -105,6 +105,10 @@ const PUBLIC_PATHS = [
   '/api/v1/supplier/auth/firebase-login',
   '/api/v1/supplier/auth/refresh',
   '/api/v1/supplier/registration/',
+  // GCP-STG-0780: POS auth routes (public — no device token for fresh install)
+  '/api/v1/auth/pos/auth/send-otp',
+  '/api/v1/auth/pos/auth/verify-otp',
+  '/api/v1/auth/pos/enroll',
   // Document upload (public for registration - application entity validated server-side)
   '/api/v1/documents/upload',
   // Health + config

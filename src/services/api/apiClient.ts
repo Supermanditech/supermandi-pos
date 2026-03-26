@@ -191,9 +191,13 @@ const PROTECTED_ENDPOINT_PATTERNS = [
 // GO-LIVE FIX: Public endpoints that do NOT require device token
 // These endpoints must work without authentication (e.g., enrollment creates the token)
 const PUBLIC_ENDPOINT_PATTERNS = [
-  /^\/api\/v1\/pos\/enroll$/,  // Enrollment endpoint - creates the device token
-  /^\/api\/v1\/pos\/auth\/send-otp$/,  // V3: OTP send — no token needed
-  /^\/api\/v1\/pos\/auth\/verify-otp$/,  // V3: OTP verify — creates the token
+  /^\/api\/v1\/auth\/pos\/enroll$/,  // GCP-STG-0780: Enrollment (new public namespace)
+  /^\/api\/v1\/auth\/pos\/auth\/send-otp$/,  // GCP-STG-0780: OTP send (new public namespace)
+  /^\/api\/v1\/auth\/pos\/auth\/verify-otp$/,  // GCP-STG-0780: OTP verify (new public namespace)
+  // DEPRECATED (GCP-STG-0780): Old paths kept for backward compat — remove after 90 days
+  /^\/api\/v1\/pos\/enroll$/,  // Legacy enrollment path
+  /^\/api\/v1\/pos\/auth\/send-otp$/,  // Legacy OTP send path
+  /^\/api\/v1\/pos\/auth\/verify-otp$/,  // Legacy OTP verify path
 ];
 
 // GO-LIVE FIX: Check if an endpoint requires device token authentication

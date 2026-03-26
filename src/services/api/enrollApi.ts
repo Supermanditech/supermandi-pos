@@ -66,7 +66,7 @@ export async function enrollDevice(input: {
   try {
     // ENROLLAPI-DEV-GUARDS-MISSING: guard API URL logging to prevent Logcat leakage in release builds
     if (__DEV__) console.log("[enrollDevice] Calling gateway:", API_BASE_URL);
-    const response = await apiClient.post<DeviceEnrollResponse>("/api/v1/pos/enroll", requestBody);
+    const response = await apiClient.post<DeviceEnrollResponse>("/api/v1/auth/pos/enroll", requestBody);
     if (__DEV__) console.log("[enrollDevice] Success:", response.deviceId, response.storeId, response.reEnrolled ? "(re-enrolled)" : "");
     return response;
   } catch (error) {
