@@ -73,11 +73,12 @@ export default function DeviceBlockedScreen() {
       if (error instanceof ApiError) {
         if (error.message === "device_unauthorized") {
           try { await clearDeviceSession(); } catch { /* best-effort */ }
-          navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
+          // GCP-STG-0765: Navigate to V3Phone (was EnrollDevice)
+          navigation.reset({ index: 0, routes: [{ name: "V3Phone" as any }] });
           return;
         }
         if (error.message === "device_not_enrolled") {
-          navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
+          navigation.reset({ index: 0, routes: [{ name: "V3Phone" as any }] });
           return;
         }
         if (error.message === "device_inactive") {

@@ -161,7 +161,7 @@ describe("ForceUpdateScreen", () => {
       expect(mockClearDeviceSession).toHaveBeenCalled();
       expect(mockReset).toHaveBeenCalledWith({
         index: 0,
-        routes: [{ name: "EnrollDevice" }],
+        routes: [{ name: "V3Phone" }],
       });
     });
   });

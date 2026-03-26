@@ -150,10 +150,10 @@ export default function PaymentSetupScreen() {
       navigation.replace("SellScan");
     } catch (err) {
       // PAYMENT-SETUP-AUTH-ERROR-HANDLING: detect 401 and guide re-enrollment
-      // STG-438: Navigate to EnrollDevice on dismiss so user isn't trapped
+      // GCP-STG-0765: Navigate to V3Phone on session expiry (was EnrollDevice)
       if (err instanceof ApiError && (err.status === 401 || err.message === "device_unauthorized")) {
         Alert.alert(t("paymentSetup.sessionExpiredTitle"), t("paymentSetup.sessionExpiredMessage"), [
-          { text: t("common.ok"), onPress: () => navigation.replace("EnrollDevice") },
+          { text: t("common.ok"), onPress: () => navigation.replace("V3Phone" as any) },
         ]);
         return;
       }
