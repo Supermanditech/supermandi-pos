@@ -22891,7 +22891,7 @@
         "single_commit": "fix(GCP-STG-0489)",
         "ticket_parked": "pending"
       },
-      "checksum": "fd5d94b668b14bd5"
+      "checksum": "e22206a146027da2"
     },
     {
       "ticket": "GCP-STG-0468",
@@ -27986,7 +27986,7 @@
       "file": "backend/src/services/authAudit.ts",
       "start_line": 1,
       "end_line": 76,
-      "checksum": "fd5d94b668b14bd5",
+      "checksum": "e22206a146027da2",
       "description": "Replace console.error with log.error in authAudit service",
       "test_file": "backend/src/__tests__/services/authAudit.test.ts",
       "depends_on": null,
@@ -32064,9 +32064,9 @@
     {
       "ticket": "GCP-STG-0682",
       "file": "backend/src/services/authAudit.ts",
-      "start_line": 30,
-      "end_line": 52,
-      "checksum": "5ff1e0d938a2f50d",
+      "start_line": 31,
+      "end_line": 53,
+      "checksum": "e22206a146027da2",
       "description": "archiveOldAuthEvents deletes auth_events older than 90 days",
       "test_file": "scripts/gcp/setup-auth-event-retention.sh",
       "depends_on": null,
@@ -32098,7 +32098,8 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-24T23:32:23.130Z",
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "line_shifted_at": "2026-03-26T17:16:57.019Z"
     },
     {
       "ticket": "GCP-STG-0682",
