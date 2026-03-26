@@ -326,15 +326,7 @@ export async function getProductSuppliers(
   return suppliers;
 }
 
-/**
- * Get all categories available in the store's catalog.
- * @deprecated Use getFmcgCategories for taxonomy-based categories
- */
-export async function getCategories(storeId: string): Promise<string[]> {
-  const path = `${CATALOG_BASE}/stores/${storeId}/catalog/categories`;
-  const response = await apiClient.get<GetCategoriesResponse>(path);
-  return response.data;
-}
+// GCP-STG-0772: getCategories() removed — use getFmcgCategories() instead
 
 // =============================================================================
 // SUP-POS-002: BUY CATALOG (Supplier Products for Purchase)
