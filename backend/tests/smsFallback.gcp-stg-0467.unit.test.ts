@@ -116,7 +116,8 @@ describe("GCP-STG-0467: SMS fallback for POS OTP delivery", () => {
     // SMS called with +91 prefixed phone
     expect(mockSendSms.mock.calls[0][0]).toBe("+919876543210");
     // SMS body contains the OTP message
-    expect(mockSendSms.mock.calls[0][1]).toContain("verification code");
+    // GCP-STG-0761: Message changed from "verification code" to "POS login OTP"
+    expect(mockSendSms.mock.calls[0][1]).toContain("POS login OTP");
   });
 
   test("when WhatsApp not configured, SMS fallback is attempted", async () => {
