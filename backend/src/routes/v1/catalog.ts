@@ -396,7 +396,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
 
   try {
     let whereClause = `
-      WHERE s.status = 'ACTIVE'
+      WHERE UPPER(s.status) = 'ACTIVE'
         AND sp.approval_status = 'approved'
         AND sp.is_active = true
         AND ssl.store_id = $1
