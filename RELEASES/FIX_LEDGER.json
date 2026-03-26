@@ -15217,7 +15217,7 @@
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
       "start_line": 54,
       "end_line": 69,
-      "checksum": "f0a5bfc3c3475bf0",
+      "checksum": "64db630ab48f4b93",
       "description": "send-otp checks u.is_active = true to block deactivated users",
       "test_file": "backend/tests/otpDeactivatedUser.gcp-stg-0311.unit.test.ts",
       "depends_on": null,
@@ -22083,7 +22083,7 @@
       "file": "backend/src/routes/v1/pos/otpAuth.ts",
       "start_line": 194,
       "end_line": 202,
-      "checksum": "59a47e2f6aeaad4c",
+      "checksum": "793763f026482f66",
       "description": "verify-otp checks u.is_active = true matching send-otp parity",
       "test_file": "backend/tests/verifyOtpIsActive.gcp-stg-0453.unit.test.ts",
       "depends_on": null,
@@ -23733,7 +23733,7 @@
         "single_commit": "done",
         "ticket_parked": "pending"
       },
-      "checksum": "a5d9b12360c5a5d8",
+      "checksum": "d08018fb0f1b6235",
       "line_shifted_at": "2026-03-26T14:28:32.679Z"
     },
     {

@@ -58,7 +58,7 @@ posOtpAuthRouter.post("/auth/send-otp", otpSendLimiter, async (req, res) => {
        FROM auth.users u
        JOIN auth.store_users su ON su.user_id = u.id
        JOIN platform.stores ps ON ps.id = su.store_id
-       WHERE u.phone = $1 AND ps.status = 'ACTIVE' AND u.is_active = true
+       WHERE u.phone = $1 AND ps.status = 'ACTIVE' AND u.deleted_at IS NULL
        ORDER BY ps.created_at DESC
        LIMIT 10`,
       [normalizedPhone]
@@ -196,7 +196,7 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
        FROM auth.users u
        JOIN auth.store_users su ON su.user_id = u.id
        JOIN platform.stores ps ON ps.id = su.store_id
-       WHERE u.phone = $1 AND ps.status = 'ACTIVE' AND u.is_active = true
+       WHERE u.phone = $1 AND ps.status = 'ACTIVE' AND u.deleted_at IS NULL
        ORDER BY ps.created_at DESC`,
       [normalizedPhone]
     );
