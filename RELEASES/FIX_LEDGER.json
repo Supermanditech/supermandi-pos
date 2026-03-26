@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1296,
+  "version": 1297,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -2681,8 +2681,8 @@
       "description": "App version display on enrollment screen (updated Layer 5: UX redesign + text fixes)",
       "test_file": "src/__tests__/i18n/locale-completion.stg-054.unit.test.ts",
       "start_line": 1,
-      "end_line": 1170,
-      "checksum": "d2acf51a350ccb54",
+      "end_line": 1217,
+      "checksum": "c383a791bc6d3e29",
       "status": "ACTIVE",
       "checklist": {
         "ui_elements": true,
@@ -9628,8 +9628,8 @@
     {
       "ticket": "GCP-STG-0009",
       "file": "src/screens/EnrollDeviceScreen.tsx",
-      "start_line": 407,
-      "end_line": 410,
+      "start_line": 422,
+      "end_line": 425,
       "checksum": "8fd3c0d98429f115",
       "description": "After enrollment navigate to V3StaffLogin not SellScan â€” staff PIN mandatory",
       "test_file": "src/__tests__/screens/EnrollDeviceScreen.test.tsx",
@@ -9663,7 +9663,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-21T09:39:42.302Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-24T13:00:10.809Z"
+      "line_shifted_at": "2026-03-26T14:36:28.735Z"
     },
     {
       "ticket": "GCP-STG-0004",
@@ -39380,6 +39380,61 @@
         "regression_check": "13/13 tests pass",
         "test_guard": "SplashScreenV3.v3-boot.test.tsx — 13 tests including GCP-STG-0758",
         "single_commit": "fix(GCP-STG-0758)",
+        "ticket_parked": "Will park after commit"
+      }
+    },
+    {
+      "ticket": "GCP-STG-0759",
+      "file": "src/screens/EnrollDeviceScreen.tsx",
+      "start_line": 490,
+      "end_line": 502,
+      "checksum": "8a2aeb5f819a40a7",
+      "description": "GCP-STG-0759: Phone Login banner + V3Phone navigation link on deprecated EnrollDeviceScreen",
+      "test_file": "src/__tests__/screens/EnrollDeviceScreen.gcp-stg-0759.test.ts",
+      "depends_on": "GCP-STG-0757",
+      "migration": null,
+      "checklist": {
+        "ui_elements": true,
+        "ux_states": true,
+        "wiring": true,
+        "navigation": true,
+        "i18n_keys": true,
+        "backend_api": "N/A",
+        "api_errors": "N/A",
+        "store_isolation": "N/A",
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": "N/A",
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true,
+        "operator_approved": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-26T14:36:22.853Z",
+      "status": "ACTIVE",
+      "checklist_evidence": {
+        "ui_elements": "Phone Login banner with icon, text, chevron. AutoFocus ref added.",
+        "ux_states": "Banner visible in all states. Focus fires 500ms after mount.",
+        "wiring": "Banner onPress → navigation.reset to V3Phone",
+        "navigation": "V3Phone reachable from EnrollDeviceScreen via banner",
+        "i18n_keys": "Hardcoded EN consistent with existing screen",
+        "business_logic": "No business logic changes",
+        "business_behaviour": "User can reach phone OTP from enrollment screen",
+        "impacted_files": "EnrollDeviceScreen.tsx, App.tsx, test file",
+        "fix_ledger_check": "Zero drift after checksum update",
+        "no_agent_conflict": "Single agent",
+        "operator_approved": "UI-only deprecation change",
+        "gcp_parity": "No new deps. Standard RN components.",
+        "regression_check": "6/6 tests pass",
+        "test_guard": "EnrollDeviceScreen.gcp-stg-0759.test.ts — 6 tests",
+        "single_commit": "fix(GCP-STG-0759)",
         "ticket_parked": "Will park after commit"
       }
     }

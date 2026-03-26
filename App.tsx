@@ -161,6 +161,7 @@ export default function App() {
           <Stack.Screen name="Splash" component={SplashScreenV3} />
           <Stack.Screen name="DeviceBlocked" component={DeviceBlockedScreen} />
           <Stack.Screen name="ForceUpdate" component={ForceUpdateScreen} />
+          {/* GCP-STG-0759: EnrollDevice deprecated — kept for OEM code-based fallback only */}
           <Stack.Screen name="EnrollDevice" component={EnrollDeviceScreen} />
           <Stack.Screen name="PaymentSetup" component={PaymentSetupScreen} />
 

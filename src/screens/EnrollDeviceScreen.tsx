@@ -1,4 +1,9 @@
 /**
+ * @deprecated GCP-STG-0759: This screen is DEPRECATED. Primary onboarding is now
+ * Phone OTP (PhoneScreenV3 → OTPScreenV3 → StoreSelectScreenV3 → StaffLoginScreenV3).
+ * Kept as legacy fallback for OEM devices that use code-based enrollment.
+ * Do NOT add new features here — all enhancements go to the V3 flow.
+ *
  * POS Activation Screen (Code-only enrollment)
  *
  * Flow:
@@ -181,6 +186,8 @@ export default function EnrollDeviceScreen() {
   const abortRef = React.useRef<AbortController | null>(null);
   // ENROLL-MISSING-ERROR-STATE-UI: persistent inline error shown after API failure
   const [enrollError, setEnrollError] = useState<string | null>(null);
+  // GCP-STG-0759: Manual focus ref — autoFocus unreliable on some Android devices (Xiaomi Redmi)
+  const codeInputRef = React.useRef<TextInput>(null);
   // ENROLL-SESSION-CHECK-RACE-CONDITION: hide form until session check completes
   const [checkingSession, setCheckingSession] = useState(true);
 
@@ -206,6 +213,14 @@ export default function EnrollDeviceScreen() {
     deviceType: "RETAILER_PHONE" as const,
     // #404: label is set dynamically, not memoized — added at call site
   }), []);
+
+  // GCP-STG-0759: Manual focus after mount — autoFocus unreliable on Xiaomi/Redmi Android devices
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      codeInputRef.current?.focus();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // GCP-STG-0009: Check existing session — if already enrolled, go to staff login
   // ENROLL-SESSION-CHECK-RACE-CONDITION: wait for check before showing form to avoid flash
@@ -477,6 +492,19 @@ export default function EnrollDeviceScreen() {
       testID="enroll-device-screen"
       accessibilityLabel="Activate POS device screen"
     >
+      {/* GCP-STG-0759: Phone login banner — primary onboarding path */}
+      <Pressable
+        style={styles.phoneLoginBanner}
+        onPress={() => navigation.reset({ index: 0, routes: [{ name: "V3Phone" as any }] })}
+        testID="enroll-phone-login-link"
+        accessibilityLabel="Use phone login instead"
+        accessibilityRole="button"
+      >
+        <MaterialCommunityIcons name="cellphone" size={18} color="#2563EB" />
+        <Text style={styles.phoneLoginText}>Use Phone Login Instead (Recommended)</Text>
+        <MaterialCommunityIcons name="chevron-right" size={18} color="#2563EB" />
+      </Pressable>
+
       {/* Header */}
       <View style={styles.headerSection}>
         {/* STG-063: Welcome illustration */}
@@ -548,6 +576,7 @@ export default function EnrollDeviceScreen() {
           autoCapitalize="characters"
           value={codeInput}
           onChangeText={(v) => { setCodeInput(v); setEnrollError(null); }}
+          ref={codeInputRef}
           testID="enroll-code-input"
           accessibilityLabel="Activation code"
           accessibilityRole="text"
@@ -1166,5 +1195,23 @@ function createStyles(colors: ReturnType<typeof useThemeColors>) { return StyleS
     fontSize: 11,
     fontFamily: "monospace",
     color: colors.textTertiary,
+  },
+  // GCP-STG-0759: Phone login banner styles
+  phoneLoginBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EFF6FF",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 12,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  phoneLoginText: {
+    color: "#2563EB",
+    fontSize: 14,
+    fontWeight: "600",
+    flex: 1,
   },
 }); }
