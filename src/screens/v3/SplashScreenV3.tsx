@@ -13,9 +13,10 @@
  *
  * Boot logic (from legacy SplashScreen, cleaned up):
  * - Init infra (cloud logger, printer, offline DB, sync)
- * - Check session → no session = V3Phone
+ * - Check session → no session = V3Phone (OTP onboarding)
  * - Check ui-status → blocked/update/auth-fail/ok
- * - Timeout/network = retry within v3 flow (no EnrollDevice)
+ * - Timeout/network = retry within v3 flow
+ * - GCP-STG-0757: All paths route to V3Phone, never EnrollDevice
  */
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
@@ -70,9 +71,9 @@ export default function SplashScreenV3() {
 
       if (!session) {
         // No device session — fresh install or cleared data.
-        // Navigate to enrollment screen where user enters activation code from SuperAdmin.
+        // GCP-STG-0757: Navigate to Phone OTP flow (primary onboarding).
         setStatusText("Welcome!");
-        safeNavigate("EnrollDevice");
+        safeNavigate("V3Phone");
         return;
       }
 
@@ -96,11 +97,10 @@ export default function SplashScreenV3() {
         // V3-API-005: Distinguish auth failure from network failure
         const errMsg = uiErr instanceof Error ? uiErr.message : String(uiErr);
         if (errMsg.includes("DEVICE_UNAUTHORIZED") || errMsg.includes("TOKEN_EXPIRED") || errMsg.includes("TOKEN_REVOKED")) {
-          // GCP-STG-0038: Auth failure — clear stale device session, navigate to EnrollDevice
-          // V3Phone requires a working backend config-status endpoint; EnrollDevice is the safe fallback
+          // GCP-STG-0757: Auth failure — clear stale session, navigate to Phone OTP re-auth
           await clearDeviceSession();
-          setStatusText("Session expired — please re-enroll");
-          safeNavigate("EnrollDevice");
+          setStatusText("Session expired — please sign in again");
+          safeNavigate("V3Phone");
           return;
         }
         // Network failure — proceed offline (offline-first)

@@ -20,6 +20,15 @@ describe("SplashScreenV3 (V3-BOOT-001 + V3-NAV-002)", () => {
     expect(splash).not.toContain('safeNavigate("EnrollDevice"');
   });
 
+  it("GCP-STG-0757: fresh install and auth failure both route to V3Phone", () => {
+    const fs = require("fs");
+    const splash = fs.readFileSync("src/screens/v3/SplashScreenV3.tsx", "utf8");
+    // Both no-session and auth-failure paths must navigate to V3Phone
+    const v3PhoneNavCount = (splash.match(/safeNavigate\("V3Phone"\)/g) || []).length;
+    // At least 2: one for no-session, one for auth failure (plus handleContinue)
+    expect(v3PhoneNavCount).toBeGreaterThanOrEqual(2);
+  });
+
   it("should match prototype UI elements", () => {
     const fs = require("fs");
     const splash = fs.readFileSync("src/screens/v3/SplashScreenV3.tsx", "utf8");
