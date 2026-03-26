@@ -19570,4 +19570,217 @@ No new tables or columns required.
 
 ---
 
-<!-- next ticket: GCP-STG-0767 -->
+## GCP-STG-0767 — HIGH: Delete 4 dead Prisma route files — unmounted legacy code (HIGH)
+
+**Ticket ID**: GCP-STG-0767
+**Severity**: P1 HIGH
+**Platforms**: BACKEND
+**Layers**: Backend
+
+**Problem**: 4 route files from the old Prisma ORM era are still in the codebase but NOT mounted in v1Router. They contain deprecated patterns, old auth flows, and will confuse any developer reading the code.
+
+**Fix**: Delete these files:
+- `backend/src/routes/auth.prisma_disabled.ts`
+- `backend/src/routes/products.prisma_disabled.ts`
+- `backend/src/routes/transactions.prisma_disabled.ts`
+- `backend/src/routes/users.prisma_disabled.ts`
+
+Verify: `grep -rn "prisma_disabled" backend/src/routes/v1/` returns 0 hits (not imported anywhere).
+
+**12-Layer**: L6 Backend ✅
+
+---
+
+## GCP-STG-0768 — HIGH: Delete 5 obsolete test files for removed screens (HIGH)
+
+**Ticket ID**: GCP-STG-0768
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: Testing
+
+**Problem**: Test files exist for screens that no longer exist in the codebase (MenuScreen, HomeScreen, SellScanScreen, old SplashScreen). These tests reference deleted components, will fail if ever run, and clutter the test suite.
+
+**Fix**: Delete:
+- `src/__tests__/screens/MenuScreen.stg-014.unit.test.tsx`
+- `src/__tests__/screens/HomeScreen.stg-051-152.unit.test.ts`
+- `src/__tests__/screens/SellScanScreen.stg-016.unit.test.tsx`
+- `src/__tests__/screens/SplashScreen.stg-002.unit.test.tsx`
+- `src/__tests__/screens/SplashScreen.stg-310.unit.test.ts`
+
+**12-Layer**: L6 Backend ✅
+
+---
+
+## GCP-STG-0769 — MEDIUM: Remove device_activation_codes fallback from enrollment (MEDIUM)
+
+**Ticket ID**: GCP-STG-0769
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, DB
+
+**Problem**: `enroll.ts` has a fallback path (lines ~130-160) that checks the old `device_activation_codes` table if `pos_device_enrollments` lookup fails. This table uses a different schema and is no longer the canonical enrollment system. With OTP flow as primary (GCP-STG-0757), this fallback is unnecessary complexity.
+
+**Fix**: Remove the fallback code path in `enroll.ts`. Keep `pos_device_enrollments` as the only lookup for code-based enrollment. The `device_activation_codes` table can remain in DB (no migration needed to drop it) but code should not query it.
+
+**12-Layer**: L6 Backend ✅, L7 DB ✅
+
+---
+
+## GCP-STG-0770 — MEDIUM: Remove store_inventory legacy fallback — use only stock_balances (MEDIUM)
+
+**Ticket ID**: GCP-STG-0770
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, DB
+
+**Problem**: `backend/src/routes/products.ts` has fallback code: "Prefers inventory.stock_balances (new), falls back to store_inventory (legacy)". All stores now use `inventory.stock_balances`. The `store_inventory` fallback adds query complexity and hides potential bugs.
+
+**Fix**: Remove `store_inventory` references from `products.ts`. Use `inventory.stock_balances` exclusively. Verify no other route files reference `store_inventory`.
+
+**12-Layer**: L6 Backend ✅, L7 DB ✅
+
+---
+
+## GCP-STG-0771 — MEDIUM: Namespace stale AsyncStorage keys — TTS and legacy purchase draft (MEDIUM)
+
+**Ticket ID**: GCP-STG-0771
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, Business
+
+**Problem**: 5 AsyncStorage keys have inconsistent naming:
+- `tts_enabled` (no `supermandi.` prefix)
+- `tts_language` (no prefix)
+- `offline_scan_queue` (no prefix)
+- `@pos_event_logs` (@ prefix, non-standard)
+- `supermandi.purchase.draft` (v0 key, v1 exists)
+
+All other keys use `supermandi.` prefix. Inconsistency makes key collision possible with other apps sharing AsyncStorage.
+
+**Fix**: In `storageKeys.ts`, rename keys with backward-compatible migration: read old key → write new key → delete old key. Do this once on app launch.
+
+**12-Layer**: L1 UI ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0772 — MEDIUM: Replace deprecated getCategories() with getFmcgCategories() (MEDIUM)
+
+**Ticket ID**: GCP-STG-0772
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: API, Wiring
+
+**Problem**: `catalogApi.ts` has `getCategories()` marked `@deprecated` with note to use `getFmcgCategories()` instead. Callers still use the old function.
+
+**Fix**: Find all callers of `getCategories()`, replace with `getFmcgCategories()`. Delete `getCategories()` export. Verify no remaining references.
+
+**12-Layer**: L3 Wiring ✅, L5 API ✅
+
+---
+
+## GCP-STG-0773 — MEDIUM: Replace deprecated secondary color aliases with accent (MEDIUM)
+
+**Ticket ID**: GCP-STG-0773
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI
+
+**Problem**: `theme/colors.ts` has `secondary`, `secondaryDark`, `secondaryLight` marked `@deprecated` — should use `accent`, `accentDark`, `accentLight`. Some components still reference `secondary`.
+
+**Fix**: `grep -rn "colors.secondary" src/ --include="*.tsx"` → replace all with `colors.accent` (or accentDark/accentLight). Remove deprecated aliases from colors.ts.
+
+**12-Layer**: L1 UI ✅
+
+---
+
+## GCP-STG-0774 — MEDIUM: Clean up triple enrollment code field names in backend (MEDIUM)
+
+**Ticket ID**: GCP-STG-0774
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, API
+
+**Problem**: `enroll.ts` accepts `code`, `enrollmentCode`, AND `enrollment_code` as field names for backward compatibility with old POS clients. After GCP-STG-0757 (OTP primary), all new clients use OTP. The code enrollment path should accept only `code` (the canonical name).
+
+**Fix**: Keep `code` as primary. Remove `enrollmentCode` and `enrollment_code` aliases. Update EnrollDeviceScreen (if kept as fallback) to send `code` only.
+
+**12-Layer**: L5 API ✅, L6 Backend ✅
+
+---
+
+## GCP-STG-0775 — LOW: Remove PaymentSetupScreen from default flow — UPI setup in Settings (LOW)
+
+**Ticket ID**: GCP-STG-0775
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Navigation, UX
+
+**Problem**: `PaymentSetupScreen` is shown after enrollment to configure UPI VPA. With OTP flow as primary, this interrupts the onboarding. UPI setup should be in Settings, not a mandatory step.
+
+**Fix**: Remove PaymentSetup from the post-enrollment navigation chain. Keep the screen accessible from SettingsScreenV3. On first UPI payment, prompt "Set up UPI VPA in Settings" if not configured.
+
+**12-Layer**: L4 Navigation ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0776 — LOW: Clean old demo store enrollment bypasses (LOW)
+
+**Ticket ID**: GCP-STG-0776
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, Business
+
+**Problem**: `enroll.ts` has a 3-layer demo store detection bypass (lines 270-289) that skips expiry checks, usage limits, and multi-use restrictions for demo stores. After go-live with real stores, demo bypasses are a security risk.
+
+**Fix**: Add `DEMO_MODE_ENABLED` env var (default false in production). If false, disable ALL demo bypasses. If true (staging only), keep current behavior. Log all demo enrollments with warning level.
+
+**12-Layer**: L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0777 — LOW: Remove backward-compat khata entryType alias (LOW)
+
+**Ticket ID**: GCP-STG-0777
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, API
+
+**Problem**: `khata.ts` accepts both `type` (new) and `entryType` (legacy) field names. All V3 clients send `type`. Old clients are no longer in use after OTP flow migration.
+
+**Fix**: Remove `entryType` alias. Accept only `type`.
+
+**12-Layer**: L5 API ✅, L6 Backend ✅
+
+---
+
+## GCP-STG-0778 — LOW: Remove backward-compat supplier notes/reason alias (LOW)
+
+**Ticket ID**: GCP-STG-0778
+**Severity**: P3 LOW
+**Platforms**: BACKEND
+**Layers**: Backend, API
+
+**Problem**: `admin/suppliers.ts` accepts both `notes` (new) and `reason` (legacy) for rejection field. Legacy admin clients no longer exist.
+
+**Fix**: Remove `reason` alias. Accept only `notes`.
+
+**12-Layer**: L5 API ✅, L6 Backend ✅
+
+---
+
+## GCP-STG-0779 — LOW: Full navigation audit — verify every screen is reachable and no dead routes (LOW)
+
+**Ticket ID**: GCP-STG-0779
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Navigation
+
+**Problem**: After all cleanup tickets (0757-0778), the navigation graph needs verification. Ensure every Stack.Screen in App.tsx is reachable from at least one navigate() call. Remove any screen registrations that have zero inbound navigations.
+
+**Fix**: `grep "Stack.Screen" App.tsx` → for each screen name, `grep -rn "navigate(\"SCREEN_NAME\")" src/` → if zero results, remove the registration. Document the final navigation graph.
+
+**12-Layer**: L4 Navigation ✅
+
+---
+
+<!-- next ticket: GCP-STG-0780 -->
