@@ -10,8 +10,9 @@ RELEASES/
 CLAUDE.md
 .claude/
 
-# Screenshots
+# Screenshots (but keep og-image for social sharing meta tags)
 *.png
+!og-image.png
 *.jpg
 
 # Test files (GCP-STG-0598)
