@@ -271,7 +271,12 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
     //   2. store_code matches demo pattern (DM*, QA*, %demo%, etc.)
     //   3. enrollment CODE itself is demo pattern (SM-DEMO*)
     const storeCode = store.code ?? "";
-    const isDemo = isDemoStoreCode(storeCode) || isDemoCode(code);
+    // GCP-STG-0776: Demo mode gated by DEMO_MODE_ENABLED env var (default: false)
+    const demoModeEnabled = process.env.DEMO_MODE_ENABLED === "true";
+    const isDemo = demoModeEnabled && (isDemoStoreCode(storeCode) || isDemoCode(code));
+    if (!demoModeEnabled && (isDemoStoreCode(storeCode) || isDemoCode(code))) {
+      log.warn(`[Enroll] GCP-STG-0776: Demo bypass attempted but DEMO_MODE_ENABLED=false (store=${storeCode})`);
+    }
 
     // SEC-6: Reject enrollment for non-ACTIVE stores (demo stores bypass)
     if (!store.active && !isDemo) {
@@ -888,7 +893,8 @@ posEnrollRouter.post("/lookup-activation", lookupBurstLimiter, lookupSustainedLi
     }
 
     const store = storeRes.rows[0];
-    const isDemo = isDemoStoreCode(store.code || "");
+    // GCP-STG-0776: Demo mode gated by DEMO_MODE_ENABLED env var
+    const isDemo = process.env.DEMO_MODE_ENABLED === "true" && isDemoStoreCode(store.code || "");
 
     // Find active enrollment code
     let enrollQuery: string;
