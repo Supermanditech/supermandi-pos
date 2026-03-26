@@ -161,20 +161,14 @@ async function buildStoreProductPayload(
     [storeId, globalProductId]
   );
 
-  // MED-005 FIX (10k stores optimized): Single query with COALESCE for production scale
-  // Prefers inventory.stock_balances (new), falls back to store_inventory (legacy)
+  // GCP-STG-0770: Use inventory.stock_balances exclusively (no store_inventory fallback)
   const inventoryKey = inventoryProductId || globalProductId;
 
   const inventoryRes = await client.query(
-    `
-    SELECT COALESCE(sb.current_qty, si.available_qty, 0) as available_qty
-    FROM (SELECT 1) AS dummy
-    LEFT JOIN inventory.stock_balances sb
-      ON sb.store_id = $1 AND sb.product_id = $2
-    LEFT JOIN store_inventory si
-      ON si.store_id = $1 AND si.global_product_id = $2
-    LIMIT 1
-    `,
+    `SELECT COALESCE(current_qty, 0) as available_qty
+     FROM inventory.stock_balances
+     WHERE store_id = $1 AND product_id = $2
+     LIMIT 1`,
     [storeId, inventoryKey]
   );
 
@@ -230,18 +224,12 @@ async function buildStoreProductPreviewPayload(
     [storeId, globalProductId]
   );
 
-  // MED-005 FIX (10k stores optimized): Single query with COALESCE for production scale
-  // Prefers inventory.stock_balances (new), falls back to store_inventory (legacy)
+  // GCP-STG-0770: Use inventory.stock_balances exclusively (no store_inventory fallback)
   const inventoryRes = await client.query(
-    `
-    SELECT COALESCE(sb.current_qty, si.available_qty, 0) as available_qty
-    FROM (SELECT 1) AS dummy
-    LEFT JOIN inventory.stock_balances sb
-      ON sb.store_id = $1 AND sb.product_id = $2
-    LEFT JOIN store_inventory si
-      ON si.store_id = $1 AND si.global_product_id = $2
-    LIMIT 1
-    `,
+    `SELECT COALESCE(current_qty, 0) as available_qty
+     FROM inventory.stock_balances
+     WHERE store_id = $1 AND product_id = $2
+     LIMIT 1`,
     [storeId, globalProductId]
   );
 
@@ -679,8 +667,7 @@ productsRouter.post("/receive", requireDeviceToken, async (req, res) => {
       });
     }
 
-    // Get the productId from the created/linked variant for store_inventory query
-    // store_inventory.global_product_id stores products.id (via variants.product_id)
+    // Get the productId from the created/linked variant for inventory.stock_balances query
     const variantRes = await client.query(
       `
       SELECT v.product_id

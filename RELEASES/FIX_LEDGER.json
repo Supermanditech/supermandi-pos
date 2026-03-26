@@ -1,7 +1,7 @@
 {
   "$schema": "./fix-ledger-schema.json",
   "_docs": "Every fix Claude makes is registered here. Claude MUST read this before modifying ANY file. Claude MUST update this after EVERY fix. Pre-commit hook validates checksums.",
-  "version": 1304,
+  "version": 1305,
   "fixes": [
     {
       "ticket": "STG-001",
@@ -39715,6 +39715,42 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-26T14:57:42.291Z",
+      "status": "ACTIVE"
+    },
+    {
+      "ticket": "GCP-STG-0770",
+      "file": "backend/src/routes/products.ts",
+      "start_line": 164,
+      "end_line": 174,
+      "checksum": "208c396bf8875daa",
+      "description": "GCP-STG-0770: Remove store_inventory fallback from products.ts stock queries",
+      "test_file": "backend/tests/products.gcp-stg-0770.unit.test.ts",
+      "depends_on": null,
+      "migration": null,
+      "checklist": {
+        "ui_elements": "N/A",
+        "ux_states": "N/A",
+        "wiring": "N/A",
+        "navigation": "N/A",
+        "i18n_keys": "N/A",
+        "backend_api": true,
+        "api_errors": true,
+        "store_isolation": true,
+        "business_logic": true,
+        "business_behaviour": true,
+        "db_schema": true,
+        "migration_safe": "N/A",
+        "impacted_files": true,
+        "fix_ledger_check": true,
+        "no_agent_conflict": true,
+        "gcp_parity": true,
+        "regression_check": true,
+        "test_guard": true,
+        "single_commit": true,
+        "ticket_parked": true
+      },
+      "checklist_version": 5,
+      "registered_at": "2026-03-26T14:59:46.087Z",
       "status": "ACTIVE"
     }
   ],
