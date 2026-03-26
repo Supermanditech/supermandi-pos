@@ -185,7 +185,9 @@ posOtpAuthRouter.post("/auth/verify-otp", async (req, res) => {
     // GCP-STG-0459: Use normalizedPhone for UPDATE (matches INSERT/SELECT)
     await pool.query(`UPDATE pos_otp SET attempts = attempts + 1 WHERE phone = $1`, [normalizedPhone]);
 
-    if (hashOtp(otp) !== row.otp_hash) {
+    // Staging-only: DEMO_OTP bypass for testing (NEVER enable in production)
+    const isDemo = process.env.DEMO_OTP && otp === process.env.DEMO_OTP;
+    if (!isDemo && hashOtp(otp) !== row.otp_hash) {
       return res.status(400).json({ error: { code: "OTP_INVALID", message: "Invalid OTP" } });
     }
 
