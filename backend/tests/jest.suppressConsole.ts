@@ -14,6 +14,9 @@ beforeAll(() => {
       msg.includes('mock-transaction') ||
       msg.includes('[OTP]') ||
       msg.includes('[GO-LIVE-') ||
+      msg.includes('[WhatsAppService]') ||
+      msg.includes('[WA-001]') ||
+      msg.includes('[WA-') ||
       msg.includes('Warning: An update to') ||
       msg.includes('Error: Uncaught') ||
       msg.includes('ReferenceError: window') ||
@@ -30,6 +33,9 @@ beforeAll(() => {
     if (
       msg.includes('[AUTH-EXPIRY-') ||
       msg.includes('[AUTH-LOGOUT-') ||
+      msg.includes('[WhatsAppService]') ||
+      msg.includes('Meta API') ||
+      msg.includes('ECONNRESET') ||
       msg.includes('Token refresh')
     ) {
       return; // suppress known auth test warnings
