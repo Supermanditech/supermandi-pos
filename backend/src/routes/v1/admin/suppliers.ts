@@ -360,9 +360,9 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
 // GO-LIVE-185: Rate limit approval operations to 10/min per IP
 adminSuppliersRouter.post("/pending-suppliers/:supplierId/reject", requireAdminToken, requirePermission("suppliers", "reject"), supplierApprovalRateLimiter, async (req, res) => {
   const { supplierId } = req.params;
-  // ITER2-003: Accept both 'notes' (from frontend) and 'reason' (legacy) field names
-  const { notes, reason } = req.body || {};
-  const reviewNotes = notes || reason || null;
+  // GCP-STG-0778: Accept only `notes` field (legacy `reason` alias removed)
+  const { notes } = req.body || {};
+  const reviewNotes = notes || null;
 
   // GO-LIVE-130: Get admin ID for audit trail
   const adminId = (req as any).adminId;
