@@ -9,6 +9,7 @@ describe("GCP-STG-0765: No EnrollDevice navigation in error recovery", () => {
     "src/screens/ForceUpdateScreen.tsx",
     "src/screens/DeviceBlockedScreen.tsx",
     "src/screens/v3/SplashScreenV3.tsx",
+    "src/hooks/useApiError.ts", // GCP-STG-0757 reiteration: was missed initially
   ];
 
   for (const file of filesToCheck) {

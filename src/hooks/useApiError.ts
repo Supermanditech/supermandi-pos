@@ -129,7 +129,8 @@ export function useApiError(options: UseApiErrorOptions = {}): UseApiErrorReturn
             navigation.dispatch(
               CommonActions.reset({
                 index: 0,
-                routes: [{ name: "EnrollDevice" }],
+                // GCP-STG-0757: Route to V3Phone (was EnrollDevice)
+                routes: [{ name: "V3Phone" as any }],
               })
             );
           }

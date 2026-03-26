@@ -36,6 +36,7 @@ import { fetchUiStatus } from "../../services/api/uiStatusApi";
 import { useStaffSessionStore } from "../../stores/staffSessionStore";
 import { getDeviceMeta } from "../../services/deviceInfo";
 import { showToast } from "../../utils/showToast";
+import { migrateStorageKeys } from "../../constants/storageKeys";
 
 type Nav = NativeStackNavigationProp<any>;
 
@@ -133,6 +134,8 @@ export default function SplashScreenV3() {
     initOfflineDb().catch(() => {});
     syncOutbox().catch(() => {});
     startAutoSync();
+    // GCP-STG-0771: Migrate legacy AsyncStorage keys (one-time, non-blocking)
+    migrateStorageKeys().catch(() => {});
 
     // GCP-STG-0758: Fade in logo (800ms) then navigate after min 1.5s brand impression
     Animated.timing(fadeAnim, {

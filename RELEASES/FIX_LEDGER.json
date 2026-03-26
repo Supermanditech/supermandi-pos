@@ -9431,8 +9431,8 @@
     {
       "ticket": "GCP-STG-0038",
       "file": "src/screens/v3/SplashScreenV3.tsx",
-      "start_line": 100,
-      "end_line": 106,
+      "start_line": 101,
+      "end_line": 107,
       "checksum": "eab049e7223bc704",
       "description": "SUPERSEDED by GCP-STG-0757 — auth failure now navigates to V3Phone instead of EnrollDevice",
       "status": "ACTIVE",
@@ -9466,7 +9466,7 @@
       },
       "checklist_version": 5,
       "registered_at": "2026-03-21T09:04:26.364Z",
-      "line_shifted_at": "2026-03-26T14:31:58.188Z"
+      "line_shifted_at": "2026-03-26T15:53:59.289Z"
     },
     {
       "ticket": "GCP-STG-0010",
@@ -20312,8 +20312,8 @@
       "ticket": "GCP-STG-0413",
       "file": "src/screens/v3/SplashScreenV3.tsx",
       "start_line": 1,
-      "end_line": 218,
-      "checksum": "8ee53cd8c88bd906",
+      "end_line": 222,
+      "checksum": "eeb3fab708b5daf7",
       "description": "GCP-STG-0413: SafeAreaView insets on SplashScreenV3 â€” paddingTop: insets.top, paddingBottom on CTA",
       "test_file": "src/__tests__/screens/authSafeArea.gcp-stg-0413.test.ts",
       "depends_on": null,
@@ -28761,8 +28761,8 @@
     {
       "ticket": "GCP-STG-0650",
       "file": "src/screens/v3/SplashScreenV3.tsx",
-      "start_line": 64,
-      "end_line": 126,
+      "start_line": 65,
+      "end_line": 127,
       "checksum": "78049e53b471da96",
       "description": "POS force update mechanism â€” SplashScreenV3 checks forceUpdate from ui-status, navigates to ForceUpdate screen with version params. Complete chain: backend MIN_APP_VERSION -> compareSemver -> forceUpdate flag -> SplashScreen -> ForceUpdateScreen blocking modal with Play Store link",
       "test_file": "backend/tests/gcp-stg-0650.force-update-mechanism.unit.test.ts",
@@ -28796,7 +28796,7 @@
       "checklist_version": 5,
       "registered_at": "2026-03-24T20:03:16.047Z",
       "status": "ACTIVE",
-      "line_shifted_at": "2026-03-26T14:31:58.386Z"
+      "line_shifted_at": "2026-03-26T15:53:59.490Z"
     },
     {
       "ticket": "GCP-STG-0681",
@@ -39166,8 +39166,8 @@
     {
       "ticket": "GCP-STG-0757",
       "file": "src/screens/v3/SplashScreenV3.tsx",
-      "start_line": 99,
-      "end_line": 105,
+      "start_line": 100,
+      "end_line": 106,
       "checksum": "2fe4626e6e0f5394",
       "description": "GCP-STG-0757: Auth failure clears session and navigates to V3Phone instead of EnrollDevice",
       "test_file": "src/__tests__/screens/SplashScreenV3.v3-boot.test.tsx",
@@ -39217,7 +39217,7 @@
         "single_commit": "fix(GCP-STG-0757)",
         "ticket_parked": "Will park after commit"
       },
-      "line_shifted_at": "2026-03-26T14:31:58.465Z"
+      "line_shifted_at": "2026-03-26T15:53:59.550Z"
     },
     {
       "ticket": "GCP-STG-0762",
@@ -39332,8 +39332,8 @@
     {
       "ticket": "GCP-STG-0758",
       "file": "src/screens/v3/SplashScreenV3.tsx",
-      "start_line": 160,
-      "end_line": 173,
+      "start_line": 163,
+      "end_line": 176,
       "checksum": "fe33b93a6d873427",
       "description": "GCP-STG-0758: Animated.View wrapper replaces ActivityIndicator spinner",
       "test_file": "src/__tests__/screens/SplashScreenV3.v3-boot.test.tsx",
@@ -39382,7 +39382,8 @@
         "test_guard": "SplashScreenV3.v3-boot.test.tsx — 13 tests including GCP-STG-0758",
         "single_commit": "fix(GCP-STG-0758)",
         "ticket_parked": "Will park after commit"
-      }
+      },
+      "line_shifted_at": "2026-03-26T15:53:59.552Z"
     },
     {
       "ticket": "GCP-STG-0759",
@@ -39901,8 +39902,8 @@
       "ticket": "GCP-STG-0765",
       "file": "src/__tests__/screens/navigation.gcp-stg-0765.test.ts",
       "start_line": 1,
-      "end_line": 20,
-      "checksum": "9206fb0248267f89",
+      "end_line": 25,
+      "checksum": "224e2109e6cfba94",
       "description": "GCP-STG-0765: Test verifying no EnrollDevice navigation in error recovery screens",
       "test_file": "src/__tests__/screens/navigation.gcp-stg-0765.test.ts",
       "depends_on": "GCP-STG-0757",
