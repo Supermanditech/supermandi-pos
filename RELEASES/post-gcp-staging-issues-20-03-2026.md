@@ -19402,4 +19402,172 @@ No new tables or columns required.
 
 ---
 
-<!-- next ticket: GCP-STG-0757 -->
+## GCP-STG-0757 — CRITICAL: Replace enrollment code flow with Phone OTP as primary POS onboarding (CRITICAL)
+
+**Ticket ID**: GCP-STG-0757
+**Severity**: P0 CRITICAL
+**Platforms**: POS
+**Layers**: UI, UX, Wiring, Navigation
+
+**Problem**: Fresh install routes to EnrollDeviceScreen which has broken TextInput focus — user CANNOT type activation code. App is completely unusable. Phone OTP flow (PhoneScreenV3 → OTPScreenV3 → StoreSelectScreenV3 → StaffLoginScreenV3) is fully implemented but unreachable from fresh install.
+
+**Fix**: In SplashScreenV3.tsx, change 2 navigate calls from "EnrollDevice" to "V3Phone" (lines 75, 103). Minimum fix to unblock.
+
+**Files**: src/screens/v3/SplashScreenV3.tsx (2 lines)
+
+**12-Layer**: L1 UI ✅, L2 UX ✅, L3 Wiring ✅, L4 Navigation ✅
+
+---
+
+## GCP-STG-0758 — HIGH: Clean splash screen — remove spinner, add brand logo transition (HIGH)
+
+**Ticket ID**: GCP-STG-0758
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, UX
+
+**Problem**: Splash shows generic spinner during session check (up to 5s). Should show clean SuperMandi logo with fade-in, then seamlessly transition to phone screen.
+
+**Fix**: Replace ActivityIndicator with SuperMandi logo SVG, add Animated.timing fade (800ms), show "SuperMandi POS" brand text, subtle status text below. Min 1.5s brand impression, max 5s timeout.
+
+**Files**: src/screens/v3/SplashScreenV3.tsx
+
+**12-Layer**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0759 — HIGH: Deprecate EnrollDeviceScreen — keep as legacy, add Phone login link (HIGH)
+
+**Ticket ID**: GCP-STG-0759
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: Navigation, UI
+
+**Problem**: EnrollDeviceScreen (900+ lines) has broken focus, becomes dead code after 0757. Should deprecate not delete (OEM devices may use code enrollment).
+
+**Fix**: Remove from initial route candidates in App.tsx. Add deprecation comment. Add "Use Phone Login Instead" link at top. Fix autoFocus bug anyway for OEM fallback.
+
+**Files**: src/screens/EnrollDeviceScreen.tsx, App.tsx
+
+**12-Layer**: L1 UI ✅, L4 Navigation ✅
+
+---
+
+## GCP-STG-0760 — HIGH: PhoneScreenV3 — prominent "Not registered?" CTA for new retailers (HIGH)
+
+**Ticket ID**: GCP-STG-0760
+**Severity**: P1 HIGH
+**Platforms**: POS
+**Layers**: UI, UX
+
+**Problem**: New retailer downloads POS, sees phone entry, enters unregistered number → "No store found" error with no guidance.
+
+**Fix**: On "No store found" error, show prominent CTA: "Register your store first → supermandi.tech/retailer/register". Brief explanation: "First register online, get approved, then log in here." Existing "New store? Register here" link should be more visible.
+
+**Files**: src/screens/v3/PhoneScreenV3.tsx
+
+**12-Layer**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0761 — MEDIUM: Update OTP WhatsApp message for POS login context (MEDIUM)
+
+**Ticket ID**: GCP-STG-0761
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND
+**Layers**: Backend, Business
+
+**Problem**: WhatsApp OTP message is generic "Your SuperMandi OTP is: XXXXXX". Should clarify POS context.
+
+**Fix**: Update message to "Your SuperMandi POS login OTP is: XXXXXX. Valid for 5 minutes. Do not share." in otpAuth.ts WhatsApp send.
+
+**Files**: backend/src/routes/v1/pos/otpAuth.ts
+
+**12-Layer**: L6 Backend ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0762 — MEDIUM: Auto-create MANAGER staff on OTP enrollment with random PIN + WhatsApp delivery (MEDIUM)
+
+**Ticket ID**: GCP-STG-0762
+**Severity**: P2 MEDIUM
+**Platforms**: BACKEND, POS
+**Layers**: Backend, Business, UX
+
+**Problem**: Code enrollment auto-creates MANAGER staff with PIN "1234" (enroll.ts:658). OTP enrollment does NOT create staff. User reaches StaffLogin with no PIN — dead end.
+
+**Fix**: In verify-otp handler, after device creation, add staff auto-creation: random 6-digit PIN, bcrypt hash, send via WhatsApp ("Your POS Manager PIN is: XXXXXX"), set must_change_pin=true. Skip if staff already exists.
+
+**Files**: backend/src/routes/v1/pos/otpAuth.ts
+
+**12-Layer**: L5 API ✅, L6 Backend ✅, L7 DB ✅, L10 Business ✅
+
+---
+
+## GCP-STG-0763 — MEDIUM: StaffLoginScreenV3 — handle "no staff exists" gracefully (MEDIUM)
+
+**Ticket ID**: GCP-STG-0763
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX, Backend
+
+**Problem**: If OTP enrollment but no staff exists, StaffLogin shows PIN entry with no way forward. Any PIN → "Invalid PIN" → stuck.
+
+**Fix**: On mount check staff count. If zero: show "No staff configured — store owner needs to set up staff" + "Contact Admin" WhatsApp link + "Setup Staff" button for owner.
+
+**Files**: src/screens/v3/StaffLoginScreenV3.tsx
+
+**12-Layer**: L1 UI ✅, L2 UX ✅, L5 API ✅
+
+---
+
+## GCP-STG-0764 — MEDIUM: Remove spinner/loading screens from fresh install flow (MEDIUM)
+
+**Ticket ID**: GCP-STG-0764
+**Severity**: P2 MEDIUM
+**Platforms**: POS
+**Layers**: UI, UX
+
+**Problem**: Fresh install shows: blank → spinner → logo → broken enrollment screen. Should be: brand logo (1-2s) → phone entry. No spinner, no enrollment.
+
+**Fix**: SplashScreenV3 — static logo during check, subtle "Connecting..." if >2s, smooth fade transition to PhoneScreenV3. Remove "Activate Your POS" references.
+
+**Files**: src/screens/v3/SplashScreenV3.tsx
+
+**12-Layer**: L1 UI ✅, L2 UX ✅
+
+---
+
+## GCP-STG-0765 — LOW: Update all EnrollDevice navigation references to V3Phone (LOW)
+
+**Ticket ID**: GCP-STG-0765
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Navigation
+
+**Problem**: Multiple places navigate to "EnrollDevice" for error recovery. After 0757, all should point to "V3Phone".
+
+**Fix**: grep -rn "EnrollDevice" src/ → change all navigate() calls to "V3Phone". Update test assertions.
+
+**Files**: Multiple across src/
+
+**12-Layer**: L4 Navigation ✅
+
+---
+
+## GCP-STG-0766 — LOW: End-to-end real device test — fresh install Phone OTP flow (LOW)
+
+**Ticket ID**: GCP-STG-0766
+**Severity**: P3 LOW
+**Platforms**: POS
+**Layers**: Testing
+
+**Problem**: After 0757-0765 implemented, need real device E2E verification.
+
+**Test Plan**: Uninstall → Install → Brand splash → Phone (7737914383) → OTP → Store select → PIN → SELL (216 products) → Add to cart → Cash payment → Success. All steps pass without stuck/error screens.
+
+**12-Layer**: All layers on real device.
+
+---
+
+<!-- next ticket: GCP-STG-0767 -->
