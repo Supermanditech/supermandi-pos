@@ -77,7 +77,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^2.1.1",
-    "nodemailer": "^7.0.13",
+    "nodemailer": "^8.0.4",
     "openai": "^4.47.0",
     "pdfkit": "^0.15.0",
     "pg": "^8.11.3",
